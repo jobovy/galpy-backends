@@ -19,10 +19,15 @@ Hessian) + **Lyapunov exponents** in C.
 
 | PR | Track | Branch | State | Tests | Notes |
 |----|-------|--------|-------|-------|-------|
-| PR0 pilot (resolver + Plummer/Isochrone) | 0 | feat/backends | ✅ done | +70 (numpy/jax/torch green) | validates the whole approach |
-| Pvar-struct (C 3D Hessian ABI) | B | feat/variational3d | ✅ done | 22 pass (inert) | serialization point for the C fan-out |
-| P1 backend package (config, special router) | 0 | feat/backends | ⏳ next (pending review) | — | — |
-| Pvar-pot.* / Pvar-rhs | B | feat/variational3d | ⏳ next (pending review) | — | — |
+| PR0+P1 backend foundation | 0 | feat/backends → main | **#892** (CI running) | 76 backend tests; galpy.backend 100% cov | integration branch |
+| Pvar-struct (C 3D Hessian ABI) | B | feat/variational3d → main | **#891** (CI running) | 22 pass (inert) | variational feature branch (merges to main first) |
+| P2.1 spherical | A | feat/P2.1-spherical → #892 | **#893** (draft) | 95 pass/15 skip | |
+| P2.2 disk | A | feat/P2.2-disk → #892 | **#894** (draft) | 138 pass | |
+| P2.3 ellipsoidal | A | feat/P2.3-ellipsoidal → #892 | **#895** (draft) | 258 pass | cache gated numpy-only |
+| P2.4 halobar | A | feat/P2.4-halobar → #892 | **#896** (draft) | 60 pass | all 10; flagged pre-existing CosmphiDisk bug |
+| P2.7 dissipative | A | feat/P2.7-dissipative → #892 | **#897** (draft) | 6 pass/2 xfail | deferred to Pspecial |
+| Pvar-rhs | B | feat/pvar-rhs → #891 | 🚧 in progress | — | the variational keystone |
+| Pspecial, P2.5, P2.6, Track C/D/E/F | — | — | ⏳ next | — | — |
 
 (Update this table as PRs land.)
 
