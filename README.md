@@ -20,8 +20,9 @@ Hessian) + **Lyapunov exponents** in C.
 | PR | Track | Branch | State | Tests | Notes |
 |----|-------|--------|-------|-------|-------|
 | PR0 pilot (resolver + Plummer/Isochrone) | 0 | feat/backends | ✅ done | +70 (numpy/jax/torch green) | validates the whole approach |
-| Pvar-struct (C 3D Hessian ABI) | B | feat/variational3d | 🚧 in progress | — | serialization point for the C fan-out |
-| P1 backend package (config, special router) | 0 | feat/backends | ⏳ next | — | — |
+| Pvar-struct (C 3D Hessian ABI) | B | feat/variational3d | ✅ done | 22 pass (inert) | serialization point for the C fan-out |
+| P1 backend package (config, special router) | 0 | feat/backends | ⏳ next (pending review) | — | — |
+| Pvar-pot.* / Pvar-rhs | B | feat/variational3d | ⏳ next (pending review) | — | — |
 
 (Update this table as PRs land.)
 
