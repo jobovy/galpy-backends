@@ -39,6 +39,20 @@ Python `phizderiv` = C `zphideriv` = ∂²Φ/∂z∂φ.
 - **Pvar-lyapunov** (separate, `feat/lyapunov`): Lyapunov exponents (largest-eigenvalue
   STM growth / Benettin renormalization) on `Orbit`.
 
+## Open consideration — dissipative / velocity-dependent forces (dynamical friction)
+`ChandrasekharDynamicalFrictionForce`, `FDMDynamicalFrictionForce` (base
+`DissipativeForce`; C `requiresVelocity` + `*Velocity` force fns) are NOT from a
+potential and depend on velocity: `f=f(x,v)`. So the variational Jacobian is the
+general `J=[[0,I],[∂F/∂x, ∂F/∂v]]` (lower-left non-symmetric, plus a nonzero
+velocity block). `Ṁ=JM` still holds (conservative case = `∂F/∂v=0`, `∂F/∂x=K`).
+Non-conservative ⇒ `det M=exp(∫tr ∂F/∂v dt)≠1` and `MᵀΩM≠Ω`, so dissipative
+potentials are **excluded from the Liouville/symplecticity tests** (use FD-of-flow).
+The STM still gives correct IC gradients. Routes: (1) Track D in-backend
+diffrax/torchdiffeq handles `f(x,v)` via AD automatically (recommended v1, needs
+only the dissipative classes namespace-swapped — Track A P2.7); (2) a dedicated
+C-STM PR implementing `∂F/∂(x,v)` per dissipative force + a velocity-coupled C RHS
+(deferred; only if C speed needed). **To discuss with user.**
+
 ## Test battery (Pvar-rhs / Pvar-lyapunov) — all of design-doc §4
 1. Liouville `det M=1` (6×6) — 3D analogue of `test_liouville_planar`.
 2. Symplecticity `MᵀΩM=Ω` in **canonical Cartesian** (Cartesian is canonical).

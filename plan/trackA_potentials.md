@@ -16,3 +16,8 @@ P2.5 special-backed (needs Pspecial), P2.6 wrappers (last, compose children).
 Each PR adds family parity + grad-vs-FD tests (its own test module).
 
 Pilot already migrated Plummer + Isochrone (PR0) — they fold into P2.1's family.
+
+**P2.7 Dissipative / velocity-dependent forces** (DissipativeForce/planarDissipativeForce,
+ChandrasekharDynamicalFrictionForce, FDMDynamicalFrictionForce): `f=f(x,v)` — thread
+velocity through the namespace-swap. Enables dissipative-orbit autodiff via the Track D
+in-backend integrator (see trackB_variational.md "Open consideration").
