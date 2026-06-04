@@ -47,11 +47,16 @@ general `J=[[0,I],[∂F/∂x, ∂F/∂v]]` (lower-left non-symmetric, plus a non
 velocity block). `Ṁ=JM` still holds (conservative case = `∂F/∂v=0`, `∂F/∂x=K`).
 Non-conservative ⇒ `det M=exp(∫tr ∂F/∂v dt)≠1` and `MᵀΩM≠Ω`, so dissipative
 potentials are **excluded from the Liouville/symplecticity tests** (use FD-of-flow).
-The STM still gives correct IC gradients. Routes: (1) Track D in-backend
-diffrax/torchdiffeq handles `f(x,v)` via AD automatically (recommended v1, needs
-only the dissipative classes namespace-swapped — Track A P2.7); (2) a dedicated
-C-STM PR implementing `∂F/∂(x,v)` per dissipative force + a velocity-coupled C RHS
-(deferred; only if C speed needed). **To discuss with user.**
+The STM still gives correct IC gradients. **IN SCOPE — route 2 (user-confirmed):**
+the C-STM RHS (Pvar-rhs) is written general from the start to carry the
+velocity-coupled, non-symmetric `J` (conservative = special case `∂F/∂v=0`), and a
+sub-track implements `∂F/∂(x,v)` in C per dissipative force:
+- **Pvar-dissip-struct:** velocity-dependent Jacobian pointers (`∂F/∂(R,z,φ)`,
+  `∂F/∂(vR,vT,vz)`) + NULL-safe aggregators, mirroring Pvar-struct.
+- **Pvar-dissip-force.x:** `∂F/∂(x,v)` for Chandrasekhar/FDM, validated vs FD-of-force
+  and the Track D in-backend AD reference.
+Track D in-backend (diffrax/torchdiffeq) gives the same derivatives via AD of the
+namespace-swapped `f(x,v)` (Track A P2.7) — kept as the independent oracle.
 
 ## Test battery (Pvar-rhs / Pvar-lyapunov) — all of design-doc §4
 1. Liouville `det M=1` (6×6) — 3D analogue of `test_liouville_planar`.
