@@ -19,7 +19,8 @@ potentials. "Not even a first PR" — a spike that becomes PR0.
   (`sqrt`, `arctan`); `numpy.pi`→`math.pi` (a plain float, namespace-free). The
   force/Hessian methods (`_Rforce/_zforce/_R2deriv/_z2deriv/_Rzderiv`) are pure
   arithmetic and needed **no change** — confirming the "only swap what calls
-  numpy" convention. Removed Plummer's unused `_rforce_jax` stub.
+  numpy" convention. Plummer's `_rforce_jax` is kept and clarified (NOT removed; it
+    is the existing spherical-DF radial-force hook, called by `constantbetadf`).
 - `tests/test_backend_pilot.py` (70 tests): value parity numpy/jax/torch (rtol
   1e-12); grad-vs-finite-difference; the identities `d(_evaluate)/dR == −_Rforce`
   and `d(−_Rforce)/dR == _R2deriv` under AD; jax jit+vmap; torch dtype
@@ -34,6 +35,14 @@ potentials. "Not even a first PR" — a spike that becomes PR0.
 - Data-first confirmed: a numpy array inside `with use("jax")` resolves to numpy.
 
 ## Dead-ends / notes
+- **Caught in review:** initially removed Plummer's `_rforce_jax` as a "dead stub"
+  (the exploration agent only checked usage *within* potential code). It is in fact
+  the established spherical-DF radial-force hook, called by `constantbetadf`
+  (constantbetadf.py:235/238/258/264) and implemented across the spherical family
+  (TwoPowerSpherical, PowerSpherical(+wCutoff), interpSpherical). Restored. Lesson:
+  grep call sites across **all** subsystems (df/, actionAngle/) before deleting any
+  cross-module hook. The eventual general `get_namespace` dispatch will subsume
+  `_rforce_jax`, but only once Track F (spherical DFs) migrates — don't remove early.
 - Considered globally enabling `jax_enable_x64` at `galpy.backend` import — rejected
   (intrusive global side effect on the user's session); enabled in the test
   fixture instead. Revisit: the resolver could enable x64 lazily only when jax is
