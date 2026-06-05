@@ -25,8 +25,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cpu"
     },
-    "git": "0ba9e3d",
-    "sha256": "2f7bfe515a9e366fd16b601f3eb04dcf1d0cab679ddf5121e73b7e8f15dddc9e",
+    "git": "65529aa",
+    "sha256": "fd0f099157435b91f9f2784ed989c82891c7ce170a6968ef66557feb0d0e5818",
     "track": "G"
   },
   "g2_throughput": {
