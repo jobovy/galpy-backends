@@ -3,14 +3,14 @@
     "description": "harness smoke test (parabola) -- validates run/verify/manifest",
     "env": {
       "galpy": "1.12.0.dev0",
-      "jax": "0.9.2",
+      "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
       "python": "3.13.12",
       "scipy": "1.17.1",
-      "torch": "2.12.0+cpu"
+      "torch": "2.12.0+cu126"
     },
-    "git": "c5bdf82",
+    "git": "097e8e7",
     "sha256": "348235458993e9904d37f31e76c26aeb4e6d7170405ecb4d96863ab0736cc552",
     "track": "G"
   },
@@ -18,19 +18,34 @@
     "description": "numpy<->jax/torch value parity + jax/torch autodiff identities (migrated potentials)",
     "env": {
       "galpy": "1.12.0.dev0",
-      "jax": "0.9.2",
+      "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
       "python": "3.13.12",
       "scipy": "1.17.1",
-      "torch": "2.12.0+cpu"
+      "torch": "2.12.0+cu126"
     },
-    "git": "65529aa",
-    "sha256": "fd0f099157435b91f9f2784ed989c82891c7ce170a6968ef66557feb0d0e5818",
+    "git": "097e8e7",
+    "sha256": "6959b01f38652f4c6ed767b6e6efdff5d20fb097b3c4dc13bca83463a9fb0465",
     "track": "G"
   },
   "g2_throughput": {
-    "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU) [measure->json, plot byte-stable]",
+    "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU), compute-only vs end-to-end transfer [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "097e8e7",
+    "sha256": "534903a6423f015a5190bdaf527eef78200b164b641d3b6754bec5b8d33dead6",
+    "track": "G"
+  },
+  "g2b_transfer": {
+    "description": "DRAFT: throughput compute-only vs end-to-end (host<->GPU transfer included)",
     "env": {
       "galpy": "1.12.0.dev0",
       "jax": "0.9.2",
@@ -38,10 +53,25 @@
       "numpy": "2.4.3",
       "python": "3.13.12",
       "scipy": "1.17.1",
-      "torch": "2.12.0+cpu"
+      "torch": "2.6.0+cu124"
     },
-    "git": "2f37fb8",
-    "sha256": "ad5efb17799e6b6013098fd4830deb44f8a968e903ad60dc0db34816f75c89d5",
+    "git": "339cfdf",
+    "sha256": "0fea13ae45c91971cabc65b33b86c424458a5990cbcc040d86b26d352de62cff",
+    "track": "G"
+  },
+  "g3_param_gradients": {
+    "description": "autodiff w.r.t. potential parameters (d/dtheta): jax/torch vs FD + a gradient-descent fit",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "097e8e7",
+    "sha256": "40ab75edc57f0d8877c429966bd70614b2844c2e8b84ef97ab68a77f847a6d82",
     "track": "G"
   }
 }
