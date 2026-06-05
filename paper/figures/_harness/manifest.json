@@ -28,5 +28,20 @@
     "git": "0ba9e3d",
     "sha256": "2f7bfe515a9e366fd16b601f3eb04dcf1d0cab679ddf5121e73b7e8f15dddc9e",
     "track": "G"
+  },
+  "g2_throughput": {
+    "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU) [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.9.2",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.6.0+cu124"
+    },
+    "git": "9f5497b",
+    "sha256": "d74102ebf97a2114941a3b123628d735a5e8e9cba533c89e34299fdf285ab8eb",
+    "track": "G"
   }
 }
