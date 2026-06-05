@@ -1,0 +1,9 @@
+**Figure G2b — Force-evaluation throughput: compute-only vs end-to-end (host↔GPU transfer included).**
+
+Companion to G2. Throughput (points per second, $=N/\text{wall-time}$) versus array length $N$ for a vectorized Plummer $F_R$ evaluation, on numpy (CPU) and jax/torch (NVIDIA TITAN Xp GPU). **Solid** curves are *compute-only* (identical protocol to G2: input array resident on-device, result left on-device; the timed wait is for the kernel, not a copy). **Dashed** curves are *end-to-end*: each call starts from a host (numpy) array and returns a host array, so it includes the host→device and device→host copies — the realistic cost of calling galpy on the GPU from a numpy workflow. Each marker is the median over repeated calls; dotted slope-1 lines mark constant wall-time per call (0.1, 1, 10, 100 ms).
+
+**Take-aways:**
+- **Transfer is the dominant cost at scale.** At $N=10^{7}$ the compute-only GPU throughput is $\sim\!10^{9}$ pts/s ($\sim\!100\times$ the CPU), but adding the round-trip copy drops it to $\sim\!10^{8}$ pts/s — a full order of magnitude — because PCIe is bandwidth-bound and the copy cost grows $\propto N$ while the compute does not.
+- The end-to-end GPU advantage over the CPU is therefore a **modest $\sim\!4$–$6\times$**, not $100\times$, and the crossover where the GPU first beats the CPU moves to larger $N$.
+- The jax end-to-end curve even **turns over** at $N=10^{7}$ (transfer + per-call `asarray`/dispatch overhead outrunning the kernel speed-up), while torch's `.cpu()` copy is comparatively cheaper at the largest size.
+- **Implication for the design:** the GPU pays off when data *stays* on-device across many operations (a full differentiable pipeline — forces, orbit integration, action-angle, DF — chained without round-trips), not for one-shot calls from a host workflow. This is the case the multi-backend layer is built to enable.
