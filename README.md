@@ -7,9 +7,9 @@ Hessian) + **Lyapunov exponents** in C.
 
 - Master plan (index): `~/.claude/plans/i-want-to-start-snug-rocket.md`
 - Design discussion (settled decisions): `galpy_backend_autodiff_discussion.md`
-- Per-track detailed specs: `plan/`
+- Per-track detailed specs: `plan/` (incl. `plan/trackG_figures.md` — reproducible paper figures)
 - Per-PR logs (Approach / Dead-ends / Results / Plots): `logs/`
-- Paper draft: `paper/`
+- Paper draft + figures: `paper/`, with `paper/figures/` (every figure ships `make.py` + a reproducibility hash; see Track G)
 
 ## Branches
 - `feat/variational3d`, `feat/lyapunov`, `feat/param-sensitivity` → merge to **main** (standalone C features the backends consume but don't depend on).
@@ -26,8 +26,9 @@ Hessian) + **Lyapunov exponents** in C.
 | P2.3 ellipsoidal | A | feat/P2.3-ellipsoidal → #892 | **#895** (draft) | 258 pass | cache gated numpy-only |
 | P2.4 halobar | A | feat/P2.4-halobar → #892 | **#896** (draft) | 60 pass | all 10; flagged pre-existing CosmphiDisk bug |
 | P2.7 dissipative | A | feat/P2.7-dissipative → #892 | **#897** (draft) | 6 pass/2 xfail | deferred to Pspecial |
-| Pvar-rhs | B | feat/pvar-rhs → #891 | **#898** (draft) | det M=1 + flow-dir/FD/2D-bridge K-validators all tight (MN+Plummer) | the variational keystone — VALIDATED |
+| Pvar-rhs | B | feat/pvar-rhs → #891 | **#898** (draft) | det M=1 + flow-dir/FD/2D-bridge K-validators all tight (MN+Plummer) | the variational keystone — VALIDATED; coverage fix: dxdv dispatcher now mirrors planar (non-symplectic cases only) so misses return to 27 |
 | Pvar-pot.* (≈48 potentials' C Hessians) | B | → #891 | ⏳ next fan-out | — | RHS/ABI/plumbing now general; add derivs→wire→test |
+| Track G figures/diagnostics | G | (cross-cutting) | ⏳ continuous | harness G0 first | reproducible paper figures; GPU benchmarks after #891/#898 land |
 | Pspecial, P2.5, P2.6, Pvar-lyapunov, Track C/D/E/F | — | — | ⏳ next | — | — |
 
 (Update this table as PRs land.)
