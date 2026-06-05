@@ -40,8 +40,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cpu"
     },
-    "git": "b148010",
-    "sha256": "609107440bb85ce372ffc512783ec3e0e6d8b6b236a20403333dfa3189d4815b",
+    "git": "2f37fb8",
+    "sha256": "ad5efb17799e6b6013098fd4830deb44f8a968e903ad60dc0db34816f75c89d5",
     "track": "G"
   }
 }

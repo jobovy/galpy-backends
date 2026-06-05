@@ -111,22 +111,24 @@ def make():
     fig, ax = plt.subplots(figsize=(5.4, 4.1))
     for name, times in series.items():
         thr = Ns / numpy.asarray(times, dtype=float)
-        ax.loglog(Ns, thr, marker="o", ms=4, color=_COLORS.get(name), label=name)
+        ax.loglog(Ns, thr, marker="o", ms=4, color=_COLORS.get(name), label=name, zorder=3)
     ax.set_xlabel(r"array length $N$  (number of points per $F_R$ call)")
     ax.set_ylabel(r"throughput  (points evaluated / second)")
     ax.set_title(r"Vectorized Plummer $F_R$: throughput vs array size")
-    ax.legend(fontsize=8, loc="lower right")
-    # methodology note so the axes are unambiguous
-    fig.text(
-        0.5, 0.005,
-        r"each call evaluates $F_R$ on one $N$-element array;  "
-        r"throughput $=\,N\,/\,$(median wall-time per call)",
-        ha="center", va="bottom", fontsize=7, color="0.4",
-    )
+    # Constant-wall-time reference lines: throughput = N / t0 is a slope-1 line in
+    # log-log. The GPU curves hug these at small N -- launch/overhead-bound, so the
+    # wall-time per call is ~constant -- and peel off toward N/time scaling at large N.
+    ax.set_ylim(*ax.get_ylim())  # freeze to the data range so the lines don't rescale it
+    Nlo, Nhi = float(Ns.min()), float(Ns.max())
+    for t0 in (1e-4, 1e-3, 1e-2, 1e-1):
+        ax.plot([Nlo, Nhi], [Nlo / t0, Nhi / t0], ls=":", lw=0.9, color="0.72", zorder=0)
+    ax.text(0.025, 0.975, "dotted: constant wall-time / call\n(0.1, 1, 10, 100 ms)",
+            transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left")
+    ax.legend(fontsize=8, loc="lower right", framealpha=0.92)
     ax.text(
-        0.02, 0.02,
+        0.025, 0.025,
         f"GPU: {env.get('gpu', '?')}\njax {env.get('jax', '?')} · torch {env.get('torch', '?')}",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom",
     )
-    fig.tight_layout(rect=[0, 0.045, 1, 1])  # leave room for the bottom note
+    fig.tight_layout()
     return fig
