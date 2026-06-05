@@ -112,14 +112,21 @@ def make():
     for name, times in series.items():
         thr = Ns / numpy.asarray(times, dtype=float)
         ax.loglog(Ns, thr, marker="o", ms=4, color=_COLORS.get(name), label=name)
-    ax.set_xlabel("N (points per force evaluation)")
-    ax.set_ylabel("throughput (force evals / s)")
-    ax.set_title(r"Plummer $F_R$ throughput: CPU vs GPU")
+    ax.set_xlabel(r"array length $N$  (number of points per $F_R$ call)")
+    ax.set_ylabel(r"throughput  (points evaluated / second)")
+    ax.set_title(r"Vectorized Plummer $F_R$: throughput vs array size")
     ax.legend(fontsize=8, loc="lower right")
+    # methodology note so the axes are unambiguous
+    fig.text(
+        0.5, 0.005,
+        r"each call evaluates $F_R$ on one $N$-element array;  "
+        r"throughput $=\,N\,/\,$(median wall-time per call)",
+        ha="center", va="bottom", fontsize=7, color="0.4",
+    )
     ax.text(
         0.02, 0.02,
         f"GPU: {env.get('gpu', '?')}\njax {env.get('jax', '?')} · torch {env.get('torch', '?')}",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom",
     )
-    fig.tight_layout()
+    fig.tight_layout(rect=[0, 0.045, 1, 1])  # leave room for the bottom note
     return fig

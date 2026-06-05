@@ -38,10 +38,10 @@
       "numpy": "2.4.3",
       "python": "3.13.12",
       "scipy": "1.17.1",
-      "torch": "2.6.0+cu124"
+      "torch": "2.12.0+cpu"
     },
-    "git": "9f5497b",
-    "sha256": "d74102ebf97a2114941a3b123628d735a5e8e9cba533c89e34299fdf285ab8eb",
+    "git": "b148010",
+    "sha256": "609107440bb85ce372ffc512783ec3e0e6d8b6b236a20403333dfa3189d4815b",
     "track": "G"
   }
 }
