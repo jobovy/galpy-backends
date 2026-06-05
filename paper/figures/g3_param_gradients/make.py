@@ -177,8 +177,9 @@ def make():
     ax2.set_title("(b) recover Plummer $b$ by autodiff gradient descent")
     ax2.set_ylim(1e-18, 1.0)
     ax2.legend(fontsize=8, loc="upper right")
-    # parameter-recovery inset
-    axin = ax2.inset_axes([0.46, 0.46, 0.5, 0.42])
+    # parameter-recovery inset, bottom-left (the loss curve runs top-left ->
+    # bottom-right, leaving the lower-left corner empty)
+    axin = ax2.inset_axes([0.13, 0.14, 0.40, 0.38])
     axin.plot(it, bj_hist, color=BACKEND_COLORS["jax"], lw=1.5)
     axin.axhline(b_true, ls=":", color="0.4", lw=1)
     axin.text(n_it * 0.97, b_true, " $b_{\\rm true}$", fontsize=7, color="0.4",

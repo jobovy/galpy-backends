@@ -70,8 +70,23 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "097e8e7",
-    "sha256": "40ab75edc57f0d8877c429966bd70614b2844c2e8b84ef97ab68a77f847a6d82",
+    "git": "825a8a8",
+    "sha256": "30412050c1190ece1e3fce19b0761d402485f554b24ace82c7196063a8080b6f",
+    "track": "G"
+  },
+  "g5_autodiff_overhead": {
+    "description": "gradient vs value throughput (reverse-mode AD overhead), jax/torch GPU [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "825a8a8",
+    "sha256": "d8dfdf7dedebf854b2993b3982509173149842458a094b1a0e75eccc7cb500b4",
     "track": "G"
   }
 }
