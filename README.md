@@ -5,7 +5,7 @@ backend-agnostic (numpy/scipy, JAX, PyTorch, array-API), and implementing the
 **3D variational equations** (state-transition matrix / full 3D potential
 Hessian) + **Lyapunov exponents** in C.
 
-- Master plan (index): `~/.claude/plans/i-want-to-start-snug-rocket.md`
+- Master plan (index): `master_plan.md` (committed snapshot; kept in sync with the working copy at `~/.claude/plans/i-want-to-start-snug-rocket.md`)
 - Design discussion (settled decisions): `galpy_backend_autodiff_discussion.md`
 - Per-track detailed specs: `plan/` (incl. `plan/trackG_figures.md` — reproducible paper figures)
 - Per-PR logs (Approach / Dead-ends / Results / Plots): `logs/`
