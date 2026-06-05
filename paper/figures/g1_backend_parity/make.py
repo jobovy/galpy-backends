@@ -53,9 +53,15 @@ def make():
         (r"$\partial^2_R\Phi$", evaluateR2derivs),
         (r"$\partial^2_z\Phi$", evaluatez2derivs),
     ]
-    R = numpy.linspace(0.3, 3.0, 60)
-    z = 0.1 * numpy.ones_like(R)
-    FLOOR = 3e-18  # where exactly-zero (bit-identical) points are drawn on the log axis
+    # A full (R,z) mesh -- NOT a single z=const slice -- so the per-element rounding
+    # differences actually surface (a constant-z line coincidentally hides most of
+    # them, leaving a misleading "only F_R differs"). On this mesh jax is exactly
+    # numpy for every method, while torch differs at the ULP level on all of them.
+    _R = numpy.linspace(0.3, 3.0, 60)
+    _z = numpy.linspace(-1.0, 1.0, 60)
+    RR, ZZ = numpy.meshgrid(_R, _z)
+    R, z = RR.ravel(), ZZ.ravel()
+    FLOOR = 1e-20  # draw exactly-zero (bit-identical) points here, well below torch's ~1e-16
     EPS = numpy.finfo(float).eps
 
     def parity(fn, p, backend):
@@ -89,7 +95,7 @@ def make():
     ax1.text(-0.45, FLOOR * 1.5, "= 0 (bit-identical to numpy)", fontsize=8,
              color="0.5", ha="left", va="bottom")
     ax1.set_yscale("log")
-    ax1.set_ylim(1.5e-18, 1e-12)
+    ax1.set_ylim(3e-21, 1e-11)
     ax1.set_xlim(-0.6, nm - 0.4)
     ax1.set_xticks(range(nm))
     ax1.set_xticklabels([m[0] for m in methods])
