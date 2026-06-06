@@ -36,9 +36,20 @@ Fan-out = one sub-agent per family, each in a worktree off `feat/variational3d`,
     adaptive integrators legitimately diverge there (C-vs-Python 4.1e-6 > 1e-6 gate). The C
     Hessian is *correct* (off-plane C-vs-Python 1.3e-11; analytic-vs-FD ~1e-10). Agent kept the
     Hessian + `hasC_dxdv3d=True` but **excluded KuzminDisk from the strict registry** with a
-    comment. OPEN QUESTION for review: should a non-smooth potential expose the 3D C dxdv path at
-    all, or is "correct off-plane, caveat at z=0" acceptable? (Python path has the same
-    discontinuity, so C is no worse and faster.)
+    comment. **Resolved in review (2026-06-05):** keep `hasC_dxdv3d=True` (the Python path has the
+    same z=0 discontinuity, so C is no worse and faster), and add a standalone off-plane
+    correctness test `test_kuzmindisk_dxdv_3d_c_vs_python_offplane` (orbit with large z0 moving
+    away from the plane, verified min|z|>1 → smooth regime → C-vs-Python agree ~1e-11, asserted
+    <1e-8). So KuzminDisk has real C-Hessian coverage without the bogus det-M-at-z=0 failure.
+
+## Review of #904 / #905 (2026-06-05, independent re-verification)
+- **#904** (spherical batch): transform verified correct (Isochrone template: R2deriv=Φ″R²/r²+Φ′z²/r³
+  etc., amp via the planar functions); Isochrone→PseudoIsothermal gate-test swap valid; numpy
+  byte-identical (additive C + flags only); **52 variational tests pass** on an independent
+  rebuild. Recommend merge, no changes.
+- **#905** (Kuzmin disks): KuzminKutuzov chain-rule Hessian verified (correct structure +
+  dVdl sign); **34 tests pass** independently; added the off-plane KuzminDisk test (above) and
+  referenced it from the registry-exclusion note (pushed 1e15e91b). Recommend merge.
   - MiyamotoNagai reported already done (axisymmetric template).
 
 ## numpy byte-identical
