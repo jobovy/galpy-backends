@@ -1,0 +1,11 @@
+**Figure G7 — Differentiable orbit integration (in-backend, CPU float64).**
+
+A Plummer orbit integrated *inside the backend* by `galpy.backend._reference.integrate_orbit` (diffrax for jax), evaluating galpy's equations of motion through the backend-agnostic force layer so the whole solve is differentiable by autodiff — no hand-coded variational equations.
+
+*(a) Orbit sensitivity (state-transition matrix).* Selected elements of $\partial x(t)/\partial x_0$ — the derivative of the orbit at time $t$ with respect to its initial conditions — obtained by reverse-mode autodiff through the ODE solve (lines), with central finite-difference of the flow overlaid (open markers). They coincide. The curves start at the identity ($\partial R/\partial R_0=1$, $\partial R/\partial v_{R0}=0$, …) and evolve as the tangent (linearized) dynamics; this is the same state-transition matrix the C variational path computes, here for free from autodiff.
+
+*(b) Fitting initial conditions through the solver.* Recovering the launch velocity $(v_{R0}, v_{z0})$ that lands the orbit on a target end-point $(R,z)_f$. Each Gauss-Newton step uses the **autodiff Jacobian of the end-point residual w.r.t. the launch velocity, taken through the ODE solve** (`jax.jacobian` of `integrate_orbit`). The end-point miss falls **quadratically to machine precision in ~5 iterations** (inset: the optimizer path goes essentially straight from the wrong guess to the truth, ★). Autodiff yields the full Jacobian, not just a gradient, enabling second-order orbit fitting.
+
+**Take-away:** orbit integration is differentiable end-to-end under the backend — initial-condition (and, via the parameter enabler, potential-parameter) gradients and Jacobians backpropagate through the ODE solver — which is what makes galpy orbits usable inside gradient-based inference and as the reference for the fast C state-transition-matrix path.
+
+*Backend notes (see `logs/TrackD_orbit_integration/`):* diffrax's `diffeqsolve` is a `custom_vjp` (reverse-mode only, so `jacfwd` is unavailable — the STM is checked via jacrev vs finite-difference). The torch path uses `dopri5`, not `dopri8`: torchdiffeq's `dopri8` *backward* carries a ~$10^{-5}$ relative gradient error (its adaptive step controller is detached on the backward), whereas `dopri5`/`rk4` and diffrax's `Dopri8` are accurate to $\sim10^{-8}$.

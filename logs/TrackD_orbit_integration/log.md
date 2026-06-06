@@ -26,7 +26,36 @@ The parameter gradient is the headline: a potential-parameter gradient **backpro
 - diffrax/torchdiffeq are not default galpy deps — installed into the GPU env (diffrax 0.7.2, torchdiffeq 0.2.5, optax 0.2.8). Runtime extras, to be gated behind `galpy[diffrax]`/`galpy[torchdiffeq]`.
 - Parameter gradients require the coordinates to also be backend arrays (so the namespace resolver follows the data) — same usage contract as the Track C param-grad figures (G3/G5).
 
+## Formalized — galpy PR #906 (`galpy.backend._reference.integrate_orbit`)
+Module `galpy/backend/_reference/inbackend_ode.py`: `integrate_orbit(pot, vxvv, ts)`, input/output in
+the `Orbit` convention `[R,vR,vT,z,vz,phi]`, dispatching on the input namespace (jax→diffrax Dopri8,
+torch→torchdiffeq). Tests (`tests/test_backend_inbackend_ode.py`, 8 pass under jax+torch, self-skip
+without the ODE extras): C-vs-in-backend match (Plummer, Isochrone), grad-vs-FD (IC + parameter), 6×6
+STM via jacrev vs FD-of-flow, torch-grad-vs-jax-grad. Stacked on #903 (parameter-grad enabler).
+
+### Two backend ODE-autodiff findings (paper-worthy gotchas)
+1. **diffrax `diffeqsolve` is a `custom_vjp`** — reverse-mode only. `jax.jacfwd` raises
+   "can't apply forward-mode autodiff (jvp) to a custom_vjp function". So the planned `jacrev==jacfwd`
+   STM cross-check is impossible as written; the STM is instead validated by jacrev vs
+   finite-difference-of-the-flow (column by column). (A forward-mode STM would need
+   `adjoint=diffrax.ForwardMode()`.)
+2. **torchdiffeq's `dopri8` *backward* is inaccurate** (~1e-5 relative gradient error), while
+   `dopri5`/`rk4` give ~1e-8. Measured for `d(final R)/d(vR0)`: torch-dopri8 ad=0.07185247 vs the
+   true 0.07185299 (dopri5/rk4/FD and **jax/diffrax Dopri8 all agree** at 0.07185299). Cause: the
+   adaptive step controller is detached on the backward pass, so the high-order dopri8 backward
+   accumulates error the lower-order methods don't. **Fix: the torch path uses `dopri5`** → accurate
+   gradients matching jax. diffrax's Dopri8 backward is fine — this is torchdiffeq-specific.
+   - Corollary: a finite-difference reference computed *with* adaptive dopri8 jitters by ~1e-3 (the
+     +/-eps solves pick different step sequences) even when the autodiff gradient is correct — so the
+     torch test cross-checks against jax.grad, not against a torch-dopri8 FD.
+
+### Figure G7 (`paper/figures/g7_orbit_sensitivity/`)
+Orbit sensitivity (STM elements ∂x(t)/∂x₀ vs t, autodiff vs FD) + a gradient-descent orbit fit
+recovering the launch velocity (vR0,vz0) through the solver. Dead-end: the GD must be bounded —
+an unconstrained step can push the launch velocity into a near-radial plunge whose adaptive solve
+exceeds diffrax's `max_steps` (EquinoxRuntimeError); fixed by clipping (vR0,vz0) to a sane box +
+solver headroom. This is the Track G "G3 showpiece" (orbit fit) that was blocked on the integrator.
+
 ## Next
-- Formalize into `galpy/backend/_reference/inbackend_ode.py` + route `Orbit.integrate` by IC namespace; add tests (grad-vs-FD, jacrev==jacfwd, torch `gradcheck`, C-vs-in-backend agreement).
-- Paper figure: orbit-sensitivity (STM columns) + a gradient-descent orbit fit (Track G G3 showpiece, currently blocked — this unblocks it).
+- Route `Orbit.integrate` by IC namespace (numpy-identical public API); `galpy[diffrax]`/`galpy[torchdiffeq]` extras + a CI job that exercises them.
 - Cross-validate against path B (C-STM) once Pvar-rhs is in main.
