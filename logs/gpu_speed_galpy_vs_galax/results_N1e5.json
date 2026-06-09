@@ -1,0 +1,8 @@
+{
+  "machine": "TITAN Xp (sm_61)", "N": 100000, "metric": "ms_per_orbit",
+  "galpy_jax": {"tol_1e-10": {"Hernquist":0.075,"NFW":0.076,"MiyamotoNagai":0.163,"PSCwCutoff":0.095,"MWPotential2014":0.357},
+                "tol_1e-8":  {"Hernquist":0.046,"NFW":0.046,"MiyamotoNagai":0.096,"PSCwCutoff":0.058,"MWPotential2014":0.246}},
+  "galpy_MW_bulge_swap_1e-8": {"full_PSCw":0.241,"disk_halo_only":0.152,"Hernquist_bulge":0.154},
+  "galpy_fused_gradPhi_MW_1e-8": 0.241,
+  "galax_1e-8": {"Hernquist":0.049,"MiyamotoNagai":0.028,"NFW":0.017,"Kepler":0.033,"MW_Hernquist":0.039,"BovyMW2014":0.080}
+}
