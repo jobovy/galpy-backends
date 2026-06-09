@@ -88,5 +88,50 @@
     "git": "825a8a8",
     "sha256": "d8dfdf7dedebf854b2993b3982509173149842458a094b1a0e75eccc7cb500b4",
     "track": "G"
+  },
+  "g6_jit_amortization": {
+    "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "f031ba5",
+    "sha256": "3f49cdd4d912b48b15b80efaf28239b566c3063c17018d88f85b91bab68a024a",
+    "track": "G"
+  },
+  "g7_orbit_sensitivity": {
+    "description": "in-backend differentiable orbit integration: STM sensitivity vs time + gradient-descent orbit fit",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "2cd6506",
+    "sha256": "edb8f55f52b37f01c57eec0d78480774494151b87985ca64dbe7ff5d13f8bf8f",
+    "track": "G"
+  },
+  "g8_galax_orbit_speed": {
+    "description": "MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "ca9f292",
+    "sha256": "0f87a0594ecedf1ed5c3023ff86bfc28e097f7c6d56de34bf9b79d14266e2300",
+    "track": "G"
   }
 }

@@ -69,3 +69,45 @@ namespace-swapped `f(x,v)` (Track A P2.7) — kept as the independent oracle.
 8. Lyapunov: integrable→0 signature; Hénon–Heiles / flattened-log regression vs literature.
 Run across rk4_c/rk6_c/dopr54_c/dop853_c/dop853/odeint and axisymmetric +
 non-axisymmetric (triaxial Log, SpiralArms, Ellipsoidal) + closed-form potentials.
+
+## Pvar-pot.6 wrappers (PR #919, → feat/variational3d)
+3D C Hessian for the four "clean" wrappers whose Hessian = modulation ×
+calc<deriv>(...wrapped...): DehnenSmooth, GaussianAmplitude, TimeDependentAmplitude,
+SolidBodyRotation (SolidBody adds an additive φ-shift, invisible to its R/z
+2nd-derivs). hasC_dxdv3d = _check_c(self._pot, dxdv3d=True). Also: WrapperPotential
+now delegates `_phizderiv` to the wrapped potential (was missing) so the pure-Python
+reference works for non-axi children. C-vs-Python dxdv ≈1e-17. Deferred hard wrappers:
+Corotating (R-dep φ-shift→chain rule), RotateAndTilt (3×3 Hessian rotation),
+coord-transform wrappers (KuzminLike/OblateStaeckel/CylindricallySeparable).
+
+## Pvar-pot SCF/Multipole harmonic Hessian (feat/pvar-pot-scf)
+SCF (and Multipole) store Φ = Σ A_nlm phiTilde_nl(r) P_l^m(cosθ) [cos/sin](mφ); the
+Python side uses NumericalPotentialDerivativesMixin (no analytic 3D Hessian to port),
+so the C 3D Hessian is DERIVED:
+- Sum the full set of spherical-coordinate potential derivatives Φ_r, Φ_θ, Φ_rr,
+  Φ_θθ, Φ_rθ, Φ_φφ, Φ_rφ, Φ_θφ (φ-derivs from m·[cos/sin], θ-derivs from the
+  Legendre functions).
+- Angular θ-derivatives from the existing x=cosθ arrays via exact identities
+    dP/dθ   = -sinθ · dP/dx
+    d²P/dθ² = cosθ · dP/dx − l(l+1)P + m²/sin²θ · P   (from the assoc.-Legendre ODE)
+  The m²/sin²θ term is a genuine z-axis (R=0) coordinate singularity for m>0 (forces
+  stay regular there); orbits never hit the axis exactly. m=0 (incl. axisymmetric)
+  is regular everywhere.
+- Spherical→cylindrical chain rule (R=r sinθ, z=r cosθ): R2/z2/Rz from Φ_rr,Φ_rθ,
+  Φ_θθ + gradient×(second partials of r,θ); Rphi/zphi from Φ_rφ,Φ_θφ; phi2=Φ_φφ.
+  Verified: planar (z=0) reduction recovers the existing PlanarR2deriv=Φ_rr etc.
+- Cache widened to 6 value slots (one compute serves all 6 cyl components); nargs
+  +7→+10 in both orbit parsers.
+
+### Disk composites (DiskSCF/DiskMultipole/KuijkenDubinski) — same PR #920
+Analytic [Sigma_i(r), Hz_i(z)] disk-approximation pairs (C type 26) get their 3D
+Hessian: for Phi=Sigma(r)Hz(Z), R2/z2/Rz from Sigma',Sigma'',Hz,Hz' plus the
+identity Hz''(z)=hz(z) (1D Poisson; reuse the existing vertical-density function).
+phi-derivs identically zero (NULL, skipped by aggregators). hasC_dxdv3d set in
+KuijkenDubinski._finish_init = (disk pairs C-capable) AND _me (SCF/Multipole) has
+its 3D Hessian. Validated: DiskSCF det/symp ~1e-11/1e-10 FDflow ~1e-5; DiskMultipole
+det/symp ~1e-8 FDflow ~6e-6 (smooth sech2 vertical profile; exp |z| is C^0 at z=0
+like KuzminDisk -> FDflow at the kink, det/symp still pass).
+
+### Harmonic+disk family status: SCF, MultipoleExpansion, DiskSCF, DiskMultipole,
+### KuijkenDubinski all have full 3D C Hessian (PR #920 -> feat/variational3d).
