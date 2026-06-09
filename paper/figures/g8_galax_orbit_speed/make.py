@@ -34,20 +34,41 @@ from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 
-# (json file, legend label, colour, linestyle, marker)
+# (json files [low-N first, optional high-N second], legend label, colour, ls, marker).
+# GPU backends merge a low-N run (1000 dense saves, shows the small-N crossover)
+# with a high-N run (16 saves, fits up to ~3e5 orbits in 12 GiB) -- per-orbit
+# integration cost is the same (integration-bound, saves are cheap), and the
+# overlap points agree.
 _SERIES = [
-    ("galpy_cpu-C.json", "galpy (C, CPU)", "#000000", "-", "o"),
-    ("galax_cpu.json", "galax (JAX, CPU)", "#009E73", "--", "s"),
-    ("galax_gpu.json", "galax (JAX, GPU: TITAN Xp)", "#D55E00", "-", "D"),
+    (["galpy_cpu-C.json"], "galpy (C, CPU)", "#000000", "-", "o"),
+    (["galax_cpu.json"], "galax (JAX, CPU)", "#009E73", "--", "s"),
+    (["galpy-jax_gpu.json", "galpy-jax_gpu_hiN.json"], "galpy (JAX, GPU: TITAN Xp)", "#0072B2", "-", "^"),
+    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax (JAX, GPU: TITAN Xp)", "#D55E00", "-", "D"),
 ]
 
 
-def _load(fname):
+def _load_one(fname):
     path = os.path.join(_DATA, fname)
     if not os.path.exists(path):
         return None
     with open(path) as fh:
         return json.load(fh)
+
+
+def _load(fnames):
+    # merge results by N across the listed files (later files win on overlap)
+    merged = {}
+    meta = None
+    for fname in fnames:
+        d = _load_one(fname)
+        if d is None:
+            continue
+        meta = d
+        for r in d.get("results", []):
+            merged[r["N"]] = r
+    if meta is None:
+        return None
+    return {**meta, "results": [merged[n] for n in sorted(merged)]}
 
 
 @figure(
@@ -70,7 +91,7 @@ def make():
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")
-    ax.set_title(r"MWPotential2014 orbit: 2 Gyr, 1000 steps")
+    ax.set_title(r"MWPotential2014 orbit integration, 2 Gyr")
 
     # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
     ax.set_ylim(*ax.get_ylim())
@@ -87,7 +108,7 @@ def make():
     ax.legend(fontsize=7.5, loc="lower right", framealpha=0.92)
 
     # env stamp from the GPU JSON (the headline machine)
-    g = _load("galax_gpu.json") or {}
+    g = _load_one("galax_gpu.json") or {}
     ax.text(
         0.025, 0.30,
         f"galax {g.get('solver', 'Dopri8')} on {g.get('device', '?')}\n"
