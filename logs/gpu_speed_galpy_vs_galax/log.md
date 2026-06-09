@@ -92,3 +92,36 @@ comparison is orbit-matched, because galpy MWPotential2014 over t=56.2 natural u
   the migrated PSCw from feat/backends / #922).
 - galax ladder: run `scripts/galax_ladder.py` in galax's uv venv (see
   `../../paper/figures/_setup/galax_gpu_setup.md`).
+
+## Follow-up: WHY is galax's cutoff bulge ~2x faster — same `gammainc`?
+
+Yes, it is literally the same function. galpy's special-function router does **not**
+fall back for `gammainc` on jax (it is in neither `_NATIVE_MISSING` nor
+`_NATIVE_UNRELIABLE`), so it routes to native `jax.scipy.special.gammainc` — the same
+XLA `igamma` kernel galax calls. Identical per-call cost.
+
+The difference is the **number of `igamma` evaluations per RHS step** (counted via
+`jax.make_jaxpr`):
+
+| code  | igamma per step | why |
+|-------|----------------:|-----|
+| galpy | **2** | the EOM calls `_Rforce` and `_zforce` separately; each calls the spherical `_rforce(r)` (which contains the `igamma`), and XLA does **not** CSE the duplicate custom `igamma`. |
+| galax | **1** | acceleration = `-grad(Phi)`; `Phi` has one `igamma`, and autodiff differentiates that single call into all three Cartesian components (the `d/dx gammainc` is a closed-form exp/pow, not another `igamma`). |
+
+This is why a cheap potential (Hernquist) is at parity — recomputing its `_rforce`
+twice is free — but PSCw, whose `_rforce` carries an expensive `igamma`, pays ~2x.
+It also explains why the fused `grad(Phi)` experiment didn't help: galpy's *potential*
+`_evaluate` itself has 2 `igamma` (two different `a` parameters), so differentiating it
+is no cheaper.
+
+**Fix:** have the spherical force layer compute `_rforce(r)` **once** per step and
+project to (R, z) instead of `_Rforce`/`_zforce` each recomputing it. Confirmed this
+collapses the bulge to **1 igamma** (jaxpr count). Expected to remove roughly half of
+the bulge's ~0.089 ms/orbit, and it generalises to every special-function-backed
+spherical potential (Einasto, etc.). (A clean in-integrator wall-time demo still needs
+the real force layer — a quick hand-rolled EOM gave a bogus number because it dropped
+the `_amp` factor.)
+
+NOTE: the radial-force-once fix addresses the bulge only; galpy's disk+halo evaluation
+is also somewhat heavier than galax's, so it narrows but does not fully close the
+matched-MW gap.
