@@ -39,11 +39,19 @@ _DATA = os.path.join(os.path.dirname(__file__), "data")
 # with a high-N run (16 saves, fits up to ~3e5 orbits in 12 GiB) -- per-orbit
 # integration cost is the same (integration-bound, saves are cheap), and the
 # overlap points agree.
+# All GPU lines at MATCHED tolerances (rtol=atol=1e-8, the galax OrbitSolver
+# default; galpy's integrate_orbit called with rtol=atol=1e-8 instead of its
+# tighter 1e-10 default). Two galax-GPU lines: its native batched mode (ONE
+# shared PIDController for the whole batch -> one dt sequence) and a vmapped
+# per-orbit-adaptive run (same stepping semantics as galpy's vmap-of-solve) --
+# the remaining gap between the per-orbit lines is implementation overhead;
+# the gap between the galax lines is the batched-stepping architecture.
 _SERIES = [
     (["galpy_cpu-C.json"], "galpy (C, CPU)", "#000000", "-", "o"),
     (["galax_cpu.json"], "galax (JAX, CPU)", "#009E73", "--", "s"),
-    (["galpy-jax_gpu.json", "galpy-jax_gpu_hiN.json"], "galpy (JAX, GPU: TITAN Xp)", "#0072B2", "-", "^"),
-    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax (JAX, GPU: TITAN Xp)", "#D55E00", "-", "D"),
+    (["galpy-jax_gpu.json", "galpy-jax_gpu_hiN.json"], "galpy (JAX, GPU; per-orbit steps)", "#0072B2", "-", "^"),
+    (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax (JAX, GPU; per-orbit steps)", "#D55E00", "--", "v"),
+    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax (JAX, GPU; batched steps)", "#D55E00", "-", "D"),
 ]
 
 
@@ -112,7 +120,8 @@ def make():
     ax.text(
         0.025, 0.30,
         f"galax {g.get('solver', 'Dopri8')} on {g.get('device', '?')}\n"
-        "galpy dop853_c (single-thread C)",
+        "galpy dop853_c (single-thread C)\n"
+        "GPU lines: diffrax Dopri8, rtol=atol=1e-8 (matched)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
     )
     fig.tight_layout()

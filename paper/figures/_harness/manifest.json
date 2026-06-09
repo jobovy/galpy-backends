@@ -130,8 +130,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ca9f292",
-    "sha256": "0f87a0594ecedf1ed5c3023ff86bfc28e097f7c6d56de34bf9b79d14266e2300",
+    "git": "058bcf0",
+    "sha256": "9b59a9c6c5b18f7601b192716e742093a77f9db1736c5316fa25fb65a76fad65",
     "track": "G"
   }
 }

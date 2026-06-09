@@ -186,3 +186,30 @@ reference, N=1e3 batch, 2 Gyr): worst-case |err| 9.2e-6 (shared) vs 3.3e-6
 `galpy.backend._reference.integrate_orbit` (state (N,6) through one diffeqsolve)
 — no potential-class or force-layer changes — recovers ~3x on GPU batches at a
 modest, tolerance-tunable accuracy cost. Per-orbit mode stays the default.
+
+## Apples-to-apples re-run (matched tolerance + matched stepping) — g8 updated
+
+Re-measured the full g8 grids with everything matched (Dopri8, rtol=atol=1e-8,
+same orbit/potential), adding a vmapped per-orbit galax line (single-orbit
+`OrbitSolver.solve` under `jax.vmap` — galax supports this fine, it is just not
+its native mode):
+
+| N    | galpy per-orbit | galax per-orbit | galax batched (native) |
+|------|----------------:|----------------:|-----------------------:|
+| 1e4  | 0.262           | 0.223           | --                      |
+| 1e5  | 0.244           | 0.232           | ~0.08                   |
+| 3e5  | 0.211           | 0.209           | ~0.07                   |
+(ms/orbit, TITAN Xp)
+
+**At matched semantics galpy == galax to within ~1-5%.** The entire original
+"galax ~5x faster" observation decomposes as (tolerance defaults ~1.5x) x
+(batched vs per-orbit stepping ~2.9x) x (framework difference ~1.0x).
+
+Decision (user): galpy keeps per-orbit stepping in its in-backend integrator —
+per-orbit error guarantees and batch-independent trajectories (shared-controller
+mode only guarantees error in the batch-RMS sense, and the same IC integrated
+inside a different batch shifts by ~1e-6 at 1e-8 tolerance). The g8 figure now
+shows three GPU lines (galpy per-orbit / galax per-orbit / galax native batched)
+with the matched-tolerance note; data in
+paper/figures/g8_galax_orbit_speed/data/{galpy-jax_gpu*,galax_gpu_perorbit*}.json,
+measure scripts measure/{galpy_jax_measure_tol8,galax_perorbit_measure}.py.
