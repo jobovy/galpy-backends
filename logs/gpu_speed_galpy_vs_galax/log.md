@@ -125,3 +125,64 @@ the `_amp` factor.)
 NOTE: the radial-force-once fix addresses the bulge only; galpy's disk+halo evaluation
 is also somewhat heavier than galax's, so it narrows but does not fully close the
 matched-MW gap.
+
+## CORRECTION + final root cause (supersedes the two sections above)
+
+The "galpy evaluates igamma 2x/step and radial-force-once would fix it" claim above
+is **wrong** — it was based on the *jaxpr* (pre-optimization) count. Verified three
+independent ways:
+
+1. **Micro**: `gammainc(a,x)+gammainc(a,x)` costs exactly the same as a single call
+   (10.81 vs 10.84 ms @1e5; 597.7 vs 597.9 @1e7) and compiles to the same optimized
+   HLO (117 `while` strings vs 234 for genuinely-different arguments).
+2. **Real path**: galpy's `(Rforce, zforce)` pair = `Rforce` alone = manual
+   radial-once (2.27/2.28/2.30 ms on (1e5,) arrays; identical optimized HLO).
+3. **Source-level** (jax 0.8 AND 0.10, verified in `jax/_src/lax/special.py` +
+   openxla `hlo_cse.cc`): jax expands igamma at lowering into inline while-loops
+   (no `chlo.igamma`), and XLA's HloCSE merges structurally identical while loops
+   with identical inputs. Identical behavior in both versions.
+
+**XLA CSE already dedupes the duplicate igamma. There is nothing to optimize in
+galpy's spherical-potential special-function pattern, and subclassing PSCw under
+SphericalPotential is performance-neutral** (PSCw already hand-implements the
+identical `_rforce(r)*R/r` pattern; the traced graph is the same either way).
+
+### The actual residual factor: batching architecture, not special functions
+
+Further controlled experiments:
+- galax controlled bulge-swap (BovyMW's own disk+halo): full 0.080 / disk+halo
+  0.036 / Hernquist-bulge 0.038 → galax's cutoff bulge genuinely adds 0.044
+  (so the igamma bulge is intrinsically expensive in BOTH codes).
+- dtype: galax solution + gradient verified float64 (not an f32-vs-f64 sm_61 artifact).
+- jaxlib version: an identical pure-jax MW-like benchmark (no galpy/galax imports;
+  fused-grad RHS + diffrax Dopri8 + PID 1e-8, vmap N=1e5) gives **0.283** ms/orbit
+  on jax 0.10.1 and **0.280** on jax 0.8.0 (galax's env) — version is irrelevant.
+  igamma kernel: 14.2 vs 13.7 ms @1e6 — same.
+- step counts @1e-8: galpy MW 235 steps; galax BovyMW **312** steps (galax takes
+  MORE steps yet is 3x faster) → the gap is per-RHS-eval throughput, not stepping.
+
+**Root cause: vmap-of-solve vs batch-as-one-system.** galpy's in-backend
+`integrate_orbit` vmaps a per-orbit `diffeqsolve` (each orbit its own adaptive
+controller; the batched while-loop runs max-over-batch iterations — measured
+per-orbit steps across the perturbed batch: median 243, p95 319, max 382+ — with
+every iteration processing all lanes). galax integrates the whole batch as ONE ODE
+system with a SHARED PIDController (one global error norm -> one dt sequence,
+**207 steps total** in the pure-jax replica). Rewriting the same pure-jax benchmark
+batch-as-one-system: **0.283 -> 0.097 ms/orbit (2.9x)** — landing at galax's 0.080.
+
+Accuracy trade-off of shared stepping (vs per-orbit, against an rtol=1e-12
+reference, N=1e3 batch, 2 Gyr): worst-case |err| 9.2e-6 (shared) vs 3.3e-6
+(per-orbit) at nominal 1e-8 — same order, ~3x looser at the batch tail.
+
+### Final decomposition of the original ~4.5x
+| factor | size | nature |
+|---|---|---|
+| tolerance defaults (1e-10 vs 1e-8) | ~1.5x | benchmark artifact — match in g8 |
+| vmap-of-solve vs shared-controller batch | ~2.9x | architecture choice; opt-in batch mode would close it |
+| backend dispatch / igamma duplication / jaxlib version / dtype | ~1.0x | all ruled out |
+| PSCw igamma bulge | intrinsic in both codes | same kernel, same cost (~0.04 ms/orbit shared-mode) |
+
+**Actionable (surgical, additive):** an opt-in shared-controller batched mode in
+`galpy.backend._reference.integrate_orbit` (state (N,6) through one diffeqsolve)
+— no potential-class or force-layer changes — recovers ~3x on GPU batches at a
+modest, tolerance-tunable accuracy cost. Per-orbit mode stays the default.
