@@ -22,7 +22,7 @@ suppresses the friction).  The 6x6 STM M(t) is built from the 6 canonical
 rectangular deviations via Orbit.integrate_dxdv (dopr54_c, rtol=atol=1e-12);
 det M(t) is compared against the Abel-Jacobi-Liouville prediction
 exp(int_0^t tr(dF/dv) dt'), with tr(dF/dv) evaluated along the orbit from the
-C-extension rectangular force Jacobian (evalRectForceJacobian, the exact
+velocity Jacobian of the friction force by central FD of the Python forces (the
 Jacobian the C variational integrator uses) and integrated with the
 trapezoidal rule on the fine output grid.
 """
@@ -88,37 +88,46 @@ def env_stamp():
     }
 
 
-def c_rect_force_jacobian(pot, q, t=0.0):
-    """(dF/dx, dF/dv) (3x3 each) of the summed rectangular force from the C
-    extension's single-point evaluator (evalRectForceJacobian) -- the exact
-    Jacobian the C variational integrator uses."""
-    npot, pot_type, pot_args, pot_tfuncs = _parse_pot(pot)
-    pot_tfuncs = _prep_tfuncs(pot_tfuncs)
-    flags = ("C_CONTIGUOUS", "WRITEABLE")
-    func = _lib.evalRectForceJacobian
-    func.argtypes = [
-        ctypes.c_double,
-        ndpointer(dtype=numpy.float64, flags=flags),
-        ctypes.c_int,
-        ndpointer(dtype=numpy.int32, flags=flags),
-        ndpointer(dtype=numpy.float64, flags=flags),
-        ctypes.c_void_p,
-        ndpointer(dtype=numpy.float64, flags=flags),
-        ndpointer(dtype=numpy.float64, flags=flags),
-    ]
-    q = numpy.require(numpy.array(q), dtype=numpy.float64, requirements=["C", "W"])
-    jac_x, jac_v = numpy.zeros(9), numpy.zeros(9)
-    func(
-        ctypes.c_double(t),
-        q,
-        ctypes.c_int(npot),
-        pot_type,
-        pot_args,
-        pot_tfuncs,
-        jac_x,
-        jac_v,
+def fd_velocity_jacobian(pot, q, t=0.0, eps=1e-6):
+    """(dF/dx, dF/dv) (3x3 each) of the summed rectangular force by CENTRAL
+    FINITE DIFFERENCES of the PYTHON forces (evaluateRforces/zforces/
+    phitorques with v=..., assembled to Cartesian). Independent of the C
+    variational code, so comparing det M(t) from the C STM against
+    exp(int tr(dF/dv) dt) built from this trace cross-validates the two
+    implementations. (The C single-point evaluator this script originally
+    used was removed from galpy per maintainer review -- C internals are not
+    exposed directly.)"""
+    from galpy.potential import (
+        evaluatephitorques,
+        evaluateRforces,
+        evaluatezforces,
     )
-    return jac_x.reshape(3, 3), jac_v.reshape(3, 3)
+
+    def cart_force(qq):
+        x, y, z, vx, vy, vz = qq
+        R = numpy.sqrt(x * x + y * y)
+        phi = numpy.arctan2(y, x)
+        cp, sp_ = numpy.cos(phi), numpy.sin(phi)
+        vR = vx * cp + vy * sp_
+        vT = -vx * sp_ + vy * cp
+        kw = dict(phi=phi, t=t, v=[vR, vT, vz], use_physical=False)
+        FR = evaluateRforces(pot, R, z, **kw)
+        Fp = evaluatephitorques(pot, R, z, **kw)
+        Fz = evaluatezforces(pot, R, z, **kw)
+        return numpy.array(
+            [cp * FR - sp_ / R * Fp, sp_ * FR + cp / R * Fp, Fz]
+        )
+
+    jac_x = numpy.zeros((3, 3))
+    jac_v = numpy.zeros((3, 3))
+    for j in range(3):
+        dq = numpy.zeros(6)
+        dq[j] = eps
+        jac_x[:, j] = (cart_force(q + dq) - cart_force(q - dq)) / (2.0 * eps)
+        dq = numpy.zeros(6)
+        dq[3 + j] = eps
+        jac_v[:, j] = (cart_force(q + dq) - cart_force(q - dq)) / (2.0 * eps)
+    return jac_x, jac_v
 
 
 def fdm_regime(fdf, q):
@@ -245,7 +254,7 @@ def main():
     print(f"[{MODE}] tr(dF/dv) along the orbit from the C Jacobian ...", flush=True)
     trJv = numpy.array(
         [
-            numpy.trace(c_rect_force_jacobian(frict, rect[k], t=times[k])[1])
+            numpy.trace(fd_velocity_jacobian(frict, rect[k], t=times[k])[1])
             for k in range(NT)
         ]
     )
