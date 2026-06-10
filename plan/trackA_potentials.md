@@ -50,8 +50,9 @@ migrated, all verified numpy-byte-identical:
   router); merge after #930/#931 for end-to-end backend eval.
 Coverage: #931 had 4 uncovered axisymmetric phi=None guards → covered by test
 (not excluded). Branch hygiene: main→feat/backends synced (temporarily a merge
-commit; **maintainer rule: rebase-only on long-lived branches** — one rebase
-scheduled after the P2.5 merges, which linearizes and drops the merge commit).
+commit; **maintainer rule: rebase-only on long-lived branches** — executed 2026-06-10
+after the P2.5 merges: 18 commits replayed cleanly onto main (incl. #925),
+merge commit dropped, history linear at d3cccc03; 185 backend tests pass).
 
 ## 2026-06-09 — also landed/learned
 - galpy-vs-galax GPU: gap fully decomposed (tolerance 1.5x + batched-stepping
