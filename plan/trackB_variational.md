@@ -196,3 +196,18 @@ all verified):
 With these, the variational track is feature-complete: every C-capable
 potential/force has dxdv support except by-design exclusions (planar
 dissipative: no such force exists — maintainer-confirmed out of scope).
+
+## 2026-06-10 — z-aliasing fix cascade (#944) + Lyapunov spectrum (#945)
+- **#944 (merged)**: integrateFullOrbit_dxdv returned the base orbit with z
+  overwritten by vT (rect_to_cyl returns Z by reference; in-place column
+  assignment clobbered it). Found by the Track G figure measurements; invisible
+  to ALL deviation-based validation (rectOut columns correct) and even to the
+  lyapunov integrable test (a corrupted restart is just a different regular
+  orbit). Mutation-verified regression test added.
+- Cascade: #926/#933/#934–#941 rebased onto the fix; doc-notebook + #926
+  examples refreshed — MW 3D λ: corrupted 1.18→1.06 /Gyr became correct
+  0.38→0.21 /Gyr (HH planar values unchanged, planar path never had the bug).
+- **#945**: Orbit.lyapunov(spectrum=True) — full Benettin/QR spectrum.
+  HH chaotic orbit F: [0.0519, 0.0004, −0.0002, −0.0505] (λ1 in lit band,
+  flow-direction pair ≈0, pairing 2.7%, sum rule 3.1%); Isochrone 3D: all six
+  within ±ln(t)/t. 11/11 lyapunov tests on the fixed base.
