@@ -211,3 +211,15 @@ dissipative: no such force exists — maintainer-confirmed out of scope).
   HH chaotic orbit F: [0.0519, 0.0004, −0.0002, −0.0505] (λ1 in lit band,
   flow-direction pair ≈0, pairing 2.7%, sum rule 3.1%); Isochrone 3D: all six
   within ±ln(t)/t. 11/11 lyapunov tests on the fixed base.
+
+## 2026-06-10 — #933 review rework (+ #934/#935 cascade)
+Per maintainer review: RectForceJacobian → **RectDissipativeForceJacobian**
+(galpy DissipativeForce nomenclature; NULL for conservative); the exported
+ctypes evaluators REMOVED (galpy convention: C tested only through regular
+orbit use) — per-entry Jacobian-vs-FD unit tests replaced by orbit-level
+validation, with the phase-volume trace now from **central FD of the Python
+forces** (independent cross-validation of the C STM; law still ≤1.6e-6);
+evalRectDeriv_dxdv simplified to the NULL-safe-aggregator straight-line
+pattern (conservative path re-verified **18/18 byte-identical** vs base);
+stale force enumerations stripped from warnings. Batteries: 126/128/130.
+g11 measure script updated to the Python-FD trace (committed data unchanged).
