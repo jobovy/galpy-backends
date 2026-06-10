@@ -111,3 +111,59 @@ like KuzminDisk -> FDflow at the kink, det/symp still pass).
 
 ### Harmonic+disk family status: SCF, MultipoleExpansion, DiskSCF, DiskMultipole,
 ### KuijkenDubinski all have full 3D C Hessian (PR #920 -> feat/variational3d).
+
+## 2026-06-09 — SCF planar sign bug, FD-of-flow doctrine, DiskSCF planar (#923, #925)
+- Adding a C-vs-analytic-Python consistency test to #921 exposed that
+  SCFPotential.c's sum_spher_2nd_derivs returned the PLANAR 2nd derivs
+  sign-flipped (force `-=` convention copied; R2deriv must be +d2Phi). The C
+  planar variational STM was wrong for SCF since the March Multipole-C commit;
+  test_liouville_planar passed throughout because a sign-flipped-but-symmetric
+  Hessian is the Hessian of -Phi (still Hamiltonian, det M=1 holds).
+  **Doctrine (now a standing project rule + tests): det(M)=1/symplecticity are
+  structural, not absolute — every variational Hessian must be pinned by
+  finite-difference-of-the-flow.** Fix + test_harmonic_planar_stm_vs_fd_of_flow
+  = PR #923 (merged to main). Post-fix: C STM matches FD-of-flow to ~1e-6.
+- #920's 3D path (sum_spher_full) was independently verified correct (FD-of-flow
+  ~7.5e-7 axi+non-axi); planar/3D now consistent at z=0 (diff exactly 0).
+- DiskSCF-family planar 2nd derivs in C (#925 → main): H(0)=0 identically for
+  both vertical profiles so the correction's planar Hessian is exactly zero;
+  wired defensively + hasC_dxdv propagation; FD-of-flow <1e-5; DiskSCF +
+  DiskMultipole removed from the liouville exclusion list.
+
+## 2026-06-09 — Pvar-lyapunov (#926 → feat/variational3d)
+Orbit.lyapunov: Benettin renormalization on integrate_dxdv (planar+3D, C, multi-
+orbit, frequency units). Validation: Hénon–Heiles chaotic orbit F (Skokos+02)
+λ→0.044–0.051 vs literature 0.04–0.08 (Benettin+76); regular orbit λ≈ln(t)/t,
+chaotic/regular ratio ~300; renormalized-vs-single-shot 2e-7; C-vs-Python <2%;
+121-test dxdv battery green. + doc notebook tutorials/orbits/
+phase_space_volumes_and_chaos.ipynb (2D/3D dxdv + Liouville + Lyapunov).
+**Bug found by the notebook: CompositePotential/baseCompositePotential did not
+aggregate hasC_dxdv3d → MWPotential2014 (a CompositePotential) silently fell
+back to Python odeint for ALL 3D variational work (21s + NaNs vs 1s C).** Fixed
++ regression test in #926 (duplicated independently in #933; dedupe at rebase).
+
+## 2026-06-09 — Pvar-dissip-struct (#933 → feat/variational3d)
+Velocity-dependent variational equations in C: RectForceJacobian(t,q,jac_x,jac_v)
+pointer in potentialArg (rectangular 3x3 dF/dx, dF/dv; NULL-safe everywhere);
+evalRectDeriv_dxdv generalized to d(δv)/dt=(K+Σ∂F/∂x)δx+(Σ∂F/∂v)δv with
+calcRforce/phitorqueConservative keeping friction out of the K-assembly;
+conservative path verified BIT-IDENTICAL (pre/post builds, 3 pots × 3 integrators).
+Chandrasekhar Jacobians fully analytic (F=A(x,|v|)v ⇒ closed forms incl.
+dlnΛ/dv and clamped-spline σ'); single documented FD term: ∂ρ/∂x via central FD
+of calcDensity (no density-gradient C interface). FDMDynamicalFriction explicitly
+gated hasC_dxdv3d=False (would inherit Chandrasekhar's True with wrong Jacobians).
+Python dxdv methods raise NotImplementedError for dissipative (Python EOM_dxdv is
+conservative-only). Validation: Jacobian-vs-FD ≤2.1e-8; FD-of-flow ≤2.8e-5;
+**phase-volume law det M(t)=exp(∫tr(∂F/∂v)dt') to 3.1e-6 rel, det M=0.518<1**
+(the non-conservative replacement for Liouville); conservative battery 121/121.
+
+## 2026-06-09 — remaining-tail fan-out (in progress, 8 agents)
+Audit: 38 potentials have the full 3D C Hessian. Remaining, launched as a
+workflow fan-out (each with FD-of-flow doctrine + adversarial verifier):
+fdm-jacobians + noninertial-frame (off #933; NonInertial physics test:
+tr(∂F/∂v)=0 ⇒ det M=1 despite velocity dependence), rotateandtilt-conjugation,
+corotating R-dependent-pattern-speed chain rule, kuzminlike z-substitution,
+movingobject (planar+3D), interpRZ spline 2nd derivs, softenedneedlebar
+(no 2nd derivs at all today; sympy-assisted derivation). Planar dissipative dxdv: confirmed OUT OF SCOPE by the
+maintainer (2026-06-09) — no concrete planar dissipative force exists in galpy
+to exercise it.
