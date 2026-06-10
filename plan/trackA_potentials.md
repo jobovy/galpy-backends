@@ -62,3 +62,15 @@ merge commit dropped, history linear at d3cccc03; 185 backend tests pass).
   XLA HloCSE merges duplicate identical igamma expansions (verified micro +
   real path + jax/XLA source) — no special-function call-site optimization
   needed in the spherical force layer.
+
+## 2026-06-10 — P2.5b: time-dependent Multipole backend (#942)
+TD (tgrid=) MultipoleExpansion now evaluates under jax/torch: the CubicSpline-
+in-t over power-basis radial PPoly stacks re-packed into stacked tables, double
+clamped-searchsorted gather + dt-Horner in numpy's exact op order → unchanged
+static radial Horner; jit-traceable. Parity 2e-16–8e-16 (11 methods × on/
+between/outside-tgrid × axi/non-axi × jax+torch); numpy byte-identical (2235-
+line grid vs pristine, sha256-equal); 100% patch coverage; adversarial verifier
+confirmed with its own independent TD potential (1.7e-15) incl. a d/dt gradient
+check. **Surfaced pre-existing issue (decision needed): the KuijkenDubinski
+layer does not forward t to the inner _me calls — TD DiskMultipole evaluates
+the embedded expansion at t=0; honoring t is a numpy-path value change.**
