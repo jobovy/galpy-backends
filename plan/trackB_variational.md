@@ -157,7 +157,7 @@ conservative-only). Validation: Jacobian-vs-FD ≤2.1e-8; FD-of-flow ≤2.8e-5;
 **phase-volume law det M(t)=exp(∫tr(∂F/∂v)dt') to 3.1e-6 rel, det M=0.518<1**
 (the non-conservative replacement for Liouville); conservative battery 121/121.
 
-## 2026-06-09 — remaining-tail fan-out (in progress, 8 agents)
+## 2026-06-09 — remaining-tail fan-out COMPLETE (8 items → PRs #934–#941)
 Audit: 38 potentials have the full 3D C Hessian. Remaining, launched as a
 workflow fan-out (each with FD-of-flow doctrine + adversarial verifier):
 fdm-jacobians + noninertial-frame (off #933; NonInertial physics test:
@@ -167,3 +167,32 @@ movingobject (planar+3D), interpRZ spline 2nd derivs, softenedneedlebar
 (no 2nd derivs at all today; sympy-assisted derivation). Planar dissipative dxdv: confirmed OUT OF SCOPE by the
 maintainer (2026-06-09) — no concrete planar dissipative force exists in galpy
 to exercise it.
+
+Tail fan-out results (16 agents: 8 impl + 8 adversarial verify; all complete,
+all verified):
+- **#934 FDM Jacobians**: fully analytic across ALL FDM regimes (zero-velocity
+  Cin series, dispersion, mu-interpolated, classical cutoff×3 lnΛ, const);
+  Jac-vs-FD 1.55e-8 (regime-asserted tests); FD-of-flow 2.45e-5 (suppression
+  asserted active); phase-volume law 1.59e-6, det M=0.677.
+- **#935 NonInertialFrameForce**: exact closed forms (−2[Ω]ₓ etc., all Omega
+  configs); KEY: tr(∂F/∂v)=0 ⇒ det M(t)=1 despite velocity dependence — the
+  volume-preserving velocity-block test friction can't provide.
+- **#936 RotateAndTilt**: Hessian conjugation RᵀHR + offset; numpy byte-identical;
+  2D-bridge tests skip by design (no invariant z=0 plane). Pre-existing
+  force-cache-key-missing-t noted (separate issue).
+- **#937 Corotating**: R-dependent pattern-speed chain rule. **Found+fixed a real
+  Python bug: Rzderiv missed the −s_R·Φ_zφ′ cross term (13–99% wrong, β≠1,
+  t≠to; nothing consumed it)**. C-vs-Python 5.1e-12 post-fix.
+- **#938 KuzminLike**: z-substitution chain rule; b=0 kink documented
+  (pre-existing); mutation-tested (wrong Hessian fails at O(1)).
+- **#939 MovingObject**: planar+3D (was: ERROR on any dxdv attempt); kernel
+  Hessian at shifted point; C-vs-Python track interp 6e-11.
+- **#940 interpRZ**: spline 2nd derivs, interp-limited ~2-3e-5; R2deriv/z2deriv
+  error→value behavior change flagged.
+- **#941 SoftenedNeedleBar**: Hessian derived from scratch (sympy-verified,
+  hand-written C), planar+3D+Python analytic; bare default stays excluded from
+  liouville_planar — its fixed IC is strongly chaotic (‖STM‖~6e4, det error
+  saturates ~0.1 from cancellation); covered via a non-chaotic config instead.
+With these, the variational track is feature-complete: every C-capable
+potential/force has dxdv support except by-design exclusions (planar
+dissipative: no such force exists — maintainer-confirmed out of scope).
