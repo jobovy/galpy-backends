@@ -136,3 +136,58 @@ exercises `run`/`verify`/`manifest`.
 ## Paper mapping
 Figures map to paper sections 1:1 with the tracks: G1→backends, G2→performance,
 G3/G4→autodiff & variational/dynamics, G3(stream)→the streams showcase.
+
+---
+
+## 2026-06-10 — G4 delivered: variational-equations figures g9/g10/g11
+
+Three paper figures for the variational section, all following the g8
+cross-environment pattern (standalone `measure/` scripts run against the
+Track-B galpy worktrees writing machine/worktree-stamped `data/*.json`;
+plot-only `make.py` registered with the harness, byte-stable from the JSONs;
+`verify` passes for all three):
+
+- **g9_variational_validity** (sha256 `74c2b3f68633…`) — measured against
+  `/var/tmp/pvar-lyap` (feat/pvar-lyapunov @7ca49a1b + local fix, see below).
+  (a) Liouville `|det M(t)−1|` ≤ 2.6e-8 (3D 6×6) / 1.3e-6 (planar 4×4) over
+  t=0–100, MWPotential2014, dop853_c 1e-12; (b) symplecticity
+  `‖MᵀΩM−Ω‖max` ≤ 1.0e-6 (3D) / 1.3e-6 (planar); (c) FD-of-the-flow V-curve
+  at t=10: forward arm ∝ε, central arm ∝ε², roundoff arm ∝1/ε, STM matching
+  the best central FD at the 1.3e-8 floor (ε=1e-6) — the ground-truth panel
+  (det/symp are necessary-not-sufficient); (d) 2D-reduction bridge ≤ 1.0e-8
+  over t=0–100 with exactly zero out-of-plane leakage.
+- **g10_lyapunov** (sha256 `4231b0708ec7…`) — same worktree. Hénon–Heiles
+  E=1/8, t→3e4: chaotic orbit F converges to λ=0.0456 (0.0425 at t=1.5e4),
+  inside the 0.04–0.08 literature band; regular orbit E at the same energy
+  decays ~ln(t)/t to 2.7e-4 (×170 separation). MWPotential2014 Sun-like 3D
+  orbit, t→3e3: λ(t) tracks ln(t)/t to 2.8e-3 (≈0.08/Gyr upper limit).
+- **g11_dissipative_phase_volume** (sha256 `7825e333ee59…`) — measured against
+  `/var/tmp/pvar-dissip` (@43451e7a) and `/var/tmp/pvt-fdm` (@36615802).
+  det M(t) from the 6×6 STM vs exp(∫tr(∂F/∂v)dt′) from the C
+  `evalRectForceJacobian` trace, decaying orbit in MWPotential2014 + friction
+  (GMs=0.008): Chandrasekhar contracts 5+ decades (det M(10)=6.1e-6,
+  r→0.05), FDM at identical GMs (mℏ⁻¹=10, dispersion regime,
+  C_FDM/C_CDM∈[0.48,0.59]) only to 0.52 (r→0.79). Max relative difference of
+  the two sides: 5.7e-6 (Chandrasekhar; trapezoid-quadrature-limited O(h²)) /
+  3.5e-7 (FDM).
+
+**Bug found & locally fixed while making g10** (needs landing on
+feat/pvar-lyapunov, + the same latent bug in the dissip/fdm branches):
+`integrateFullOrbit_dxdv` corrupts the returned *base orbit* — `rect_to_cyl`
+passes `Z` through **by reference**, so `Zout` aliases `out[...,2]`, which is
+overwritten with `vT` before `out[...,3] = Zout` runs ⇒ the returned z-column
+equals vT (and with `rectOut=False` the deviation Jacobian is evaluated at
+the wrong z too). The deviation columns with `rectOut=True` (all of
+g9/g11) are unaffected, but `Orbit.lyapunov` restarts every renormalization
+segment from the corrupted orbit: unfixed, 3D λ estimates plateau at a
+spurious ~0.05 *even for the integrable isochrone* (and depend on the
+renormalization interval). The existing test battery missed it because no
+test consumed the base-orbit columns of the 3D dxdv output, and
+test_lyapunov_integrable's fine grid happened to pass its loose threshold.
+Fix: copy `Zout`/`vzout` before the in-place column assignments
+(uncommitted in /var/tmp/pvar-lyap; data stamped `galpy_dirty: true`).
+Post-fix validation: segmented vs single-shot deviation propagation agrees to
+7e-13; isochrone λ identical for renorm intervals 1 and 10 (0.006414);
+MW2014 regular orbits decay ~ln(t)/t as they must. Suggested regression
+tests: base-orbit columns of 3D integrate_dxdv vs plain integrate;
+renorm-interval independence of lyapunov.

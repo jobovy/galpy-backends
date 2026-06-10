@@ -36,7 +36,7 @@ Hessian) + **Lyapunov exponents** in C.
 | Pspecial (special-function router) | 0 | → feat/backends | ✅ **#916** merged | native-vs-fallback + grad-vs-FD | jax hyp2f1/hyp1f1 forced to fallbacks |
 | P2.5 special-backed (Einasto…DiskSCF) | A | → feat/backends | **#927–#932** open (CI green) | numpy byte-parity vs pristine + AD | TD Multipole queued (P2.5b) |
 | In-backend integrator (diffrax/torchdiffeq) | D | → feat/backends | ✅ merged (#906) | C-parity ~1e-9; param-grads via AD | per-orbit stepping kept (vs galax batched: 2.9x, by design) |
-| Track G figures/diagnostics | G | (cross-cutting) | ⏳ continuous | g1–g8 in manifest | g8 matched-tolerance + galax per-orbit apples-to-apples |
+| Track G figures/diagnostics | G | (cross-cutting) | ⏳ continuous | g0–g11 in manifest | g9–g11 variational/Lyapunov/dissipative figures; found+fixed lyapunov 3D restart bug (z←vT aliasing in integrateFullOrbit_dxdv) |
 | P2.6 wrappers, Track C/E/F | — | — | ⏳ next | — | — |
 
 (Update this table as PRs land.)

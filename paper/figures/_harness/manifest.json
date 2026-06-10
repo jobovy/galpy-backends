@@ -14,6 +14,36 @@
     "sha256": "348235458993e9904d37f31e76c26aeb4e6d7170405ecb4d96863ab0736cc552",
     "track": "G"
   },
+  "g10_lyapunov": {
+    "description": "Largest-Lyapunov-exponent running estimates (Orbit.lyapunov): chaotic vs regular Henon-Heiles at E=1/8 with the literature band, and a regular MWPotential2014 orbit [cross-env measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "4a23413",
+    "sha256": "4231b0708ec7a63ebd2896b4647bc3d1f750ac76e05ff32416eb1e9ae9d7b4ec",
+    "track": "G"
+  },
+  "g11_dissipative_phase_volume": {
+    "description": "Dissipative phase-volume law det M(t)=exp(int tr(dF/dv) dt'): STM determinant vs C-Jacobian trace integral for Chandrasekhar and FDM friction in MWPotential2014 [cross-env measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "4a23413",
+    "sha256": "7825e333ee597d16091d259eed34f5637ceec3cd44a59c8fd64ceb3e9d6d7473",
+    "track": "G"
+  },
   "g1_backend_parity": {
     "description": "numpy<->jax/torch value parity + jax/torch autodiff identities (migrated potentials)",
     "env": {
@@ -132,6 +162,21 @@
     },
     "git": "058bcf0",
     "sha256": "9b59a9c6c5b18f7601b192716e742093a77f9db1736c5316fa25fb65a76fad65",
+    "track": "G"
+  },
+  "g9_variational_validity": {
+    "description": "Variational-equation validity: Liouville det M, symplecticity, FD-of-the-flow V-curve, 2D-reduction bridge (MWPotential2014, dop853_c) [cross-env measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "4a23413",
+    "sha256": "74c2b3f686339cfdc26e0bfe4f88d6ac55dfa929a36dec1216b45f12484d570a",
     "track": "G"
   }
 }
