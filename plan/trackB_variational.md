@@ -241,3 +241,23 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   the spectrum with the SAME dxdv0 as the single-vector run (|R_11|
   accumulation ≡ single-vector Benettin; agreement 1.4e-8) instead of
   comparing decorrelated chaotic finite-time estimates at 5%.
+
+## 2026-06-11 — #934 (FDM) + #935 (NonInertial) retarget + full C-branch coverage
+- Post-#933-squash retarget: both branches rebased
+  `--onto origin/feat/variational3d 2e234049` (squash tree-identical to the
+  old tip, so the replays were clean); phantom CONFLICTING → MERGEABLE.
+- #934: all 39 uncovered FDM-Jacobian C lines closed via 7 orbit-level
+  FD-of-flow configs (template = the Chandrasekhar branch battery):
+  minr-gate / σ-spline-clamp / rhm-lnΛ+cdm-cutoff / const-lnΛ+cdm-cutoff /
+  zero-velocity-Cin / μ-intermediate / const-FDMfactor. Non-vacuity via the
+  `_fdm_c_regime` Python replication of the C regime logic (asserted regime
+  set per orbit). gcov (CI-exact -O0 --coverage) 39/39 hit; mutations 8/8
+  detected. Design note: the lnΛ-branch configs pair with the classical
+  cdm-cutoff regime so the lnΛ *derivatives* are consumed (mutation-
+  detectable), not dead.
+- #935: the 10 uncovered NonInertial-Jacobian lines = 3 branches —
+  translation-only early exit (J≡0), scalar Ω_z(t)-as-function
+  (tdep/tdep_deriv spline path), constant-vector Ω+Ω̇ componentwise.
+  3 new configs, gcov 10/10, mutations 9/9 (incl. a garbage-entry injection
+  before the early return). Quirk: vector Omega must be a numpy array
+  (parse_frequency rejects lists) — existing convention, not a bug.
