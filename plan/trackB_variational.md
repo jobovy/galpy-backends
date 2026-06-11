@@ -261,3 +261,21 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   3 new configs, gcov 10/10, mutations 9/9 (incl. a garbage-entry injection
   before the early return). Quirk: vector Omega must be a numpy array
   (parse_frequency rejects lists) — existing convention, not a bug.
+
+## 2026-06-11 (later) — full tail retarget after #934 merge
+- #935 re-conflicted post-#934 (both PRs append batteries at the same
+  test_orbit.py anchor); resolved by reconstructing base + both blocks
+  (noninertial battery placed after the FDM one), coverage commit replayed
+  clean, diff purely additive, 21/21 dissipative-dxdv tests green → pushed
+  4d699d3e, MERGEABLE.
+- The six Pvar-pot tail PRs #936–#941 predated #926/#933/#934 entirely
+  (merge-base 8f50486f) → 6-agent workflow fan-out, one per worktree, rebased
+  all onto 198f7c07. 3 clean, 3 with conflicts (all purely-additive
+  test_orbit.py interleaves at shared anchors + one duplicate
+  CompositePotential hasC_dxdv3d hunk in movingobj dropped as already-merged).
+  Verified per branch: base's rewritten evalRectDeriv_dxdv untouched (0
+  touching lines in every diff; only per-potential wiring hunks), build OK,
+  own battery + dissipative regression battery (14 tests) green under the
+  worktree-import guard. All six pushed; notebooks cancelled.
+- Tips: 936=0ae41d2c 937=d0c2caeb 938=86c5b059 939=4febaf48 940=b75d8354
+  941=3c69d0db.
