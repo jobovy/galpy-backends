@@ -279,3 +279,24 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   worktree-import guard. All six pushed; notebooks cancelled.
 - Tips: 936=0ae41d2c 937=d0c2caeb 938=86c5b059 939=4febaf48 940=b75d8354
   941=3c69d0db.
+
+## 2026-06-11 (later still) — tail landings + final retarget pass
+- Merged today in order: #934 (FDM), #935 (NonInertial), #936 (RotateAndTilt),
+  #940 (interpRZ), #941 (SoftenedNeedleBar). #940/#941 needed no re-rebase
+  (merge-tree-simulated clean in sequence); #941's windows streamgapdf job was
+  a runner-setup infra flake (194-line log), rerun → green.
+- User found a committed conflict marker in HISTORY.txt — full-branch sweep
+  showed exactly ONE stray line (line 17, ">>>>>>> 0e732bc4"), introduced by
+  the FDM stacking rebase and squashed into feat/variational3d via #934;
+  AUTHORS.txt "=======" hits are RST underlines. Root cause: repo lacks the
+  check-merge-conflict pre-commit hook AND diff-vs-base verification can't see
+  inherited markers. Fix rides on #937 (marker deleted + hook added,
+  9ab4f0b2). Lesson memorized: full-tree marker grep before every rebase push
+  (now mandatory in fan-out agent prompts).
+- Final 3-agent pass: #937/#938/#939 rebased onto dc291335 (conftest registry
+  + test-anchor unions; movingobj keeps _planar_invariant adjacent to its
+  consumer). Each: build OK, own battery + 21-test dissipative regression
+  green, marker sweep clean (sole hit = the base's line that #937 removes).
+  merge-tree chain sim: 937 clean; 938-after-937 and 939-after-938 WILL
+  re-conflict (shared anchors) → one mechanical re-rebase per landing.
+- Tips: 937=9ab4f0b2 938=d94a2289 939=034ef885.
