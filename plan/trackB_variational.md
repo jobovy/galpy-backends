@@ -223,3 +223,21 @@ evalRectDeriv_dxdv simplified to the NULL-safe-aggregator straight-line
 pattern (conservative path re-verified **18/18 byte-identical** vs base);
 stale force enumerations stripped from warnings. Batteries: 126/128/130.
 g11 measure script updated to the Python-FD trace (committed data unchanged).
+
+## 2026-06-11 — #933 round-2 review + coverage closure
+- calcRforce/calczforce/calcphitorque generalized with a final
+  include_dissipative int (macros supply 1 → all existing call sites
+  unchanged; the variational RHS calls with 0); the Conservative duplicate
+  aggregators deleted. Conservative path hash-verified bit-identical vs base.
+- The 11 uncovered Chandrasekhar-Jacobian C lines closed via ORBIT-LEVEL
+  tests only (maintainer convention; the ctypes evaluators are gone):
+  parametrized FD-of-flow over const-lnΛ / rhm-Coulomb-log / minr-gate /
+  σ-clamp configs, each with a non-vacuity branch guard, mutation-validated
+  1:1. Physics note: the minr-gate test keeps the orbit entirely inside minr —
+  a crossing orbit's flow has a saltation term at the force discontinuity that
+  the zero Jacobian correctly omits (FD-of-flow ill-posed across the
+  discontinuity; measured 0.68 mismatch for a crossing orbit).
+- #945 spectrum consistency test made platform-robust: tight check now seeds
+  the spectrum with the SAME dxdv0 as the single-vector run (|R_11|
+  accumulation ≡ single-vector Benettin; agreement 1.4e-8) instead of
+  comparing decorrelated chaotic finite-time estimates at 5%.
