@@ -300,3 +300,35 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   merge-tree chain sim: 937 clean; 938-after-937 and 939-after-938 WILL
   re-conflict (shared anchors) → one mechanical re-rebase per landing.
 - Tips: 937=9ab4f0b2 938=d94a2289 939=034ef885.
+
+## 2026-06-11 (evening) — Pvar-pot wrapper family COMPLETE: the two deferred wrappers
+- User opted to finish OblateStaeckelWrapper + CylindricallySeparableWrapper
+  ("otherwise we never will") — the last two #919 deferrals; KuzminLike (#938)
+  was the template. Branch feat/pvar-tail-staeckelwrappers (df4ba616, worktree
+  /var/tmp/pvt-staeckelwrap, off dc291335). Both also gain their first PLANAR
+  hasC_dxdv (they had hasC_dxdv=False even pre-variational-track).
+- CylSep trivial by separability: Phi_RR=Phi_w,RR(R,0), Phi_zz=Phi_w,zz(Rp,z),
+  Phi_Rz≡0 (NULL in the Full parser; ZeroPlanarForce in the planar parser
+  since calcPlanar* aggregators are not NULL-safe). OblateStaeckel: full
+  (u,v) chain rule, C transcribed 1:1 from the Python ground truth (same
+  intermediates: umvfac, d2Udu2/d2Vdv2, prefactor-derivative helpers); the
+  planar functions use the exact v=pi/2 simplification (V(pi/2)=0,
+  dVdv(pi/2)=0) since the planar parser only wires wrapped planar functions.
+  amp subtlety: trailing 2*force/prefac^2 terms reuse the wrapper's own C
+  forces (amp included) so only the leading bracket multiplies amp.
+- Note: both wrappers drop t by design (Python _R2deriv calls
+  evaluateR2derivs(...,t=0); existing C forces likewise) — checked against
+  the KD-t-forwarding lesson, NOT a bug here (static-by-construction).
+- Validation: parity planar+3D ~3e-11; physics-law cross-check — wrapper on
+  exact-Staeckel KuzminKutuzov (delta matched) reconstructs KK's independent
+  C Hessian to 2e-11 for any u0; FD-of-flow/det(M)/symplecticity/bridge via
+  registry; gcov 100% new lines (CI-exact build); 13 mutations killed (11
+  impl + 2 fresh from the coverage verifier). One term unfalsifiable by
+  construction: d2Udu2's z0-suppressed Rzderiv term (z0~1e-17 at v0=pi/2) —
+  kept for arithmetic fidelity to Python.
+- 3 adversarial verifiers (independent-derivation math refuter, coverage,
+  regression incl. actionAngle consumers): 0 blockers; minors = hardening
+  suggestions (parity tests could assert absence of the fallback warning)
+  + scratch debris (removed).
+- Holding push until #937/#938/#939 land (HISTORY-marker deletion dedupes
+  with #937's at rebase; conftest/test anchors will conflict mechanically).
