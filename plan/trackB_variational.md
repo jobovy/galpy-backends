@@ -332,3 +332,18 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   + scratch debris (removed).
 - Holding push until #937/#938/#939 land (HISTORY-marker deletion dedupes
   with #937's at rebase; conftest/test anchors will conflict mechanically).
+
+## 2026-06-11 — #938's longstanding planar bug, quantified (kept in #938 per user)
+- KuzminLikeWrapper C d2xi/dR2: s^2/(R^2+s^2)^3.0 instead of ^1.5 (xi^6 for
+  xi^3) — wrong since 0014d576 (2024-01-18), shipped in EVERY release since
+  v1.9.2 (7 releases). Confined to the C planar variational RHS (planar
+  integrate_dxdv, evolveddiskdf, planar Lyapunov); forces/orbits/Python-side
+  always correct. Live demo: reintroducing the exponent fails the new planar
+  parity test at 0.652848 on a unit deviation (tol 1e-8) — order unity.
+- Undetectable by det(M)=1 BY CONSTRUCTION: planar J=[[0,I],[K,0]] has tr J=0
+  identically, so Liouville holds for arbitrarily wrong K. Third latent bug
+  caught by the FD-of-flow/parity doctrine (SCF planar sign #923,
+  CompositePotential hasC_dxdv3d, this). Paper: prime exhibit for the
+  "validation methodology" section.
+- User decision: fix stays bundled in #938 (no separate main PR; reaches main
+  via #891 before the v1.12.0 release).
