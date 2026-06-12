@@ -347,3 +347,17 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   "validation methodology" section.
 - User decision: fix stays bundled in #938 (no separate main PR; reaches main
   via #891 before the v1.12.0 release).
+
+## 2026-06-12 — Pvar-pot COMPLETE; feat/variational3d rebased onto main; #891 MERGEABLE
+- #950 (Staeckel wrappers) merged — every potential AND every wrapper now has
+  the full C variational support (planar + 3D), closing the per-potential
+  track entirely.
+- feat/variational3d rebased onto main (26 commits over 5: #943/#947/#948 +2):
+  agent-driven, 2 conflict stops (KD hasC_dxdv/3D-flag union + galpy_potentials.h
+  declaration union; test_liouville_planar DiskSCF-unskip from main's #925),
+  one amendment for EXACT end-state equivalence (a dropped comment line) —
+  final check: diff(old-branch→new-branch) == diff(merge-base→main)
+  hunk-for-hunk across all 9 files. Linear, 0 merge commits, batteries green
+  (35+35+1). Pushed e378e45a; #891 MERGEABLE.
+- Remaining to land: #946 (P2.6) → #949 (f32) → feat/backends rebase onto
+  main → #892. Then the two long-lived PRs are both clean for final review.
