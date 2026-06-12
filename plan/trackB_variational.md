@@ -384,3 +384,22 @@ fully done:
 - Live pre-existing issue: RotateAndTilt C FORCE cache keys (x,y,z) without t
   (Hessian cache correctly keys t) → stale forces possible for time-dependent
   wrapped potentials.
+
+## 2026-06-12 — closeout PRs opened (user-directed split)
+- #951 → variational3d (HOLDS #891): battery families 3+5 — harmonic
+  (HomogeneousSphere, 4e-12) + Kepler f,g STM (hand-derived Battin dE form,
+  cross-checked vs sympy prototype 1.7e-13 AND independent 40-digit mpmath
+  propagator), E/Lz left-relations (2e-10); MWPotential2014 registry entry
+  (38 ids). Flagged: odeint base-orbit now rtol=atol=1e-12 in the
+  flow-direction check (odeint-only; 1.001e-6 noise at defaults).
+- #952 → variational3d: log-spiral planar Hessians (derived+FD-validated
+  pre-port, gcov 100%, mutations killed, parity under -W error::galpyWarning)
+  + rotated-ellipsoidal RotateAndTilt-route docs.
+- #953 → main: _parse_pot silent-skip segfault — new hasC_planar attribute
+  (False for interpRZ/CDF/FDM) + final else raising in BOTH parsers. The CDF
+  reproducer was SILENT wrongness (friction dropped in C, byte-identical to
+  frictionless).
+- #954 → main: RotateAndTilt C force cache keys (x,y,z,t) — reproduced as an
+  at-rest orbit in a not-yet-formed potential never moving in C; static path
+  byte-identical.
+- Deferred to Track D: batched (nt,6,6) M; dissipative-vs-AD cross-check.
