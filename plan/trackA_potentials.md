@@ -74,3 +74,22 @@ confirmed with its own independent TD potential (1.7e-15) incl. a d/dt gradient
 check. **Surfaced pre-existing issue (decision needed): the KuijkenDubinski
 layer does not forward t to the inner _me calls — TD DiskMultipole evaluates
 the embedded expansion at t=0; honoring t is a numpy-path value change.**
+
+## 2026-06-11 — P2.6 wrappers COMPLETE (#946): Track A potentials done
+- All wrappers backend-agnostic: DehnenSmooth (dual-path t: numpy-scalar keeps
+  original branching, traced t branch-free xp.where — DehnenBar precedent),
+  GaussianAmplitude, RotateAndTilt (anchored rot/inv_rot/offset constants,
+  input-guarded R==inf), KuzminLike, OblateStaeckel (U/V machinery), CylSep,
+  TimeDependentAmplitude; SolidBody/Corotating already clean (tested only);
+  AdiabaticContraction = interpSphericalPotential at runtime (inherits #929);
+  WrapperPotential delegation audited clean.
+- 5 coords transforms P0-util missed migrated (cyl_to_rect, rect_to_cyl,
+  Rz_to_coshucosv, Rz_to_uv, uv_to_Rz) + _promote_scalars_for (torch scalar
+  promotion anchored on array dtype/device).
+- Byte-parity: 18,822 values bitwise vs pristine — ZERO deltas. Behavioral:
+  coords list-input TypeError (P0 precedent), 0-d intermediates (outputs
+  bit-equal), no new inf RuntimeWarnings. 474 new tests; backend suite 2069.
+- Adversarial verify (independent byte-parity, AD stress + where-audit,
+  conventions): 0 blockers. Pre-existing surfaced: WrapperPotential repr
+  drops leading char; RotateAndTilt(raw list) fails; SpiralArms f32→f64.
+- With #946, EVERY galpy potential (incl. all wrappers) is backend-agnostic.
