@@ -93,3 +93,28 @@ the embedded expansion at t=0; honoring t is a numpy-path value change.**
   conventions): 0 blockers. Pre-existing surfaced: WrapperPotential repr
   drops leading char; RotateAndTilt(raw list) fails; SpiralArms f32→f64.
 - With #946, EVERY galpy potential (incl. all wrappers) is backend-agnostic.
+
+## 2026-06-11 (late) — wrapper-oddities sweep: 2 main PRs + SpiralArms dtype fix
+- #947 (main): list-of-Potential input crashed ALL 9 wrappers (factory ones at
+  _dim in __new__, direct subclasses at first raw-_evaluatePotentials call);
+  fixed via the canonical _check_potential_list_and_deprecate at the shared
+  altitude (one __new__ + two __init__ sites), one DeprecationWarning, tests
+  for all 9 + planar, fail-on-unpatched proven.
+- #948 (main): wrapper repr ate the first character for the DIRECT 3D-only
+  subclasses (RotateAndTilt v1.7.0+, KuzminLike v1.10.0+) — the factory
+  underscore mechanism is INTACT (both dims); regression from PR #804's
+  unconditional __name__[1:] (shipped v1.11.2); _repr_utils in the same PR was
+  already conditional. Fix: removeprefix("_") both sites + factory×dim/direct/
+  wrapper-of-wrapper/pickle test battery.
+- feat/backends 362d9237: SpiralArms torch promotion root-caused — NOT numpy
+  scalars (weak on torch 2.12); stored float64 numpy ARRAYS via bare
+  xp.asarray (strong tensors). Same line fixes the 4e-8 float64 _dens bug:
+  int64 Cs=[1] tensor × python-float rho0 computed in torch DEFAULT dtype
+  (f32 round-trip of 1/4pi). dtype=getattr(R,'dtype',None) anchor; numpy
+  44-entry byte-parity proof; _dens parity 4e-8 → 2e-16; f32 preserved.
+- Systemic census (diagnosed, NOT yet fixed; user decision pending): same
+  unanchored-asarray f32→f64 in SCF, DoubleExpDisk (Ogata), interpSpherical/
+  King (spline), MultipoleExpansion (deliberately f64 per code comment),
+  DiskSCF (via _me). SEPARATE likely-real bugs: TwoPowerSpherical generic
+  alpha/beta calls scipy.special directly (bypasses router → torch autograd
+  DETACHED); PerfectEllipsoid/TriaxialNFW all-tensor TypeError (unverified).
