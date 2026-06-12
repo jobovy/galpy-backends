@@ -361,3 +361,26 @@ g11 measure script updated to the Python-FD trace (committed data unchanged).
   (35+35+1). Pushed e378e45a; #891 MERGEABLE.
 - Remaining to land: #946 (P2.6) → #949 (f32) → feat/backends rebase onto
   main → #892. Then the two long-lived PRs are both clean for final review.
+
+## 2026-06-12 — completeness AUDIT (3 agents: flag census / battery-vs-spec / TODO sweep)
+Verdict: 3D coverage complete (no unconditional gaps: every hasC potential has
+hasC_dxdv3d except snapshot-sourced InterpSnapshotRZ, intentional). But NOT
+fully done:
+- SEGFAULT BUG (pre-existing on main): planar _parse_pot has no final else —
+  hasC=True planar pots without a parse case are silently skipped while npot
+  counts them → C reads garbage. Reproduced: interpRZ.toPlanar()+dop853_c and
+  toPlanarPotential([Log, ChandrasekharDF]). Same latent missing-else in the
+  3D parser. Must fix on main (else-raise + flag corrections).
+- Battery vs spec: families 3 (closed-form STM: 3D harmonic + Kepler Lagrange
+  f,g) and 5 (conserved-integral left-relations gᵀM=gᵀ for E/Lz) MISSING —
+  exactly the suspected two. MWPotential2014 absent from the registry.
+- Planar legacy gaps: SteadyLogSpiral/TransientLogSpiral have no 2nd derivs
+  anywhere (trivial analytic). Rotated (zvec/pa) ellipsoidals: hasC_dxdv3d
+  False (needs-decision: wire R^T H R internally — machinery exists from
+  #936 — or document RotateAndTiltWrapper(aligned) workaround).
+- Plan items never delivered: batched (nt,6,6) M public convenience (natural
+  to fold into Track D STM work); dissipative C Jacobians not yet
+  cross-validated vs the in-backend AD oracle (Track D exists now).
+- Live pre-existing issue: RotateAndTilt C FORCE cache keys (x,y,z) without t
+  (Hessian cache correctly keys t) → stale forces possible for time-dependent
+  wrapped potentials.
