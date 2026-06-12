@@ -139,3 +139,24 @@ the embedded expansion at t=0; honoring t is a numpy-path value change.**
   TypeErrors are PROJECT-WIDE under torch (SoftenedNeedleBar, LogHalo fail
   identically) — the backend suites always pass all-arrays. Needs a shared
   mixed-input gate + sweep (user decision pending).
+
+## 2026-06-12 — f32 exit-cast policy landed as #949; #946 CI fixed
+- #949 (→ feat/backends, c94d93f2): match_input_dtype exit cast for the
+  table-backed five (SCF/mixin, DoubleExp, interpSpherical→King,
+  Multipole→DiskSCF/DiskMultipole) — f64 interiors kept, f32 in → f32 out.
+  The new 46-entry dtype gate (zero skips) caught a FIFTH instance while
+  being built: the special-router fallbacks' f64 GL/trapezoid node tables
+  (promoted f32 through the freshly-routed TwoPower) — same cast in
+  _dispatch. Byte proofs: 92-record impl + 324-record independent verifier
+  (incl. Quantity paths). Approved delta: numpy all-f32 inputs now return
+  f32. Residual: ≤ tens of f32-ulp input-stage rounding in chain-rule
+  prefactors (documented; pins at rtol=2e-6).
+- #946 CI failure root-caused: actionAngleStaeckel public indivdelta API
+  feeds plain LISTS to the migrated uv_to_Rz — the "galpy never passes lists
+  internally" audit claim was wrong for user-supplied array-likes. Fixed at
+  the AA boundary (_coerce_delta_arraylike at 3 delta entry points, 79fe4299),
+  coords list policy intact.
+- NEW KNOWN GAP (queued): CUDA device preservation broken for table-backed
+  pots + SpiralArms (tables materialize on CPU); device-anchoring pass after
+  #949, validate on the TITAN Xp box. Also pending user decision: project-wide
+  mixed-input (tensor coords + python-float phi/t) gate + sweep.
