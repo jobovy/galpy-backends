@@ -118,3 +118,24 @@ the embedded expansion at t=0; honoring t is a numpy-path value change.**
   DiskSCF (via _me). SEPARATE likely-real bugs: TwoPowerSpherical generic
   alpha/beta calls scipy.special directly (bypasses router → torch autograd
   DETACHED); PerfectEllipsoid/TriaxialNFW all-tensor TypeError (unverified).
+
+## 2026-06-12 — chase (b): both confirmed real, fixed on feat/backends
+- b15fb8c3 TwoPowerSpherical generic (alpha,beta): direct scipy.special calls
+  bypassed the router — torch no-grad SILENTLY degrades (numpy round-trip, no
+  graph; loud error only with requires_grad), jax silently returns ndarray
+  eager + TracerArrayConversionError under jit/grad. Test gap: CASES entry was
+  ad_ok=False "scipy-deferred". Fixed via the Einasto router convention
+  (fallback hyp2f1 <1e-12 vs scipy on the galpy regime); CASES upgraded to the
+  full matrix; byte-parity pinned; grads match FD ~1e-10. Same idiom reported
+  (not yet fixed): PowerSpherical._surfdens, TwoPowerTriaxial._psi.
+- 7933ef06 EllipsoidalPotential: claim verified, mechanism CORRECTED — the
+  default Perfect/TriaxialNFW are AXISYMMETRIC (b=c=1) and every method does
+  `if not isNonAxi: phi = 0.0` (python float) before xp.cos(phi) → torch
+  TypeError even all-tensor; ALSO mixed tensor-R,z + float-phi fails for ALL
+  ellipsoidals. P2.3 missed both (only b=0.9,c=0.7 instances, only all-array
+  inputs). Fix: _anchor_phi at 11 sites (numpy passthrough; 528-record
+  byte-parity grid identical). 105/105 reproduction matrix post-fix.
+- SYSTEMIC follow-up surfaced: mixed tensor-coords + python-float phi/t
+  TypeErrors are PROJECT-WIDE under torch (SoftenedNeedleBar, LogHalo fail
+  identically) — the backend suites always pass all-arrays. Needs a shared
+  mixed-input gate + sweep (user decision pending).
