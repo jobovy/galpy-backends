@@ -403,3 +403,20 @@ fully done:
   at-rest orbit in a not-yet-formed potential never moving in C; static path
   byte-identical.
 - Deferred to Track D: batched (nt,6,6) M; dissipative-vs-AD cross-check.
+
+## 2026-06-13 — closeout merged; final rebase; #891 ready
+- #951/#952/#953/#954 all merged (one CI flake rerun; #952 needed a
+  list→Composite test fix — our own deprecation policy biting our test).
+- feat/variational3d final rebase onto settled main (a24f181a, 28 commits):
+  the real semantic reconciliation was RotateAndTiltWrapperPotential.c —
+  main's #954 t-keyed force cache merged with the branch's Hessian cache into
+  one 32-arg layout (force key 1-4 | F 5-7 | rot 8-16 | rotSet 17 |
+  offsetSet 18 | offset 19-21 | Hessian key 22-25 | H 26-31); main's t-check
+  applied once in the consolidated getforces helper. Else-raise confirmed
+  LAST in both parsers after the branch's dxdv cases. Equivalence: verbatim
+  main hunks for 11 files + 2 documented forced adaptations; static-wrapper
+  orbit hash identical pre/post. All batteries green incl. main's new
+  cache regression test. #891 MERGEABLE, CI running.
+- feat/backends rebased too (3e8c47d1, zero stops, diff-of-diffs EMPTY vs
+  main's 4 commits) but HELD locally until #946/#949 merge (pushing now
+  would phantom-orphan them).
