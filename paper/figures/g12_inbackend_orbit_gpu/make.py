@@ -194,7 +194,7 @@ def make():
     # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,
     # controller architecture, compile amortization) live in caption.md.
     ax.text(
-        0.025, 0.02,
+        0.17, 0.02,
         f"rtol=atol=1e-8  ·  GPU: {gpu_meta.get('gpu', '?')}  ·  "
         f"jax {gpu_meta.get('jax_version', '?')} · torch {torch_meta.get('torch_version', '?')}",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
