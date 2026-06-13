@@ -52,7 +52,7 @@ C/D/E/F.
 | P2.6 wrappers | A | → feat/backends | ✅ **#946** merged 2026-06-13 | 474 new tests; backend suite 2069; 18,822-value byte-parity | **Track A potentials complete** — every wrapper backend-agnostic |
 | f32 exit-cast / device policy | A | → feat/backends | **#949** open | 46-entry dtype gate (zero skips); 92+324-record byte proofs | f32 in → f32 out for table-backed pots; device-anchoring commit being added |
 | In-backend integrator (diffrax/torchdiffeq) | D | → feat/backends | ✅ **#906** merged 2026-06-08 | C-parity ~1e-9; param-grads via AD | per-orbit stepping kept (vs galax batched: 2.9x, by design) |
-| Track G figures/diagnostics | G | (cross-cutting) | ⏳ continuous | g0–g11 in manifest | g9–g11 variational/Lyapunov/dissipative figures; found+fixed lyapunov 3D restart bug (z←vT aliasing, #944) |
+| Track G figures/diagnostics | G | (cross-cutting) | ⏳ continuous | g0–g12 in manifest | g12 galpy in-backend orbit GPU throughput (vs C/jax-CPU/torch); g2/g6 re-measured on TITAN Xp; g9–g11 variational/Lyapunov/dissipative; found+fixed lyapunov 3D restart bug (z←vT aliasing, #944) |
 | Tracks C/D/E/F | — | — | ⏳ next (after backends rebase + #892) | — | — |
 
 (Update this table as PRs land.)

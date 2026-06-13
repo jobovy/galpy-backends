@@ -1,0 +1,48 @@
+{
+  "backend": "galpy-torch",
+  "device": "cuda",
+  "integrator": "torchdiffeq dopri5 (in-backend, eager)",
+  "stepping": "batched state (6,N), shared adaptive controller",
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 12.12770857900614,
+      "per_orbit_ms": 12127.70857900614,
+      "first_s": 12.743744447012432
+    },
+    {
+      "N": 10,
+      "wall_s": 12.437555929995142,
+      "per_orbit_ms": 1243.7555929995142,
+      "first_s": 12.466680776968133
+    },
+    {
+      "N": 100,
+      "wall_s": 11.60288435203256,
+      "per_orbit_ms": 116.02884352032561,
+      "first_s": 11.641809627006296
+    },
+    {
+      "N": 1000,
+      "wall_s": 11.643620159011334,
+      "per_orbit_ms": 11.643620159011334,
+      "first_s": 11.733897236001212
+    },
+    {
+      "N": 10000,
+      "wall_s": 11.684386754990555,
+      "per_orbit_ms": 1.1684386754990554,
+      "first_s": 11.72484960599104
+    }
+  ],
+  "torch_version": "2.12.0+cu126",
+  "galpy_version": "1.12.0.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "NVIDIA TITAN Xp"
+}

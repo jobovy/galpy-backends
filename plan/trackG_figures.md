@@ -191,3 +191,53 @@ Post-fix validation: segmented vs single-shot deviation propagation agrees to
 MW2014 regular orbits decay ~ln(t)/t as they must. Suggested regression
 tests: base-orbit columns of 3D integrate_dxdv vs plain integrate;
 renorm-interval independence of lyapunov.
+
+---
+
+## 2026-06-12 — GPU measurements: g2/g6 re-measured + new g12 (in-backend orbit GPU)
+
+Re-ran the GPU benchmark figures on the TITAN Xp (sm_61) against the rebased
+backend worktree (`/var/tmp/backends-merge`, feat/backends @36c92e8f), in the
+`py313` env (jax 0.10.1 + diffrax 0.7.2, torch 2.12.0+cu126 + torchdiffeq 0.2.5).
+The pure-backend jax/torch paths don't need the C extension (libgalpy-not-loaded
+warning ignored); the galpy-C baseline used the C-built main env
+(`/home/bovy/Repos/galpy`).
+
+- **g2_throughput** (sha256 `bc47b1552dbc…`) — re-measured Plummer `F_R` throughput
+  vs N. jax-GPU compute-only peaks ~2.3e9 pts/s at N=1e7 vs numpy-CPU ~3.6e7
+  (~64×); torch-GPU ~1.5e9. End-to-end (host↔GPU transfer) saturates an order of
+  magnitude below compute-only (PCIe-bound). CPU baseline kept; structure
+  (compute-only solid / +transfer dashed) unchanged.
+- **g6_jit_amortization** (sha256 `c93b6b93034d…`) — re-measured jit compile-once/
+  run-many for Plummer `F_R`. Compile ~95 ms (N=1e4) / ~122 ms (N=1e6); steady-state
+  0.12 / 0.91 ms; eager (un-jit) 1.60 / 2.22 ms ⇒ jit-vs-eager break-even ≈ 65 / 94
+  calls.
+- **g12_inbackend_orbit_gpu** (NEW; sha256 `0e0e0f56e91f…`) — galpy's OWN in-backend
+  differentiable integrator (`galpy.backend._reference.integrate_orbit`, #906), the
+  analogue of g8 but galpy-only: MWPotential2014, Sun-like orbit, 2 Gyr, batch of N,
+  rtol=atol=1e-8, per-orbit adaptive stepping. Four series (cross-env `measure/`
+  scripts → per-backend machine/version-stamped `data/*.json`; plot byte-stable):
+  - **galpy (C, CPU; sequential)** dop853_c — ~2.1 ms/orbit, constant; 2.06 s @ N=1e3,
+    21.2 s @ N=1e4, 67.8 s @ N=3e4.
+  - **galpy in-backend (JAX, GPU)** diffrax Dopri8 (jit+vmap) — 1.56 s for one orbit
+    (launch/compile floor), amortising to **0.28 ms/orbit @ N=1e4, 0.25 @ N=1e5,
+    0.21 @ N=3e5** (the clean peak); compile (excluded from steady wall) ~5 s small-N
+    → ~28 s @ N=1e5. Crossover with galpy-C between N=1e3 (C 2.06 s < GPU 2.49 s) and
+    N=1e4 (C 21.2 s ≫ GPU 2.82 s) → **~7× faster per orbit at N=1e4**. lowN (1000
+    dense saves) **OOMs at N=1e5** in 12 GiB (same cap g8 hit); hiN (16 saves) reaches
+    N=3e5 (N=1e6 attempted but XLA compile of the 1e6-orbit vmap thrashed >13 min and
+    was abandoned — 3e5 is the headline peak). NB: the GPU benchmarks were run STRICTLY
+    SERIALLY (one device-timed job at a time) — an initial N=1e5 point timed while a
+    torch job was co-resident read 0.34 ms/orbit (contention); re-measured GPU-exclusive
+    it is 0.25, consistent with the trend.
+  - **galpy in-backend (JAX, CPU)** — same diffrax path on CPU, ~5–8 ms/orbit (device
+    contribution isolated).
+  - **galpy in-backend (torch, GPU; eager)** torchdiffeq dopri5, state (6,N) batched —
+    runs EAGER (no jit-fuse): the whole batch takes a near-constant ~12–15 s
+    regardless of N (Python-overhead/step-loop-bound, GPU-starved), so per-orbit only
+    reaches ~1.2 ms @ N=1e4 — ~4× slower than the jit-fused JAX-GPU line and ~40× more
+    wall time. Correct + differentiable (the #906 in-backend tests pass vs C and FD
+    gradients), but not the batched-throughput path — exactly why g8 omits torch.
+  POTENTIAL SUPPORT: as of #949 (36c92e8f) MWPotential2014 (PowerSphericalCutoff +
+  MiyamotoNagai + NFW) is fully in-backend-integrable on jax AND torch — the earlier
+  "Plummer/Isochrone only" status no longer holds, so g12 uses the same MW model as g8.
