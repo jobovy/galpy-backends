@@ -55,8 +55,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "c1c3153",
-    "sha256": "d102b7aa8c05b79337ef5a0df6de77b049fab1dac041a634c3dc8df7520d29d5",
+    "git": "2474ec1",
+    "sha256": "074bc1ee07d8adf6982657eb5b4da978ccba1a8b654fd5359ba531adbc3fba2e",
     "track": "G"
   },
   "g1_backend_parity": {

@@ -153,7 +153,7 @@ def _load(fnames):
     description="MWPotential2014 in-backend orbit integration wall time vs batch size N: galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    fig, ax = plt.subplots(figsize=(6.0, 4.4))
+    fig, ax = plt.subplots(figsize=(9.0, 4.5))
 
     gpu_meta = _load_one("jax_gpu.json") or _load_one("jax_gpu_hiN.json") or {}
     torch_meta = _load_one("torch_cuda.json") or {}
@@ -174,6 +174,9 @@ def make():
     # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
     ax.set_ylim(*ax.get_ylim())
     xl = ax.get_xlim()
+    # extend the x-axis to the right so the rightmost markers have room and the
+    # reference lines / legend region do not crowd the data
+    xl = (xl[0], xl[1] * 3.0)
     Nlo, Nhi = xl
     for tau in (1e-2, 1e-3, 1e-4):
         ax.plot([Nlo, Nhi], [Nlo * tau, Nhi * tau], ls=":", lw=0.8, color="0.8", zorder=0)
@@ -183,10 +186,11 @@ def make():
         "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
-    # legend OUTSIDE the axes (upper right, anchored to the figure margin) so it
-    # overlaps no data line -- notably the near-flat eager torch line across the top.
+    # legend OUTSIDE the axes, vertically centered on the right margin (wide
+    # figure), so it overlaps no data line -- notably the near-flat eager torch
+    # line across the top.
     ax.legend(
-        fontsize=7.0, loc="upper left", bbox_to_anchor=(1.01, 1.0),
+        fontsize=7.5, loc="center left", bbox_to_anchor=(1.01, 0.5),
         borderaxespad=0.0, framealpha=0.95,
     )
     # work counts (accepted steps / nfev per orbit) from data/work_counts.json --
