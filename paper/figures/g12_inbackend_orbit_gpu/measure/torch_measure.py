@@ -50,8 +50,12 @@ dev = "cuda" if torch.cuda.is_available() else "cpu"
 
 nt = 16  # hiN convention: torch is step-bound, saves are irrelevant; keeps output small
 # Push N from the overhead-bound floor (~1..1e4) into the compute-bound regime
-# (where wall time rises ~linearly and ms/orbit flattens). Stop on OOM or budget.
-Ns = [1, 10, 100, 1000, 10000, 30000, 100000, 300000, 1000000]
+# (where wall time rises ~linearly and ms/orbit flattens). Intermediate points
+# (5e5, 7e5) resolve the rise; the 1e6 point earlier OOMed by only ~322 MiB, so this
+# process imports NO jax (XLA does not preallocate the GPU here) and frees each N's
+# tensors + empties the cache before the next, reclaiming that memory to attempt 1e6.
+# Stop on OOM or budget (recorded in stopped_at).
+Ns = [1, 10, 100, 1000, 10000, 30000, 100000, 300000, 500000, 700000, 1000000]
 WALL_BUDGET_S = 200.0  # stop once a single steady run exceeds this
 ts = torch.linspace(0.0, 56.2, nt, device=dev)
 ic0 = torch.tensor([1.0, 0.0, 1.0, 0.0125, 0.036, 0.0], device=dev)

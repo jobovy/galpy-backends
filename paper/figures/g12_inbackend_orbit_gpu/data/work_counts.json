@@ -1,0 +1,80 @@
+{
+  "what": "solver work counts (accepted steps + nfev) for the g12 orbit",
+  "orbit": "MWPotential2014, Sun-like IC, 2 Gyr (linspace(0,56.2,nt))",
+  "nt": 1000,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "N_batch": 1000,
+  "host": "geir",
+  "note": "diffrax counts are per single vmapped solve (per-orbit work); torch carries a (6,N) batched state through ONE shared adaptive controller, so its nfev is the number of shared RHS calls (each evaluating all N orbits at once).",
+  "jax_version": "0.10.1",
+  "diffrax_version": "0.7.2",
+  "torch_version": "2.12.0+cu126",
+  "torchdiffeq_version": "0.2.5",
+  "galpy_version": "1.12.0.dev0",
+  "numpy_version": "2.4.3",
+  "diffrax_single": {
+    "Dopri8": {
+      "method": "diffrax Dopri8",
+      "order": 8,
+      "nstages": 14,
+      "num_accepted_steps": 189,
+      "num_rejected_steps": 46,
+      "num_steps": 235,
+      "nfev": 3056,
+      "nfev_per_accepted_step": 16.16931216931217
+    },
+    "Dopri5": {
+      "method": "diffrax Dopri5",
+      "order": 5,
+      "nstages": 7,
+      "num_accepted_steps": 545,
+      "num_rejected_steps": 46,
+      "num_steps": 591,
+      "nfev": 3547,
+      "nfev_per_accepted_step": 6.508256880733945
+    }
+  },
+  "diffrax_batch_sample": {
+    "Dopri8": {
+      "method": "diffrax Dopri8",
+      "order": 8,
+      "nstages": 14,
+      "num_accepted_steps": 180,
+      "num_rejected_steps": 15,
+      "num_steps": 195,
+      "nfev": 2536,
+      "nfev_per_accepted_step": 14.088888888888889
+    },
+    "Dopri5": {
+      "method": "diffrax Dopri5",
+      "order": 5,
+      "nstages": 7,
+      "num_accepted_steps": 622,
+      "num_rejected_steps": 33,
+      "num_steps": 655,
+      "nfev": 3931,
+      "nfev_per_accepted_step": 6.319935691318328
+    }
+  },
+  "torch": {
+    "single": {
+      "N": 1,
+      "method": "torchdiffeq dopri5",
+      "order": 5,
+      "nstages": 7,
+      "nfev": 3470,
+      "num_total_steps_est": 578,
+      "nfev_per_step": 6.003460207612457
+    },
+    "batch": {
+      "N": 1000,
+      "method": "torchdiffeq dopri5",
+      "order": 5,
+      "nstages": 7,
+      "nfev": 3362,
+      "num_total_steps_est": 560,
+      "nfev_per_step": 6.003571428571429
+    }
+  }
+}

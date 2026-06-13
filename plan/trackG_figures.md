@@ -194,6 +194,55 @@ renorm-interval independence of lyapunov.
 
 ---
 
+## 2026-06-13 — g12 same-work jax-Dopri5 vs torch-dopri5 (+work counts) + torch rise to 1e6
+
+g12's jax-GPU-vs-torch-GPU crossover was NOT same-work: jax SHIPS diffrax **Dopri8**
+(8th order), torch SHIPS torchdiffeq **dopri5** (5th order — chosen because
+torchdiffeq's dopri8 *backward* is buggy, ~1e-5 grad error; see
+`galpy.backend._torch.orbit_ode`). Different methods → different work/orbit, so the
+shipped lines can't be read as a backend kernel-speed comparison. Fixed by quantifying
+the work and adding a matched 5th-order jax line.
+
+**Work counts** (`measure/work_counts.py` → `data/work_counts.json`; nfev via a
+`jax.debug.callback` that fires once per RHS call under diffrax, and a plain Python
+counter on the eager torchdiffeq func). ONE Sun-like orbit, rtol=atol=1e-8
+(accepted steps / nfev):
+- jax  diffrax **Dopri8**: **189 / 3056**  (8th order: few big steps, ~16 evals/acc-step incl. rejections)
+- jax  diffrax **Dopri5**: **545 / 3547**  (5th order: ~3× more steps, ~6.5 evals/acc-step)
+- torch torchdiffeq **dopri5**: **~578 total steps / 3470**
+→ **jax-Dopri5 and torch-dopri5 are genuinely same-work** (matching step + nfev
+counts; the small Δ is rejections vs the torch batch's shared controller). Dopri8 nets
+a little *lower* nfev than dopri5 (fewer steps × more evals).
+
+**New same-work jax-Dopri5 GPU line** (`measure/jax_dopri5_measure.py`, local to g12,
+NOT shared — the shared `jax_*.json` stay the shipped Dopri8 curve g8 also uses).
+Same orbit/tol/nt convention, jit+vmap, GPU, serial. lowN (nt=1000) +
+hiN (nt=16) → `data/jax_dopri5_gpu[_hiN].json`. Reaches ~0.13 ms/orbit at N=3e5
+(cheaper-per-step Dopri5 beats Dopri8's ~0.21 on the GPU despite more steps).
+
+**Same-work verdict at large N:** jax-Dopri5 ~0.13 ms/orbit vs torch-dopri5 ~0.069
+ms/orbit at N=3e5. Torch's edge is therefore NOT the method (same nfev/steps) — it's
+torchdiffeq's single *shared* (6,N) adaptive controller (one dt sequence, one fused
+per-step kernel for the whole batch) vs jax's per-orbit vmap-of-solve (N independent
+controllers). Identical to g8's galax batched-vs-per-orbit story; galpy-jax keeps
+per-orbit stepping for per-orbit error guarantees.
+
+**torch rise extended to N=1e6** (`measure/torch_measure.py`, hiN nt=16). Added
+intermediate 5e5, 7e5 and retried 1e6 — run with **NO jax import** + 
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to reclaim the ~322 MiB that OOMed
+1e6 before. **1e6 now FITS** (67.3 s, 0.0673 ms/orbit; no `stopped_at`). The
+compute-bound rise is now well-resolved: 20.8 → 34.4 → 47.9 → 67.3 s for
+3e5/5e5/7e5/1e6, ms/orbit flat ~0.069.
+
+**g8 unchanged** (checked): its galpy-jax AND galax lines are BOTH diffrax Dopri8, and
+the caption says so — g8's same-work claim is already honest, no annotation needed.
+
+Re-rendered + manifest updated: **g12 sha256 `d102b7aa8c05…`**, `verify` OK
+(byte-stable from JSON). All GPU jobs run STRICTLY SERIALLY (verified GPU idle via
+nvidia-smi between each). g7 pre-existing-red (untouched).
+
+---
+
 ## 2026-06-13 — g8/g12 made cross-consistent (shared orbit+C+jax) + torch large-N + legend fix
 
 g8 and g12 both integrate MWPotential2014 for 2 Gyr but were INCONSISTENT on their
