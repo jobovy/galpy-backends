@@ -420,3 +420,18 @@ fully done:
 - feat/backends rebased too (3e8c47d1, zero stops, diff-of-diffs EMPTY vs
   main's 4 commits) but HELD locally until #946/#949 merge (pushing now
   would phantom-orphan them).
+
+## 2026-06-13 — #891 MERGED TO MAIN. Track B COMPLETE.
+The full variational track is on main (rebase-merge, linear): 3D variational
+equations in C for EVERY potential and wrapper (planar + 3D), dissipative
+velocity-dependent Jacobians (Chandrasekhar/FDM/NonInertial), Orbit.lyapunov
++ full spectrum, the complete 8-family validation battery (Liouville,
+symplecticity, closed-form harmonic+Kepler STM, flow-direction, E/Lz
+left-relations, FD-of-flow, 2D bridge, Lyapunov regressions), and the audit
+fixes (#953 parser segfault, #954 cache-t). Bugs found and fixed along the
+way by the FD-of-flow doctrine: SCF planar sign (#923), CompositePotential
+hasC_dxdv3d, KuzminLike planar xi-exponent (v1.9.2+, #938), parser
+silent-skip segfault (#953), RotateAndTilt stale force cache (#954), KD
+t-forwarding (#943), dxdv z<-vT aliasing (#944).
+Deferred to Track D: batched (nt,6,6) M convenience; dissipative-vs-AD
+cross-validation.
