@@ -186,12 +186,10 @@ def make():
         "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
-    # legend OUTSIDE the axes, vertically centered on the right margin (wide
-    # figure), so it overlaps no data line -- notably the near-flat eager torch
-    # line across the top.
+    # legend INSIDE the axes, lower-right (the empty high-N / low-wall corner),
+    # sitting a bit low so it clears the rising data lines.
     ax.legend(
-        fontsize=7.5, loc="center left", bbox_to_anchor=(1.01, 0.5),
-        borderaxespad=0.0, framealpha=0.95,
+        fontsize=7.5, loc="lower right", borderaxespad=0.8, framealpha=0.95,
     )
     # work counts (accepted steps / nfev per orbit) from data/work_counts.json --
     # makes the same-work claim explicit on the figure itself.
