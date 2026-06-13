@@ -157,7 +157,6 @@ def make():
 
     gpu_meta = _load_one("jax_gpu.json") or _load_one("jax_gpu_hiN.json") or {}
     torch_meta = _load_one("torch_cuda.json") or {}
-    work = _load_one("work_counts.json") or {}
     for fnames, label, col, ls, mk in _SERIES:
         d = _load(fnames)
         if d is None or not d.get("results"):
@@ -191,30 +190,14 @@ def make():
     ax.legend(
         fontsize=7.5, loc="lower right", borderaxespad=0.8, framealpha=0.95,
     )
-    # work counts (accepted steps / nfev per orbit) from data/work_counts.json --
-    # makes the same-work claim explicit on the figure itself.
-    d8 = (work.get("diffrax_single") or {}).get("Dopri8", {})
-    d5 = (work.get("diffrax_single") or {}).get("Dopri5", {})
-    t5 = (work.get("torch") or {}).get("single", {})
-    if d8 and d5 and t5:
-        work_line = (
-            f"per-orbit work (steps/nfev): jax-Dopri8 "
-            f"{d8.get('num_accepted_steps', '?')}/{d8.get('nfev', '?')}  ·  "
-            f"jax-Dopri5 {d5.get('num_accepted_steps', '?')}/{d5.get('nfev', '?')}  ~=  "
-            f"torch-dopri5 {t5.get('num_total_steps_est', '?')}/{t5.get('nfev', '?')} (same work)\n"
-        )
-    else:
-        work_line = ""
+    # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator
+    # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,
+    # controller architecture, compile amortization) live in caption.md.
     ax.text(
         0.025, 0.02,
-        "galpy in-backend integrate_orbit (#906)\n"
-        "JAX ships diffrax Dopri8 (8th order); torch ships torchdiffeq dopri5\n"
-        "(5th order -- torchdiffeq's dopri8 backward is buggy). The jax-Dopri5 line\n"
-        "is the same-work (same 5th-order method) match to torch-dopri5.\n"
-        + work_line
-        + f"rtol=atol=1e-8  ·  GPU: {gpu_meta.get('gpu', '?')}\n"
+        f"rtol=atol=1e-8  ·  GPU: {gpu_meta.get('gpu', '?')}  ·  "
         f"jax {gpu_meta.get('jax_version', '?')} · torch {torch_meta.get('torch_version', '?')}",
-        transform=ax.transAxes, fontsize=6.0, color="0.5", va="bottom", ha="left",
+        transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
     )
     fig.tight_layout()
     return fig
