@@ -20,22 +20,39 @@ Four series, all integrating the *same* backend-agnostic galpy forces:
     step pays full Python dispatch overhead and the GPU is starved -- correct and
     differentiable, but impractically slow at scale (see docstring/caption).
 
-All lines use rtol=atol=1e-8 and per-orbit adaptive stepping. The story mirrors G8:
-galpy-C has ~zero startup and wins at small N (one orbit ~10 ms vs the GPU's
-~1.5 s compile/launch-bound floor), but its per-orbit cost is constant
-(sequential); the jit-fused JAX-GPU line amortises the vectorised solve across the
-batch down to ~0.24 ms/orbit, crossing galpy-C around N~few-hundred. The JAX-CPU
-line shows the device contribution; the torch line shows why eager torchdiffeq is
-not the batched-throughput path.
+All lines use rtol=atol=1e-8 and per-orbit adaptive stepping. The galpy-C and
+galpy-jax (CPU/GPU) series are loaded from ``paper/figures/_shared/orbit_speed/data``
+and are byte-for-byte IDENTICAL to G8's -- same orbit (MWPotential2014, Sun-like IC,
+2 Gyr = linspace(0, 56.2, nt)), same tolerance (rtol=atol=1e-8), and same nt
+convention (lowN regime nt=1000 dense saves; hiN regime nt=16 sparse saves; per-orbit
+cost matches and the overlap points agree), so G8 and G12 can be read together.
+
+The story mirrors G8: galpy-C has ~zero startup and wins at small N (one orbit
+~3-10 ms vs the GPU's ~1.5 s compile/launch-bound floor), but its per-orbit cost is
+constant (sequential); the jit-fused JAX-GPU line amortises the vectorised solve
+across the batch down to ~0.21-0.25 ms/orbit, crossing galpy-C around N~few-hundred.
+The JAX-CPU line shows the device contribution.
+
+The **torch-GPU line is the eager-vs-compute story**: torchdiffeq runs EAGER (no
+jit-fuse of the adaptive-step loop). At small N the batch is *overhead-bound* -- the
+wall time is a near-constant ~12 s set by the Python-driven step loop, the GPU is
+starved, and ms/orbit falls as ~1/N. Pushed to large N the line crosses into the
+*compute-bound* regime: the per-step GPU kernels finally dominate the Python
+overhead, wall time starts rising ~linearly, and ms/orbit flattens to torch's true
+per-orbit asymptote. Correct and fully differentiable, but ~40x slower per orbit than
+the jit-fused JAX path -- exactly why G8 omits a torch line; G12 shows it (out to the
+OOM/time cap) to make the eager overhead->compute transition visible.
 
 POTENTIAL SUPPORT: as of the backends worktree (#949, 36c92e8f), MWPotential2014
 (PowerSphericalCutoff bulge + MiyamotoNagai disk + NFW halo) is fully
 in-backend-integrable on jax AND torch -- the earlier "Plummer/Isochrone only"
 limitation no longer holds, so this figure uses the same MW model as G8.
 
-Reproducibility: like G8, the backends are measured by the standalone scripts under
-measure/ (jax_measure.py for {CPU,GPU} x {lowN dense, hiN}; torch_measure.py;
-galpy_c_measure.py in the C-built main env), each writing a machine- and
+Reproducibility: the shared galpy series come from ../_shared/orbit_speed
+(galpy_c_measure.py, galpy_jax_measure.py for {CPU,GPU} x {lowN dense, hiN}), run
+against the backend-migrated galpy worktree (/var/tmp/backends-merge, which now
+ships libgalpy so the C baseline runs from the SAME galpy as the jax/torch lines);
+torch is measured by measure/torch_measure.py. Each writes a machine- and
 version-stamped data/*.json. This plot is byte-stable from those JSONs; ``verify``
 only re-renders the (deterministic) plot.
 """
@@ -49,13 +66,17 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
+_SHARED = os.path.join(
+    os.path.dirname(__file__), "..", "_shared", "orbit_speed", "data"
+)
 
 # (json files [low-N first, optional high-N second], legend label, colour, ls, marker).
 # The GPU/CPU jax lines merge a low-N run (1000 dense saves, small-N crossover) with
 # a high-N run (16 saves, fits the batch in 12 GiB) -- integration is adaptive-step-
 # bound not save-bound, so per-orbit cost matches and the overlap points agree.
+# galpy_c_* and jax_* are SHARED with G8 (../_shared/orbit_speed/data); torch is local.
 _SERIES = [
-    (["galpy_c_cpu.json"], "galpy (C, CPU; sequential)", "#000000", "-", "o"),
+    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "galpy (C, CPU; sequential)", "#000000", "-", "o"),
     (["jax_cpu.json", "jax_cpu_hiN.json"], "galpy in-backend (JAX, CPU)", "#009E73", "--", "s"),
     (["jax_gpu.json", "jax_gpu_hiN.json"], "galpy in-backend (JAX, GPU)", "#0072B2", "-", "^"),
     (["torch_cuda.json"], "galpy in-backend (torch, GPU; eager)", "#D55E00", ":", "v"),
@@ -63,11 +84,13 @@ _SERIES = [
 
 
 def _load_one(fname):
-    path = os.path.join(_DATA, fname)
-    if not os.path.exists(path):
-        return None
-    with open(path) as fh:
-        return json.load(fh)
+    # shared galpy JSONs live in _shared/orbit_speed/data; torch JSON is local.
+    for base in (_SHARED, _DATA):
+        path = os.path.join(base, fname)
+        if os.path.exists(path):
+            with open(path) as fh:
+                return json.load(fh)
+    return None
 
 
 def _load(fnames):
@@ -120,14 +143,19 @@ def make():
         "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
-    ax.legend(fontsize=7.5, loc="upper left", bbox_to_anchor=(0.0, 0.86), framealpha=0.92)
+    # legend OUTSIDE the axes (upper right, anchored to the figure margin) so it
+    # overlaps no data line -- notably the near-flat eager torch line across the top.
+    ax.legend(
+        fontsize=7.0, loc="upper left", bbox_to_anchor=(1.01, 1.0),
+        borderaxespad=0.0, framealpha=0.95,
+    )
     ax.text(
-        0.975, 0.03,
+        0.025, 0.02,
         "galpy in-backend integrate_orbit (#906)\n"
         "JAX: diffrax Dopri8 (jit+vmap)  ·  torch: torchdiffeq dopri5 (eager)\n"
         f"rtol=atol=1e-8  ·  GPU: {gpu_meta.get('gpu', '?')}\n"
         f"jax {gpu_meta.get('jax_version', '?')} · torch {torch_meta.get('torch_version', '?')}",
-        transform=ax.transAxes, fontsize=6.0, color="0.5", va="bottom", ha="right",
+        transform=ax.transAxes, fontsize=6.0, color="0.5", va="bottom", ha="left",
     )
     fig.tight_layout()
     return fig

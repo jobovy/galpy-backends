@@ -1,0 +1,40 @@
+{
+  "backend": "galpy",
+  "device": "cpu-C",
+  "integrator": "dop853_c (compiled, single-thread, sequential)",
+  "nt": 1000,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "galpy_version": "1.12.0.dev0",
+  "galpy_file": "/var/tmp/backends-merge/galpy/__init__.py",
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 0.0034365419996902347,
+      "per_orbit_ms": 3.4365419996902347
+    },
+    {
+      "N": 10,
+      "wall_s": 0.03310688503552228,
+      "per_orbit_ms": 3.310688503552228
+    },
+    {
+      "N": 100,
+      "wall_s": 0.2600603169994429,
+      "per_orbit_ms": 2.6006031699944288
+    },
+    {
+      "N": 1000,
+      "wall_s": 2.1044887590105645,
+      "per_orbit_ms": 2.1044887590105645
+    },
+    {
+      "N": 10000,
+      "wall_s": 21.42428223398747,
+      "per_orbit_ms": 2.142428223398747
+    }
+  ]
+}

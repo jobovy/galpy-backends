@@ -1,27 +1,45 @@
-"""G8 -- orbit-integration throughput: galpy (C, CPU) vs galax (JAX, CPU & GPU).
+"""G8 -- orbit-integration throughput: galpy (C, CPU & JAX CPU/GPU) vs galax (JAX, CPU & GPU).
 
-MWPotential2014 / BovyMWPotential2014, a Sun-like orbit integrated for 2 Gyr with
-1000 output points, over a batch of N (slightly perturbed) initial conditions.
+MWPotential2014 / BovyMWPotential2014, a Sun-like orbit integrated for 2 Gyr over a
+batch of N (slightly perturbed) initial conditions.  This figure shares its galpy
+series (galpy-C, galpy-jax-CPU, galpy-jax-GPU) byte-for-byte with G12 -- both load
+the SAME canonical JSONs from ``paper/figures/_shared/orbit_speed/data/`` so the two
+figures' orbit, tolerance, and galpy curves are identical and can be read together.
+
+Shared parameterization (G8 == G12 on these series):
+  * same orbit: MWPotential2014, Sun-like IC, 2 Gyr (= linspace(0, 56.2, nt) in
+    galpy internal units), per-N-seeded Gaussian perturbations;
+  * same tolerance: rtol = atol = 1e-8 (the galax OrbitSolver default; galpy's
+    integrators called with the same instead of their tighter 1e-10 default);
+  * same nt convention -- lowN regime: nt=1000 dense saves (resolved small-N
+    crossover); hiN regime: nt=16 sparse saves (fits the batch in 12 GiB at large
+    N).  Integration is adaptive-step-bound not save-bound, so per-orbit cost is the
+    same in both regimes and the overlap points agree -> one consistent curve each.
 
   * galpy (C, CPU): the compiled ``dop853_c`` integrator, one orbit at a time in a
-    sequential C loop (single-threaded build).
+    sequential C loop (single-threaded build).  ~2.1 ms/orbit, constant.
+  * galpy (JAX, CPU) and galpy (JAX, GPU): galpy's OWN in-backend differentiable
+    integrator (``galpy.backend._reference.integrate_orbit`` -> diffrax Dopri8),
+    jit-fused and ``jax.vmap``-ed over the N ICs (compile excluded), per-orbit
+    adaptive stepping -- the common galpy reference against which to place galax.
   * galax (JAX, CPU) and galax (JAX, GPU): the modern ``OrbitSolver`` (diffrax
     Dopri8), jit-compiled and batched over the N ICs (compile time excluded).
     GPU = NVIDIA TITAN Xp (sm_61).
 
 The story: galpy-C has ~zero startup, so it wins decisively at small N (a single
-orbit: ~10 ms vs galax-GPU's ~1.6 s of kernel-launch/compile-bound overhead). But
-its per-orbit cost is ~constant (sequential), while galax amortises the vectorised
-solve across the batch -- on the GPU down to ~0.09 ms/orbit at N=3e4 (~70x faster
-per orbit than galpy-C). Crossover is ~N=300 (GPU) / ~N=40 (CPU). The GPU OOMs at
-N=1e5 (12 GiB), saving 1000 dense steps x N x 6 doubles.
+orbit: ~3-10 ms vs the GPU lines' ~1.6 s of kernel-launch/compile-bound overhead).
+But its per-orbit cost is ~constant (sequential), while the JAX backends amortise the
+vectorised solve across the batch -- galax-GPU down to ~0.07 ms/orbit at N=3e5
+(batched stepping), galpy-in-backend-GPU to ~0.21 ms/orbit (per-orbit stepping).
+The GPU lowN (dense) run OOMs at N=1e5 (12 GiB), saving 1000 dense steps x N x 6
+doubles; the hiN (sparse, 16 saves) run reaches N=3e5.
 
-Reproducibility: the two backends are measured in SEPARATE environments (galpy in
-the main py313 env; galax in its own uv-locked venv with a matched CUDA-12 plugin
--- see ../_setup/galax_gpu_setup.md), so unlike the single-process G-figures the
-*measure* step here is the two standalone scripts under measure/, which write the
-per-backend data/*.json (machine- and version-stamped). The *plot* below is
-byte-stable from those JSONs.
+Reproducibility: the galpy series come from the shared ``_shared/orbit_speed``
+measure scripts (galpy_c_measure.py, galpy_jax_measure.py) run against the
+backend-migrated galpy worktree (/var/tmp/backends-merge); galax is measured in its
+own uv-locked venv with a matched CUDA-12 plugin -- see ../_setup/galax_gpu_setup.md.
+Each writes a machine- and version-stamped JSON.  The *plot* below is byte-stable
+from those JSONs.
 """
 
 import json
@@ -33,6 +51,9 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
+_SHARED = os.path.join(
+    os.path.dirname(__file__), "..", "_shared", "orbit_speed", "data"
+)
 
 # (json files [low-N first, optional high-N second], legend label, colour, ls, marker).
 # GPU backends merge a low-N run (1000 dense saves, shows the small-N crossover)
@@ -46,21 +67,26 @@ _DATA = os.path.join(os.path.dirname(__file__), "data")
 # per-orbit-adaptive run (same stepping semantics as galpy's vmap-of-solve) --
 # the remaining gap between the per-orbit lines is implementation overhead;
 # the gap between the galax lines is the batched-stepping architecture.
+# The galpy series (galpy_c_*, jax_*) live in ../_shared/orbit_speed/data and are
+# shared byte-for-byte with G12; the galax series are local to G8.
 _SERIES = [
-    (["galpy_cpu-C.json"], "galpy (C, CPU)", "#000000", "-", "o"),
+    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "galpy (C, CPU)", "#000000", "-", "o"),
     (["galax_cpu.json"], "galax (JAX, CPU)", "#009E73", "--", "s"),
-    (["galpy-jax_gpu.json", "galpy-jax_gpu_hiN.json"], "galpy (JAX, GPU; per-orbit steps)", "#0072B2", "-", "^"),
+    (["jax_cpu.json", "jax_cpu_hiN.json"], "galpy (JAX, CPU; per-orbit steps)", "#56B4E9", "--", "P"),
+    (["jax_gpu.json", "jax_gpu_hiN.json"], "galpy (JAX, GPU; per-orbit steps)", "#0072B2", "-", "^"),
     (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax (JAX, GPU; per-orbit steps)", "#D55E00", "--", "v"),
     (["galax_gpu.json", "galax_gpu_hiN.json"], "galax (JAX, GPU; batched steps)", "#D55E00", "-", "D"),
 ]
 
 
 def _load_one(fname):
-    path = os.path.join(_DATA, fname)
-    if not os.path.exists(path):
-        return None
-    with open(path) as fh:
-        return json.load(fh)
+    # shared galpy JSONs live in _shared/orbit_speed/data; galax JSONs are local.
+    for base in (_SHARED, _DATA):
+        path = os.path.join(base, fname)
+        if os.path.exists(path):
+            with open(path) as fh:
+                return json.load(fh)
+    return None
 
 
 def _load(fnames):
@@ -113,15 +139,20 @@ def make():
         "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
-    ax.legend(fontsize=7.5, loc="lower right", framealpha=0.92)
+    # legend OUTSIDE the axes (upper right, anchored to the figure margin) so it
+    # overlaps no data line.
+    ax.legend(
+        fontsize=7.0, loc="upper left", bbox_to_anchor=(1.01, 1.0),
+        borderaxespad=0.0, framealpha=0.95,
+    )
 
     # env stamp from the GPU JSON (the headline machine)
     g = _load_one("galax_gpu.json") or {}
     ax.text(
-        0.025, 0.30,
+        0.025, 0.03,
         f"galax {g.get('solver', 'Dopri8')} on {g.get('device', '?')}\n"
         "galpy dop853_c (single-thread C)\n"
-        "GPU lines: diffrax Dopri8, rtol=atol=1e-8 (matched)",
+        "all lines: diffrax/dop853, rtol=atol=1e-8 (matched)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
     )
     fig.tight_layout()

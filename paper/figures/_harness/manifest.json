@@ -55,8 +55,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2ddfbc2",
-    "sha256": "0e0e0f56e91f9f1225adaea9b0774eef586caaa54ceb58cf63461512ec27b317",
+    "git": "fa2ea3f",
+    "sha256": "4adce1e021145cf88dab5438ee0f895b6ca1ba4f82660ab964a1b4048d06555e",
     "track": "G"
   },
   "g1_backend_parity": {
@@ -175,8 +175,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "058bcf0",
-    "sha256": "9b59a9c6c5b18f7601b192716e742093a77f9db1736c5316fa25fb65a76fad65",
+    "git": "fa2ea3f",
+    "sha256": "50e0f526c33b1adacf2797f8850c8f886bc9fe479acea9f6c9c4c13fc622297d",
     "track": "G"
   },
   "g9_variational_validity": {

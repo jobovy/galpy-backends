@@ -9,40 +9,64 @@
   "atol": 1e-08,
   "potential": "MWPotential2014",
   "host": "geir",
+  "wall_budget_s": 200.0,
   "results": [
     {
       "N": 1,
-      "wall_s": 12.12770857900614,
-      "per_orbit_ms": 12127.70857900614,
-      "first_s": 12.743744447012432
+      "wall_s": 12.483928002009634,
+      "per_orbit_ms": 12483.928002009634,
+      "first_s": 13.186475283000618
     },
     {
       "N": 10,
-      "wall_s": 12.437555929995142,
-      "per_orbit_ms": 1243.7555929995142,
-      "first_s": 12.466680776968133
+      "wall_s": 10.178667716041673,
+      "per_orbit_ms": 1017.8667716041674,
+      "first_s": 12.760897324013058
     },
     {
       "N": 100,
-      "wall_s": 11.60288435203256,
-      "per_orbit_ms": 116.02884352032561,
-      "first_s": 11.641809627006296
+      "wall_s": 9.616938393039163,
+      "per_orbit_ms": 96.16938393039163,
+      "first_s": 9.798393970006146
     },
     {
       "N": 1000,
-      "wall_s": 11.643620159011334,
-      "per_orbit_ms": 11.643620159011334,
-      "first_s": 11.733897236001212
+      "wall_s": 9.951301467022859,
+      "per_orbit_ms": 9.951301467022859,
+      "first_s": 10.019021445012186
     },
     {
       "N": 10000,
-      "wall_s": 11.684386754990555,
-      "per_orbit_ms": 1.1684386754990554,
-      "first_s": 11.72484960599104
+      "wall_s": 9.726676000049338,
+      "per_orbit_ms": 0.9726676000049337,
+      "first_s": 10.0776813729899
+    },
+    {
+      "N": 30000,
+      "wall_s": 9.745398653030861,
+      "per_orbit_ms": 0.32484662176769535,
+      "first_s": 9.41927560500335
+    },
+    {
+      "N": 100000,
+      "wall_s": 10.270625836972613,
+      "per_orbit_ms": 0.10270625836972613,
+      "first_s": 11.296182474005036
+    },
+    {
+      "N": 300000,
+      "wall_s": 21.724994706979487,
+      "per_orbit_ms": 0.07241664902326496,
+      "first_s": 21.453381331986748
     }
   ],
   "torch_version": "2.12.0+cu126",
   "galpy_version": "1.12.0.dev0",
   "numpy_version": "2.4.3",
-  "gpu": "NVIDIA TITAN Xp"
+  "gpu": "NVIDIA TITAN Xp",
+  "stopped_at": {
+    "N": 1000000,
+    "reason": "OutOfMemoryError",
+    "msg": "CUDA out of memory. Tried to allocate 322.00 MiB. GPU 0 has a total capacity of 11.90 GiB of which 286.06 MiB is free. I"
+  }
 }

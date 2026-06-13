@@ -194,6 +194,66 @@ renorm-interval independence of lyapunov.
 
 ---
 
+## 2026-06-13 — g8/g12 made cross-consistent (shared orbit+C+jax) + torch large-N + legend fix
+
+g8 and g12 both integrate MWPotential2014 for 2 Gyr but were INCONSISTENT on their
+shared series — g8's galpy-C used nt=1000 dense / no pinned tol (galpy's 1e-10
+default) → ~6.8 ms/orbit, while g12's used nt=16 / rtol=atol=1e-8 → ~2.1 ms/orbit.
+Same integrator, different sampling+tol, so the two figures could not be read
+together. Fixed by establishing ONE canonical parameterization for the series that
+appear in both figures and having BOTH load the same JSONs.
+
+**Unified parameterization (the now-shared convention):**
+- Same orbit: MWPotential2014, Sun-like IC [1,0,1,0.0125,0.036,0] (internal units),
+  per-N-seeded Gaussian perturbation, 2 Gyr = linspace(0, 56.2, nt).
+- Same tolerance: **rtol = atol = 1e-8** for ALL lines (galpy-C, galpy-jax CPU/GPU,
+  galax) — the galax OrbitSolver default; galpy's C and in-backend integrators
+  called with it instead of their tighter 1e-10 default.
+- Same nt convention: **lowN regime nt=1000 dense saves** (resolved small-N
+  crossover); **hiN regime nt=16 sparse saves** (fits the batch in 12 GiB at large
+  N). Integration is adaptive-step-bound not save-bound, so per-orbit cost matches
+  across regimes and the overlap points agree → one consistent curve each.
+
+**Where the shared JSONs live:** new `paper/figures/_shared/orbit_speed/` dir with
+`galpy_c_measure.py` + `galpy_jax_measure.py` (lowN/hiN × CPU/GPU) writing
+`data/{galpy_c_cpu[_hiN],jax_{cpu,gpu}[_hiN]}.json`. BOTH g8 and g12 `_load_one`
+search `_shared/orbit_speed/data` first, then the figure-local `data/` (galax stays
+local to g8, torch local to g12). The old per-figure galpy/jax JSONs+scripts were
+deleted. Confirmed: g8 and g12 load **byte-identical** galpy-C (6 pts),
+galpy-jax-CPU (5 pts), galpy-jax-GPU (8 pts). The single backend worktree
+`/var/tmp/backends-merge` (feat/backends @36c92e8f) now ships libgalpy, so the C
+baseline AND the in-backend jax/torch lines all run from the SAME galpy.
+
+Canonical numbers (TITAN Xp, py313 env, jax 0.10.1 + torch 2.12.0+cu126, GPU jobs
+run STRICTLY SERIALLY):
+- **galpy-C**: ~2.1 ms/orbit constant (2.10 lowN / 2.07 hiN at N≥1e3 overlap).
+- **galpy-jax-GPU**: 1.65 s for one orbit (launch floor) → 0.291 ms/orbit @ N=1e4,
+  0.242 @ N=1e5, **0.212 @ N=3e5** (headline peak); lowN dense reaches N=3e4, hiN
+  reaches N=3e5 (N=1e5 dense still OOMs in 12 GiB → why hiN exists).
+- **galpy-jax-CPU** (NEW in g8, was g12-only): ~6–8 ms/orbit at large N (N=1..1e4;
+  CPU N=3e4 dense capped — impractically slow, not needed for the device reference).
+
+**g12 torch extended to LARGE N** (`measure/torch_measure.py`, hiN nt=16 convention,
+200 s/run wall budget): pushed N from the old ~1e4 stop out to OOM. torchdiffeq runs
+eager, so the batch is *overhead-bound* (~9.6–10.3 s wall, GPU-starved, ms/orbit ∝
+1/N) for N=1..1e5, then crosses into the *compute-bound* regime — **wall time turns
+up at N=3e5 (21.7 s)** and ms/orbit flattens toward torch's per-orbit asymptote
+(0.103 @ 1e5 → **0.072 ms/orbit @ 3e5**). **N=1e6 OOMs** (tried to allocate 322 MiB,
+only 286 MiB free on the 11.9 GiB card) — recorded as `stopped_at` in the JSON. This
+captures the eager overhead→compute transition the figure previously missed.
+
+**Legend fix:** both g8 and g12 legends moved OUTSIDE the axes (upper-left anchored at
+bbox (1.01, 1.0)) so they overlap no data — notably g12's near-flat eager torch line
+across the top that the old in-axes upper-left legend covered. Env-stamp annotations
+moved to the bottom-left corner.
+
+Re-rendered + manifest updated (matplotlib 3.10.8): **g8 sha256 `50e0f526c33b…`**,
+**g12 sha256 `4adce1e02114…`**; both `verify` OK (byte-stable from JSON). Docstrings
++ captions updated to state the shared orbit/tol/nt convention and the torch
+eager-vs-compute story. NOTE: g7_orbit_sensitivity has a PRE-EXISTING verify mismatch
+(expected edb8f55f52b3, got a741150dc35c) unrelated to this work — left untouched,
+still red.
+
 ## 2026-06-12 — GPU measurements: g2/g6 re-measured + new g12 (in-backend orbit GPU)
 
 Re-ran the GPU benchmark figures on the TITAN Xp (sm_61) against the rebased
