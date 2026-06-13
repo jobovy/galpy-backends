@@ -160,8 +160,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2cd6506",
-    "sha256": "edb8f55f52b37f01c57eec0d78480774494151b87985ca64dbe7ff5d13f8bf8f",
+    "git": "4efe9c8",
+    "sha256": "a741150dc35cd4c9b173197592d87b088c720e1c740a3c859e528cfccb117332",
     "track": "G"
   },
   "g8_galax_orbit_speed": {
