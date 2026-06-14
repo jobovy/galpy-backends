@@ -160,3 +160,48 @@ the embedded expansion at t=0; honoring t is a numpy-path value change.**
   pots + SpiralArms (tables materialize on CPU); device-anchoring pass after
   #949, validate on the TITAN Xp box. Also pending user decision: project-wide
   mixed-input (tensor coords + python-float phi/t) gate + sweep.
+
+## 2026-06-14 — #39 PR1 plan LOCKED (SCF/Multipole jax vectorization)
+
+The #1 jax POTENTIAL blocker. Diagnosed + designed (workflow wf_170c5c4b) and
+prepped: worktree `/var/tmp/galpy-scf39` (branch `feat/scf-jax-vectorize`, off
+`feat/backends`, C ext built), numpy baseline saved at `/var/tmp/scf_baseline.npy`
+(SCF N,L,M=4,3,3, eval+forces on a 4-pt array). Confirmed: tiny jax SCF eval =
+4.2 s / force = 2.6 s (pure per-call trace+compile, no jit), values match numpy
+to ~1e-17; the real hang is at production N,L + along orbits (×T calls).
+
+**ROOT CAUSE:** the SCF backend path loops over EVERY coordinate with
+`numpy.ndindex`, re-tracing the full (N,L,M) harmonic graph per point, nothing
+jitted. 6 per-point loops (all scalar-fast-path + ndindex-loop, numpy branch
+UNTOUCHED for byte-identity):
+- SCFPotential.py `_evaluate_expansion` backend (497-500),
+- SphericalHarmonicPotentialMixin.py `_evaluate_cyl_force` backend (106-115),
+  `_evaluate_cyl_2nd_deriv_core` backend (234-239),
+- SCF `_compute_at_point` (429), `_compute_spher_forces_at_point` (643),
+  `_compute_spher_2nd_derivs_at_point` (732) — the scalar leaves.
+- plus `_C` per-l gegenbauer stack (954) — minor (×L).
+
+**FIX (backend branch ONLY; numpy stays verbatim → byte-identical by construction):**
+1. Make the radial leaves `_phiTilde`/`_rhoTilde` (+ `_dphiTilde`/`_d2phiTilde` etc.)
+   array-`r`-aware: the prefactor `rsafe**(-l-1)/(1+a/rsafe)**(2l+1)` must carry a
+   leading point axis. For r shape (P,): l→(L,1), r→(1,P) ⇒ prefactor (L,P) ⇒
+   [None,:,:] × CC (N,L,P) ⇒ (N,L,P). Scalar r keeps the (N,L) path. `_C` already
+   returns (N,L,P) for array xi.
+2. Make `_compute_*_at_point` shape-agnostic: `radial = moveaxis(radial_func, -1, 0)`
+   → (P,N,L); `PP = assoc_legendre(...)` → (P,L,M) (already point-first); mcos/msin
+   → (P,M); broadcast+`xp.sum` over (N,L,M) ⇒ (P,). Mirrors the WORKING template
+   `MultipoleExpansionPotential._backend_evaluate`/`_backend_angular`.
+3. Replace the 3 backend ndindex loops with one batched call + reshape (flatten to
+   (P,), compute, reshape to `shape`).
+4. α-vectorize `gegenbauer` (accept an alpha VECTOR) to collapse the `_C` per-l loop.
+5. Backend-conditional jit: `jax.jit(static_argnums=L,M,N,deriv)` around the batched
+   kernel; identity on torch/numpy. (torch just needs the loop gone; no torch.compile.)
+
+**VALIDATION:** (a) numpy byte-identity vs baseline (`array_equal` on `.tobytes()`);
+(b) jax 2nd-call ≪ 1st (jit caching, no per-call recompile) + no hang at production
+N,L; (c) jax-vs-numpy parity at existing tol incl. poles |cosθ|=1; (d) grad-vs-FD +
+FD-of-flow STM on the orbit path; (e) un-defer the test_scf / Multipole jax tests.
+**PR shape:** PR1 = SCF eval+forces (+α-gegenbauer +jit); PR2 = SCF 2nd derivs
+(deriv=2, pole xp.where guard); PR3 = Multipole jit (arith already vectorized);
+PR4 (later) = assoc_legendre fallback graph-shrink / lax.scan (float-ordering risk
+vs the fallback-vs-scipy test → last). Full design: workflow wf_170c5c4b output.
