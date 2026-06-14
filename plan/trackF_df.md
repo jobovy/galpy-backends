@@ -19,6 +19,15 @@ Batches by difficulty:
   **not** Torus), `make_smoothing_spline`/`cKDTree`, and streamdf's iterative track
   assembly (refactor ~60 loops + in-place mutations + eigen-slerp to functional/vectorized).
   streamdf last; several sub-PRs.
+  - **`useTM=True` is OUT OF SCOPE for non-numpy backends** — it routes the track
+    through `actionAngleTorus` (external C++ Torus library, never backend-agnostic).
+    **Requirement:** when migrating streamdf, RAISE a clear error (e.g. NotImplementedError
+    with a message naming Torus) if `useTM=True` AND the active backend is not numpy,
+    rather than letting it fail deep inside the Torus C call. The 4 streamdf `useTM`
+    tests (`test_bovy14_useTM[_poterror/_useTMHessian/_approxConstTrackFreq]`) are
+    DESELECTED from the all-backend CI shard (`-k 'not useTM'`, harness PR #956) and the
+    backend job no longer builds Torus at all — so this error-raise is the only backend
+    behavior `useTM` should have. Numpy keeps full useTM support unchanged.
 
 Each batch: full existing DF tests pass under all backends + new grad-vs-FD tests on
 DF evaluations, moments, and stream-track outputs (w.r.t. inputs and potential params).
