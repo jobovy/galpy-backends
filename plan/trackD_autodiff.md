@@ -34,3 +34,38 @@ the unit decorators). Expected ~15% on those Python paths; zero risk to the C
 paths. Discovered while profiling the run-notebooks slowdown (which turned out to
 be an unrelated slow live Gaia archive query in staeckel.ipynb, NOT the
 namespace-swap).
+
+## ⛔ CI obligation — RE-ENABLE the deferred jax orbit shard when Track D lands
+
+The all-backend CI harness (PR #956, `feat/pillar1-backend-ci` → `feat/backends`)
+**defers the ENTIRE jax orbit test surface to Track D**. Until the in-backend
+integrator + C-STM + jit routing make jax orbit integration fast, the shard is
+unrunnable: `tests/test_orbit.py` + `tests/test_orbits.py` collect **579 jax
+tests** but only ~120 run before the 4500 s session cap, so the shard
+self-truncates every run (never completing, never yielding a stable ledger).
+
+**Deferral mechanism:** two FILE-LEVEL lines in `tests/backend_xfail`-adjacent
+`tests/backend_slow_skip.txt`:
+```
+jax tests/test_orbit.py
+jax tests/test_orbits.py
+```
+`conftest._matches` treats a path with no `::` as "every test in this file";
+matched tests are `pytest.mark.skip("backend-slow-skip: …")`, counted in the
+status report's separate **`deferred`** burndown bucket (NOT xfail).
+
+**To re-enable (DO THIS as the closing step of Track D):**
+1. Delete the two lines above from `tests/backend_slow_skip.txt`.
+2. Run the jax orbit shard(s) to completion (now fast) and harvest a real ledger
+   for whatever still fails — `GALPY_BACKEND_XFAIL_REGEN=1` regen, then add the
+   genuine failures back to `tests/backend_xfail.txt` (jax). The 25 jax
+   `test_orbit`/`test_orbits` ledger entries removed in the deferral commit
+   (c35ba05a) are the pre-Track-D failures — most should now PASS; re-harvest
+   rather than blindly restoring them.
+3. Confirm the jax orbit shard completes under the session cap and the run is
+   green; the `deferred` count for orbit drops to 0.
+
+Same obligation pattern (different track): the jax **spherical-DF** tests are
+deferred to **Track F** (Pdf.2) via per-nodeid `jax tests/test_sphericaldf.py::…`
+slow-skip lines — re-enable those when the spherical-DF backend migration lands
+(see `trackF_df.md`).
