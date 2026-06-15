@@ -225,12 +225,16 @@ vs the fallback-vs-scipy test → last). Full design: workflow wf_170c5c4b outpu
 - Multipole: 100/103 jax FOR FREE via the shared mixin (3 pre-existing edge cases
   stay: z-axis continuity + 2 time-dependent). No Multipole ledger change.
 
-DEFERRED (jit): an inner jit boundary was in the design but is redundant with the
-in-backend integrator's RHS jit (the orbit path -- #39's actual goal) and marginal
-for direct calls (warm ~0.02s; jax already caches the compiled XLA exec), and
-carries forced-namespace/jit-cache risk. Recommend as a MEASURED fast-follow, not
-speculative. (alpha-vectorized gegenbauer: same -- collapses a x L loop run once
-per eval, not the hang; fast-follow.)
+NO INTERNAL JIT (settled principle, user-confirmed): the #39 design listed an
+inner jit boundary (step 5 above) -- STRIKE it. galpy must NEVER jit/compile
+internally; the goal is to be jax-COMPATIBLE (traceable/differentiable) so the
+USER jits their own galpy-using code. An internal jit fragments the user's jit
+boundary, fights nested-jit/static-arg semantics + the forced-namespace harness,
+and is redundant (the in-backend integrators already jit the RHS). Optimize
+migrated modules by VECTORIZING (small clean graph), not by compiling. The
+alpha-vectorized gegenbauer is the only real optional opt -- collapses a x L loop
+run once per eval (not the hang) -- and is NOT needed for correctness; add only if
+profiling demands. (See memory: no-internal-jit.)
 
 NEW SYSTEMIC GAP (task #44, "soon"): torch SCALAR-input rejection blocks the torch
 test_scf (40) + Multipole even though the vectorization works at array level --
