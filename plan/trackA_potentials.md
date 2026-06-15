@@ -205,3 +205,36 @@ FD-of-flow STM on the orbit path; (e) un-defer the test_scf / Multipole jax test
 (deriv=2, pole xp.where guard); PR3 = Multipole jit (arith already vectorized);
 PR4 (later) = assoc_legendre fallback graph-shrink / lax.scan (float-ordering risk
 vs the fallback-vs-scipy test → last). Full design: workflow wf_170c5c4b output.
+
+## 2026-06-15 — #39 PR1 SCF/Multipole jax vectorization DONE (branch feat/scf-jax-vectorize)
+
+5 commits (3e842a2c..d0cc4946), pushed; PR into feat/backends pending review.
+- PR1a-c: removed the per-point numpy.ndindex loop from the SCF backend eval/
+  forces/2nd-derivs by making the radial leaves array-r-aware (l on axis 0 for
+  array r -> (N,L,P)) and batching the (N,L,M) sums point-first (mirrors the
+  already-vectorized MultipoleExpansion._backend_evaluate). numpy branch
+  untouched -> byte-identical (validated vs /var/tmp/scf_baseline.npy); jax/torch
+  parity ~1e-16; jax time now FLAT in P (P=2000 ~0.05-0.09s; was an O(P) hang).
+  A first forces run caught a real bug: _dC/_d2C needed a trailing point axis for
+  array xi (they were only ever called scalar via the numpy loop) -- fixed.
+- PR1d: SCF coeff-computation -- the one in-place site is _gaussianQuadrature's
+  roundoff clip s[where(|s|<roundoff)]=0 -> functional xp.where (no-op for the
+  default roundoff=0 -> numpy byte-identical).
+- PR1e: un-defer 31 jax test_scf entries (now 47/47 jax). Kept deferred: 3 jax
+  *_nbody_* (DF sampling -> Track F) + all 40 torch (systemic torch issue below).
+- Multipole: 100/103 jax FOR FREE via the shared mixin (3 pre-existing edge cases
+  stay: z-axis continuity + 2 time-dependent). No Multipole ledger change.
+
+DEFERRED (jit): an inner jit boundary was in the design but is redundant with the
+in-backend integrator's RHS jit (the orbit path -- #39's actual goal) and marginal
+for direct calls (warm ~0.02s; jax already caches the compiled XLA exec), and
+carries forced-namespace/jit-cache risk. Recommend as a MEASURED fast-follow, not
+speculative. (alpha-vectorized gegenbauer: same -- collapses a x L loop run once
+per eval, not the hang; fast-follow.)
+
+NEW SYSTEMIC GAP (task #44, "soon"): torch SCALAR-input rejection blocks the torch
+test_scf (40) + Multipole even though the vectorization works at array level --
+torch.sqrt(numpy.float64) in the reference potentials (TwoPowerSpherical._dens),
+numpy.ndarray * Tensor in the SCF integrand. jax is lenient; torch is strict. Real
+fix is CENTRAL scalar/numpy->tensor coercion under forced-torch (resolver/input
+layer) -- high leverage across the whole torch suite, separate from #39.
