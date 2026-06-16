@@ -1,0 +1,6 @@
+{
+  "date": "2026-06-04",
+  "total": 2466,
+  "label": "#892 opened — full suite, pre-migration",
+  "note": "all-backend suite size (tests/ collected, minus out-of-scope test_actionAngleTorus). Project-start reference: before the backend infra existed, nothing ran under jax/torch, so the whole suite is the burndown's starting height. Not a git-measured ledger point (the ledger only exists from 2026-06-14)."
+}
