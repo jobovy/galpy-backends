@@ -1,0 +1,238 @@
+[
+  {
+    "date": "2026-06-14",
+    "jax_total": 355,
+    "per_file": {
+      "test_FDMdynamfric.py": {
+        "jax": 1,
+        "torch": 4
+      },
+      "test_MultipoleExpansionPotential.py": {
+        "jax": 3,
+        "torch": 96
+      },
+      "test_SpiralArmsPotential.py": {
+        "jax": 1,
+        "torch": 11
+      },
+      "test_actionAngle.py": {
+        "jax": 96,
+        "torch": 187
+      },
+      "test_conversion.py": {
+        "jax": 0,
+        "torch": 2
+      },
+      "test_coords.py": {
+        "jax": 6,
+        "torch": 20
+      },
+      "test_diskdf.py": {
+        "jax": 0,
+        "torch": 14
+      },
+      "test_dynamfric.py": {
+        "jax": 1,
+        "torch": 5
+      },
+      "test_evolveddiskdf.py": {
+        "jax": 0,
+        "torch": 3
+      },
+      "test_galpypaper.py": {
+        "jax": 2,
+        "torch": 11
+      },
+      "test_interp_potential.py": {
+        "jax": 2,
+        "torch": 40
+      },
+      "test_kuzminkutuzov.py": {
+        "jax": 1,
+        "torch": 1
+      },
+      "test_noninertial.py": {
+        "jax": 8,
+        "torch": 35
+      },
+      "test_orbit.py": {
+        "jax": 1,
+        "torch": 456
+      },
+      "test_orbits.py": {
+        "jax": 1,
+        "torch": 55
+      },
+      "test_potential.py": {
+        "jax": 34,
+        "torch": 156
+      },
+      "test_pv2qdf.py": {
+        "jax": 7,
+        "torch": 10
+      },
+      "test_qdf.py": {
+        "jax": 40,
+        "torch": 56
+      },
+      "test_quantity.py": {
+        "jax": 46,
+        "torch": 149
+      },
+      "test_scf.py": {
+        "jax": 34,
+        "torch": 40
+      },
+      "test_snapshotpotential.py": {
+        "jax": 0,
+        "torch": 8
+      },
+      "test_sphericaldf.py": {
+        "jax": 52,
+        "torch": 212
+      },
+      "test_streamTrack.py": {
+        "jax": 0,
+        "torch": 40
+      },
+      "test_streamdf.py": {
+        "jax": 17,
+        "torch": 29
+      },
+      "test_streamgapdf.py": {
+        "jax": 2,
+        "torch": 3
+      },
+      "test_streamgapdf_impulse.py": {
+        "jax": 0,
+        "torch": 7
+      },
+      "test_streamspraydf.py": {
+        "jax": 0,
+        "torch": 20
+      }
+    },
+    "sha": "beb9963e3a",
+    "subject": "CI: all-backend existing-suite job (xfail-ledger, sharded, feat/backends+nightly+dispatch) + per-PR backend smoke (#956)",
+    "torch_total": 1670,
+    "total": 2025
+  },
+  {
+    "date": "2026-06-15",
+    "jax_total": 324,
+    "per_file": {
+      "test_FDMdynamfric.py": {
+        "jax": 1,
+        "torch": 4
+      },
+      "test_MultipoleExpansionPotential.py": {
+        "jax": 3,
+        "torch": 96
+      },
+      "test_SpiralArmsPotential.py": {
+        "jax": 1,
+        "torch": 11
+      },
+      "test_actionAngle.py": {
+        "jax": 96,
+        "torch": 187
+      },
+      "test_conversion.py": {
+        "jax": 0,
+        "torch": 2
+      },
+      "test_coords.py": {
+        "jax": 6,
+        "torch": 20
+      },
+      "test_diskdf.py": {
+        "jax": 0,
+        "torch": 14
+      },
+      "test_dynamfric.py": {
+        "jax": 1,
+        "torch": 5
+      },
+      "test_evolveddiskdf.py": {
+        "jax": 0,
+        "torch": 3
+      },
+      "test_galpypaper.py": {
+        "jax": 2,
+        "torch": 11
+      },
+      "test_interp_potential.py": {
+        "jax": 2,
+        "torch": 40
+      },
+      "test_kuzminkutuzov.py": {
+        "jax": 1,
+        "torch": 1
+      },
+      "test_noninertial.py": {
+        "jax": 8,
+        "torch": 35
+      },
+      "test_orbit.py": {
+        "jax": 1,
+        "torch": 456
+      },
+      "test_orbits.py": {
+        "jax": 1,
+        "torch": 55
+      },
+      "test_potential.py": {
+        "jax": 34,
+        "torch": 156
+      },
+      "test_pv2qdf.py": {
+        "jax": 7,
+        "torch": 10
+      },
+      "test_qdf.py": {
+        "jax": 40,
+        "torch": 56
+      },
+      "test_quantity.py": {
+        "jax": 46,
+        "torch": 149
+      },
+      "test_scf.py": {
+        "jax": 3,
+        "torch": 40
+      },
+      "test_snapshotpotential.py": {
+        "jax": 0,
+        "torch": 8
+      },
+      "test_sphericaldf.py": {
+        "jax": 52,
+        "torch": 212
+      },
+      "test_streamTrack.py": {
+        "jax": 0,
+        "torch": 40
+      },
+      "test_streamdf.py": {
+        "jax": 17,
+        "torch": 29
+      },
+      "test_streamgapdf.py": {
+        "jax": 2,
+        "torch": 3
+      },
+      "test_streamgapdf_impulse.py": {
+        "jax": 0,
+        "torch": 7
+      },
+      "test_streamspraydf.py": {
+        "jax": 0,
+        "torch": 20
+      }
+    },
+    "sha": "037ac4036e",
+    "subject": "SCF/Multipole jax/torch vectorization: kill the per-point hang (#39 PR1) (#959)",
+    "torch_total": 1670,
+    "total": 1994
+  }
+]

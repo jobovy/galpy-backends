@@ -59,6 +59,21 @@
     "sha256": "34f773c644e8ab680b655d23e191131ea7a224a97598bc41136c1ac5b2f6069f",
     "track": "G"
   },
+  "g13_ledger_burndown": {
+    "description": "backend-port burndown: tests still xfail-ledgered (jax/torch) vs time",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "af3d926",
+    "sha256": "cff7023010974624d246cf4aa36f43a593e072753122ae0fa0c304f5247c7852",
+    "track": "G"
+  },
   "g1_backend_parity": {
     "description": "numpy<->jax/torch value parity + jax/torch autodiff identities (migrated potentials)",
     "env": {

@@ -14,6 +14,22 @@ each track produces its figures as it lands, not in a big batch at the end.
 
 ---
 
+## 2026-06-16 — g13 backend-port burndown (progress vs time)
+
+- **g13_ledger_burndown** (NEW; sha256 `cff702301097…`) — the migration's
+  PROGRESS metric: # tests still in the `xfail(strict=False)` ledger (still
+  failing under jax / torch) vs time. Reconstructed **exactly from git history**
+  of `tests/backend_xfail.txt` + `backend_slow_skip.txt` on `feat/backends`
+  (`measure/burndown_from_git.py`) — no manual logging, auto-grows one point per
+  ledger-touching commit. Baseline 2026-06-14: jax 355, torch 1670; #959 drops
+  jax → 324. Falls to 0 when the full suite passes under both backends at numpy
+  tolerances. Dashed lines = milestones (`data/milestones.json`, hand-annotated).
+  Re-run the measure script + `run` at each milestone review (see plan Pillar 1
+  ledger-burndown policy) to extend the series. The torch≫jax early gap is the
+  systemic scalar-rejection that #960's central coercion fixes (first milestone).
+
+---
+
 ## G0 — Figure harness (do this first; everything else plugs into it)
 
 A tiny, dependency-light harness so "every figure has reproducible code" is
