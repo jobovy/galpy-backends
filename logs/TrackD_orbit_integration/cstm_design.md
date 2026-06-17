@@ -47,3 +47,14 @@ matrix {rk4_c,rk6_c,dopr54_c,dop853_c} x {MiyamotoNagai, MWPotential2014, non-ax
 5. Routing ownership: wire the in-backend ODE path into Orbit.integrate FIRST
    (PR-A), or let C-STM introduce the dispatch hook?
 6. Public frame: Orbit order (fold cyl<->rect Jacobians) vs rectangular. [Orbit order]
+
+---
+## STATUS 2026-06-17 (overnight)
+PR-B **DONE** -> draft PR #972 (feat/cstm-orbit-autodiff). Functional C-STM
+wrappers + 18 passing tests. Phase-0 simplification: integrate_dxdv(rectIn=False,
+rectOut=False) gives M directly in Orbit order, so NO cyl<->rect Jacobian folding
+(the design's §a concern is moot). Reverse-mode validated exactly (jacrev==M,
+gradcheck, grad==FD, ==in-backend-ODE grad). jacfwd is reverse-only for now
+(custom_vjp); custom_jvp forward-mode = future enhancement.
+PR-C (Orbit.integrate routing) BLOCKED on the user's answers to the 6 open
+questions above.
