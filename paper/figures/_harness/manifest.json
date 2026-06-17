@@ -60,7 +60,7 @@
     "track": "G"
   },
   "g13_ledger_burndown": {
-    "description": "backend-port burndown: tests still xfail-ledgered (jax/torch) vs time",
+    "description": "backend-port burndown per backend: tests still xfail-ledgered vs time",
     "env": {
       "galpy": "1.12.0.dev0",
       "jax": "0.10.1",
@@ -70,8 +70,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "af3d926",
-    "sha256": "cff7023010974624d246cf4aa36f43a593e072753122ae0fa0c304f5247c7852",
+    "git": "a617c59",
+    "sha256": "c2034ff5282a41cb816258c9cec5afe0052cfcd18e87cd67230629aacdb74598",
     "track": "G"
   },
   "g1_backend_parity": {
