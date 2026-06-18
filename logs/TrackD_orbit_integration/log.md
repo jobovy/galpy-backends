@@ -56,6 +56,78 @@ an unconstrained step can push the launch velocity into a near-radial plunge who
 exceeds diffrax's `max_steps` (EquinoxRuntimeError); fixed by clipping (vR0,vz0) to a sane box +
 solver headroom. This is the Track G "G3 showpiece" (orbit fit) that was blocked on the integrator.
 
+## Landed — Orbit.integrate wiring (PR-A #973) + accessors (PR-B #974) (2026-06-18)
+
+### PR-A — `Orbit.integrate` routes to the in-backend ODE path (#973, merged 2026-06-18 → feat/backends)
+`Orbit.integrate(method=...)` now selects the in-backend diffrax/torchdiffeq integrator when the
+method is one of the in-backend names **and** the IC is a backend array (numpy ICs keep the exact C/
+Python paths — public API and numpy results byte-identical). Generalizations beyond the #906 pilot:
+- **All phase-space dimensions**, not just 6: the RHS is dimension-aware over `phasedim` 2/3/4/5/6
+  (1D linear, 2D planar-axi, 3D, 4D planar-non-axi, 5D, 6D full), reusing `_EOM`/`_EOM_2d`-equivalent
+  cylindrical RHS per dim. Parity ~1e-9 vs the matching C integrator across dims.
+- **Concrete (non-forced) backend ICs run the numpy/C path** rather than raising — a jax/torch IC
+  under no forced context still integrates; only the in-backend *method* names trigger the ODE route.
+- **rtol/atol match the C defaults** (`1e-12`, the C `_parse_tol` default — not the pilot's 1e-11) — answers the review question: the
+  in-backend tolerances now equal galpy's C-integration defaults, and the loose pilot test tolerances
+  were tightened to match (except one Quantity test where `_TS*u.Gyr` parses to ~28× longer
+  integration, kept at 1e-6/1e-7 with a logged justification).
+- **Coverage:** closed the one missing line (inbackend_ode.py:84) flagged in review.
+- Extras `galpy[diffrax]`/`galpy[torchdiffeq]` + a CI job that installs them so the in-backend code is
+  actually exercised (no coverage hiding).
+- **Follow-up ledgered:** ICs must be in *internal units* for in-backend tracing — needs clear docs
+  (deferred, recorded for a docs PR).
+
+### PR-B — backend-aware time-evaluation accessors + off-grid interpolation (#974, open → feat/backends)
+After integrating in-backend, the derived `Orbit` accessors (`x/y/z/r/R/vR/vT/vx/vy/...`) must read
+back the stored backend trajectory without detaching it. The accessors now dispatch through `xp`:
+- `_resolve_accessor_namespace(thiso)` resolves the namespace **and** coerces `thiso` onto it
+  (`xp.asarray`) — fixing a forced-suite crash where `xp.cos(thiso)` with a numpy `thiso` and a forced
+  torch `xp` made torch reject the numpy input (jax silently coerces; torch raises). This was the one
+  **real bug** the triage caught (I had initially mislabeled it a ledger flip).
+- **Off-grid interpolation**: evaluating an accessor at times *between* the integration grid points now
+  uses `galpy.backend.interpolate.Spline1D` (the same differentiable cubic spline the potentials use),
+  so `o.R(t)` is differentiable in `t` and the ICs even off the stored grid — parity with the C/numpy
+  interpolation at ~1e-9.
+- **Aliasing fix** (user flagged "earlier instances in 892"): `getOrbit` and both `_call_internal`
+  backend branches return a `_backend_safe_copy` — torch `.clone()` (graph-preserving, prevents a user
+  mutating the stored orbit in place), jax left as-is (immutable). The numpy path keeps its existing
+  `.copy()` semantics, so users still cannot inadvertently mutate an orbit's internal array.
+
+### Potential backend-completeness (#975, open → feat/backends) — "are we done with potential?"
+Audit answer: the compute core (forces/2nd-derivs/density) was already done; what remained were the
+**convenience / functional-interface** methods that still used bare numpy + the scipy-backed
+root-finds/quadratures. #975 closes them:
+- Module-level `vesc/rtide/ttensor/tdyn` + `Potential` convenience methods → `xp`.
+- `rl/rE/LcE/zvc/zvc_range` energy/circular-radius root-finds → new `galpy.backend.optimize.brentq`
+  (numpy→`scipy.brentq`; jax/torch→bisection + one Newton reparameterization step for first-order
+  gradients).
+- `mass()` Gauss-theorem quadrature → `galpy.backend.quadrature` GL quad, with a **node-by-node mode**
+  for scalar-only forces (e.g. `DoubleExponentialDiskPotential`) so `mass()` never feeds an array to a
+  scalar-only `_Rforce` (the one real bug found in #975's first cut).
+- `Force.rforce` base-class plumbing + `planarPotential` convenience → `xp`; dissipative-force backend
+  cases deferred (scipy.special.erf on a backend array coerces to numpy + emits the numpy-2.0
+  `__array_wrap__` DeprecationWarning the focused CI promotes to error — a separate dissipative
+  migration concern, gated off here).
+- numpy path byte-identical throughout; new backend tests for optimize/quadrature/convenience/
+  planar/linear/force.
+
+### Triage of the all-backend shard reds (both PRs)
+The all-backend CI re-runs the full suite under a *forced* jax/torch backend with a checked-in xfail
+ledger; `feat/backends` itself is green, so every new red is introduced by the PR. A migration that
+swaps `numpy.sqrt(x)→xp.sqrt(x)` legitimately makes a method return a backend array under the forced
+suite (the **intended** progress), which flips downstream numpy-only tests — those are **ledger flips**,
+not regressions, and the fix is a ledger add, not code. The triage workflow classified every new red:
+- **#974:** 1 real bug (the accessor crash above, fixed) + 16 ledger-flip adds (1808→1824).
+- **#975:** ~6 real bugs (mass/scalar-only quad, radicand coercion, etc., fixed) + 50 ledger adds
+  (1764→1815 [this PR's branch baseline]).
+- Local representative shards re-run green under `-n auto` (72-core box): #974 `test_orbits`/
+  `test_actionAngle` torch+jax 0-failed; #975 `test_potential` torch (80 pass) + jax (191 pass) 0-failed.
+  jax shows extra XPASSes (jax is far more migrated than torch) — left under `strict=False`, to be
+  pruned at the next milestone, not per-PR.
+
 ## Next
-- Route `Orbit.integrate` by IC namespace (numpy-identical public API); `galpy[diffrax]`/`galpy[torchdiffeq]` extras + a CI job that exercises them.
-- Cross-validate against path B (C-STM) once Pvar-rhs is in main.
+- Cross-validate the in-backend path against **path B (C-STM)** once #972's wrappers route into
+  `Orbit.integrate` (PR-C, task #57): same `∂x(t)/∂x₀` from two independent mechanisms (g16 figure).
+- Optimize `c_stm_forward` to a single batched C `integrate_dxdv` instead of 6 callback solves (#59);
+  forward-mode C-STM via `custom_jvp` for single-direction IC sensitivities (#60).
+- Docs: ICs-in-internal-units note for in-backend tracing (ledgered).
