@@ -29,13 +29,27 @@ Counts are `grep -c '^<backend> ' tests/backend_xfail.txt` (xfail entries) plus 
 |------|-------|-----------|---------------|---------------|-------------|-----------------|-----------------|
 | 2026-06-16 | project-start baseline (master plan) | 296 | 28 | **324** | 1670 | — | **1670** |
 | 2026-06-17 | #969 milestone-1 prune (before → after) | 296 → 253 | 39 | 335 → **292** | 1683 → 1484 | 1 | 1684 → **1485** |
-| 2026-06-18 | current `feat/backends` HEAD | **254** | 39 | **293** | **1494** | 1 | **1495** |
+| 2026-06-18 | `feat/backends` HEAD (pre #974/#975) | **254** | 39 | **293** | **1494** | 1 | **1495** |
+| 2026-06-19 | post #974/#975 merge + rebase onto #977 (coarse) | **298** | 39 | **337** | **1589** | 1 | **1590** |
+| 2026-06-19 | **⟂ granularity refined → per-potential** (#978) | **284** | 39 | **323** | **2072** | 1 | **2073** |
 
-Verification: `git show origin/feat/backends:tests/backend_xfail.txt | grep -c '^torch '`
-→ 1494; `... | grep -c '^jax '` → 254. `backend_slow_skip.txt` on the same ref: jax 39,
-torch 1. (The current xfail count is *fractionally higher* than #969's post-prune 1484/253
-because triage adds since the prune are folded in; the milestone-prune deltas, not the HEAD
-count, are the burndown signal.)
+Verification (pre-#974/#975): `git show <ref>:tests/backend_xfail.txt | grep -c '^torch '`
+→ 1494; `'^jax '` → 254. `backend_slow_skip.txt`: jax 39, torch 1.
+
+**⟂ GRANULARITY DISCONTINUITY (2026-06-19, #978).** #977 parametrized the 12
+`test_potential.py` loop-tests; #978 then regenerated the `test_potential` portion of the
+ledger at full per-`(potential × test)` granularity (`GALPY_BACKEND_XFAIL_REGEN`):
+`test_potential` jax **19→5**, torch **135→618**. The torch **+483** is a *measurement-
+resolution change, NOT a regression* — the old coarse entries prefix-matched every potential,
+so one entry hid 618 real failures (+598 passes). jax **−14** because it was *over*-ledgered
+(coarse entries marked mostly-passing tests xfail).
+**Handling of prior measurements:** the pre-#977 rows above are kept as-is but are a **coarse
+undercount** for `test_potential` (cannot be recomputed at fine granularity — the parametrized
+tests did not exist at those commits). The burndown therefore has a labeled step here; the
+per-potential count is the true metric from this point forward. Only `test_potential` changes
+granularity — the rest of the ledger (test_orbit/test_actionAngle/test_sphericaldf/…) is
+continuous across the discontinuity. The g13 burndown figure should plot the pre-#977 series
+dashed (coarse) up to this marker and the per-potential series solid after.
 
 **Reading the trajectory.**
 - The project-start baseline (324 jax / 1670 torch) and #969's "before" numbers (335 / 1684)

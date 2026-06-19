@@ -110,3 +110,21 @@ state (torch 1494 / jax 254). Because g13 is reconstructed from git history of t
 data point should already be picked up by re-running `measure/burndown_from_git.py` + `run` — but the
 figure has **not** been regenerated here (do not regenerate; that is a Track G task at the next
 milestone review).
+
+## 2026-06-19 — per-potential ledger regen (post-#977 parametrization)
+
+#974 (orbit accessors) + #975 (potential convenience/functional) merged to feat/backends;
+feat/backends then rebased onto post-#977 main (39 commits, conflict-free — feat/backends
+doesn't touch test_potential.py, #977 only touches it). #977 parametrized the 12
+test_potential loop-tests, so the coarse ledger entries (prefix-matching every potential)
+were regenerated at full per-(potential × test) granularity via GALPY_BACKEND_XFAIL_REGEN
+→ **PR #978** into feat/backends.
+
+- test_potential: jax **19 → 5**, torch **135 → 618**. Ledger total: jax 298 → **284**,
+  torch 1589 → **2072** (1887 → **2356**).
+- torch +483 = granularity refinement (coarse prefix entries hid 618 real failures + 598
+  passes), NOT a regression; jax −14 = was over-ledgered. Validated torch:
+  598 pass / 618 xfail / 0 failed / 0 xpass. jax via #978 CI.
+- Burndown discontinuity handling: see appendix E (pre-#977 rows = coarse undercount, kept
+  labeled; per-potential is the true metric from here; only test_potential changes granularity).
+- g13 TODO: plot pre-#977 coarse series dashed up to the 2026-06-19 marker, per-potential solid after.
