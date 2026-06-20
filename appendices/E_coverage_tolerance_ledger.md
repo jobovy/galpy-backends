@@ -32,6 +32,7 @@ Counts are `grep -c '^<backend> ' tests/backend_xfail.txt` (xfail entries) plus 
 | 2026-06-18 | `feat/backends` HEAD (pre #974/#975) | **254** | 39 | **293** | **1494** | 1 | **1495** |
 | 2026-06-19 | post #974/#975 merge + rebase onto #977 (coarse) | **298** | 39 | **337** | **1589** | 1 | **1590** |
 | 2026-06-19 | **⟂ granularity refined → per-potential** (#978) | **293** | 39 | **332** | **2072** | 1 | **2073** |
+| 2026-06-19 | #978 onto #980 + new deepcopy test + 9 jax-slow→slow-skip | **284** | 49 | **333** | **2073** | 1 | **2074** |
 
 Verification (pre-#974/#975): `git show <ref>:tests/backend_xfail.txt | grep -c '^torch '`
 → 1494; `'^jax '` → 254. `backend_slow_skip.txt`: jax 39, torch 1.
@@ -54,6 +55,62 @@ per-potential count is the true metric from this point forward. Only `test_poten
 granularity — the rest of the ledger (test_orbit/test_actionAngle/test_sphericaldf/…) is
 continuous across the discontinuity. The g13 burndown figure should plot the pre-#977 series
 dashed (coarse) up to this marker and the per-potential series solid after.
+
+**Rebase onto #980 + the deepcopy regression test (2026-06-19).** When `feat/backends` (and
+#978 on top of it) was rebased onto main after **#980** merged, two `test_potential` ledger
+moves followed — both for the single new test **`test_MultipoleExpansion_deepcopy`** that #980
+added:
+- **torch xfail +1** (618→619): the new test constructs Multipole/DiskMultipole potentials, and
+  torch fails at *construction* (`MultipoleExpansionPotential.py:650` `TypeError`, ~20 s) — the
+  same genuine torch-backend SCF/Multipole coefficient-setup failure already behind the 59 torch
+  `test_amp_mult_divide[*Multipole*/*SCF*/*Disk*]` entries.
+- **jax slow-skip +1** (39→40): under jax the same test *constructs and evaluates correctly* and
+  **passes**, but the full deepcopy-and-re-evaluate over 4 potentials × a grid × times × 10
+  methods takes **~185 s on the dev box** (jax-eager Multipole eval) → it risks crossing the
+  300 s per-test timeout on the slower CI runners (a flaky-timeout red), so it is `slow_skip`,
+  not xfail. The numpy run fully covers the actual scipy ≥ 1.18 deepcopy-of-module regression.
+  (Consistent with jax having **0** `test_amp_mult_divide` ledger entries: jax handles Multipole
+  construction, torch does not.)
+
+  *Measurement caveat (important):* the dev box's py3.13 jax is **CUDA-enabled and GPU-default**;
+  a first `-n 4` validation OOM'd the GPU (`CUDA_ERROR_OUT_OF_MEMORY`) and reported ~90 % spurious
+  `F`, and the same OOM made this test "time out" at 300 s. CI runs jax on **CPU** — so all
+  ledger validation/regen must force CPU (`CUDA_VISIBLE_DEVICES="" JAX_PLATFORMS=cpu`); on CPU the
+  test is a clean 185 s pass. (Lab-notebook memory `jax-defaults-to-gpu-force-cpu`.)
+
+**Plus a categorization fix surfaced by the same CPU validation: 9 jax `test_potential` tests
+moved xfail → slow-skip (xfail −9 / slow-skip +9, jax total unchanged).** The CI-parity full jax
+`test_potential.py` validation (CPU, no `--timeout`, so tests run to completion) flagged **9
+XPASS** — ledgered-xfail tests that actually *pass* under jax: `test_DehnenBinney98`,
+`test_Cautun20`, `test_McMillan17`, `test_diskscf_overflow`, and 5 rotated/tilted-wrapper
+`test_poisson_surfdens_potential[…]` cases. They are not stale: each takes **580–2641 s** under
+jax-eager (DehnenBinney98 ≈ 44 min; junit-measured), far over the 300 s per-test CI timeout, so
+as xfail entries they timed out (→ xfail) on every CI run — but they compute *correct* values
+given the time. That is exactly the **slow-skip** category ("correct but pathologically slow until
+vectorized"), not xfail. Moving them: (a) is the honest label; (b) reclaims **~190 min/run** of
+pure timeout-burn on the jax `test_potential` shards (those 9 had been eating 9 × 300 s every
+run) — bringing the 5-way `pytest-split` groups from ~55 min to ~46 min each (75 min ceiling), a
+healthier session-timeout margin; (c) torch fails these **fast at construction** (0.0 s), so they
+stay in the *torch* xfail-ledger; numpy exercises all of them. Net jax `test_potential`: **5 xfail
++ 15 slow-skip** (was 14 xfail + 6).
+
+**Important — why #980 does NOT drop any existing entries (a misdiagnosis corrected).** It was
+initially expected that the 59 torch `amp_mult_divide[*Multipole*/*SCF*]` entries were the
+`copy.deepcopy`-of-a-stored-numpy-module failure that #980 fixes, and would therefore *drop*
+once #980 was in the base. They do **not**: the dev box is **py3.13, which tolerates deepcopy of
+a module**, so the local regen that produced the ledger never saw the deepcopy bug — those 59
+entries are *genuine torch construction/eval failures*, unrelated to #980, and re-running the
+regen on the #980 base reproduces the identical set (verified: the entries still `xfailed`, not
+`xpassed`). The deepcopy-of-module bug is a **py3.14-CI-only** failure mode (scipy ≥ 1.18 stores
+the numpy module on its PPoly/BPoly interpolants; py3.14's deepcopy raises `cannot pickle
+'module' object`). #980's value for the all-backend suite is therefore:
+1. it fixes the **numpy `build.yml` red** on py3.14 (`test_amp_mult_divide[*Multipole*]`), which
+   was the actual blocker for #978 going green; and
+2. it prevents **un-ledgered py3.14 jax/torch deepcopy reds** for the table-backed potentials
+   that the py3.13 local regen could not capture.
+Net for #980's new test: no drops, +1 torch xfail, +1 jax slow-skip. (Separately, the CPU
+validation recategorized 9 already-ledgered jax tests xfail → slow-skip — see the paragraph
+above; that is a label fix, not a burndown change: jax total stays 333.)
 
 **Reading the trajectory.**
 - The project-start baseline (324 jax / 1670 torch) and #969's "before" numbers (335 / 1684)
