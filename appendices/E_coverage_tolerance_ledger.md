@@ -206,6 +206,48 @@ rforce in `test_backend_force.py` — but that is a coverage placement, not a to
 - **#972** (merged 2026-06-17) — Track D functional STM interface; the loose-tolerance pilot.
 - **#973** (merged 2026-06-18) — in-backend `Orbit.integrate` diffrax/torchdiffeq; tightened
   parity to 1e-8/1e-9, with the Quantity-time exception.
-- **#974** (OPEN → feat/backends) — orbit accessors; ledger +16 (branch-local).
-- **#975** (OPEN → feat/backends) — potential convenience/functional interface; tdyn
+- **#974** (merged) — orbit accessors; ledger +16 (branch-local).
+- **#975** (merged) — potential convenience/functional interface; tdyn
   GL-vs-adaptive loosening; ledger +50 (branch-local).
+
+### Potential closeout wave (#978–#993) — torch `test_potential` burndown
+
+The migrated potentials were already backend-clean; the remaining torch reds were
+test-infrastructure / boundary-coercion gaps, not potential-code bugs. Fix PRs carry
+**no ledger prunes** (the flipped entries become XPASS under `strict=False`); the prune
+happens once in the milestone regen that follows #993.
+
+- **#978** (merged 2026-06-20) — all-backend ledger regen at **per-potential** test_potential
+  granularity (this is why torch xfail grew 1485→~2079: each loop-test became many
+  per-potential nodeids; ledger size = progress metric, so finer granularity is intended).
+- **#981** (merged 2026-06-20) — test_potential legacy asserts backend-tolerant (`numpy.asarray`
+  routing of forced-torch outputs; no tolerance change).
+- **#982** (merged 2026-06-20) — test_orbit energy/Jacobi conservation backend-tolerant.
+- **#983** (merged 2026-06-20) — centralize data-coercion helpers into `galpy.backend._coerce`
+  (`coerce_coords` / `promote_scalars` / `as_backend_constant` / `zeros_like_backend`).
+- **#984** (merged 2026-06-20) — backend-correct `ttensor` eigenvalues + `zvc_range` no-solution path.
+- **#985** (merged 2026-06-20) — `Orbit.L()` cross-product namespace-consistent.
+- **#986** (merged 2026-06-20) — pin SCF/Multipole **construction-time** coefficient setup to numpy
+  (the #75 coefficient computation stays numpy-pinned; lifting it is a tracked follow-up).
+- **#987** (merged 2026-06-20) — centrally coerce forced-backend scalar leaks.
+- **#988** (merged 2026-06-20) — pin the 3D variational dxdv driver's host-side coords to numpy.
+- **#989** (merged 2026-06-20) — anchor construction-time scalar phi to float64 in EllipsoidalPotential
+  (fixes a float32-amp bug exposed while stabilizing the GL sum order).
+- **#990** (merged 2026-06-21) — coerce scalar coords for backend-compatible scalar-method potentials;
+  **gated on `_check_backend_compatible`** (an unconditional decorator coercion broke unmigrated
+  AnyAxiRazorThin — scipy rejects tensors — caught in adversarial review).
+- **#991** (merged 2026-06-21) — coerce all-numpy operands in `promote_scalars` under a forced backend;
+  restored the `asarray_on_device` device-reject fallback dropped in #987; ledgered 6 streamdf torch
+  tests the coercion correctly breaks (unmigrated streamdf numpy track-build).
+- **#992** (merged 2026-06-21) — anchor scalar coordinates in migrated analytic/disk potentials
+  (SpiralArms, EllipticalDisk, KuijkenDubinski, PowerSpherical[wCutoff]).
+- **#993** (OPEN → feat/backends) — **last potential-reds PR**: `_check_backend_compatible` now recurses
+  into `CompositePotential._potlist` (the dominant fix — composites of migrated members were wrongly
+  gated incompatible, so the boundary never coerced); CylindricallySeparable construction-time coerce;
+  CorotatingRotation flag parity; test harness made backend-aware (`_tonumpy` helper, derived mock
+  flags). 33 stash-rerun-verified flips. Slow-skip: `jax test_streamspraydf::test_center` (composite
+  gate makes its composite eager-jax, >300s). **Closes potential**; the ledger-regen milestone PR
+  follows and declares potential done.
+
+**Regen baseline (origin/feat/backends, pre-regen):** jax 284 xfail + 49 slow-skip; torch 2079 xfail
++ 1 slow-skip. The #989–#993 wave's flips become XPASS and get pruned in that regen.
