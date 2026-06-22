@@ -241,13 +241,37 @@ happens once in the milestone regen that follows #993.
   tests the coercion correctly breaks (unmigrated streamdf numpy track-build).
 - **#992** (merged 2026-06-21) — anchor scalar coordinates in migrated analytic/disk potentials
   (SpiralArms, EllipticalDisk, KuijkenDubinski, PowerSpherical[wCutoff]).
-- **#993** (OPEN → feat/backends) — **last potential-reds PR**: `_check_backend_compatible` now recurses
+- **#993** (merged 2026-06-22) — **last potential-reds PR**: `_check_backend_compatible` now recurses
   into `CompositePotential._potlist` (the dominant fix — composites of migrated members were wrongly
   gated incompatible, so the boundary never coerced); CylindricallySeparable construction-time coerce;
   CorotatingRotation flag parity; test harness made backend-aware (`_tonumpy` helper, derived mock
-  flags). 33 stash-rerun-verified flips. Slow-skip: `jax test_streamspraydf::test_center` (composite
-  gate makes its composite eager-jax, >300s). **Closes potential**; the ledger-regen milestone PR
-  follows and declares potential done.
+  flags). 33 stash-rerun-verified flips. Slow-skipped 3 composite-gate eager-jax timeouts
+  (`test_streamspraydf::test_center`, `test_interp_potential::_force`, `test_actionAngleAdiabatic_…_cylsep`
+  + 3 at-risk interp `_c` tests). **Closes the potential reds.**
+- **#994** (merged 2026-06-22, → **main**) — **numpy 2.5.0 compat** (released that day, broke galpy
+  repo-wide): `numpy.linalg.eig/eigvals` now return complex for real-symmetric input → `numpy.real(...)`
+  in `ttensor` + a `_real_eig` helper at streamdf's 6 eig sites; `numpy.char.array` deprecated →
+  `Orbits._name` uses `numpy.array(..., ndmin=1)` (the `ndmin=1` preserves char.array's scalar→1-d
+  promotion — caught while verifying older-numpy parity). Byte-identical on numpy<2.5. feat/backends
+  rebased onto this (ttensor unified to `xp.real(xp.linalg.eigvals(tij))`), then #993 rebased on top.
+
+### Milestone-2 ledger regen (#996) — **POTENTIAL CLOSEOUT**
+
+Regen from run 27949897402 on the merged feat/backends (`b6f1a072`). **Reviewed, not blind**:
+**0 ADDs (no regressions), 1017 DROPs**, all in the composite-gate/coercion families (test_potential
+525, test_orbit 256, then sphericaldf/scf/Multipole/quantity/interp/actionAngle). Legit-ledgered
+numpy-pinned/unmigrated sets retained (SCF/Multipole #75, AdiabaticContraction, interpSpherical,
+TimeDependentAmplitude, streamdf-torch, unmigrated action-angle). All 37 shards completed (no
+truncation/carry-forward, unlike milestone-1).
+
+| backend | milestone-1 (2026-06-16) | pre-regen (#978 per-potential granularity) | milestone-2 (#996) |
+|---|---|---|---|
+| jax xfail | 292 | 284 | **271** |
+| torch xfail | 1485 | 2079 | **1075** |
+
+(torch *grew* 1485→2079 via #978's per-potential test parametrization — finer granularity, more
+nodeids — then dropped to 1075 here; the count is a granularity-dependent progress proxy, not
+monotonic.) **Potential track: done.** Next: orbit (Track D burndown).
 
 **Regen baseline (origin/feat/backends, pre-regen):** jax 284 xfail + 49 slow-skip; torch 2079 xfail
 + 1 slow-skip. The #989–#993 wave's flips become XPASS and get pruned in that regen.
