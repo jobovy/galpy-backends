@@ -62,3 +62,37 @@ tests (diffrax/torchdiffeq accessors; normalize under forced jax/torch).
 **Ledger.** Code-only PR (no `backend_xfail.txt` change) → independent of #1000/#999.
 The 12 flipped entries (+ the ~35 helper-flipped torch entries from #1000) drop at the
 next **orbit-milestone** ledger regen (separate PR, after #1000 merges).
+
+## Orbit close-out (post-#1001): triage → "3 then 2"
+
+Clean CPU-torch re-characterization (CI-faithful; the earlier 270-fail set was
+inflated by a stale-`.so` ABI artifact — 304 undefined-symbol AttributeErrors).
+**186 real torch orbit fails.** A triage workflow (8 cluster agents + synthesis)
+classified them: ~19 genuine orbit-infra reductions; ~119 DEFER (Python-eager 64,
+Track-A non-migrated potentials 39, Track-E action-angle 15, dissipative 1, flaky
+1); ~47 **test-side** (the orbit code is RIGHT — under forced torch the accessors
+correctly return torch tensors and the *existing tests* call `numpy.amax/all/std`
+on them).
+
+Key architecture clarification (user Q "shouldn't outputs stay backend?"): yes,
+for the **in-backend** path; the fast **C integrator is a numpy/ctypes boundary**,
+re-lifted to a differentiable backend array by the C-STM wrapper. `force=True` is
+a test stressor — the crashes are at the seams where galpy legitimately holds
+numpy internally. `_resolve_accessor_namespace`'s coercion is **load-bearing**
+(derived accessors' cos/sin need torch), so the accessor-policy "return numpy"
+alternative is NOT viable → fix the tests, not the accessors.
+
+User chose **"3 then 2"**:
+- **#1002 (3):** 34 test-side comparison/energy/scalar tests made backend-agnostic
+  via a shared `_to_numpy(x)` helper (conftest, imported by test_orbit/test_orbits;
+  renamed from `_anp` per review). 34/34 torch-green + 34/34 numpy byte-identical;
+  scope-verified. MERGED 2026-06-23.
+- **#1003 (2):** route `Orbit.integrate(<dxdv C method>)` on a jax/torch IC →
+  C-STM (`d o.e()/dR0` over a C solve == FD, jax+torch); 6D+C-3D-Hessian → C-STM,
+  else in-backend diffrax/torchdiffeq fallback (pre-checked `_check_c(dxdv3d)`);
+  numpy byte-identical. 28 routing tests incl. full 6×6 STM jacobian. Open.
+  [Track-G speed check = backlog #58; C param-grads deferred.]
+
+Remaining orbit reds = Track-A potentials + Track-E action-angle + Python-eager.
+The ~19 orbit-infra SOS/bruteSOS/dissip-warning reductions + the orbit-milestone
+ledger regen were NOT done (user deprioritized option 1).
