@@ -74,6 +74,51 @@
     "sha256": "c2034ff5282a41cb816258c9cec5afe0052cfcd18e87cd67230629aacdb74598",
     "track": "G"
   },
+  "g14_hvs_potential_fit": {
+    "description": "HVS 'Great Escape' hybrid fit: C-STM IC fit + in-backend AD halo-flattening fit",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "07eca85",
+    "sha256": "83bba3dda25f85d833a78e327af6f6d9eb4747a79330fbb35fec471a68301c80",
+    "track": "G"
+  },
+  "g15_icderiv_speed": {
+    "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "07eca85",
+    "sha256": "c3f5572fae224a891728bac20a8c18491f11bdea50d874e4812d5fff4ed2bafc",
+    "track": "G"
+  },
+  "g16_icjacobian_precision": {
+    "description": "IC-Jacobian dx(t)/dx0 four ways (C-STM, FD, jax/torch AD) agree to ~1e-8..1e-10",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "07eca85",
+    "sha256": "d842ebf97bc31561ef2705d4d0369b6bccfd25de8a58111bab3d5c75e240a1e2",
+    "track": "G"
+  },
   "g1_backend_parity": {
     "description": "numpy<->jax/torch value parity + jax/torch autodiff identities (migrated potentials)",
     "env": {

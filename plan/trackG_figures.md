@@ -366,3 +366,46 @@ warning ignored); the galpy-C baseline used the C-built main env
   POTENTIAL SUPPORT: as of #949 (36c92e8f) MWPotential2014 (PowerSphericalCutoff +
   MiyamotoNagai + NFW) is fully in-backend-integrable on jax AND torch — the earlier
   "Plummer/Isochrone only" status no longer holds, so g12 uses the same MW model as g8.
+
+## g15 — cost of the IC derivative ∂(orbit)/∂(x0): C-STM vs in-backend AD (CPU+GPU)
+
+Companion to g12, but for *differentiating* the orbit w.r.t. its initial conditions.
+`measure/measure_icderiv.py` (single-orbit) + `measure/measure_scaling.py` +
+`measure/measure_largeN.py` → `data/icderiv.json`; plot byte-stable.
+
+- Mechanisms (full 6-vector gradient of the summed final R): **C-STM** (the C
+  variational integrator; M=∂x(t)/∂x0 is a byproduct of the variational forward solve);
+  **in-backend AD** diffrax (jax, vmap-batched) and torchdiffeq (batched as the g12
+  `(6,N)` shared-controller state, then backprop). Finite-difference dropped (the user:
+  "not reliable"). MWPotential2014, nt=100, CPU float64 + TITAN Xp.
+- **Single orbit (CPU):** C-STM ≈ 66 ms ≈ diffrax-CPU 61 ms ≪ diffrax-GPU 2.1 s ≪
+  torch-CPU 4.5 s ≪ torch-GPU 13.4 s. (Note: "forward vs grad" was dropped — not
+  apples-to-apples; C-STM's *variational* forward already builds M, so grad≈forward.)
+- **Batch scaling:** C-STM-CPU **linear** (loops over orbits; 93 ms→13.8 s over N=1→256,
+  capped). diffrax-CPU (vmap) sub-linear (109 ms→6.4 s @ N=1024). diffrax-GPU **flat
+  ~2 s** (launch-overhead-bound) → **crosses diffrax-CPU at N≈300–500**, ~3× faster by
+  N=1024 — the batch crossover. Batched torch flat (CPU ~2.7 s, GPU ~7.5 s; high eager
+  floor). Large-N sweep (measure_largeN.py) pushes the flat lines to the
+  compute-bound bend / memory ceiling.
+- **Two C-STM optimisations surfaced (tasks #59, #60):** (#59) the current
+  `c_stm_forward` builds M one column at a time = **6 `integrate_dxdv` solves**; a single
+  C solve of Ṁ=J·M (J once/step, all 6 columns) ≈ 6× faster — for the full Jacobian.
+  (#60) C-STM is natively forward-sensitivity (1 solve = 1 column = 1 JVP); a
+  `custom_jvp` would give a **single** directional sensitivity (e.g. ∂R/∂R0) in 1 solve
+  instead of materialising the full M. Both will drop the C-STM line; re-measure after.
+
+## g14 — "The Great Escape" hypervelocity-star potential/IC fit (PLANNED, hybrid)
+
+S5-HVS1 (Koposov+19, arXiv:1907.11725): a star ejected by Sgr A* must, integrated
+*backward*, return to the Galactic Centre. Worked example composing BOTH gradient
+mechanisms (user-confirmed scope = full hybrid in one figure):
+- **C-STM IC-fit (fixed potential):** find the HVS phase-space within its observational
+  uncertainties that minimises closest approach to the GC — an **IC**-gradient problem,
+  C-STM's wheelhouse (verified: finite ∂(min r²)/∂IC via the STM, ∂/∂φ≈0 by symmetry).
+- **In-backend AD potential fit:** add a potential knob (halo flattening / solar V_y)
+  and fit it — a **parameter** gradient, which C-STM cannot do (verified: finite
+  ∂(min r²)/∂q through the backward diffrax solve; GD converges).
+Data: a mock star ejected from the GC in a fiducial MW potential (self-validating —
+recovers a known truth), made S5-HVS1-like; real S5-HVS1 observables as a follow-on
+variant. Ships `skeleton.py` (the minimal runnable core) that make.py imports, so the
+paper listing is exactly the code that ran — the reproducible-skeleton convention.

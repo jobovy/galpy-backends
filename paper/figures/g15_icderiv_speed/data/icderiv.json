@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "gpu": "NVIDIA TITAN Xp",
+    "has_gpu": true,
+    "nt": 100,
+    "potential": "MWPotential2014"
+  },
+  "scaling": {
+    "1": {
+      "cstm_cpu": 0.09289847605396062,
+      "diffrax_cpu": 0.10938575700856745,
+      "diffrax_gpu": 2.0714382940204814,
+      "torchdiffeq_cpu": 2.931922093965113,
+      "torchdiffeq_gpu": 7.785159329068847
+    },
+    "1000": {
+      "cstm_cpu": 58.184828977973666
+    },
+    "1024": {
+      "diffrax_cpu": 6.418649327009916,
+      "diffrax_gpu": 2.0068210440222174
+    },
+    "131072": {
+      "torchdiffeq_cpu": 60.50158424198162
+    },
+    "16": {
+      "cstm_cpu": 0.9311089639086276,
+      "diffrax_cpu": 0.19727670203428715,
+      "diffrax_gpu": 2.1501541200559586,
+      "torchdiffeq_cpu": 3.008676904020831,
+      "torchdiffeq_gpu": 8.58980725100264
+    },
+    "16384": {
+      "diffrax_cpu": 180.92073027207516,
+      "diffrax_gpu": 7.839879419072531,
+      "torchdiffeq_cpu": 17.100770631921478,
+      "torchdiffeq_gpu": 6.544563979958184
+    },
+    "256": {
+      "cstm_cpu": 13.81730678502936,
+      "diffrax_cpu": 1.3155904239974916,
+      "diffrax_gpu": 1.888407484977506,
+      "torchdiffeq_cpu": 2.6894876080332324,
+      "torchdiffeq_gpu": 7.372960205073468
+    },
+    "3000": {
+      "cstm_cpu": 161.03164205304347
+    },
+    "4": {
+      "cstm_cpu": 0.23171689501032233,
+      "diffrax_cpu": 0.14049202797468752,
+      "diffrax_gpu": 1.7561025189934298,
+      "torchdiffeq_cpu": 2.2448724589776248,
+      "torchdiffeq_gpu": 8.44329263502732
+    },
+    "4096": {
+      "diffrax_cpu": 46.77013009204529,
+      "diffrax_gpu": 6.628244200022891,
+      "torchdiffeq_cpu": 8.975094742025249,
+      "torchdiffeq_gpu": 10.82904010801576
+    },
+    "64": {
+      "cstm_cpu": 3.7437187269097194,
+      "diffrax_cpu": 0.3482731649419293,
+      "diffrax_gpu": 1.8983264380367473,
+      "torchdiffeq_cpu": 2.3971569519490004,
+      "torchdiffeq_gpu": 7.515469609992579
+    },
+    "65536": {
+      "torchdiffeq_cpu": 45.15953353594523
+    }
+  },
+  "single": {
+    "cstm": {
+      "cpu": {
+        "grad": 0.06609100697096437
+      }
+    },
+    "diffrax": {
+      "cpu": {
+        "grad": 0.06141412700526416
+      },
+      "gpu": {
+        "grad": 2.130274179042317
+      }
+    },
+    "torchdiffeq": {
+      "cpu": {
+        "grad": 4.494244217989035
+      },
+      "gpu": {
+        "grad": 13.42979440803174
+      }
+    }
+  }
+}
