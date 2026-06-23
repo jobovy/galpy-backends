@@ -46,10 +46,14 @@ tests (diffrax/torchdiffeq accessors; normalize under forced jax/torch).
   use C integration → numpy internal state via the helper); they matter for the
   **diffrax/torchdiffeq** orbit path (backend internal state) — hence the backend tests.
 - **xdist + segfault = false flips/regressions.** Two `*_dxdv_planar_c_vs_python` tests
-  segfault under torch **on the unmodified base too** (pre-existing C crash). A segfault
-  kills the xdist worker and pytest mis-attributes the failure to whichever tests shared
-  it → they appeared as "regressions" in the 2-pass xdist measurement. Always re-verify
-  flips/regressions **serially** (the segfault only hits the dxdv tests). [follow-up:
+  segfault under torch **on the unmodified base too**. Root cause: the dev box's **CUDA
+  torch build** (`2.12.0+cu126`) segfaults these dxdv-planar-C tests even with
+  `CUDA_VISIBLE_DEVICES=""`; **CI uses CPU-only torch** (`--index-url .../whl/cpu`) where
+  they PASS (not ledgered, torch shard green). So this is *local* noise. A segfault kills
+  the xdist worker and pytest mis-attributes the failure to whichever tests shared it →
+  they appeared as "regressions" in the 2-pass xdist measurement. Always re-verify
+  flips/regressions **serially** (the segfault only hits the dxdv tests); for CI-faithful
+  local torch runs, install CPU torch in a venv. [follow-up:
   root-cause the torch dxdv-planar-C segfault]
 - Worktree `libgalpy.so` copied from the main repo (different commit) → ABI mismatch
   segfaults the actionAngle Staeckel C path (analytic ecc/rap); rebuild the worktree's
