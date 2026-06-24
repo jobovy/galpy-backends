@@ -96,3 +96,33 @@ User chose **"3 then 2"**:
 Remaining orbit reds = Track-A potentials + Track-E action-angle + Python-eager.
 The ~19 orbit-infra SOS/bruteSOS/dissip-warning reductions + the orbit-milestone
 ledger regen were NOT done (user deprioritized option 1).
+
+## Orbit-milestone ledger prune — #1006 (open 2026-06-24)
+
+After #1003 + #1004 merged, ran the **full-matrix backend regen**
+(`workflow_dispatch regen=true`, run 28083178345) off the 2026-06-22 milestone-2
+baseline (run 27949897402). **All 45 jax+torch shards ran to completion** (no
+session-timeout truncation → the failing set is complete, not the
+[triage-gather-misses-timed-out-shards] blind spot). Built the new failing set
+from the 22+22 per-shard `backend_xfail_new_<be>.txt` fragments; diffed vs the
+base ledger by mirroring the conftest `_matches` base/param/file logic.
+
+**Delta: jax 289→287 (-2), torch 1029→961 (-68); 70 drops, 0 adds.**
+- `test_orbit.py`: 31 torch + 2 jax · `test_orbits.py`: 31 torch
+- incidental (same 6/22 → 6/24 window): Multipole 2, dynamfric 2, FDM 1,
+  actionAngle 1 (all torch).
+**0 adds** = the suite was genuinely all-green; nothing un-ledgered.
+
+**Gotcha (caught):** the **main repo `/home/bovy/Repos/galpy` was STALE**
+(c6014372 → old 2026-06-14 ledger, 296/1683). The real base is
+`origin/feat/backends` (28c55f29 → the 2026-06-22 milestone-2 ledger, 289/1029).
+Diffing against the stale main-repo ledger falsely showed 815+ drops / 98 adds
+(incl. phantom noninertial/kuzminkutuzov "adds"). Always diff against
+`git show origin/feat/backends:tests/backend_xfail.txt`, never the main worktree
+([[worktree-stale-base-reverts-merged-prs]]).
+
+**Method choice:** surgical prune (remove exactly the 70 now-passing entries,
+keep the rest verbatim) rather than a full regen-snapshot replace — the diff IS
+the burndown delta (-70 lines), reviewable, and can't un-mask/re-express kept
+entries. Drops are CI-verified passing (regen ran them xfail-free); #1006's own
+backend-tests run is the hard re-check.
