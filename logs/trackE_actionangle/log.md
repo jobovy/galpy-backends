@@ -75,11 +75,44 @@ infra (shard balance / Track F vectorization) must catch up.
   than `xp.pi`, to keep the byte-identity argument trivial.
 - `xp.clip(x,-1,1)` verified on torch+jax (MultipoleExpansion already uses it).
 
-## Next increment (Vertical + Spherical) — machinery already exists
+## #1005 round 2 (review feedback) — dθ/dt=Ω tests + HarmonicInverse
+
+**dθ/dt = Ω autodiff consistency (the showcase).** Angle variables evolve
+linearly in time, so dθ_i/dt = ∇_x θ_i · ẋ (Hamiltonian flow) MUST equal the
+returned frequency Ω_i. New tests differentiate the forward angle (jax.grad /
+torch.autograd) wrt the phase-space vector, dot with the EOM (galpy internal
+coords), and assert == the SAME call's Ω (so the sign/wrap convention is
+auto-referenced, no manual bookkeeping). **Holds to ~1e-15** for Harmonic
+(dθ/dt=ω) and all three Isochrone angles, prograde AND retrograde (Lz<0).
+- **Adversarial-verify catch:** the investigation workflow's test-design agent
+  claimed dθ/dt≠Ω for the Isochrone (ratios ~0.11/0.37) and wanted a strict
+  xfail — but it used the **private amp-less `_Rforce`**, giving a
+  self-consistent-but-wrong dynamics where dE/dt=0 yet dθ/dt≠Ω. The
+  dtheta-verify agent (public `Rforce`, amp included) got ~1e-15. I reproduced
+  BOTH myself: public Rforce → 1e-15, private _Rforce → 0.11/0.37 (= amp factor
+  4.5). The test uses **public Rforce** and is a PASSING test (not xfail). Two
+  agents disagreed → resolved empirically, never trust an un-verified claim.
+
+**actionAngleHarmonicInverse** — closed-form ((J,θ)→(x,v): amp=√(2J/ω),
+x=amp·sinθ, vx=amp·ω·cosθ); trivial namespace-swap, byte-identical. Migrated +
+round-trip/grad tests. No reason it was separate beyond subclassing
+actionAngleInverse.
+
+**actionAngleIsochroneInverse — DEFERRED to the root-find increment.** It is NOT
+closed-form: it solves Kepler's equation eta - a·e/ab·sin(eta) = ar per-element
+via `scipy.optimize.newton`+brentq in a Python loop (+ numpy.empty index-assign
+loop, masked writes). Needs a backend Newton/fixed-point solver with
+implicit-diff — same machinery as Vertical/Spherical. So the inverses SPLIT:
+HarmonicInverse (closed-form, done in #1005); IsochroneInverse (root-find, joins
+Vertical+Spherical). numpy round-trip tested now as the reference.
+
+## Next increment (Vertical + Spherical + IsochroneInverse) — machinery already exists
 `galpy.backend.quadrature` has `fixed_quad`, `gauss_legendre`, `transformed_quad`
 (finite GL with a near-singular **interior-point split** — the `xmax-t²` /
 `r=r_peri+t²` turning-point substitution), `fixed_quad_semiinfinite`, `nested_quad`;
 `galpy.backend.optimize` has `brentq` + `bisect_root` (backend-agnostic). So the
-1D-numerical `actionAngleVertical` (`quad` + `brentq` for `xmax`) and the 3D→1D
-`actionAngleSpherical` (quad + root-find + implicit diff) map directly onto these
-— next Track-E PR, after #1005 lands and the action-angle milestone ledger prune.
+1D-numerical `actionAngleVertical` (`quad` + `brentq` for `xmax`), the 3D→1D
+`actionAngleSpherical` (quad + root-find + implicit diff), AND
+`actionAngleIsochroneInverse` (Kepler-equation Newton root-find) all map onto a
+shared backend root-find + implicit-diff pattern — the next Track-E PR(s), after
+#1005 lands.
