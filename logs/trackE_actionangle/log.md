@@ -134,7 +134,34 @@ in that module). So task #86's "shared helper" is satisfied by the infra; I just
 
 PR opens after #1005 automerges (rebase the stacked branch onto feat/backends).
 
-## Next increment (Vertical + Spherical) — same shared root-finder + GL quadrature
+## actionAngleSpherical PR-1 (#1008, open) — actions + EccZmaxRperiRap
+
+The hardest AA method. Design fan-out (3 agents) numerically verified every piece
+vs scipy BEFORE implementing; an implement→adversarial-verify workflow then built
++ independently checked PR-1 (I re-ran byte-identity + tests myself).
+
+- **Purely ADDITIVE** (`elif is_backend_array(R):` in `_evaluate` + `_EccZmaxRperiRap`;
+  numpy scipy-loop unchanged → byte-identical, 0 deletions).
+- **rperi/rap**: shared `backend.optimize.brentq` on `E−Φ(R)−L²/2R²`, vectorised, with
+  a **fixed-schedule** expanding bracket search (vectorises `_rapRperiAxiFindStart`)
+  + `xp.where` for circular/peri/apo/plunge. roots ~5e-15 vs scipy; implicit-diff
+  `d(rperi,rap)/d(E,L)`==FD.
+- **Jr**: `r=rperi+(rap−rperi)sin²θ` substitution (kills the √ at BOTH turning points)
+  + `backend.quadrature.fixed_quad(0,π/2,n=25)`; clip radicand ≥0 (NaN-poison guard).
+  matches scipy 3-4e-16.
+- **Key design call (verified):** for Jr the **sin² single-panel** substitution beats
+  `transformed_quad`'s interior-split/X³ boundary-layer (which is for endpoint
+  *near*-singularities, not a real √ turning point — only reached 5e-8 vs sin²'s
+  3e-16). `transformed_quad` / the t² two-panel split is the right tool for the
+  FREQ/ANGLE integrals (PR-2), where galpy already uses `r=rperi+t²`/`r=rap−t²`.
+- **Validation:** numpy byte-identical (Log/NFW/Hernquist, all branch cases + scalar +
+  fixed_quad + gamma=1.0). jax+torch parity ~3.8e-12, grad-vs-FD ~6e-8. gamma≠0 backend
+  → NotImplementedError. 60 backend + 20 numpy + 18 adiabatic green.
+
+**PR-2 (next):** frequencies + angles (`_calc_or`/`_calc_op`/`_calc_angler`/
+`_calc_anglez`, the t² two-panel Tr/I integrals + the vT<0 / Rmean-log where-masking).
+
+## Vertical (still pending) — needs linearPotential/verticalPotential migrated first
 `galpy.backend.quadrature` has `fixed_quad`, `gauss_legendre`, `transformed_quad`
 (finite GL with a near-singular **interior-point split** — the `xmax-t²` /
 `r=r_peri+t²` turning-point substitution), `fixed_quad_semiinfinite`, `nested_quad`;
