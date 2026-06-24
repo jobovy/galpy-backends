@@ -158,8 +158,17 @@ vs scipy BEFORE implementing; an implement→adversarial-verify workflow then bu
   fixed_quad + gamma=1.0). jax+torch parity ~3.8e-12, grad-vs-FD ~6e-8. gamma≠0 backend
   → NotImplementedError. 60 backend + 20 numpy + 18 adiabatic green.
 
-**PR-2 (next):** frequencies + angles (`_calc_or`/`_calc_op`/`_calc_angler`/
-`_calc_anglez`, the t² two-panel Tr/I integrals + the vT<0 / Rmean-log where-masking).
+**PR-2 (#1009, open) — frequencies + angles → actionAngleSpherical FULLY migrated.**
+Additive `elif` in `_actionsFreqs`/`_actionsFreqsAngles`; new `_panel_backend` (one
+t²-substituted GL panel, per-object limit folded in via `t=lim·s` on a fixed `[0,1]`
+panel so `fixed_quad`'s a,b stay scalar), `_calc_or_op_backend` (Tr/I two panels →
+Or=2π/Tr, Op=I·Or/2π; circular `Jr<1e-9` → `xp.where(epifreq/omegac)`), and the
+`_calc_angler`/`_anglez`/`_long_asc_backend` angle assembly (every if → `xp.where`:
+r<Rmean panel, vr<0/vT<0 quadrant fixes, sinpsi inclination + non-finite→phi). numpy
+byte-identical (base-vs-port array_equal, pro+retrograde). jax+torch parity Or~2.8e-9,
+Op/angles~1e-9, grad~1e-7, circular branch exact. 68 backend + 20 numpy green. Built
+design→implement→adversarial-verify (SHIP), re-checked by me. One documented edge: the
+fully non-inclined z=0 IC (measure-zero non-smooth angle kink; numpy warns too).
 
 ## Vertical (still pending) — needs linearPotential/verticalPotential migrated first
 `galpy.backend.quadrature` has `fixed_quad`, `gauss_legendre`, `transformed_quad`
