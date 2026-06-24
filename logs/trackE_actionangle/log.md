@@ -50,6 +50,22 @@ case. The migration itself is correct (the `aAI(...)` call returns fine); these
 flip at the **action-angle milestone** regen once the test-side reductions +
 IsochroneApprox land.
 
+**CI consequence — streamdf jax timeout (caught + fixed in #1005).** The migration
+is a *correctness* win that exposed an eager-jax perf cliff: streamdf's
+IsochroneApprox track assembly calls `actionAngleIsochrone` per trackpoint. The
+OLD code did `numpy.sqrt(jax_array)` → silently returned **numpy** (fast); the
+migrated code returns **real jax**, so the track assembly now does genuine
+per-trackpoint XLA dispatch. The `backend jax test_streamdf` shard went **~12 min →
+>90 min** (job cap → cancelled → all-clear red); torch/regen/#1006 (without the
+migration) all passed at ~12 min, isolating the cause. Fix: file-level
+`jax tests/test_streamdf.py` in `backend_slow_skip.txt` (streamdf isn't vectorized
+for jax — Track F; 80 jax tests skip in 8 s). The 17 now-redundant test_streamdf
+jax xfail entries self-clean at the next regen. **Lesson: a numpy→backend migration
+of a function on a hot eager path can flip a shard from accidentally-fast (numpy
+fall-through) to genuinely-slow (eager XLA) — watch for shard-timeout, not just
+correctness.** Mirrors the test-side entanglement: the migration is right, the
+infra (shard balance / Track F vectorization) must catch up.
+
 **Dead-ends / gotchas.**
 - Can't replace the `isinstance(R,float)` wrap with `promote_scalars` alone:
   `promote_scalars` passes a numpy/python scalar THROUGH on numpy (stays a float),
