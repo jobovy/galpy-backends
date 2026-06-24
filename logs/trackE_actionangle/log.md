@@ -106,7 +106,35 @@ implicit-diff — same machinery as Vertical/Spherical. So the inverses SPLIT:
 HarmonicInverse (closed-form, done in #1005); IsochroneInverse (root-find, joins
 Vertical+Spherical). numpy round-trip tested now as the reference.
 
-## Next increment (Vertical + Spherical + IsochroneInverse) — machinery already exists
+## IsochroneInverse backend (#1007, stacked on #1005) — DONE
+
+The first root-find migration. Key win: **the shared backend root-finder already
+exists** — `galpy.backend.optimize.brentq` (numpy→scipy byte-identical; jax/torch→
+vectorised sign-preserving `bisect_root` + one-Newton-step implicit-diff, documented
+in that module). So task #86's "shared helper" is satisfied by the infra; I just
+*reuse* it. IsochroneInverse is its first AA consumer + reference.
+
+- Kepler eq `f(η)=η−(a·e/ab)·sin η−angler`, `a·e/ab<1` ⇒ strictly monotone on
+  `[0,2π]` (always a valid bracket; `f(0)≤0≤f(2π)`).
+- **Branch on namespace**: numpy keeps the exact `scipy.optimize.newton`(+brentq
+  fallback) loop → byte-identical; jax/torch call `backend.optimize.brentq` on
+  `[0,2π]` vectorised over the angler array → differentiable wrt the actions.
+- Masked writes → `xp.where`; double floor-mod `(angler%−2π)%2π` maps directly
+  (verified torch/jax `%` are floor-mod, **not** fmod — the agent's fmod worry was
+  unfounded).
+- **Verified:** numpy byte-identical (b∈{0.3,0.8,1.5}, prograde/retrograde/jz=0);
+  jax+torch parity ~3e-16; backend brentq vs scipy.newton ~9e-16 (near-radial
+  c=0.99769 ~5e-13); forward∘inverse round-trip Jr/Jphi/Jz ~1e-16; d(ΣR)/djr AD==FD
+  ~5e-10. 52 backend tests green.
+- **Adversarial-verify catch (2nd this session):** the design workflow's
+  byte-identity-policy + implicit-diff agents FAILED to return structured output;
+  the kepler agent's byte-identity strategy *assumed* the branch-scipy-for-numpy
+  policy — I confirmed it myself by reading `galpy.backend.optimize` (it IS the
+  documented policy) rather than trusting the assumption.
+
+PR opens after #1005 automerges (rebase the stacked branch onto feat/backends).
+
+## Next increment (Vertical + Spherical) — same shared root-finder + GL quadrature
 `galpy.backend.quadrature` has `fixed_quad`, `gauss_legendre`, `transformed_quad`
 (finite GL with a near-singular **interior-point split** — the `xmax-t²` /
 `r=r_peri+t²` turning-point substitution), `fixed_quad_semiinfinite`, `nested_quad`;
