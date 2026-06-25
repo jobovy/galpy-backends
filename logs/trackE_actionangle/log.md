@@ -158,7 +158,7 @@ vs scipy BEFORE implementing; an implement→adversarial-verify workflow then bu
   fixed_quad + gamma=1.0). jax+torch parity ~3.8e-12, grad-vs-FD ~6e-8. gamma≠0 backend
   → NotImplementedError. 60 backend + 20 numpy + 18 adiabatic green.
 
-**PR-2 (#1009, open) — frequencies + angles → actionAngleSpherical FULLY migrated.**
+**PR-2 (#1009, ✅ MERGED 2026-06-24) — frequencies + angles → actionAngleSpherical FULLY migrated.**
 Additive `elif` in `_actionsFreqs`/`_actionsFreqsAngles`; new `_panel_backend` (one
 t²-substituted GL panel, per-object limit folded in via `t=lim·s` on a fixed `[0,1]`
 panel so `fixed_quad`'s a,b stay scalar), `_calc_or_op_backend` (Tr/I two panels →
