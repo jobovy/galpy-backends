@@ -327,3 +327,21 @@ numpy+backend path — elementwise setup, turning points via shared bisect_root
 **NEXT (PR-2):** freqs (calcdJR/calcdJz 6 derivative integrands w/ Low/High t²-subst panels
 + calcFreqs 3x3 solve) + the angle quadrant tree (2x2-per-branch → xp.where) + custom-rule
 accurate action/freq gradients + drop actionAngleStaeckelSingle + migrate StaeckelGrid.
+
+### PR-2 freqs core — VALIDATED in scratch (2026-06-25, ready to integrate)
+Vectorized Staeckel frequencies validated vs c=True (develop-in-scratch, /tmp/staeckel_freqs_dev.py):
+Omegar 4.6e-12, Omegaphi 6.5e-13, Omegaz 1.1e-10 (GL order 10, 6-orbit batch, MWPotential2014).
+- 6 derivative integrals: each = Low(lo)+High(hi) t^2-substituted panels of factor/sqrt(S), where
+  factor ∈ {sinh^2 u, 1/sinh^2 u, 1 (u-side); sin^2 v, 1/sin^2 v, 1 (v-side)}, mid=sqrt(0.5(hi-lo)),
+  integrand 2t*g*mid with g = xp.where(S>0, factor/sqrt(S_safe), 0) (dead-branch guard; S=_JR/_Jz
+  IntegrandSquared). v-side: lo=vmin, hi=pi/2.
+- **PREFACTOR BUG caught in scratch (would've shipped wrong freqs):** djr prefactors are δ/π/√2 but
+  djz prefactors are √2·δ/π (2× larger) AND djzdI3 is POSITIVE (djrdI3 is negative). djrd{E,Lz,I3}
+  *= {δ/π/√2, -Lz/π/√2/δ, -δ/π/√2}; djzd{E,Lz,I3} *= {√2δ/π, -Lz√2/π/δ, +√2δ/π}.
+- calcFreqs solve: detA=djrdE·djzdI3−djzdE·djrdI3; Or=djzdI3/detA, Oz=−djrdI3/detA,
+  Op=(djrdI3·djzdLz−djzdI3·djrdLz)/detA. Circular (umax≈umin): derivs→0, detA→0, freqs→NaN; caller
+  substitutes epifreq/omegac/verticalfreq (mirror the c=True indx-substitution, vectorized xp.where).
+- **Integration TODO (PR-2):** add _staeckel_deriv_panels + _staeckel_freqs module fns, wire into
+  _actionsFreqs c=False (setup+turning computed once, shared w/ actions), vectorize the circular
+  epifreq substitution, + custom-vjp so these dJ integrands ALSO give PR-1's deferred accurate action
+  gradients. THEN the angle quadrant tree (SUPERVISED) + drop Single + migrate StaeckelGrid.
