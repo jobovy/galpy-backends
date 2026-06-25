@@ -167,8 +167,35 @@ Or=2π/Tr, Op=I·Or/2π; circular `Jr<1e-9` → `xp.where(epifreq/omegac)`), and
 r<Rmean panel, vr<0/vT<0 quadrant fixes, sinpsi inclination + non-finite→phi). numpy
 byte-identical (base-vs-port array_equal, pro+retrograde). jax+torch parity Or~2.8e-9,
 Op/angles~1e-9, grad~1e-7, circular branch exact. 68 backend + 20 numpy green. Built
-design→implement→adversarial-verify (SHIP), re-checked by me. One documented edge: the
-fully non-inclined z=0 IC (measure-zero non-smooth angle kink; numpy warns too).
+design→implement→adversarial-verify (SHIP), re-checked by me.
+
+**PR-2 edge-case hardening (#1009 follow-up; user: "match numpy EVERYWHERE, not just
+document it away").** A divergence map over 8 special cases × {Log,NFW,Hernquist,
+Isochrone} × pro/retro × {jax,torch} (per-quantity |back−np|, thr 1e-7) found two real
+gaps — both now FIXED; the fully-non-inclined case is matched EXACTLY, not xfailed:
+- **Non-inclined `ap`/`az` off by 0.7–5.6 rad (the prior "documented edge" — a real
+  BUG).** numpy: `sinpsi=z/r/sin(i)=0/0=NaN → isfinite False → psi=phi` (and skips the
+  `vθ>0→π−psi` rotation); the backend computed `finite` from the **sini_safe** division
+  (always finite) so it took `psi=0`. Fix: compute `finite=isfinite(z/r/sini)` on the
+  **raw** sini (mirrors numpy's own 0/0→NaN — numpy emits the same RuntimeWarning),
+  keep `sini_safe` only for the arcsin VALUE (no NaN in the grad path). Cascades through
+  `az` and `ap=asc±az` → circular **0.0** exact, planar 1.5e-9, near_circular 9.5e-8.
+  **Same fix in `_calc_long_asc_backend`**: its raw `z/R/tan(i)` NaN was correct in
+  VALUE but **NaN-poisoned the gradient** via the `xp.where(isfinite,u,phi)` dead branch
+  (the eager-where trap) → now `dap/dvR,daz/dvR` finite & equal (Ω=0 in-plane), jax+torch
+  grad-vs-FD ✓.
+- **Near-radial (L/Lcirc≤1e-3) freq/angle integrals up to ~4e-4 off.** GL order **25→50**
+  (`_BACKEND_GL_ORDER`; panels + Jr). A gold-reference probe (tight scipy quad) showed the
+  n=25 deficit AND that at L/Lcirc<~1e-4 scipy's OWN adaptive quad fails to ~1e-5
+  (IntegrationWarning "tolerance cannot be achieved") — so that pathological extreme is the
+  irreducible GL-vs-adaptive floor, NOT a logic bug; at n=50 the backend is actually *more*
+  accurate vs gold there. Post-fix: physical range (L/Lcirc≥1e-2) matches numpy <1e-12;
+  even the pathological vT=1e-4 → ~1e-6 (was 4e-4).
+- **Tests:** `test_spherical_edge_case_parity` (8 cases × 4 pots × pro/retro × 2 backends
+  = 128) asserts numpy↔backend on all of (Jr,Lz,Jz,Or,Op,Oz,ar,ap,az,e,zmax,rperi,rap);
+  `test_spherical_noninclined_angle_grad_vs_fd` locks the NaN-free gradient. 200 backend
+  green (file) + numpy byte-identical (only backend-only methods + a module constant +
+  comments changed).
 
 ## Vertical (still pending) — needs linearPotential/verticalPotential migrated first
 `galpy.backend.quadrature` has `fixed_quad`, `gauss_legendre`, `transformed_quad`
