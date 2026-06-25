@@ -233,3 +233,35 @@ for Ω, verbatim angle quadrant tree (no-0.5 partial mid), pure-Python `calcu0`.
   az (C-vs-scipy brentq vmin tolerance amplified in sqrt(vx-vmin)); measure-zero, the
   Staeckel analog of the Spherical peri/apo floor; can't tighten w/o breaking actions.
 - 110 Staeckel+Adiabatic tests pass. Next: rebase feat/backends, add backend layer.
+
+### Staeckel #1010 review round (user, 2026-06-24/25) — 3 follow-up commits + design decisions
+Three points raised reviewing #1010, all addressed:
+1. **Behavior change → dead code.** Orbit.jr/jp/jz wrapped freqsAngles in `try/except
+   NotImplementedError -> _setup_actions`; that fallback existed ONLY for staeckel-c=False
+   (the last Orbit AA type without a Python actionsFreqsAngles; its own docstring says so).
+   With #1010 it's dead (no other type raises; isochroneApprox implements it; 2D→spherical).
+   Traced the call graph (only the 3 except-branches call _setup_actions), removed both →
+   jr/jp/jz call _setup_actionsFreqsAngles directly. orbit-interface tests green.
+2. **Python↔C inconsistency (the big one).** Empirically: C-actions == C-freqsAngles to 0.0
+   (C uses v0=π/2 for actions+freqs+angles alike), but the pre-existing Python ACTIONS used
+   v0=vx → off C by up to ~6e-3 (a long-standing latent inconsistency, predates this PR).
+   User: "make the entire Python implementation consistent with C, tests can shift." Fixed:
+   default the Single's `_v0u` to π/2 (collapsing the byte-identity dual-path) → c=False==c=True
+   (actions to the ~1e-5 GL-vs-adaptive floor; action/ecc/zmax conservation BYTE-FOR-BYTE
+   identical to c=True — e.g. ecc-orbit Jr 3.282%, zmax 4.146%). 2 ecc-conservation test tols
+   loosened to the (identical-to-C) v0=π/2 levels (authorized shift). This also dissolves the
+   behavior change from (1): actions-path jr == freqsAngles-path jr now.
+3. **Drop actionAngleStaeckelSingle for vectorization? (user, forward-looking).** Single is
+   scipy(brentq+quad) → can't run under jax; the backend needs a vectorized path regardless
+   (Spherical precedent). For Staeckel the per-object physics (2D u/v + the 4×8 angle quadrant
+   tree) is costly to duplicate, so **APPROVED PLAN (A): one unified vectorized numpy+backend
+   path, drop Single, validate vs c=True (~1e-9), migrate the Grid consumer.** Single IS exported
+   + used by actionAngleStaeckelGrid (JR/Jz) — both handled in the rewrite. #1010 (per-object,
+   now C-consistent) stays as the validated reference; the vectorized rewrite is the NEXT PR
+   (the convergence of (2) full-C-consistency-incl-GL and (3) vectorization/backend).
+
+**NEXT: vectorized C-consistent Staeckel rewrite** — turning-point root-finds via
+backend.optimize.brentq (+ vectorised bracket search), GL panels via backend.quadrature.fixed_quad,
+the angle quadrant tree → xp.where (Spherical-angles technique, larger), drop Single, point
+StaeckelGrid at the vectorised actions. Lands the numpy C-consistency (all-GL closes the last
+~1e-5) AND backend support in one path.
