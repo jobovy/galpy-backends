@@ -265,3 +265,36 @@ backend.optimize.brentq (+ vectorised bracket search), GL panels via backend.qua
 the angle quadrant tree → xp.where (Spherical-angles technique, larger), drop Single, point
 StaeckelGrid at the vectorised actions. Lands the numpy C-consistency (all-GL closes the last
 ~1e-5) AND backend support in one path.
+
+### actionAngleVertical backend → #1012 (Track E, 2026-06-25)
+PR #1012 (`feat/Paa-vertical` → `feat/backends`), **auto-merge armed**. Additive backend
+path (137 ins / 0 del → numpy byte-identical), the 1D vertical analog of Spherical's radial
+Jr/Or/ar: `elif is_backend_array(x)` → vectorised `_evaluate/_actionsFreqs/_actionsFreqsAngles
+_backend`. Turning point zmax via shared `backend.optimize.brentq` (80-doubling expanding
+bracket, `at_turn = vx==0` dead-branch guard). J/Ω/angle via `backend.quadrature.fixed_quad`
+GL-50 with the `xi = xmax − t²` substitution (2t Jacobian regularises the 1/√ turning-point
+singularity); radicand clipped ≥0 (√'(0)=∞ would NaN-poison reverse AD). Angle: integrate
+t∈[√(xmax−|x|), √xmax], then the (x,vx)-quadrant `xp.where` tree (π−a / π+a / 2π−a, %2π).
+Validated numpy↔jax↔torch ~1e-10 across IsothermalDisk/KGPotential/verticalPotential(MN) at
+all edges (vx=0 turn 4e-12, x=0 midplane exact, large amplitude, all 4 (x,vx) quadrants
+~1e-13); grad-vs-FD wrt vx ~1e-9; 212 backend tests + 32 numpy tests pass.
+
+### actionAngleAdiabatic backend — design (NOT free; corrected) (2026-06-25)
+The earlier note "Adiabatic: no new code (delegates to Spherical+Vertical)" is **wrong** —
+empirically confirmed: feeding a jax array recurses through Adiabatic's per-object single
+path into `aAV(z[0],vz[0])` with a **0-d scalar**, which the array-oriented backends reject
+(GL integrands assume `[N,n]`). Adiabatic needs its own vectorised backend path. Validated
+design (the hard angle-quadrant trees live in the DONE Spherical+Vertical — Adiabatic only
+*composes* them, so it is NOT in the supervised-Staeckel category):
+- `Jr,Lz,Ω,ar,aphi` → delegate to the (vectorised) Spherical backend
+  `self._aAS.actionsFreqsAngles(R,vR,vT,0,0,_Jz=Jz)` — it already accepts `_Jz=` array and
+  applies the adiabatic `γ·Jz` term inside `_setup_backend` (verified).
+- `Jz,Ωz,az` → Vertical's zmax-bracket + 3 GL integrals, but with the vertical PE
+  `Φ_vert(R_i,z)=Φ(R_i,z)−Φ(R_i,0)` evaluated with **R broadcast per-element**: `R.reshape(
+  R.shape+(1,)*(zz.ndim−1)) * ones_like(zz)` adapts R to whichever rank zz has ([N] for the
+  bracket, [N,n] for the integrand grid). Verified the per-R Φ broadcast matches the numpy
+  `toVerticalPotential(pot,R_i)` reference to 1e-16.
+- **Clean impl** = thread a `phi(z)` callable through Vertical's 4 backend helpers (they
+  differ ONLY in the `evaluatelinearPotentials(self._pot, xi)` call) → DRY shared module;
+  Vertical passes the linear-pot evaluator, Adiabatic passes the per-R 3D evaluator. Requires
+  #1012 merged → build on clean `feat/backends` (squash-merge ⇒ no stacking). Task #89.
