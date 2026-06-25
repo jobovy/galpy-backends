@@ -298,3 +298,32 @@ design (the hard angle-quadrant trees live in the DONE Spherical+Vertical — Ad
   differ ONLY in the `evaluatelinearPotentials(self._pot, xi)` call) → DRY shared module;
   Vertical passes the linear-pot evaluator, Adiabatic passes the per-R 3D evaluator. Requires
   #1012 merged → build on clean `feat/backends` (squash-merge ⇒ no stacking). Task #89.
+
+### Staeckel vectorized rewrite PR-1 → #1013 (actions, 2026-06-25)
+Approach A, staged like Spherical (PR-1 actions / PR-2 freqs+angles+drop Single+Grid;
+angle tree = compute-both-panels + xp.where — user-confirmed). Rebased feat/backends onto
+main first (consumed #1010; 1 trivial Staeckel decorator conflict; c=F≡c=T 1.79e-10).
+
+**#1013** (feat/staeckel-vectorized → feat/backends): replace the per-object
+actionAngleStaeckelSingle scipy loop in _evaluate with ONE unified vectorized
+numpy+backend path — elementwise setup, turning points via shared bisect_root
+(fixed-iter expanding bracket + xp.where for at-turn/circular), J_R/J_z via fixed_quad.
+- **C-consistency KEY INSIGHT:** C integrates actions with gsl_glfixed = PLAIN GL
+  order-`order` over [umin,umax] (NO substitution; the J integrand sqrt(S) VANISHES at
+  turning points). So match C EXACTLY with plain GL order-10 → c=False actions ≡ c=True to
+  **4e-16**. My first instinct (t²-subst + GL=50) OVER-converges → 2e-5 OFF C (C's own
+  order-10 quad error). Substitution is only for PR-2's 1/sqrt-SINGULAR angle integrals.
+- **numpy behavior change (flagged):** old c=False _evaluate used ADAPTIVE quad (~exact,
+  ~2e-5 off c=True); now GL order-10 = C-consistent AND consistent w/ _actionsFreqsAngles.
+- **gradients → PR-2:** d(sqrt S)/dparam ~ 1/sqrt(S) SINGULAR at turning pts → AD-through-
+  plain-GL is only GL-order accurate (~5e-3 vs FD). Accurate grads need the substitution-
+  regularized derivative integrands (dJRdE/dLz/dI3) — they live with the freqs (PR-2). PR-1
+  ships VALUES + backend parity; Staeckel backend tests assert value-parity only.
+- Validated: turning pts vs Single 2.8e-13; actions vs c=True 4e-16; jax/torch parity 1e-17;
+  63 numpy Staeckel tests + 4 backend tests (under -W error::Deprecation) pass.
+- Integrand fix: _JR/_JzStaeckelIntegrandSquared resolve xp from data (numpy byte-identical;
+  xp.sinh/xp.sin for backends) — avoids numpy.sinh(tensor) -W error::Deprecation trap.
+
+**NEXT (PR-2):** freqs (calcdJR/calcdJz 6 derivative integrands w/ Low/High t²-subst panels
++ calcFreqs 3x3 solve) + the angle quadrant tree (2x2-per-branch → xp.where) + custom-rule
+accurate action/freq gradients + drop actionAngleStaeckelSingle + migrate StaeckelGrid.
