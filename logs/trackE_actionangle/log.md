@@ -207,3 +207,29 @@ gaps — both now FIXED; the fully-non-inclined case is matched EXACTLY, not xfa
 `actionAngleIsochroneInverse` (Kepler-equation Newton root-find) all map onto a
 shared backend root-find + implicit-diff pattern — the next Track-E PR(s), after
 #1005 lands.
+
+## Staeckel pure-Python freqs+angles (#1010 → main, open 2026-06-24)
+`actionAngleStaeckel.actionsFreqs/actionsFreqsAngles` were **C-only** (raised
+NotImplementedError for c=False); only actions were pure-Python. PR #1010 adds
+the freqs+angles in pure numpy/scipy so they can later go onto the backends.
+Built design→impl→adversarial-verify workflow (wf_fb62790a), then re-verified by
+me vs the C oracle. **c=False matches c=True ~1e-9 (freqs) / ~1e-7 (angles)** over
+a 3684-pt edge grid. Ported from C `calcdJR/calcdJz/calcFreqsFromDerivs/
+calcAnglesStaeckel`: 6 derivative integrands (reuse `*IntegrandSquared` radicand),
+GL panel quadrature w/ exact prefactors+circular guards, 2×2 Jacobian inversion
+for Ω, verbatim angle quadrant tree (no-0.5 partial mid), pure-Python `calcu0`.
+- **Actions byte-identical:** C freqs/angles use v0=π/2 (J_R)/actual-u0 (J_z) vs
+  actions v0=vx/u0=ux; `_v0u`/`_u0v` DEFAULT to actions values → JR/Jz/turning-pt
+  unchanged (diff=0.0). Refuted a code-review agent FAIL (it flagged the rename
+  without seeing the default == vx/ux).
+- **My fix on top of the agent:** exactly-circular (detA=0) raised ZeroDivisionError
+  (scalar 0/0; C gets IEEE NaN→epifreq/omegac/verticalfreq fallback). calcFreqs now
+  returns NaN on detA==0 → fallback fires. Matches c=True to 0.0. Added circular test.
+- **Adiabatic:** no new code (delegates to pure-Python Spherical+Vertical); guard test.
+- **Behavior change (flagged on PR):** Orbit.jr/jz/... staeckel c=False now route
+  through actionsFreqsAngles (consistent with c=True, which already did via Orbits.py
+  try-freqsAngles-first); ~1e-5 GL-vs-adaptive shift; 1 orbit-interface test updated.
+- **Documented edge:** |pvx|<1e-3 annulus at a vertical turning point → up to ~5e-4 in
+  az (C-vs-scipy brentq vmin tolerance amplified in sqrt(vx-vmin)); measure-zero, the
+  Staeckel analog of the Spherical peri/apo floor; can't tighten w/o breaking actions.
+- 110 Staeckel+Adiabatic tests pass. Next: rebase feat/backends, add backend layer.
