@@ -389,3 +389,23 @@ diffs (planar snap π/2·1e-6 vs 1e-7; vmin at_turn 1e-7 vs 1e-10; |f(ux)|<1e-10
 match the trusted Single, measure-zero. Nits for follow-up: float32 GL-result dtype widening; the eager
 `if bool(xp.any(unbound))` blocks jit/vmap (by-design eager guard; raising can't be jitted — a sentinel
 mode could). NEXT PR-2b (SUPERVISED): angle quadrant tree + custom-vjp gradients + drop Single.
+
+### PR-2b Staeckel angles (quadrant tree) → #1015 (2026-06-26)
+Vectorized _actionsFreqsAngles (c=False) angles -- completes the backend-agnostic Staeckel
+action-angle stack (actions+freqs+angles all numpy/jax/torch + differentiable). Refactored the
+6 Leibniz derivs into shared _staeckel_jacobian; added _staeckel_angle_partial (t^2-subst PARTIAL
+integral turning-point->position, guarded) + _staeckel_angles (4-leaf u + 8-leaf v quadrant tree)
++ _staeckel_actions_freqs_angles (combined, folds azimuth into anglephi).
+- **Quadrant tree (reverse-engineered from calcAnglesStaeckel, all leaves verified):** panel (Low
+  from umin/vmin, High from umax/pi-2) chosen by which turning point the position is nearer;
+  reflection const K + sign s = f(momentum-sign x position quadrant). u-branch K table
+  {high:pi; low:0(pux>0)/2pi(pux<=0)}, I3 has a leading minus, aphi sign = -s. v-branch 8 leaves
+  K in {0,pi/2,pi,3pi/2,2pi}, I3 NO leading minus (+s), phitmp sign = -s. Assembly:
+  angler=Or*(Or1+Or2)+dI3dJR*(I3r1+I3r2); anglez +pi/2; anglephi += phitmp + Op*(..)+dI3dLz*(..);
+  remainder(2pi) angler/anglez only; circular|planar -> all angles 0; anglephi += phi at the end.
+- Validated vs c=True: 648-orbit grid hitting ALL 12 leaves -> 6.75e-10; 768-grid angler 1.9e-9
+  /anglephi 2.3e-10/anglez 1.2e-8; np<->jax<->torch ~1e-11. 6 numpy + 23 backend tests green.
+- Dropped the now-dead Single calcdJR/calcdJz/calcFreqs/calcAngles + exclusive helpers (-550 lines);
+  JR/Jz/calcUminUmax/calcVmin kept for StaeckelGrid. Dev script: logs/trackE_actionangle/staeckel_angles_dev.py.
+- NEXT PR-2c (deferred): custom_vjp accurate gradients (actions+freqs+angles via the dJ integrands)
+  + StaeckelGrid migration + full Single removal. Then Adiabatic backend (task #89).
