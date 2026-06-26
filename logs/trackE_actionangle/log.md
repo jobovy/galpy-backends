@@ -345,3 +345,14 @@ Omegar 4.6e-12, Omegaphi 6.5e-13, Omegaz 1.1e-10 (GL order 10, 6-orbit batch, MW
   _actionsFreqs c=False (setup+turning computed once, shared w/ actions), vectorize the circular
   epifreq substitution, + custom-vjp so these dJ integrands ALSO give PR-1's deferred accurate action
   gradients. THEN the angle quadrant tree (SUPERVISED) + drop Single + migrate StaeckelGrid.
+
+### PR-2a Staeckel freqs → #1014 (2026-06-26)
+Vectorized _actionsFreqs (c=False) on the merged-#1013 base. Refactor _staeckel_prep/
+_staeckel_jr_jz (share setup+turning w/ actions) + _staeckel_deriv_panels (6 dJ integrals,
+Low/High t²-subst panels of factor/sqrt(S), xp.where S<=0 guard) + _staeckel_freqs (3x3 solve,
+NaN circular) + _staeckel_actions_freqs (combined). Circular -> epifreq/omegac/verticalfreq
+(vectorized; epifreq takes array R). Validated: Or 4.6e-12/Op 6.5e-13/Oz 1.1e-10 vs c=True;
+jax 4.7e-14 / torch 3.5e-13 parity; circular subst exact; 64 numpy Staeckel + 2 backend tests.
+Coverage: new lines hit via eager xp.where (epifreq computed for all). NEXT PR-2b (SUPERVISED):
+angle quadrant tree (_actionsFreqsAngles) + custom-vjp action/freq gradients via these dJ
+integrands + drop Single + migrate StaeckelGrid.
