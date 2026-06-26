@@ -409,3 +409,21 @@ integral turning-point->position, guarded) + _staeckel_angles (4-leaf u + 8-leaf
   JR/Jz/calcUminUmax/calcVmin kept for StaeckelGrid. Dev script: logs/trackE_actionangle/staeckel_angles_dev.py.
 - NEXT PR-2c (deferred): custom_vjp accurate gradients (actions+freqs+angles via the dJ integrands)
   + StaeckelGrid migration + full Single removal. Then Adiabatic backend (task #89).
+
+### Track G g17 + cross-AA GPU device-safety pass (2026-06-26)
+**g17 figure** (paper/figures/g17_staeckel_actionangle_speed/): Staeckel actionsFreqsAngles throughput
+vs N for C / numpy / jax+torch CPU+GPU on the TITAN Xp. Findings: vectorised numpy ≈ single-threaded C
+(26 vs 25s @1e5); new numpy 13-17x faster than the OLD per-object loop for batches (crossover ~N=10,
+OLD wins only at N=1); **torch GPU ~1s launch floor -> ~18x faster than C/numpy by N=1e5**; jax eager
+dispatch-bound (~7s flat CPU&GPU -- needs user jit). old worktree for the OLD curve: built at 7a31c196.
+**GPU device-safety (the user pushed to run ALL AA methods on GPU -- it paid off):** found the GL-quadrature
+`fixed_quad(...,0.0,1.0)`-nodes-on-default-device bug recurs in EVERY migrated method that quadratures
+(Staeckel x3 + Vertical x3 + Spherical x2 = 8 sites) -> torch CUDA crashes, jax GPU silently round-trips
+(CI has no GPU -> latent). FIX: `device=device_of(<input array>)` on each (no-op numpy). PLUS a 9th bug
+the static audit MISSED (not a quadrature pattern): EccZmaxRperiRap passed numpy `delta` into
+coords.Rz_to_uv against CUDA R/z -> mismatch; root fix in shared `_staeckel_prep`:
+`delta = asarray_on_device(xp, delta, device_of(R))`. Verified gpu_verify_aa.py: 17/17 torch CUDA + 6/6
+jax GPU at machine precision; 235 CPU backend tests still green. The audit's other 14 findings were FALSE
+POSITIVES: xp.ones_like / numpy.nan*xp.ones_like / python-scalar*tensor all preserve device (proven by the
+GPU runs + torch-CPU CI). LESSON: static audits over-flag device bugs; GPU execution is the only ground truth.
+Device fixes -> their own PR after #1015 merges (3 files, +33/-12 across Staeckel/Vertical/Spherical).
