@@ -356,3 +356,36 @@ jax 4.7e-14 / torch 3.5e-13 parity; circular subst exact; 64 numpy Staeckel + 2 
 Coverage: new lines hit via eager xp.where (epifreq computed for all). NEXT PR-2b (SUPERVISED):
 angle quadrant tree (_actionsFreqsAngles) + custom-vjp action/freq gradients via these dJ
 integrands + drop Single + migrate StaeckelGrid.
+
+### PR-2a follow-up: EccZmax backend + 3 bracketing bugs + adversarial review → #1014 (2026-06-26)
+Backendized EccZmaxRperiRap (_uminumaxvmin c=False -> shared _staeckel_prep). Then a 4-angle
+adversarial math-review workflow (vs c=True gold) surfaced THREE genuine bracketing-collapse bugs
+in the vectorised root-finds — all the same class (a bisection bracket failing to straddle a turning
+point near a degenerate limit), each silently wrong only where the validation grid had no edge orbits:
+- **umax (turning point, vR=vz=0):** orbit sits AT umin (f(ux)~0⁻ to round-off); umax bisection over
+  [ux,hi] had f<0 at both ends -> returned hi -> umax grossly wrong -> J_R zeroed (GL nodes miss the
+  tiny sliver) + ecc inflated (e=0.068 vs 2.7e-4). **Also corrupted the merged #1013 actions.** Fix:
+  bracket the other turning point from ux±eps (inside, f>0), mirroring Single calcUminUmax.
+- **planar freqs (z=vz=0):** vmin landed ~7e-9 short of π/2 -> tiny-nonzero J_z panels -> finite GARBAGE
+  freqs vs C's NaN/Inf. Fix: snap vmin->π/2 in _staeckel_prep (unify the EccZmax snap) -> det(A)=0
+  exactly -> deterministic NaN/Inf. planar-eccentric: Omegar,Omegaphi=NaN, Omegaz=**Inf** (Inf not NaN
+  stops the Jz<1e-3 subst from wrongly setting Omegar=epifreq on eccentric radial motion).
+- **umin (near-axis, low Lz):** the lo down-bracket did 80×0.9 (floor ~3.8e-4·ux); near-axis turning
+  points (Lz≲3e-4) sit below it -> [lo,ux] f>0 both ends -> umin collapsed to ux -> jr off 97%. vT=0
+  purely-radial: no lower turning point at all. Fix: HALVE the bracket (60 steps -> ~1e-18) + detect
+  axis-reaching (f>0 at floor -> umin=0, mirror C/Single rstart==0).
+All three fixed + regression grids (turning-point, planar, near-axis vs c=True + backend parity).
+Validated machine-precision vs c=True over 324+ orbits incl. all edges: jr/jz 7e-15, freqs 7e-10,
+ecc 8e-13. 20 backend + 64 numpy Staeckel tests green.
+
+**Surprise: the C extension is the WRONG side in 5 degenerate regimes** (c=False matches the adaptive
+gold standard; these are pre-existing galpy C bugs, NOT introduced here, left as-is so c=False stays
+correct): (1) C's order-10 GL freq-derivative integrands OVER-converge for high-ecc / near-planar /
+near-circular-in-z orbits — Oz off up to ~0.6, error GROWS with GL order; (2) C's vmin snap mis-locates
+the v turning point near the plane (Oz ~6.5% off); (3) C sentinels (9999.99) bound orbits with R_apo
+≳37.5 that c=False integrates fine. => "match C to machine precision" is NOT the right bar for Staeckel
+freqs; validate vs C in the bulk + vs adaptive-quad gold in the edges. Remaining c=False/C threshold
+diffs (planar snap π/2·1e-6 vs 1e-7; vmin at_turn 1e-7 vs 1e-10; |f(ux)|<1e-10 circular knife-edge)
+match the trusted Single, measure-zero. Nits for follow-up: float32 GL-result dtype widening; the eager
+`if bool(xp.any(unbound))` blocks jit/vmap (by-design eager guard; raising can't be jitted — a sentinel
+mode could). NEXT PR-2b (SUPERVISED): angle quadrant tree + custom-vjp gradients + drop Single.
