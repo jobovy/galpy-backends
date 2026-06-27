@@ -15,16 +15,23 @@ figure is the headline performance picture for that stack:
     "numpy (CPU)" is the vectorisation win.
   * jax / torch (CPU): the same vectorised code under the array backends, eager
     (galpy adds no internal jit -- it is made jit-*compatible* for the caller).
+  * jax (CPU/GPU, jit): the caller's jax.jit of actionsFreqsAngles (dash-dot) --
+    how a user runs it for speed inside an optimisation/training loop. Compile is
+    one-time (~8.6 min/shape here: the fixed-iteration bisection + multi-panel
+    quadrature + 12-leaf angle tree unroll into a huge XLA graph) and EXCLUDED; the
+    warm call is timed, matching the jit-then-time convention of g2/g8/g15.
   * jax / torch (GPU): compute-only (solid; arrays resident on device, timed wait
     is the kernel) and end-to-end (dashed; incl. host<->device transfer).
 
 What it shows: C wins at every N for this branchy root-find + quadrature workload
 (no surprise -- it is compiled and has no per-op dispatch); among the differentiable
-paths numpy is fastest on CPU, the GPU backends are dispatch-bound at small N and
-amortise toward large N, and the vectorised numpy path is orders of magnitude faster
-than the old per-object loop. The backends are not here to beat C on raw throughput
--- they are here to make the action-angle map *differentiable and composable* inside
-jax/torch models; this figure quantifies what that costs.
+paths numpy is fastest on CPU, EAGER jax/torch are dispatch-bound at small N (eager
+jax sits on a ~7 s per-op-dispatch floor), JITTING jax cuts that warm floor by ~3-4x
+(to ~1.9 s) -- but only after a ~8.6 min/shape compile, so jit pays off solely for
+repeated calls at a *fixed* shape (the ML training-loop case), not a one-off. The
+backends are not here to beat C on raw throughput -- they are here to make the
+action-angle map *differentiable and composable* inside jax/torch models; this figure
+quantifies what that costs, eager vs jit.
 
 Reproducibility: timings are machine-dependent, so the *measure* step writes
 data/g17_staeckel_actionangle_speed.json (stamped with GPU + library versions) and
@@ -52,7 +59,9 @@ _STYLE = {
     "numpy (CPU)": ("#444444", "-", "s"),
     "numpy (CPU, per-object, OLD)": ("#999999", "--", "x"),
     "jax (CPU)": ("#56B4E9", "-", "^"),
+    "jax (CPU, jit)": ("#56B4E9", "-.", "P"),
     "jax (GPU)": ("#0072B2", "-", "o"),
+    "jax (GPU, jit)": ("#0072B2", "-.", "D"),
     "jax (GPU, +transfer)": ("#0072B2", "--", "o"),
     "torch (CPU)": ("#E69F00", "-", "v"),
     "torch (GPU)": ("#D55E00", "-", "o"),
@@ -104,11 +113,30 @@ def _measure():
     # (root-find + quadrature = hundreds of ops/call) so cap CPU eager lower; the
     # old O(N) Python loop is capped hardest.
     Ns = [1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000]
-    Ns_jaxcpu = [n for n in Ns if n <= 3000]  # jax eager is dispatch-bound + slow
-    Ns_torchcpu = [n for n in Ns if n <= 30000]
-    Ns_gpu = [n for n in Ns if n <= 100000]
+    # extend the rising backend curves until throughput flattens: GPU to a few e6
+    # (compute saturates the device), CPU eager as far as is affordable.
+    Ns_gpu = Ns + [300000, 1000000]  # 3e6 OOMs the 12 GB GPU (quadrature (N,order) arrays)
+    Ns_jaxcpu = [n for n in Ns if n <= 30000]  # jax eager is dispatch-bound + slow
+    Ns_torchcpu = [n for n in Ns if n <= 100000]
     Ns_old = [1, 3, 10, 30, 100, 300, 1000, 3000]
+    # jitted jax: compile is ~8.6 min/shape (the unrolled bisection + multi-panel
+    # quadrature + angle tree is a huge XLA graph), so use a reduced N-grid -- the
+    # warm curve is smooth and a few points show the floor + the large-N rise.
+    Ns_jaxjit_cpu = [1, 100, 3000, 30000]
+    Ns_jaxjit_gpu = [1, 100, 3000, 100000]  # cap < 1e6: the huge unrolled graph
+    #                                          risks a compile-time OOM on 12 GB
     series = {}
+
+    def _safe(fn):  # large-N GPU calls may OOM the 12 GB device -> record NaN
+        try:
+            return fn()
+        except Exception as e:
+            print("  skip (likely OOM):", str(e)[:70])
+            try:
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
+            return float("nan")
 
     # --- C (c=True) ---
     series["C (c=True)"] = []
@@ -129,43 +157,62 @@ def _measure():
     def _jax_series(dev, Nlist, sync):
         out = []
         for N in Nlist:
-            g = [jax.device_put(jnp.asarray(b), dev) for b in _grid(N)]
-            r = aF.actionsFreqsAngles(*g)
-            jax.block_until_ready(r)
-            out.append(_med(lambda g=g: aF.actionsFreqsAngles(*g),
-                            warmup=2, repeats=5, sync=sync))
+            def _t(N=N):
+                g = [jax.device_put(jnp.asarray(b), dev) for b in _grid(N)]
+                jax.block_until_ready(aF.actionsFreqsAngles(*g))
+                return _med(lambda g=g: aF.actionsFreqsAngles(*g),
+                            warmup=2, repeats=3, sync=sync)
+            out.append(_safe(_t))
         return out
 
     series["jax (CPU)"] = _jax_series(cpu, Ns_jaxcpu, "jax")
+
+    # jitted jax (how a user actually runs it for speed: compile once at a fixed
+    # shape -- e.g. inside an optimization/training loop -- then call repeatedly).
+    # Compile is EXCLUDED (one-time, ~minutes here); the WARM call is timed,
+    # matching the jit-then-time-warm convention of g2/g8/g15. galpy adds no
+    # internal jit -- the CALLER jits, exactly as done here.
+    def _jax_jit_series(dev, Nlist):
+        out = []
+        for N in Nlist:
+            def _t(N=N):
+                g = [jax.device_put(jnp.asarray(b), dev) for b in _grid(N)]
+                f = jax.jit(lambda *a: aF.actionsFreqsAngles(*a))
+                jax.block_until_ready(f(*g))  # compile (excluded from timing)
+                return _med(lambda f=f, g=g: f(*g), warmup=2, repeats=3, sync="jax")
+            out.append(_safe(_t))
+        return out
+
+    series["jax (CPU, jit)"] = _jax_jit_series(cpu, Ns_jaxjit_cpu)
     if gpu is not None:
+        series["jax (GPU, jit)"] = _jax_jit_series(gpu, Ns_jaxjit_gpu)
         series["jax (GPU)"] = _jax_series(gpu, Ns_gpu, "jax")
         # end-to-end: host numpy -> device -> compute -> host
         e2e = []
         for N in Ns_gpu:
-            gn = _grid(N)
-            numpy.asarray(
-                jax.block_until_ready(
-                    aF.actionsFreqsAngles(*[jax.device_put(jnp.asarray(b), gpu) for b in gn])
-                )[0]
-            )
-            e2e.append(_med(
-                lambda gn=gn: numpy.asarray(
-                    aF.actionsFreqsAngles(*[jax.device_put(jnp.asarray(b), gpu) for b in gn])[0]
-                ),
-                warmup=2, repeats=5,
-            ))
+            def _t(N=N):
+                gn = _grid(N)
+                return _med(
+                    lambda gn=gn: numpy.asarray(
+                        aF.actionsFreqsAngles(*[jax.device_put(jnp.asarray(b), gpu) for b in gn])[0]
+                    ),
+                    warmup=2, repeats=3,
+                )
+            e2e.append(_safe(_t))
         series["jax (GPU, +transfer)"] = e2e
 
     # --- torch CPU / GPU ---
     def _torch_series(device, Nlist, sync):
         out = []
         for N in Nlist:
-            g = [torch.as_tensor(b, device=device) for b in _grid(N)]
-            r = aF.actionsFreqsAngles(*g)
-            if sync == "torch":
-                torch.cuda.synchronize()
-            out.append(_med(lambda g=g: aF.actionsFreqsAngles(*g),
-                            warmup=2, repeats=5, sync=sync))
+            def _t(N=N):
+                g = [torch.as_tensor(b, device=device) for b in _grid(N)]
+                aF.actionsFreqsAngles(*g)
+                if sync == "torch":
+                    torch.cuda.synchronize()
+                return _med(lambda g=g: aF.actionsFreqsAngles(*g),
+                            warmup=2, repeats=3, sync=sync)
+            out.append(_safe(_t))
         return out
 
     series["torch (CPU)"] = _torch_series("cpu", Ns_torchcpu, "none")
@@ -173,14 +220,15 @@ def _measure():
         series["torch (GPU)"] = _torch_series("cuda", Ns_gpu, "torch")
         e2e = []
         for N in Ns_gpu:
-            gn = _grid(N)
-            aF.actionsFreqsAngles(*[torch.as_tensor(b, device="cuda") for b in gn])[0].cpu().numpy()
-            e2e.append(_med(
-                lambda gn=gn: aF.actionsFreqsAngles(
-                    *[torch.as_tensor(b, device="cuda") for b in gn]
-                )[0].cpu().numpy(),
-                warmup=2, repeats=5,
-            ))
+            def _t(N=N):
+                gn = _grid(N)
+                return _med(
+                    lambda gn=gn: aF.actionsFreqsAngles(
+                        *[torch.as_tensor(b, device="cuda") for b in gn]
+                    )[0].cpu().numpy(),
+                    warmup=2, repeats=3,
+                )
+            e2e.append(_safe(_t))
         series["torch (GPU, +transfer)"] = e2e
 
     # --- OLD per-object c=False (subprocess against the pre-vectorisation build) ---
@@ -205,7 +253,9 @@ def _measure():
         env["gpu"] = "?"
     data = {
         "Ns": Ns, "Ns_jaxcpu": Ns_jaxcpu, "Ns_torchcpu": Ns_torchcpu,
-        "Ns_gpu": Ns_gpu, "Ns_old": Ns_old, "series": series, "env": env,
+        "Ns_gpu": Ns_gpu, "Ns_old": Ns_old,
+        "Ns_jaxjit_cpu": Ns_jaxjit_cpu, "Ns_jaxjit_gpu": Ns_jaxjit_gpu,
+        "series": series, "env": env,
     }
     os.makedirs(_DATA, exist_ok=True)
     with open(_JSON, "w") as fh:
@@ -239,48 +289,89 @@ def _measure_old(old_wt, Ns_old):
     return [res.get(N, float("nan")) for N in Ns_old]
 
 
-@figure(
-    name="g17_staeckel_actionangle_speed",
-    track="G",
-    seed=0,
-    description="Staeckel actionsFreqsAngles throughput vs N: C vs numpy vs jax/torch CPU&GPU; + old per-object loop [measure->json, plot byte-stable]",
-)
-def make():
+# 11 curves in one figure is too dense, so split by backend (each its own figure):
+# both share the C + numpy (+ old per-object numpy) reference backdrop, then add
+# the backend's eager/jit/transfer curves. Plot-only -- one shared measurement.
+_REF = ["C (c=True)", "numpy (CPU)", "numpy (CPU, per-object, OLD)"]
+_JAX = ["jax (CPU)", "jax (CPU, jit)", "jax (GPU)", "jax (GPU, jit)", "jax (GPU, +transfer)"]
+_TORCH = ["torch (CPU)", "torch (GPU)", "torch (GPU, +transfer)"]
+
+
+def _data():
     if os.path.exists(_JSON):
         with open(_JSON) as fh:
-            data = json.load(fh)
-    else:
-        data = _measure()
-    series = data["series"]
-    env = data.get("env", {})
-    Nmap = {
+            return json.load(fh)
+    return _measure()
+
+
+def _Nmap(data):
+    return {
         "jax (CPU)": data["Ns_jaxcpu"], "torch (CPU)": data["Ns_torchcpu"],
         "jax (GPU)": data["Ns_gpu"], "jax (GPU, +transfer)": data["Ns_gpu"],
         "torch (GPU)": data["Ns_gpu"], "torch (GPU, +transfer)": data["Ns_gpu"],
         "numpy (CPU, per-object, OLD)": data["Ns_old"],
+        "jax (CPU, jit)": data.get("Ns_jaxjit_cpu", data["Ns"]),
+        "jax (GPU, jit)": data.get("Ns_jaxjit_gpu", data["Ns_gpu"]),
     }
 
-    fig, ax = plt.subplots(figsize=(6.2, 4.4))
-    for name in _STYLE:
+
+def _make(names, backend_label):
+    data = _data()
+    series, env, Nmap = data["series"], data.get("env", {}), _Nmap(data)
+    plot_names = [n for n in names if n in series]
+    fig, (axw, axt) = plt.subplots(1, 2, figsize=(10.4, 4.4))
+    _plot_panel(axw, series, Nmap, data, "walltime", plot_names)
+    _plot_panel(axt, series, Nmap, data, "throughput", plot_names)
+    axt.legend(fontsize=6.8, loc="lower right", framealpha=0.92, handlelength=2.6, ncol=1)
+    axt.text(0.97, 0.05,
+             f"GPU: {env.get('gpu', '?')}\njax {env.get('jax', '?')} · torch {env.get('torch', '?')}",
+             transform=axt.transAxes, fontsize=6.0, color="0.5", va="bottom", ha="right")
+    fig.suptitle(r"Staeckel $(\mathbf{J},\mathbf{\Omega},\mathbf{\theta})$ via actionsFreqsAngles "
+                 r"vs batch size $N$ -- " + backend_label, y=0.99)
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    return fig
+
+
+@figure(
+    name="g17_staeckel_actionangle_speed_jax",
+    track="G", seed=0,
+    description="Staeckel actionsFreqsAngles throughput vs N -- jax (eager vs jit, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
+)
+def make_jax():
+    return _make(_REF + _JAX, "jax (eager vs jit)")
+
+
+@figure(
+    name="g17_staeckel_actionangle_speed_torch",
+    track="G", seed=0,
+    description="Staeckel actionsFreqsAngles throughput vs N -- torch (eager, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
+)
+def make_torch():
+    return _make(_REF + _TORCH, "torch (eager)")
+
+
+def _plot_panel(ax, series, Nmap, data, mode, names):
+    """One log-log panel: mode='walltime' (s) [matches the orbit speed figures]
+    or mode='throughput' (points/s). NaN points (OOM-skipped) drop out. `names`
+    is the ordered subset of series to draw (the backend split)."""
+    Nfull = float(max(data["Ns_gpu"] if "Ns_gpu" in data else data["Ns"]))
+    for name in names:
         if name not in series:
             continue
         col, ls, mk = _STYLE[name]
         Ns = numpy.asarray(Nmap.get(name, data["Ns"]), dtype=float)
         t = numpy.asarray(series[name], dtype=float)
-        thr = Ns / t
-        ax.loglog(Ns, thr, marker=mk, ms=4, color=col, ls=ls, label=name, zorder=3)
+        y = t if mode == "walltime" else Ns / t
+        ax.loglog(Ns, y, marker=mk, ms=4, color=col, ls=ls, label=name, zorder=3)
     ax.set_xlabel(r"number of phase-space points $N$ per call")
-    ax.set_ylabel(r"throughput  (points / second)")
-    ax.set_title(r"Staeckel $(\mathbf{J},\mathbf{\Omega},\mathbf{\theta})$ via actionsFreqsAngles")
-    ax.set_ylim(*ax.get_ylim())
-    Nlo, Nhi = 1.0, float(max(data["Ns"]))
-    for t0 in (1e-3, 1e-2, 1e-1, 1e0):
-        ax.plot([Nlo, Nhi], [Nlo / t0, Nhi / t0], ls=":", lw=0.8, color="0.82", zorder=0)
-    ax.text(0.025, 0.975, "dotted: constant wall-time / call\n(1, 10, 100, 1000 ms)",
-            transform=ax.transAxes, fontsize=6.5, color="0.55", va="top", ha="left")
-    ax.legend(fontsize=6.6, loc="lower right", framealpha=0.92, handlelength=2.8, ncol=1)
-    ax.text(0.30, 0.025,
-            f"GPU: {env.get('gpu', '?')}\njax {env.get('jax', '?')} · torch {env.get('torch', '?')}",
-            transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left")
-    fig.tight_layout()
-    return fig
+    if mode == "walltime":
+        ax.set_ylabel(r"wall time for the batch  (s)")
+        ax.set_title("(a) wall time")
+    else:
+        ax.set_ylabel(r"throughput  (points / second)")
+        ax.set_title("(b) throughput")
+        ax.set_ylim(*ax.get_ylim())
+        for t0 in (1e-3, 1e-2, 1e-1, 1e0):  # constant wall-time/call references
+            ax.plot([1.0, Nfull], [1.0 / t0, Nfull / t0], ls=":", lw=0.8, color="0.82", zorder=0)
+        ax.text(0.025, 0.975, "dotted: constant wall-time / call\n(1, 10, 100, 1000 ms)",
+                transform=ax.transAxes, fontsize=6.2, color="0.55", va="top", ha="left")
