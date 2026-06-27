@@ -47,9 +47,11 @@ Two dominant themes:
 6. **Gate the C-STM forward on requires-grad** — a no-gradient backend-IC `integrate` (routed
    through `_integrate_cstm`, `Orbits.py:1748`) silently pays the 6× STM solve. jax: primal calls
    base-orbit-only; torch: skip STM when `not requires_grad`. With P0#3 → forward = one base solve.
-7. **streamdf `calcaAJac`: 6-point finite-difference AA Jacobian → analytical `jacfwd`.** Now
-   possible *because #1016 made Staeckel `actionsFreqsAngles` jit/AD-traceable* — exact, removes
-   the 6-call FD loop, unlocks differentiable stream-track fitting. + batch the per-chunk loop.
+7. **DEFERRED (gated on Track F — streamdf not yet backend-migrated).** General principle worth
+   keeping: now that #1016 made Staeckel `actionsFreqsAngles` AD-traceable, *any* consumer that
+   needs `d(J,Ω,θ)/d(x,v)` should use `jax.jacfwd`/`torch.func.jacfwd` instead of finite
+   differences — exact + cheaper. The concrete first application (streamdf `calcaAJac`'s 6-point
+   FD Jacobian) waits until streamdf itself is on a backend; do NOT touch streamdf now.
 8. **Hoist `_staeckel_jacobian`** — compute the 6 derivative panels once and share between
    `_staeckel_freqs` and `_staeckel_angles` (each recomputes them today). *agnostic, M.*
 9. **Native batch axis through the in-backend diffrax/torchdiffeq RHS** (`_eom_rhs/_to_eom/
