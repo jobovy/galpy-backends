@@ -98,3 +98,70 @@ Two dominant themes:
 3. Vectorize EllipsoidalPotential GL loop + the assoc_legendre/gegenbauer recurrences.
 
 Raw per-subsystem findings: `raw_audit_result.json`.
+
+---
+
+# Addendum — deep potential + orbit audit (NEW levers, 2026-06-26, wf_afb96d85-01d)
+
+**Dominant structural insight:** the force/Hessian layer wires every cylindrical component
+(Rforce/zforce/phitorque) and every Hessian entry independently, and the numpy md5/key result
+caches are *disabled* under jax/torch — so every shared subexpression (`sqrt(R²+z²)`, `log(1+r/a)`,
+`hyp2f1`, `gamma·gammainc`, the Gegenbauer C-ladder, SCF tables, the cyl↔rect transform) is
+recomputed **3× (force) → 6× (Hessian) per ODE step**, multiplied straight into the variational/
+gradient hot path (`inbackend_ode._eom_rhs:50-63` calls all three force evaluators every step).
+
+## Cross-cutting "shared wins" (one pattern, many consumers)
+1. **Combined force + combined-6-Hessian per-point evaluators** — compute the shared spherical/
+   radial pieces once, return all 3 forces / all 6 Hessian entries. Pays off for NFW
+   (`TwoPowerSphericalPotential.py:967-1023`), TwoPowerSpherical (hyp2f1 6×→2×, :251-300),
+   PowerSphericalwCutoff (gammainc 3×→1×), Plummer/MiyamotoNagai, all spherical leaves, SCF/Multipole
+   (`SphericalHarmonicPotentialMixin.py:121-161`), RotateAndTilt. **The #1 lever** — generalizes the
+   first audit's combined-evaluator item to the whole analytic-potential layer.
+2. **Skip structurally-zero components per point** — axisymmetric `phitorque≡0`, planar `zforce≡0`;
+   `phasedim`/symmetry is statically known at `integrate_orbit` time → drop 1 of 3 force dispatches
+   per step on the common classes AND remove the dead reverse-mode sub-tape. (`inbackend_ode.py:58-62`,
+   SCF `dPhi_dphi` azimuthal sum / `Asin` branch.)
+3. **Cache per-`(backend,device,dtype)` constant tables** — SCF Acos/Asin, Multipole table dict,
+   DoubleExpDisk Ogata nodes (re-materialized twice in `_R2deriv`), RotateAndTilt matrices: a per-call
+   `asarray_on_device` host→device transfer with no cache. Memoize on `(id(xp),device,dtype)`; numpy
+   (`dev=None`) stays byte-identical pass-through.
+4. **Single `_call_internal` feeds all derived accessors** — `L()` calls it 6× via x/y/z/vx/vy/vz;
+   SkyCoord 3–4×; off-grid this *also* multiplies the spline rebuild 6×. Compute `thiso` once.
+
+## P0 (highest (impact×reach)/effort)
+- Combined NFW/TwoPowerSpherical/PowerSphericalwCutoff evaluators (heavy special once).
+- SCF/Multipole combined force (3×→1×) + combined-6 Hessian (6×→1×).
+- **Off-grid backend interpolator: 4–6 (up to 36 via `L`) dense O(n³) tridiagonal solves → one
+  multi-RHS solve** (`Orbits.py:7050-7060`).
+- Gegenbauer C-ladder: build `_C` at N+2 once, derive C/dC/d2C by roll (3×/6× rebuild → 1).
+- **3D dxdv rect→cyl: per-(orbit×timestep) `numpy.linalg.solve` → the closed-form analytic inverse
+  the planar twin already uses** ⚠ byte-identity flag (below).
+- Skip the structurally-zero z-force (planar) / phi-torque (axisymmetric) RHS dispatch.
+
+## P1 / P2
+- P1: WrapperPotential `__getattr__` per-call lambda synthesis + `_wrap_pot_func` 11-branch chain →
+  module-level map; RotateAndTilt frame-transform recompute (3–9×→1); L()/SkyCoord single-call;
+  device-table caching; diffrax `dt0`/`max_steps`/`jump_ts` hygiene (skip initial-step root-solve,
+  declare the bar/spiral C¹ kink).
+- P2: `potential_physical_input` re-parsing `inspect.signature`/`_check_backend_compatible` per call;
+  `_C` carry-alpha-vector recurrence; skip `arctan2` for axisymmetric in the RHS; packed
+  lower-triangular Legendre/SCF; jax SaveAt/pure_callback shape-bucketing; per-step `xp.stack`,
+  `_parse_pot` memo, hoist `Orbit()` out of the 6-basis loop.
+
+## ⚠ Byte-identity flags (standing rule)
+1. **3D dxdv analytic inverse** (`integrateFullOrbit.py:1037-1042`) — mathematically exact but NOT
+   bit-identical to `numpy.linalg.solve`; needs review before it touches the numpy path.
+2. **Off-grid multi-RHS spline solve** — backend-only path (mode-2, `is_backend_array`), so numpy
+   stays byte-identical, but diff the stacked-solve reassociation.
+
+All respect no-internal-jit (combined evaluators, dead-branch elimination, multi-RHS batching,
+device-table memoization, solver-arg hygiene — no jit/compile inside galpy).
+
+---
+
+# After the optimizations land: RE-MEASURE all speed figures
+Every perf change shifts timings, so the Track G speed figures must be re-measured (machine-stamped
+JSON re-generated, byte-stable plots re-rendered) once the optimizations land — **g17** (Staeckel AA
+speed, jax+torch), **g2** (force throughput), **g8** (galpy-vs-galax orbit), **g12** (in-backend orbit
+GPU), **g15** (IC-deriv speed). Re-run on the GPU box; the plotting code is byte-stable so only the
+`data/*.json` change. (User flagged 2026-06-26.)
