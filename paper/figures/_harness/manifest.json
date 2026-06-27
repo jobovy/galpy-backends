@@ -119,6 +119,36 @@
     "sha256": "d842ebf97bc31561ef2705d4d0369b6bccfd25de8a58111bab3d5c75e240a1e2",
     "track": "G"
   },
+  "g17_staeckel_actionangle_speed_jax": {
+    "description": "Staeckel actionsFreqsAngles throughput vs N -- jax (eager vs jit, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "dbd4715",
+    "sha256": "047f8888ad2cedc3688f3e1b14796ebf6bcf3bb22eba7ec4ddf301542cf0f157",
+    "track": "G"
+  },
+  "g17_staeckel_actionangle_speed_torch": {
+    "description": "Staeckel actionsFreqsAngles throughput vs N -- torch (eager, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.0.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "dbd4715",
+    "sha256": "ac5f6878322da4d6041352f51350b051a41badb4be5f2f85b73513069d0d27e9",
+    "track": "G"
+  },
   "g1_backend_parity": {
     "description": "numpy<->jax/torch value parity + jax/torch autodiff identities (migrated potentials)",
     "env": {
