@@ -32,6 +32,13 @@ Two dominant themes:
    The stacked single-call idiom is already proven in-repo (Lyapunov `Orbits.py:2893-2907`,
    `rectIn/rectOut=True`, `numcores`). ~6× forward-cost cut on the headline C-STM gradient path.
    *backend-agnostic, effort M, warm+gradient.*
+   **DONE (partial) → PR #1023 (2026-06-27).** Stacked the 6N calls into ONE `integrate_dxdv`
+   on 6N orbits; bit-identical M (24/24 exact), 117 STM tests green. Measured N=20: 881ms →
+   750ms (nc=1) → 480ms (nc=8). **NOT 6×** — the premise was wrong: `integrate_dxdv` is
+   base+1-deviation, so each of the 6 stacked copies *re-integrates the base*. The actual win
+   is call-overhead (~1.2×) + `numcores` parallelism across the 6N orbits (~Ncore×). The true
+   6× needs a base+6-deviation **augmented 42-state** variational C integrator (integrate the
+   base ONCE alongside the 6×6 deviation block) — new follow-up (task #100).
 
 ## P1 — next
 
