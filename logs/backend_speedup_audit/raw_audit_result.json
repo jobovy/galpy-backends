@@ -1,0 +1,1429 @@
+{
+  "summary": "Grounded audit of galpy backend code for jit-fast / backend-specific speedup opportunities (no internal jit), ranked into a roadmap",
+  "agentCount": 7,
+  "logs": [],
+  "result": {
+    "roadmap": {
+      "tiers": [
+        {
+          "tier": "P0-now",
+          "items": [
+            {
+              "title": "Roll bisect_root's fixed for-loop into lax.while_loop (jax) with a static trip count, threaded from callers",
+              "subsystem": "infrastructure (shared root-finder)",
+              "mechanism": "jax-specific rewrite of `for _ in range(n)` (optimize.py:165) to jax.lax.while_loop with a data-independent iteration cap as the cond (sign-preserving carry, branch-free xp.where body), so the body traces ONCE instead of unrolling 100 copies; torch keeps the eager Python loop; numpy unchanged (scipy.optimize.brentq). Also thread an explicit static nsteps=/width-hint through bisect_root so n_bisect_steps does not fall back to maxiter=100 under tracing (verified: traced probe -> 100 vs concrete ~46-51); Staeckel callers pass maxiter=200, doubling that segment again.",
+              "regime": [
+                "compile",
+                "gradient"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": true,
+              "why_ranked_here": "Single highest reach in the codebase: bisect_root is the ONE shared kernel behind backend brentq, consumed by Potential.rl/rE/zmaxgrid/rliftedgrid, actionAngleSpherical rperi/rap, actionAngleVertical xmax, actionAngleIsochroneInverse eta, and twice per Staeckel turning-point solve. Each call bakes ~100 (Staeckel: 200) unrolled physics-closure f-evaluations into the compiled graph. Rolling once is the named-lever class and fixes every consumer at once.",
+              "locations": [
+                "galpy/backend/optimize.py:165",
+                "galpy/backend/optimize.py:116-142 (n_bisect_steps tracer fallback -> min(maxiter,_MAXITER)=100)",
+                "galpy/potential/Potential.py:3292,3406,4643,4719",
+                "galpy/actionAngle/actionAngleSpherical.py:584-585; actionAngleVertical.py:343; actionAngleIsochroneInverse.py:178"
+              ]
+            },
+            {
+              "title": "Roll the Staeckel/Spherical/Vertical expanding-bracket loops into lax.while_loop/fori_loop (jax)",
+              "subsystem": "action-angle",
+              "mechanism": "jax-specific rewrite of the fixed-count Python for-loops in the turning-point finders to lax.while_loop/fori_loop with a static cap; the body is already a single branch-free xp.where update so it ports directly. numpy stays on the eager loop (byte-identical; numpy does not unroll a graph).",
+              "regime": [
+                "compile",
+                "gradient"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": true,
+              "why_ranked_here": "Concrete instances of the named 47k-equation-jaxpr lever in the hottest AA subsystem. _staeckel_uminumax (60+80) + _staeckel_vmin (80) bake ~220 full _JRStaeckelIntegrandSquared/_JzStaeckelIntegrandSquared (-> potentialStaeckel) evals into the graph BEFORE the two bisect_root calls; Spherical (2x80) and Vertical (80) mirror it. Highest per-subsystem compile lever after the shared bisect_root, stacks with P0#1.",
+              "locations": [
+                "galpy/actionAngle/actionAngleStaeckel.py:127 (range 60), :133 (range 80), :164 (range 80); :116,159 f closures",
+                "galpy/actionAngle/actionAngleSpherical.py:564,569 (two range 80)",
+                "galpy/actionAngle/actionAngleVertical.py:336 (range 80)"
+              ]
+            },
+            {
+              "title": "Collapse c_stm_forward's 6-per-IC variational integrations into ONE stacked integrate_dxdv call",
+              "subsystem": "orbit-integration",
+              "mechanism": "Replace the inner `for i in range(6)` (fresh Orbit + integrate_dxdv per basis column) with a single integrate_dxdv propagating all 6 canonical deviation vectors as 6 stacked copies, exactly the Lyapunov idiom Orbits.py:2893-2907 (Orbit(numpy.repeat(vxvv,6)) + integrate_dxdv(eye-stack, rectIn=True, rectOut=True, numcores=...)), reshape to (N,nt,6,6). Integrates the base orbit ONCE (bit-identical across columns), collapses 6 dispatches to 1, parallelizes columns over numcores.",
+              "regime": [
+                "warm-cpu",
+                "gradient",
+                "warm-gpu-largeN"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "~6x forward-cost reduction on the fast-C STM gradient path (the headline differentiable IC-gradient route); the optimal pattern is already proven in-repo (Lyapunov, rectIn/rectOut=True) and supported by integrateFullOrbit_dxdv ([N,6], numcores). Broad reach -- every jax/torch C-STM gradient and routed dop853_c integrate from a backend IC pays the 6x today -- and the reference implementation already exists, low risk.",
+              "locations": [
+                "galpy/backend/_reference/inbackend_stm.py:59-83 (for ic / for i in range(6); base re-integrated all 6)",
+                "galpy/orbit/Orbits.py:2893-2907 (reference stacked single-call pattern)",
+                "galpy/orbit/integrateFullOrbit.py:856-943 (integrateFullOrbit_dxdv [N,6], numcores)"
+              ]
+            }
+          ]
+        },
+        {
+          "tier": "P1-next",
+          "items": [
+            {
+              "title": "Vectorize the EllipsoidalPotential GL node loop (_potInt / _forceInt_all / _2ndDerivInt_all)",
+              "subsystem": "potentials",
+              "mechanism": "Replace per-node `for k in range(len(glx))` with a single broadcast over a node axis: form m of shape (...,K) using glx as an array, call dens(m)/psi(m) ONCE on batched m, multiply by glw, reduce with one xp.sum(axis=-1). glx/glw are static leggauss constants (fixed K), so one fused op replaces K unrolled iterations each spawning its own dens()/sqrt()/where().",
+              "regime": [
+                "compile",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "Universal inner loop for every PerfectEllipsoid/TwoPowerTriaxial/PowerTriaxial force/Hessian eval; glorder~20-50 means K unrolled integrand copies in the graph + K eager dispatches warm. Collapses to 1 dispatch and shrinks the graph ~K-fold for the dominant cost term, all four regimes. P1 not P0 only because reach is one potential family vs the cross-cutting root-finder.",
+              "locations": [
+                "galpy/potential/EllipsoidalPotential.py:469 (_potInt for k)",
+                "galpy/potential/EllipsoidalPotential.py:510-522 (_forceInt_all per-node dens)",
+                "galpy/potential/EllipsoidalPotential.py:575-598 (_2ndDerivInt_all dens+densDeriv per node)",
+                "galpy/potential/EllipsoidalPotential.py:159-162 (static leggauss glx/glw)"
+              ]
+            },
+            {
+              "title": "Add combined force / Hessian evaluators so the backend path stops recomputing the expansion 3x/6x per point",
+              "subsystem": "potentials",
+              "mechanism": "Expose a single _all_cyl_forces returning (FR,Fz,Fphitorque) from ONE _compute_*_forces_at_point call, and a combined Hessian evaluator returning all six cyl 2nd-deriv components from the one 8-tuple the chain rule already derives. numpy shares via the md5 _force_hash / _2nd_deriv_cache_key caches, disabled for jax/torch (trace-hostile), so the backend recomputes the full (N,L,M) SCF expansion / GL quadrature 3x (forces) and 6x (Hessian) at the same point. Have inbackend_ode._eom_rhs use the combined force evaluator.",
+              "regime": [
+                "compile",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "3-6x redundant expansion/quadrature on the heaviest per-point kernels (SCF Legendre+Gegenbauer, Multipole tables, Ellipsoidal GL), amplified by inbackend_ode._eom_rhs issuing all three force calls every adaptive ODE stage. Broad reach across SCF/Multipole/Ellipsoidal and both differentiable paths.",
+              "locations": [
+                "galpy/backend/_reference/inbackend_ode.py:58-62 (three separate _evaluate*forces calls)",
+                "galpy/potential/SphericalHarmonicPotentialMixin.py:121-161",
+                "galpy/potential/SCFPotential.py:751-754,869-872 (backend cache-free; numpy cache 719-749/814-820)",
+                "galpy/potential/EllipsoidalPotential.py:226-229,291-301 (hash cache guarded by `if xp is numpy`)"
+              ]
+            },
+            {
+              "title": "Gate the C-STM forward on requires-grad so a no-gradient backend-IC integrate skips the 6x variational solve",
+              "subsystem": "orbit-integration",
+              "mechanism": "jax custom_vjp primal _stm calls a base-orbit-only host fn; only _fwd (when differentiating) computes M. For torch, detect requires_grad in _CSTMFunction.forward and skip the STM assembly + save_for_backward when not needed. Combined with P0#3 a forward-only integrate drops from 6 variational integrations to one base integration.",
+              "regime": [
+                "warm-cpu",
+                "warm-gpu-largeN"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": true,
+              "why_ranked_here": "Orbits.py:1748 routes ANY 6D backend-IC orbit with a dxdv C method through _integrate_cstm, so users wanting only a backend-array trajectory silently pay ~6-7x. Broad (every non-differentiated backend-IC integrate), but depends on P0#3 landing first to realize the base-only saving.",
+              "locations": [
+                "galpy/backend/_jax/orbit_stm.py:29-49 (_host/_stm always compute M, primal discards it)",
+                "galpy/backend/_torch/orbit_stm.py:17-29 (forward always runs c_stm_forward + save_for_backward)",
+                "galpy/orbit/Orbits.py:1743-1748 (routing)"
+              ]
+            },
+            {
+              "title": "Replace streamdf's 6-point finite-difference AA Jacobian (calcaAJac) with analytical jacfwd, and batch the per-chunk track loop",
+              "subsystem": "df-streams",
+              "mechanism": "calcaAJac approximates the 9x6 d(J,Omega,angle)/d(x,v) by forward differences (dxv=1e-8, mod-pi turning-point guard); replace with jax.jacfwd/torch.func.jacfwd of the now-traceable Staeckel actionsFreqsAngles -- exact, removes the 6-call FD loop. Separately batch the `for ii in range(nTrackChunks)` track loop by stacking all chunk base-points + FD perturbations into ONE batched aA call. FLAGGED: jacfwd is NOT byte-identical to the FD result -- gate behind the backend resolver, keep FD for numpy.",
+              "regime": [
+                "gradient",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "compile"
+              ],
+              "impact": "high",
+              "effort": "L",
+              "backend_specific": false,
+              "why_ranked_here": "Track assembly is THE setup cost of streamdf/streamgapdf (~7*nChunks*(1+nIter) serial scalar Staeckel AA evals, default nChunks 20-60). jacfwd removes the 6x FD multiplier AND gives exact derivatives, unlocking the differentiable stream-fit gradient w.r.t. potential params -- the headline backend use case. L effort + depends on batched-AA + needs review for the non-byte-identical numpy divergence, so P1 not P0.",
+              "locations": [
+                "galpy/df/streamdf.py:4115,4136-4178 (calcaAJac FD loop + mod-pi guard)",
+                "galpy/df/streamdf.py:1257,1309-1311 (per-chunk loop x nTrackIterations)",
+                "galpy/df/streamdf.py:3839,3845"
+              ]
+            },
+            {
+              "title": "Hoist the single _staeckel_jacobian call and share the 6 derivative panels between _staeckel_freqs and _staeckel_angles",
+              "subsystem": "action-angle",
+              "mechanism": "Lift the one _staeckel_jacobian call (12 t^2-substituted derivative-panel quadratures + detA + Omegas) into _staeckel_actions_freqs_angles and pass the six derivatives (and detsafe/Omegas) into BOTH consumers instead of each recomputing them. Pure backend-agnostic refactor; numpy byte-identical.",
+              "regime": [
+                "compile",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "high",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "Verified: _staeckel_freqs (line 320) and _staeckel_angles (line 388) BOTH call _staeckel_jacobian and the full path invokes both, so the 12-quadrature derivative computation runs TWICE per orbit -- a clean ~2x halving of the dominant cost after turning points across all four regimes. Low risk, M effort, compounds with the turning-point loop rolls.",
+              "locations": [
+                "galpy/actionAngle/actionAngleStaeckel.py:320-322 (_staeckel_freqs)",
+                "galpy/actionAngle/actionAngleStaeckel.py:388-400 (_staeckel_angles recomputes identically)",
+                "galpy/actionAngle/actionAngleStaeckel.py:494-506 (caller invokes both)"
+              ]
+            },
+            {
+              "title": "Add a native batch axis to the in-backend diffrax/torchdiffeq ODE so N orbits integrate in one solve",
+              "subsystem": "orbit-integration",
+              "mechanism": "Thread a leading batch axis through _eom_rhs/_to_eom/_from_eom (the force layer is already elementwise in R,z,phi, so vmapping the RHS is natural) so diffrax/torchdiffeq integrate a stacked (N,6) state in one adaptive solve, avoiding an outer vmap of the whole diffeqsolve (which re-traces/recompiles per N and gives N independent step sequences).",
+              "regime": [
+                "warm-gpu-largeN",
+                "gradient",
+                "compile"
+              ],
+              "impact": "high",
+              "effort": "L",
+              "backend_specific": false,
+              "why_ranked_here": "The in-backend ODE path is the parameter-gradient / higher-order-diff path whose point is GPU-batch training loops; single-orbit-only is the difference between a usable GPU pipeline and one bottlenecked on per-orbit dispatch. High impact for GPU-large-N, but L effort and narrower regime reach than the P0 levers.",
+              "locations": [
+                "galpy/backend/_reference/inbackend_ode.py:38,50,147,162 (flat single (6,) state)",
+                "galpy/backend/_jax/orbit_ode.py:10-33",
+                "galpy/orbit/Orbits.py:2139 (result always single (nt,phasedim))"
+              ]
+            },
+            {
+              "title": "Rewrite assoc_legendre's O(L*M) Bonnet recurrence as a lax.scan over l, with vectorized derivative tables",
+              "subsystem": "special-functions",
+              "mechanism": "The l-recurrence (P[l][m] from P[l-1],P[l-2]) is the only loop-carried part -> one lax.scan over l carrying (P_{l-1},P_{l-2}) for all m at once, collapsing the L*M list-of-lists + 2-level nested xp.stack into one carried buffer. The deriv=1/2 loops read only the finished P table -> ONE vectorized elementwise map over the (L,M) grid, not per-cell xp.where. jax-specific kernel; keep the list+stack Python path as torch/numpy-trace fallback.",
+              "regime": [
+                "compile",
+                "gradient",
+                "warm-gpu-largeN"
+              ],
+              "impact": "high",
+              "effort": "L",
+              "backend_specific": true,
+              "why_ranked_here": "Largest unrolled graph in the special-fn subsystem, on the SCF/Multipole force path (SCFPotential.py:456,760,890; MultipoleExpansionPotential.py:2549); deriv=2 emits ~3*L*M separately-traced ops + a nested stack at L,M~10-30. Same ~12x-class compile win. L effort, algebraically constrained, partly subsumed if the combined-evaluator (P1) lands.",
+              "locations": [
+                "galpy/backend/special/_fallback/assoc_legendre.py:39-49,51-52,62-73,81-93",
+                "galpy/potential/SCFPotential.py:456,760,890; galpy/potential/MultipoleExpansionPotential.py:2549"
+              ]
+            },
+            {
+              "title": "Vectorize the gegenbauer L-call comprehension + N-step recurrence and share the C^a/C^{a+1}/C^{a+2} family per SCF point",
+              "subsystem": "special-functions / potentials",
+              "mechanism": "(a) Fold alpha (affine in l) into a leading (L,)-axis and run ONE lax.scan over n carrying (C_{n-1},C_n) for all L alphas, collapsing the `xp.stack([gegenbauer(N,alpha(ll),xi) for ll in Ls])` L*N unroll to N scan steps. (b) Compute the family C^a/C^{a+1}/C^{a+2} once per point and pass it to _phiTilde/_dphiTilde/_d2phiTilde instead of each re-calling _C/_dC/_d2C on the same xi (~3x forces, ~6x Hessian).",
+              "regime": [
+                "compile",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": true,
+              "why_ranked_here": "SCF radial basis is evaluated on every SCF force/density call; L*N unroll + 3-6x family recompute bloat the SCF graph and warm cost. Strong overlap with the combined force/Hessian evaluator (P1), scoped medium, natural companion to assoc_legendre sharing the scan idiom.",
+              "locations": [
+                "galpy/potential/SCFPotential.py:1059 (xp.stack comprehension over Ls)",
+                "galpy/backend/special/_fallback/gegenbauer.py:24-29 (N-step recurrence)",
+                "galpy/potential/SCFPotential.py:364,568,595,1066,1090 (_phiTilde/_dphiTilde re-call _C/_dC)"
+              ]
+            }
+          ]
+        },
+        {
+          "tier": "P2-later",
+          "items": [
+            {
+              "title": "custom_jvp for the Staeckel/spherical/vertical action integrals using the existing analytical Leibniz dJ integrands",
+              "subsystem": "action-angle",
+              "mechanism": "Attach jax.custom_jvp / torch.autograd.Function to J(E,Lz,I3) whose tangent uses the already-implemented derivative panels (djrdE/djrdLz/djrdI3 from _staeckel_jacobian; spherical/vertical radial-period integrands). Forward value stays the plain sqrt-GL quadrature (byte parity); the backward pass skips differentiating through xp.sqrt(clip(S)) at near-turning-point nodes (sqrt'(0)=inf) and decouples the gradient from the node count.",
+              "regime": [
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "L",
+              "backend_specific": true,
+              "why_ranked_here": "Exact, well-conditioned, cheap action gradients (galpy already has the dJ integrands), but gradient-regime-only with no warm-forward change, L effort. Lower reach than the compile-time loop rolls; the streamdf jacfwd (P1) is the higher-leverage gradient consumer.",
+              "locations": [
+                "galpy/actionAngle/actionAngleStaeckel.py:177-186,277-314",
+                "galpy/actionAngle/actionAngleSpherical.py:604-623; actionAngleVertical.py:352-369"
+              ]
+            },
+            {
+              "title": "Cache GL node/weight tables as backend arrays per (xp, n, device) in _gl01_on",
+              "subsystem": "infrastructure (shared quadrature)",
+              "mechanism": "gauss_legendre_01 caches only numpy float64 tables; _gl01_on runs asarray_on_device(xp, x01, dev) on EVERY fixed_quad/transformed_quad/nested_quad call -- a fresh host->backend materialization (host->device on GPU) of the same constant grid. Add a dict cache keyed by (id(xp), n, device-key). Warm-only (under jit the constant folds); numpy short-circuits to the cached numpy tuple (byte-identical).",
+              "regime": [
+                "warm-cpu",
+                "warm-gpu-largeN"
+              ],
+              "impact": "medium",
+              "effort": "S",
+              "backend_specific": false,
+              "why_ranked_here": "Cross-cutting (one cache helps Staeckel 3 calls/eval, Vertical 3, Spherical, Potential.mass, qdf, SCF nested_quad) and only S effort, but warm-path-only and folds away under jit, so it does not touch the dominant compile blowup.",
+              "locations": [
+                "galpy/backend/quadrature.py:213-216 (_gl01_on)",
+                "galpy/backend/quadrature.py:177-191 (gauss_legendre_01 caches only numpy)",
+                "consumers: actionAngleStaeckel.py:186,272,378; actionAngleVertical.py:366,389,417; Potential.py:813; quasiisothermaldf.py:492"
+              ]
+            },
+            {
+              "title": "Share per-node S(u),S(v) evaluations across the 3 factor integrands in the Staeckel angle/jacobian panels",
+              "subsystem": "action-angle",
+              "mechanism": "PE/PI/PL, QE/QI/QL, and the six _staeckel_jacobian panels call the helper 3x with the same Sfunc/nodes, differing only by factor_fn. Refactor to evaluate 1/sqrt(S) once on the node grid and return all three weighted sums (factor as a cheap elementwise multiply), turning 3 node-grids into 1 per branch.",
+              "regime": [
+                "compile",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "~3x cut in angle/jacobian node-potential evals, compounds with the freqs/angles jacobian de-dup (P1). Backend-agnostic, byte-identical. P2 because it is finer-grained sharing already addressed coarsely by the P1 jacobian hoist; do after that to avoid churn.",
+              "locations": [
+                "galpy/actionAngle/actionAngleStaeckel.py:415-430,448-463,295-313,364-378"
+              ]
+            },
+            {
+              "title": "Share node potential evals across the spherical Or/Op/angler/anglez panels (fuse azimuthal/non-azimuthal pairs)",
+              "subsystem": "action-angle",
+              "mechanism": "The azimuthal vs non-azimuthal panel over the SAME limits differ only by a 1/r^2 factor on identical nodes; collapse each pair into one node-radicand evaluation returning both moments, and return Or/Op to the angle helpers so panels are not recomputed. Reduces ~8 n-node grids to ~4-5.",
+              "regime": [
+                "compile",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "Cuts a substantial fraction of spherical angle-path potential sampling, backend-agnostic, but one AA family of medium reach; sequence after the spherical bracket-loop roll (P0#2) and combined-force work to avoid overlapping edits.",
+              "locations": [
+                "galpy/actionAngle/actionAngleSpherical.py:677-690,716-717,752-755,650-664,658-659"
+              ]
+            },
+            {
+              "title": "Fuse the per-RHS-step force dispatch into one pass over _potlist and hoist isDissipative out of the step loop",
+              "subsystem": "orbit-integration / potentials",
+              "mechanism": "_eom_rhs does 3 separate Python dispatches into _evaluateRforces/_evaluatephitorques/_evaluatezforces, each re-iterating a CompositePotential's _potlist with a per-component isDissipative branch (3 full passes/step). Compute all three components per component in one loop reusing R,cosphi,sinphi and the isDissipative branch once; precompute the (dissipative-mask, component-list) once per integrate.",
+              "regime": [
+                "warm-cpu",
+                "compile",
+                "warm-gpu-largeN"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "torchdiffeq runs the field eagerly every adaptive step so the 3x redundant dispatch + isDissipative re-checks are pure per-step overhead; for diffrax it enlarges the traced RHS. Real but constant-factor, largely subsumed by the P1 combined-force evaluator.",
+              "locations": [
+                "galpy/backend/_reference/inbackend_ode.py:57-63",
+                "galpy/potential/CompositePotential.py:185-192,217-224,249-256",
+                "galpy/potential/Potential.py:2229-2232,2284,2339"
+              ]
+            },
+            {
+              "title": "Thread diffrax potential parameters as diffeqsolve args (not a closed-over Python object) and shrink max_steps",
+              "subsystem": "orbit-integration",
+              "mechanism": "diffeqsolve closes over the Python pot object (trace keyed on its pytree/identity) with an empty args slot and static max_steps=100000 (sizes internal while-loop buffers). Thread the potential's array-valued parameters through diffeqsolve args so re-using the same structure with new values reuses the compiled solve (and makes parameter-gradients first-class), and derive a smaller max_steps from len(ts).",
+              "regime": [
+                "compile",
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": true,
+              "why_ranked_here": "Directly helps the fitting-loop case (params change every step -> recompile if closed-over), jax-only and needs a parameter-pytree plumbing design; sequence after the native batch axis (P1) which touches the same RHS.",
+              "locations": [
+                "galpy/backend/_jax/orbit_ode.py:19-32 (pot closed over, args unused, max_steps=100000)",
+                "galpy/backend/_reference/inbackend_ode.py:118"
+              ]
+            },
+            {
+              "title": "Reduce the STM VJP residual from full (N,nt,6,6) to the adjoint-needed (N,6) by contracting over t host-side",
+              "subsystem": "orbit-integration",
+              "mechanism": "The VJP residual is the full STM M of shape (N,nt,6,6); backward only needs sum_t M(t)^T ct[t]. Push the t-contraction into the host callback (or store smaller per-time pieces) so the saved-tensor / host<->device transfer drops from O(N*nt*36) to O(N*36) for the IC gradient.",
+              "regime": [
+                "gradient",
+                "warm-gpu-largeN"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": true,
+              "why_ranked_here": "Helps gradient-regime memory pressure and large-batch GPU training for long output grids, but the forward cost dominates the fast-C STM path so this is a memory/transfer optimization not a FLOP win; do after P0#3 and P1 STM-gating land.",
+              "locations": [
+                "galpy/backend/_jax/orbit_stm.py:38,53,57-59",
+                "galpy/backend/_torch/orbit_stm.py:27,34-37"
+              ]
+            },
+            {
+              "title": "Batch the constantbetadf.fE / sphericaldf._dMdE per-energy quadrature comprehensions into fixed 2D GL tensor evaluations",
+              "subsystem": "df-streams",
+              "mechanism": "fE evaluates quadpack.quadrature TWICE per energy in a Python comprehension over ~202 energies; anisotropic _dMdE runs a doubly-nested per-energy quad. Build (nE,nGL[,nGL]) GL node grids mapped to each energy's interval (inner L-limit closed-form), evaluate the already-vmappable integrand ONCE on the flattened grid, contract with weights. numpy byte-identical.",
+              "regime": [
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "compile"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "Removes 400+ adaptive-quadrature subgraphs from DF setup (constantbetadf is jax-only -> direct payoff), but these are setup/diagnostic methods not hot inner loops, narrower reach than streamdf track assembly (P1).",
+              "locations": [
+                "galpy/df/constantbetadf.py:363-379,390-401,316-323",
+                "galpy/df/sphericaldf.py:887-928,793-821"
+              ]
+            },
+            {
+              "title": "Batch streamgapdf impulse per-star Orbit integration into one stacked-Orbit integrate",
+              "subsystem": "df-streams",
+              "mechanism": "Replace `for i in range(nstar): Orbit([...single...]).integrate(...)` (+ flipped reverse) with a single Orbit(numpy.array([R,vR,vp,z,vz,phi]).T) integrating all stars in one call (and the reverse arm together), as streamspraydf._sample_tail:596-598 already does; index o.x(times) as (nstar,nt). Lets the in-backend ODE integrator batch all trajectories.",
+              "regime": [
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "Large CPU win and the exact batch-of-trajectories pattern the new ODE integrator is built for, reference batched pattern already in streamspraydf, but the analytical kick path (not this loop) is the default fast route, so impact medium and reach one DF method.",
+              "locations": [
+                "galpy/df/streamgapdf.py:1729-1736,1831-1840",
+                "galpy/df/streamspraydf.py:596-598 (reference)"
+              ]
+            },
+            {
+              "title": "Cache per-(device,dtype) special-fn series/node tables (hyp2f1/bessel_k/sici) and add a positive-only torch gamma fast path",
+              "subsystem": "special-functions",
+              "mechanism": "(a) hyp2f1/k0/k1/kn/sici re-asarray their numpy GL/trapezoid/Laguerre constants to device every call -- add a per-(namespace,device,dtype) memo (subsumed by the shared _gl01_on cache where applicable). (b) torch gamma_fallback always evaluates the reflection branch even for positive args (Einasto/PowerSphericalwCutoff) -- add a positive-only fast path; refresh _NATIVE_MISSING against current torch.special capability.",
+              "regime": [
+                "warm-cpu",
+                "gradient"
+              ],
+              "impact": "low",
+              "effort": "S",
+              "backend_specific": false,
+              "why_ranked_here": "Warm-only per-call constant-factor + smaller AD graph; folds away under jit. S effort, low individual impact, cheap hygiene that compounds with the shared _gl01_on cache -- bundle with that work.",
+              "locations": [
+                "galpy/backend/special/_fallback/hyp2f1.py:74-76; bessel_k.py:71-72; sici.py:64-65",
+                "galpy/backend/special/_fallback/gamma.py:33-37",
+                "galpy/backend/special/_router.py:15-53"
+              ]
+            },
+            {
+              "title": "Batch the umin/umax bisections into one [2,N] solve reusing already-computed bracket f-values",
+              "subsystem": "action-angle",
+              "mechanism": "umin and umax are two roots of the SAME f bracketing ux from below/above via two separate bisect_root calls; stack the two brackets along a leading axis and call bisect_root ONCE on the batched [2,N] bracket (one vectorised f per step), and reuse the f(ux+/-eps)/f(lo)/f(hi) already computed for the at_turn/reaches_axis logic instead of recomputing inside the bisections.",
+              "regime": [
+                "compile",
+                "warm-cpu",
+                "warm-gpu-largeN",
+                "gradient"
+              ],
+              "impact": "medium",
+              "effort": "M",
+              "backend_specific": false,
+              "why_ranked_here": "Halves the separate root solves + per-op launches for the u turning points, stackable with the bisect_root lax roll (P0#1) -- but once bisect_root is a single traced while_loop the marginal win shrinks, so do after P0#1 to size the remaining benefit. vmin is a single root so only u benefits.",
+              "locations": [
+                "galpy/actionAngle/actionAngleStaeckel.py:118-152 (two bisect_root at 147-148, f reused at 131)"
+              ]
+            }
+          ]
+        }
+      ],
+      "shared_wins": [
+        "Roll the shared bisect_root for-loop (optimize.py:165) into lax.while_loop ONCE -> shrinks the traced graph for EVERY backend root-find consumer simultaneously: Potential.rl/rE/zmaxgrid/rliftedgrid, actionAngleSpherical rperi/rap, actionAngleVertical xmax, actionAngleIsochroneInverse eta, and the two per-Staeckel-turning-point calls. The single broadest-reach item in the roadmap.",
+        "Thread a static bisection step count (or width hint) through bisect_root so n_bisect_steps stops falling back to maxiter=100 under a tracer (verified: traced probe -> 100 vs concrete ~46-51; Staeckel passes maxiter=200) -> roughly halves the iteration count of every backend bisection under jit and warm, compounding with the while_loop roll. S effort, all consumers.",
+        "Add a per-(xp, n, device) cache for GL node/weight tables in _gl01_on (quadrature.py:213) -> one fix removes a per-call host->device node-table transfer for every quadrature consumer (Staeckel actions/freqs/angles, Vertical, Spherical, Potential.mass, qdf, SCF nested_quad) and subsumes the special-fn hyp2f1/bessel_k/sici per-call table re-uploads.",
+        "Introduce combined force (FR,Fz,Fphitorque) and combined Hessian (all six cyl components) evaluators -> one pattern eliminates the backend-path 3x force / 6x Hessian recompute across SCF, Multipole AND Ellipsoidal at once (their numpy md5/key caches are all disabled for jax/torch) and directly de-bloats inbackend_ode._eom_rhs (the most-executed differentiable code, calling all three force evaluators per ODE stage).",
+        "Establish the lax.scan-over-a-loop-carried-recurrence + vectorize-the-non-carried-derivative-tables idiom ONCE (assoc_legendre) and reuse it for gegenbauer and any future Bonnet/3-term recurrence; both sit on the SCF/Multipole hot path and are the special-fn instances of the named 47k-jaxpr/12x-compile lever.",
+        "Reuse the in-repo stacked single-call integrate_dxdv pattern (already proven in the Lyapunov path Orbits.py:2893-2907 with rectIn/rectOut=True) for BOTH the c_stm_forward 6-column collapse and the streamgapdf per-star impulse batching -> the same idiom fixes redundant base-orbit integration in two subsystems.",
+        "Make the in-backend ODE RHS (_eom_rhs) batch-capable AND fused-force in one coordinated edit -> the leading-batch-axis (orbit-integration P1) and the single-pass-over-_potlist fuse (P2) touch the same RHS/force layer, so design them together to avoid churn; both also enable the streamgapdf batched-Orbit and any GPU training pipeline."
+      ],
+      "rejected": [
+        "No audit proposed an internal jax.jit / torch.compile call inside galpy -- all high/medium items use jit-COMPATIBLE rewrites (lax.while_loop/fori_loop/scan for control flow, custom_jvp/custom_vjp for gradients, broadcast+sum vectorization for GL node loops). Nothing violated the no-internal-jit rule, so nothing was dropped on that ground.",
+        "numpy-only ndindex per-point loops in SCF/Multipole expansion assembly (SCFPotential.py:515-518; SphericalHarmonicPotentialMixin.py:74-83,218-221; MultipoleExpansionPotential.py:1615-1650): vectorizing them changes numpy reduction order and breaks byte-identity, and touches NEITHER the jit nor the gradient path -- low value and policy-flagged. Keep as a numpy-only lever surfaced for the user's explicit review, not part of the backend roadmap.",
+        "EllipsoidalPotential(glorder=None) scipy.integrate.quad and FerrersPotential scipy.quad + numpy.roots fallbacks (EllipsoidalPotential.py:462-464; FerrersPotential.py:397,475): a backend-traceability COVERAGE gap (these triaxial routes don't work under jax/torch at all), not a speedup on an already-working path; L-effort rewrite of unmigrated code. Track as a correctness/coverage item, not a performance opportunity here.",
+        "iv/kn integer-order upward recurrences (bessel_i.py:45-46; bessel_k.py:102-103): loop-carried but galpy's only consumer is RazorThinExponentialDisk._R2deriv at n=2, so the loop unrolls to ~1 step -- negligible graph cost. Listed in the audit only for recursion-audit completeness; not worth a scan rewrite.",
+        "jax pure_callback STM per-(N,nt)-shape re-specialization + host round-trip (orbit_stm.py:17-44): the C integrator is inherently a host call so the device round-trip is structural, not a bug; the only realistic win is shape-bucketing/padding for variable-length time grids, and most training loops use a fixed batch size. Low impact; fold into documentation/guidance rather than a code change.",
+        "transformed_quad two-panel integrand fusion (quadrature.py:431,436) and get_namespace memoization (~0.7-3.2us/call, _resolver.py:27-53): both real but low-ceiling (panel count fixed at 2; per-call resolve folds away under jit and is dwarfed by the loop-unroll items). Defer indefinitely unless profiling of a specific warm-eager pipeline flags them.",
+        "streamdf spread eigen-decomposition / slerp per-chunk loops (streamdf.py:1054-1101,1569-1611): O(nChunks) tiny 2x2/6x6 linalg ops -- the warm win is modest and the jit-traceability benefit is small relative to the heavy AA-carrying loops in the same file. Low priority; revisit only after the track-assembly AA batching (P1) lands.",
+        "isochrone actionAngle (closed-form, no quadrature/root-find) and quasiisothermaldf vmomentdensity (already vectorizes its ngl^3 GL grid into one batched self() call; residual cost is the action eval, owned by the action-angle subsystem) -- no opportunity. diskdf/evolveddiskdf are legacy 2D solar-neighborhood DFs unlikely in GPU/gradient pipelines; interpRZPotential is not backend-migrated (scipy splines), out of scope."
+      ],
+      "narrative": "The four audits converge on one dominant theme: galpy's backend paths are full of Python for-loops and redundant recomputes that, while correct, bake giant subgraphs into the user's jit/grad trace and pay 3-6x redundant work warm because the numpy md5/key caches are deliberately disabled for jax/torch. The single broadest lever is the shared bisect_root for-loop (optimize.py:165), whose n_bisect_steps falls back to 100 iterations under a tracer (verified) and which sits behind EVERY backend root-find -- Staeckel/Spherical/Vertical turning points, Potential.rl/rE/zmax/rgrid, IsochroneInverse -- so rolling it once into lax.while_loop (jax) shrinks the graph for all of them simultaneously. Stacked on top are the explicit expanding-bracket loops (Staeckel 60+80+80, Spherical 2x80, Vertical 80) and the special-fn recurrences (assoc_legendre O(L*M), gegenbauer L*N), the concrete instances of the named 47k-equation-jaxpr / ~12x-compile lever in the hottest subsystems. The second pillar is redundant recompute on the backend path: c_stm_forward re-integrates the identical base orbit 6 times when the Lyapunov code already proves a single stacked integrate_dxdv works, the EllipsoidalPotential GL quadratures unroll K~20-50 node iterations that vectorize to one batched dens(m)+sum, and the disabled force/Hessian caches mean 3x/6x recompute of the SCF/Multipole/Ellipsoidal expansions per point -- amplified because inbackend_ode._eom_rhs calls all three force evaluators every ODE stage. The gradient regime gets two clean wins: custom_jvp on the action integrals using galpy's existing analytical Leibniz dJ integrands, and replacing streamdf's 6-point finite-difference AA Jacobian with jacfwd (exact, 6x fewer evals, unlocks differentiable stream fitting). Recommended first moves: (1) roll bisect_root into lax.while_loop and thread a static step count -- one change, every consumer benefits; (2) collapse c_stm_forward to a single stacked integrate_dxdv and gate the STM on requires-grad; (3) vectorize the EllipsoidalPotential GL node loop and the assoc_legendre/gegenbauer recurrences. All proposals respect no-internal-jit and keep numpy byte-identical via the existing scipy/eager fallbacks."
+    },
+    "audits": [
+      {
+        "opportunities": [
+          {
+            "title": "Replace unrolled fixed-count bracket + bisection loops with lax.while_loop (jax) / tensor-while (torch) in the Staeckel/spherical/vertical turning-point finders",
+            "location": "galpy/actionAngle/actionAngleStaeckel.py:_staeckel_uminumax (127-148), _staeckel_vmin (164-166); galpy/backend/optimize.py:bisect_root (165-172) + n_bisect_steps (134-142); galpy/actionAngle/actionAngleSpherical.py:_calc_rperi_rap_backend (564-585); galpy/actionAngle/actionAngleVertical.py:_calc_xmax_backend (336-343)",
+            "pattern": "unrolled-loop",
+            "mechanism": "lax.fori_loop/while_loop (jax) and a Python while on a tensor convergence flag (torch) for the expanding-bracket and bisection sweeps, so the body traces ONCE instead of unrolling 60/80/200 copies; keep numpy path as the eager fixed-count fallback (byte-identical). bisect_root's n_bisect_steps falls back to the full maxiter (200) whenever the bracket is an abstract tracer (optimize.py:137-138), so under user jit EVERY bisect unrolls the worst case.",
+            "regime": [
+              "compile",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "Per Staeckel orbit-batch the J_R turning points alone cost ~3 + 61 + 80 + 1 (uminumax brackets) + 2x~203 (two bisect_root calls at traced maxiter=200, each f(mid)=one full _evaluatePotentials per step) ~= 550 unrolled potential evaluations, plus vmin (~280) and the spherical/vertical 80-step mirrors. Each f is a full _evaluatePotentials (potentialStaeckel->uv_to_Rz->_call_nodecorator). This is the action-angle analog of the named Staeckel 47,528-equation / 8.6-min-compile jaxpr lever; collapsing the loop body to one trace is the single biggest compile-time win in this subsystem and also shrinks the reverse-mode tape.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "actionAngleStaeckel.py:127  for _ in range(60): lo = xp.where((f(lo) >= 0.0) & (lo > 1e-10), lo * 0.5, lo)",
+              "actionAngleStaeckel.py:133  for _ in range(80):  # expanding bracket above ux until f<0",
+              "optimize.py:165  for _ in range(n): ... same = xp.sign(f(mid)) == slo  (n=n_bisect_steps -> maxiter=200 under a tracer)",
+              "optimize.py:137  except Exception: return min(maxiter, _MAXITER)  # abstract bracket -> full 200-step unroll",
+              "actionAngleSpherical.py:564  for _ in range(80): rstart = xp.where((f(rstart, E, L) > 0.0) & (rstart > 1e-9), rstart / 2.0, rstart)",
+              "actionAngleVertical.py:336  for _ in range(80): xend = xp.where(f(xend, E) > 0.0, xend * 2.0, xend)"
+            ]
+          },
+          {
+            "title": "Compute the six Staeckel Leibniz derivative panels once and share them between frequencies and angles",
+            "location": "galpy/actionAngle/actionAngleStaeckel.py:_staeckel_actions_freqs_angles (494-506), _staeckel_freqs (320-322), _staeckel_angles (388-400), _staeckel_jacobian (277-314)",
+            "pattern": "redundant-recompute",
+            "mechanism": "Hoist the single _staeckel_jacobian call (the 12 t^2-substituted derivative-panel quadratures + detA + Omega_r/phi/z + dI3/dJ) into _staeckel_actions_freqs_angles and pass the six derivatives (and detsafe/Omegas) into both _staeckel_freqs and _staeckel_angles instead of each recomputing them. Pure backend-agnostic refactor; numpy stays byte-identical.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "_staeckel_freqs (line 320) and _staeckel_angles (line 388) BOTH call _staeckel_jacobian, and _staeckel_actions_freqs_angles invokes both -> the entire 12-quadrature derivative computation (each a 2-panel t^2-substituted GL integral hitting the potential at 2*order nodes) runs TWICE per orbit in the actions+freqs+angles path. Eliminating the duplicate halves the derivative-quadrature work (the dominant cost after turning points) in the full-output path across compile, warm CPU/GPU, and gradient regimes. Low risk, moderate effort.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "actionAngleStaeckel.py:347  Omegar, Omegaphi, Omegaz = _staeckel_freqs(xp, s, umin, umax, vmin, pot, delta, order)",
+              "actionAngleStaeckel.py:502  angler, anglephi, anglez = _staeckel_angles(xp, s, umin, umax, vmin, pot, delta, order)",
+              "actionAngleStaeckel.py:320  djrdE, djrdLz, djrdI3, djzdE, djzdLz, djzdI3 = _staeckel_jacobian(...)  # inside _staeckel_freqs",
+              "actionAngleStaeckel.py:388  djrdE, djrdLz, djrdI3, djzdE, djzdLz, djzdI3 = _staeckel_jacobian(...)  # inside _staeckel_angles",
+              "actionAngleStaeckel.py:391-397  detA, detsafe, Omegar, Omegaz, Omegaphi recomputed identically to _staeckel_freqs 323-337"
+            ]
+          },
+          {
+            "title": "custom_jvp for the Staeckel/spherical/vertical action integrals using the analytical Leibniz dJ integrands instead of autodiffing through the sqrt+clip GL quadrature",
+            "location": "galpy/actionAngle/actionAngleStaeckel.py:_staeckel_gl_action (177-186) + _staeckel_jacobian (277-314 supplies dJ/dE,dLz,dI3); actionAngleSpherical.py:_calc_jr_backend (604-623); actionAngleVertical.py:_calc_J_backend (352-369)",
+            "pattern": "ad-through-singularity",
+            "mechanism": "Attach a jax.custom_jvp / torch.autograd.Function to the action value J(E,Lz,I3) (and J(E,L) spherical) whose tangent uses the ALREADY-IMPLEMENTED analytical derivative panels (djrdE/djrdLz/djrdI3 from _staeckel_jacobian; the spherical/vertical radial-period integrands). The forward value stays the plain sqrt-GL quadrature (byte parity preserved); the backward pass skips differentiating through xp.sqrt of a clipped where (sq>0 -> sq else 0 at 177-181), whose sqrt'(0)=inf is the classic AD-through-turning-point singularity the clip only papers over.",
+            "regime": [
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "The action integrand sqrt(S) vanishes at the turning points so the forward GL value is well-behaved, but reverse-mode AD through xp.sqrt(clip(S)) at the near-turning-point nodes produces large/ill-conditioned cotangents (the clip's where masks value but the sqrt gradient at the boundary node is still huge), and the gradient currently also flows through the whole n-node quadrature graph. galpy already has the exact analytical dJ integrands (the _staeckel_jacobian panels and the C dJ?d? split referenced at lines 250-254), so a custom_jvp gives exact, cheap, well-conditioned action gradients and decouples them from the quadrature node count. Helps the training-loop / gradient regime specifically; no warm-forward change.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "actionAngleStaeckel.py:180  sq = xp.where(sq > 0.0, sq, xp.zeros_like(sq))  # clip (AD/round-off guard)",
+              "actionAngleStaeckel.py:181  return xp.sqrt(sq) * span[..., None]",
+              "actionAngleStaeckel.py:250-254  # The frequency derivative integrals dJ/d(E,Lz,I3) ... galpy already has C + Python Leibniz dJ integrands",
+              "actionAngleSpherical.py:610  rad = xp.where(rad > 0.0, rad, 0.0)  # clip before sqrt (AD guard); 611 xp.sqrt(rad)",
+              "actionAngleVertical.py:358  rad = xp.where(rad > 0.0, rad, xp.zeros_like(rad))  # clip (AD guard)"
+            ]
+          },
+          {
+            "title": "Share node potential evaluations across the spherical Or/Op/angler/anglez panels (and fuse the redundant per-panel quadratures)",
+            "location": "galpy/actionAngle/actionAngleSpherical.py:_actionsFreqsAngles_backend (807-832), _calc_or_op_backend (677-690), _calc_angler_backend (716-717), _calc_anglez_backend (752-755), _panel_backend (650-664)",
+            "pattern": "redundant-recompute",
+            "mechanism": "Each _panel_backend call evaluates _radicand (a full 2D potential eval) at n GL nodes. _calc_or_op_backend runs 4 panels (Tr non-azimuthal x2 + I azimuthal x2 over [rperi,Rmean]&[Rmean,rap]); angler runs 2 more and anglez 2 more (over [rperi,r]&[r,rap]). The azimuthal vs non-azimuthal pair over the SAME limits differ only by a 1/r^2 factor inside the integrand, so they should share one node-radicand evaluation and return both moments; and Or/Op should be returned to the angle helpers (Or already is) so panels aren't recomputed. Reduces 8 potential-node-grids to ~4-5.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "In the full spherical actions+freqs+angles path the potential is sampled on ~8 separate n-node grids (4 in or_op, 2 in angler, 2 in anglez), several of which differ only by a cheap 1/r^2 weight on identical nodes (azimuthal vs non-azimuthal over the same [base,lim]). _radicand dominates per-node cost, so collapsing the azimuthal/non-azimuthal pairs into one node evaluation that yields both moments cuts a substantial fraction of the warm and compile cost in the angle path. Backend-agnostic, moderate refactor.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "actionAngleSpherical.py:677-690  Tr = 2*(panel(...,False)+panel(...,False)); I = 2*L*(panel(...,True)+panel(...,True))  # 4 panels, azimuthal flag only changes /r**2",
+              "actionAngleSpherical.py:658-659  if azimuthal: val = val / rr**2.0  # same nodes, extra factor",
+              "actionAngleSpherical.py:716-717  wr_small_raw/wr_large_raw = Or * panel(...False)  # 2 more panels",
+              "actionAngleSpherical.py:752-754  wz_small/wz_large = L * panel(...True)  # 2 more panels"
+            ]
+          },
+          {
+            "title": "Share the per-node S(u),S(v) evaluations across the 3 factor integrands in the Staeckel angle/jacobian panels",
+            "location": "galpy/actionAngle/actionAngleStaeckel.py:_staeckel_angles (415-463), _staeckel_jacobian (295-313), _staeckel_deriv_panels (258-274), _staeckel_angle_partial (364-378)",
+            "pattern": "redundant-recompute",
+            "mechanism": "PE/PI/PL (lines 415-430) call _staeckel_angle_partial THREE times with the same Sfunc, sq_args, base, sign, mid -- only factor_fn (sinh^2, 1, 1/sinh^2) differs -- so S=Sfunc(u) and the dead-branch where/sqrt are recomputed 3x over identical nodes; likewise QE/QI/QL (448-463) and the six _staeckel_jacobian panels. Refactor the panel helper to evaluate 1/sqrt(S) once on the node grid and return all three weighted sums (factor applied as a cheap elementwise multiply), turning 3 potential-node-grids into 1 per branch.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "Sfunc (=_JRStaeckelIntegrandSquared/_JzStaeckelIntegrandSquared, each a full potentialStaeckel) is the per-node cost; it is evaluated 3 times per branch (once per factor) in both the jacobian and the angle partials when the three factors share the identical node grid and 1/sqrt(S). Computing S once per branch cuts the angle/jacobian node-potential evaluations by ~3x. Combined with the freqs/angles jacobian de-dup it compounds. Moderate, backend-agnostic refactor; numpy stays byte-identical.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "actionAngleStaeckel.py:415-430  PE/PI/PL = AP(xp, JRsq, jr_args, lambda...: sinh(u)**2 / ones / 1/sinh(u)**2, base_u, sign_u, mid_u, order)  # same Sfunc+nodes, 3 factors",
+              "actionAngleStaeckel.py:448-463  QE/QI/QL = AP(xp, JZsq, jz_args, lambda...: sin(v)**2 / ones / 1/sin(v)**2, base_v, sign_v, mid_v, order)",
+              "actionAngleStaeckel.py:295-313  djrdE/djrdLz/djrdI3/djzdE/djzdLz/djzdI3 each = dP(xp, JRsq/JZsq, args, <factor>, lo, hi, order)  # 6 panels, 3 factors per S",
+              "actionAngleStaeckel.py:373-375  S = Sfunc(u, *a2); Ssafe = where(S>0,...); g = where(S>0, factor_fn(xp,u)/sqrt(Ssafe), 0)  # recomputed per factor"
+            ]
+          },
+          {
+            "title": "Fuse the umin and umax bisections (and reuse bracket f-evaluations) into one batched root solve",
+            "location": "galpy/actionAngle/actionAngleStaeckel.py:_staeckel_uminumax (118-152)",
+            "pattern": "dispatch-overhead",
+            "mechanism": "umin and umax are two roots of the SAME f=_JRStaeckelIntegrandSquared bracketing ux from below/above; currently two separate bisect_root calls (147-148) each re-run the full bracket+bisect schedule and re-evaluate f. Stack the two brackets along a leading axis and call bisect_root ONCE on the batched [2,N] bracket so f is evaluated on both roots' midpoints in one vectorised op per step (halving the number of distinct f-traces/launches), and reuse the f(ux+/-eps), f(lo), f(hi) values already computed for the at_turn/reaches_axis/unbound logic instead of recomputing inside the bisections.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "The two bisect_root calls (umin, umax) and the bracket loops repeatedly evaluate the same f; batching the two roots into one bisect_root halves the number of separate quadrature-free root solves and per-op launches (the eager dispatch lever) and, under jit, halves that part of the unrolled graph. Independent of and stackable with the lax-loop rewrite. Smaller than the loop rewrite but a clean win; vmin is a single root so only u benefits.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "actionAngleStaeckel.py:147  umin = bisect_root(f, lo, u_hi_umin, xp, xtol=1e-13, maxiter=200)",
+              "actionAngleStaeckel.py:148  umax = bisect_root(f, u_lo_umax, hi, xp, xtol=1e-13, maxiter=200)",
+              "actionAngleStaeckel.py:116  f = lambda u: _JRStaeckelIntegrandSquared(u, *args)  # same f for both roots",
+              "actionAngleStaeckel.py:131  reaches_axis = f(lo) >= 0.0  # f(lo) already known",
+              "optimize.py:163  slo = xp.sign(f(lo))  # bisect_root re-evaluates f(lo) the caller just computed"
+            ]
+          },
+          {
+            "title": "Make n_bisect_steps not silently fall back to the 200-step worst case under tracing by threading a static step count",
+            "location": "galpy/backend/optimize.py:n_bisect_steps (130-142), bisect_root (164), brentq backend dispatch (106-113)",
+            "pattern": "shape-instability",
+            "mechanism": "n_bisect_steps probes float(numpy.max(|b-a|)) which raises on an abstract tracer and returns min(maxiter,_MAXITER)=100 (or the caller's maxiter=200 for the Staeckel calls) -> the bisection always unrolls the maximum count under user jit even when the concrete bracket needs ~50 halvings. Expose a static-int steps= argument (or compute from a known a-priori bracket-width bound for the Staeckel/spherical brackets, whose widths are bounded by the u in [0,100]/r ranges) so the trace uses the true ~50 steps; orthogonal to but compounds with the lax-loop rewrite.",
+            "regime": [
+              "compile"
+            ],
+            "impact": "low",
+            "impact_rationale": "The Staeckel callers pass maxiter=200 (uminumax 147-148, vmin 166) and the tracer fallback returns that full count, so each bisect unrolls ~200 steps vs the ~50 actually needed to reach xtol=1e-13 from a bounded bracket -- a ~4x larger graph for that segment. If the lax-loop rewrite lands this is subsumed; if not, a static step count is a cheap standalone compile-graph shrink. Low impact on its own, S effort.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "optimize.py:134  try: width = float(numpy.max(numpy.abs(numpy.asarray(b) - numpy.asarray(a))))",
+              "optimize.py:137  except Exception: return min(maxiter, _MAXITER)  # abstract bracket -> full count",
+              "actionAngleStaeckel.py:147  bisect_root(f, lo, u_hi_umin, xp, xtol=1e-13, maxiter=200)  # maxiter=200 used as the traced step count",
+              "optimize.py:164  n = n_bisect_steps(a, b, xtol, maxiter)"
+            ]
+          }
+        ],
+        "summary": "The action-angle backend path (Staeckel vectorised core + spherical/vertical mirrors; isochrone is already closed-form with no quadrature/root-find, so no opportunity) has two dominant, named-lever-class problems. (1) UNROLLED LOOPS: the turning-point finders run fixed-count Python for-loops (60/80 expanding-bracket halvings + bisect_root's up-to-200 bisection steps, which under a jit tracer always fall back to the 200-step worst case via n_bisect_steps), each iteration calling a full _evaluatePotentials -> ~550+ unrolled potential evals per Staeckel orbit just for the J_R turning points, the action-angle analog of the 47k-equation Staeckel jaxpr; lax.while_loop/fori_loop (jax) and tensor-while (torch) collapse the body to one trace (high, compile+gradient). (2) REDUNDANT RECOMPUTE: _staeckel_actions_freqs_angles calls both _staeckel_freqs and _staeckel_angles, each independently re-running _staeckel_jacobian's 12 derivative-panel quadratures (a clean ~2x halving, high); within those panels the 3 factor integrands (PE/PI/PL, QE/QI/QL, and the 6 jacobian panels) re-evaluate the same Sfunc/potential on identical nodes ~3x (medium); and the spherical Or/Op/angler/anglez path samples the potential on ~8 separate n-node grids, several differing only by a 1/r^2 weight on identical nodes (medium). A gradient-regime lever: the action integrals autodiff through xp.sqrt(clip(S)) at near-turning-point nodes (ill-conditioned), while galpy already has the exact analytical Leibniz dJ integrands -> a custom_jvp gives cheap, well-conditioned action gradients (medium). Smaller levers: batch the umin/umax bisections into one solve and reuse already-computed bracket f-values (medium); thread a static bisection step count to avoid the 200-step tracer fallback (low). All findings respect no-internal-jit (jit-COMPATIBLE rewrites: lax control flow, custom_jvp, fusion -- no internal jit/compile); numpy paths stay byte-identical via the existing scipy/eager fallbacks.",
+        "subsystem": "action-angle (galpy/actionAngle/* + shared galpy/backend/optimize.py & quadrature.py)"
+      },
+      {
+        "subsystem": "potentials (galpy/potential/* force/2nd-deriv private methods; SCF/Multipole/DiskSCF harmonic series, EllipsoidalPotential quadratures, spherical-harmonic chain rule, special-function fallbacks)",
+        "opportunities": [
+          {
+            "title": "Vectorize the Gauss-Legendre node loop in EllipsoidalPotential quadratures (_potInt / _forceInt_all / _2ndDerivInt_all)",
+            "location": "galpy/potential/EllipsoidalPotential.py:_potInt (line 469), _forceInt_all (line 510), _2ndDerivInt_all (line 575)",
+            "pattern": "unrolled-loop",
+            "mechanism": "Replace the per-node `for k in range(len(glx))` accumulation with a single broadcast over a quadrature-node axis: form m of shape (...,K) using glx as an array, call dens(m)/psi(m) ONCE on the batched m, multiply by glw, and reduce with one xp.sum(axis=-1). glx/glw are static numpy constants set in _setup_gl, so the node axis is a fixed size -> one fused op instead of K unrolled iterations (each spawning its own dens()/sqrt()/where()).",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "glorder defaults to ~20-50; today every traced force/Hessian eval unrolls K copies of the integrand (each with a user _mdens/_psi call) into the XLA/torch graph, and each is a separate eager dispatch warm. Vectorizing collapses K dispatches to 1 batched call and shrinks the graph ~K-fold for the dominant cost term. This is the universal inner loop for PerfectEllipsoid/TwoPowerTriaxial/PowerTriaxial forces.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "EllipsoidalPotential.py:469 `for k in range(len(glx)): ... result = result + glw[k] * psi(m) / denom`",
+              "EllipsoidalPotential.py:510-522 force loop accumulates Fx/Fy/Fz node-by-node with a per-node dens(m) call",
+              "EllipsoidalPotential.py:575-598 2nd-deriv loop calls dens(m) and densDeriv(m) per node",
+              "EllipsoidalPotential.py:159-162 glx/glw are precomputed static leggauss arrays (fixed K)"
+            ]
+          },
+          {
+            "title": "Redundant 3x spherical-force recompute on the backend path (no cross-call sharing of the expansion sum) — driven hardest by the in-backend ODE RHS",
+            "location": "galpy/potential/SphericalHarmonicPotentialMixin.py:_Rforce/_zforce/_phitorque (121-161) via _evaluate_cyl_force; galpy/potential/EllipsoidalPotential.py:_compute_forces (217); galpy/backend/_reference/inbackend_ode.py:_eom_rhs (58-62)",
+            "pattern": "redundant-recompute",
+            "mechanism": "Add a single combined force evaluator (e.g. _all_cyl_forces returning (FR, Fz, Fphitorque) from ONE _compute_spher_forces_at_point / _compute_forces call) and call it once per point; have the EOM RHS use it instead of three separate _evaluateRforces/_evaluatephitorques/_evaluatezforces calls. The numpy path already shares via the md5 _force_hash cache (SCF line 719, Ellipsoidal line 227), but that cache is explicitly disabled for jax/torch (trace-hostile), so the backend recomputes the full (N,L,M) expansion / GL quadrature three times at the same (R,z,phi).",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "inbackend_ode._eom_rhs issues all three force calls at every Dopri8/torchdiffeq stage of every adaptive step, so the 3x redundancy multiplies the single most-executed code in the differentiable integrator; it triples both the traced graph size and warm FLOPs for SCF/Multipole/Ellipsoidal orbits.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "inbackend_ode.py:58-62 three separate calls _evaluateRforces, _evaluatephitorques, _evaluatezforces at identical (R,z,phi,t)",
+              "SphericalHarmonicPotentialMixin.py:131-161 each of _Rforce/_zforce/_phitorque independently invokes _evaluate_cyl_force -> _compute_spher_forces_at_point",
+              "SCFPotential.py:751-754 backend branch of _compute_spher_forces_at_point is 'cache-free' (numpy hash cache at 719-749 not used)",
+              "EllipsoidalPotential.py:226-229 force hash cache guarded by `if xp is numpy`; backend recomputes _forceInt_all each call"
+            ]
+          },
+          {
+            "title": "Redundant 6x full-Hessian recompute on the backend path (each 2nd-deriv method recomputes the whole spherical/aligned 2nd-deriv set)",
+            "location": "galpy/potential/SCFPotential.py:_R2deriv.._phizderiv (955-971) via _evaluate_cyl_2nd_deriv -> _compute_spher_2nd_derivs_at_point (798); galpy/potential/MultipoleExpansionPotential.py:_backend_cyl_2nd_deriv (2632) -> _backend_spher_2nd_derivs (2615); galpy/potential/EllipsoidalPotential.py:_compute_2ndderivs (283)",
+            "pattern": "redundant-recompute",
+            "mechanism": "Expose a single combined Hessian evaluator that computes the full set of spherical/aligned second derivatives once and returns all six cylindrical components (the chain-rule transform already derives all six from the same 8-tuple at SphericalHarmonicPotentialMixin _cyl_2nd_deriv_at_point 247-310). Today each of the six public 2nd-deriv methods independently re-runs the entire (N,L,M) Legendre+Gegenbauer expansion (SCF) / GL quadrature (Ellipsoidal) / radial+angular tables (Multipole). numpy shares via the _2nd_deriv_cache_key / _2ndderiv_hash; the backend does not.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "The 3D variational / dxdv path and any full-Hessian use (epicyclic freqs, orbit STM cross-checks) need all six components at a point; on the backend each point pays 6x the expansion/quadrature cost. This is the heaviest per-point kernel (adds d2phiTilde/d2C and d2P Legendre on SCF), so the 6x factor is the dominant Hessian cost.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "SCFPotential.py:955-971 six 2nd-deriv methods each call _evaluate_cyl_2nd_deriv with a different string",
+              "SCFPotential.py:814-820 numpy path caches the 8-tuple via _2nd_deriv_cache_key; 869-872 backend branch is 'cache-free'",
+              "MultipoleExpansionPotential.py:2648-2650 _backend_cyl_2nd_deriv calls _backend_spher_2nd_derivs (full 8-tuple) for every single deriv_type",
+              "EllipsoidalPotential.py:291-301 2nd-deriv hash cache guarded by `if xp is numpy`; backend recomputes _2ndDerivInt_all per component"
+            ]
+          },
+          {
+            "title": "assoc_legendre fallback builds P_l^m with nested Python L x M recurrence -> O(L^2 M) graph unroll every force eval",
+            "location": "galpy/backend/special/_fallback/assoc_legendre.py:assoc_legendre (loops at 39-49 for P, 62-73 for dP, 81-93 for d2P)",
+            "pattern": "unrolled-loop",
+            "mechanism": "The Bonnet recurrence is sequential in l but parallel across m and across the point axis; restructure so the diagonal P_m^m is built by a cumulative-product over m (one scan/cumprod, not a Python loop building somx2 powers) and the l-recurrence advances all m and all points as full-width array ops with stacked l-slices, minimizing the number of distinct traced ops. Keep it backend-agnostic (no jit); the win is a much smaller, flatter graph and fewer eager dispatches, with values bit-identical to the current recurrence.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "medium",
+            "impact_rationale": "Called once per force/Hessian eval on BOTH the SCF and Multipole hot paths; for typical L~10-20 the nested loops emit hundreds of tiny element-wise ops (plus the derivative grids), inflating compile time and per-call dispatch overhead. Algebraically constrained (recurrence order matters) so it's medium not high, and partly subsumed if the recompute-sharing items land.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "assoc_legendre.py:37-49 `P = [[zero ...] ...]` then nested `for m in range(M): ... for l in range(m+2, L): P[l][m] = ...`",
+              "assoc_legendre.py:62-73 second nested loop builds dP[l][m]; 81-93 third builds d2[l][m]",
+              "SCFPotential.py:456,760,890 assoc_legendre invoked inside _compute_at_point / _compute_spher_forces_at_point / _compute_spher_2nd_derivs_at_point",
+              "MultipoleExpansionPotential.py:2549 assoc_legendre invoked in _backend_angular per force/dens/Hessian eval"
+            ]
+          },
+          {
+            "title": "Gegenbauer family (_C/_dC/_d2C) recomputed multiple times per SCF force/Hessian eval and built per-l with a Python recurrence",
+            "location": "galpy/potential/SCFPotential.py:_C (1059, per-l list comprehension over gegenbauer), _phiTilde (364), _dphiTilde (568+595 calls _C and _dC), _d2phiTilde; galpy/backend/special/_fallback/gegenbauer.py:gegenbauer (24, N-step Python recurrence)",
+            "pattern": "redundant-recompute",
+            "mechanism": "Two compounding issues: (a) _phiTilde, _dphiTilde, _d2phiTilde each independently call _C(xi,...) (and _dC->_C(N+1), _d2C->_C(N+2)) on the SAME xi, so a single spherical-force eval runs the Gegenbauer recurrence ~3x (Hessian ~6x). Compute the C^{a}, C^{a+1}, C^{a+2} family once per point and pass it down. (b) _C's backend branch loops `for ll in Ls` calling gegenbauer(N, alpha(ll), xi) separately per l, and gegenbauer itself runs an N-step Python recurrence (gegenbauer.py:24) -> O(L*N) sequential ops that unroll. Batch the l axis (alpha is affine in l) and advance the n-recurrence as array ops.",
+            "regime": [
+              "compile",
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "The radial Gegenbauer basis is the per-point cost of every SCF force; recomputing it 3-6x and unrolling L*N steps bloats the SCF graph and warm cost. High structural overlap with the recompute-sharing items, so scoped medium; bit-identical to the existing recurrence.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "SCFPotential.py:1059 `CC = xp.stack([gegenbauer(N, alpha(ll), xi) for ll in Ls], axis=-1)`",
+              "SCFPotential.py:364 _phiTilde calls _C; 568 _dphiTilde calls _dC; 595 _dphiTilde also calls _C -> overlapping Gegenbauer work at same xi",
+              "SCFPotential.py:1066 _dC calls _C(xi,N+1,...); 1090 _d2C calls _C(xi,N+2,...)",
+              "gegenbauer.py:24-29 `for n in range(1, N-1): cnp1 = (...) ; cols.append(cnp1)` sequential N-step recurrence"
+            ]
+          },
+          {
+            "title": "numpy-path per-point ndindex loops in the expansion / cyl-force / 2nd-deriv assembly (warm-CPU array evals)",
+            "location": "galpy/potential/SCFPotential.py:_evaluate_expansion (515); galpy/potential/SphericalHarmonicPotentialMixin.py:_evaluate_cyl_force (74) and _evaluate_cyl_2nd_deriv_core (218); galpy/potential/MultipoleExpansionPotential.py:_evaluate_at_point per-(l,m) loop (1615-1650)",
+            "pattern": "unrolled-loop",
+            "mechanism": "The numpy branches iterate `for idx in numpy.ndindex(*shape)` calling the scalar _compute_*_at_point once per coordinate, whereas the backend branches already flatten and evaluate all points in one batched call (e.g. SCFPotential.py:535-538). The numpy scalar loop could reuse the same vectorized kernel for a large warm-CPU array speedup. NOTE: per the user's standing rule, the numpy path must stay byte-identical; this changes numpy reduction order so it is FLAGGED for explicit review, not silently applied — list it as a known numpy-only lever, lower priority than the backend items.",
+            "regime": [
+              "warm-cpu"
+            ],
+            "impact": "low",
+            "impact_rationale": "Pure numpy array evaluation of SCF/Multipole over many points is O(P) Python-level iterations today; vectorizing helps large-array CPU calls but does NOT touch the jit/gradient path, and risks breaking numpy byte-identity (reduction order), so it is low-priority and must be surfaced for review rather than done freely.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "SCFPotential.py:515-518 `for idx in numpy.ndindex(*shape): result[idx] = self._compute_at_point(...)`",
+              "SphericalHarmonicPotentialMixin.py:74-83 numpy ndindex loop over _compute_spher_forces_at_point",
+              "SphericalHarmonicPotentialMixin.py:218-221 numpy ndindex loop over _cyl_2nd_deriv_at_point",
+              "SCFPotential.py:532-538 backend branch already does the batched, loop-free equivalent (proof the vectorized kernel exists)"
+            ]
+          },
+          {
+            "title": "EllipsoidalPotential / FerrersPotential scipy.integrate.quad + numpy.roots fallbacks are not backend-traceable (force fallthrough, not jit-compatible)",
+            "location": "galpy/potential/EllipsoidalPotential.py:_potInt/_forceInt/_2ndDerivInt scipy.integrate.quad branches (462-464, 494, 555); galpy/potential/FerrersPotential.py:_forceInt/_potInt/_2ndDerivInt (397, 417, 451) and lowerlim numpy.roots (475)",
+            "pattern": "device-roundtrip",
+            "mechanism": "When glorder=None (Ellipsoidal) the integrals defer to scipy.integrate.quad, and FerrersPotential ALWAYS uses integrate.quad over an infinite interval plus numpy.roots for the lower limit — both are numpy-only and silently break (or fall back to host numpy) under jax/torch, so these potentials are not differentiable/jit-traceable. The fix is a backend-agnostic fixed-node quadrature (and a closed-form / Newton lower-limit) so they trace like the GL path; Ferrers additionally has no C and is flagged slow. Mark as a correctness/coverage gap blocking these potentials on the backend rather than a speed win on an already-working path.",
+            "regime": [
+              "gradient",
+              "warm-gpu-largeN"
+            ],
+            "impact": "low",
+            "impact_rationale": "These code paths are the only EllipsoidalPotential route when the user omits glorder, and the sole FerrersPotential route always; they are unmigrated so they don't degrade the migrated GL/expansion paths, but they cap which triaxial potentials work under the backend at all. Lower priority than speeding the already-traceable kernels; larger rewrite.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "EllipsoidalPotential.py:462-464 `if glx is None: return integrate.quad(integrand, 0.0, 1.0)[0]`",
+              "FerrersPotential.py:397 `return integrate.quad(integrand, lowerlim(...), numpy.inf)[...]`",
+              "FerrersPotential.py:475 `r = numpy.roots([1, B, C, D])` in lowerlim (numpy-only)",
+              "FerrersPotential.py:38 class docstring: 'has not yet been optimized for speed and has no C implementation, so orbit integration is currently slow'"
+            ]
+          }
+        ],
+        "summary": "The potentials subsystem already has well-vectorized backend paths for the heaviest classes (SCF, Multipole, Ellipsoidal forces are batched over points and components), so the highest-value remaining levers are (1) unrolled quadrature/recurrence Python loops and (2) redundant recompute across the per-component force/Hessian methods. The two strongest findings: the EllipsoidalPotential GL quadratures loop over nodes in Python (`for k in range(len(glx))` in _potInt/_forceInt_all/_2ndDerivInt_all), which unrolls K~20-50 copies of the integrand into the traced graph and costs K eager dispatches warm — vectorizable to one batched dens(m)+xp.sum; and the backend path deliberately drops the numpy md5/key caches that share work across _Rforce/_zforce/_phitorque (3x) and across the six 2nd-deriv methods (6x), so a combined force/Hessian evaluator would cut redundant expansion/quadrature work 3-6x. This redundancy is amplified by inbackend_ode._eom_rhs, which calls all three force evaluators separately at every ODE stage. Supporting backend-agnostic levers: the assoc_legendre fallback's nested L x M Python recurrence (O(L^2 M) graph) and the Gegenbauer _C family (recomputed 3-6x per point, built per-l via an N-step Python recurrence). Two flagged-but-lower items: the numpy-only ndindex per-point loops (vectorizable but would change numpy reduction order — must be surfaced for review, not silently applied), and the scipy.integrate.quad / numpy.roots fallbacks in Ellipsoidal(glorder=None)/Ferrers that aren't backend-traceable at all (coverage gap, larger rewrite). No finding requires internal jit; all respect the no-internal-jit rule. interpRZPotential is not backend-migrated (scipy splines) and was out of scope for a backend speedup this round."
+      },
+      {
+        "subsystem": "orbit-integration (galpy/orbit + galpy/backend in-backend ODE/STM integrators: _reference/inbackend_ode.py, _reference/inbackend_stm.py, _jax|_torch/orbit_ode.py, _jax|_torch/orbit_stm.py, Orbits._integrate_inbackend/_integrate_cstm)",
+        "opportunities": [
+          {
+            "title": "c_stm_forward does 6 (per IC) redundant C variational integrations instead of one stacked integrate_dxdv call",
+            "location": "galpy/backend/_reference/inbackend_stm.py:c_stm_forward (lines 57-83)",
+            "pattern": "redundant-recompute",
+            "mechanism": "Replace the inner `for i in range(6)` loop (a fresh Orbit(list(ic)) + integrate_dxdv(basis[i], rectIn=False, rectOut=False) per basis column) with ONE integrate_dxdv call that propagates all 6 canonical deviation vectors as 6 stacked copies of the orbit, exactly the idiom Orbits.py already uses for Lyapunov: Orbit(numpy.repeat(vxvv,6,axis=0)) + integrate_dxdv(eye(6)-stack, rectIn=True, rectOut=True, numcores=...) in a single C call, then reshape orbit_dxdv to (N,nt,6,6). This (a) integrates the base orbit ONCE instead of 6x (each of the 6 calls currently re-integrates the identical base trajectory), (b) collapses 6 Python/C dispatch round-trips into 1, (c) lets the C layer parallelize the 6 columns over numcores. For a batch of N ICs it becomes a single C call over N*6 (base,deviation) pairs instead of N*6 separate Orbit()+integrate_dxdv calls.",
+            "regime": [
+              "warm-cpu",
+              "gradient",
+              "warm-gpu-largeN"
+            ],
+            "impact": "high",
+            "impact_rationale": "This is task #59 quantified: forward+STM cost drops from 6 base-orbit integrations to 1 (the base orbit is bit-identical across all 6 columns), plus 6x fewer Python-level Orbit constructions and C dispatches per IC. integrateFullOrbit_dxdv already accepts yo/dyo of shape [N,6] and runs them in one vectorized (optionally multi-core) C call, and Orbits.py's Lyapunov path proves the stacked single-call pattern is correct with rectIn/rectOut=True. Every jax/torch C-STM gradient (the fast differentiable path, and the routed Orbit.integrate(method='dop853_c') from a backend IC) pays this 6x today.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/_reference/inbackend_stm.py:59 `for ic in ics:` then :62 `for i in range(6):` with :63 `o = Orbit(list(ic))` and :64 `o.integrate_dxdv(basis[i], ..., rectIn=False, rectOut=False)` — 6 separate Orbit+C calls per IC",
+              "galpy/backend/_reference/inbackend_stm.py:74-76 `cols.append(o.getOrbit_dxdv())` and `if base is None: base = o.getOrbit()` — base orbit captured from col 0 but still integrated in all 6 calls",
+              "galpy/orbit/Orbits.py:2893-2907 Lyapunov path already does the optimal pattern: `Orbit(numpy.repeat(cur_vxvv, phasedim, axis=0))` + single `integrate_dxdv(cur_Q...reshape((norb*phasedim,phasedim)), ..., rectIn=True, rectOut=True)`",
+              "galpy/orbit/integrateFullOrbit.py:856-943 integrateFullOrbit_dxdv takes yo/dyo shape [N,6] and integrates all N pairs in one C call (numcores parallel)"
+            ]
+          },
+          {
+            "title": "C-STM forward always computes the full 6-column STM even when no gradient is requested",
+            "location": "galpy/backend/_jax/orbit_stm.py:_host/_stm (lines 29-49); galpy/backend/_torch/orbit_stm.py:_CSTMFunction.forward (lines 17-29)",
+            "pattern": "redundant-recompute",
+            "mechanism": "The host callback `_host` (jax) and `_CSTMFunction.forward` (torch) unconditionally run the full c_stm_forward (the 6x variational integration) and return/save M, even for a plain forward integrate with no autodiff. A forward-only orbit needs only the base trajectory (one ordinary C integrate, no dxdv). Gate the variational solve: jax custom_vjp's primal `_stm` should call a base-orbit-only host fn; only `_fwd` (taken when differentiating) should compute M. For torch, detect `vxvv.requires_grad` (or any input requiring grad) in forward and skip the STM assembly + save_for_backward when not needed. This makes a non-differentiated Orbit.integrate(method='dop853_c') from a jax/torch IC ~6-7x cheaper (one integrate vs base+6 variational).",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "high",
+            "impact_rationale": "Orbits.py routes ANY 6D backend-IC orbit with a dxdv C method through _integrate_cstm (Orbits.py:1748), so users who merely want a backend-array trajectory (no grad) silently pay the full STM cost. Combined with finding #1, a forward-only integrate drops from 6 variational integrations to a single base integration — roughly a 6x warm-CPU win on the common 'integrate on a jax/torch IC, no gradient' use case.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/_jax/orbit_stm.py:29-33 `_host` always returns `xt, M` via c_stm_forward; :47-49 primal `_stm` calls `_call(v)` (computes M) but discards it (`xt, _`)",
+              "galpy/backend/_torch/orbit_stm.py:26-27 forward always runs `c_stm_forward(...)` and `ctx.save_for_backward(... M ...)` regardless of requires_grad",
+              "galpy/orbit/Orbits.py:1743-1748 every phasedim==6 backend-IC orbit with a C dxdv method is routed to _integrate_cstm"
+            ]
+          },
+          {
+            "title": "In-backend diffrax/torchdiffeq ODE integrates a SINGLE orbit; no batched/vmapped N-orbit solve",
+            "location": "galpy/backend/_reference/inbackend_ode.py:integrate_orbit/_to_eom/_eom_rhs (lines 27-162); galpy/backend/_jax/orbit_ode.py:integrate (10-33); galpy/orbit/Orbits.py:_integrate_inbackend (2161-2165 single-orbit guard is only on cstm; inbackend stores result[None,...] at 2139)",
+            "pattern": "dispatch-overhead",
+            "mechanism": "_eom_rhs/_to_eom/_from_eom operate on a single state vector (len(vxvv) selects the phase-space dim; y0 is shape (6,)). To integrate N orbits the user must jax.vmap/torch.vmap the whole diffeqsolve, which under jax re-traces and (when the user jits) recompiles the vmap-of-solve per N, and gives N independent adaptive solves with no shared step control. Add a leading batch axis through _eom_rhs (the force layer is already elementwise in R,z,phi, so vmapping the RHS is natural) so diffrax/torchdiffeq integrate a stacked (N,6) state in one solve. Diffrax/torchdiffeq both support batched y0; a single batched adaptive solve amortizes the per-step Python field-closure dispatch across N orbits and is the regime where GPU actually pays off.",
+            "regime": [
+              "warm-gpu-largeN",
+              "gradient",
+              "compile"
+            ],
+            "impact": "high",
+            "impact_rationale": "The in-backend ODE path is the parameter-gradient / higher-order-diff path; its whole point is GPU-batch training loops (fit potential params to many orbits). Single-orbit-only forces an outer vmap whose compile cost scales with N-bucketing and whose warm cost can't share adaptive step sequences. Native batch support is the difference between a usable GPU training pipeline and one bottlenecked on Python-level per-orbit dispatch.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "galpy/backend/_reference/inbackend_ode.py:38 `if len(y0)==2` / :50 `x,vx,yy,vy,z,vz = y[0]..y[5]` — RHS assumes a flat single state, no batch axis",
+              "galpy/backend/_reference/inbackend_ode.py:147 `y0 = _to_eom(xp, vxvv)` with vxvv shape (phasedim,) only; :162 returns (len(ts),phasedim)",
+              "tests/test_backend_inbackend_ode.py:73 `_IC = [...]` single 6-vector; no batched ODE test (only the C-STM test has test_batch_and_vmap)",
+              "galpy/orbit/Orbits.py:2139 `self.orbit = result[None, ...]` — inbackend result is always a single (nt,phasedim)"
+            ]
+          },
+          {
+            "title": "STM backward materializes and saves the full (N,nt,6,6) STM as the VJP residual",
+            "location": "galpy/backend/_jax/orbit_stm.py:_fwd/_bwd (lines 51-60); galpy/backend/_torch/orbit_stm.py:forward/backward (lines 27, 32-37)",
+            "pattern": "redundant-recompute",
+            "mechanism": "The VJP residual is the full STM M of shape (N,nt,6,6); backward computes vbar = einsum('ntab,nta->nb', M, ct). Memory/transfer scales with nt and N: for a long trajectory (nt large, the common case for fitting) this is the dominant device<->host residual and the einsum contracts the whole thing. Since only sum_t M(t)^T ct[t] is needed and M is built host-side, the contraction over t can be pushed into the host callback (return only what's needed for the adjoint) or the residual stored as the smaller per-time pieces; at minimum avoid round-tripping the full (nt,6,6) tensor to device when only a (6,) (or (N,6)) cotangent product is required. Net: cut the saved-tensor / device-transfer cost from O(N*nt*36) to O(N*36) for the IC gradient.",
+            "regime": [
+              "gradient",
+              "warm-gpu-largeN"
+            ],
+            "impact": "medium",
+            "impact_rationale": "For the fast-C STM path the forward cost dominates, but for long output-time grids the (N,nt,6,6) residual saved for backward (jax ShapeDtypeStruct n66 = (N,nt,6,6), torch ctx.save_for_backward(M)) is a real memory and host->device transfer cost, and on GPU torch keeps it resident across the whole forward graph. Reducing it helps gradient-regime memory pressure and large-batch GPU training.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/_jax/orbit_stm.py:38 `n66 = (nt,6,6) if single else (v.shape[0],nt,6,6)` returned by pure_callback; :53 residual = M; :57-59 einsum('tab,ta->b'/'ntab,nta->nb', M, ct)",
+              "galpy/backend/_torch/orbit_stm.py:27 `ctx.save_for_backward(torch.as_tensor(M, ... device=vxvv.device))` — full STM kept on device until backward; :34-37 same einsum"
+            ]
+          },
+          {
+            "title": "ODE force callback re-builds the field closure and rebuilds Python tuples/lists every RHS step",
+            "location": "galpy/backend/_jax/orbit_ode.py:field (19-20); galpy/backend/_torch/orbit_ode.py:field (27-28); galpy/backend/_reference/inbackend_ode.py:_eom_rhs (50-63)",
+            "pattern": "dispatch-overhead",
+            "mechanism": "Each RHS evaluation calls _eom_rhs which: builds the Python list `v=[vR,vT,vz]`, does 3 separate Python-level dispatches into _evaluateRforces/_evaluatephitorques/_evaluatezforces (each re-checking Pot.isDissipative and, for a CompositePotential, re-running the `sum(... for pot in self._potlist)` generator with a per-component `if pot.isDissipative` branch), then `jnp.stack`/`torch.stack`s a 6-tuple. Under torchdiffeq (eager, NOT traced) this Python overhead is paid at every adaptive step; under diffrax it inflates the traced graph. Fuse R/phi/z force evaluation into one pass over _potlist (compute all three components per component in a single loop, reusing R, cosphi, sinphi, and the isDissipative branch once) to cut per-step Python dispatch ~3x; this is a backend-agnostic rewrite in the force layer / _eom_rhs.",
+            "regime": [
+              "warm-cpu",
+              "compile",
+              "warm-gpu-largeN"
+            ],
+            "impact": "medium",
+            "impact_rationale": "torchdiffeq odeint runs the field in eager Python at every (adaptive, often hundreds of) step, so the 3x redundant dispatch + isDissipative re-checks + list/tuple churn is pure per-step overhead with no compilation to hide it. For diffrax it enlarges the traced RHS (compile time). A combined-force evaluator (one pass yielding R,phi,z torques) is the standard fuse-fewer-bigger-ops win.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/_reference/inbackend_ode.py:57 `v = [vR, vT, vz]`; :58-62 three separate _evaluateRforces/_evaluatephitorques/_evaluatezforces calls; :63 returns a 6-tuple stacked by the caller",
+              "galpy/potential/CompositePotential.py:185-192 _Rforce, :217-224 _zforce, :249-256 _phitorque each independently iterate `for pot in self._potlist` with a per-component `if pot.isDissipative` — 3 full passes per RHS",
+              "galpy/backend/_torch/orbit_ode.py:30 `odeint(field, y0, ts, method='dopri5', ...)` — torchdiffeq is eager, field Python runs every step"
+            ]
+          },
+          {
+            "title": "diffrax solve closes over the Python potential object; recompiles per distinct potential identity and per (nt, max_steps) shape",
+            "location": "galpy/backend/_jax/orbit_ode.py:integrate (10-33); galpy/orbit/Orbits.py:_integrate_inbackend (2127-2138)",
+            "pattern": "shape-instability",
+            "mechanism": "diffeqsolve closes over `pot` (a Python potential object) and the static `max_steps=100000`; the field references it as a Python closure, so under the user's jit the trace is keyed on the potential's pytree/identity and on max_steps. max_steps=100000 also sizes diffrax's internal while-loop buffers; a large static cap inflates compile time and memory even for short integrations. Recommend: (a) thread the potential's array-valued parameters as diffeqsolve `args` (a pytree leaf) rather than a closed-over Python object, so re-using the same potential structure with new parameter values reuses the compiled solve (and makes parameter-gradients first-class via args); (b) make max_steps adaptive/smaller-by-default (e.g. derived from len(ts)) to cut the compiled buffer size. Helps compile-time and avoids per-potential-instance recompiles in training loops.",
+            "regime": [
+              "compile",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "In a fitting loop the potential parameters change every step; if params are closed-over Python rather than passed as args, each new potential instance is a new trace -> recompile, defeating jit. max_steps=100000 is a large static while-loop bound that diffrax compiles around. Both are compile-regime costs that bite exactly the training-loop / parameter-gradient use case this path exists for.",
+            "backend": "jax",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/_jax/orbit_ode.py:19-20 `def field(t,y,args): return jnp.stack(_eom_rhs(y, pot, t, jnp))` — pot closed over, args unused; :31 `max_steps=max_steps` static",
+              "galpy/backend/_reference/inbackend_ode.py:118 default `max_steps=100000`; galpy/orbit/Orbits.py:2132-2138 integrate_orbit called with rtol/atol but pot passed as the Python object",
+              "galpy/backend/_jax/orbit_ode.py:22-32 diffeqsolve has an empty args slot (`args` param of field never populated)"
+            ]
+          },
+          {
+            "title": "jax pure_callback STM re-traces per (batch N, nt) shape and round-trips host<->device every call",
+            "location": "galpy/backend/_jax/orbit_stm.py:integrate/_call (17-44)",
+            "pattern": "device-roundtrip",
+            "mechanism": "_call closes over nt and uses v.shape[0] to build ShapeDtypeStructs, and the forward is a jax.pure_callback into the CPU/float64 C integrator. Every distinct (N, nt) shape re-specializes the callback (jax must re-trace the ShapeDtypeStruct), and every call copies v device->host and xt,M host->device. On GPU this host round-trip per integrate is unavoidable for the C path, but (a) shape-bucketing/padding N to a fixed batch and nt to a fixed length would let a jitted training loop reuse one compiled callback, and (b) returning only the adjoint-needed quantity (see finding #4) shrinks the host->device leg. Document/encourage fixed-shape batching; optionally pad-and-mask inside the wrapper.",
+            "regime": [
+              "compile",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "low",
+            "impact_rationale": "The C integrator is inherently a host call, so the device round-trip is structural, not a bug; the realistic win is avoiding per-shape callback re-tracing in loops with varying N/nt via shape-bucketing. Lower impact than #1/#2 because most training loops use a fixed batch size, but worth flagging for variable-length time grids.",
+            "backend": "jax",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "galpy/backend/_jax/orbit_stm.py:26 `nt = ts_np.shape[0]` closed over; :37-38 shapes built from `v.shape[0]` -> per-(N,nt) specialization; :39-44 jax.pure_callback into the CPU C integrator (host round-trip)",
+              "galpy/backend/_jax/orbit_stm.py:30-32 `_host` does numpy.asarray(vxvv_np) -> c_stm_forward -> returns numpy xt,M (device->host->device each call)"
+            ]
+          },
+          {
+            "title": "Repeated Pot.isDissipative attribute lookups and list->CompositePotential reconstruction inside the integration hot path",
+            "location": "galpy/potential/Potential.py:_evaluateRforces/_evaluatephitorques/_evaluatezforces (2227-2342); galpy/orbit/Orbits.py:_integrate_impl (1737)",
+            "pattern": "redundant-recompute",
+            "mechanism": "_evaluateRforces/_evaluatephitorques/_evaluatezforces each re-read `Pot.isDissipative` per RHS call, and for a list-of-potentials _check_potential_list_and_deprecate / CompositePotential wrapping happens (once per integrate at Orbits.py:1737, good) but the per-step CompositePotential._Rforce still re-evaluates `if pot.isDissipative` for every component every step. Precompute, once per integrate, the (dissipative-mask, component-list) and a single combined force functional bound to the EOM, so the RHS does a flat sum over a fixed pre-split list with no per-step isDissipative branching or generator setup. Pairs with finding #5 (combined R/phi/z pass).",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "low",
+            "impact_rationale": "Per-step attribute lookups and generator-expression setup are small individually but multiplied by (3 force components) x (n_components) x (hundreds of adaptive steps); for torchdiffeq's eager loop this is measurable Python overhead. Low impact relative to the structural wins but cheap to hoist out of the step loop.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "galpy/potential/Potential.py:2229-2232 `if Pot.isDissipative:` per call in _evaluateRforces (and 2284, 2339 for phitorque/zforce)",
+              "galpy/potential/CompositePotential.py:186-191 `if pot.isDissipative` inside the per-step `sum(... for pot in self._potlist)`",
+              "galpy/orbit/Orbits.py:1737 `_potl = _check_potential_list_and_deprecate(pot)` done once per integrate (the wrapping itself is already hoisted; the per-component branching is not)"
+            ]
+          }
+        ],
+        "summary": "The orbit-integration subsystem has two distinct differentiable paths: a fast C state-transition-matrix path (inbackend_stm.py + _jax/_torch orbit_stm.py, IC gradients only) and a backend-agnostic diffrax/torchdiffeq ODE path (inbackend_ode.py + orbit_ode.py, parameter + higher-order gradients). The highest-value wins are structural, not jitting (all findings respect no-internal-jit):\n\n(1) THE big one — c_stm_forward (inbackend_stm.py:57-83) does 6 separate Orbit()+integrate_dxdv calls per IC, each redundantly re-integrating the identical base orbit, when integrateFullOrbit_dxdv already supports propagating all 6 basis vectors in ONE vectorized C call (the Lyapunov code in Orbits.py:2893-2907 already uses exactly this stacked single-call idiom with rectIn/rectOut=True). ~6x forward cost.\n\n(2) Both STM wrappers always compute the full 6-column STM even for a no-gradient forward integrate, and ANY 6D backend-IC orbit is routed through this path (Orbits.py:1748) — so plain trajectory integration on a jax/torch IC silently pays 6-7x. Gate the variational solve on requires-grad.\n\n(3) The diffrax/torchdiffeq ODE path is single-orbit only (_eom_rhs/_to_eom assume a flat (6,) state); N-orbit GPU/training use is forced through an outer vmap that re-traces per N and can't share adaptive steps — add a native batch axis.\n\n(4) The VJP residual is the full (N,nt,6,6) STM (large host<->device transfer for long time grids).\n\nLower-tier: per-RHS-step Python dispatch is 3x redundant (separate R/phi/z evaluators each re-iterating _potlist with per-component isDissipative branches — torchdiffeq runs this eagerly every adaptive step), the diffrax solve closes over the Python potential object (recompiles per potential instance; max_steps=100000 inflates compiled buffers) rather than threading parameters as diffeqsolve args, the jax pure_callback re-specializes per (N,nt) shape, and per-step isDissipative lookups should be hoisted out of the step loop."
+      },
+      {
+        "subsystem": "special-functions (galpy/backend/special: Pspecial router + _fallback recurrences/series/quadrature)",
+        "opportunities": [
+          {
+            "title": "assoc_legendre Bonnet recurrence: O(L*M) triple Python loop unrolls into a giant jaxpr; rewrite the l-recurrence as lax.scan and vectorize the derivative tables",
+            "location": "galpy/backend/special/_fallback/assoc_legendre.py:assoc_legendre (lines 37-94)",
+            "pattern": "unrolled-loop",
+            "mechanism": "Split into two parts. (1) The P table is built by three nested Python loops (`for m in range(M)` x `for l in range(m+2,L)`, lines 39-49) where the inner l-step is a genuine loop-carried 3-term recurrence reading P[l-1],P[l-2]; this is the only true sequential part and maps to a single lax.scan over l (jax) carrying (P_{l-1},P_{l-2}) for all m at once (m vectorized as a leading axis), or a Python-level scan kept for torch. Critically, this collapses ~L*M separate stacked arrays + the final nested `xp.stack` (line 51-52) into one carried buffer. (2) The deriv=1/2 loops (lines 61-73 and 80-93) are NOT loop-carried -- each dP[l][m]/d2[l][m] reads only the already-finished P table -- so they are a pure elementwise map over the (L,M) grid and should be computed as ONE vectorized expression over the stacked Parr (broadcast l,m index arrays) instead of M*(L) per-cell `xp.where`/division ops. Backend-agnostic numerics; only the jax scan is backend-specific (keep the list+stack Python path as the torch/numpy-trace fallback).",
+            "regime": [
+              "compile",
+              "gradient",
+              "warm-gpu-largeN"
+            ],
+            "impact": "high",
+            "impact_rationale": "This is the single largest unrolled graph in the subsystem and sits on the SCF/Multipole hot path (SCFPotential.py:456,760,776,890,921; MultipoleExpansionPotential.py:2549). At a typical SCF/Multipole resolution (L,M~10-30) the deriv=2 path emits roughly 3*L*M (~hundreds to ~2700) separately-traced array ops plus a 2-level nested stack, so a user who jits a force/potential call pays a large one-off compile (the Staeckel precedent: a Python loop traced to a 47.5k-eqn jaxpr / ~8.6min). Collapsing to one scan + vectorized derivative tensors is the documented ~12x-class compile win, and the vectorized derivative map also reduces warm per-op dispatch on large costheta batches (GPU pipelines).",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "assoc_legendre.py:46-49 inner l-recurrence P[l][m] = (x*(2l-1)*P[l-1][m] - (l+m-1)*P[l-2][m])/(l-m) -- loop-carried, scan-shaped",
+              "assoc_legendre.py:51-52 `_stack` does a 2-level nested xp.stack over the L*M list-of-lists (materializes every cell as its own traced node)",
+              "assoc_legendre.py:62-73 and 81-93 derivative loops read only finished P/dP -> embarrassingly vectorizable, currently per-cell xp.where + division",
+              "SCFPotential.py:890,921 and MultipoleExpansionPotential.py:2549 call deriv=2 on the force path (3x the table cost)"
+            ]
+          },
+          {
+            "title": "gegenbauer called L separate times in an SCF Python comprehension, each running an N-term recurrence loop (L*N total unroll)",
+            "location": "galpy/potential/SCFPotential.py:_C (line 1059) calling galpy/backend/special/_fallback/gegenbauer.py:gegenbauer (lines 24-29)",
+            "pattern": "unrolled-loop",
+            "mechanism": "Two compounding loops. (a) gegenbauer itself runs a loop-carried 3-term recurrence `for n in range(1,N-1)` (gegenbauer.py:24-29) building a Python list then xp.stack -> rewrite as lax.scan over n carrying (C_{n-1},C_n) (jax kernel; keep the list/stack path for torch/numpy-trace). (b) The SCF caller wraps it in `xp.stack([gegenbauer(N, alpha(ll), xi) for ll in Ls], axis=-1)` (SCFPotential.py:1059), so the whole N-term graph is re-emitted L times with only the scalar alpha=2l+3/2 differing. Vectorize alpha over an (L,)-axis and run ONE scan that carries the (N) recurrence for all L alphas simultaneously, collapsing L*N traced ops to N scan steps over an (..., L) array.",
+            "regime": [
+              "compile",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "SCF radial basis is evaluated on every SCF potential/force/density call (SCFPotential.py:1059 via _C/_dC). At a representative (N,L)~(10-20, 10-20) the comprehension unrolls to ~L*N (hundreds) of separately-traced recurrence ops under a user jit; folding alpha into a leading axis + one scan turns it into N steps independent of L, a large compile reduction and fewer warm kernels on batched/GPU radial evaluations.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "SCFPotential.py:1059 `CC = xp.stack([gegenbauer(N, alpha(ll), xi) for ll in Ls], axis=-1)` -- L calls, alpha(ll)=2*ll+5/2 the only difference",
+              "gegenbauer.py:24-29 loop-carried recurrence `cnp1 = (2*(n+alpha)*x*cn - (n+2*alpha-1)*cnm1)/(n+1)` building a Python list -> scan-shaped",
+              "SCFPotential.py:1063-1068 _dC calls _C again with N+1 -> the L*N unroll happens twice per derivative evaluation"
+            ]
+          },
+          {
+            "title": "Quadrature/series node tables re-uploaded to device on every fallback call (no per-(device,dtype) cache); a host->device round-trip + asarray each invocation",
+            "location": "galpy/backend/special/_fallback/hyp2f1.py:74-76; bessel_k.py:71-72; sici.py:64-65 (all via asarray_on_device of numpy float64 constants)",
+            "pattern": "device-roundtrip",
+            "mechanism": "gauss_legendre_01 (quadrature.py:177) caches the GL nodes only as NUMPY float64 arrays; every hyp2f1/k0/k1/kn/sici call then does `asarray_on_device(xp, nodes, dev)` (hyp2f1.py:74-76) / the trapezoid+Laguerre tables (bessel_k.py:71-72, sici.py:64-65), which re-converts the numpy constant into a fresh backend array on the device per call. Add a small per-(namespace,device,dtype) memo (a module-level dict keyed by id(xp),repr(device)) returning the already-materialized backend array, so warm repeated calls skip the host->device transfer and the asarray graph node. Backend-agnostic (a cache wrapper around the existing helper); numpy path unchanged (device is None -> byte-identical asarray).",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "medium",
+            "impact_rationale": "hyp2f1 is on the TwoPowerSpherical mass/force path (TwoPowerSphericalPotential.py:112-286, many calls per evaluate) and k0/k1/kn/sici on disk-force paths; in a warm CPU loop or a GPU pipeline the per-call 128-node (hyp2f1) / 65-node (trapezoid) / 64-node (Laguerre) re-upload is pure overhead that recurs every call. Under a user jit the constant folds so the win is warm-only, not compile -- hence medium, not high.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "quadrature.py:184-191 gauss_legendre_01 caches only the numpy float64 (nodes,weights), not the backend array",
+              "hyp2f1.py:74-76 `nodes,weights = gauss_legendre_01(_NODES); xg = asarray_on_device(xp, nodes, dev)` every call",
+              "bessel_k.py:71-72 and sici.py:64-65 asarray_on_device of module-level numpy _TRAP_NODES/_LAG_U each call"
+            ]
+          },
+          {
+            "title": "Native-routing coverage gaps: torch.special.gammaincc absent forces a fallback that re-derives gamma from gammaln, and several torch natives are routed away unnecessarily -- audit and prefer native where accurate",
+            "location": "galpy/backend/special/_router.py:_NATIVE_MISSING/_NEEDS_FALLBACK (lines 15-53); gamma_fallback (gamma.py:24-39)",
+            "pattern": "redundant-recompute",
+            "mechanism": "gamma on torch has no native (router line 22-23) so gamma_fallback (gamma.py) computes TWO gammaln calls + a reflection-formula `xp.where` with double-where AD guards on EVERY call even for x>0 where a single exp(gammaln(x)) suffices. Cheaper: when the caller's x is statically known positive (EinastoPotential/PowerSphericalwCutoff pass fixed positive alpha) expose a positive-only fast path, or at minimum skip the reflection branch's sin/second-gammaln when `xp.all(x>0)` is cheap to assert at trace-build (it is, when x is a parameter scalar). Separately, verify whether torch.special now ships erf/erfc/gammainc/i0e etc. so _NATIVE_MISSING entries can be pruned (the capability test exists; this is a coverage refresh, not new code). Backend-agnostic restructure of the fallback; numpy never reaches it.",
+            "regime": [
+              "warm-cpu",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "Einasto and PowerSphericalwCutoff call gamma/gammaincc per density/mass evaluation with positive arguments; the reflection branch (a sin, a second gammaln, two nested xp.where) is dead work + extra graph nodes on the common positive path. The double-gammaln also makes the gradient graph larger than necessary. Medium because each call is cheap; the win is per-call constant-factor + smaller AD graph, not algorithmic.",
+            "backend": "torch",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "_router.py:22-35 torch _NATIVE_MISSING includes gamma,hyp2f1,hyp1f1,k0,k1,kn,iv,sici",
+              "gamma.py:33-37 always evaluates BOTH `pos = exp(gammaln(x_pos))` and `refl = pi/(sin(pi x_neg)*exp(gammaln(1-x_neg)))` under eager where",
+              "EinastoPotential.py:9-10 and PowerSphericalPotentialwCutoff.py:12-13 import gamma/gammaincc/gammainc with positive shape parameters"
+            ]
+          },
+          {
+            "title": "iv/kn integer-order upward recurrences are Python loops (loop-carried) -- correct but unroll; convert to lax.scan only if higher orders ever appear (currently n=2 so low impact)",
+            "location": "galpy/backend/special/_fallback/bessel_i.py:45-46 and bessel_k.py:102-103",
+            "pattern": "unrolled-loop",
+            "mechanism": "Both run `for m in range(1,n): im1,i = i, ...` upward recurrences from native i0/i1 (or k0/k1). These are loop-carried and would map to lax.scan, but n is a small static int. Recommend leaving as-is unless a consumer requests n>~5; document that the scan rewrite is only worthwhile for high orders. Flagged for completeness of the recursion audit.",
+            "regime": [
+              "compile"
+            ],
+            "impact": "low",
+            "impact_rationale": "galpy's only iv consumer is RazorThinExponentialDisk._R2deriv at n=2 (router comment bessel_i.py:11-12) and kn is used at low integer orders; the loop unrolls to ~1 step, so the compile-graph cost is trivial. Returned only so the audit explicitly accounts for these recurrences rather than silently omitting them.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "bessel_i.py:45-46 `for m in range(1,n): im1,i = i, im1 - (2*m/xl)*i`",
+              "bessel_i.py:11-12 comment: galpy uses n=2 only (RazorThinExponentialDisk)",
+              "bessel_k.py:102-103 `for m in range(1,n): km1,k = k, km1 + (2*m/x)*k`"
+            ]
+          }
+        ],
+        "summary": "The special-functions subsystem (Pspecial router + _fallback/) is already correctly native-preferring and the numpy path is byte-identical, so the real levers are the pure-backend fallbacks that contain Python loops which UNROLL under a user's jax.jit. Two findings are high-value and clearly worth doing: (1) assoc_legendre's triple nested O(L*M) Bonnet recurrence (assoc_legendre.py:37-94) is the largest unrolled graph in the subsystem and sits on the SCF/Multipole force path (deriv=2 => ~3*L*M separately-traced ops + a 2-level nested stack); its l-recurrence is a textbook lax.scan and its derivative tables (deriv=1/2) are NOT loop-carried and should be ONE vectorized map, not per-cell xp.where loops. (2) gegenbauer is called L times inside an SCF Python comprehension (SCFPotential.py:1059), each running an N-term loop-carried recurrence, for an L*N unroll that folds to N scan-steps if alpha is vectorized over an L-axis. Both are backend-SPECIFIC jax kernels (keep the existing list+stack as the torch/numpy-trace fallback) and respect no-internal-jit (they make the code traceable/cheap-to-compile, they do not call jit). Medium-value: node/series tables (GL 128-node for hyp2f1, trapezoid/Laguerre for k0/k1/sici) are re-uploaded to device every call because gauss_legendre_01 caches only numpy constants -- add a per-(device,dtype) memo (warm-CPU/GPU win, S effort, backend-agnostic); and the torch gamma_fallback always evaluates the reflection branch even for positive arguments, inflating the warm path and AD graph for Einasto/PowerSphericalwCutoff. The iv/kn upward recurrences are loop-carried but n is tiny (2), so low impact -- listed only so the recursion audit is complete. The series/quadrature `for k` loops in hyp2f1/sici/k01 are fixed small counts already vectorized over the data and are not worth changing. Nothing here requires violating the no-internal-jit rule."
+      },
+      {
+        "subsystem": "df-streams (galpy/df/*: sphericaldf + anisotropic variants, constantbetadf, streamdf/streamgapdf track assembly, streamspraydf, quasiisothermaldf, diskdf/evolveddiskdf)",
+        "opportunities": [
+          {
+            "title": "streamdf track assembly: batch the per-chunk action-angle Jacobian instead of a Python chunk loop of scalar AA calls",
+            "location": "galpy/df/streamdf.py:_determine_stream_track (loops at 1257, 1311) + _determine_stream_track_single:3839,3845 + calcaAJac:4136-4178",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize: replace the `for ii in range(self._nTrackChunks)` loop (executed once + nTrackIterations times) with a single batched call. Each chunk calls _determine_stream_track_single -> aA.actionsFreqsAngles(scalar) once + calcaAJac which does a 6-point forward-difference Jacobian = 6 MORE scalar aA.actionsFreqsAngles calls (calcaAJac:4144). So per chunk = 7 scalar AA evals; with the default nTrackChunks=floor(deltaAngleTrack/0.15)+1 (often 20-60) and up to 2 iterations that is ~7*nChunks*(1+nIter) = hundreds of scalar AA evaluations. Stack all chunk base-points + their 6 finite-difference perturbations into one (nChunks*7, 6) array and evaluate aA.actionsFreqsAngles ONCE on the whole batch (the vectorized Staeckel AA at afa0aa8b/HEAD is now jit-traceable and batch-capable), then reshape to form all Jacobians with numpy/xp ops. This both removes the eager per-chunk dispatch AND, under user j.jit, collapses the unrolled chunk loop into one batched AA graph.",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "compile"
+            ],
+            "impact": "high",
+            "impact_rationale": "Track assembly is THE setup cost of streamdf/streamgapdf and dominates instantiation; it is O(nChunks * nIter) scalar AA evaluations (each AA eval is itself expensive Staeckel quadrature). Batching to one AA call gives near-linear speedup in nChunks on CPU (fewer Python/dispatch round-trips) and is the only way GPU action-angle batching can help here. Re-fitting a stream for a likelihood scan re-runs this every call.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "streamdf.py:1257 `for ii in range(self._nTrackChunks): multiOut = _determine_stream_track_single(...)`",
+              "streamdf.py:1309 `for nn in range(self.nTrackIterations):` wrapping the same per-chunk loop at 1311",
+              "streamdf.py:3839 `tacfs = aA.actionsFreqsAngles(progenitorTrack(trackt))` then 3845 `tjac = calcaAJac(... actionsFreqsAngles=True ...)`",
+              "streamdf.py:4136-4146 `for ii in range(6): ... aA.actionsFreqsAngles(tR,tvR,tvT,tz,tvz,tphi)` -> 6 extra scalar AA calls per chunk",
+              "streamdf.py:1208 nTrackChunks default `int(numpy.floor(self._deltaAngleTrack/0.15))+1` (>=4)"
+            ]
+          },
+          {
+            "title": "streamdf calcaAJac: analytical d(J,Omega,angle)/d(x,v) via custom_jvp instead of a 6-point finite-difference loop",
+            "location": "galpy/df/streamdf.py:calcaAJac:4114-4184",
+            "pattern": "ad-through-singularity",
+            "mechanism": "custom_vjp/custom_jvp-analytical: calcaAJac currently approximates the 9x6 Jacobian d(jr,lz,jz,Or,Ophi,Oz,ar,aphi,az)/d(R,vR,vT,z,vz,phi) by forward finite differences with dxv=1e-8 (4115) and the modulo-pi turning-point guard (4170). On a backend, this Jacobian IS available analytically by AD of aA.actionsFreqsAngles itself (jax.jacfwd / torch.func.jacfwd of the now-traceable Staeckel AA). Replacing the FD loop with jacfwd (a) removes the 6-call FD loop entirely, (b) is exact (no 1e-8 cancellation / turning-point pi-wrap heuristics), and (c) makes the WHOLE track gradient w.r.t. potential parameters well-defined for fitting. Keep the FD path as the numpy fallback (byte-identical).",
+            "regime": [
+              "gradient",
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "high",
+            "impact_rationale": "The FD Jacobian is 6/7 of all AA work in track assembly (see #1). jacfwd computes the same Jacobian in one traced pass over the batched base points, removing the 6x multiplier, and gives exact derivatives that the noisy 1e-8 forward differences (with their pi-wrap guard at 4170) cannot. It also unlocks differentiable stream fitting (gradient of the track w.r.t. potential params), the headline use case for the backend project.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "L",
+            "evidence": [
+              "streamdf.py:4115 `dxv = 10.0**-8.0 * numpy.ones(6)`",
+              "streamdf.py:4136-4146 finite-difference loop calling aA.actionsFreqsAngles per perturbed coordinate",
+              "streamdf.py:4150-4178 `(tjr - jr)[0] / dxv[ii]` ... `((tar - ar + numpy.pi) % (2.0*numpy.pi) - numpy.pi)[0] / dxv[ii]` turning-point guard",
+              "streamdf.py:3853 `alljacsTrack[:,:] = tjac[3:,:]` consumes the FD Jacobian"
+            ]
+          },
+          {
+            "title": "constantbetadf.fE: vectorize the per-energy two-quadrature list comprehension into a single batched GL evaluation",
+            "location": "galpy/df/constantbetadf.py:fE:363-401 (small-r quad), 390-401 (large-r quad); _ensure_fE_interp:316-327",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize + shape-bucket: fE evaluates `quadpack.quadrature` TWICE per energy inside a Python list comprehension `for tE in Eint[indx]` (two separate comprehensions, 363 and 390), and _ensure_fE_interp drives this over ~202 energies (geomspace grids hstacked at 316-321). quadpack.quadrature is itself fixed_quad Gauss-Legendre (util/quadpack.py:128). Lift to a batched form: build a (nE, nGL) grid of GL nodes mapped to each energy's [startt, rphi^(1-alpha)] interval, call the (already vmap-able, self._gradfunc=vmap at 266) integrand on the flattened grid ONCE, and contract with GL weights. Same for the large-r half. The integrand divergence-handling transforms (_fEintegrand_smallr/_larger) are pure elementwise and backend-safe.",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "compile"
+            ],
+            "impact": "medium",
+            "impact_rationale": "fE is the setup bottleneck for constantbetadf sampling: ~2*202 adaptive quadratures, each calling the AD-derivative chain self._gradfunc. Batching to 2 vectorized GL contractions removes the Python loop and the per-call quadrature dispatch; under jit it avoids unrolling 400+ quadrature subgraphs. constantbetadf is already jax-only (requires _JAX_LOADED, line 197) so the backend payoff is direct.",
+            "backend": "jax",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "constantbetadf.py:363-379 `out[indx] = numpy.array([ quadpack.quadrature(lambda t: _fEintegrand_smallr(...), ...) for tE in Eint[indx] ])`",
+              "constantbetadf.py:390-401 second `numpy.array([ quadpack.quadrature(lambda t: _fEintegrand_larger(...), 0.0, 0.5/self._rphi(tE)) for tE in Eint[indx] ])`",
+              "constantbetadf.py:316-323 `_ensure_fE_interp` builds ~202-point energy grid then `fE4interp = self.fE(Es4interp)`",
+              "constantbetadf.py:266 `self._gradfunc = vmap(func)` already batchable; util/quadpack.py:128 fixed_quad GL backend"
+            ]
+          },
+          {
+            "title": "sphericaldf._dMdE (anisotropic): collapse the doubly-nested per-energy quad into batched 2D Gauss-Legendre",
+            "location": "galpy/df/sphericaldf.py:anisotropicsphericaldf._dMdE:887-928; isotropicsphericaldf._dMdE:793-821",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize: the anisotropic _dMdE runs `integrate.quad` over r whose integrand at each r runs ANOTHER `integrate.quad` over L (901-916), all inside a Python list comprehension `for ii,tE in enumerate(E)` (921). That is O(nE) outer x O(nQuad) inner adaptive quadratures, each inner integrand a DF self-call. Replace with a fixed 2D GL tensor product: build (nE, nGLr, nGLL) nodes (the inner L upper limit sqrt(2 r^2 (E-Phi)) is closed-form, 904-909), evaluate the DF on the flattened (nE*nGLr*nGLL,) batch once, contract with weights. The isotropic version (805-816) is the single-quad analogue. Numpy path stays byte-identical via the existing branch.",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "medium",
+            "impact_rationale": "dMdE for anisotropic DFs is among the most expensive public methods (nested adaptive quadrature per energy); a GL tensor-product over a batched DF evaluation turns it into one big vectorized op, large constant-factor and GPU-parallel win when computing dM/dE on a grid of energies (the typical use). Lower priority than streamdf because it is a diagnostic rather than a hot inner loop.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "sphericaldf.py:899-920 outer `integrate.quad(lambda r: r * integrate.quad(Lintegrand, 0.0, sqrt(2 r^2 (tE-Phi)), ...)[0], 0.0, self._rphi(tE))[0]`",
+              "sphericaldf.py:921 `for ii, tE in enumerate(E)` driving the nested quad",
+              "sphericaldf.py:805-816 isotropic single-quad list comprehension `for ii,tE in enumerate(E) if fE[ii]>0.0`",
+              "sphericaldf.py:904-909 inner L-limit is closed form `numpy.sqrt(2.0*r**2.0*(tE - _evaluatePotentials(...)))`"
+            ]
+          },
+          {
+            "title": "sphericaldf._make_pvr_interpolator: vectorize the per-radius inverse-CDF spline-build loop",
+            "location": "galpy/df/sphericaldf.py:_make_pvr_interpolator:659-694",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize: the velocity-sampling interpolator is built by a Python `for i in range(pvr_grid_cml_norm.shape[1])` loop over n_r_a=120 radii (659), each iteration constructing a fresh InterpolatedUnivariateSpline inverse CDF (680) and evaluating it (684). The p(v|r) grid itself is already vectorized (646), only the icdf inversion is looped. Replace the per-column 1-D inverse-CDF interpolation with a single batched monotone-grid interpolation: since the target abscissae (pvr_samples_reg = linspace(0,1,100), 683) are shared across all radii, the inversion is a vectorized searchsorted + linear interp over the (n_v_vesc, n_r_a) cumulative grid done as one array op. Numpy path can keep the spline for byte-identity; backend path uses the vectorized k=1 interp (the spline is already k=1 linear, 681).",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "compile"
+            ],
+            "impact": "medium",
+            "impact_rationale": "_make_pvr_interpolator is the one-time-per-sample-call setup for ALL velocity sampling in every spherical DF (isotropic + anisotropic). 120 Python-loop spline constructions dominate first-call sampling latency; vectorizing the k=1 inversion removes them. It is k=1 (linear) so a vectorized searchsorted-interp is exactly equivalent, making it backend-traceable for end-to-end differentiable sampling pipelines.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "sphericaldf.py:659 `for i in range(pvr_grid_cml_norm.shape[1]):`",
+              "sphericaldf.py:680-684 `cml_pvr_inv_interp = scipy.interpolate.InterpolatedUnivariateSpline(cml_pvr[...], v_vesc_values[...], k=1)` then `cml_pvr_inv_interp(pvr_samples_reg)`",
+              "sphericaldf.py:683 shared abscissae `pvr_samples_reg = numpy.linspace(0, 1, n_new_pvr)` across all radii",
+              "sphericaldf.py:646 `pvr_grid = self._p_v_at_r(vr_grid, r_grid)` already vectorized over the full grid"
+            ]
+          },
+          {
+            "title": "sphericaldf._setup_rphi_interpolator: vectorize the per-radius potential evaluation list comprehension",
+            "location": "galpy/df/sphericaldf.py:_setup_rphi_interpolator:727-729 (and _make_cmf_interpolator fallback:541)",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize: phis is built by `numpy.array([_evaluatePotentials(self._pot, r*self._scale, 0) for r in r_a_values])` over nra=10001 radii (727). _evaluatePotentials already accepts arrays for spherical potentials, so this is a one-line change to `_evaluatePotentials(self._pot, r_a_values*self._scale, 0)`. Same pattern in _make_cmf_interpolator (541) which only falls into the per-r list comp on TypeError. This is a pure backend-agnostic vectorization that removes a 10001-iteration Python loop from r(phi) setup (used by every dMdE and by constantbetadf setup).",
+            "regime": [
+              "warm-cpu",
+              "compile"
+            ],
+            "impact": "low",
+            "impact_rationale": "Pure constant-factor: 10001 scalar potential evals -> one array eval. Cheap to do (S effort) and removes a large Python loop that would unroll under jit, but only runs once per DF (cached as self._rphi) so it is a setup-latency win, not an inner-loop win.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "sphericaldf.py:727-729 `phis = numpy.array([_evaluatePotentials(self._pot, r * self._scale, 0) for r in r_a_values])` with nra=10001",
+              "sphericaldf.py:541 `ms = numpy.array([mass(self._denspot, r, use_physical=False) for r in rs])` fallback loop"
+            ]
+          },
+          {
+            "title": "streamgapdf impulse: per-star Orbit construction + integration loop is serial; batch into one multi-particle Orbit",
+            "location": "galpy/df/streamgapdf.py:impulse_deltav_general_orbitintegration:1729-1739; impulse_deltav_general_fullplummerintegration:1831-1840",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize: `for i in range(nstar): o = Orbit([...single...]); o.integrate(times, galpot)` constructs and integrates one Orbit per star (1730-1731), plus a flipped reverse integration (1735-1736). Orbit already supports a stacked (nstar,6) vxvv integrated in one call (as streamspraydf._sample_tail:596-598 does). Build a single Orbit(numpy.array([R,vR,vp,z,vz,phi]).T) and integrate all stars together (and the reverse arm together), then index o.x(times) as a (nstar, nt) array. Removes the Python star loop and lets the backend ODE integrator (diffrax/torchdiffeq) batch all trajectories.",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "These are the direct-integration impulse kicks used to validate/replace the analytical gap kicks; nstar is the stream particle count (can be large). One batched integration vs nstar serial integrations is a large CPU win and is exactly the batch-of-trajectories pattern the new in-backend ODE integrator is built for (GPU-parallel, differentiable kicks). Medium not high because the analytical kick path (not this loop) is the default fast path.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "streamgapdf.py:1729-1731 `for i in range(nstar): o = Orbit([R[i], vR[i], vp[i], z[i], vz[i], phi[i]]); o.integrate(times, galpot, ...)`",
+              "streamgapdf.py:1735-1736 `oreverse = o.flip(); oreverse.integrate(times, galpot, ...)` second per-star integration",
+              "streamgapdf.py:1831-1837 fullplummerintegration `for i in range(nstar):` with three integrations each",
+              "streamspraydf.py:596-598 reference batched pattern `o = Orbit(numpy.array([Rs,vRs,vTs,Zs,vZs,phis]).T); o.integrate(ts, self._pot)`"
+            ]
+          },
+          {
+            "title": "streamdf spread eigen-decomposition + slerp interpolation per-chunk loops",
+            "location": "galpy/df/streamdf.py:_parse_track_spread:1054-1063 & 1070-1101; _cart_and_interp_cov:1569-1611; _determine_stream_spreadLB:1663-1721",
+            "pattern": "unrolled-loop",
+            "mechanism": "fuse-vectorize: the transverse-spread direction is computed by `for ii in range(self._nTrackChunks): covEig = _real_eig(cov[ii]); argmin; sign-fix` (1054, 1070) and the interpolated version adds a per-chunk slerp loop (1088). _real_eig of a 2x2 cov per chunk and the eigenvector sign-continuation are a batched numpy.linalg.eigh over a (nChunks,2,2) stack plus a vectorized cumulative sign-flip (the eigDir carry is the only sequential dependency, expressible as a cumprod of sign decisions). The slerp at 1094-1100 is already nearly vectorized per chunk; the 6x6 covariance assembly loops in _cart_and_interp_cov (1569-1611) similarly batch.",
+            "regime": [
+              "warm-cpu",
+              "compile"
+            ],
+            "impact": "low",
+            "impact_rationale": "These spread loops are O(nChunks) small (2x2 / 6x6) linear-algebra ops; the per-op cost is tiny so the warm CPU win is modest. The real value is jit-traceability: under user jit these loops unroll into nChunks copies of eig + the slerp, so batching keeps the spread-determination graph small and compile-fast. Lower impact than the AA loops which carry the heavy quadrature.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "streamdf.py:1054 `for ii in range(self._nTrackChunks): covEig = _real_eig(cov[ii])`",
+              "streamdf.py:1070-1080 interp branch repeats per-chunk eig + sign-fix with sequential `eigDir = minEigvec` carry",
+              "streamdf.py:1088-1100 `for ii in range(self._nTrackChunks-1):` slerp loop over eigenvectors",
+              "streamdf.py:1569-1611 `_cart_and_interp_cov` per-chunk 6x6 covariance assembly + interpolation loops",
+              "streamdf.py:46 `_real_eig` is a 2x2 eigen-decomposition helper batchable via eigh"
+            ]
+          }
+        ],
+        "summary": "The df-streams hotspots cluster into two backend-relevant categories. (1) STREAMDF TRACK ASSEMBLY is the dominant target: track setup runs a Python `for ii in range(nTrackChunks)` loop (streamdf.py:1257, repeated nTrackIterations times at 1309), and each chunk calls calcaAJac (4136), which itself does a 6-point finite-difference Jacobian = 6 extra scalar aA.actionsFreqsAngles calls. That is ~7*nChunks*(1+nIter) serial scalar Staeckel action-angle evaluations per stream. The two highest-value fixes are (a) BATCH all chunk base-points + FD perturbations into one vectorized AA call (now possible since the vectorized Staeckel AA was made jit-traceable at HEAD afa0aa8b), and (b) replace the finite-difference Jacobian with an ANALYTICAL jacfwd of the traceable AA (custom_jvp) — exact, 6x fewer evals, and it unlocks the differentiable stream-fit gradient that is the headline use case. (2) NESTED-QUADRATURE SETUP in sphericaldf/constantbetadf: per-energy `for tE in ...` quadrature list comprehensions (constantbetadf.fE:363/390 two quads each over ~202 energies; sphericaldf anisotropic _dMdE:899-921 doubly-nested quad; isotropic _dMdE:805) and per-radius spline-build loops (_make_pvr_interpolator:659, _setup_rphi_interpolator:727) all collapse to batched fixed Gauss-Legendre tensor evaluations over a flattened grid. Secondary: streamgapdf impulse kicks integrate one Orbit per star in a Python loop (1729, 1831) — batchable to a single stacked-Orbit integration exactly like streamspraydf already does (596-598), ideal for the new in-backend ODE integrator. NONE of the proposals require internal jit; all keep the numpy path byte-identical as a fallback. NOTE for user review: the streamdf jacfwd substitution replaces a 1e-8 forward-difference Jacobian (calcaAJac:4115/4150-4178, including its mod-pi turning-point guard) with exact AD derivatives — this is NOT byte-identical to the numpy FD result and must be gated behind the backend resolver with the FD path preserved for numpy. Quasiisothermaldf's GL vmomentdensity (640-830) and diskdf/evolveddiskdf were reviewed and are NOT prioritized: qdf already vectorizes its ngl^3 GL grid into one batched self() call (the residual cost is the action evaluation, owned by the actionAngle subsystem), and diskdf/evolveddiskdf are legacy 2D solar-neighborhood DFs unlikely to appear in GPU/gradient pipelines."
+      },
+      {
+        "subsystem": "infrastructure (galpy/backend: _resolver, _namespaces, _coerce, optimize, quadrature + util/coords, conversion)",
+        "summary": "The infrastructure subsystem's dominant, cross-cutting performance problem is unrolled Python for-loops in the shared root-finder and its AA consumers, which bake giant subgraphs into the user's jit/grad trace. The single highest-value lever is bisect_root's `for _ in range(n)` (optimize.py:165): n_bisect_steps falls back to 100 iterations under tracing (verified empirically -- traced probe returns 100 vs concrete ~46-51), so EVERY backend brentq call (Potential.rl/rE/zmax/rgrid, actionAngleSpherical/Vertical/IsochroneInverse) unrolls 100 copies of a physics closure into the graph; rolling it once into lax.while_loop (jax) helps all of them. The same antipattern recurs as explicit expanding-bracket loops in actionAngleStaeckel (60+80+80 potentialStaeckel evals at lines 127/133/164), actionAngleSpherical (two range(80) at 564/569), and actionAngleVertical (range(80) at 336) -- these are the concrete instances of the known 47k-equation-jaxpr / ~12x-compile lever in the hottest AA subsystem. All of these respect the no-internal-jit rule: they make galpy jit-COMPATIBLE via lax control flow with static trip counts, never jitting internally, and keep the numpy path byte-identical (it still dispatches to scipy / stays eager). Secondary warm-path/GPU wins: _gl01_on re-materializes the cached GL node tables to backend arrays on every quadrature call (quadrature.py:215 -- a repeated host->device transfer for the shared fixed_quad kernel behind Staeckel/Vertical/Spherical/mass/qdf/SCF), a tighter static bisection cap, fusing transformed_quad's two integrand calls, and memoizing get_namespace's per-call array_namespace dispatch (~0.7-3.2us, 724 call sites). Note: backend/linalg.py does not exist in this tree (linalg lives in backend/interpolate.py's spline solves, outside the named scope and not a hot lever).",
+        "opportunities": [
+          {
+            "title": "Roll bisect_root's fixed for-loop into lax.while_loop / structured scan (shared by EVERY backend root-find)",
+            "location": "galpy/backend/optimize.py:bisect_root (lines 145-172, the `for _ in range(n)` at 165)",
+            "pattern": "unrolled-loop",
+            "mechanism": "Under jit/grad, n_bisect_steps (optimize.py:116-142) cannot read a concrete bracket width off a tracer, so it falls back to `min(maxiter, _MAXITER)` = 100 (confirmed empirically: traced fallback returns 100 vs concrete 46-51). The `for _ in range(n)` then unrolls 100 copies of the body into the user's jaxpr, and each iteration calls `f` TWICE (sign(f(mid)) plus the carried sign), where `f` is a full physics closure (the Staeckel integrand-squared -> potentialStaeckel, or a potential force eval). Backend-specific rewrite: jax half uses jax.lax.while_loop with a sign-preserving carry and a fixed iteration cap as the cond (data-independent trip count keeps it jit/vmap-clean, no internal jit of galpy); torch keeps the Python loop (eager) or a torch.where loop. numpy path unchanged (byte-identical, still scipy.optimize.brentq via the dispatch in brentq()). This rolls ONE shared kernel and shrinks the traced graph for every consumer below at once.",
+            "regime": [
+              "compile",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "bisect_root is the single shared root-find kernel behind backend brentq, consumed by Potential.rl/rE/zmaxgrid/rliftedgrid (Potential.py:3292,3406,4643,4719), actionAngleSpherical rperi/rap (553-585), actionAngleVertical xmax (343), actionAngleIsochroneInverse eta (175). Each backend brentq call currently bakes 100 unrolled f-evaluations (200 with the per-iter sign re-eval) into the user's compiled graph; Staeckel alone makes TWO bisect_root calls per turning-point solve. Rolling once removes ~100x graph blowup from the root-find portion for all of them -- the same class of win as the Staeckel 47k-equation jaxpr / 12x compile lever.",
+            "backend": "both",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/optimize.py:165 `for _ in range(n):` with n from n_bisect_steps",
+              "galpy/backend/optimize.py:138,140 traced/degenerate bracket returns `min(maxiter, _MAXITER)` (=100)",
+              "empirical: jax.eval_shape probe of n_bisect_steps on a tracer returns 100; concrete returns 46 (width 2) / 51 (width 100)",
+              "consumers: galpy/potential/Potential.py:3292,3406,4643,4719; galpy/actionAngle/actionAngleSpherical.py:584-585; actionAngleVertical.py:343; actionAngleIsochroneInverse.py:178"
+            ]
+          },
+          {
+            "title": "Roll the Staeckel turning-point expanding-bracket loops (60+80+80 f-evals) into a jax fori/while_loop",
+            "location": "galpy/actionAngle/actionAngleStaeckel.py:_staeckel_uminumax (lines 127, 133) and _staeckel_vmin (line 164)",
+            "pattern": "unrolled-loop",
+            "mechanism": "Three Python `for _ in range(...)` loops (60 lower-halving, 80 upper-expand, 80 vmin-halving) each call `f` once per iteration, where f is _JRStaeckelIntegrandSquared / _JzStaeckelIntegrandSquared -- multi-term closures that each invoke potentialStaeckel. Under the user's jit these unroll to 220 potential-evaluations baked into the graph BEFORE the two bisect_root calls (themselves ~200 more f-evals, item 1). Backend-specific rewrite for jax: lax.while_loop/fori_loop with a fixed cap and the same xp.where update body (the body is already branch-free), so the trip count is static and it stays jit/vmap-traceable with no internal galpy jit. numpy stays on the same eager loop (byte-identical; numpy doesn't unroll a graph).",
+            "regime": [
+              "compile",
+              "gradient"
+            ],
+            "impact": "high",
+            "impact_rationale": "Staeckel actions/freqs/angles are the flagship vectorised backend path (Track E, the 47k-equation jaxpr motivating the whole lever). _staeckel_uminumax+_staeckel_vmin currently contribute ~220 unrolled potential evals on top of the bisect_root unrolls, dominating the turning-point portion of the traced graph and the compile time. This is the concrete instance of the known big lever in the hottest AA subsystem.",
+            "backend": "jax",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/actionAngle/actionAngleStaeckel.py:127 `for _ in range(60):` (lower bracket halving, f(lo) each iter)",
+              "galpy/actionAngle/actionAngleStaeckel.py:133 `for _ in range(80):` (upper bracket expand, f(hi) each iter)",
+              "galpy/actionAngle/actionAngleStaeckel.py:164 `for _ in range(80):` (vmin halving)",
+              "galpy/actionAngle/actionAngleStaeckel.py:116,159 f = _JRStaeckelIntegrandSquared / _JzStaeckelIntegrandSquared -> potentialStaeckel",
+              "galpy/actionAngle/actionAngleStaeckel.py:147-148 two bisect_root calls compound the unroll"
+            ]
+          },
+          {
+            "title": "Roll the Spherical (rperi/rap) and Vertical (xmax) expanding-bracket loops into while_loop",
+            "location": "galpy/actionAngle/actionAngleSpherical.py:564,569 and galpy/actionAngle/actionAngleVertical.py:336",
+            "pattern": "unrolled-loop",
+            "mechanism": "Same antipattern as item 2 in the other AA backends: actionAngleSpherical does two `for _ in range(80)` bracket searches (halve-from-r/2 for rperi's lower end, double-from-2r for rap's upper end), each calling f=_radicand/2 (-> potential eval) per iteration; actionAngleVertical does one `for _ in range(80)` doubling xend calling evaluatelinearPotentials each iter. Under jit each unrolls 80 potential evals into the graph, then each calls backend brentq (item 1's bisect_root unroll). jax-specific rewrite to lax.while_loop with a fixed cap; the body is already a single xp.where so it ports directly. numpy/eager loop unchanged.",
+            "regime": [
+              "compile",
+              "gradient"
+            ],
+            "impact": "medium",
+            "impact_rationale": "Two more AA backends (radial actions/freqs/angles for spherical potentials; the 1D vertical analog) carry 80-160 unrolled potential evals plus the bisect_root unroll. Lower volume than Staeckel but the same compile-time blowup; fixing alongside items 1-2 makes the whole AA backend family compile-cheap.",
+            "backend": "jax",
+            "backend_specific": true,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/actionAngle/actionAngleSpherical.py:564 `for _ in range(80):` rstart halving (f(rstart,E,L) each iter)",
+              "galpy/actionAngle/actionAngleSpherical.py:569 `for _ in range(80):` rend doubling",
+              "galpy/actionAngle/actionAngleSpherical.py:557-558 f -> _radicand -> potential",
+              "galpy/actionAngle/actionAngleVertical.py:336 `for _ in range(80):` xend doubling, evaluatelinearPotentials each iter"
+            ]
+          },
+          {
+            "title": "Cache GL node/weight tables as backend arrays per (xp, n, device) instead of re-asarray-ing every quadrature call",
+            "location": "galpy/backend/quadrature.py:_gl01_on (lines 213-216) and gauss_legendre_01 (177-191)",
+            "pattern": "redundant-recompute",
+            "mechanism": "gauss_legendre_01 caches the numpy float64 nodes/weights (keyed by order), but _gl01_on then runs asarray_on_device(xp, x01, dev) on EVERY fixed_quad / transformed_quad / nested_quad / semiinfinite call -- a fresh host->backend materialization (and, on GPU, a host->device transfer) of the same constant node grid each time. Add a small dict cache keyed by (id(xp), n, device-key) holding the already-converted backend arrays (the tables are immutable constants). Warm-path-only: under a user's jit the asarray of a constant is folded at trace time anyway, but in warm eager (numpy-of-jax, repeated AA grid builds, training loops that re-enter the integrator) and on GPU this removes a per-call transfer. numpy path: asarray of a cached numpy array is essentially free / can short-circuit to the cached numpy tuple, so it stays byte-identical.",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN"
+            ],
+            "impact": "medium",
+            "impact_rationale": "fixed_quad is the shared GL kernel behind Staeckel actions (3 calls/orbit-eval at actionAngleStaeckel.py:186,272,378), Vertical J/Omega/angle (3 calls), Spherical, Potential.mass, quasiisothermaldf, SCF nested_quad -- a hot warm-loop and GPU-pipeline site. Eliminating a repeated host->device node-table transfer per call is a real warm-GPU and tight-eager-loop win; modest on warm-CPU. Cross-cutting: one cache helps every quadrature consumer.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "galpy/backend/quadrature.py:215 `return asarray_on_device(xp, x01, dev), asarray_on_device(xp, w01, dev)` -- per-call materialization",
+              "galpy/backend/quadrature.py:184-190 gauss_legendre_01 caches only the NUMPY tuple, not backend arrays",
+              "consumers re-entering per call: actionAngleStaeckel.py:186,272,378; actionAngleVertical.py:366,389,417; Potential.py:813; quasiisothermaldf.py:492"
+            ]
+          },
+          {
+            "title": "Make the expanding-bracket convergence count concrete to avoid the worst-case 100-iter bisection fallback under jit",
+            "location": "galpy/backend/optimize.py:n_bisect_steps (lines 116-142), as used by bisect_root (164)",
+            "pattern": "redundant-recompute",
+            "mechanism": "n_bisect_steps probes a CONCRETE bracket width to pick the halving count, but when a, b are tracers float(numpy.max(...)) raises and it returns the full _MAXITER=100 (lines 134-138). At galpy's call sites the bracket WIDTH is actually known/bounded at construction time even when the endpoints are traced (e.g. Staeckel bisects over [lo, ux] with lo>=1e-10*ux; Vertical over a doubled bracket). Pass an explicit `nsteps=` (or a width hint) from the caller so the trip count is the true ~46-51 instead of 100, roughly halving the unrolled bisection body. This is complementary to item 1 (while_loop): even after rolling, a tighter static cap means fewer iterations executed warm and a smaller `length` for any scan. numpy path unaffected (scipy).",
+            "regime": [
+              "compile",
+              "gradient",
+              "warm-cpu"
+            ],
+            "impact": "medium",
+            "impact_rationale": "The 100-vs-~48 gap roughly doubles every backend bisection's iteration count under jit and warm. Cheap to thread a hint through bisect_root's signature; compounds with item 1. Affects all brentq consumers.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "galpy/backend/optimize.py:134-138 try/except returns `min(maxiter, _MAXITER)` (=100) for traced brackets",
+              "empirical: traced probe -> 100; concrete width-2 bracket -> 46",
+              "galpy/actionAngle/actionAngleStaeckel.py:147-148 bisect over brackets whose width is bounded by construction (lo>=1e-10*ux)"
+            ]
+          },
+          {
+            "title": "Vectorize transformed_quad's two-panel split into one (2,n)-batched node evaluation",
+            "location": "galpy/backend/quadrature.py:transformed_quad (lines 374-439)",
+            "pattern": "dispatch-overhead",
+            "mechanism": "The split-panel path builds s_l and s_r separately and calls `integrand(s_l)` then `integrand(s_r)` as two separate invocations, doubling the per-op dispatch and the integrand's own work-graph. Stack the two panels' node grids along a new leading axis (shape (2, ..., n)), call integrand ONCE, then contract each panel with its weights and sum. One fused integrand call halves eager per-op dispatch on this path and produces a smaller traced graph (one integrand subtree instead of two). Backend-agnostic; numpy result identical (same nodes/weights, same reduction order per panel).",
+            "regime": [
+              "warm-cpu",
+              "warm-gpu-largeN",
+              "compile"
+            ],
+            "impact": "low",
+            "impact_rationale": "transformed_quad is used at the disk a=R near-singular and DF sqrt-limit sites; fusing the two integrand calls is a modest per-op-dispatch and graph-size win, but the panel count is fixed at 2 so the ceiling is ~2x on this path only, not a structural blowup like the loops.",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "M",
+            "evidence": [
+              "galpy/backend/quadrature.py:431 `vals_l = integrand(s_l)` and 436 `vals_r = integrand(s_r)` -- two separate integrand invocations",
+              "galpy/backend/quadrature.py:432,437 separate per-panel sums that could be one batched reduction"
+            ]
+          },
+          {
+            "title": "Cache get_namespace resolution to cut per-call array_namespace cost on the 700+ transform call sites",
+            "location": "galpy/backend/_resolver.py:get_namespace (27-53) -> _namespaces.py:namespace_from_arrays (215-237); is_backend_array (24-47)",
+            "pattern": "dispatch-overhead",
+            "mechanism": "get_namespace runs namespace_from_arrays on every call, which (for non-numpy inputs) calls array_api_compat.array_namespace(*arrs) -- measured ~0.7us (torch) to ~3.2us (jax) per call -- plus is_backend_array does an isinstance against jax.Array/torch.Tensor each time. coords.py alone has ~7 get_namespace sites (rect_to_cyl, cyl_to_rect, Rz_to_uv, uv_to_Rz, ...), and there are 724 helper call sites repo-wide, many in transforms invoked per-coordinate inside the AA setup. The numpy fast-path (all-numpy -> return numpy) is already cheap; the win is memoizing the jax/torch array_namespace lookup by type so the array_api_compat dispatch isn't paid per call. Warm-eager only -- under jit these resolve once at trace time. numpy path unchanged.",
+            "regime": [
+              "warm-cpu"
+            ],
+            "impact": "low",
+            "impact_rationale": "Real but small: ~1-3us x (calls per high-level op). It matters in warm eager loops with many small transform calls (e.g. building an AA grid element-by-element) but is negligible under jit (resolved once at trace) and dwarfed by the loop-unroll items. Listed for completeness as the per-call get_namespace/anchoring cost called out in the scope (task #35).",
+            "backend": "both",
+            "backend_specific": false,
+            "respects_no_internal_jit": true,
+            "effort": "S",
+            "evidence": [
+              "galpy/backend/_namespaces.py:233-237 `import array_api_compat; return array_api_compat.array_namespace(*arrs)` per non-numpy call",
+              "empirical: array_namespace ~0.72us/call (torch), ~3.2us/call (jax)",
+              "galpy/util/coords.py:1132,1162,1189,2392,2433,2466 multiple get_namespace sites per transform; 724 helper call sites repo-wide"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
