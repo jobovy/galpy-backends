@@ -160,3 +160,21 @@ analogue of #1025; unlocks IsochroneApprox-on-GPU + higher-order AA (#102).
   13.9s = **8.36×**, N=1 = 1.02× (no win), growing with N. GPU large-N win (one kernel vs N launches) is
   the real target but the dev TITAN Xp (sm_61) + diffrax XLA-compile makes a clean timing impractical →
   Track-G follow-up on better HW. 119 (integrate+inbackend_ode) + 62 (accessors+new) backend tests green.
+
+#### off-grid eval for multi-orbit batches (#1027 follow-up commit 196363eb, 2026-06-28)
+User: "1027 looks good but we need to make off grid evaluation work." The first commit guarded
+multi-orbit off-grid accessors with NotImplementedError; replaced with a real implementation.
+- _call_internal_backend_interp was single-orbit (`orb=self.orbit[0]`). Key simplification: the
+  in-backend BATCH is ONE solve, so all orbits share ONE integration grid → spline each orbit's
+  coords on that shared grid (in-backend differentiable cubic Spline1D, mode 2) and stack on the
+  trailing orbit axis → (phasedim, nt_query, size), the SAME layout _call_internal's on-grid batch
+  branch returns (permute_dims of (size,nt,pd)). Refactored the per-orbit spline body into
+  _interp_one(orb)->(pd,nt_query); size==1 reproduces the prior (pd,nt,1) BYTE-IDENTICALLY (single-orbit
+  accessor tests unchanged). Backward-integration grid flip handled once (shared grid) + each orb.
+- cubic_spline_coeffs is 1D-y only (not batched) → loop over orbits (size Spline1D per coord); fine for
+  an eager accessor call, differentiable w.r.t. ICs/params/eval-times. Vectorized batched-coeffs = future.
+- So o.R(t)/o.x(t)/o.vR(t)/o.z(t)/o(t)/o.E(t) at OFF-GRID times now work for a batch: (N,nt) for array t,
+  (N,) scalar; o(t)→(N,)-shape Orbit. ALSO fixes the pre-existing #1024 C-STM multi-orbit off-grid path.
+  Verified: 6 accessors match per-orbit single solve 1e-6; 67 backend tests green (single-orbit
+  byte-identical + new multi-orbit off-grid param tests). _integrate_inbackend docstring corrected
+  (accessors work on+off grid; only in-place mutators flip(inplace)/SOS remain a follow-up).
