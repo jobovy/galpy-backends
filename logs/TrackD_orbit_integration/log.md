@@ -131,3 +131,32 @@ not regressions, and the fix is a ledger add, not code. The triage workflow clas
 - Optimize `c_stm_forward` to a single batched C `integrate_dxdv` instead of 6 callback solves (#59);
   forward-mode C-STM via `custom_jvp` for single-direction IC sensitivities (#60).
 - Docs: ICs-in-internal-units note for in-backend tracing (ledgered).
+
+### Opt PR: in-backend ODE native batch (#99) → #1027 (2026-06-28)
+The diffrax(jax)/torchdiffeq(torch) in-backend ODE path was single-orbit-only (multi-orbit Orbit
+raised). Made it a NATIVE batch: thread a leading N axis through the rectangular EOM on the
+TRAILING component axis so N orbits integrate in ONE adaptive solve. The diffrax/torchdiffeq
+analogue of #1025; unlocks IsochroneApprox-on-GPU + higher-order AA (#102).
+- **Design+critique workflow (wf_3a45aefe) chose Seam A (native batch) over outer vmap**, empirically
+  validated on the real Plummer force layer (batched==per-orbit 1.6e-10). Outer vmap rejected:
+  torchdiffeq has NO native vmap (forces a Python loop), jax.vmap(diffeqsolve) re-traces.
+- **4 single-orbit assumptions fixed** (all "first axis == the 6 components"): _eom_rhs positional
+  unpack y[0..5]→y[...,k] + explicit `dim` arg (len(y) is the batch size once batched, not phasedim);
+  _to_eom pd=len(vxvv)→vxvv.shape[-1], vxvv[...,i], stack axis=-1; field stacks axis=-1; _integrate_inbackend
+  drops the guard + flattens raw _ic_backend (2,3,6)→(size,6) [critic caught: _ic_backend is stored RAW,
+  not pre-flattened] + moveaxis (nt,size,pd)→(size,nt,pd). _from_eom was already batch-ready (ys[...,i]).
+- **gotcha:** pd==5 branch `(genexpr)+(zero,)` → TypeError (can't concat generator+tuple); split to
+  `R..vz=(vxvv[...,i] for i in range(5)); phi=zero`. Caught by the pd5 phasedim test.
+- **numpy byte-identical** (numpy in-backend branch still raises; only backend-array ICs reach the code).
+- **Adversarial diff-review workflow (wf_1d9d50e5) → 2 confirmed, both folded in:** (MAJOR) multi-orbit
+  off-grid accessors (o.R(t_offgrid)/o(t)) hit _call_internal_backend_interp's `orb=self.orbit[0]`
+  (single-orbit) → opaque reshape crash; added `if self.shape!=(): raise NotImplementedError` — ALSO
+  fixes the pre-existing #1024 C-STM multi-orbit path. (MINOR) batch shares one max_steps → stiff orbit
+  can exhaust it; docstring warning. Both have tests.
+- **shared adaptive controller is the only semantic cost** and it's sub-tolerance: error norm (rms) over
+  the whole (N,dim) state, so a much-stiffer orbit shrinks dt for all; verified sub-1e-10 even on
+  adversarial heterogeneous batches; per-orbit time grids unsupported (raise) since saveat is shared.
+- **speed:** batched cost ~flat in N (one controller; force evals broadcast). N=8 jax CPU 1.67s vs loop
+  13.9s = **8.36×**, N=1 = 1.02× (no win), growing with N. GPU large-N win (one kernel vs N launches) is
+  the real target but the dev TITAN Xp (sm_61) + diffrax XLA-compile makes a clean timing impractical →
+  Track-G follow-up on better HW. 119 (integrate+inbackend_ode) + 62 (accessors+new) backend tests green.
