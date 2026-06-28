@@ -427,3 +427,31 @@ jax GPU at machine precision; 235 CPU backend tests still green. The audit's oth
 POSITIVES: xp.ones_like / numpy.nan*xp.ones_like / python-scalar*tensor all preserve device (proven by the
 GPU runs + torch-CPU CI). LESSON: static audits over-flag device bugs; GPU execution is the only ground truth.
 Device fixes -> their own PR after #1015 merges (3 files, +33/-12 across Staeckel/Vertical/Spherical).
+
+### Opt PR: IsochroneApprox one batched Orbit solve → #1025 (2026-06-28)
+Optimization-phase follow-up consuming the #1024 multi-orbit C-STM lift. The backend
+_parse_args_backend (jax/torch) forward + backward legs looped over the input orbits --
+one Orbit per IC, then xp.stack of each orbit's getOrbit()/accessor outputs. Replaced with
+ONE Orbit(xp.stack([R,vR,vT,z,vz,phi],axis=-1)) → o.getOrbit() (no,nt,6) -- a single
+stacked differentiable solve for the whole batch (both the forward leg and the time-reversed
+backward leg).
+- **Backward leg uses getOrbit columns, NOT accessors.** First attempt reused the old
+  `accessor(bo)(ts[1:])` pattern -> TypeError reshape (1,1999)->(3,1999): Orbit accessors
+  (bo.R(t) etc.) are SINGLE-ORBIT-ONLY on a multi-orbit Orbit (return (1,nt-1) for 3 orbits).
+  Fix: `_bcol(col,sign) = sign*xp.flip(borbs[:,1:,col],axis=1)` reading getOrbit()[:,1:,col]
+  (getOrbit IS multi-orbit-correct via #1024's shapeDecorator fix). For query times ==
+  self._tsJ these equal the accessor (interpolated) values exactly but stay batched.
+- **numpy byte-identical:** _parse_args_backend is only reached when is_backend_array(args[0])
+  (dispatch in _parse_args ~L735); numpy stays on the per-orbit _parse_args loop -> untouched.
+  Verified: 4 numpy actionAngleIsochroneApprox tests green; the change is in the backend-only fn.
+- **~6.1× speedup** on an N=8 jax actionsFreqsAngles batch: OLD per-orbit loop 47.4s median ->
+  NEW batched 7.5s median (CPU, MWPotential2014, ntintJ=2000; bench: stash old vs new, warm+3).
+  The per-orbit pure_callback C-STM dispatch collapses to one stacked call; scales with N, no
+  difference at N=1. (cf. #1024's modest 1.65× on the raw 8-orbit C-STM forward -- the AA win is
+  larger because IsochroneApprox does TWO solves/orbit (fwd+bwd) and the loop's Python+callback
+  overhead dominated.)
+- No new tests: existing isochroneapprox_* battery already hits the modified path on a 3-orbit
+  grid (parity _evaluate/_actionsFreqs/_actionsFreqsAngles + scalar/cumul/planar/nonaxi +
+  grad-vs-FD-through-the-batched-solve). 8 jax cases green; torch in CI (local CUDA dxdv segfault).
+  Stale scalar_parity comment updated. NEXT opt: #99 batched in-backend ODE (vmap-of-solve, the
+  diffrax/torchdiffeq analogue -> unlocks IsochroneApprox-on-GPU #102), #100 augmented 42-state STM.
