@@ -201,3 +201,33 @@ same nt). Now both modes:
   shared-controller cross-coupling, unlike the shared native batch's ~1e-13); shape-mismatch raises;
   concrete o.R([t_i])/o.R(scalar) work; shared 1-D path unchanged. 127 backend tests green. Enables
   the future streamspraydf backend migration (Track F). Adversarial diff-review wf_4142bbd8 running.
+
+#### Augmented 42-state C-STM integrator (#100, PR #1028, 2026-06-28)
+User: "Let's do 100 and 102 first." #100 = the true 6× C-STM forward. `c_stm_forward` (the
+host-side forward the jax/torch orbit_stm wrappers call) used SIX separate 12-state
+`integrate_dxdv` solves per orbit — each re-integrates the base orbit and re-evaluates the force +
+3D Hessian. Replaced with ONE augmented 42-state solve: base (6) + six 6-D deviation columns (36).
+- **C** (`integrateFullOrbit.c`): new `evalRectDeriv_stm` — 42-state RHS, term-for-term identical to
+  the validated `evalRectDeriv_dxdv` but the base accel `a[0..5]`, the full 3D-Hessian scalars
+  (`R2deriv..zphideriv`→`dFxdx..dFzdz`, conservative-only `RforceK/phitorqueK`) and the dissipative
+  rectangular `calcRectDissipativeForceJacobian(jac_x,jac_v)` are computed ONCE/step, then the 6×6
+  Jacobian `J=[[0,I],[K+dF/dx, dF/dv]]` is applied to each column k at offset o=6+6k. New
+  `integrateFullOrbit_stm` = `integrateFullOrbit_dxdv` copy with dim=42 in all 4 switch cases.
+- **Python**: `integrateFullOrbit_stm_c` packs `yo`(6)+`dyo_block`(36)→42 IC, `result (nt,42)`,
+  argtypes mirror the dxdv wrapper. `c_stm_forward` rewritten: cyl→rect base + `jac0.T.reshape(-1)`
+  seed (the six cyl basis deviations folded to rect = columns of the cyl→rect Jacobian), ONE
+  augmented solve, rect→cyl base (Z/vz copy-guard for views), fold each rect deviation column back to
+  cyl via `M[t]=numpy.linalg.solve(jac_t, dev[t].T)`, `M[0]=eye6` exact. Old six-solve kept as
+  `_c_stm_forward_loop` (the bit-identity reference).
+- **Speedup ~5.8×** (MWPotential2014, nt=1000: 0.250s→0.043s; ~6 fewer force/Hessian evals/step).
+- **Tolerance:** for the ADAPTIVE methods (dop853_c/dopr54_c) the joint 42-state error norm accepts a
+  slightly different step sequence than six 12-state solves → M matches `_c_stm_forward_loop` ~1e-10
+  (amplified to ~1e-8 in the worst STM entry; gradient unchanged, well inside all test tols). Fixed
+  step (rk4_c/rk6_c) bit-identical. numpy `Orbit.integrate` byte-identical (only the STM path changes).
+  User decision (AskUserQuestion): adaptive default, accept ~1e-10.
+- **Verified:** augmented-vs-loop parity over generic / turning-point-edge (vR=0/vz=0/z=0) / all-nonzero
+  / phi=0 ICs (M[0]=I); FD-of-flow column-by-column conservative 3.15e-9 + **dissipative 1.65e-9**
+  (MWPotential2014+Chandrasekhar — the non-symmetric velocity-coupled J); batch shape (N,nt,6,6). 7
+  new tests green under `-W error::DeprecationWarning` (dissipative list-of-pots filterwarnings).
+  The C RHS is a verbatim per-column copy of the already-merged-and-validated dxdv RHS; FD-of-flow is
+  the gold-standard independent end-to-end check of the cyl↔rect folding. Task #100.
