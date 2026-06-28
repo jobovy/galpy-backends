@@ -231,3 +231,42 @@ host-side forward the jax/torch orbit_stm wrappers call) used SIX separate 12-st
   new tests green under `-W error::DeprecationWarning` (dissipative list-of-pots filterwarnings).
   The C RHS is a verbatim per-column copy of the already-merged-and-validated dxdv RHS; FD-of-flow is
   the gold-standard independent end-to-end check of the cyl↔rect folding. Task #100.
+
+#### IsochroneApprox via diffrax — twice-differentiable + GPU (#102, PR #1029, 2026-06-28)
+User: "Let's do 100 and 102 first." #102 = make actionAngleIsochroneApprox usable via diffrax for
+GPU + higher-order derivatives. **Key empirical finding (before writing any code):**
+`actionAngleIsochroneApprox(integrate_method="diffrax")` ALREADY worked — it routed the AA orbit
+integration through the in-backend ODE solver and matched the C-STM path on actions (0.01016122 vs
+0.01016122) AND first derivatives (0.08006499 vs 0.08006499). The real blocker for the *second*
+derivative was the diffrax **adjoint**, not a config flip (confirms the diffrax-higher-order-aa-blockers
+memory):
+- C-STM path = `jax.pure_callback`/`torch.autograd.Function` → "Pure callbacks do not support JVP".
+- diffrax DEFAULT `RecursiveCheckpointAdjoint` is reverse-mode-only: `jax.hessian` (=jacfwd∘jacrev)
+  → "can't apply forward-mode autodiff (jvp) to a custom_vjp"; `jacrev∘jacrev` → "Reverse-mode does
+  not work for lax.while_loop with dynamic start/stop" (the adaptive controller's while_loop in the
+  backward).
+- **`diffrax.DirectAdjoint`** differentiates through the solver ops → supports fwd-mode + nested AD;
+  cost = a `max_steps`-long scan (so max_steps MUST be tunable & small). torchdiffeq's plain `odeint`
+  retains the graph → double-backprops with no adjoint knob.
+
+Threaded the knobs end-to-end (all default None → byte-identical to before):
+- `_jax/orbit_ode.integrate(..., solver=, adjoint=)`: `_resolve_solver` (Dopri8/Dopri5/Tsit5 names
+  or instance) + `_resolve_adjoint` (recursive/direct names or instance); adjoint passed ONLY when set
+  so the default diffeqsolve is unchanged; max_steps None→100000 (diffrax's own 4096 default is too low
+  for 10-Tdyn).
+- `_torch/orbit_ode.integrate(..., solver=, max_steps=)` → method + torchdiffeq `max_num_steps`.
+- `integrate_orbit(..., solver=, adjoint=)` forwards per backend.
+- `Orbits.integrate(..., inbackend_kwargs=None)` → `_integrate_impl` → `_integrate_inbackend` →
+  `integrate_orbit(**inbackend_kwargs)`. One dict param on the public API (not 3) keeps the broad
+  signature lean; only used by diffrax/torchdiffeq (or a backend-IC fallback).
+- `actionAngleIsochroneApprox(integrate_kwargs=None)` stored + forwarded at all 3 o.integrate sites;
+  `{"adjoint":"direct","max_steps":4096}` enables jax.hessian of the actions.
+
+Verified end-to-end through the real API: jax.hessian d²jr/dvR² = **0.7534993413** vs FD-of-grad
+**0.7534993487**; torch double-grad agrees; value+grad parity vs the default adjoint EXACT; tsit5
+solver passthrough works. **Caveat:** estimateBIsochrone's `_backend_brentq` is stop_gradient'd
+(1st-order only) → auto-b 2nd derivs are 0; pass explicit b for Hessians (tests + docstrings do).
+Follow-up filed to make that root-find twice-diff. +8 tests (AA in-backend parity + hessian jax/torch;
+orbit-level solver/adjoint/max_steps plumbing incl. instance passthrough, per-orbit-time grids, unknown
+-name ValueErrors, Orbit.integrate(inbackend_kwargs=) hessian). 69 existing backend tests unchanged
+(numpy byte-identical). codecov/patch verified locally (new lines covered). Task #102.
