@@ -16,13 +16,21 @@ Two dominant themes:
 
 ## P0 — now (highest leverage)
 
-1. **Roll the shared `bisect_root` for-loop → `lax.while_loop` (jax)** + thread a static step count.
+1. **Roll the shared `bisect_root` for-loop → `lax.fori_loop` (jax)** + thread a static step count.
    `optimize.py:165` `for _ in range(n)` unrolls ~100 copies of the physics closure. It's the
    ONE root-finder behind **every** backend turning-point solve: `Potential.rl/rE/zmaxgrid/
    rliftedgrid`, Spherical `rperi/rap`, Vertical `xmax`, IsochroneInverse `eta`, ×2 per Staeckel.
    Bonus (verified): `n_bisect_steps` falls back to **100** iters under a tracer (vs ~46–51
    concrete; Staeckel passes maxiter=200) → threading a static `nsteps`/width-hint roughly
    **halves every backend bisection**. *backend-specific, effort M, compile+gradient.*
+   **⏳ #1026 open 2026-06-28 (review):** rolled the loop into `lax.fori_loop` **only under a
+   trace** (`isinstance jax.core.Tracer`); eager (CI) + torch + numpy keep the Python loop.
+   **KEY FINDING:** a naive unconditional roll *regresses eager ~9×* (137ms vs 16ms; `fori_loop`
+   compiles a loop primitive per call) — galpy's CI runs EAGER, so the eager/traced branch is
+   mandatory, not optional. Measured (N=64): eager 16ms unchanged; **jit compile 592→152ms (~4×);
+   jaxpr 717→41 eqns (~17×)**; traced result bit-identical to the unrolled loop at equal n
+   (max-diff 0). DEFERRED follow-up: the static-step-count-through-callers half (use ~50 not 100
+   halvings under jit) — composes with P0#2/#93.
 2. **Roll the expanding-bracket loops** (Staeckel `60+80+80`, Spherical `2×80`, Vertical `80`)
    → `lax.while_loop`/`fori_loop`. Bodies are already single branch-free `xp.where` updates.
    The concrete 47k-jaxpr instances in the hottest subsystem; stacks with P0#1.
