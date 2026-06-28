@@ -178,3 +178,26 @@ multi-orbit off-grid accessors with NotImplementedError; replaced with a real im
   Verified: 6 accessors match per-orbit single solve 1e-6; 67 backend tests green (single-orbit
   byte-identical + new multi-orbit off-grid param tests). _integrate_inbackend docstring corrected
   (accessors work on+off grid; only in-place mutators flip(inplace)/SOS remain a follow-up).
+
+#### per-orbit time arrays (#1027 follow-up commit 82a00cdb, 2026-06-28)
+User: "in C you can actually have different time arrays all of the same length. We should also
+allow that for in backend integrators. Used in streamspraydf." My #99 raised NotImplementedError on
+2-D ts — too restrictive. Verified C truly supports this: integrate*Orbit_c has indiv_t (per-orbit t,
+same nt). Now both modes:
+- ts (nt,): shared grid -> ONE native-batch solve (fast #99 path, unchanged).
+- ts self.shape+(nt,): per-orbit grid -> each orbit its own times/span + independent controller.
+  jax: jax.vmap(_solve, in_axes=(0,0), out_axes=1) -> (nt,N,dim) [out_axes=1 keeps the saveat-first
+  layout so the downstream moveaxis is uniform with the shared path]. torch: per-orbit odeint loop
+  stacked dim=1 (torchdiffeq has NO vmap). -> (nt,size,pd) -> moveaxis -> (size,nt,pd).
+- _integrate_inbackend: drop the raise, validate ts.shape[:-1]==self.shape (clear ValueError), flatten
+  ts to (size,nt) [row-order pairs orbit i with ts row i, same as the ic flatten]. self.t stored 2-D
+  -> _call_internal auto-routes accessors to the existing _call_internal_indiv_t (works for CONCRETE
+  backend orbits via numpy.asarray+scipy; non-differentiable, but getOrbit() stays backend/differentiable).
+- jax.vmap is VECTORIZATION not jit -> composes with the user's outer jit, respects no-internal-jit.
+  The shared native batch is kept (not replaced by vmap) precisely because vmap re-traces per call-site;
+  vmap is used ONLY for the per-orbit case where a single shared saveat is impossible. numpy untouched.
+- Verified jax+torch: per-orbit batch & (2,2)-grid getOrbit match per-orbit single solves ~3e-11
+  (different t0 AND t1 per orbit); gradient off-diagonal EXACTLY 0.0 (vmap independence -> no
+  shared-controller cross-coupling, unlike the shared native batch's ~1e-13); shape-mismatch raises;
+  concrete o.R([t_i])/o.R(scalar) work; shared 1-D path unchanged. 127 backend tests green. Enables
+  the future streamspraydf backend migration (Track F). Adversarial diff-review wf_4142bbd8 running.
