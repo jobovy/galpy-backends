@@ -455,3 +455,44 @@ backward leg).
   grad-vs-FD-through-the-batched-solve). 8 jax cases green; torch in CI (local CUDA dxdv segfault).
   Stale scalar_parity comment updated. NEXT opt: #99 batched in-backend ODE (vmap-of-solve, the
   diffrax/torchdiffeq analogue -> unlocks IsochroneApprox-on-GPU #102), #100 augmented 42-state STM.
+
+---
+
+## 2026-06-29 — AA milestone: forced-backend numpy-island the query paths (PR #1033)
+
+**Approach.** Consuming the systemic potentials forced-backend scalar-input promotion
+(feat/aa-coords-delta 935b17a8 — `Pot(R,z)`/`_evaluatePotentials`/force funnels promote
+numpy/scalar inputs to the active backend), the AA query paths that compute against an
+inherently-numpy core (vectorised Staeckel core; scipy-spline grids; Spherical scipy loop;
+Adiabatic numpy path) started mixing a returned backend array into numpy ops
+(`ndarray (-|*) Tensor`). Fix = a shared `galpy.backend.numpy_island` decorator (+ a local
+`_island(xp)` helper in Staeckel) that forces numpy for the whole call WHEN NO ARG IS A
+BACKEND ARRAY, so the numpy-input path stays byte-identical and returns numpy; a real
+backend-array input runs the backend-native path untouched. Mirrors the grid-build
+`with use("numpy", force=True)` boundary (167b69ce). Applied to Staeckel (4 query methods +
+estimateDeltaStaeckel), StaeckelGrid, Adiabatic, AdiabaticGrid, Spherical, estimateBIsochrone.
+
+**Dead-ends / subtleties.**
+- The decorator forcing numpy for numpy-input is the SAME end-state as the `xp = ... else numpy`
+  island already in these modules — the difference vs honoring-the-force is that AA composites
+  must RETURN numpy for numpy input (unmodified pillar-1 tests don't coerce), so a wholesale
+  honor-force would break the suite AND go eager-slow; the island keeps it numpy-fast (torch AA
+  248s, not >500s).
+- Caught a REGRESSION in 935b17a8: `planarForce._Rforce/_phitorque_nodecorator` promoted
+  `phi` unconditionally, but axisymmetric `vcirc`/`rl`/`epifreq`/`omegac` pass `phi=None` →
+  `torch.asarray(None)` crash under a forced backend. (numpy never hit it: promote_scalars
+  short-circuits on numpy.) Guarded `phi is None`. Force.py (R,z only) was fine.
+- `CylindricallySeparablePotentialWrapper._refpot` was a construction-time-cached backend
+  array → a later forced-numpy AA query mixed ndarray with the cached Tensor. Stored as a
+  backend-agnostic Python scalar (it's an additive constant, drops from forces).
+
+**Results (forced backend; numpy byte-identical preserved).**
+- torch test_actionAngle: 0 failed, **61 xpassed (flips)**, 105 xfailed (248s).
+- jax test_actionAngle: 0 regressions, **43 xpassed**. 3 `Spherical_*_linear_angles` jax fails
+  are a PRE-EXISTING orbit-integration-precision red (maxdev 1.8e-7 vs 1e-8, identical with PR
+  stashed; already torch-ledgered) → added 3 mirroring jax ledger entries.
+- numpy test_actionAngle+test_potential: 1415 passed, 0 failed.
+
+**Ledger.** 61 torch + 43 jax now-passing entries LEFT ledgered (xpass) for the AA-milestone
+regen; only the 3 pre-existing jax precision reds added here. NEXT: ledger regen on feat/backends
+after #1033 merges (drop the ~104 flipped entries, review add/drop diff vs origin/feat/backends).
