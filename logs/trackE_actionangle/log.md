@@ -526,3 +526,31 @@ ROOT CAUSE for the last ~24 + the user's "make test_orbit(s) AA tests run" ask i
 **orbit-side islanding** (numpy IC under a forced backend -> integrate via C/numpy -> numpy
 accessors). That is the next follow-up PR (also restores 1e-8 integration precision -> flips the
 linear_angles too).
+
+### 2026-06-29 (wave 2 follow-up) — apply_amp eval-time coercion (PR #1033, commit 8ed6e814)
+
+The wave-2 `normalize() -> float(_amp)` change broke **pillar-2**: #989 asserts a
+potential constructed under a forced backend keeps `_amp` as a backend-array float64
+(differentiable amp). `float()` collapsed it to a Python scalar -> `test_normalize_{torch,jax}_backend`
++ `test_construct_normalize_amp_is_float64` failed (this is the "1033 has failures" the user hit).
+
+Reverted the `float()` (b9031959, re-ledgered the ~19 AA tests that relied on it), then per user
+("do the proper way to get both by eval-time coercion") added **`apply_amp(amp, result)`** in
+`galpy/backend/_array_utils.py`: coerces a stored backend-array `_amp` onto the *result's* namespace
+only when a backend array is involved; the pure-numpy path stays the literal `amp * result`
+(byte-identical). Funnelled every `self._amp * self._X(...)` site through it
+(Potential 10, Force 3, planarForce 2, linearPotential 2).
+
+This resolves the conflict cleanly:
+- construction keeps a backend-array `_amp` (**pillar-2 / differentiable amp ✓**);
+- a forced-numpy AA island evaluating a torch/jax-built potential coerces the amp to numpy at eval
+  time, so `ndarray * Tensor` never happens (**AA islands ✓**).
+
+**Net vs the post-revert base: un-ledger 15 torch + 4 jax (verified pass serially), ledger the
+jax `Staeckel_actions_order` eager-slow timeout. Final AA: torch 60 / jax 29.** numpy byte-identical
+(194 potential + 12 array-utils tests pass); pillar-2 normalize tests pass; new `apply_amp`
+cross-namespace + byte-identical-numpy branch covered in `test_backend_array_utils.py`.
+
+#1034 (Harmonic/IsochroneInverse islanding) rebased onto this; needs a re-rebase onto the squashed
+feat/backends after #1033 auto-merges (stacked-PR-after-squash). Orbit-side islanding (the last ~24
++ test_orbit(s) AA) remains the next follow-up (task #110).
