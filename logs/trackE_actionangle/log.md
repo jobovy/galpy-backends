@@ -496,3 +496,33 @@ estimateDeltaStaeckel), StaeckelGrid, Adiabatic, AdiabaticGrid, Spherical, estim
 **Ledger.** 61 torch + 43 jax now-passing entries LEFT ledgered (xpass) for the AA-milestone
 regen; only the 3 pre-existing jax precision reds added here. NEXT: ledger regen on feat/backends
 after #1033 merges (drop the ~104 flipped entries, review add/drop diff vs origin/feat/backends).
+
+### 2026-06-29 (wave 2) — flip the C-path + freqs + normalized-potential AA xfails (PR #1033)
+
+Per user ask ("bring as many test_actionAngle tests onto the ledger pass; everything but
+VerticalInverse/Torus should be possible"), drove the remaining ledgered AA tests to pass:
+
+- **Staeckel @numpy_island on the WHOLE method** (was a surgical `_island(xp)` wrap on only
+  the backend-core else-branch). Forcing numpy for the whole call also covers the C-dispatch
+  branch -> the ~25 Staeckel `_c` action tests run the numpy C path cleanly. Removed the
+  redundant manual wraps + helper.
+- **Harmonic / Vertical @numpy_island** (were returning tensors for numpy input).
+- **Potential.normalize -> float(_amp)**: Rforce(1,0) returns a backend array under a forced
+  backend, baking a Tensor into `_amp` so EVERY later eval returned backend arrays even on a
+  numpy query (regression from 935b17a8). Unblocks every in-test `Pot(normalize=...)`. Byte-id.
+- **epifreq/omegac/verticalfreq/rl/rE @numpy_island** (module fns + 3 methods): composite
+  derived quantities; tests call them directly for references -> islanding makes them match the
+  island-numpy AA result instead of mixing numpy with a forced-backend Tensor.
+
+**Result: torch AA 166->60 ledgered (106 un-ledgered, 0 fail); jax 102->27 (75 un-ledgered, 0 fail);
+numpy byte-identical (207 AA + 1208 potential pass).** 5 torch re-ledgered (3 eager-slow timeout-flaky,
+2 flattened-LogHalo q=0.9 c-vs-python parity edges that fail intermittently at _staeckel_setup
+despite lp._amp now being float -- needs follow-up).
+
+Remaining 60 torch / 27 jax = by-design (VerticalInverse + Isochrone/HarmonicInverse not migrated)
+or **orbit-interface-dependent**: the test integrates an Orbit under the backend, so obs.x()/R()/E()
+return backend arrays that flow into the (correctly backend-native) AA -> the test's numpy ops mix.
+ROOT CAUSE for the last ~24 + the user's "make test_orbit(s) AA tests run" ask is the same:
+**orbit-side islanding** (numpy IC under a forced backend -> integrate via C/numpy -> numpy
+accessors). That is the next follow-up PR (also restores 1e-8 integration precision -> flips the
+linear_angles too).
