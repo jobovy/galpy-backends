@@ -181,3 +181,19 @@ JSON re-generated, byte-stable plots re-rendered) once the optimizations land �
 speed, jax+torch), **g2** (force throughput), **g8** (galpy-vs-galax orbit), **g12** (in-backend orbit
 GPU), **g15** (IC-deriv speed). Re-run on the GPU box; the plotting code is byte-stable so only the
 `data/*.json` change. (User flagged 2026-06-26.)
+
+---
+## UPDATE 2026-06-30: #93 + P0#2 DONE → PR #1040 (feat/staeckel-jit-fast)
+
+Track E complete (#1038/#1039 merged). First perf PR knocks out the biggest item.
+KEY CORRECTION to this roadmap: #1026 (P0#1, merged) only rolled the brentq-routed
+bisections; **Staeckel's umin/umax/vmin call bisect_root DIRECTLY** (not via brentq),
+so they were never rolled — that was the real 47k-jaxpr / 134s-compile blow-up.
+
+PR #1040: (1) bisect_root now dispatches to the lax _bisect_root under a jax trace
+(so direct callers benefit, zero call-site change); (2) new iterate_bracket(step,x0,n)
+rolls the 6 expanding-bracket loops (Staeckel x3, Spherical x2, Vertical x1). Same
+#1026 eager/traced split via _under_jax_trace (numpy/torch/jax-eager keep Python loop,
+byte-identical). Measured (Staeckel actions, N=8): jaxpr 47,556→2,283 (~21x), jit
+compile 134.0s→2.6s (~52x), jit-vs-eager bit-identical 1.6e-16, grad correct.
+Regression: numpy 91 / torch 197 passed. → P0#2 and #93 both resolved by #1040.
