@@ -118,3 +118,27 @@ After the c-routing fix, remaining regressions: ~2 jax + ~5 torch (buckets 2 & 3
 - **Rollout order**: Vertical unbound-mask, then Harmonic (promote-at-entry), Staeckel/grids/
   IsochroneApprox (dispatch + triage), then the honest ledger regen (un-ledger only verified-
   backend-native passes). C `c=True` stays ledgered.
+
+## Checkpoint (overnight, commits c09f160e..a9c40afd on feat/aa-backend-native)
+
+Done & pushed:
+- Resolved-namespace dispatch: **Spherical, Vertical, Adiabatic** (drop is_backend_array gate).
+- Shared **torch root-find clean-forward** fix (_torch/optimize).
+- **c=True routing** fix (Adiabatic backend gate now respects explicit C requests) — cleared 4 jax + 2 torch regressions.
+- **Vertical J/Omega unbound mask** (9999.99 sentinel) in the 3 backend methods.
+- numpy byte-identical; Pillar-2 148/148 each backend; 33 jax + 16 torch ledgered tests now genuinely backend-native.
+
+Remaining (next push), per the agreed plan (Continue rollout + backend-agnostic test reductions):
+1. **torch `numpy.mean/fabs(output)` tests** (`*_conserved_EccZmaxRperiRap*`): wrap outputs in the
+   existing `_to_numpy()` helper in test_actionAngle.py (user-approved: backend-agnostic reductions,
+   like the orbit tests). Focused test-file pass.
+2. **Vertical edge cases**: `test_actionAngleVertical_unbound` (degenerate angle-sentinel formula)
+   and `test_physical_vertical` (physical-units decorator returns a tuple under backend) — match or
+   ledger honestly.
+3. **Harmonic** (closed-form): promote-at-entry so numpy inputs run jax/torch-native (watch scalars).
+4. **Staeckel / StaeckelGrid / AdiabaticGrid / IsochroneApprox**: apply dispatch + measure-then-triage.
+5. **Honest ledger regen**: un-ledger the verified backend-native passes (33 jax + 16 torch already;
+   more as modules land); ledger genuine backend gaps + C(`c=True`) paths.
+
+Net so far: the principle is proven and productionised on 3 of ~8 AA modules, with a clean pattern
+(dispatch + promote + the shared torch fix) the rest follow. No PR open; branch is review-ready.
