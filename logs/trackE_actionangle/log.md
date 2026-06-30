@@ -554,3 +554,33 @@ cross-namespace + byte-identical-numpy branch covered in `test_backend_array_uti
 #1034 (Harmonic/IsochroneInverse islanding) rebased onto this; needs a re-rebase onto the squashed
 feat/backends after #1033 auto-merges (stacked-PR-after-squash). Orbit-side islanding (the last ~24
 + test_orbit(s) AA) remains the next follow-up (task #110).
+
+### 2026-06-29 (apply_amp follow-up fixes, PR #1033 commit cf04cdc7)
+
+All-backend CI on the apply_amp commit (8ed6e814) went red across many shards. Root-caused
+to two issues + a pre-existing ledger gap (NOT new regressions in most shards):
+
+1. **apply_amp over-coerced.** The first cut coerced the amp whenever the *result* was a
+   backend array -> a plain float64 scalar amp became a *strong* 0-d tensor, breaking torch's
+   weak-scalar promotion (float32 result -> float64). This reddened test_backend_dtype_policy
+   (DiskSCF/DiskMultipole) AND every amp/normalize/vc test under the torch potential shards
+   (test_amp_mult_divide x24, test_normalize_potential x9, finitemass_amp, LcE/rE_powervc,
+   dvcircdR..., NFW_rmaxvmax, Ring...; also orbit dxdv via force evals). **Fix: coerce ONLY when
+   the amp itself is a backend array** (the real AA-island / pillar-2 case). Plain scalar amp ->
+   native weak-scalar multiply = byte-identical to base. Confirmed: passthrough apply_amp passes
+   the dtype cases in the combined shard; narrowed apply_amp passes all of the above.
+
+2. **promote_scalars broke unmigrated scalar-only potentials.** Wave-1's funnel promote_scalars
+   promotes scalar inputs onto the backend; AnyAxisymmetricRazorThinDiskPotential's scipy.quad
+   internals then get tensor limits/points -> TypeError. **Fix in check_potential_inputs_not_arrays:**
+   for a NOT _backend_compatible potential, bring a promoted scalar backend array back to a python
+   float. numpy untouched (is_backend_array-guarded) -> byte-identical. Fixes ALL AnyAxisymmetric
+   backend reds (test_potential x9 each backend, quantity unitson, orbit energy_jacobi torch+jax).
+
+3. **Pre-existing interpRZ/interpSnapshot family** (unmigrated C/spline eval rejects backend
+   coords; PotentialError at interpRZPotential.py:1000). torch variants already ledgered; added the
+   jax counterparts (interp_potential x2, snapshot x3) + a few missed torch entries (eval_naz,
+   mockInterp at_zero/at_infinity x3). Proper migration = follow-up task #112.
+
+Net: the AA un-ledger (19) stands; +13 ledger lines for the interpRZ family; numpy byte-identical
+throughout. dxdv/movingobject + streamgapdf RNG tests were broad-apply_amp casualties -> now pass.
