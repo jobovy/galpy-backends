@@ -142,3 +142,28 @@ Remaining (next push), per the agreed plan (Continue rollout + backend-agnostic 
 
 Net so far: the principle is proven and productionised on 3 of ~8 AA modules, with a clean pattern
 (dispatch + promote + the shared torch fix) the rest follow. No PR open; branch is review-ready.
+
+## Rollout (continued) — 7 of 8 modules dispatched
+
+Applied the resolved-namespace dispatch to all AA modules that have a vectorised
+`_*_backend` path:
+- **Spherical, Vertical, Adiabatic** (commit c09f160e) + Adiabatic c=True routing fix (ff403a5c).
+- **Vertical** J/Omega unbound-sentinel mask (a9c40afd).
+- **Harmonic** _evaluate promote-at-entry (matches _actionsFreqs).
+- **AdiabaticGrid, StaeckelGrid, IsochroneApprox** (dd667f85) — grid interpolation + orbit-STM
+  paths; torch: 12 more previously-ledgered tests xpass, 0 regressions.
+- **Backend-agnostic test reductions**: the EccZmaxRperiRap conserved helper now `_to_numpy`s the
+  AA outputs before numpy reductions (fixes the torch numpy.mean-on-tensor cases) — byte-identical.
+
+Only **Staeckel** (the C-wrapped one: 13 is_backend_array gates, 0 `_backend` methods — its forward
+is C, no jax-native vectorised path) is left undispatched; per the agreed principle its `c=True`
+forward stays ledgered until analytic derivatives land. (A pure-Python Staeckel forward exists but
+isn't vectorised into `_backend` methods; vectorising it is a follow-up.)
+
+**Honest ledger regen** (GALPY_BACKEND_XFAIL_REGEN=1) running for test_actionAngle under jax+torch
+to produce the true failing set → the new AA ledger un-ledgers the now-genuinely-backend-native
+passes and keeps only real gaps (Staeckel C, Vertical unbound-angle/physical, etc.).
+
+Known residual backend gaps to ledger honestly: Vertical `unbound` (angle sentinel) + `physical`
+(units decorator tuple); Staeckel `c=True` forward. Everything else in the 7 modules now runs the
+backend for real.
