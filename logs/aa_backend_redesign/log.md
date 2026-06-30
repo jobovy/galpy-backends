@@ -187,3 +187,39 @@ Adiabatic, Harmonic, AdiabaticGrid, StaeckelGrid, IsochroneApprox, Staeckel(c=Fa
 Staeckel/Adiabatic **c=True C forward** stays ledgered (no jax-native C), per the agreed principle.
 
 Re-running the honest ledger regen on the complete code now.
+
+## Honest ledger applied + 1 fix (2026-06-30)
+
+Regen ran the full test_actionAngle.py per backend in REGEN mode (xfail off):
+**jax 69 fail / 137 pass / 1 skip, torch 121 fail / 86 pass, 207 collected, 0
+collection errors** — clean and authoritative. Built the new AA ledger by
+consolidating ALL scattered `tests/test_actionAngle.py` entries (main sorted
+blocks + milestone-appended + the c=False FREQS/ANGLES comment block) into the
+two sorted jax/torch blocks, replacing 99 jax + 166 torch with the regen sets.
+
+**Verification (verify-burndown principle):**
+- jax regen finished 10:29, the test_actionAngle.py `_to_numpy` reductions edit
+  landed 10:33 → jax regen was STALE w.r.t. those edits (torch regen 10:36 was
+  current). The `_to_numpy` edits can only make tests pass (never break), so
+  jax_new is at worst a safe superset. Verified live: re-ran the 12 most
+  boundary-relevant affected tests under jax against the current tree →
+  **2 failed (both ledgered), 10 passed (all claimed-pass)** → ledger consistent.
+- The 2 "newly-exposed" adds turned out to be 1 fix + 1 honest ledger:
+  - **test_actionAngleVertical_unbound — FIXED.** `_actionsFreqsAngles_backend`
+    returned the raw (garbage) angle for unbound orbits; numpy sets angle=9999.99
+    BEFORE `angle*=Omega`(=9999.99) then `%2pi`, so the sentinel is
+    `(9999.99**2)%(2pi)≈3.0047`, not 0. Added `xp.where(unbound, (9999.99*9999.99)
+    %(2*pi), angle)`. Passes jax+torch; numpy untouched (backend-only branch).
+  - **test_physical_vertical — ledgered (honest).** `aAV(x,vx)` with ro/vo returns
+    a 1-element TUPLE on numpy too (physical decorator wraps a len-1 1D-action
+    output in `(val,)`); the test passes on numpy ONLY because numpy broadcasts
+    `tuple - ndarray`. jax/torch raise `TypeError` on `tuple - array`. Pre-existing
+    decorator quirk, not introduced by the dispatch; fixing needs a shared-decorator
+    change (numpy byte-identity risk) → out of scope, ledger honestly.
+
+**Final ledger: jax 99→68, torch 166→120** (net −77 AA lines, 1286→1209). Only
+AA lines + the orphaned c=False comment changed (non-AA lines byte-identical).
+Remaining ledgered: Staeckel/Adiabatic c=True C forward, the Inverse modules (not
+in the 8-module set), and ~1e-7 torch precision gaps the real backend path now
+exposes (linear_angles / kepler / against_orbit). Follow-ups: redesign the Inverse
+modules; chase the torch 1e-7 gaps; consider fixing the 1D physical-decorator tuple.
