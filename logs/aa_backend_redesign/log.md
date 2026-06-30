@@ -223,3 +223,25 @@ Remaining ledgered: Staeckel/Adiabatic c=True C forward, the Inverse modules (no
 in the 8-module set), and ~1e-7 torch precision gaps the real backend path now
 exposes (linear_angles / kepler / against_orbit). Follow-ups: redesign the Inverse
 modules; chase the torch 1e-7 gaps; consider fixing the 1D physical-decorator tuple.
+
+## Coercion unification folded into #1038 (2026-06-30)
+
+User review caught that the AA dispatch hand-rolled `R,... = (xp.asarray(a) for a
+in (...))` for input coercion, diverging from the house style. A cross-subsystem
+survey (workflow wf_9e2bc78f-ae5) confirmed: `get_namespace` is the universal
+resolver (honors `use(...,force=True)` via a contextvar -- there is NO
+`force_backend` fn), but coercion is forked -- potentials/df use
+`coerce_coords` at the boundary decorator; orbit + (most) AA hand-roll
+`xp.asarray`; Harmonic/Isochrone already use `promote_scalars`. Inline asarray
+skips device-anchoring (numpy scalar beside a GPU array -> default device) and
+the float64-scalar dtype policy.
+
+Unified all 7 split-structure AA modules (Spherical/Vertical/Staeckel/Adiabatic/
+both Grids/IsochroneApprox) onto `promote_scalars(xp, ...)` -- matching
+Harmonic/Isochrone and aligned with potentials' coerce_coords (same _coerce.py
+home). Kept inside the `if xp is not numpy` gate (numpy never reaches it ->
+byte-identical), kept the isinstance(float) SHAPE preamble (backend methods
+index [:, None] -> need 1-D, which the dtype-only coercers don't give),
+preserved Staeckel's device-aware phi/delta folds + IsochroneApprox internal
+xp.asarray. Verified: test_backend_actionAngle 299 passed jax + 299 torch
+(parity + gradcheck). Commit cc1d51e0.
