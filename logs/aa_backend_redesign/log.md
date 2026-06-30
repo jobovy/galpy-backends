@@ -92,3 +92,29 @@ mismatch). So:
    output is a backend array); ledger torch test-incompat regressions honestly.
 
 PRs #1033 + #1034 closed. Branch `feat/aa-backend-native` off `feat/backends`.
+
+## Full-suite measurement (test_actionAngle, backend running for real)
+
+| | passed | xpass (now backend-native for real) | xfail | failed (regressions) |
+|---|---|---|---|---|
+| jax  | 101 | **33** | 66  | 6 |
+| torch| 33  | **16** | 150 | 8 |
+
+**33 jax + 16 torch ledgered tests now pass genuinely** (the win). Regressions triaged:
+1. **C-path routing bug (mine)** — Adiabatic backend gate was before the c=True check, so
+   c=True under a forced backend took the backend path not C. FIXED (commit: gate on `not use_c`);
+   4 jax + 2 torch resolved.
+2. **Vertical backend-path gap** (`Vertical_unbound`, `physical_vertical`; both backends) — the
+   numpy path returns the J=9999.99 unbound sentinel, but `_evaluate_backend` returns garbage
+   (~2e30); the vectorised path doesn't replicate the unbound mask. Real backend-code fix.
+3. **torch `numpy.mean(output)` test-incompat** (`*_conserved_EccZmaxRperiRap*`) — torch tensors
+   don't duck-type through numpy reductions. Backend-agnostic test reductions (like the orbit
+   tests, task #81) OR honest ledger.
+
+After the c-routing fix, remaining regressions: ~2 jax + ~5 torch (buckets 2 & 3).
+
+## Two decisions for the next session
+- **torch test-side** (bucket 3): backend-agnostic reductions in the existing tests vs ledger.
+- **Rollout order**: Vertical unbound-mask, then Harmonic (promote-at-entry), Staeckel/grids/
+  IsochroneApprox (dispatch + triage), then the honest ledger regen (un-ledger only verified-
+  backend-native passes). C `c=True` stays ledgered.
