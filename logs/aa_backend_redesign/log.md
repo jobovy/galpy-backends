@@ -245,3 +245,26 @@ index [:, None] -> need 1-D, which the dtype-only coercers don't give),
 preserved Staeckel's device-aware phi/delta folds + IsochroneApprox internal
 xp.asarray. Verified: test_backend_actionAngle 299 passed jax + 299 torch
 (parity + gradcheck). Commit cc1d51e0.
+
+## #1038 CI fallout — triage + fixes (2026-06-30, commits 7c244c2e..bd35905e)
+
+The AA-native CI surfaced that the redesign's blast radius reaches AA CONSUMERS
+(jax only — torch consumers were already ledgered). 5 distinct issues, all
+caused/exposed by the PR:
+1. brentq[torch] regression — my detach-forward guard ignored bracket-endpoint
+   grad. FIX (7c244c2e): also reparam when a/b requires grad. test_backend_optimize
+   24 passed.
+2. test_actionAngleAdiabaticGrid_basicAndConserved_actions — CI 300s timeout that
+   my fast-box regen (no --timeout) PASSED, so I wrongly dropped it. -> slow_skip.
+3-5. diskdf-consumer exposures: diskdf.sample -> orbit(t) with a 0-d jax time hit
+   Orbits._call_internal len(t) (TypeError: len() of unsized object). FIX (4112620b):
+   treat 0-d backend time as scalar (numpy byte-identical). After the fix, of the
+   10 diskdf.py sample tests: 5 PASS-but-slow (39-238s) -> slow_skip; 5 still FAIL
+   at a deeper diskdf-jax gap -> xfail. test_galpypaper::test_diskdf pass-slow ->
+   slow_skip; 2 test_quantity::test_diskdf_* fail -> xfail.
+
+Ledger (bd35905e): slow_skip += 5 diskdf + galpypaper + basicAndConserved; xfail +=
+5 diskdf + 2 quantity. No slow_skip/xfail overlap; all node ids collectible.
+Key lesson reinforced: local fast-box regen CANNOT see CI's 300s per-test timeout
+(numpy_island removal flips consumers eager-slow). Next: Inverse modules
+(Harmonic/Isochrone/Vertical) after #1038 merges (user steer).
