@@ -268,3 +268,21 @@ Ledger (bd35905e): slow_skip += 5 diskdf + galpypaper + basicAndConserved; xfail
 Key lesson reinforced: local fast-box regen CANNOT see CI's 300s per-test timeout
 (numpy_island removal flips consumers eager-slow). Next: Inverse modules
 (Harmonic/Isochrone/Vertical) after #1038 merges (user steer).
+
+## #1038 MERGED + Inverse follow-up #1039 (2026-06-30)
+
+#1038 (AA backends run for real) merged to feat/backends as squash b9454149 —
+all-backend CI green. Then started the in-scope Inverse work (Harmonic/Isochrone
+ONLY; VerticalInverse stays _reject_backend-guarded, user-confirmed out of scope;
+Torus excluded).
+
+#1039 (feat/aa-inverse-reductions): the 5 ledgered torch Inverse tests were purely
+TEST-SIDE — numpy.amax/all(numpy.fabs(orb.X - inverseOut)) on torch tensors (torch
+doesn't duck-type numpy reductions' axis=/out=; jax does, hence jax already passed).
+The 2 _orbit tests also mixed numpy ts * torch xvFreqs and built Orbit from torch
+ICs. Fix = test-only _to_numpy reductions + bring xvFreqs output to numpy before the
+orbit plumbing (inverse __call__ still runs the backend → non-hollow). All 5 pass
+numpy+jax+torch. Harmonic/Isochrone Inverse now FULLY un-ledgered (0 jax/torch);
+VerticalInverse keeps its 48 entries. No library code change.
+Lesson: do NOT use @numpy_island (the closed-#1033/#1034 anti-pattern); the Inverse
+modules were already partially resolved-namespace-migrated, only the tests lagged.
