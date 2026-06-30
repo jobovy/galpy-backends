@@ -167,3 +167,23 @@ passes and keeps only real gaps (Staeckel C, Vertical unbound-angle/physical, et
 Known residual backend gaps to ledger honestly: Vertical `unbound` (angle sentinel) + `physical`
 (units decorator tuple); Staeckel `c=True` forward. Everything else in the 7 modules now runs the
 backend for real.
+
+## Correction: Staeckel c=False IS backend-native (8/8 modules done)
+
+The user caught my error: I'd written off Staeckel as "C-only" because `grep "def _.*_backend"`
+returned 0. Wrong — Staeckel's c=False path is **fully vectorised + backend-agnostic** (the
+module-level `_staeckel_actions` / `_staeckel_actions_freqs` / `_staeckel_prep` helpers from
+**#1013 / #1014 / #1015**, with #1010's pure-Python freqs/angles). It just selected `xp` via
+`get_namespace(R) if is_backend_array(R) else numpy` — the same hollow gate. The C path is only
+the `c=True` branch.
+
+Fixed all 4 input-dispatch sites (`_evaluate`, `_actionsFreqs`, `_actionsFreqsAngles`,
+`_uminumaxvmin`) to resolve the active namespace + promote. Now Staeckel c=False runs genuinely
+backend-native: **jax 17 pass + 2 xpass, torch 3 pass + 5 xpass, 0 regressions**; numpy
+byte-identical (65 pass). Commit bbff62f8.
+
+**So all 8 AA modules now run the existing tests on the backend for real**: Spherical, Vertical,
+Adiabatic, Harmonic, AdiabaticGrid, StaeckelGrid, IsochroneApprox, Staeckel(c=False). Only the
+Staeckel/Adiabatic **c=True C forward** stays ledgered (no jax-native C), per the agreed principle.
+
+Re-running the honest ledger regen on the complete code now.
