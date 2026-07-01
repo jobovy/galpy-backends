@@ -130,8 +130,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "dbd4715",
-    "sha256": "047f8888ad2cedc3688f3e1b14796ebf6bcf3bb22eba7ec4ddf301542cf0f157",
+    "git": "2aaeb6b",
+    "sha256": "ca97a822671370abb911d6244c4145554ba48a8a004b4fa08885fb9b7d138659",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_torch": {

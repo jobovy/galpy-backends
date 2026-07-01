@@ -17,8 +17,8 @@ figure is the headline performance picture for that stack:
     (galpy adds no internal jit -- it is made jit-*compatible* for the caller).
   * jax (CPU/GPU, jit): the caller's jax.jit of actionsFreqsAngles (dash-dot) --
     how a user runs it for speed inside an optimisation/training loop. Compile is
-    one-time (~8.6 min/shape here: the fixed-iteration bisection + multi-panel
-    quadrature + 12-leaf angle tree unroll into a huge XLA graph) and EXCLUDED; the
+    one-time (~3 s/shape post-#1040: the fixed-iteration bisection rolls into
+    lax.fori_loop instead of unrolling; was ~8.6 min before) and EXCLUDED; the
     warm call is timed, matching the jit-then-time convention of g2/g8/g15.
   * jax / torch (GPU): compute-only (solid; arrays resident on device, timed wait
     is the kernel) and end-to-end (dashed; incl. host<->device transfer).
@@ -26,9 +26,9 @@ figure is the headline performance picture for that stack:
 What it shows: C wins at every N for this branchy root-find + quadrature workload
 (no surprise -- it is compiled and has no per-op dispatch); among the differentiable
 paths numpy is fastest on CPU, EAGER jax/torch are dispatch-bound at small N (eager
-jax sits on a ~7 s per-op-dispatch floor), JITTING jax cuts that warm floor by ~3-4x
-(to ~1.9 s) -- but only after a ~8.6 min/shape compile, so jit pays off solely for
-repeated calls at a *fixed* shape (the ML training-loop case), not a one-off. The
+jax sits on a ~3-7 s per-op-dispatch floor), JITTING jax collapses the warm
+single-orbit call to ~5 ms after a ~3 s/shape compile (post-#1040 fori_loop
+rolling; was ~8.6 min), so jit is now worthwhile even for modest reuse. The
 backends are not here to beat C on raw throughput -- they are here to make the
 action-angle map *differentiable and composable* inside jax/torch models; this figure
 quantifies what that costs, eager vs jit.
@@ -119,9 +119,9 @@ def _measure():
     Ns_jaxcpu = [n for n in Ns if n <= 30000]  # jax eager is dispatch-bound + slow
     Ns_torchcpu = [n for n in Ns if n <= 100000]
     Ns_old = [1, 3, 10, 30, 100, 300, 1000, 3000]
-    # jitted jax: compile is ~8.6 min/shape (the unrolled bisection + multi-panel
-    # quadrature + angle tree is a huge XLA graph), so use a reduced N-grid -- the
-    # warm curve is smooth and a few points show the floor + the large-N rise.
+    # jitted jax: compile is ~3 s/shape post-#1040 (rolled fori_loop bisection;
+    # was ~8.6 min unrolled); keep the reduced N-grid -- the warm curve is smooth
+    # and a few points show the floor + the large-N rise.
     Ns_jaxjit_cpu = [1, 100, 3000, 30000]
     Ns_jaxjit_gpu = [1, 100, 3000, 100000]  # cap < 1e6: the huge unrolled graph
     #                                          risks a compile-time OOM on 12 GB
