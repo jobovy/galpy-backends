@@ -1,0 +1,116 @@
+diff --git a/galpy/actionAngle/actionAngleStaeckel.py b/galpy/actionAngle/actionAngleStaeckel.py
+index 8037bcae..eeb5e1ce 100644
+--- a/galpy/actionAngle/actionAngleStaeckel.py
++++ b/galpy/actionAngle/actionAngleStaeckel.py
+@@ -22,8 +22,10 @@ from ..backend import (
+     is_backend_array,
+     promote_scalars,
+ )
++from ..backend._namespaces import under_jax_trace, under_torch_grad
+ from ..backend.optimize import bisect_root, iterate_bracket
+ from ..backend.quadrature import fixed_quad as _backend_fixed_quad
++from ..backend.quadrature import graft_jacobian
+ from ..potential import (
+     CompositePotential,
+     DiskSCFPotential,
+@@ -264,6 +266,22 @@ def _staeckel_actions(xp, R, vR, vT, z, vz, pot, delta, order):
+     """Unified vectorised (jr, Lz, jz) for numpy and jax/torch backends."""
+     s, umin, umax, vmin, delta = _staeckel_prep(xp, R, vR, vT, z, vz, pot, delta)
+     jr, jz = _staeckel_jr_jz(xp, s, umin, umax, vmin, pot, delta, order)
++    # Under AD only, graft the analytic dJ/d(E,Lz,I3) chain rule onto the plain-GL
++    # value (its d(sqrt S) gradient is turning-point-singular); first-order only.
++    # This grafts d(actions)/d(x,v) (theta fixed); parameter gradients through the
++    # node potential are a documented follow-up (out of PR A scope).
++    if is_backend_array(R) and (
++        under_jax_trace(s["E"]) or under_torch_grad(R, vR, vT, z, vz)
++    ):
++        djrdE, djrdLz, djrdI3, djzdE, djzdLz, djzdI3 = _staeckel_jacobian(
++            xp, s, umin, umax, vmin, pot, delta, order
++        )
++        jr = graft_jacobian(
++            xp, jr, (s["E"], s["Lz"], s["I3U"]), (djrdE, djrdLz, djrdI3)
++        )
++        jz = graft_jacobian(
++            xp, jz, (s["E"], s["Lz"], s["I3V"]), (djzdE, djzdLz, djzdI3)
++        )
+     return jr, s["Lz"], jz
+ 
+ 
+diff --git a/galpy/backend/_namespaces.py b/galpy/backend/_namespaces.py
+index bf77823c..c5e78abb 100644
+--- a/galpy/backend/_namespaces.py
++++ b/galpy/backend/_namespaces.py
+@@ -72,6 +72,36 @@ def under_jax_trace(*xs):
+     return any(isinstance(x, jax.core.Tracer) for x in xs)
+ 
+ 
++def under_torch_grad(*xs):
++    """True iff torch is imported, grad is enabled, and some input is a grad tensor."""
++    import sys
++
++    if "torch" not in sys.modules:
++        return False
++    import torch
++
++    return torch.is_grad_enabled() and any(
++        isinstance(x, torch.Tensor) and x.requires_grad for x in xs
++    )
++
++
++def stop_gradient(x):
++    """Backend stop-gradient: identity (numpy), ``jax.lax.stop_gradient`` / ``.detach``."""
++    import sys
++
++    if "jax" in sys.modules:
++        import jax
++
++        if isinstance(x, jax.Array):
++            return jax.lax.stop_gradient(x)
++    if "torch" in sys.modules:
++        import torch
++
++        if isinstance(x, torch.Tensor):
++            return x.detach()
++    return x
++
++
+ def _is_floating_dtype(dtype):
+     """True for real floating-point dtypes of any backend.
+ 
+diff --git a/galpy/backend/quadrature.py b/galpy/backend/quadrature.py
+index 05d4fdcd..660b9c82 100644
+--- a/galpy/backend/quadrature.py
++++ b/galpy/backend/quadrature.py
+@@ -47,6 +47,7 @@ from ._namespaces import (
+     device_of,
+     is_backend_array,
+     match_input_dtype,
++    stop_gradient,
+ )
+ 
+ # Default number of Gauss-Legendre nodes for the public backend ``quad``. High
+@@ -58,6 +59,24 @@ _QUAD_N = 100
+ _GL01_CACHE = {}
+ 
+ 
++def graft_jacobian(xp, value, primals, jac_rows):
++    r"""First-order analytic-gradient graft (stop_gradient reparameterisation).
++
++    The same construction as ``galpy.backend.optimize.bisect_root``: keeps the
++    forward value of ``value`` and replaces its gradient with the supplied
++    analytic Jacobian ``jac_rows[i] = dvalue/dprimals[i]``, via
++    ``sg(value) + sum_i sg(jac_rows[i]) * (primals[i] - sg(primals[i]))`` where
++    ``sg`` is ``stop_gradient``. Every ``primals[i] - sg(primals[i])`` is 0 at the
++    primal, so the value is unchanged; the first derivative becomes the analytic
++    chain rule. First-order only (the Jacobian is stop_gradient-ed, so second and
++    higher derivatives are 0).
++    """
++    out = stop_gradient(value)
++    for primal, jac in zip(primals, jac_rows):
++        out = out + stop_gradient(jac) * (primal - stop_gradient(primal))
++    return out
++
++
+ def quad(func, a, b, args=(), n=_QUAD_N, device=None, vectorized=True):
+     r"""``int_a^b func(x, *args) dx`` -- a backend-agnostic definite integral.
+ 
