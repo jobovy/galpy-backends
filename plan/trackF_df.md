@@ -65,3 +65,48 @@ slowness deferral.
 (Counterpart obligation, different track: the **whole jax orbit shard** is
 deferred to **Track D** via two file-level slow-skip lines — see
 `trackD_autodiff.md` "CI obligation".)
+
+---
+
+## EXECUTION PLAN (scouted 2026-07-01, workflow wf_77a2f588-cbc, verified vs code)
+
+**Scale:** ~22.8K lines, 0% migrated — the largest remaining block (> potentials +
+AA combined). **All upstream deps LANDED → fully unblocked.** Shared-helper layer
+(`galpy.backend.quadrature/interpolate/special/optimize`) ~90% sufficient: only
+`binom` missing (Pdf.5); RNG / multivariate-optimize / cKDTree intentionally
+numpy-guarded (not made backend-native).
+
+**PR sequence** (Pdf.2/3/4 have disjoint files → parallelizable; Pdf.5 last):
+| PR | Files | Lines | Effort | Notes |
+|----|-------|-------|--------|-------|
+| Pdf.1 foundation | df.py, surfaceSigmaProfile.py, jeans.py | 480 | M | warm-up; establishes df dispatch + quad-swap pattern |
+| Pdf.2 sphericaldf | sphericaldf + 9 subclasses | 2778 | XL | special(gamma/hyp2f1)+nested quad+pvr/cmf interp+sampling |
+| Pdf.3 diskdf | diskdf, evolveddiskdf | 6776 | XL | DFcorrection spline cache, numpylog(28×), Orbit.integrate; slow_skip under jax |
+| Pdf.4 qdf | quasiisothermaldf | 3121 | L | _rg/_maxVT interp caches, tplquad, Staeckel/Isochrone dep |
+| Pdf.5 streams | streamdf/spraydf/gapdf/Track | 9597 | XL | LAST; 4 sub-PRs; iterative track loop + eigen-slerp = hardest |
+
+**Pdf.1 concrete (the immediate PR):**
+- `df.py` (base): units only, no compute → no changes.
+- `surfaceSigmaProfile.py`: 4 methods (surfacemass/…Derivative/sigma2/…Derivative) — add
+  `from ..backend import get_namespace`; `xp = get_namespace(R)` first line; `numpy.exp/log→xp.*`
+  (L150/175/198/200-201/230). params are Python floats → broadcast, no coercion.
+- `jeans.py`: `sigmar`, `sigmalos` — add `from ..backend.quadrature import quad, fixed_quad_semiinfinite`;
+  `xp = get_namespace(r/R)`; the 4 `integrate.quad(...)[0]` → `quad(...)` (finite) /
+  `fixed_quad_semiinfinite(xp, ..., lo)` (semi-inf); `numpy.sqrt→xp.sqrt`. **Non-mechanical:** the
+  `numpy.isnan(called_surfdens)` at L125 is a "was surfdens supplied" sentinel — keep the
+  supplied-vs-not as a Python `None`-check (static), only `xp.isnan` for genuine array tests.
+- **Byte-identity:** quad/fixed_quad_semiinfinite delegate to scipy on numpy → byte-identical; VERIFY
+  the numpy branch is literally scipy (flag-numpy-byte-identical-changes). jax/torch = fixed-order GL
+  (smooth mass/density integrands → matches the accepted Ellipsoidal/Spherical tradeoff).
+- **Coverage:** add `tests/test_backend_df_*.py` exercising the `if xp is not numpy` lines or
+  codecov/patch fails (no-hiding-uncovered-code).
+
+**Hard parts (Pdf.5):** streamdf `_determine_stream_track` (~60-iter refinement loop, rebuild full
+array/iter, fixed loop count, no value-branch); eigen-slerp needs a deterministic eigenvector sign
+convention (else AD discontinuities); sampling RNG stays numpy-seeded (bitstream divergence accepted,
+tests check shape/dtype only); spline caches = dual-path (scipy at init for numpy byte-id + pickles,
+`spline_to_ppoly` coeffs for backend eval); `numpylog` (scimath.log) helper for diskdf.
+
+**Milestones:** ledger prune after Pdf.1 (smoke), Pdf.2, Pdf.3+Pdf.4 (mid), Pdf.5 (final). ~11-15
+person-weeks total; ~6-8wk wall-clock if Pdf.2/3/4 run concurrently. After Pdf.5 = last breadth block
+→ then the deferred speed-up roadmap (logs/backend_speedup_audit/).

@@ -275,3 +275,23 @@ monotonic.) **Potential track: done.** Next: orbit (Track D burndown).
 
 **Regen baseline (origin/feat/backends, pre-regen):** jax 284 xfail + 49 slow-skip; torch 2079 xfail
 + 1 slow-skip. The #989–#993 wave's flips become XPASS and get pruned in that regen.
+
+### AA-wave-downstream ledger regen (#1045) — 2026-07-01
+
+Regen from full-matrix run 28516574227 on feat/backends post-#1043 (`2794c74a`). All 45 jax+torch
+shards ran to completion (no session-timeout truncation). **Reviewed, not blind: 0 ADDs, 70 DROPs.**
+The AA backend-native wave (#1038 real-backend dispatch + #1039/#1040/#1043) makes the df tests that
+COMPUTE actions run the real jax/torch action-angle path — streamdf setup/track/`trackaa`/`calcaAJac`,
+diskdf, qdf, and their `test_quantity` unit checks. (test_actionAngle itself was pruned earlier at the
+AA milestone; this is the downstream df impact.)
+
+| backend | milestone-2 (#996) | pre-AA-wave (post orbit+AA milestones) | AA-wave (#1045) |
+|---|---|---|---|
+| jax xfail | 271 | 273 | **233** |
+| torch xfail | 1075 | 916 | **886** |
+
+**Review discipline:** all 71 regen drops classified before commit — 70 deterministic (seeded samples
+`numpy.random.seed(1)`, setup/config, deprecation, unit/returntype) → dropped; the ONE unseeded-RNG
+drop `torch test_streamgapdf_impulse::test_impulse_deltav_general_curved` (flaky by construction, #66)
+**RETAINED xfail** (a premature drop of a flaky test would red the next run; a retained xfail is
+harmless). **AA-perf + AA-wave complete.**

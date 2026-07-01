@@ -197,3 +197,82 @@ rolls the 6 expanding-bracket loops (Staeckel x3, Spherical x2, Vertical x1). Sa
 byte-identical). Measured (Staeckel actions, N=8): jaxpr 47,556→2,283 (~21x), jit
 compile 134.0s→2.6s (~52x), jit-vs-eager bit-identical 1.6e-16, grad correct.
 Regression: numpy 91 / torch 197 passed. → P0#2 and #93 both resolved by #1040.
+
+Also on #1040 (2026-06-30): promoted `_under_jax_trace` → `galpy.backend._namespaces.under_jax_trace`
+(shared eager-vs-`lax.fori_loop` predicate, next to `is_backend_array`; DRY'd the duplicate
+inline tracer-check in `_jax/optimize._bisect_root`) + added `test_staeckel_jit_grad_rolls_direct_bisection`
+(jit/grad THROUGH Staeckel — the only test that traces the DIRECT `bisect_root` caller;
+closed the codecov/patch gap on optimize.py:219-222).
+
+---
+## UPDATE 2026-06-30: comprehensive AA-method perf audit (workflow wf_71e05065-2e9, 7 agents)
+
+Full read-only audit of ALL action-angle methods (Staeckel, Spherical+Vertical, Adiabatic,
+IsochroneApprox, Isochrone+Harmonic, StaeckelGrid+AdiabaticGrid) after #1040, scored by the
+value lens (agnostic+byte-identical recompute-elim = HIGH; eager-only = LOW because jit CSE
+dedups). **12 findings, ALL byte-identical-safe. Honest ceiling: exactly ONE cross-the-board
+win; the rest is numpy/eager-only micro-hygiene.** Adiabatic (non-grid) audited clean.
+
+**HIGH (the anchor):**
+- **A1 — Staeckel `_staeckel_jacobian` hoist** (`actionAngleStaeckel.py:515-527`). The 6 Leibniz
+  derivative panels (dJr/dJz d{E,Lz,I3}, each a t²-subst singular-integrand GL quadrature) are
+  computed TWICE in `actionsFreqsAngles`: `_staeckel_freqs` (L341) + `_staeckel_angles` (L409).
+  Hoist to compute once/orbit, thread into both. Docstring L301 already declares the intent.
+  Benefits numpy (byte-identical) + eager + shrinks the jit trace graph. Effort S. **LAND FIRST.**
+
+**MEDIUM/LOW (free but not fast — land for cleanliness):**
+- A2/A3/M1/M2 Isochrone scalar-`sqrt` hoists (`actionAngleIsochrone.py`): sqrt(L²+4·amp·b),
+  sqrt(R²+z²), sqrt(L²−Lz²) each 2×. Byte-identical but jit-noise (CSE folds them).
+- A4/M3 grid numpy consolidations (StaeckelGrid `_grid_common_numpy`+ErEz-combo drops the dup
+  `potentialStaeckel(u0,π/2)`; AdiabaticGrid shared Jz vertical-setup). numpy-only, zero jit impact
+  (backend path already consolidated via `_grid_common_backend`).
+- M4/M5/L1 Spherical radicand-share across Or/Op + angler/anglez panels (same GL nodes/E/L).
+  EAGER-ONLY (CSE reclaims under jit). Fold L1 into M5.
+- M6/M7 IsochroneApprox `tile`→broadcast (numpy path; backend already broadcasts). numpy temp churn.
+
+**Recommended single AA-perf PR (after #1040 lands):** A1 first (verify byte-id vs c=True) →
+Isochrone sqrt bundle → grid numpy consolidations → Spherical radicand-share (last) →
+IsochroneApprox broadcast. Flag A4/M3 + M6/M7 for numpy byte-diff review. Keep #88 (Spherical
+numpy-loop vectorization — RELAXES byte-identity) OUT on its own track.
+
+---
+## UPDATE 2026-07-01: AA-perf PR MERGED → #1043 (squash 2794c74a on feat/backends)
+
+CI 154/154 green (codecov cleared after the jac-required patch fix + all sessions
+uploaded; one VizieR notebook flake re-run to green). Regressions:
+test_actionAngle.py (numpy, affected classes) 166 passed;
+test_backend_actionAngle.py (full jax+torch) 300 passed.
+
+**AA-perf roadmap now fully burned down.** Remaining AA item: only #88 (Spherical
+numpy-loop vectorization), deliberately on its own track because it RELAXES numpy
+byte-identity. Non-AA speedup-audit items (potentials/orbit/df) remain in the
+sections above.
+
+
+Built with a byte-identity gold-reference harness (`/tmp/aa_ref.py`: dumps numpy AA outputs
+on a fixed grid; `numpy.array_equal` before/after each edit). 4 commits, all verified:
+
+- **A1 — Staeckel jacobian hoist** (9544765c). `jac=` param on _staeckel_freqs/_staeckel_angles;
+  computed once in _staeckel_actions_freqs_angles. numpy byte-identical (15 arrays) + backend
+  parity/jit-grad (24 passed). THE real win (all backends, incl. smaller jit trace).
+- **Isochrone sqrt hoists** (8dfc2e7c). sqrt(L2+4ab), sqrt(R²+z²), sqrt(L²-Lz²) DRY'd.
+  **KEY:** the audit's suggested L306 reuse (1/sqrt(1+4ab/L2) = L/s) is a DIFFERENT float op →
+  NOT byte-identical; left untouched. Byte-identical (15) + backend (64 passed).
+- **StaeckelGrid ErEz dedup** (dc8ea6cc). potentialStaeckel(u0,π/2) once per orbit (was 2×).
+  Byte-identical (10) + grid backend parity (18 passed).
+- **Spherical M4/M5** (b19e97f0). `_panel_backend_both` shares the radicand across Or/Op;
+  merged `_calc_angles_backend` shares it across angler/anglez. Bit-identical backend output
+  (exact op order preserved) → parity+grad (148 passed). numpy untouched (scipy). EAGER-ONLY.
+
+**DROPPED / SKIPPED (with cause — validates the honest ceiling):**
+- **M6/M7** (IsochroneApprox tile→broadcast): audit claimed "same order → byte-identical" but
+  numpy.sum's pairwise grouping depends on array CONTIGUITY; tile+transpose vs broadcast give
+  different layouts → ~1e-13 diff, AMPLIFIED through inv(AᵀA) into the angles. Reverted. The
+  numpy-only IsochroneApprox angle path can't take this rewrite byte-identically.
+- **_grid_common_numpy extraction (A4 big part) + AdiabaticGrid-Jz (M3)**: pure cross-method
+  DRY — dedups CODE not per-call COMPUTE (separate entry points each run their setup once) →
+  no speedup for real byte-identity risk on branchy masked-assignment numpy. Skipped.
+
+**Verdict:** the ceiling held EXACTLY as audited — A1 is the one cross-the-board win; Isochrone
++ StaeckelGrid are tiny byte-identical numpy savings; Spherical is eager-only. Everything
+past A1 is marginal, and the one item that CHANGED an op (M6/M7) broke byte-identity.
