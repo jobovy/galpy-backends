@@ -1,6 +1,6 @@
 # Staeckel action gradients: t²-donor graft (Track E derivative fix, PR A)
 
-**Status:** ⏳ **PR #1047** open 2026-07-01 (branch `feat/staeckel-actions-jvp`,
+**Status:** ✅ **PR #1047** MERGED 2026-07-01 (squash 6199474b) (branch `feat/staeckel-actions-jvp`,
 commit e839ca0f); all validation passed (numpy byte-identity tobytes-equal on
 24 orbits × 4 quantities, numpy Staeckel suite 72/72, backend suites 978/0).
 **Design docs:** `plan/staeckel_deriv_fix/design_scoping_wpo9oiys0.md` (scoping),
