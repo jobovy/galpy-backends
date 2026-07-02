@@ -113,3 +113,16 @@ actionsFreqs/actionsFreqsAngles action outputs), `tests/test_backend_staeckel_gr
   terms (Jr: Ihat3U = I3U - (sinh^2 u0 + sin^2 v0u)*potu0v0; Jz: additionally
   the direct-u0 integrand). The closed branch's dispatch wiring / pure_callback
   skeleton / test parametrization are reused.
+
+## PR C-v2 (#1051): c=True C-native gradients (replaces closed #1050)
+
+Per the user directive, the c=True gradient is C-native, not the Python donor.
+New C entry `actionAngleStaeckel_actionsJac` builds the full 2x5 Jacobian from
+the existing t^2 derivative integrands + the elementary (E,Lz,Ĩ3U,u0) chain:
+Jr uses Ĩ3U = I3U - (sinh^2 u0 + sin^2 v0)*potu0v0 (kills explicit u0); Jz =
+F(E,Lz,I3V,u0) uses total dI3V + a NEW dJz/du0 integrand (calcdJzdU0Staeckel),
+no double-counting. Tied in via jax.pure_callback custom_vjp / torch
+autograd.Function (C-STM pattern). DECISIVE: C-Jacobian vs the merged c=False
+donor grad = 1.2e-12 (machine precision) — two independent true-gradient
+mechanisms agree. numpy c=True byte-identical (200 orbits). 50+72 tests.
+First-order only; freqs/angles gradients remain Phase 2 (#120).
