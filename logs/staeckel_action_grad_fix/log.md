@@ -89,3 +89,27 @@ actionsFreqs/actionsFreqsAngles action outputs), `tests/test_backend_staeckel_gr
   mechanism present, untested).
 - Phase 2: second-derivative integrands (freq/angle gradients, Hessians).
 - g17 gradient panel once this + C path land.
+
+## Review outcomes (2026-07-01, user review of the B/C/D round)
+
+- **#1048 (PR D, probes + Adiabatic jax d/dR fix): open**, unaffected.
+- **#1049 (PR B, StaeckelGrid donor graft): CLOSED unmerged.** User decision:
+  the grid exists for speed and that must hold under AD; the donor costs a
+  direct evaluation (measured: grad-through-grid 1.18x SLOWER than direct at
+  N=1000 jax eager, vs 6x FASTER forward) and is inconsistent with the
+  interpolated value (grid values themselves differ 32% between reasonable
+  resolutions at a generic point — percent-level tool). Design law: grids keep
+  self-consistent spline-AD gradients (~5-10% off the true derivative on
+  dominant components = the grid's accuracy class); true gradients via
+  direct/c=True. Kept for the record: the baseline measurements, and the
+  possible future opt-in of gridded donor-gradient TABLES (fast approximate
+  true gradients) if ever needed.
+- **#1050 (PR C, c=True with Python-donor gradient): CLOSED unmerged.** User
+  directive: implement the gradient functions IN C and register them like the
+  C-STM (custom_vjp with a C-computed Jacobian residual); no Python fallback
+  in the gradient path; first-order-only accepted. Reworked as PR C-v2: C
+  assembles the full d(jr,jz)/d(R,vR,vT,z,vz) from its existing t^2 derivative
+  integrands + the elementary (E,Lz,I3-effective) chain incl. the u0-geometry
+  terms (Jr: Ihat3U = I3U - (sinh^2 u0 + sin^2 v0u)*potu0v0; Jz: additionally
+  the direct-u0 integrand). The closed branch's dispatch wiring / pure_callback
+  skeleton / test parametrization are reused.
