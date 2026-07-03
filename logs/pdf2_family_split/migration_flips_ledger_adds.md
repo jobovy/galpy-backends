@@ -63,3 +63,17 @@ the milestone; ledger for now to keep retarget green.
   jax:   3  (eddington general fE; constantbeta hyp2f1 + differentpot direct-int)
   Plus verify jax equivalents of the osipkovmerritt-powerlaw-directint x7 (jax run was killed).
 Family branch shas: isotropic 7ada2608 | eddington-king 23cd0ad9 | osipkovmerritt fe753844 | constantbeta 0051acef
+
+## UPDATE 2026-07-02: 14 flips ledgered in the BASE #1052 (c4e39670), not deferred
+The base pilot's forced-backend shards themselves surface these (migrated
+sphericaldf machinery inherited by still-numpy family subclasses), so they were
+added to backend_xfail.txt in #1052 directly:
+  torch(9): isotropic_plummer_energyoutofbounds; constantbeta_powerlaw_sigmar_directint[-0.5/0.0/0.3/0.5];
+            osipkovmerritt_powerlaw_sigmar_directint[0.5/2.0/5.0]; osipkovmerritt_powerlaw_large_ra_approaches_isotropic
+  jax(5):   isotropic_eddington_dehnencore_in_nfw_{dens,meanvr}_directint;
+            isotropic_eddington_selfconsist_dehnencore_{beta,sigmar}_directint; test_quantity::test_sphericaldf_densitymatch_issue677
+At FAMILY RETARGET (task #128): the family PRs FULLY migrate their df files, so their
+own backend shards may expose ADDITIONAL flips (e.g. *dens*_directint variants,
+constantbeta hyp2f1 beta>0.5, constantbeta differentpot direct-int) beyond these 14 -
+regen/verify each family shard at retarget and add only the delta. The 14 above are
+already covered by the base and need NOT be re-added.
