@@ -144,3 +144,10 @@ adds are branch-local until merge (#974 ≈ +16, #975 ≈ +50).
 ## Backend support snapshot (this env)
 - jax 0.9.2 ✅ · torch 2.12 (CPU) ✅ · array-api-compat 1.14 ✅
 - `array_api_compat.array_namespace`: numpy → (normalized to plain numpy), jax → `jax.numpy`, torch → `array_api_compat.torch`.
+
+<!-- 2026-07-07: feat/backends REBASED onto main (a0fe9e12, linear, no merge commit).
+Consumed ExpTruncNFW #976, time-dep SCF #1058, from_nbody #1061, SCF<->Multipole
+translate #1062, sphericaldf negative-df #1032. Only SCFPotential.py needed manual
+merge (main refactor+time-dep vs backend migration; numpy byte-identical, backend
+preserved). New numpy-only features ledgered (jax 121, torch 802) pending Phase-2
+backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). -->
