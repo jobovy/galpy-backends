@@ -213,3 +213,12 @@ numpy array resolving to numpy). Forced -> numpy/C; genuine (eager OR jit) ->
 in-backend ODE. Validated: eager backend-theta parity+grad 4 passed (jax+torch),
 forced-jax progpot repro OK, jit tests 3 passed, numpy byte-identical. Clean
 2-commit history (2dc9bdfc + 7d135eed), force-pushed; stale CI cancelled.
+
+### Final: coverage-safe merge + clean history (6b72f0fc)
+Folded the forced-context early-return INTO the existing pure-numpy early-return
+(shared body -> covered by numpy tests; a forced-only branch would be uncovered
+since forced-backend shards upload no coverage -> codecov/patch). Clean 2-commit
+history (15aa7c82 streamspraydf + 6b72f0fc tolerance), force-pushed to #1106;
+stale CI cancelled. Final local validation on 6b72f0fc: eager backend-theta
+parity+grad (jax+torch) + jit sample/streamTrack/tp_scale = 7 passed; forced-jax
+progpot repro OK; numpy + forced-jax streamspraydf 38 each. CI re-running.
