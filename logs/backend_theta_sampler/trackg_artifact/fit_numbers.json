@@ -1,0 +1,8 @@
+{
+  "fit_amp_start": 1.08,
+  "fit_amp_true": 1.0,
+  "fit_amp_final": 1.000170684044612,
+  "fit_loss_start": 7.758967227802646,
+  "fit_loss_final": 4.281138634012615e-05,
+  "fit_n_steps": 60
+}

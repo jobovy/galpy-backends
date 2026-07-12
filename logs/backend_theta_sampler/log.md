@@ -245,3 +245,24 @@ upload) or an untested branch. Fixed (81548b6a):
   context fix), so it needed a direct orbit test.
 Confirmed all 10 (post-removal) now COVERED locally; numpy streamspraydf 38 passed
 (byte-identical). Pushed; CI re-running (also retries the SIMBAD orbit flake).
+
+## Track G artifact regenerated with the GENERATIVE gradient (2026-07-12)
+The showpiece "The Differentiable Stream Track" (artifact 8449556c) was built on the
+NON-PHYSICAL frozen-xv gradient (narrative literally said "xv = drawn once, then
+frozen ... the model track through the FIXED stars"). Regenerated GENERATIVELY (xv(θ)
+flows) via the now-working jittable streamspray:
+- **fig_sens** (TD=126, gen2_sens.py + plot_sens.py): perturbed tracks where the WHOLE
+  stream re-forms at each perturbed param (particles re-sampled, common random numbers;
+  only the discrete structure -- assignment/GCV smoother -- frozen). Striking result:
+  the generative deformation is **3.6x (vz) to 70x (vR)** larger than frozen-xv --
+  freezing the stars drops the dominant term (vindicates the user's correction; the
+  frozen-xv gradient wasn't a small approximation, it was the wrong quantity).
+- **fig_fit** (TD=20, fit_gen.py via M2 jittable pipeline + plot_fit.py): generative
+  gradient descent recovers amp 1.08->1.000 (loss 7.8->4e-5), structure frozen at the
+  observed stream, every star re-integrated each step. LESSON: a MATURE (4.5 Gyr) stream's
+  generative loss is chaotically rugged (TD=126/40 fits get stuck) -- a real dynamics
+  feature; a young stream (TD=20) has a convex landscape. Noted honestly in the artifact.
+- Narrative rewritten to the generative framing (stars are a theory intermediate, not
+  data; freeze the STRUCTURE not the particles; generative code `streamTrack(n=600, key=key)`
+  samples internally). Hero fig_track (TD=126) kept. Deployed in place (same URL); scripts
+  in logs/backend_theta_sampler/trackg_artifact/.

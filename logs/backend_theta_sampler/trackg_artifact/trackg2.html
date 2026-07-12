@@ -1,0 +1,224 @@
+<title>The Differentiable Stream Track</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#111830; --ink:#e8ecf6; --mut:#9aa3ba; --faint:#6b7490;
+    --line:#1e2740; --coral:#ff7a5c; --cyan:#6ee7ff; --violet:#a78bfa; --green:#34d399;
+    --gold:#ffd166;
+    --serif:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --maxw:940px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:
+      radial-gradient(1200px 700px at 78% -8%, #16204010 0%, #0b102000 60%),
+      radial-gradient(900px 600px at 8% 4%, #1a2c4e22 0%, #0b102000 55%),
+      var(--bg);
+    color:var(--ink);font-family:var(--sans);line-height:1.62;
+    font-size:17px;letter-spacing:.005em;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  .measure{max-width:66ch}
+  a{color:var(--cyan);text-decoration:none;border-bottom:1px solid #6ee7ff40}
+  a:hover{border-color:var(--cyan)}
+  code,.mono{font-family:var(--mono);font-size:.9em}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.12;text-wrap:balance;letter-spacing:-.01em}
+
+  header{padding:74px 0 30px}
+  .eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--faint);display:flex;gap:12px;align-items:center}
+  .eyebrow::before{content:"";width:26px;height:1px;background:linear-gradient(90deg,var(--coral),var(--cyan))}
+  h1{font-size:clamp(34px,6.4vw,60px);margin:.34em 0 .28em;letter-spacing:-.02em}
+  h1 .grad{background:linear-gradient(92deg,var(--coral) 12%,var(--gold) 42%,var(--cyan) 88%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:clamp(18px,2.4vw,21px);color:var(--mut);max-width:62ch;margin:0}
+  .lede em{color:var(--ink);font-style:normal}
+
+  figure{margin:44px 0 8px}
+  .fig-full{width:100%;border:1px solid var(--line);border-radius:14px;display:block;
+    background:var(--bg);box-shadow:0 24px 60px -30px #000c}
+  figcaption{color:var(--faint);font-size:14px;margin-top:12px;font-family:var(--sans)}
+  figcaption b{color:var(--mut);font-weight:600}
+
+  section{padding:40px 0;border-top:1px solid var(--line)}
+  .kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  h2{font-size:clamp(24px,3.6vw,33px);margin:.1em 0 .5em}
+  p{margin:0 0 1.05em}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  @media(max-width:720px){.two{grid-template-columns:1fr}}
+
+  .swatch{display:inline-block;width:.62em;height:.62em;border-radius:2px;margin-right:.15em;vertical-align:baseline;transform:translateY(.02em)}
+  .coral{color:var(--coral)} .cyan{color:var(--cyan)} .violet{color:var(--violet)} .green{color:var(--green)}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 6px}
+  @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:linear-gradient(180deg,#141d3a55,#0f1730aa);border:1px solid var(--line);
+    border-radius:12px;padding:16px 16px 14px}
+  .stat .n{font-family:var(--mono);font-size:24px;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:12.5px;color:var(--mut);margin-top:4px;line-height:1.4}
+  .stat .n.small{font-size:19px}
+
+  .ratio{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0 4px}
+  @media(max-width:560px){.ratio{grid-template-columns:repeat(2,1fr)}}
+  .rc{border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:#0e1730aa}
+  .rc .rn{font-family:var(--mono);font-size:21px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .rc .rl{font-size:12px;color:var(--mut);margin-top:3px}
+
+  .card{background:linear-gradient(180deg,#131c3877,#0e1630aa);border:1px solid var(--line);
+    border-radius:14px;padding:22px 24px;margin:22px 0}
+  .card h3{font-size:18px;margin:0 0 .5em;font-family:var(--sans);font-weight:650;letter-spacing:0}
+  pre{background:#0a0f1e;border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow-x:auto;
+    font-family:var(--mono);font-size:13.5px;line-height:1.6;color:#cdd6ee;margin:16px 0}
+  pre .k{color:var(--violet)} pre .s{color:var(--green)} pre .c{color:var(--faint)} pre .f{color:var(--cyan)}
+
+  ul.clean{list-style:none;padding:0;margin:0}
+  ul.clean li{padding:9px 0 9px 22px;position:relative;border-bottom:1px solid #17203a;color:var(--mut)}
+  ul.clean li:last-child{border-bottom:0}
+  ul.clean li::before{content:"";position:absolute;left:2px;top:16px;width:7px;height:7px;border-radius:50%;
+    background:var(--coral);box-shadow:0 0 0 3px #ff7a5c22}
+  ul.clean li b{color:var(--ink);font-weight:600}
+
+  footer{padding:38px 0 70px;color:var(--faint);font-size:13.5px;border-top:1px solid var(--line)}
+  footer .mono{color:var(--mut)}
+  .hr-dot{color:var(--faint);margin:0 8px}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">galpy &nbsp;·&nbsp; differentiable galactic dynamics &nbsp;·&nbsp; Track&nbsp;G</div>
+  <h1>The shape of a stream is now a <span class="grad">differentiable function</span> of the Galaxy.</h1>
+  <p class="lede">A tidal stellar stream traces a smooth curve through phase space. That curve — and
+  <em>the whole spray of stars it is built from</em> — now carries exact gradients with respect to where the
+  progenitor started and what the dark-matter halo is made of. The entire generative model is differentiable,
+  jit-compiled, and runs on the GPU, so the Milky Way's potential can be fit to a stream by gradient descent
+  rather than by sampling a black box.</p>
+</header>
+
+<figure>
+  <img class="fig-full" alt="A tidal stream: spray particles and the fitted phase-space track, edge-on" src="data:image/png;base64,FIG_TRACK">
+  <figcaption>A <b>fardal15</b> particle-spray stream (600 stars) in a flattened logarithmic halo, edge-on.
+  The spray is <b>not observed data</b> — it is generated by the potential: every star is stripped from the
+  progenitor and integrated in the halo. The smooth <b>track</b> is a differentiable spline through it. Change
+  the halo and the entire picture — stars and track together — re-forms.</figcaption>
+</figure>
+
+<section>
+  <div class="kicker">One gradient, taken honestly</div>
+  <h2>The stars aren't data — they're a function of the halo.</h2>
+  <p class="measure">It is tempting to treat the spray as a fixed point cloud and ask only how the smooth
+  track slides when you turn the potential. But the stars are a <em>theory intermediate</em>: change the halo
+  and every one of them is re-stripped and re-integrated onto a new orbit. The physical gradient
+  <span class="coral">∂&nbsp;track&nbsp;/&nbsp;∂&nbsp;θ</span> has to let the <b>whole stream re-form</b> —
+  freeze the stars and you drop its dominant term.</p>
+
+  <div class="two" style="margin:20px 0 6px">
+    <div>
+      <p><span class="swatch" style="background:var(--coral)"></span><b class="coral">∂&nbsp;track&nbsp;/&nbsp;∂&nbsp;θ</b> — the
+      halo's mass and flattening. Turning either one re-integrates <b>all 600 sample orbits</b> (and the
+      progenitor) natively in jax&nbsp;/&nbsp;torch through an <b>in-backend ODE</b> (diffrax&nbsp;/&nbsp;torchdiffeq)
+      — the whole spray flows, under <span class="mono">jit</span>, on the GPU.</p>
+    </div>
+    <div>
+      <p><span class="swatch" style="background:var(--violet)"></span><b class="violet">∂&nbsp;track&nbsp;/&nbsp;∂&nbsp;progenitor</b> — the
+      stream's initial conditions. Nudge the progenitor's launch velocity and every star is re-thrown from the
+      shifted orbit; the whole track swings. The fast eager path carries this through galpy's compiled
+      <span class="mono">C</span> integrator as a state-transition matrix (C-STM).</p>
+    </div>
+  </div>
+
+  <p class="measure" style="margin-top:6px">How much does letting the stars flow actually matter? Compared to
+  the tempting shortcut of holding them fixed, the generative response is <b>larger by</b>:</p>
+  <div class="ratio">
+    <div class="rc"><div class="rn coral">20&times;</div><div class="rl">halo mass&nbsp;(amp)</div></div>
+    <div class="rc"><div class="rn cyan">6&times;</div><div class="rl">flattening&nbsp;(q)</div></div>
+    <div class="rc"><div class="rn violet">70&times;</div><div class="rl">radial kick&nbsp;(v<sub>R</sub>)</div></div>
+    <div class="rc"><div class="rn green">3.6&times;</div><div class="rl">vertical kick&nbsp;(v<sub>z</sub>)</div></div>
+  </div>
+  <p style="color:var(--faint);font-size:13.5px;margin:8px 0 0">Freezing the stars underestimates the physical
+  displacement of the track by these factors — for a radial kick to the progenitor, by <b>70×</b>. The
+  frozen-star gradient isn't a small approximation; it is the wrong quantity.</p>
+
+  <figure>
+    <img class="fig-full" alt="Generative sensitivity: perturbed stream tracks when each parameter is turned" src="data:image/png;base64,FIG_SENS">
+    <figcaption>Turn one knob and re-sample the whole stream. Each colored track is the <b>physical response</b>
+    — all 600 stars re-integrated in the perturbed Galaxy (common random numbers isolate the deformation from
+    sampling noise). <b>Left:</b> a heavier <span class="coral">halo mass</span> pulls the track down and inward;
+    a rounder <span class="cyan">halo</span> lifts it. <b>Right:</b> a <span class="violet">radial</span> and a
+    <span class="green">vertical</span> kick to the progenitor's launch velocity. Whiskers connect each baseline
+    point to its deformed counterpart.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="kicker">The payoff</div>
+  <h2>Fit the dark-matter halo to a stream — by descending its gradient.</h2>
+  <p class="measure">Inferring the Milky Way's potential from a stream usually means an expensive sample over a
+  forward model you can only evaluate, never differentiate. With the <em>generative</em>
+  <span class="coral">∂&nbsp;track&nbsp;/&nbsp;∂&nbsp;θ</span> in hand — every star flowing — the same problem
+  becomes ordinary optimization: start from a wrong halo mass and let the gradient walk it home.</p>
+
+  <figure>
+    <img class="fig-full" alt="Gradient-descent stream fit: recovering the halo mass; loss and parameter converge" src="data:image/png;base64,FIG_FIT">
+    <figcaption>Starting from a halo <b>8% heavier</b> than the truth, gradient descent on the track's
+    mean-squared error walks the halo mass home to <b>amp&nbsp;=&nbsp;1.000</b> — the fit error falling from
+    <b>7.8</b> to below <b>10<sup>&minus;4</sup></b> in 60 steps. Each step re-generates the entire stream —
+    every star re-integrated — and back-propagates through it; no sampler, no surrogate.
+    <span style="color:var(--faint)">(A dynamically young stream: the generative loss of a fully phase-mixed
+    stream is chaotically rugged — a real feature of the dynamics, not the autodiff.)</span></figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="kicker">Under the hood</div>
+  <h2>How the gradient stays physical through a pipeline full of non-differentiable steps.</h2>
+  <p class="measure">A stream track is assembled from operations that look hostile to autodiff — a closest-point
+  assignment, a GCV-smoothed spline, a nearest-positive-definite covariance projection. The trick is to freeze
+  the <b>discrete structure</b> — <em>which</em> star maps where, the smoothing bandwidth, the eigenvectors — as a
+  stop-gradient hyperparameter, while the star <em>positions</em> flow through as differentiable data. Freeze the
+  bookkeeping, not the stars: the assignment is a property of the observed stream, but every star's phase-space
+  coordinate is a live function of the halo.</p>
+
+  <ul class="clean" style="margin:18px 0 10px">
+    <li><b>Every orbit on the backend</b> — the progenitor and all 600 spray stars integrated by the in-backend ODE (<span class="mono">diffrax</span>/<span class="mono">torchdiffeq</span>), jittable and GPU-resident; the eager C-STM (<span class="mono">dop853_c</span>) preserved for fast initial-condition gradients.</li>
+    <li><b>Reparameterized spray</b> — the stripping times and kick velocities are drawn from a backend RNG key, so the noise is common across a gradient step; autodiff and finite difference see the identical realization.</li>
+    <li><b>Frozen-operator reconstruction</b> — closest-point assignment, GCV bandwidth, and PSD eigenvectors detached; the offset&nbsp;→&nbsp;bin&nbsp;→&nbsp;smooth&nbsp;→&nbsp;covariance map stays a differentiable linear operator in the flowing data.</li>
+  </ul>
+
+  <pre><span class="c"># the WHOLE stream is generated and tracked inside one differentiable call</span>
+key = galpy.backend.random.<span class="f">key</span>(0)            <span class="c"># reparameterized spray noise</span>
+<span class="k">def</span> <span class="f">stream_track</span>(amp):
+    pot  = LogarithmicHaloPotential(amp=amp, q=0.9)
+    spdf = fardal15spraydf(mass, progenitor=prog, pot=pot)
+    <span class="k">return</span> spdf.<span class="f">streamTrack</span>(n=<span class="s">600</span>, key=key)   <span class="c"># samples INTERNALLY — xv(amp) flows</span>
+
+track = jax.<span class="f">jit</span>(stream_track)(amp)          <span class="c"># backend-θ → in-backend ODE, on GPU</span>
+g     = jax.<span class="f">grad</span>(loss)(amp)                <span class="c"># every one of 600 stars re-integrated</span></pre>
+
+  <div class="stats">
+    <div class="stat"><div class="n small">0.0</div><div class="l">numpy path <b>byte-identical</b> — max&nbsp;|Δ| across sample, track &amp; covariance</div></div>
+    <div class="stat"><div class="n">2–7e&#8209;7</div><div class="l">generative ∂/∂θ vs finite difference, h-converged relative error</div></div>
+    <div class="stat"><div class="n small">jit + GPU</div><div class="l"><span class="mono">sample()</span> and <span class="mono">streamTrack()</span> compile and run under <span class="mono">jax.jit</span></div></div>
+    <div class="stat"><div class="n small">jax = torch</div><div class="l">two autodiff engines, one differentiable stream</div></div>
+  </div>
+  <p style="color:var(--faint);font-size:14px;margin-top:14px">Every gradient here is checked against a
+  <em>h-converged</em> central finite difference — never merely asserted finite. Streams are sensitive probes:
+  a single step size is unreliable, so each check is confirmed across a spread of step sizes.</p>
+</section>
+
+<footer>
+  <div class="measure">
+    <span class="mono">galpy</span> · <span class="mono">feat/backends</span> — differentiable, backend-agnostic
+    galactic dynamics (numpy&nbsp;·&nbsp;jax&nbsp;·&nbsp;torch).
+    <span class="hr-dot">·</span> jittable generative streamspray + track: PR&nbsp;#1106
+    <span class="hr-dot">·</span> ∂track/∂progenitor: PR&nbsp;#1101/#1102.
+    <br><span style="color:var(--faint)">Figures regenerate deterministically from a fixed seed; the stream is a
+    fardal15 spray in a flattened logarithmic halo. The generative gradient re-integrates every star; freezing
+    the stars would under-predict the track's response by 3.6–70×.</span>
+  </div>
+</footer>
+
+</div>
