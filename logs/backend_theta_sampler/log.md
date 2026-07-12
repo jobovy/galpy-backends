@@ -222,3 +222,26 @@ history (15aa7c82 streamspraydf + 6b72f0fc tolerance), force-pushed to #1106;
 stale CI cancelled. Final local validation on 6b72f0fc: eager backend-theta
 parity+grad (jax+torch) + jit sample/streamTrack/tp_scale = 7 passed; forced-jax
 progpot repro OK; numpy + forced-jax streamspraydf 38 each. CI re-running.
+
+### codecov/patch: real uncovered lines found + covered (81548b6a)
+User was right that the tolerance flake had nothing to do with coverage. A local
+coverage pass (test_backend_streamspraydf/streamTrack + numpy streams + backend
+orbit, --source=galpy, cross-ref every added line vs missing_lines) found 12
+genuinely-uncovered added lines across the +650 diff -- my earlier forced-branch
+"merge" closed only ONE of them. All hit only under a FORCED backend (no coverage
+upload) or an untested branch. Fixed (81548b6a):
+- streamspraydf 160 (center+backend guard) -> pytest.raises test
+- streamspraydf 746-7 (jit/traced backend prog-IC -> in-backend ODE) -> keyed
+  grad-vs-FD test (REL ~1e-8)
+- streamspraydf 926,928 (_setup_rot None-defaults, sole caller always passes) ->
+  DEAD CODE removed
+- streamTrack 1356-7 / 2330-1 (tp_scale in _eval_cart + cov accessors) -> tp_scale
+  StreamTrack accessor test (R + cov)
+- Orbits 6886-7 (o.x/R at TRACED exact-grid times -> interpolator) -> jit accessor
+  test
+- integratePlanarOrbit 683 (_finalize_pot_args detaches a backend param for C) ->
+  direct backend-param-via-dop853_c test (byte-identical). This LOST its streamspray
+  coverage when backend-theta construction moved to the in-backend ODE (my forced-
+  context fix), so it needed a direct orbit test.
+Confirmed all 10 (post-removal) now COVERED locally; numpy streamspraydf 38 passed
+(byte-identical). Pushed; CI re-running (also retries the SIMBAD orbit flake).
