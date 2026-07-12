@@ -200,3 +200,16 @@ Two reds on the b26e5121 push:
    sit at the spline-reconstruction FP floor; py3.14 torch BLAS tips one over. Fix
    (054fd8a7): align tolerance to the sibling frozen-vs-production check (rtol=1e-4/
    atol=1e-6). Pushed 054fd8a7; CI re-running.
+
+### Correction: forced-context discriminator (not concreteness)
+My first fix used "concrete theta -> numpy" but that ALSO killed the GENUINE
+eager backend-theta case (test_streamtrack_backend_theta_parity: a normal-env
+`amp=xp.asarray(...)` is concrete too, and IS the #1106 d(track)/d(theta)
+deliverable -> must keep the backend path). Concrete can't distinguish forced
+from genuine. Correct discriminator: `get_namespace(numpy.zeros(1)) is not numpy`
+-- true ONLY under `use(backend, force=True)` (force overrides array_namespace;
+a normal env, even with a global default or a genuine backend param, leaves a
+numpy array resolving to numpy). Forced -> numpy/C; genuine (eager OR jit) ->
+in-backend ODE. Validated: eager backend-theta parity+grad 4 passed (jax+torch),
+forced-jax progpot repro OK, jit tests 3 passed, numpy byte-identical. Clean
+2-commit history (2dc9bdfc + 7d135eed), force-pushed; stale CI cancelled.
