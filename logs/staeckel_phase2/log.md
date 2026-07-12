@@ -36,3 +36,10 @@ Validated jax+torch: dOr/dR=-1.93268 (was 104.89); Hessian [[0.592,0.305],[0.305
 ## Follow-up
 c=True C-native freq/angle Jacobian: extend the C actionsJac (#1051) with the same
 implicit dumin/dtheta = -S_theta(umin)/S_u(umin) at the solved turning point.
+
+## MERGED 2026-07-03
+#1059 merged to feat/backends (squash cc63dd03). Phase-2 backend freq gradients +
+action Hessians via differentiable turning points landed. NaN-safety (isfinite
+mask + value-exact graft) + tolerance tightening (freq 1e-3->1e-5, Hessian
+1e-2->1e-4 + FD-independent symmetry <1e-10) all in. numpy byte-identical.
+Next AA-wave item: #131 (c=True C-native freq/angle Jacobian via implicit dumin/dtheta).

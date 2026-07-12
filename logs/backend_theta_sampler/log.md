@@ -180,3 +180,23 @@ Pushed b26e5121; CI queued. The old 66837a7f All-backend "failure" was a GitHub
 artifact-upload infra timeout (tests were green: 179 passed, 0 un-ledgered), not
 a real red. New jit tests run in build.yml's `test_backend*.py` jobs (REQUIRES_JAX
 → jax+diffrax installed); not in the forced all-backend shard.
+
+## CI reds on the folded #1106, root-caused + fixed (2026-07-12)
+Two reds on the b26e5121 push:
+1. **forced-jax `test_integrate_with_prog`** (un-ledgered FAIL). Root cause: under
+   `use(jax, force=True)` the all-backend suite constructs `LogarithmicHaloPotential(
+   normalize=1.0)` INSIDE the forced context, so its `_amp` is coerced to a jax array.
+   `_integrate_progenitor`'s force probe then reads that jax `_amp` and mis-detects a
+   genuine backend theta -> picks `method="diffrax"` -> the `progpot` sample orbit
+   integrates via the jax ODE, which crashes in the UN-migrated `MovingObjectPotential`
+   (`_cylR` uses `numpy.cos` on a diffrax tracer). Base used the C path here. Fix
+   (95290ac3): a genuine differentiable theta is always TRACED (jit/grad); a CONCRETE
+   probe force = merely-forced context -> fall back to numpy/C (byte-identical). jit
+   sampling (traced) still -> diffrax; concrete backend IC still -> dop853_c C-STM.
+   Verified: forced-jax streamspraydf 38 passed, numpy 38 passed, 3 jit tests pass.
+2. **py3.14 `test_fit_track_endtoend_torch_prog_grad`** (1/2400 elem @ 2.3e-5 vs
+   rtol=1e-5). NOT a regression: base streamTrack.py gives the identical margin
+   (max_rel 1.606e-5, my eager path byte-identical). A few near-zero grad components
+   sit at the spline-reconstruction FP floor; py3.14 torch BLAS tips one over. Fix
+   (054fd8a7): align tolerance to the sibling frozen-vs-production check (rtol=1e-4/
+   atol=1e-6). Pushed 054fd8a7; CI re-running.

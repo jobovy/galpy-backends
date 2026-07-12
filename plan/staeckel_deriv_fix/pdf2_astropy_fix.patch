@@ -1,0 +1,136 @@
+diff --git a/galpy/df/sphericaldf.py b/galpy/df/sphericaldf.py
+index 64c7ea26..a3412ef6 100644
+--- a/galpy/df/sphericaldf.py
++++ b/galpy/df/sphericaldf.py
+@@ -64,6 +64,16 @@ def _as_numpy(x):
+     return numpy.asarray(x)
+ 
+ 
++def _exit_cast(value, *inputs):
++    """Exit-cast a public physical/consumption output back to numpy unless the
++    caller passed a backend array (autodiff keeps backend arrays). Under a forced
++    backend a scalar/numpy call still computes on the backend, but astropy can't
++    hold a backend-array Quantity (#1052), so consumption outputs stay numpy."""
++    if any(is_backend_array(a) for a in inputs):
++        return value
++    return _as_numpy(value)
++
++
+ def _resolve_xp(*args):
+     """Resolve the namespace from the backend-array args, else fall through to
+     the context/forced default (list/None/scalar inputs stay resolver-safe)."""
+@@ -257,6 +267,7 @@ class sphericaldf(df):
+             E = conversion.parse_energy(E, vo=self._vo)
+             L = conversion.parse_angmom(L, ro=self._ro, vo=self._vo)
+             Lz = conversion.parse_angmom(Lz, ro=self._vo, vo=self._vo)
++            _inp = (E, L, Lz)
+             xp = _resolve_xp(E, L, Lz)
+             if xp is numpy:
+                 E = numpy.atleast_1d(E)
+@@ -275,6 +286,7 @@ class sphericaldf(df):
+             vT = conversion.parse_velocity(vT, vo=self._vo)
+             z = conversion.parse_length(z, ro=self._ro)
+             vz = conversion.parse_velocity(vz, vo=self._vo)
++            _inp = (R, vR, vT, z, vz)
+             xp = _resolve_xp(R, vR, vT, z, vz)
+             if xp is numpy:
+                 vtotSq = vR**2.0 + vT**2.0 + vz**2.0
+@@ -294,16 +306,19 @@ class sphericaldf(df):
+                 r = xp.sqrt(R**2.0 + z**2.0)
+                 vrad = (R * vR + z * vz) / r
+                 L = xp.atleast_1d(xp.sqrt(vtotSq - vrad**2.0) * r)
+-        return self._call_internal(E, L, Lz).reshape(
+-            args[0].shape
+-            if len(args) == 1 and hasattr(args[0], "shape")
+-            else (
+-                args[0][0].shape
+-                if len(args) == 1
+-                and hasattr(args[0], "__len__")
+-                and hasattr(args[0][0], "shape")
+-                else (args[0].shape if hasattr(args[0], "shape") else ())
+-            )
++        return _exit_cast(
++            self._call_internal(E, L, Lz).reshape(
++                args[0].shape
++                if len(args) == 1 and hasattr(args[0], "shape")
++                else (
++                    args[0][0].shape
++                    if len(args) == 1
++                    and hasattr(args[0], "__len__")
++                    and hasattr(args[0][0], "shape")
++                    else (args[0].shape if hasattr(args[0], "shape") else ())
++                )
++            ),
++            *_inp,
+         )
+ 
+     @physical_conversion("massenergydensity", pop=True)
+@@ -332,8 +347,11 @@ class sphericaldf(df):
+             return self._dMdE(numpy.atleast_1d(Ei)).reshape(
+                 E.shape if isinstance(E, numpy.ndarray) else ()
+             )
+-        return self._dMdE(xp.atleast_1d(xp.asarray(Ei))).reshape(
+-            Ei.shape if hasattr(Ei, "shape") else ()
++        return _exit_cast(
++            self._dMdE(xp.atleast_1d(xp.asarray(Ei))).reshape(
++                Ei.shape if hasattr(Ei, "shape") else ()
++            ),
++            Ei,
+         )
+ 
+     def vmomentdensity(self, r, n, m, **kwargs):
+@@ -370,15 +388,16 @@ class sphericaldf(df):
+         vo = conversion.parse_velocity_kms(vo)
+         if use_physical and vo is not None and ro is not None:
+             fac = conversion.mass_in_msol(vo, ro) * vo ** (n + m) / ro**3
+-            if _optional_deps._APY_UNITS:
+-                u = units.Msun / units.kpc**3 * (units.km / units.s) ** (n + m)
+             out = self._vmomentdensity(r, n, m)
+             if _optional_deps._APY_UNITS:
+-                return units.Quantity(out * fac, unit=u)
++                u = units.Msun / units.kpc**3 * (units.km / units.s) ** (n + m)
++                # a Quantity is a consumption boundary: astropy can't hold a
++                # backend array (#1052), so cast unconditionally
++                return units.Quantity(_as_numpy(out) * fac, unit=u)
+             else:
+-                return out * fac
++                return _exit_cast(out, r) * fac
+         else:
+-            return self._vmomentdensity(r, n, m)
++            return _exit_cast(self._vmomentdensity(r, n, m), r)
+ 
+     def _vmomentdensity(self, r, n, m):
+         xp = _resolve_xp(r)
+@@ -456,7 +475,9 @@ class sphericaldf(df):
+         """
+         r = conversion.parse_length(r, ro=self._ro)
+         xp = _resolve_xp(r)  # numpy path: xp.sqrt == numpy.sqrt (byte-identical)
+-        return xp.sqrt(self._vmomentdensity(r, 2, 0) / self._vmomentdensity(r, 0, 0))
++        return _exit_cast(
++            xp.sqrt(self._vmomentdensity(r, 2, 0) / self._vmomentdensity(r, 0, 0)), r
++        )
+ 
+     @physical_conversion("velocity", pop=True)
+     def sigmat(self, r):
+@@ -480,7 +501,9 @@ class sphericaldf(df):
+         """
+         r = conversion.parse_length(r, ro=self._ro)
+         xp = _resolve_xp(r)  # numpy path: xp.sqrt == numpy.sqrt (byte-identical)
+-        return xp.sqrt(self._vmomentdensity(r, 0, 2) / self._vmomentdensity(r, 0, 0))
++        return _exit_cast(
++            xp.sqrt(self._vmomentdensity(r, 0, 2) / self._vmomentdensity(r, 0, 0)), r
++        )
+ 
+     def beta(self, r):
+         """
+@@ -502,7 +525,9 @@ class sphericaldf(df):
+ 
+         """
+         r = conversion.parse_length(r, ro=self._ro)
+-        return 1.0 - self._vmomentdensity(r, 0, 2) / 2.0 / self._vmomentdensity(r, 2, 0)
++        return _exit_cast(
++            1.0 - self._vmomentdensity(r, 0, 2) / 2.0 / self._vmomentdensity(r, 2, 0), r
++        )
+ 
+     ############################### SAMPLING THE DF################################
+     def sample(self, R=None, z=None, phi=None, n=1, return_orbit=True, rmin=0.0):
