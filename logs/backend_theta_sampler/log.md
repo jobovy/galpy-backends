@@ -292,3 +292,29 @@ code is correct:
   frozen stated qualitatively; fit kept (1.08->1.000). LESSON: h-CONVERGE grad-vs-FD and
   never diagnose "chaos" from a single/intermediate-h finite difference on a pipeline with
   a discrete argmin.
+
+## Roadmap: differentiable progenitor mass M(t) -- diagnosed + prototyped (2026-07-12)
+User clarified "non-uniform mass loss" = progenitor mass M(t) (via rtide -> spray scale),
+DISTINCT from stripping_pdf (stripping-TIME distribution, a separate numpy-only gap).
+Investigated + prototyped (WIP patch: logs/backend_theta_sampler/differentiable_mass_WIP.patch):
+- ROOT CAUSE: differentiating w.r.t. the progenitor mass traces the PARTICLES (mass ->
+  _calc_rtide -> spray) but NOT the mass-independent progenitor CURVE. Several paths
+  assumed only the curve could be traced.
+- 3 fixes make the mass gradient FLOW in eager grad mode (validated, AD=5.6e8 nonzero,
+  no tracer error):
+  1. streamspraydf `_integrate_progenitor`: detect a backend mass (probe
+     `_progenitor_mass_fn(0.0)`), route it to backend sampling (in-backend ODE for the
+     traced sample orbits; the curve stays concrete/numpy). Same forced-context guard as
+     theta. [THE key fix -- else `_bsamp=None` -> sample orbits use dop853_c -> C can't
+     integrate mass-traced ICs.]
+  2. streamTrack `_fit_track_from_particles` dispatch: route to the jittable path when
+     EITHER the curve OR the particles is traced (mass traces only the particles).
+  3. streamTrack `_fit_track_backend_jit`: resolve the namespace from whichever input is
+     backend + coerce the (numpy) curve onto it.
+- REMAINING for the PR: a jit-specific TracerBoolConversionError in the RNG path (eager
+  grad works, jit does not -- a bool() on a random_bits(150) draw); grad-vs-FD correctness
+  (h-converged, expect the amp-like assignment-noise floor); a TIME-VARYING M(t) test
+  (fit the mass-loss rate); numpy byte-identity; per-module test. Base off feat/backends
+  after #1106 merges.
+Also in the same roadmap bucket: stripping_pdf backend-native inverse-CDF (differentiable
+non-uniform stripping TIMES); center= on the backend (drop the NotImplementedError guard).
