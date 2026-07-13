@@ -266,3 +266,29 @@ flows) via the now-working jittable streamspray:
   data; freeze the STRUCTURE not the particles; generative code `streamTrack(n=600, key=key)`
   samples internally). Hero fig_track (TD=126) kept. Deployed in place (same URL); scripts
   in logs/backend_theta_sampler/trackg_artifact/.
+
+## CORRECTION: the "3.6-70x" and "chaos" claims were WRONG (2026-07-12, user-flagged)
+User pushed back on the "chaotic mature stream" claim + asked to check the figures vs
+just running streamTrack twice. Investigation found MY analysis was flawed; the galpy
+code is correct:
+- **The gradient is EXACT.** Production streamTrack grad-vs-FD: AD matches FD to ~1e-5
+  at a CONVERGED step size (compute_adfd.py: AD=5078.6; FD->AD for h<=1.6e-6). My earlier
+  "AD-vs-FD 78% -> chaos" measured FD at h~1e-4 -- exactly the discrete-assignment-jump
+  step size where FD is spuriously wild (off 10x, even WRONG SIGN, -49995 vs +5079). The
+  GRADIENT was never wrong; the finite difference is step-size-treacherous.
+- **"3.6-70x generative vs frozen-xv" NOT robust.** Came from freezing the closest-point
+  assignment (which zeroed the frozen-xv baseline). Run streamTrack twice -> ~1x (the
+  discrete assignment absorbs it). Pulled from the artifact.
+- **Assignment roughness real but minor + velocity-independent.** Hard cKDTree argmin
+  quantizes ta to the curve grid (440/600 unchanged at h=1e-4, then jumps); 6D (velocity,
+  production default) ~= 3D (467 vs 440) -- velocities don't fix it. A soft/sub-grid
+  assignment would smooth ta (test_assign.py: constant slope) -> a possible streamTrack
+  improvement (make the reconstruction fully differentiable), but it does NOT affect the
+  autodiff gradient (which freezes the assignment) -- deferred as future work.
+- **Artifact corrected + redeployed (same URL 8449556c):** dropped 3.6-70x + chaos;
+  sensitivity now from ACTUAL streamTrack runs (gen_sens_full.py); NEW centerpiece figure
+  fig_adfd (compute_adfd/plot_adfd) = autodiff vs finite-difference-of-streamTrack across
+  step sizes (the exact-gradient / FD-is-a-trap story the user asked for); generative-vs-
+  frozen stated qualitatively; fit kept (1.08->1.000). LESSON: h-CONVERGE grad-vs-FD and
+  never diagnose "chaos" from a single/intermediate-h finite difference on a pipeline with
+  a discrete argmin.
