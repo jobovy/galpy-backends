@@ -30,8 +30,11 @@ DELTA = float(
 )
 _aAS = actionAngleStaeckel(pot=MWPotential2014, delta=DELTA, c=False)
 
+# output box sized to contain the FULL high-action tori (J_R,J_z up to ~0.2 at
+# L_z=1 reach R~1.9, |vR|~0.6, |z|~0.8, |vz|~0.6); an undersized box clips them
+# and biases the recovered action low.
 CEN = jnp.array([1.0, 0.0, 0.0, 0.0])
-SCL = jnp.array([0.45, 0.32, 0.45, 0.32])
+SCL = jnp.array([0.95, 0.72, 0.92, 0.72])
 J_LO, J_HI = 1e-3, 0.2
 
 
@@ -70,10 +73,10 @@ def gen_dataset(n, seed=0):
         [numpy.full(n // 3, s) for s in (1.0, 0.55, 0.28)]
     )[:n]
     sc = numpy.concatenate([sc, numpy.ones(n - sc.shape[0])])
-    R = jnp.asarray(1.0 + sc * 0.45 * (2 * rng.rand(n) - 1))
-    vR = jnp.asarray(sc * 0.32 * (2 * rng.rand(n) - 1))
-    z = jnp.asarray(sc * 0.45 * (2 * rng.rand(n) - 1))
-    vz = jnp.asarray(sc * 0.32 * (2 * rng.rand(n) - 1))
+    R = jnp.asarray(1.0 + sc * 0.9 * (2 * rng.rand(n) - 1))
+    vR = jnp.asarray(sc * 0.7 * (2 * rng.rand(n) - 1))
+    z = jnp.asarray(sc * 0.9 * (2 * rng.rand(n) - 1))
+    vz = jnp.asarray(sc * 0.7 * (2 * rng.rand(n) - 1))
     JR, Jz, thR, thz = jax.jit(forward)(R, vR, z, vz)
     JR = numpy.asarray(JR); Jz = numpy.asarray(Jz)
     m = (JR > J_LO) & (JR < J_HI) & (Jz > J_LO) & (Jz < J_HI)
@@ -83,9 +86,10 @@ def gen_dataset(n, seed=0):
 
 def loss_fn(p, model, R, vR, z, vz, JR, Jz, thR, thz, lam):
     pred = model.apply(p, feats(JR, Jz, thR, thz))
-    # action-weight ~1/(JR+Jz) so small (near-circular / near-planar) orbits are
-    # fit as precisely as the big ones (unweighted MSE favours the big orbits).
-    w = 1.0 / (JR + Jz + 0.02)
+    # action-weight ~1/sqrt(JR+Jz): up-weights small (near-circular / near-planar)
+    # orbits without crushing the high-action end (a full 1/(JR+Jz) gives the
+    # small tori ~14x the weight and leaves the big tori under-fit / biased).
+    w = 1.0 / jnp.sqrt(JR + Jz + 0.02)
     sup = jnp.sum(w * jnp.sum((pred - jnp.stack([R, vR, z, vz], -1)) ** 2, -1)) / jnp.sum(w)
     JRh, Jzh, thRh, thzh = forward(pred[:, 0], pred[:, 1], pred[:, 2], pred[:, 3])
     # per-sample cycle residual, masked where the Staeckel forward is non-finite
@@ -93,12 +97,17 @@ def loss_fn(p, model, R, vR, z, vz, JR, Jz, thR, thz, lam):
     # loss finite and, with optax.zero_nans as a backstop, the update stable.
     res = ((JRh - JR) ** 2 + (Jzh - Jz) ** 2
            + (1 - jnp.cos(thRh - thR)) + (1 - jnp.cos(thzh - thz)))
-    ok = jnp.isfinite(res)
+    # Mask samples where the net briefly proposed an unbound/degenerate orbit:
+    # the Staeckel forward returns a huge finite "9999.99" sentinel (survives an
+    # isfinite check) or a NaN angle -- either would blow up / diverge the cycle
+    # gradient. The larger output box makes this reachable (the old small box
+    # confined G to bound orbits). Real actions are < 0.2 here.
+    ok = jnp.isfinite(res) & (JRh < 1.0) & (Jzh < 1.0)
     cyc = jnp.sum(jnp.where(ok, w * res, 0.0)) / (jnp.sum(jnp.where(ok, w, 0.0)) + 1e-6)
     return sup + lam * cyc, (sup, cyc)
 
 
-def train(n_steps=2600, batch=512, lr=2e-3, warmup=400, seed=0):
+def train(n_steps=3200, batch=512, lr=2e-3, warmup=400, seed=0):
     R, vR, z, vz, JR, Jz, thR, thz = gen_dataset(40000, seed=seed)
     nd = int(R.shape[0])
     print(f"dataset {nd}, JR<={float(JR.max()):.3f} Jz<={float(Jz.max()):.3f}")

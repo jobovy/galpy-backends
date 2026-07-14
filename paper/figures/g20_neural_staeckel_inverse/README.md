@@ -56,3 +56,15 @@ CUDA_VISIBLE_DEVICES=0 PYTHONUNBUFFERED=1 \
   much slower on this 2D-quadrature forward, so the headline run is JAX.
 - The full 6D problem (free `L_z`, angle `theta_phi`) is a straightforward
   extension of this fixed-`L_z` meridional demo.
+
+## Convergence note (box sizing)
+
+The dominant source of a high-action *bias* (recovered J below the diagonal at
+large J_R/J_z) was **output-box clipping**: high-action tori at L_z=1 reach
+R~1.9, |vR|~0.6, |z|~0.8, |vz|~0.6, so a box that only permits R<=1.45 /
+|.|<=0.32-0.45 saturates the net at the wall and the reconstructed orbit is
+artificially confined -> its actions come out low. Sizing the output box (and
+the data-sampling box) to the true high-J extent, softening the action weight to
+1/sqrt(J_R+J_z), and masking the Staeckel "9999.99" unbound sentinel (now
+reachable with the larger box) brought the round-trip RMS from 1.3e-2 to 7.3e-3
+with no high-J bias.
