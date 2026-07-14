@@ -1,0 +1,57 @@
+| AnyAxisymmetricRazorThinDiskPotential | **NUMPY** (backend=False) | **CRASH: TracerArrayConversionError: The numpy** | **CRASH: TypeError: '<' not supported between ** | CRASH |
+| NonInertialFrameForce | **NUMPY** (backend=False) | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | NUMPY-FALLTHROUGH |
+| NullPotential | **NUMPY** (backend=False) | backend-array, finite | **NUMPY** (backend=False) | NUMPY-FALLTHROUGH |
+| interpRZPotential | **NUMPY** (backend=False) | **CRASH: TracerArrayConversionError: The numpy** | **NUMPY** (backend=False) | NUMPY-FALLTHROUGH |
+| AnySphericalPotential | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| ChandrasekharDynamicalFrictionForce | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| FDMDynamicalFrictionForce | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| FerrersPotential | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| KuzminKutuzovStaeckelPotential | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| MovingObjectPotential | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| RingPotential | backend-array, finite | **CRASH: TracerArrayConversionError: The numpy** | backend-array, finite | EAGER-ONLY |
+| InterpSnapshotRZPotential | - | - | - | OUT-OF-SCOPE |
+| SnapshotRZPotential | - | - | - | OUT-OF-SCOPE |
+| AdiabaticContractionWrapperPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| BurkertPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| CompositePotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| DehnenBarPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| DehnenCoreSphericalPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| DehnenSphericalPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| DiskMultipoleExpansionPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| DiskSCFPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| DoubleExponentialDiskPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| EinastoPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| ExpTruncNFWPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| FlattenedPowerPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| HernquistPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| HomogeneousSpherePotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| IsochronePotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| JaffePotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| KeplerPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| KingPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| KuzminDiskPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| KuzminLikeWrapperPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| LogarithmicHaloPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| MN3ExponentialDiskPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| MiyamotoNagaiPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| MultipoleExpansionPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| NFWPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| PerfectEllipsoidPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| PlummerPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| PowerSphericalPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| PowerSphericalPotentialwCutoff | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| PowerTriaxialPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| PseudoIsothermalPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| RazorThinExponentialDiskPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| RotateAndTiltWrapperPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| SCFPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| SoftenedNeedleBarPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| SphericalShellPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| SpiralArmsPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| TriaxialGaussianPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| TriaxialHernquistPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| TriaxialJaffePotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| TriaxialNFWPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| TwoPowerSphericalPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| TwoPowerTriaxialPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |
+| interpSphericalPotential | backend-array, finite | backend-array, finite | backend-array, finite | FULLY-BACKEND |

@@ -1,0 +1,515 @@
+{
+  "AdiabaticContractionWrapperPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "AnyAxisymmetricRazorThinDiskPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=False finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "CRASH TypeError: '<' not supported between instances of 'numpy.ndarray' and 'Tensor'",
+    "classification": "CRASH",
+    "notes": ""
+  },
+  "AnySphericalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "BurkertPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "ChandrasekharDynamicalFrictionForce": {
+    "instantiated": true,
+    "veldep": true,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "CompositePotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "DehnenBarPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "DehnenCoreSphericalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "DehnenSphericalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "DiskMultipoleExpansionPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "DiskSCFPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "DoubleExponentialDiskPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "EinastoPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "ExpTruncNFWPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "FDMDynamicalFrictionForce": {
+    "instantiated": true,
+    "veldep": true,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "FerrersPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "FlattenedPowerPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "HernquistPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "HomogeneousSpherePotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "InterpSnapshotRZPotential": {
+    "instantiated": false,
+    "veldep": false,
+    "jax_eager": "",
+    "jax_traced": "",
+    "torch": "",
+    "classification": "OUT-OF-SCOPE",
+    "notes": "RuntimeError: OUT-OF-SCOPE: needs pynbody snapshot"
+  },
+  "IsochronePotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "JaffePotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "KeplerPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "KingPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "KuzminDiskPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "KuzminKutuzovStaeckelPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "KuzminLikeWrapperPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "LogarithmicHaloPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "MN3ExponentialDiskPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "MiyamotoNagaiPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "MovingObjectPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "MultipoleExpansionPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "NFWPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "NonInertialFrameForce": {
+    "instantiated": true,
+    "veldep": true,
+    "jax_eager": "backend=False finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "NUMPY-FALLTHROUGH",
+    "notes": ""
+  },
+  "NullPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=False finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=False finite=True",
+    "classification": "NUMPY-FALLTHROUGH",
+    "notes": ""
+  },
+  "PerfectEllipsoidPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "PlummerPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "PowerSphericalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "PowerSphericalPotentialwCutoff": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "PowerTriaxialPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "PseudoIsothermalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "RazorThinExponentialDiskPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "RingPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=True finite=True",
+    "classification": "EAGER-ONLY",
+    "notes": ""
+  },
+  "RotateAndTiltWrapperPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "SCFPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "SnapshotRZPotential": {
+    "instantiated": false,
+    "veldep": false,
+    "jax_eager": "",
+    "jax_traced": "",
+    "torch": "",
+    "classification": "OUT-OF-SCOPE",
+    "notes": "RuntimeError: OUT-OF-SCOPE: needs pynbody snapshot"
+  },
+  "SoftenedNeedleBarPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "SphericalShellPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "SpiralArmsPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "TriaxialGaussianPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "TriaxialHernquistPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "TriaxialJaffePotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "TriaxialNFWPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "TwoPowerSphericalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "TwoPowerTriaxialPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  },
+  "interpRZPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=False finite=True",
+    "jax_traced": "CRASH TracerArrayConversionError: The numpy.ndarray conversion method __array__() was called on traced array with shape float64[]",
+    "torch": "backend=False finite=True",
+    "classification": "NUMPY-FALLTHROUGH",
+    "notes": ""
+  },
+  "interpSphericalPotential": {
+    "instantiated": true,
+    "veldep": false,
+    "jax_eager": "backend=True finite=True",
+    "jax_traced": "backend=True finite=True",
+    "torch": "backend=True finite=True",
+    "classification": "FULLY-BACKEND",
+    "notes": ""
+  }
+}
