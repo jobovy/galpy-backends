@@ -2030,3 +2030,43 @@ unified formula on numpy -- `concatenate`-roll vs `numpy.roll`, and
 Fallout measurement (whole `-k linear_angles` group, both backends) in flight --
 this is the check that caught the previous attempt, so it runs before anything
 is claimed.
+
+### `dePeriod` de-duplication done and committed (not yet pushed -- #1210 still in flight)
+
+Branch `backend-jit/deperiod-dedup` @ `e41fe536`, off post-#1209 develop.
+
+One `dePeriod` now, resolving **and coercing**; `_backend_dePeriod` deleted, its
+4 call sites pointed at the public function. Consumers cast at their boundary:
+5 sites in `test_actionAngle.py` (2 tests plus the shared
+`check_actionAngle_linear_angles` helper the other 8 use) and 4 in
+`streamdf.plotTrack(..., ang=)`, where the result feeds `.T[::-1]` and torch has
+no negative-step slicing.
+
+Measured on the **whole** `-k linear_angles` group, which is the check that
+caught the first attempt:
+
+| | torch | jax | numpy |
+|---|---|---|---|
+| before | **10 failures** / 6 xfail | 0 failures | -- |
+| after | **0 failures** / 6 xfail | 0 failures / 1 xfail | 16 passed |
+
+Byte-identity, measured not assumed: 200 randomised trials, **408 wraps actually
+triggered**, `max|old - new| = 0.0`, bitwise equal.
+
+Two things worth recording:
+
+**The test's own guard caught a weakness in my test data.** I asserted the wrap
+branch had to fire more than 10 times; it fired 9. Reason: `dePeriod` detects a
+wrap as `diff < -6.0`, but a wrap only drops the angle by `2pi - step`, so with
+steps up to 0.9 rad most wraps are *below* the threshold and never register.
+Tightened the steps so every wrap fires. A weaker assertion ("some wraps") would
+have passed while testing almost nothing.
+
+**Attribution checked before claiming a flip.** The `jax` ledger entry for
+`test_actionAngleVertical_linear_angles` XPASSes, so it is pruned -- but I ran it
+on the *untouched* library first and it already XPASSed there. That is #1209's
+doing, not this PR's, and the commit message says so. The torch entry for the
+same test still fails and stays.
+
+**#1210** meanwhile: 87 pass / 65 pending / codecov-project only. codecov climbing
+36.96% -> 70.05% -> 74.79% as uploads land; `codecov/patch` green throughout.
