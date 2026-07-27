@@ -1945,3 +1945,34 @@ so `jit=true` dispatch cannot be green. Inheritance is the gate on traced CI.
 `xfail(strict=False)`, so it is strictly widening -- it cannot manufacture a
 false green. Verification run (whole `test_actionAngle.py` under `--backend jax
 --jit`) in flight.
+
+**PR #1210 opened** (`backend-jit/ledger-inherit-eager` -> `feat/backends-develop`).
+
+While writing it, two things changed the shape of the change:
+
+1. **The rule belongs in the parser, not in `_load_ledger`.** All three lists
+   (`backend_xfail.txt`, `backend_slow_skip.txt`, `backend_skip.txt`) go through
+   one `_load_backend_nodeids`, and "-jit inherits eager" is a property of the
+   backend *name*, not of which list is being read. Putting it in the shared
+   parser instead of one caller avoids three copies of the same rule.
+2. **The slow-skip half matters more than the ledger half.** Measured:
+
+   | list | jax | jax-jit before | jax-jit after |
+   |---|---|---|---|
+   | xfail-ledger | 52 | 28 | **80** |
+   | slow-skip | 215 | **0** | **215** |
+   | permanent-skip | 6 | **0** | **6** |
+
+   A traced dispatch was going to attempt all 215 pathologically-slow tests
+   *and* the 6 SIMBAD-network ones. That, not the ledger, is what would have
+   made `jit=true` unrunnable rather than merely red.
+
+Also closed a regen footgun: regen xfails nothing, so a traced regen reports the
+eager failures too and would have written the entire eager list back out as
+duplicate `-jit` entries. `_regen_entries` subtracts what the eager list already
+covers (base entries covering their parametrizations included).
+
+Added `tests/test_backend_ledger.py` (5 tests). Without it the rule is reachable
+only from a traced dispatch, which does not run on every push -- it would have
+landed unexercised. `galpy/` is untouched, so numpy is byte-identical by
+construction.
