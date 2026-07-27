@@ -1976,3 +1976,57 @@ Added `tests/test_backend_ledger.py` (5 tests). Without it the rule is reachable
 only from a traced dispatch, which does not run on every push -- it would have
 landed unexercised. `galpy/` is untouched, so numpy is byte-identical by
 construction.
+
+### #1210 verification: measured, then derived exactly
+
+Traced `test_actionAngle.py` under `--backend jax --jit`, with inheritance on:
+
+| | |
+|---|---|
+| tests | 207 |
+| **failures / errors** | **0 / 0** |
+| xfail (`pytest.xfail`) | 29 |
+| skip (`pytest.skip`) | 3 |
+| wall | 920 s |
+
+I started a baseline run at the parent commit to substantiate the before-number,
+then realised it was unnecessary -- and that the baseline was going to take an
+hour partly *because* it lacked the change. The ledger answers it exactly:
+
+```
+RAW backend_xfail.txt, test_actionAngle.py:
+  jax     entries: 30
+  jax-jit entries:  0
+```
+
+So every one of the 29 xfails above is inherited; without inheritance all 30
+eager entries are unledgered under `jax-jit` and become failures -- which is
+exactly the 30 I measured before. Killed the baseline run rather than spend an
+hour re-deriving a number the ledger already fixes.
+
+(The baseline was also informative while it ran: 56 min of CPU versus 15 min for
+the inheritance-on run, because without the inherited slow-skips the traced run
+actually attempts the pathologically-slow tests.)
+
+**codecov/project** went 36.96% (-63.01%) -> 70.05% (-29.92%) as uploads landed,
+with 91 jobs still pending: partial upload, not a real shortfall.
+`codecov/patch` is green ("Coverage not affected") -- correct for a tests-only
+diff.
+
+### Next PR prepared: `dePeriod` de-duplication (`/var/tmp/dp`)
+
+One `dePeriod` now, coercing (not merely resolving) its input; `_backend_dePeriod`
+deleted and its 4 call sites pointed at the public function. Byte-identity of the
+unified formula on numpy -- `concatenate`-roll vs `numpy.roll`, and
+`xp.astype(w, dtype)` float cumsum vs `w.astype(int)` int cumsum:
+
+| check | result |
+|---|---|
+| randomised trials | 200 |
+| wraps actually triggered | 408 |
+| max abs diff | **0.0**, bitwise identical |
+| in-tree numpy `dePeriod` vs old formula | bitwise identical (9 wraps) |
+
+Fallout measurement (whole `-k linear_angles` group, both backends) in flight --
+this is the check that caught the previous attempt, so it runs before anything
+is claimed.
