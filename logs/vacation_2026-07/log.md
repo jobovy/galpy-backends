@@ -3145,3 +3145,39 @@ under `use("numpy", force=True)` so the bridge never sees a backend array).
 
 Not pinged to the phone: it does not block my progress, and it only affects the
 dispatch-only jit mode, which is not in the merge gate.
+
+### RETRACTION: the test_scf crash was my environment, not galpy
+
+I reported `test_scf --jit` aborting with SIGABRT and filed it as a
+ctypes-bridge/forced-backend leak. **That was wrong and I have retracted it.**
+
+On a clean worktree at develop head 3aeca4fd the same full file runs **exit 0,
+all pass**. The single test passes alone too.
+
+Cause: when I created /var/tmp/logstartt I **symlinked** the C extension from the
+main repo rather than building it. The main repo sits on feat/backends @ dbb09ffc
+-- a different branch, several PRs back -- so the worktree ran its own Python
+against a foreign libgalpy. md5 differs from the clean worktree's real .so.
+Mismatched Python/C ABI aborts, which is precisely what a SIGABRT with no Python
+traceback looks like.
+
+What misled me: I *did* assert `galpy.__file__` pointed at the worktree, which is
+the check I have written down. That check does not cover the C extension, which
+has separate provenance. Saved as memory `worktree-so-provenance`.
+
+Also worth noting what saved me from shipping the bad report: running the
+pre-existence check on a clean base. I nearly skipped it as a formality since the
+crash "obviously" predated my branch. It was the step that falsified the whole
+finding.
+
+**Corrected measurement:** test_scf traced is GREEN, joining test_coords,
+test_conversion, test_streamspraydf, test_qdf, test_evolveddiskdf and
+test_dynamfric as traced-clean.
+
+**What survives unaffected:**
+- #164 (surfdens infinite-limit NaN) re-verified on the clean worktree with a
+  matching .so: numpy 0.25, traced nan. Stands.
+- The test_jeans traced failure was independently reproduced in /var/tmp/fe and
+  /var/tmp/nogl, both with real .so files. Stands.
+- #1215's correctness is being validated by CI against a proper build, which is
+  the authoritative check regardless of my local worktree.
