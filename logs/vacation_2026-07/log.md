@@ -3236,3 +3236,17 @@ So the traced tail across everything measured is now **one df failure (#164) and
 six potential failures**, of which five are two root causes and one is a policy
 question for Jo. That is the honest state of "is galpy jittable" for the parts
 that have been measured -- test_orbit remains the big unmeasured block.
+
+## Wake 19 -- #1215 is runner-starved, not stalled
+
+#1215 sat at 103 pass / 48 pending across a whole wake, which looked like a
+stall. It is not: the all-backend run has **22 jobs queued**, 6 in progress, 16
+completed. GitHub-hosted runner capacity, nothing to fix. Worth writing down
+because "pass count unchanged for an hour" is not evidence of a hung job -- check
+queued-vs-in_progress before reacting.
+
+Started sampling the one big unmeasured block: **test_orbit under --jit**. I had
+written it off as ">90 min locally", but CI uses pytest-split, so the same
+mechanism gives a bounded sample: `--splits 10 --group N` for groups 1-5, i.e.
+50% of the file, each group ~1/10 of the runtime. Partial coverage of the largest
+remaining unknown beats no coverage.
