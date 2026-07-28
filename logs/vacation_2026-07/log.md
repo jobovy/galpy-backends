@@ -2282,3 +2282,32 @@ read `codecov/patch` stalling at 71.42% as a real shortfall, but
 where l decreases along the stream" covering the descending branches I touched.
 The 2 misses are unuploaded shards (sessions 14 of 28), not untested code. I
 should have checked for the test before theorising about the number.
+
+### #1211 MERGED (`be4f01eb`); #1212 (surfdens) opened
+
+All 154 checks green. `codecov/patch` finished at **100.00%** and project at
+99.96% (+0.00%), which settles the earlier worry: the 71.42% plateau was
+unuploaded shards, exactly as the existing descending-branch test implied.
+
+Audited the diff before merging — no `if`-on-array introduced, the `as_numpy`
+casts sit at consumer boundaries rather than inside the library, and the
+duplication removed is the whole point of the change.
+
+**PR #1212** opened: surfdens traceable end to end, `jax-jit` ledger **28 -> 15**.
+
+Running total for the traced ledger this vacation:
+
+| | jax-jit entries |
+|---|---|
+| 2026-07-25 baseline | 100 |
+| after #1206 | 49 |
+| after #1208 | 28 |
+| **after #1212 (open)** | **15** |
+
+Of the 15 left, only a handful are real work: `test_mass_spheroidal`
+(TracerArrayConversionError), 3 that plain-skip (McMillan17 / Cautun20 /
+DehnenBinney98, so their entries are inert), 5 mock-wrapper surfdens entries that
+also skip, and the rest are the two by-design families —
+AnyAxisymmetricRazorThinDisk (GL vs the z=0 Hadamard second derivative) and
+`test_ExpDisk_special` (asserts an exception that cannot fire under a trace,
+following the NaN decision).
