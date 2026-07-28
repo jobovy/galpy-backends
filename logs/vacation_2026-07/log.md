@@ -2853,3 +2853,55 @@ jax-jit ledger **19 -> 14**. Everything left is test_potential.py surfdens /
 RazorThin, which is the by-design tail.
 
 Held from PR: #1214 is still the active PR and the rule is one at a time.
+
+### #163 verification complete
+
+| suite | result |
+|---|---|
+| `test_backend_constantbetadf.py` (incl. new test) | 32 passed |
+| `test_sphericaldf.py`, numpy | 223 passed |
+| `test_sphericaldf.py --backend jax --jit` | **223 tests, 0 failures** |
+| `test_quantity.py -k sphericaldf` | 9 passed |
+
+The traced sphericaldf file is now **fully green**: 223 -> 8 -> 5 -> **0** failures
+across #1214 and #163. Worth stressing that the 0 is real and not masked -- the
+five entries were already removed from the ledger, so they ran as ordinary tests
+and passed on their own.
+
+Committed `41037190`, stacked on #1214, held from PR until #1214 lands.
+
+### What is actually left in the jax-jit ledger
+
+Ran all 14 remaining entries traced with `--runxfail`. They are not 14 problems:
+**6 fail, 8 never run at all.**
+
+The 8 are dead weight -- the test is slow-skipped under jax-jit, so the xfail
+entry can never fire (Cautun20, DehnenBinney98, McMillan17, and five
+`poisson_surfdens_potential[mock*Wrapper*]`). Pruning them is zero-risk and
+takes the ledger 14 -> 6. If a slow-skip is ever lifted they come back, so that
+belongs in the PR text.
+
+The 6 real ones are three clusters:
+
+| cluster | count | failure |
+|---|---|---|
+| AnyAxisymmetricRazorThinDisk | 4 | at_zero / at_infinity / 2ndDeriv assertions + surfdens `TypeError: do not accept array inputs` |
+| DoubleExponentialDisk | 1 | same array-input TypeError via surfdens |
+| test_ExpDisk_special | 1 | RazorThin R2deriv asserted-exception -- **deferred to Jo** |
+
+Clusters 1 and 2 share one root cause and it is the tail #1212 deliberately did
+not chase: both potentials carry `check_potential_inputs_not_arrays`, and the
+traced surfdens path evaluates on an array of quadrature nodes. `_quad_needs_backend`
+gates on tracer-ness precisely *because* "does this potential accept arrays" is
+undecidable, so closing this means making those two potentials array-safe -- a
+real migration, not a ledger tweak.
+
+Queue after #1214 + #163: the 8-entry prune (small), then that migration
+(larger). Not started -- one PR at a time.
+
+### #1214 codecov, resolving as predicted
+
+63.42% -> **86.18%** project coverage over the wake as shards uploaded, against
+149 of 151 checks now green. That is the partial-upload phantom behaving exactly
+as the #1212 discriminator says it should, so the two codecov reds still need no
+action beyond letting the remaining 22 checks finish.
