@@ -3354,3 +3354,24 @@ unilaterally.
 Jo checked in mid-wake asking for the three #164 options; answered briefly
 (boundary detection / structural whole-line entry point / inf-safe formulas, with
 DoubleExpDisk as the existence proof for the third) and continued.
+
+### Correction: the RazorThin tail is THREE characteristics, not two
+
+I claimed last wake that AnyAxisymmetricRazorThinDisk's five traced failures
+split into two groups. Ran all of them with `--runxfail` and read the actual
+messages instead of inferring -- it is three:
+
+| tests | message | class |
+|---|---|---|
+| test_eccentricity, test_2ndDeriv | tolerance assertions | GL less accurate than scipy |
+| test_poisson_surfdens | `TypeError: ... do not accept array inputs` | scalar-only decorator |
+| test_potential_at_zero, test_potential_at_infinity | **"gave NaN"** | GL returns NaN at degenerate args |
+
+The third is not a tolerance issue at all, which is what I had assumed. And
+`at_infinity` is the **same family as #164** -- "infinite argument -> NaN under
+trace". So the design decision on `surfdens(R, inf)` probably wants to cover
+`_evaluate(R, z=inf)` as well; better to put that to Jo as one question than two.
+
+Net picture of the jax-jit tail after #1216: one potential with three traced
+characteristics, one scalar-only issue shared with DoubleExpDisk, and one policy
+question (test_ExpDisk_special). Nothing unexplained left in it.
