@@ -2625,3 +2625,31 @@ flips 3, and prevents the next silent divergence. `constantbetadf.fE` gets its o
 task -- bundling it here would make an unreviewable PR out of two unrelated fixes.
 
 **#1213**: 5 pass / 146 pending, codecov partial. Nothing failing.
+
+### #162 committed (`0e2295b7`), held behind #1213
+
+Full three-mode verification of the hoist:
+
+| mode | result |
+|---|---|
+| numpy | 223 tests, **0 failures** |
+| eager torch | 223 tests, **0 failures** |
+| traced jax | **8 -> 5 failures** |
+| numpy f(E), both classes | **20 hex-exact values, byte-identical** |
+
+No eager regression -- which is the check #1212 taught me to run before pushing,
+not after.
+
+Ledgered the residual 5 under `jax-jit` with the measured reason attached (real
+`constantbetadf.fE` still converts a tracer; the three siblings that monkeypatch
+the interpolator now pass, and `grep -c` for that monkeypatch returns exactly 3).
+Filed as task #163 with a caution to probe `fE` directly first -- a
+mechanism-level guess has over-predicted twice this vacation, so the note tells
+the next person to measure before editing.
+
+`jax-jit` ledger 14 -> 20. **That is deliberate growth**: these five were always
+broken traced, just never measured, because `test_sphericaldf.py` had never been
+run under a trace until this vacation. Ledger size is only a progress metric when
+the denominator is fixed; measuring new files moves it up before it moves down.
+
+**#1213**: 28 pass / 123 pending, codecov at 8 of 28 sessions.
