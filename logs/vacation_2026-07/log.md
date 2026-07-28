@@ -2441,3 +2441,37 @@ grepping for `numpy.` calls that are not the cause.
 
 **#1212** after the force-push: 17 pass / 134 pending, codecov partial as usual at
 this stage. Cancelled the superseded commit's two workflows when I pushed.
+
+### Correction: the 8 sphericaldf failures are duplication, not a frozen-state boundary
+
+I framed these last entry as a frozen-interpolant-vs-trace problem, by analogy
+with the qdf `_precomputergLzmax` case. That was wrong, and two direct checks
+showed it:
+
+- `Spline1D` traces fine, eager **and** under `jax.jit` -- so the interpolator is
+  not the problem.
+- Inside `_ensure_fE_interp` under a forced backend, `get_namespace()` **is**
+  `jax.numpy`, and yet `_fE_interp` comes out a scipy
+  `InterpolatedUnivariateSpline`.
+
+The reason: `constantbetadf` has its **own** `_ensure_fE_interp`
+(`constantbetadf.py:516`), a near-copy of `eddingtondf._ensure_fE_interp`
+(`eddingtondf.py:112`) but **without the dual path** -- it always builds the scipy
+spline, where eddingtondf branches to galpy `Spline1D` under a backend. The two
+classes share no ancestor that owns this (`constantbetadf -> _constantbetadf ->
+anisotropicsphericaldf -> sphericaldf -> df`), so they are genuinely independent
+copies and only one was ever migrated.
+
+**This is the dePeriod shape again** (#1211): one routine, two copies, one
+migrated, and the un-migrated copy silently wins wherever it is reachable. Third
+time this pattern has produced a traced failure this vacation -- dePeriod, the two
+`_surfdens` routes in #1212, and now this. Worth treating "is there a second copy
+of this function?" as a standing question rather than an occasional discovery.
+
+Fix per the placement directive: hoist the shared f(E)-spline builder to
+`sphericaldf` and delete BOTH copies, not patch the constantbeta one. Task #162
+rewritten with this framing; the earlier one would have sent someone hunting for
+`numpy.` calls that are not the cause.
+
+**#1212**: 74 pass / 77 pending, codecov partial. No real reds -- the eager
+regressions stay fixed.
