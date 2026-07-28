@@ -2996,3 +2996,33 @@ Two of three parts done and verified:
 Time-boxed there rather than pushing on: #1214 is one shard from mergeable and
 the rule is one PR at a time. Committed as explicit WIP so the diagnosis is not
 lost, with "do not open a PR from this commit as-is" in the message.
+
+### #1214 MERGED, #1215 opened
+
+`3aeca4fd` -- squash-merged into feat/backends-develop at 17:06Z on a full green
+board (**154 pass, 0 fail, 0 pending**). Pre-merge audit against the three
+criteria passed: no `if`-on-array-data (`hasattr` and `xp is numpy` are Python /
+namespace checks), duplication *removal* is the PR's entire purpose, and
+`_ensure_fE_interp` lands on `sphericaldf`, the common ancestor of both
+subclasses.
+
+The codecov arc end to end: 63.42% -> 86.18% -> 99.96%, both checks green. The
+discriminator was right at every step and no intervention was ever needed. Worth
+recording that the *first* reading (63.42%) looked alarming and the right move
+was to wait ~90 min.
+
+#163 rebased onto the post-squash base (the squash rewrote its parent), clean,
+diff exactly the 3 intended files, conflict-marker swept, pushed, and opened as
+**#1215**. jax-jit ledger 19 -> 14.
+
+Also folded into #1215 during the audit: the ledger comment block #1214 added
+above those five entries. My `sed` had removed the entries but orphaned the
+comment, leaving text that claimed "the five below call the real fE" sitting over
+unrelated RazorThin entries -- and that comment also guessed
+`constantbetadf.py:735` as the culprit, which #163 disproved (the real site was
+`as_numpy` at :657). Removing a wrong comment I wrote two PRs ago is exactly the
+sort of thing the diff audit is for.
+
+Queue: #1215 to green -> merge; then #164 (WIP, part 3 outstanding); then the
+8-entry dead-ledger prune; then the RazorThin/DoubleExpDisk array-safety
+migration.
