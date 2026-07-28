@@ -3026,3 +3026,49 @@ sort of thing the diff audit is for.
 Queue: #1215 to green -> merge; then #164 (WIP, part 3 outstanding); then the
 8-entry dead-ledger prune; then the RazorThin/DoubleExpDisk array-safety
 migration.
+
+## Wake 17 -- #164 diagnosed properly, and two of my own hypotheses killed
+
+#1215 is early in CI (2/151). Spent the wait on #164, and the honest outcome is
+that I was wrong twice before getting it right. Both corrections came from
+measurement, not reasoning.
+
+**Wrong #1 -- "the gate keys on the wrong argument."** I had claimed
+`_quad_needs_backend` tested only the limit's concreteness and so mis-routed a
+traced R. It does test only the limit -- but under jit `absz = xp.abs(z)` is
+ALWAYS a tracer, because jax traces the op rather than folding it. So the
+ORIGINAL gate already routed traced calls to the backend rule. Measured on
+unmodified code: traced surfdens at a **finite** limit already matched numpy to
+1.58e-15. I had told the user that path "was previously unreachable" -- it was
+not. The `under_trace(absz, *coords)` change fixed nothing, so I reverted it
+rather than ship churn.
+
+**Wrong #2 -- "read the finiteness off the raw z."** There is no raw z.
+`_surfdens` receives z as a `DynamicJaxprTracer`: `@backend_input` coerces it at
+the boundary. Measured with a spy on the method.
+
+**Actual defect, narrow:** `transformed_quad` cannot integrate an infinite range
+-- its affine map sends the nodes to +-inf and the sum is nan. #1212 routed every
+traced call there, inf included. That is the whole of it.
+
+**Built and verified:** `symmetric_quad` in `backend/quadrature.py` -- two
+separate semi-infinite halves (not doubled; the integrand need not be even in z,
+offset/tilted wrappers are not). 1/(1+x^2) over (-inf,inf) = pi to 1.5e-15, and
+both halves of LogHalo's density trace correctly at 0.125 each.
+
+**Blocked, and deliberately so.** The finite-vs-infinite choice cannot be made
+inside `_surfdens` -- z is already a tracer, its magnitude unknowable. Fixing it
+needs either (a) detecting non-finite z at the decorated boundary before
+coercion, or (b) a distinct whole-line entry point (z=None) so the choice is
+structural rather than value-dependent. (b) is cleaner and jit-friendly but is an
+API addition. That is Jo's call. I am flagging it rather than guessing, and left
+an interim option in the task: make the infinite traced case RAISE, restoring
+#1210's loud failure while keeping #1212's finite-limit traceability.
+
+Also noted en route: MiyamotoNagai has its own analytic `_surfdens` which ALSO
+returns NaN at z=inf under trace (arctan of inf/inf) -- a separate site with the
+same symptom, worth covering by the same tests.
+
+Committed as WIP `80684184`, "do not open a PR from this commit". Two wrong
+hypotheses cost most of a wake, but the branch now carries a correct diagnosis
+instead of a plausible-looking fix that did nothing.
