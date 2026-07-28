@@ -2248,3 +2248,37 @@ The lesson I keep re-learning, stated once more because it cost real time twice
 today: an experiment that reproduces the *mechanism* is not an experiment that
 reproduces the *failure*. The numpy quadrature harness said 18 would flip; the
 trace said 8; the direct probe said the other 6 were three unrelated problems.
+
+### 13th flip found; and a classifier bug that briefly inverted my reading
+
+Swept the 6 "one-off" traced entries. Corrected picture:
+
+| | |
+|---|---|
+| **PASS** (prunable) | `test_plotting`, `test_plotting_xy_effective_error` |
+| plain `pytest.skip` (entries inert) | McMillan17, Cautun20, DehnenBinney98 |
+| genuinely failing | `test_mass_spheroidal` (TracerArrayConversionError), `test_ExpDisk_special` |
+
+`test_ExpDisk_special` is worth flagging as **permanent**, not pending work: it
+asserts `RazorThinExponentialDisk.R2deriv` raises AttributeError off-plane, and
+#1206 made that path return NaN under a trace (your call: "Let's do NaN"). An
+exception conditioned on a traced value cannot fire, so this one stays ledgered
+by construction.
+
+`test_plotting` was verified against the untouched library — it **fails** there
+and passes with the fix, so it is a genuine 13th flip, not a stale entry.
+**jax-jit ledger 28 -> 15.**
+
+A process note, because it nearly cost me a wrong claim: my first classifier used
+`tc.find('failure') or tc.find('error')`, and an ElementTree element with no
+children is FALSY, so failures were silently reported as passes. Python printed
+the DeprecationWarning that says exactly this and I read past it. The suite-level
+`failures=2` disagreed with my per-test table, and that contradiction is what
+caught it. Two numbers that must agree are worth more than one number I trust.
+
+**#1211**: 92 pass / 59 pending. I also walked back an earlier worry here — I
+read `codecov/patch` stalling at 71.42% as a real shortfall, but
+`test_streamdf.py` already contains an explicit "Dangerous hack to test case
+where l decreases along the stream" covering the descending branches I touched.
+The 2 misses are unuploaded shards (sessions 14 of 28), not untested code. I
+should have checked for the test before theorising about the number.
