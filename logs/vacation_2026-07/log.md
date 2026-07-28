@@ -3375,3 +3375,58 @@ trace". So the design decision on `surfdens(R, inf)` probably wants to cover
 Net picture of the jax-jit tail after #1216: one potential with three traced
 characteristics, one scalar-only issue shared with DoubleExpDisk, and one policy
 question (test_ExpDisk_special). Nothing unexplained left in it.
+
+## Wake 21 -- #164 implemented and tested (Jo approved 3-where-possible + 2-as-fallback)
+
+Jo checked in, asked for the three options, then approved **3 where possible, 2
+as fallback**. Implemented on `backend-jit/surfdens-wholeline`, stacked behind
+#1216: `b98ecb6b` (fix) + `ae750fd6` (tests).
+
+**Option 2 alone covered all three broken potentials**, including MiyamotoNagai,
+which I had expected to need option 3. The whole-line path integrates the density
+rather than MN's arctan closed form, so the `inf/inf` NaN never arises. Option 3
+is therefore still open only for `_evaluate(R, z=inf)` -- the at_zero/at_infinity
+NaNs -- not for surfdens.
+
+Traced results, all previously NaN:
+| potential | traced | rel vs numpy |
+|---|---|---|
+| LogarithmicHalo | 0.25 | 2.8e-15 |
+| MiyamotoNagai | 0.18494223 | 7.0e-13 |
+| DoubleExpDisk | 0.07164229 | 3.8e-14 |
+
+**test_jeans: 5/5 traced (was 4/1), 5/5 numpy, 5/5 torch.** #164's consumer is
+closed.
+
+### The byte-identity trap I nearly walked into
+
+My first version had `z=None` use GL on numpy too. That would have shifted
+`jeans.sigmalos` numpy results (0.25 -> 0.2499999999999998) -- a silent
+numpy-path change of exactly the kind the notes say to always surface. The
+whole-line path is now dual: numpy makes the *same* `scipy.quad(-inf, inf)` call
+the `z=inf` spelling already made, verified byte-equal, and only the backend uses
+GL. The test asserts hex equality rather than a tolerance so a future drift fails
+loudly.
+
+### What the tests taught me
+
+The byte-equality test failed for DoubleExpDisk, and it was right to. That
+potential's analytic `_surfdens` already handled z=inf, so z=inf and z=None take
+different (both correct) routes and agree to 4e-14, not exactly. My test premise
+had been too broad. Split it: byte-equality for the two that route through the
+integral, and a separate assertion that the integral REPRODUCES DoubleExpDisk's
+known closed form -- which is a stronger statement than self-consistency.
+
+That leaves one rough edge, stated in the commit rather than hidden: for a
+potential with an inf-capable closed form, z=None and z=inf can differ at
+quadrature level. Letting such potentials serve z=None from their closed form is
+a natural opt-in; left as a follow-up rather than guessed at.
+
+Also of note: `z=None` returns a correct finite value where `z=inf` gave NaN even
+on numpy (NFW 0.2747), because the closed form cannot express the limit.
+
+### CI
+
+#1216 is fully runner-starved -- 71 jobs queued, ZERO running, ~27 min after
+creation, because the develop merge and #1215's tail are still holding capacity.
+Nothing to fix.
