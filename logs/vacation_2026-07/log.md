@@ -2510,3 +2510,33 @@ expected one.
 
 Full convenience suite: **112 passed** with `-W error::Deprecation`. Pushed as
 `43ad13d8`; cancelled the superseded commit's two workflows.
+
+### #1212 status; pspecial pre-flighted much harder than #1212 was
+
+**#1212** after the coverage fix: 147 pass / 3 pending / 3 fail. Of the three:
+
+- **`codecov/patch` 80%, `codecov/project` -13.78%** at 25 of 28 sessions -- still
+  the partial-upload shape, so not yet actionable. Codecov's own file report lists
+  772/773/774, 783, 831-837 and 846 as **covered**, i.e. both surfdens routes and
+  both branches are now exercised. Whatever the residual misses are, they are not
+  the lines I was worried about; I will pin them down from the file report if the
+  number survives full upload.
+- **py3.14 `from_name` build**: `pyvo.dal.exceptions.DALServiceError: Unable to
+  access the capabilities endpoint` -- the known SIMBAD network flake. Confirmed
+  from the log rather than assumed (the first grep only surfaced C++ compiler
+  noise from the Torus build, which looks alarming and is not the failure).
+  Re-run is queued behind the workflow still being in progress.
+
+**Pre-flighting the NEXT PR against its consumers, which is the #1212 lesson.**
+`backend-jit/pspecial-masses` changes two `_mass` implementations, so I ran the
+shards that actually consume them rather than only the test I was chasing:
+
+| shard | result |
+|---|---|
+| `test_backend_ellipsoidal` + `amp_grad` + `dtype_policy`, **torch** | 1048 tests, **0 failures** |
+| same three, **jax** | 1048 tests, **0 failures** |
+| `test_quantity.py -k "mass or dens or surfdens"` | 7 tests, **0 failures** |
+
+That is the check #1212 did not get before its first push, and it is why #1212
+cost three extra CI rounds. Doing it up front is cheaper than discovering it from
+five red shards.
