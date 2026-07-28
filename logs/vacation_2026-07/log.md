@@ -2475,3 +2475,38 @@ rewritten with this framing; the earlier one would have sent someone hunting for
 
 **#1212**: 74 pass / 77 pending, codecov partial. No real reds -- the eager
 regressions stay fixed.
+
+### #1212: a REAL patch-coverage gap this time, caused by my own design change
+
+codecov reached `project 99.95% (-0.01%)` -- flat, fully uploaded -- with
+`patch 85.00%`. That combination is the discriminator for a genuine shortfall,
+as opposed to the partial-upload pattern (big project drop + low patch) I have
+been correctly dismissing all week. So I treated it as real, and it was.
+
+The cause was the design change itself. Once the backend rule is gated on the
+limit being a **tracer**, my two tests -- which called `surfdens` eagerly under
+`gb.use(backend, force=True)` -- took the *scipy* branch. They asserted nothing
+about the new code, and the new lines were never executed on any shard.
+
+That is worth stating plainly: after switching the gate, the tests still passed
+while testing the opposite path. Passing tests are not evidence that the intended
+code ran.
+
+Rewrote both to `jax.jit` the call, which is what the feature actually is, and
+extended the second to the analytic `_surfdens` route (separate code from the
+Poisson branch). Confirmed by line-level coverage rather than by re-reading the
+tests:
+
+| region | result |
+|---|---|
+| backend branch, both routes | **covered** |
+| only uncovered line in the region | the scipy branch at `Potential.py:774`, which the numpy suite covers on the coverage shard |
+
+An aside on method: my first check grepped for lines containing
+`transformed_quad` / `_node_axis` and reported "2 misses". Those were argument
+continuation lines, which are not statements and are never marked executed.
+Reading coverage's own `missing_lines` gave the true answer -- one line, and an
+expected one.
+
+Full convenience suite: **112 passed** with `-W error::Deprecation`. Pushed as
+`43ad13d8`; cancelled the superseded commit's two workflows.
