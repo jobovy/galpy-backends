@@ -3430,3 +3430,29 @@ on numpy (NFW 0.2747), because the closed form cannot express the limit.
 #1216 is fully runner-starved -- 71 jobs queued, ZERO running, ~27 min after
 creation, because the develop merge and #1215's tail are still holding capacity.
 Nothing to fix.
+
+### test_orbit group 7 closed out: not a timeout, a force-exit
+
+The group-7 gap was NOT a timeout. With a 7000s limit it produced a full progress
+line -- `...............sss.....s.....s...ss.ssss...sssssss`, **50 marks, no F or
+E** -- then stopped with no summary and no junitxml. That is the conftest
+force-exit (the torch+fork-deadlock guard from #1083), which bypasses pytest's
+XML write.
+
+Group 7 collects **59**; 50 reported clean, so **9 are unobserved, not failing**.
+
+Worth flagging beyond this one group: the force-exit destroys junitxml, so a jit
+dispatch run would lose an entire group's results the same way -- the same
+blind-spot class as a timed-out shard, and the same class as the SIGABRT I
+mis-attributed earlier. When a shard reports nothing, the answer is never "it
+passed".
+
+test_orbit under --jit is therefore: **0 failures across every group except the
+by-design test_eccentricity (ledgered in #1216), with 9 of ~590 unobserved** --
+and the standing caveat that ~a fifth of the file is slow-skipped and never runs
+at all.
+
+### #1216
+
+Showed 1 fail mid-wake; it is the codecov partial-upload phantom again (66.4%
+with 113 shards pending), not a real red. Runner queue is draining: 39 pass.
