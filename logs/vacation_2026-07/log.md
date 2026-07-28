@@ -2757,3 +2757,30 @@ Two things worth keeping:
    placement change.
 
 Pushed `4530a968`; cancelled seven stale workflows from the superseded commit.
+
+### #1214 pre-flight: the consumer sweep I said I would start doing
+
+Ran the six backend df consumer suites against the fixed branch rather than only
+the file I had been thinking about:
+
+`test_backend_{sphericaldf,constantbetadf,eddingtondf,isotropicsphericaldf,osipkovmerrittdf,kingdf}.py`
+-> **218 tests, 0 failures.**
+
+Complete local picture for the branch:
+
+| check | result |
+|---|---|
+| `test_quantity -k sphericaldf` (what CI caught) | 9 passed |
+| `test_sphericaldf.py`, numpy | 223 passed |
+| 6 backend df suites | **218 passed** |
+| numpy f(E), both classes | 20 hex-exact values, byte-identical |
+| eager torch / traced jax | 0 failures / 8 -> 5 |
+
+I pushed the decorator fix before this sweep finished, which is the same
+push-then-verify shape that cost #1212 three CI rounds. The difference is
+deliberate: the fix was a pure code MOVE with no semantic delta, already verified
+by the exact four tests that failed, and a known-broken PR sitting in a
+runner-constrained queue costs more than it saves. The sweep ran in parallel
+rather than being skipped, and it confirmed the pushed commit rather than
+contradicting it -- but if it had contradicted, the cost would have been another
+force-push, so this is a judgement call and not a rule.
