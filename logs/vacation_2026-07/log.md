@@ -2540,3 +2540,32 @@ shards that actually consume them rather than only the test I was chasing:
 That is the check #1212 did not get before its first push, and it is why #1212
 cost three extra CI rounds. Doing it up front is cheaper than discovering it from
 five red shards.
+
+### #1212 MERGED (`dd0f124e`); #1213 (Pspecial masses) opened
+
+All 154 green. Two things had to be untangled to get there, and both were
+process rather than code:
+
+- **`codecov/patch` finished at 100.00%** (20 hits, 0 misses). The 80% I flagged
+  last entry was partial upload after all -- the traced tests had already fixed
+  the real gap. Codecov's file report confirmed both surfdens routes covered.
+- **The last red was `all-clear`, not a test.** The py3.14 `from_name` build had
+  flaked on SIMBAD (`DALServiceError`), GitHub had already auto-retried it to
+  success on attempt 2, but the aggregate gate had recorded its verdict during
+  attempt 1 and stayed red. `gh run rerun` refused ("cannot be retried") because
+  the build run itself had already succeeded -- the thing needing a re-run was
+  the gate. Re-ran `all-clear` alone and it went green.
+
+  Worth remembering: when a flaked shard self-heals, the aggregate gate does not
+  re-evaluate. Check *which* check is red before reaching for the shard.
+
+**Rebase conflict, resolved by intent rather than by picking a side.** Both PRs
+edit `backend_xfail.txt`, and the conflict offered `test_mass_spheroidal` (HEAD)
+vs `test_plotting` (mine). The correct answer was **neither**: #1212 had already
+removed `test_plotting` upstream, and this commit removes `test_mass_spheroidal`.
+Taking either side would have silently resurrected a pruned entry. Verified after:
+exactly one line removed, no markers anywhere in the tree, byte-identity intact.
+
+**jax-jit ledger 15 -> 14.**
+
+Vacation running total for the traced ledger: **100 -> 49 -> 28 -> 15 -> 14**.
