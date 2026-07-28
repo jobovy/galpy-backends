@@ -2184,3 +2184,30 @@ with warnings escalated.
 **#1211** meanwhile: 14 pass / 137 pending, `codecov/patch` 14.28% and
 `codecov/project` -53.97% — the partial-upload signature again (both recover as
 shards report; #1210 went 36.96% -> 99.96% the same way).
+
+### Traced `test_orbit.py` does not fit on one box — use the sharded dispatch
+
+The local `test_orbit.py --backend jax --jit` measurement hit its 90-minute cap
+before writing any results, even *with* the inherited slow-skips (127 of them
+apply to that file). So the answer is not a longer local timeout: a single-box
+traced orbit run is the wrong instrument.
+
+The right one is now available. `backend-tests.yml` has a `workflow_dispatch`
+input:
+
+```
+jit:  Run the whole suite TRACED (jax.jit / torch.compile at every galpy entry
+      point); burndown lists are keyed "<backend>-jit"
+```
+
+That shards the traced suite across runners, which is precisely what #1210's
+inheritance made *possible* — before it, every one of the eager-known failures
+and all 215 slow tests would have run and red the dispatch.
+
+Holding the dispatch until #1211's CI drains rather than firing it now: 122 jobs
+are still queued on the active PR and the project is runner-constrained, so
+launching a full traced matrix would starve the PR I am trying to land. One PR at
+a time applies to CI capacity too.
+
+**#1211 codecov** is recovering exactly on the expected curve: project
+32.21% -> 63.75%, patch 14.28% -> 71.42%.
