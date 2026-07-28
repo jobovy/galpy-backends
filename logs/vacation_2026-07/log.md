@@ -3103,3 +3103,45 @@ are recorded under `jax`, not `jax-jit`. Grepping for `^jax-jit ` in
 backend_slow_skip.txt returns nothing, which briefly looked like the entries were
 not slow-skipped at all. The inheritance rule I wrote in #1210 is what makes them
 apply.
+
+### Traced sweep: three more clean, one CRASH
+
+| suite | traced |
+|---|---|
+| test_coords | 97 tests, 0 failures |
+| test_conversion | 18 tests, 0 failures |
+| test_streamspraydf | 38 tests, 0 failures |
+| **test_scf** | **process aborted, exit 134 (SIGABRT), core dumped** |
+
+`pytest tests/test_scf.py --backend jax --jit` kills the interpreter at 76%.
+
+I did NOT take the first observation at face value: it happened while four
+jax-jit suites ran concurrently, so memory pressure was a live alternative.
+Re-ran test_scf **alone** -- identical abort, exit 134. Real fault, not resource
+exhaustion.
+
+Crash site, from the faulthandler traceback:
+
+    tests/test_scf.py:1546  test_tdep_c_dynamical_friction_dens
+    -> Orbits.py:2369 integrate -> Orbits.py:1957 _integrate_impl
+    -> integrateFullOrbit.py:715 integrateFullOrbit_c      <-- the ctypes call
+
+The test integrates a **time-dependent** SCFPotential (`Acos=lambda t: ...` with
+a tgrid) plus Chandrasekhar friction through `method="dop853_c"`. The bridge
+marshals potential arguments with `numpy.require(..., float64)` + ndpointer;
+under a trace the t-dependent coefficients are backend arrays, so it is handed
+something it cannot legally point at and aborts instead of raising. That is the
+ctypes-bridge / forced-backend leak already in the notes, in a new place.
+
+**Why this is worse than a failure:** SIGABRT writes no junitxml at all, so every
+other test in the file becomes unreportable. Same blind-spot class as a timed-out
+shard -- a jit dispatch run would silently lose test_scf whole.
+
+Almost certainly pre-existing (test_scf had never been run traced; the branch
+under test changes only constantbetadf), but that must be confirmed on a clean
+base before any fix. Recorded as task #165 with two separable pieces: a cheap
+skip entry to keep the rest of the file reportable, and the real fix (marshal
+under `use("numpy", force=True)` so the bridge never sees a backend array).
+
+Not pinged to the phone: it does not block my progress, and it only affects the
+dispatch-only jit mode, which is not in the merge gate.
