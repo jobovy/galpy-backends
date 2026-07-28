@@ -2346,3 +2346,50 @@ the eager jax/torch shards and traced. A separate backend test would duplicate
 it — which is the kind of thing the audit is supposed to catch.
 
 **#1212**: 9 pass / 143 pending, codecov partial as usual.
+
+### #1212: CI found five eager-backend regressions, and the fix was a design change
+
+The surfdens change went green in every local check I ran, then CI reported **5**
+failures — all EAGER backend, none traced:
+
+| shard | test | cause |
+|---|---|---|
+| jax + torch jeans | `test_sigmalos_wlog_zerobeta` | `z = inf` — jeans integrates the whole line of sight. scipy.quad transforms an infinite limit; a fixed-node GL rule puts every node on `inf`. |
+| torch potential grp 2 | 5 `poisson_surfdens[mock*Wrapper*]` | the wrapper is scalar-only, but the mock subclass overrides `_Rforce` **undecorated**, so `_force_accepts_arrays` cannot see the marker |
+| torch quantity | `test_potential_function_*` | `phi=None` reaching `phi[..., None]` |
+
+I patched each in turn -- None-safe indexing, a finite-range guard, then a
+delegation-aware detector. The third attempt is where I should have stopped
+patching: the mock composes via `_potlist`, not `_pot`, and special-casing a test
+attribute in library code is obviously wrong. **"Does this potential accept an
+array" is not decidable** -- the codebase's own `_force_accepts_arrays` is
+explicitly best-effort, and `mass()` has the same latent hole.
+
+So I replaced the whole accumulated guard stack with **one decidable predicate**:
+
+```python
+def _quad_needs_backend(xp, absz):
+    # the backend rule exists for exactly one reason -- under a trace scipy is
+    # unusable. Whenever the limit is CONCRETE, scipy is still the better tool.
+    if xp is numpy:
+        return False
+    return not has_concrete_truth_value(xp.all(xp.isfinite(absz)))
+```
+
+Concreteness *is* decidable. Eager jax/torch have concrete limits, so they keep
+scipy and are untouched by construction -- which kills all three failure classes
+at once rather than one at a time. Three helpers and ~40 lines of guards
+collapsed to this.
+
+The honest cost: eager backend surfdens stays on scipy, so it is not
+differentiable there. It never was, so nothing regresses, and the PR's goal was
+traced-green, which is unaffected.
+
+| check | result |
+|---|---|
+| numpy Poisson route | **240 hex values, byte-identical** |
+| numpy analytic route | **312 hex values, byte-identical** |
+| eager torch + traced jax | verification running |
+
+Worth recording as a general lesson: when a gate needs its third special case,
+the gate is asking an undecidable question. Look for the decidable one.
