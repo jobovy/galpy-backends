@@ -3319,3 +3319,38 @@ less accurate than scipy" questions, and the tolerance-loosening rule requires
 his approval per batch. Explicitly NOT raising the GL order to force accuracy:
 that would tax every traced call to satisfy a test, and eager users currently get
 scipy's accuracy for free.
+
+## Wake 20 -- #1215 MERGED, #1216 opened
+
+`ebf0215f` -- squash-merged on a full green board (**154 pass, 0 fail, CLEAN**).
+Pre-merge audit passed on all three criteria; a mechanical check of the diff
+confirmed no new `if` or `def` lines anywhere in `galpy/`, i.e. the change really
+is a spline swap plus dropping the clamp.
+
+Traced `test_sphericaldf.py` is now 223 / 0 on develop, unmasked.
+
+### #1216: reconcile the jax-jit ledger with reality
+
+Promoted the queued prune and strengthened it with this wake's finding, so the PR
+is one coherent idea rather than two:
+
+- **Drop 8** entries that can never fire (slow-skipped under `jax`, inherited by
+  `jax-jit`) -- verified 8 skipped / 0 failures.
+- **Add 1** that does: `test_orbit::test_eccentricity`, failing under --jit and in
+  none of the three lists, so a jit dispatch run would have shown a genuine red.
+
+jax-jit ledger **14 -> 7**, and those 7 are now all genuinely-failing tests
+rather than a mix of real and inert.
+
+Verified the new entry is load-bearing: `x` with the entry, `F` under
+`--runxfail`.
+
+Deliberately ledgered rather than loosening the tolerance. A backend-aware
+tolerance (loose only on the traced path, numpy untouched) is the better
+long-term answer, but that is a maintainer call per the tolerance rule, so it is
+proposed in the PR body alongside #164's design question instead of done
+unilaterally.
+
+Jo checked in mid-wake asking for the three #164 options; answered briefly
+(boundary detection / structural whole-line entry point / inf-safe formulas, with
+DoubleExpDisk as the existence proof for the third) and continued.
