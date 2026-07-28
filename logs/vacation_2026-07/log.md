@@ -2956,3 +2956,43 @@ argument. Recorded as task #164 with the fix sketch. Deliberately NOT folded int
 Worth noting what caught this: nothing in CI would have. test_jeans.py had never
 been run under --jit, so the ledger had no opinion about it. The gap was found
 only because I went looking at previously unmeasured suites while blocked on CI.
+
+### #164 started locally (WIP, not PR-ready)
+
+Branch `backend-jit/quad-gate-coords` @ `9cecf59b`, stacked on #163.
+
+Two of three parts done and verified:
+
+1. **Gate fixed.** `_quad_needs_backend(xp, absz, *coords)` now asks
+   `under_trace(absz, *coords)`. I did NOT write a predicate --
+   `galpy.backend._namespaces.under_trace` already existed for exactly this
+   ("the 'do I have a concrete value?' probes that pick an out-of-backend
+   computation"), and `AnyAxisymmetricRazorThinDiskPotential.py:173` already
+   calls `under_trace(R, z)`. Searching the backend utils first, per the
+   placement rule, turned a new-helper job into a one-line import. It also
+   catches `torch.compile`, which the old probe missed.
+   Traced surfdens at a **finite** limit now matches numpy to 1.6e-15 / 2.8e-15
+   -- that path was simply unreachable before.
+
+2. **`symmetric_quad` added** to `backend/quadrature.py` (a quadrature concern
+   with two Potential.py callers, so it belongs there, not in Potential.py).
+   Infinite `b` splits into two *separate* semi-infinite halves rather than
+   doubling one, because the integrand need not be even in z -- offset and
+   tilted wrappers are not. Standalone check: 1/(1+x^2) over (-inf,inf) = pi to
+   1.5e-15.
+
+   The subtlety that cost me a wrong first attempt, worth remembering: **inside
+   `jax.jit`, `xp.isfinite(concrete_constant)` still returns a tracer.** Every op
+   in jit scope is traced, so asking the backend whether the limit is infinite
+   always answers "unknown" and silently picks the finite rule. The limit's
+   finiteness has to be read with numpy.
+
+3. **Not done.** Infinite-limit surfdens is still NaN under trace. Localised: the
+   rule is right in isolation and the finite path is right, so the NaN is
+   produced inside the traced integrand at the huge nodes the reciprocal map
+   generates -- `symmetric_quad` on `_dens` gives 0.25 eager and nan traced with
+   identical inputs. Next step is to instrument which term goes non-finite.
+
+Time-boxed there rather than pushing on: #1214 is one shard from mergeable and
+the rule is one PR at a time. Committed as explicit WIP so the diagnosis is not
+lost, with "do not open a PR from this commit as-is" in the message.
