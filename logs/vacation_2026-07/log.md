@@ -3456,3 +3456,50 @@ at all.
 
 Showed 1 fail mid-wake; it is the codecov partial-upload phantom again (66.4%
 with 113 shards pending), not a real red. Runner queue is draining: 39 pass.
+
+## Wake 22 -- option 3 delivered: RazorThin degenerate radii
+
+#1216 still runner-starved (53 pass / 99 pending, codecov phantom at 66.4%).
+
+Did the remaining half of what Jo approved: **option 3, inf-safe formulas**, for
+the at_zero / at_infinity NaNs. Commit `c829ece3`.
+
+Instrumented the three panels of the a=R split rather than guessing, and the two
+degenerate radii turn out to fail for *different* reasons:
+
+| R | panel [0,R] | panel [R,2R] | panel [2R,inf) |
+|---|---|---|---|
+| 0 | **nan** | **nan** | 0.785 (finite) |
+| 1 | 0.237 | 0.0517 | 0.00205 |
+| inf | **nan** | **nan** | **nan** |
+
+At R=0 the first two panels have zero width but the integrand is 0/0 there, so
+each is `0*nan`; the tail alone is already the whole [0,inf) integral, which is
+exactly right. At R=inf every panel spans an infinite range, and all these
+quantities vanish as R->inf, so the answer is 0.
+
+Both guarded with `xp.where` in the **shared** `_bk_split_quad`, so all six _gl
+kernels benefit rather than just `_evaluate`, with each dead branch evaluated at
+a harmless R so a nan cannot leak through a gradient.
+
+| | numpy | traced |
+|---|---|---|
+| Phi(0) | -2.7855674 | **-2.7855674** (was nan) |
+| Phi(inf) | 0 | **0** (was nan) |
+
+Finite radii unchanged (6.7e-15 / 4.7e-13 / 2.5e-11 at R=0.3/1/3 -- the
+pre-existing GL-vs-scipy floor, not a shift). Backend-only change: the concrete
+path goes to scipy via `_bk_dispatch`, so numpy is untouched by construction.
+
+**jax-jit ledger 7 -> 5.** The two remaining RazorThin entries are genuinely
+different problems, not more of the same: test_2ndDeriv is the by-design GL
+accuracy limit, test_poisson_surfdens is the scalar-only-inputs decorator.
+
+Tests assert VALUES against numpy, not "not NaN" -- Phi(0) is a real number worth
+pinning and a finiteness check would pass on garbage. Confirmed load-bearing by
+stashing the guard: the degenerate-radii test fails without it.
+
+A small process note: the first commit attempt was rejected by ruff-format (it
+reformatted a file). Worth remembering that a pre-commit hook that *modifies*
+files fails the commit, so `git log` after committing is the check that it
+actually landed.
