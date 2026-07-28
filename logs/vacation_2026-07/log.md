@@ -2121,3 +2121,17 @@ Worth being precise about why the earlier attempt failed: it swapped in plain
 Implementation is dual-path (numpy keeps `scipy.integrate.quad` and stays
 byte-identical; the backend namespace takes `transformed_quad`), no new helper,
 queued behind the dePeriod PR as task #161.
+
+### #1210 MERGED (`70d5b4ff`), #1211 opened
+
+All 154 checks green; `codecov/project` finished at **99.96% (+0.00%)**, having
+climbed 36.96% -> 70.05% -> 74.79% -> 99.96% as the shards uploaded. That is the
+partial-upload signature behaving exactly as diagnosed, and worth stating plainly
+because it looked like a 63-point regression for most of the run.
+
+Squash-merged into `feat/backends-develop`. Traced runs now inherit the eager
+ledger, slow-skips and permanent skips, which is the precondition for a
+`jit=true` dispatch being green at all.
+
+**PR #1211** (`dePeriod` de-duplication) opened against `feat/backends-develop`,
+rebased clean onto the merged base, diff confined to its 5 files.
