@@ -2905,3 +2905,54 @@ Queue after #1214 + #163: the 8-entry prune (small), then that migration
 149 of 151 checks now green. That is the partial-upload phantom behaving exactly
 as the #1212 discriminator says it should, so the two codecov reds still need no
 action beyond letting the remaining 22 checks finish.
+
+## Wake 16 (2026-07-28 ~16:3xZ) -- codecov cleared; a real defect found in my own merged code
+
+### #1214 codecov: phantom confirmed, resolved
+
+63.42% -> 86.18% -> **99.96%**. Both codecov checks green. The discriminator held
+end to end: large project drop + shards still uploading = partial upload, wait.
+No action was ever needed. #1214 now 152 pass / 2 pending (last test_backend
+shard + all-clear).
+
+### Traced measurement of four never-measured df suites
+
+| suite | traced |
+|---|---|
+| test_qdf | 56 tests, 0 failures |
+| test_evolveddiskdf | 35 tests, 0 failures |
+| test_dynamfric | 7 tests, 0 failures |
+| test_jeans | 5 tests, **1 failure** |
+
+### The jeans failure is a defect I introduced in #1212
+
+`test_sigmalos_wlog_zerobeta` returns all-NaN under trace. Chased it to a
+one-line reproduction on LogarithmicHaloPotential:
+
+| call | result |
+|---|---|
+| `lp.surfdens(1.0, inf)` numpy | 0.25 |
+| `lp.surfdens(jnp(1.0), inf)` eager | 0.25 |
+| `jax.jit(...)` **at #1210, before #1212** | `TracerArrayConversionError` |
+| `jax.jit(...)` **after #1212** | **nan** |
+
+So the test failed before *and* after -- the ledger looks unchanged -- but
+**#1212 converted a loud crash into a silent wrong value**, which is strictly the
+worse failure mode. numpy is 0.25 on both sides, so byte-identity is intact and
+this is backend-only.
+
+Root cause is my design error in `_quad_needs_backend(xp, absz)`: it decides
+whether scipy.quad is usable by testing the concreteness of the **integration
+limit** alone. With `z=numpy.inf` the limit is concrete, so the gate says "scipy
+is fine" -- but `R` is a tracer, and scipy silently yields NaN instead of
+raising. The gate has to consider tracer-ness of the **coordinate**, not just the
+limit.
+
+I got the hard part of #1212 right (concreteness is decidable where
+"does this potential accept arrays" is not) and then keyed it off the wrong
+argument. Recorded as task #164 with the fix sketch. Deliberately NOT folded into
+#163: different file, different concern, and #163 is already verified.
+
+Worth noting what caught this: nothing in CI would have. test_jeans.py had never
+been run under --jit, so the ledger had no opinion about it. The gap was found
+only because I went looking at previously unmeasured suites while blocked on CI.
