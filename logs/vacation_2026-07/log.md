@@ -2784,3 +2784,72 @@ runner-constrained queue costs more than it saves. The sweep ran in parallel
 rather than being skipped, and it confirmed the pushed commit rather than
 contradicting it -- but if it had contradicted, the cost would have been another
 force-push, so this is a judgement call and not a rule.
+
+## Wake 15 (2026-07-28 ~15:20Z) -- #1214 still running; #163 built locally
+
+### #1214 CI
+
+The pass count had gone *backwards* since the last wake (151 -> 52). Not a
+regression: the decorator-theft force-push at 14:26Z restarted every check, so
+the 151-pass reading belonged to the superseded SHA. `run_attempt=1` on the
+current runs confirms it. Progressed 52 -> 72 -> 84 pass over the wake, with only
+`codecov/patch` + `codecov/project` red.
+
+Those two are the partial-upload phantom, not a real gap: codecov reports the
+project at **63.42%** against galpy's true ~99.6% while 67 shards are still
+pending. The discriminator I wrote down after #1212 (flat project + low patch =
+real gap; large project drop = partial upload) says wait, so I waited.
+
+### #163: constantbetadf.fE traceable
+
+Two frozen interpolators set the fE integration limits. The measured break was
+`as_numpy` at `constantbetadf.py:657` clamping E to numpy so both could be
+queried -- under `jax.jit` that clamped E is a tracer and the conversion raises.
+
+The pre-work grep (the "check for a third copy" rule that #1214 taught me) paid
+off twice, and both times by *shrinking* the job:
+
+- `_rphi` needed **nothing**. `_setup_rphi_interpolator` already lives on
+  `sphericaldf` and already returns `Spline1D`. My own task note had said to give
+  it the dual path; it already had one.
+- `_logstartt` was the only scipy spline left, and it is constantbetadf-only
+  (one construction site), so it warranted a swap, not a hoist. `Spline1D` is
+  already the idiom in kingdf / eddingtondf / sphericaldf / streamgapdf.
+
+So the fix is one interpolator swap plus dropping the clamp -- not the two-site
+dual-path build I had written down.
+
+**Which half does the work.** I mis-set this once mid-wake and the measurement
+corrected me. `beta=-0.5` and `twobeta=-1` are *not* the same DF:
+
+| construction | `_halfint` | `_logstartt` |
+|---|---|---|
+| `beta=-0.5` | False | built |
+| `twobeta=-1` | True | absent |
+| `beta=0.25` | False | built |
+
+The five ledgered tests build with `twobeta=-1`, so they return before
+`_logstartt` and are fixed purely by the clamp drop feeding `_rphi`. The
+`_logstartt` swap fixes the non-half-integer branch, which was equally
+untraceable but had no ledgered test. Both changes are needed; neither is
+redundant.
+
+### Verification
+
+| check | result |
+|---|---|
+| `Spline1D` vs scipy, numpy queries | array / scalar / extrapolated all **maxdiff exactly 0.0** |
+| traced vs eager, `twobeta=-1` | 7.8e-16 |
+| traced vs eager, `beta=0.25` | 1.5e-13 |
+| out-of-bounds E under trace | exactly 0.0 |
+| the 5 ledgered tests, `--jit --runxfail` | **5 passed** |
+
+New test `test_generic_fE_jit_traceable` covers both branches plus the
+out-of-bounds clamp, at `rtol=1e-12` -- ~7x over the measured 1.5e-13 floor.
+Confirmed load-bearing by stashing only the source change: it fails with
+`TracerArrayConversionError` at `_namespaces.py:204`, the exact site.
+
+jax-jit ledger **19 -> 14**. Everything left is test_potential.py surfdens /
+RazorThin, which is the by-design tail.
+
+Held from PR: #1214 is still the active PR and the rule is one at a time.
