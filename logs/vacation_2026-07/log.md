@@ -2690,3 +2690,35 @@ the spline-building pattern first -- the duplication existed because nobody look
 **#1213**: 86 pass / 66 pending; `codecov/patch` already **100%**; the
 `run-notebooks (3.14)` SIMBAD flake is being superseded by a concurrency-duplicate
 run that already shows pass, so no intervention needed.
+
+### #1213 MERGED (`48af8808`); #1214 (f(E) de-dup) opened
+
+154/154 green. Two failures along the way, neither a real red, and both worth
+distinguishing because they look alike in the checks list:
+
+- **`run-notebooks (3.14)`**: `DALServiceError` from a SIMBAD query inside a
+  notebook. Resolved itself -- the notebook workflow had a concurrency duplicate
+  whose 3.14 job already passed.
+- **`backend torch test_orbit --splits 5 --group 4`**: the tests all PASSED
+  ("107 passed, 2 xfail, 0 FAILED"); the failing STEP was *"Upload shard JUnit
+  XML"* with `Failed to CreateArtifact: ECONNRESET`. A GitHub artifact-service
+  network error, not a test failure at all.
+
+  That one is a good argument for reading the failing *step* before the test log.
+  A red "backend torch test_orbit" check on a PR that changes `_mass` looks
+  exactly like a real regression, and it was infrastructure.
+
+Audit before merge found nothing to fix, and confirmed one thing worth writing
+down: `TwoPowerTriaxial` still imports `scipy.special` and still uses
+`special.gamma` at lines 121-123 -- but those run in `__init__` on scalar
+*parameters*, never on traced coordinates. So removing that import (as I did for
+`TriaxialGaussian`, where nothing was left) would have been wrong. The rule is
+not "no scipy in migrated files", it is "no scipy on values that can be traced".
+
+**#1214** opened: the f(E) spline builder hoisted to `sphericaldf`, both copies
+deleted. `jax-jit` ledger 14 -> 20, which is measurement rather than regression
+(the five were always broken traced; `test_sphericaldf.py` had simply never been
+run under a trace before this vacation).
+
+Vacation totals: **#1210, #1211, #1212, #1213 merged**; #1214 open; #163 next,
+with its exact site already measured.
