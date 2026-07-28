@@ -2722,3 +2722,38 @@ run under a trace before this vacation).
 
 Vacation totals: **#1210, #1211, #1212, #1213 merged**; #1214 open; #163 next,
 with its exact site already measured.
+
+### #1214: CI caught a real bug of mine -- the hoist stole `dMdE`'s decorator
+
+Windows shard went red on four `test_quantity.py::test_sphericaldf_method_*`
+tests: `AttributeError: 'numpy.ndarray' object has no attribute 'to'`, i.e.
+`dMdE` had stopped returning a Quantity.
+
+Cause was entirely mechanical and entirely mine. I inserted the hoisted method at
+the anchor `    def dMdE(self, E):` -- but decorators sit ABOVE that line, so the
+new method landed **between `@physical_conversion("massenergydensity", pop=True)`
+and `dMdE`**, taking the decorator with it. `dMdE` was left bare.
+
+```
+393:    @physical_conversion("massenergydensity", pop=True)
+394:    def _ensure_fE_interp(self):      <- stole it
+432:    def dMdE(self, E):                <- undecorated
+```
+
+Reproduced locally in 20s, fixed by moving the insertion above the decorator, and
+confirmed: `test_quantity -k sphericaldf` **9 passed**.
+
+Two things worth keeping:
+
+1. **Anchor insertions on a `def` line are unsafe in a decorated codebase.** The
+   safe anchor is the first decorator, or a blank line between methods. I have hit
+   this class of edit twice now (the earlier one was ruff reformatting my
+   exact-match strings out from under a second edit); text-level surgery on Python
+   needs the decorator block treated as part of the function.
+2. **My local verification missed it because I ran `test_sphericaldf.py`, not
+   `test_quantity.py`.** Same shape as #1212: I test the file I am thinking about,
+   not the file that consumes what I changed. The units tests are a consumer of
+   every df method, so they belong in the pre-flight for any df signature or
+   placement change.
+
+Pushed `4530a968`; cancelled seven stale workflows from the superseded commit.
