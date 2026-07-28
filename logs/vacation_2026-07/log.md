@@ -2653,3 +2653,40 @@ run under a trace until this vacation. Ledger size is only a progress metric whe
 the denominator is fixed; measuring new files moves it up before it moves down.
 
 **#1213**: 28 pass / 123 pending, codecov at 8 of 28 sessions.
+
+### #163 root cause measured: frozen `_rphi`/`_logstartt`, and my guess was wrong
+
+Followed my own note ("probe before editing") and it paid: the guess recorded in
+task #163 -- `_evalpot_asnumpy` at constantbetadf.py:735 -- was **not** the site.
+
+Direct `jax.jit` probe of `dfh.fE`:
+
+```
+fE eager -> OK
+fE jit   -> TracerArrayConversionError
+frames:   constantbetadf.py:585 fE
+       -> constantbetadf.py:657 _fE_backend
+       -> galpy/backend/_namespaces.py:204 as_numpy
+```
+
+Line 657 is `Enp = as_numpy(xp.where(indx, Eb, xp.ones_like(Eb) * emin))`, and its
+own comment says why: *"clamp out-of-bounds E for the frozen numpy interpolators"*.
+It exists so `self._rphi(Enp)` and `10 ** self._logstartt(Enp)` can be queried --
+both scipy `InterpolatedUnivariateSpline`s.
+
+So the residual five ARE a frozen-interpolant boundary after all, just for
+`_rphi`/`_logstartt` rather than `_fE_interp`. Two entries ago I replaced the
+frozen-state framing with "duplication"; the honest resolution is that the
+population was **mixed** -- 3 duplication, 5 frozen-state -- and each of my
+single-cause framings was right about part of it and wrong about the rest.
+
+The fix is now the same pattern #162 just applied, which is a good sign the
+abstraction is right: give `_rphi`/`_logstartt` the dual path (scipy on numpy,
+`Spline1D` under a backend), then drop the `as_numpy` clamp entirely. `Spline1D`
+is already verified traceable. Task #163 rewritten with the exact site, the failed
+guess recorded so nobody repeats it, and a reminder to check for a THIRD copy of
+the spline-building pattern first -- the duplication existed because nobody looked.
+
+**#1213**: 86 pass / 66 pending; `codecov/patch` already **100%**; the
+`run-notebooks (3.14)` SIMBAD flake is being superseded by a concurrency-duplicate
+run that already shows pass, so no intervention needed.
