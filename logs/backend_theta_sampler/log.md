@@ -318,3 +318,45 @@ Investigated + prototyped (WIP patch: logs/backend_theta_sampler/differentiable_
   after #1106 merges.
 Also in the same roadmap bucket: stripping_pdf backend-native inverse-CDF (differentiable
 non-uniform stripping TIMES); center= on the backend (drop the NotImplementedError guard).
+
+## 2026-07-13 — LANDED: mass M(t) = PR #1109, stripping_pdf = PR #1110 (stacked)
+
+Both opened, all local validation green, driving CI.
+
+**PR #1109 (differentiable progenitor mass M(t)), branch feat/differentiable-mass off
+feat/backends.** The jit blocker in the WIP note ("TracerBoolConversionError in the RNG
+path") was MIS-DIAGNOSED: the real cause was that the mass-only branch integrated the
+progenitor in NUMPY, so under jit `_setup_rot`'s `o.x(dt)` queried a numpy orbit at a
+TRACED dt -> `numpy.any(t > nanmax(self.t))` bool error (Orbits.py:6941). Fix: route the
+(mass-independent) progenitor through the IN-BACKEND ODE too, so every downstream orbit
+query takes the backend interp path. Then `_scalar_mass_fn`/`_mass_fn` had to keep a
+backend M/M(t) on the backend (`get_namespace(M0,t)` so a plain-float t on TORCH doesn't
+mix numpy ones with the torch M; the callable branch returns the backend result; the
+present-day attr stays backend when traced). Results: constant-M grad-vs-FD 1.8e-7,
+M(t)=M0·exp(rate·t) 3.5e-8 on INVARIANT functionals (mean-radius, sum-sq); an index-wise
+loss diverges (frozen-assignment AD on a reassignment-SENSITIVE loss — expected). torch
+eager grad flows (5.1e7) but the eager generative reconstruction is minutes-slow (large
+fixed cost, N-independent) -> jax-jit-only in CI, torch validated locally. FD steps must
+be RELATIVE (mass ~3e-5, absolute h flips the sign -> rtide((-M)**1/3) NaN).
+
+**PR #1110 (differentiable stripping_pdf), branch feat/stripping-pdf-backend STACKED on
+#1109.** A backend stripping_pdf builds a cumulative-trapezoid CDF (`xp.cumsum(...,axis=0)`
+— torch needs the explicit axis; clip incr>=0 for monotonicity since a jit trace can't
+raise on a negative pdf) and inverts it in `_draw_stripping_dt` by `xp.searchsorted` +
+linear interp (frozen bracket, differentiable weight; flat-tie div dead-branch guarded).
+Matches the scipy k=1 inverse-CDF to 3e-15. d(track)/d(burst-center-time) grad-vs-FD
+1.4e-7. Its own backend-sampling trigger, exactly like the mass. Torch surfaced a latent
+bug shared with mass: a torch tensor's `.to(Quantity)` raises TypeError not AttributeError
+-> the astropy unit-output probes (stripping AND mass M(t)) now catch TypeError (jax
+arrays lack `.to()` -> AttributeError, so jax never hit it). Fast jax+torch inverse-CDF-
+vs-scipy parity test gives real torch coverage (no slow track). numpy byte-identical (a
+numpy stripping_pdf keeps the scipy spline).
+
+**Convergence investigation closed:** the tracks do NOT relatively converge as Δ→0 even
+as CURVES — curve-to-curve (Hausdorff) dist ≈ per-point resid (~15% of deform, O(Δ) not
+O(Δ²), plateaus at the grid floor ~2e-4). The AD gradient of the RAW curve omits an O(Δ)
+discrete-assignment term that cancels only in smooth functionals (why AD=FD to 1e-7 for a
+loss/moment). Soft-assignment DROPPED per user.
+
+**Remaining:** center= on the backend (mirror the progenitor in-backend integration; drop
+the NotImplementedError guard; watch pot-vs-centerpot method mismatch).

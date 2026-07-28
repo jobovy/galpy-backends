@@ -2070,3 +2070,54 @@ same test still fails and stays.
 
 **#1210** meanwhile: 87 pass / 65 pending / codecov-project only. codecov climbing
 36.96% -> 70.05% -> 74.79% as uploads land; `codecov/patch` green throughout.
+
+### The traced-green endgame is one test function, and it is solved
+
+With the traced ledger now readable as a whole, the remaining `jax-jit`
+entries are **entirely `test_potential.py`**, and 18 of the 28 are a single test:
+
+| group | count |
+|---|---|
+| `test_poisson_surfdens_potential[*]` | **18** |
+| `AnyAxisymmetricRazorThinDisk` (2ndDeriv / at_zero / at_infinity) | 3 |
+| one-offs (Cautun20, DehnenBinney98, McMillan17, ExpDisk_special, mass_spheroidal, plotting) | 6 |
+
+`Potential.surfdens`'s Poisson branch uses `scipy.integrate.quad`, which cannot
+trace. The ledger recorded that a naive swap to fixed-order GL was attempted and
+**deliberately reverted**, because the required order scales with the range
+(n=100 gives 3.7e-4 at |z|=10; n=400 reaches 2.6e-14) -- a constant order is
+accurate only inside whatever range was tested and silently wrong outside it.
+
+That conclusion was right about *plain* GL and wrong about the problem being
+hard. The fix is an **existing** utility:
+`galpy.backend.quadrature.transformed_quad(..., interior_point=0.0)` -- split the
+range at z=0 and cluster nodes toward the split with the `X = xi**k`
+boundary-layer remap. A decaying integrand has its mass near z'=0, and the
+clustering is defined *relative to the range*, so it is range-aware by
+construction rather than by tuning. Same total node count: 50 per panel x 2
+versus 100 in one.
+
+Measured over the test's own grid, R in {0.5, 1, 2} and z in {0.125, 0.25, 1, 10},
+worst relative error per potential:
+
+| potential | tol | GL n=100 | split n=50 | |
+|---|---|---|---|---|
+| BurkertPotential | 1e-8 | 6.03e-07 | **3.80e-14** | fixed |
+| FlattenedPowerPotential | 1e-8 | 8.43e-03 | **8.16e-14** | fixed |
+| HernquistPotential | 1e-8 | 3.62e-04 | **1.20e-11** | fixed |
+| JaffePotential | 1e-8 | 2.35e-03 | **6.94e-13** | fixed |
+| KuzminDiskPotential | 1e-8 | 9.82e-03 | **3.10e-15** | fixed |
+| NFWPotential | 1e-8 | 2.03e-04 | **4.04e-13** | fixed |
+| PlummerPotential | 1e-8 | 1.72e-07 | **2.79e-15** | fixed |
+| PowerSphericalPotential | 1e-8 | 3.92e-05 | **3.78e-15** | fixed |
+| Isochrone / Kepler / DoubleExpDisk / SphericalShell | | already pass | unchanged | |
+
+Nothing is left failing, and the margin is five orders. The failures are exactly
+small-R/large-z, which is the signature of nodes spread evenly over a range whose
+integrand lives near one point.
+
+Worth being precise about why the earlier attempt failed: it swapped in plain
+`fixed_quad` -- no split, no clustering. The revert was correct for *that* change.
+Implementation is dual-path (numpy keeps `scipy.integrate.quad` and stays
+byte-identical; the backend namespace takes `transformed_quad`), no new helper,
+queued behind the dePeriod PR as task #161.

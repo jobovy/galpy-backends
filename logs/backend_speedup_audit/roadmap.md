@@ -23,7 +23,7 @@ Two dominant themes:
    Bonus (verified): `n_bisect_steps` falls back to **100** iters under a tracer (vs ~46–51
    concrete; Staeckel passes maxiter=200) → threading a static `nsteps`/width-hint roughly
    **halves every backend bisection**. *backend-specific, effort M, compile+gradient.*
-   **⏳ #1026 open 2026-06-28 (review):** rolled the loop into `lax.fori_loop` **only under a
+   **✅ #1026 LANDED:** rolled the loop into `lax.fori_loop` **only under a
    trace** (`isinstance jax.core.Tracer`); eager (CI) + torch + numpy keep the Python loop.
    **KEY FINDING:** a naive unconditional roll *regresses eager ~9×* (137ms vs 16ms; `fori_loop`
    compiles a loop primitive per call) — galpy's CI runs EAGER, so the eager/traced branch is
@@ -35,6 +35,8 @@ Two dominant themes:
    → `lax.while_loop`/`fori_loop`. Bodies are already single branch-free `xp.where` updates.
    The concrete 47k-jaxpr instances in the hottest subsystem; stacks with P0#1.
    `actionAngleStaeckel.py:127,133,164`; `Spherical.py:564,569`; `Vertical.py:336`. *jax, M.*
+   **✅ LANDED:** all three (`actionAngleStaeckel`/`Spherical`/`Vertical`) now import & use the
+   shared `optimize.iterate_bracket` helper (the eager/traced-gated roll from #1026).
 3. **Collapse `c_stm_forward`'s 6-per-IC variational integrations → ONE stacked `integrate_dxdv`.**
    `inbackend_stm.py:59-83` re-integrates the identical base orbit 6× (once per basis column).
    The stacked single-call idiom is already proven in-repo (Lyapunov `Orbits.py:2893-2907`,
@@ -55,6 +57,12 @@ Two dominant themes:
    `EllipsoidalPotential.py:469,510-522,575-598`): `for k in range(len(glx))` (K~20–50) →
    one broadcast `dens(m)`/`psi(m)` over a node axis + one `xp.sum`. Universal inner loop for
    every triaxial potential; collapses K dispatches → 1 and shrinks the graph K-fold. *agnostic, M.*
+   **⏳ PR #1130 open 2026-07-16:** backend-only vectorize via a shared `_gl_node_factors` helper,
+   gated on `is_backend_array(x)` (numpy keeps the verbatim loop = BYTE-IDENTICAL, 105 repr-exact).
+   Measured glorder=20: evaluate jaxpr 294→30, R2deriv 1154→91 (~10–13×); jit compile ~2–3×; parity
+   ~1e-14; grad jax==torch |AD-FD|~1e-11; existing test_backend_ellipsoidal (737) pass. NOTE: the
+   `dens(m)`/`psi(m)`-broadcast assumption verified across all subclasses. Also confirmed: the
+   `_forceInt_all`/`_2ndDerivInt_all` "combined single-pass" evaluators (part of P0#5) already landed.
 5. **Combined force / Hessian evaluators** (stop the backend 3×/6× recompute): one
    `_all_cyl_forces` → `(FR,Fz,Fphitorque)` and one combined Hessian from the single 8-tuple.
    numpy shares via md5 caches that are **disabled for jax/torch** → SCF/Multipole/Ellipsoidal
@@ -276,3 +284,50 @@ on a fixed grid; `numpy.array_equal` before/after each edit). 4 commits, all ver
 **Verdict:** the ceiling held EXACTLY as audited — A1 is the one cross-the-board win; Isochrone
 + StaeckelGrid are tiny byte-identical numpy savings; Spherical is eager-only. Everything
 past A1 is marginal, and the one item that CHANGED an op (M6/M7) broke byte-identity.
+
+---
+## UPDATE 2026-07-16: night perf pass (4-agent re-audit) → PR #1130 + #1131
+
+Roadmap had gone stale — re-verified against feat/backends. **Already landed since
+2026-07-01:** #1026 (P0#1 bisect_root), #1040 (P0#2 bracket-loops), #1043 (AA jacobian
+hoist A1), #1111 (P1#10 assoc_legendre lax.scan). Two NEW graph-shrink PRs this pass:
+
+- **#1130 — EllipsoidalPotential GL node-loop vectorize** (P1#4). Backend-only vectorize
+  of `_potInt`/`_forceInt_all`/`_2ndDerivInt_all` (all nglx nodes on a trailing axis +
+  one xp.sum), `is_backend_array`-gated so numpy keeps the verbatim loop (BYTE-IDENTICAL,
+  105 repr-exact). jaxpr: evaluate 294→30, R2deriv 1154→91 (~10-13×); jit compile ~2-3×.
+- **#1131 — gegenbauer lax.scan under trace** (SCF radial basis; the pre-#1111 analog).
+  jax-trace-only scan branch, numpy untouched by construction. SCF jaxpr now N-INDEPENDENT
+  (Rforce 224, R2deriv 438) vs growing (N=24: 556/1112). numpy byte-identical (stash).
+
+**Remaining PENDING (4-agent audit, all deferred as marginal/higher-surface for autonomous
+work — documented for review):**
+- **phitorque-skip for axisymmetric** (`_reference/inbackend_ode.py:_eom_rhs` 3D branch calls
+  all 3 force evals every step; `_evaluatephitorques≡0` for axisym). Thread a static `axisym`
+  bool from `integrate_orbit` through `_jax`/`_torch/orbit_ode`. Backend-only (numpy raises
+  NotImplementedError). BUT jit DCEs the ×0 term → mostly an EAGER + trace-size win. S/M.
+- **alpha-vectorize the SCF L-loop** (`SCFPotential._C` backend branch stacks
+  `gegenbauer(N,alpha(ll),xi)` over L → still O(L) scan calls). Broaden the #1131 scan to a
+  broadcastable alpha vector → one scan. Stacks on #1131 (same files) + touches SCF backend
+  branch. The natural #1131 follow-up; higher graph-shrink but stacked-PR + SCF surface.
+- **combined spherical force/Hessian evaluators** (`SphericalPotential.py` base funnels the
+  whole family through `_rforce`/`_r2deriv`; add numpy-md5-cached `_compute_*` like
+  EllipsoidalPotential). NUMPY byte-identical win (5×/3×→1× heavy special) — but the jax/torch
+  3×/6× recompute needs a fused consumer / XLA-CSE already dedups under jit → mostly a NUMPY-path
+  win, not the backend goal. S/M, low risk.
+- **DoubleExpDisk Ogata device-table cache** (de_n=10000 tables re-transferred per call ×6
+  methods + a duplicate `_de_j1_xs` in `_R2deriv:411-412`). Per-(id(xp),device) instance cache,
+  numpy pass-through. EAGER-ONLY (jit bakes constants) → LOW value. Fully designed (worktree
+  removed); the `_R2deriv` duplicate collapse is the one trivially-safe sub-fix if revisited.
+- **multi-RHS spline batching** — ✅ **PR #1133 (2026-07-16)**. `cubic_spline_coeffs` accepts 2-D
+  y (n,m) → one multi-RHS solve (coeffs 4,n-1,m); `eval_ppoly` gives dr a trailing axis for
+  cb.ndim==3; `_backend_spline_orbit` batches all phase-space columns (k==3), reconstructs R,phi
+  for pd 4/6. numpy single-spline BYTE-IDENTICAL (stash). multi==per-col ~1e-14; 82 orbit tests
+  pass + new pd-5 off-grid test. Measured 2-orbit pd-6 off-grid jaxpr 1056→256 (~4×). NOTE: only the
+  per-orbit column batching (pd→1); the cross-orbit shared-grid batching (36→1 via
+  `_call_internal_backend_interp`) was left as a further follow-up.
+- **cross-orbit spline batching — ✅ PR #1136 (2026-07-16)**, the #1133 follow-up. All orbits
+  share ONE grid → all size*pd columns in a single multi-RHS solve (vs one per-orbit call looped).
+  Backend-only (is_backend_array). 83 orbit tests pass + new multi-orbit pd-5. Measured 24-orbit
+  off-grid o.R eager 396→45 ms (~8.7×, scales with N). NOTE: concrete-orbit value-eval jaxpr
+  unchanged (solve baked at trace); win = eager multi-orbit + differentiating-interp-wrt-ICs.
