@@ -2569,3 +2569,29 @@ exactly one line removed, no markers anywhere in the tree, byte-identity intact.
 **jax-jit ledger 15 -> 14.**
 
 Vacation running total for the traced ledger: **100 -> 49 -> 28 -> 15 -> 14**.
+
+### #1213 in CI; #162 (the f(E) duplicate) implemented locally
+
+`backend-jit/fE-interp-dedup`, off post-#1212 develop.
+
+Confirmed the hierarchy before touching anything: `constantbetadf` and
+`eddingtondf` share exactly one non-trivial ancestor, `sphericaldf`. Diffed the
+two `_ensure_fE_interp` copies -- identical energy grid, and eddington's is a
+strict superset (it additionally `as_numpy`s the bounds, a no-op on numpy, and
+branches to `Spline1D` under a backend).
+
+So the fix is the one the placement directive asks for: **hoist the superset to
+`sphericaldf`, delete both copies**, rather than patching the constantbeta one
+into agreement. `sphericaldf` already imports everything it needs
+(`as_numpy`, `get_namespace`, `Spline1D`, `scipy.interpolate`), which is a good
+sign the method belongs there.
+
+Byte-identity probe covers **both** classes (constantbeta at three betas plus
+eddington, five energies each), because a hoist that silently changes the other
+class would be the obvious way for this to go wrong. Running.
+
+This is the third de-duplication this vacation -- dePeriod (#1211), the two
+`_surfdens` routes (#1212), and now this. In every case the un-migrated copy was
+invisible until something traced, because on numpy both copies behave
+identically. That is the whole hazard: **duplicate routines diverge silently in
+exactly the dimension the migration cares about.**
