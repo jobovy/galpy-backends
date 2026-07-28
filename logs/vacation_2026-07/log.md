@@ -3250,3 +3250,33 @@ written it off as ">90 min locally", but CI uses pytest-split, so the same
 mechanism gives a bounded sample: `--splits 10 --group N` for groups 1-5, i.e.
 50% of the file, each group ~1/10 of the runtime. Partial coverage of the largest
 remaining unknown beats no coverage.
+
+### test_orbit traced, sampled: one real failure, one gap, and a caveat
+
+pytest-split made the ">90 min" block measurable: `--splits 10`, groups 1-10 run
+in parallel batches.
+
+| groups | result |
+|---|---|
+| 1,2,3,4,5,6,9,10 | 0 failures |
+| **8** | **1 failure -- test_eccentricity** |
+| **7** | **no XML -- hit the 3000s timeout, UNMEASURED** |
+
+**test_eccentricity**: passes `--backend jax` eager, FAILS `--backend jax --jit`.
+"Eccentricity of a circular orbit is not equal to zero". Reproduced in isolation,
+and it is in **none** of the three lists -- completely unledgered, so a jit
+dispatch run would show it as a genuine red. Jit-specific, so a tracing-path
+defect rather than a tolerance issue. Suspect rperi/rap, which are on the
+deferred SETUP-path list where `as_numpy` was the scoped fix -- to be verified,
+not assumed. Task #166.
+
+**The caveat that keeps this honest.** I nearly reported "test_orbit is
+traced-clean" off the first five groups. Checking the skip lists first: test_orbit
+has only 2 jax xfail entries and 0 jax-jit ones, so almost nothing is
+xfail-masked -- but **112 slow-skip entries under `jax`** (inherited by jax-jit)
+plus 8 hard skips. Of ~590 collected, about a fifth never runs. So "0 failures"
+means no unexpected failures *among tests that ran*, which is a much weaker claim
+than "test_orbit is jittable". Every summary of this needs to say so.
+
+Also notable: group 8 took 2154s on its own. The jax eager-XLA slowness is why
+this file is a dispatch-only proposition, and why group 7 timed out.
