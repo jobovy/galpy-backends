@@ -3280,3 +3280,42 @@ than "test_orbit is jittable". Every summary of this needs to say so.
 
 Also notable: group 8 took 2154s on its own. The jax eager-XLA slowness is why
 this file is a dispatch-only proposition, and why group 7 timed out.
+
+### test_eccentricity root-caused: by design, and it consolidates the RazorThin tail
+
+Pulled the exact failure out of the group-8 junit rather than guessing:
+
+    Eccentricity of a circular orbit is not equal to zero by 2.94267e-11
+    for potential AnyAxisymmetricRazorThinDiskPotential and integrator dopr54_c
+    assert (5.42463803e-06)**2 < 1e-16
+
+`AnyAxisymmetricRazorThinDiskPotential._bk_dispatch` switches implementation on
+tracedness on purpose:
+- concrete, non-grad input -> scipy's **adaptive** quad (accurate)
+- `requires_grad` or `under_trace(R, z)` -> in-backend fixed-order
+  Gauss-Legendre, a differentiable **approximation**
+
+So under a trace the forces carry ~1e-6 error and a nominally circular orbit
+picks up ecc ~5e-6. A 1e-16 tolerance is unmeetable on that path **by
+construction**. Not a defect -- it is the differentiability-vs-adaptive-accuracy
+trade-off the dispatch exists to make.
+
+My minimal repro (MWPotential2014 + dop853_c) gave e=0 exactly under the jit
+harness, which is why the parameterised failure text mattered: the bug lives in
+one potential, not in tracing generally.
+
+**Consolidation.** AnyAxisymmetricRazorThinDisk now accounts for FIVE traced
+failures in two groups:
+ (a) GL-approximation vs tight tolerances -- test_eccentricity, and very likely
+     2ndDeriv / at_zero / at_infinity (to verify individually);
+ (b) scalar-only decorator vs array quadrature nodes -- poisson_surfdens.
+The "six real jax-jit failures" are really *one potential with two
+characteristics* plus test_ExpDisk_special's policy question.
+
+**Action:** ledger it (autonomous-safe, matches its siblings) and fold the
+alternative -- a backend-aware tolerance, loose only on the traced path -- into
+the same proposal to Jo that covers #164. Both are "the differentiable path is
+less accurate than scipy" questions, and the tolerance-loosening rule requires
+his approval per batch. Explicitly NOT raising the GL order to force accuracy:
+that would tax every traced call to satisfy a test, and eager users currently get
+scipy's accuracy for free.
