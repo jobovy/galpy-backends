@@ -3209,3 +3209,30 @@ plus (a) or (b) for the quadrature path.
 Recorded in task #164 so Jo has the measured scope, not just the symptom, when he
 makes the call. Also recorded there: the two hypotheses of mine that measurement
 killed, so they are not retried.
+
+### Consolidated traced (jax --jit) status, 2026-07-28
+
+Re-verified `test_dynamfric` (7/0) and `test_qdf` (56/0) against the corrected
+.so -- identical to the earlier numbers, so the bad-.so window did not corrupt
+them. Full picture from this vacation's measurements:
+
+| suite | traced result |
+|---|---|
+| test_actionAngle | 207 / 0 failures |
+| test_sphericaldf | 223 / 0 (was 8 -> 5 -> 0 across #1214 + #1215) |
+| test_diskdf | 129 / 0 |
+| test_coords | 97 / 0 |
+| test_qdf | 56 / 0 |
+| test_streamspraydf | 38 / 0 |
+| test_evolveddiskdf | 35 / 0 |
+| test_conversion | 18 / 0 |
+| test_dynamfric | 7 / 0 |
+| test_scf | 0 failures (the SIGABRT was my .so mismatch, retracted) |
+| **test_jeans** | **1 failure** -- the #164 surfdens(inf) consumer |
+| test_potential | 6 real failures after the pending prune (2 clusters + 1 policy Q) |
+| test_orbit / test_orbits | exceeds 90 min locally; belongs on a sharded dispatch |
+
+So the traced tail across everything measured is now **one df failure (#164) and
+six potential failures**, of which five are two root causes and one is a policy
+question for Jo. That is the honest state of "is galpy jittable" for the parts
+that have been measured -- test_orbit remains the big unmeasured block.
