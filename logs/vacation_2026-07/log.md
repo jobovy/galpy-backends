@@ -3181,3 +3181,31 @@ test_dynamfric as traced-clean.
   /var/tmp/nogl, both with real .so files. Stands.
 - #1215's correctness is being validated by CI against a proper build, which is
   the authoritative check regardless of my local worktree.
+
+### #164 blast radius measured -- narrower than feared, and it is TWO sites
+
+Swept 10 potentials on the clean worktree (matching .so), numpy vs traced
+`surfdens(R, inf)`:
+
+| potential | numpy | traced | verdict |
+|---|---|---|---|
+| LogarithmicHalo | 0.25 | **nan** | broken -- generic quadrature path |
+| MiyamotoNagai | 0.1849 | **nan** | broken -- its OWN analytic `_surfdens` |
+| DoubleExpDisk | 0.0716 | 0.0716 | OK |
+| NFW, Hernquist, Plummer, Jaffe, PowerSpherical, Isochrone, Kepler | nan | nan | numpy also undefined -- not a regression |
+
+Only **two** potentials actually lose a good value, and they break for different
+reasons: LogHalo hits the transformed_quad infinite-range problem; MiyamotoNagai
+NaNs at `arctan(inf/inf)` inside its closed form, nothing to do with quadrature.
+
+The useful third data point is **DoubleExpDisk**, which works traced at z=inf.
+Its analytic `_surfdens` takes the z->inf limit correctly with no branching at
+all. That is an existence proof for a third design option I had not considered:
+make the implementations **inf-safe** rather than detecting inf. It fixes
+MiyamotoNagai cleanly, but cannot fix the quadrature fallback -- no finite-range
+rule spans an infinite range -- so the likely answer is (c) for the closed form
+plus (a) or (b) for the quadrature path.
+
+Recorded in task #164 so Jo has the measured scope, not just the symptom, when he
+makes the call. Also recorded there: the two hypotheses of mine that measurement
+killed, so they are not retried.
