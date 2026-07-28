@@ -2311,3 +2311,38 @@ also skip, and the rest are the two by-design families —
 AnyAxisymmetricRazorThinDisk (GL vs the z=0 Hadamard second derivative) and
 `test_ExpDisk_special` (asserts an exception that cannot fire under a trace,
 following the NaN decision).
+
+### Next PR ready: the "Pspecial-blocked" masses were blocked by a stale comment
+
+`backend-jit/pspecial-masses` @ `efe815ce`, held while #1212 is active.
+
+Two `_mass` implementations each carried a comment saying their closed form
+"requires scipy.special.hyp2f1 / scipy.special.erf, which has no
+backend-agnostic (jax/torch array-API) replacement -> numpy only". Both
+functions have been in `galpy.backend.special`'s router since the Pspecial work.
+The comments were simply out of date, and they were the entire reason
+`test_mass_spheroidal` sat in the `jax-jit` ledger.
+
+The interesting part is what the stale comment **hid**: routing the special
+function through the router was not sufficient. `TriaxialGaussian._mass` also
+calls `numpy.exp` on `R`, which converts a tracer, so after the erf fix it still
+failed. I only found that because I re-probed each potential individually rather
+than assuming the named blocker was the only one — the same shape of mistake as
+the surfdens residual, caught the same way.
+
+| | |
+|---|---|
+| eager jax / traced jax / eager torch | 0 failures each |
+| numpy byte-identity | **48 hex-exact mass values**, 8 potentials x 6 radii (0.05 to 1000) |
+
+Also deleted the now-dead `from scipy import special` in
+`TriaxialGaussianPotential` — pycln left it, and my first grep for `special.`
+would have missed the fact that `_bspecial.erf` contains that substring, so I
+checked with a word-boundary match before removing.
+
+No new test: both call sites are unconditional (no backend branch), so the numpy
+coverage shard exercises them, and `test_mass_spheroidal` itself now runs under
+the eager jax/torch shards and traced. A separate backend test would duplicate
+it — which is the kind of thing the audit is supposed to catch.
+
+**#1212**: 9 pass / 143 pending, codecov partial as usual.
