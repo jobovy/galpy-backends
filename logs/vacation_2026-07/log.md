@@ -2423,3 +2423,21 @@ the slow-skips apply):
 
 So beyond `test_potential.py`, the traced frontier is a single bounded cluster of
 8 tests. That is the next target after the current PR queue.
+
+### The 8 sphericaldf traced failures are a frozen-state boundary, not a missing migration
+
+Characterised them rather than assuming, because "TracerArrayConversionError"
+looks like an un-migrated numpy call and here it is not.
+
+The tests do `dfh.fE = lambda x: dfh._fE_interp(x)`, and `_fE_interp` is **frozen
+precompute state** built by `eddingtondf._ensure_fE_interp`: scipy
+`InterpolatedUnivariateSpline` on the numpy path, galpy `Spline1D` under a forced
+backend. The table is built eagerly at fixture time and then queried under a
+trace. That is the same shape as the known qdf `_precomputergLzmax` problem --
+state frozen in one mode and used in another -- not a missing `xp` swap.
+
+Filed as task #162 with that framing, so whoever picks it up does not start by
+grepping for `numpy.` calls that are not the cause.
+
+**#1212** after the force-push: 17 pass / 134 pending, codecov partial as usual at
+this stage. Cancelled the superseded commit's two workflows when I pushed.
