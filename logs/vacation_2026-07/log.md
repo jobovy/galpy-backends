@@ -2393,3 +2393,33 @@ traced-green, which is unaffected.
 
 Worth recording as a general lesson: when a gate needs its third special case,
 the gate is asking an undecidable question. Look for the decidable one.
+
+### Concreteness gate verified and pushed to #1212
+
+| check | result |
+|---|---|
+| numpy Poisson route | 240 hex values, **byte-identical** |
+| numpy analytic route | 312 hex values, **byte-identical** |
+| **eager torch** (the shard CI failed on) | 64 tests, **0 failures** -- the mock wrappers pass again |
+| eager jax + torch, jeans/dynamfric | 21 tests, **0 failures** each |
+| traced jax | 64 tests, **2 failures** -- exactly the by-design scalar-only pair, still ledgered |
+
+Pushed as `6ef5ee09`; cancelled the previous commit's two still-running workflows
+since the project is runner-constrained.
+
+One thing I checked rather than assumed: `test_jeans` under a **trace** fails on
+an accuracy assertion. It is not a regression -- surfdens was scipy-only before,
+which cannot trace at all, so that test was already traced-broken. It is not
+ledgered only because `test_jeans` has never been run traced. Recorded here so a
+future `jit=true` dispatch does not read it as new.
+
+**Traced measurements of two never-before-measured files** (post-inheritance, so
+the slow-skips apply):
+
+| file | traced result |
+|---|---|
+| `test_diskdf.py` | 129 tests, **0 failures** |
+| `test_sphericaldf.py` | 223 tests, **8 failures** -- all `TracerArrayConversionError` in the constantbeta `*_directint` family |
+
+So beyond `test_potential.py`, the traced frontier is a single bounded cluster of
+8 tests. That is the next target after the current PR queue.
