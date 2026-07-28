@@ -2211,3 +2211,40 @@ a time applies to CI capacity too.
 
 **#1211 codecov** is recovering exactly on the expected curve: project
 32.21% -> 63.75%, patch 14.28% -> 71.42%.
+
+### Chasing the residual paid off: surfdens now 12 flips, not 8
+
+The 6 that survived the first fix turned out to be **three different bugs**, and
+finding that out took one probe rather than more speculation. Reproducing the
+call directly under `jax.jit` (no pytest) showed
+`surfdens(forcepoisson=True)` on FlattenedPower **already worked** — so the
+residual failure was never in the branch I had changed:
+
+| what actually failed | where |
+|---|---|
+| generic `Potential._surfdens` (the ANALYTIC route) still on `scipy.quad` | `Potential.py:801` — FlattenedPower |
+| `PowerSphericalPotential._surfdens` calling `scipy.special.hyp2f1` on a tracer | `PowerSphericalPotential.py:388` — Kepler, PowerSpherical |
+| potentials that reject array input at all | AnyAxisymmetricRazorThinDisk, DoubleExponentialDisk |
+
+Fixed the first two — the analytic `_surfdens` gets the same dual path, and the
+closed-form one routes through `galpy.backend.special.hyp2f1` (whose numpy path
+goes straight back to scipy, so nothing moves). The third stays: those two
+potentials fail on the test's own `check_potential_inputs_not_arrays` guard under
+a tracer, which is a property of the potential, not of surfdens.
+
+Measured with `--runxfail`, so the ledger cannot mask anything:
+
+| | tests | failures |
+|---|---|---|
+| eager jax | 64 | **0** |
+| traced jax | 64 | **2** (the scalar-only pair) |
+
+**jax-jit ledger 28 -> 16.** numpy byte-identical on *both* routes, hex-exact
+against the base library: 240 values through Poisson, 312 through analytic.
+Whole convenience suite green with `-W error::Deprecation` (116 passed), numpy
+surfdens/dens tests 19 passed.
+
+The lesson I keep re-learning, stated once more because it cost real time twice
+today: an experiment that reproduces the *mechanism* is not an experiment that
+reproduces the *failure*. The numpy quadrature harness said 18 would flip; the
+trace said 8; the direct probe said the other 6 were three unrelated problems.
