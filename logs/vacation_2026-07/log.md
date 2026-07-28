@@ -3072,3 +3072,34 @@ same symptom, worth covering by the same tests.
 Committed as WIP `80684184`, "do not open a PR from this commit". Two wrong
 hypotheses cost most of a wake, but the branch now carries a correct diagnosis
 instead of a plausible-looking fix that did nothing.
+
+## Wake 18 -- inert-ledger prune prepared
+
+#1215 early in CI (25/151); codecov at 38.67% with 126 shards pending, the same
+partial-upload phantom, no action.
+
+Used the wait to finish the first half of the ledger burndown. Confirmed the
+eight suspect jax-jit entries are **inert**: they appear verbatim in
+`backend_slow_skip.txt` under `jax`, and `jax-jit` inherits the eager lists
+(#1210), so the tests never run traced and the xfail entries have no effect.
+Running all eight with `--backend jax --jit` gives **8 skipped, 0 failures**.
+
+Prune committed on `backend-jit/prune-inert-ledger` @ `7c44d07b`, stacked on
+#1215, held until that merges. jax-jit ledger **14 -> 6**.
+
+Likely origin worth recording: a heavy test that hits the session timeout records
+FAILED, so a regen at that moment ledgers it; the later slow-skip then makes the
+entry inert without removing it. That is the same timeout-vs-xfail interaction
+already in the notes, seen from the other side.
+
+What remains is the genuine tail: four AnyAxisymmetricRazorThinDisk failures plus
+one DoubleExponentialDisk sharing a root cause (both carry
+`check_potential_inputs_not_arrays` while the traced surfdens path evaluates on
+an array of quadrature nodes), and test_ExpDisk_special, the
+asserted-exception-under-trace policy question for Jo.
+
+The prune also required checking a detail I had gotten wrong once: the slow-skips
+are recorded under `jax`, not `jax-jit`. Grepping for `^jax-jit ` in
+backend_slow_skip.txt returns nothing, which briefly looked like the entries were
+not slow-skipped at all. The inheritance rule I wrote in #1210 is what makes them
+apply.
