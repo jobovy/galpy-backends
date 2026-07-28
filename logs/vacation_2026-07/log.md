@@ -3503,3 +3503,38 @@ A small process note: the first commit attempt was rejected by ruff-format (it
 reformatted a file). Worth remembering that a pre-commit hook that *modifies*
 files fails the commit, so `git log` after committing is the check that it
 actually landed.
+
+## Wake 23 -- first REAL red on #1216, and it is a known flake
+
+#1216 reached 117 pass / 34 pending and grew a second failure. Unlike the codecov
+phantom this one is a build job, so it needed reading rather than dismissing:
+
+    build (windows-latest, 3.12, test_orbit.py test_orbits.py ...)
+    FAILED tests/test_orbits.py::test_from_name_values
+      pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+That is the known SIMBAD/VizieR network flake, not a real red -- and worth
+noting that #1216 only edits the xfail ledger, which a plain (non---backend) run
+does not even consult, so a genuine regression from this PR in a Windows orbit
+shard was implausible on its face. The log confirmed it rather than assuming it.
+
+**New operational detail:** `gh run rerun <id> --failed` refuses with "This
+workflow is already running" while any job in the run is still in flight. So a
+mid-run flake cannot be re-run immediately; it has to wait for the run to settle.
+Worth remembering, since the instinct is to re-run the moment a flake appears.
+
+### torch parity for the degenerate-radii guards
+
+`_bk_dispatch` selects the GL path on `requires_grad` as well as on tracedness,
+so torch reaches the guarded split by a different door than jax. Added the
+matching grad-vs-FD check rather than trusting jax to speak for torch -- torch
+lands on exactly the jax figures (1.8e-10 / 2.4e-11 / 3.5e-11 at R=0.3/1/3).
+Commit `bed56efc`; the file is 17 passed.
+
+Also: the ruff-format rejection bit me a SECOND time on this commit, one wake
+after writing the lesson down. A hook that *modifies* files fails the commit, and
+the only reliable check is `git log` afterwards -- which is exactly how I caught
+it both times.
+
+#164 branch now: whole-line surfdens, its cross-backend tests, the degenerate
+radii guards (ledger 7 -> 5), the gradient verification, and torch parity.
