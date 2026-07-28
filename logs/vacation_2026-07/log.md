@@ -2595,3 +2595,33 @@ This is the third de-duplication this vacation -- dePeriod (#1211), the two
 invisible until something traced, because on numpy both copies behave
 identically. That is the whole hazard: **duplicate routines diverge silently in
 exactly the dimension the migration cares about.**
+
+### #162 result: the hoist fixes 3 of 8, and the other 5 are a different bug
+
+Traced `test_sphericaldf.py` after hoisting `_ensure_fE_interp` to `sphericaldf`:
+**223 tests, 8 failures -> 5**.
+
+The split is exact, and checking *which* tests flipped explained it:
+
+| | monkeypatches `dfh.fE = lambda x: dfh._fE_interp(x)` | traced result |
+|---|---|---|
+| `dehnencore_in_nfw_{dens,meanvr,sigmar}` | **yes** (3 of 3) | **now pass** |
+| `selfconsist_dehnencore_{dens,meanvr,sigmar}`, `differentpotentials_dens`, `exptruncnfw_dens` | no | still fail |
+
+`grep -c "dfh.fE = lambda"` over the whole file returns exactly **3**, and those
+are precisely the three that flipped. The monkeypatching tests route through
+`_fE_interp`, which the hoist made a traceable `Spline1D`; the other five call the
+real `constantbetadf.fE`, which carries its own numpy island. So the duplication
+fix is complete for what it targets, and the residual is a separate,
+larger piece of work -- migrating `fE` itself.
+
+That is a better outcome than it sounds: it means my earlier root-cause note
+(task #162) was right about the mechanism but described only **part** of the
+population. Recording the correction rather than quietly shipping "8 -> 5" as if
+it were the plan.
+
+Scope decision: ship the de-duplication on its own. It removes a real duplicate,
+flips 3, and prevents the next silent divergence. `constantbetadf.fE` gets its own
+task -- bundling it here would make an unreviewable PR out of two unrelated fixes.
+
+**#1213**: 5 pass / 146 pending, codecov partial. Nothing failing.
