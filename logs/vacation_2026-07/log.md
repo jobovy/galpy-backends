@@ -2135,3 +2135,52 @@ ledger, slow-skips and permanent skips, which is the precondition for a
 
 **PR #1211** (`dePeriod` de-duplication) opened against `feat/backends-develop`,
 rebased clean onto the merged base, diff confined to its 5 files.
+
+### surfdens implemented — and my "fixes all 18" prediction was wrong
+
+Committed on `backend-jit/surfdens-quad` (`d6456975`), held unpushed while #1211
+is the active PR.
+
+**8 entries flip, not 18.** The numpy-level experiment in the previous entry
+tested the quadrature *math* and I read it as testing the *tests*. Measured under
+an actual trace:
+
+| | |
+|---|---|
+| XPASS | **8** — Burkert, Hernquist, Isochrone, Jaffe, KuzminDisk, NFW, Plummer, SphericalShell |
+| still xfail | 6 |
+
+The residual 6 have nothing to do with quadrature:
+
+- **AnyAxisymmetricRazorThinDisk, DoubleExponentialDisk** — `TypeError: Methods
+  in X do not accept array inputs. Please input scalars`.
+- **FlattenedPower, Kepler, PowerSpherical, testMWPotential** —
+  `TracerArrayConversionError: __array__() was called on traced array`, i.e. a
+  tracer -> numpy conversion somewhere else in the potential.
+
+FlattenedPower and PowerSpherical are the instructive pair: my experiment
+predicted both fixed (8.16e-14, 3.78e-15) and both still fail, because the
+failure was never accuracy.
+
+**And the first version was a real regression.** Feeding the node array to
+scalar-only potentials turned two *passing* eager-jax tests into TypeErrors —
+trading 8 traced flips for 2 eager breakages. Caught by running eager as well as
+traced, on the reasoning that a change routing new data into potentials could
+break the path that already worked. Gated on the existing `_force_accepts_arrays`
+detector; eager back to 0 failures.
+
+One more CI-only trap caught before pushing: `numpy.fabs(z)` on a torch tensor
+emits a NumPy 2 `__array_wrap__` DeprecationWarning, and the coverage shard runs
+`-W error::Deprecation`. Computing `absz` per-namespace fixes it; re-verified
+with warnings escalated.
+
+| check | result |
+|---|---|
+| numpy byte-identity | **240 hex-exact values, all match** |
+| eager jax | 0 failures (was 2 with the first version) |
+| traced jax | 0 failures, 8 XPASS |
+| `-W error::Deprecation` | 8 passed |
+
+**#1211** meanwhile: 14 pass / 137 pending, `codecov/patch` 14.28% and
+`codecov/project` -53.97% — the partial-upload signature again (both recover as
+shards report; #1210 went 36.96% -> 99.96% the same way).
