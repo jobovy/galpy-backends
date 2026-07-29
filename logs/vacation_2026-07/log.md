@@ -4015,3 +4015,54 @@ the same structural reason.
 
 So #169 is one pattern applied twice, not two migrations -- materially smaller
 and safer than the ledger note implied. Both halves can go in one PR after all.
+
+## Wake 30 -- #169 built, and half of it deliberately thrown away
+
+Committed `460f1a0b` on `backend-jit/array-safe-quad-potentials` (held until
+#1218 merges; one PR at a time). The plan from wake 29 was "one pattern applied
+twice". It turned out to be one pattern applied **once**, and the second half
+had to be dropped for a reason worth recording.
+
+**What landed.** `DoubleExponentialDisk`'s five force/deriv methods now
+broadcast: `node_axis` on the closed-over `R`/`z`, `axis=-1` on the reduction.
+Both are no-ops for scalars, so the scalar arithmetic is untouched -- verified
+**bitwise on numpy AND jax**, all five methods, array result identical to
+looping the same coordinates as scalars. `check_potential_inputs_not_arrays`
+grows an opt-in (`_backend_accepts_arrays`) gated on every array argument being
+a BACKEND array, so the documented numpy contract is unchanged. `node_axis`
+moved to `galpy.backend.quadrature`, where the convention lives and where it now
+has two consumers. **The traced Poisson surfdens for DoubleExpDisk passes: 13s,
+vectorised.** 2 ledger entries dropped.
+
+**What I pulled back out, and why.** `AnyAxisymmetricRazorThinDisk` has the
+identical symptom, and the identical fix made its six `_gl` methods broadcast
+bit-identically too (verified, z=0 edge included). I reverted all of it.
+
+Running the actual test after the fix, the traced Poisson surfdens came back
+`-8.5e-06` against numpy's `0.6065`. Not a quadrature shortfall -- raising the
+order drove it to `1.8e-14`, i.e. it converges cleanly to **zero**. Splitting
+the two terms found the boundary term exact to all digits and the integral at
+`-6.644` instead of `+0.978`. Probing the integrand toward the plane:
+
+```
+   |z|      numpy(scipy)      traced GL        relerr
+  1e-02   4.1259264991e+00  4.1259264991e+00   1.6e-12
+  1e-03   4.1605916883e+00  4.4090723647e+00   6.0e-02
+  1e-04   4.1640252925e+00 -6.8505866336e+01   1.8e+01
+  1e-05   4.1643683070e+00 -9.3066065216e+04   2.2e+04
+```
+
+That is the `a=R` principal value the class comment already documents, and
+`symmetric_quad(interior_point=0.0)` clusters its nodes at `z=0` precisely
+there. So for this potential the array gate would have converted a loud
+`TypeError` into a silently wrong `~0` -- exactly the failure mode I argued
+against in #1218 two hours earlier. The gate stays shut for it; its ledger
+entries stay, with the reason corrected from "scalar-only decorator" to the
+sheet limit, and a test now pins the refusal so nobody opens it casually.
+
+Net: 4 ledger entries were going to drop; 2 dropped, 2 kept **on purpose**. The
+useful lesson is that "same symptom, same fix" was true about the code and false
+about whether the fix should ship.
+
+Also worth noting: this is the fourth pre-commit rejection of the vacation
+(ruff-format again). Checking `git log` after every commit has caught all four.
