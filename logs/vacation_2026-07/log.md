@@ -3739,3 +3739,44 @@ Worth understanding once group 2 lands: the two tracers disagree about the same
 code, which usually means one of them is taking a different branch (torch's
 `under_trace` goes through `torch.compiler.is_compiling()`, jax's through tracer
 type). A difference there is worth knowing regardless of which way it falls.
+
+### The torch-jit green was partly HOLLOW -- and it corrects my own earlier call
+
+test_potential under torch --jit finished: all 5 groups, **1326 tests, 0
+failures**. But group 2 had 64 skips against 3-14 elsewhere, which was worth
+pulling on rather than banking.
+
+The two tests that FAIL under jax --jit --
+`test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDisk]` and
+`[DoubleExponentialDisk]` -- came back **PASSED** under torch --jit, in no ledger
+and not skipped. Tests disagreeing between tracers needs a reason, so I spied on
+the gate inside a `gb.jit("torch")` region:
+
+    _quad_needs_backend -> [False]     # False = take scipy.integrate.quad
+
+So under torch tracing surfdens takes the **scipy branch**; the traced GL path --
+the one that fails under jax -- is never entered. The torch pass is **vacuous**:
+scipy runs node-by-node with scalars, the scalar-only decorator is satisfied, and
+the test goes green without exercising the traced path.
+
+torch.compile itself is genuinely on (is_compiling=True inside a galpy call), so
+this is not a global fallback -- it is this one gate being fooled. And
+`under_trace`'s own docstring predicted it: dynamo turns `float(x)` into a
+symbolic scalar, so a concreteness probe "wrongly takes the concrete branch and
+drags the scipy/numpy code into the graph".
+
+**This corrects a call I made earlier.** In #164 I wrote a change switching this
+gate to `under_trace(absz, *coords)`, measured that it did not fix the jax NaN,
+called it speculative churn, and reverted it. That was right about jax and wrong
+about torch: `under_trace` consults `torch.compiler.is_compiling()` instead of a
+float() probe, which is exactly what this needs. The change was correct for a
+reason I had not measured yet -- I had tested the hypothesis I happened to have,
+not the space of reasons the change might matter.
+
+Filed as task #168, to do after #1217 lands (same function). Expect the fix to
+make the torch poisson_surfdens tests start FAILING like jax's -- which is the
+right outcome and gets ledgered. A loud shared failure beats a silent divergence.
+
+So the honest torch-jit headline is: 2028 tests measured across 11 suites with 0
+failures, but at least the surfdens-touching subset of that green is not evidence
+the traced path works.
