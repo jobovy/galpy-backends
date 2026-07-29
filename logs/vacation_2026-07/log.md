@@ -4587,3 +4587,47 @@ nothing had ever run the relevant configuration -- after the torch-jit blind spo
 Ledger arithmetic: **none**. These were never ledgered, because nothing had ever
 run them on torch. That is a worse state than a ledger entry, and the reason the
 "run the configuration nobody has run" habit keeps paying.
+
+## Wake 39 -- the streamTrack slow-skip is JUSTIFIED, and now with a number
+
+Two measurements settled the open question from wake 33 ("should the file-level
+slow-skip be narrowed so 40 passing tests actually run?").
+
+**1. Independent corroboration of the earlier measurement.** The 5 tests I found
+failing on jax by bypassing the skip are ALREADY LEDGERED FOR TORCH -- the skip is
+`jax`-only, so torch runs the file:
+
+```
+torch tests/test_streamTrack.py::test_streamTrack_cov_basis
+torch tests/test_streamTrack.py::test_streamTrack_cov_per_call_unit_overrides
+torch tests/test_streamTrack.py::test_streamTrack_out_of_range_returns_nan
+torch tests/test_streamTrack.py::test_streamTrack_plot_smoke
+torch tests/test_streamTrack.py::test_streamTrack_plot_spread_non_cartesian
+```
+
+Exactly the five, same names, same cause (the deferred sky-frame `cov()` basis).
+So the gap was never undocumented -- it was documented on the backend that runs
+the file, and invisible on the one that skips it. My measurement and the existing
+ledger agree, which is the best kind of confirmation.
+
+**2. The reason for the skip, quantified.** Eager jax, whole file:
+
+```
+45 tests, 5 fail, TOTAL = 779s  (13 minutes)
+```
+
+Thirteen minutes for ONE file. The skip's own note said it "pushes
+test_streamTrack over the shard timeout", and that is plainly still true.
+Narrowing it would buy 40 tests of jax coverage at the price of +13 min on a jax
+shard that is already the slowest thing in CI -- and I cannot edit workflows to
+rebalance the shards.
+
+**Decision: leave the file-level skip.** Not because it is comfortable, but
+because the trade is now measured rather than assumed: 40 tests vs 13 minutes,
+with the 5 real gaps already recorded via torch. If Jo wants that coverage, the
+cheap version is to move `test_streamTrack.py` into its own shard rather than to
+un-skip it in place -- a workflow change, which is his to make.
+
+This closes the second of the three residual blind spots as *understood*, not
+fixed. The third (`test_noninertial`, does not finish in 45 min traced) is the
+same shape of problem: a speed issue masquerading as a coverage gap.
