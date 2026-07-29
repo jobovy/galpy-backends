@@ -4418,3 +4418,36 @@ away; it entered and left the jit context per point instead of once for the
 grid. The reproduction only became stable when I matched the original
 measurement exactly. Same lesson as the torch.compile hunt: a non-reproduction
 is only evidence if the retry differs in the one way you think it does.
+
+## Wake 35 -- #1219 MERGED (`c1abf586`), #1220 opened
+
+154/154 green, and codecov/project flipped to pass on its own for the SECOND
+time as uploads completed. That pattern is now well-established enough to treat
+as the default reading: a large project drop while shards are still running is
+the partial-upload signature, and waiting costs nothing.
+
+Audit before merge. The three new conditionals, and what each decides on:
+
+| line | decides on | verdict |
+|---|---|---|
+| `v[..., None] if getattr(v, "ndim", 0)` | array RANK, static under trace | structural |
+| `hasattr(x,"shape") and x.shape != () and len(x) > 1` | SHAPE, static under trace | structural |
+| `arrays and not (flag and all(is_backend_array(x)))` | list truthiness, class attr, TYPE | structural |
+
+None branches on element values, so none needs `xp.where`. Duplication: net
+NEGATIVE -- `node_axis` moved rather than copied, and `git grep "^def node_axis"`
+returns exactly one hit, in `galpy.backend.quadrature` where the convention is
+defined and where it now has two consumers in different subpackages.
+
+**Rebase trap worth recording.** After the squash-merge, rebasing the stacked
+branch tried to REPLAY #1219's pre-squash commits (`30afbbed`, `4e4e1fb7`) --
+git cannot tell they are already in develop, because squashing changed their
+content -- and conflicted against the file they had themselves added. The fix is
+not to resolve those conflicts: it is to abort, reset to the new develop, and
+cherry-pick only MY commits. Verified after: exactly 2 commits, exactly 2 files,
+no conflict markers, no #1219 content leaked in.
+
+**#1220** carries the ledger-accuracy work: `test_ExpDisk_special` un-ledgered
+(real flip, stash-verified) and the two NFW/XLA interpRZPotential gaps recorded
+with their root cause. Re-verified on the new base after the cherry-pick --
+ExpDisk passes numpy/jax-jit/torch-jit, and the interp pair registers `xx`.
