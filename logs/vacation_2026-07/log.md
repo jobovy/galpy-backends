@@ -3988,3 +3988,18 @@ Worth naming the misread: I took "needs an array-safety migration" from my own
 earlier ledger note at face value and started building around it, when ten
 minutes of probing showed the migration is far smaller than the note implied --
 and that the cheap-looking alternative was the expensive one.
+
+**De-risked before committing to it.** I patched `_Rforce_gl` alone (node-axis on
+the closed-over `R`/`z2`) and checked the two properties the whole PR rests on:
+
+```
+scalar GL : -1.5341582621184369  -1.34158831864304  -1.167249999317013
+array  GL : -1.5341582621184369  -1.34158831864304  -1.167249999317013   shape (3,)
+BIT-IDENTICAL elementwise: True
+```
+
+So the array path broadcasts *and* reproduces the scalar path bit-for-bit -- not
+"to 1e-15", bitwise. `_node_axis` being a no-op on 0-d input means the scalar
+graph is unchanged, which is exactly why byte-identity is structural here rather
+than something to re-argue per method. Patch reverted; the PR gets built properly
+(all six `_gl` methods + decorator opt-in + tests) rather than half-landed now.
