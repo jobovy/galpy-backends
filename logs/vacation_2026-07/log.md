@@ -3563,3 +3563,25 @@ is green.
 Also started a full traced `test_potential.py` (5 parallel splits) on the #164
 branch, to verify the ledger 7 -> 5 claim end to end before it becomes a PR:
 only the 5 remaining entries should xfail, with nothing unexpected failing.
+
+### #164 branch verified end to end, traced
+
+Ran the full `test_potential.py` under `--backend jax --jit`, 5 parallel splits:
+
+| group | tests | failures |
+|---|---|---|
+| 1 | 266 | 0 |
+| 2 | 266 | 0 |
+| 3 | 266 | 0 |
+| 4 | 266 | 0 |
+| 5 | 262 | 0 |
+
+**1326 tests, 0 failures**, 122 skipped (which includes the 5 remaining ledgered
+xfails). That is the end-to-end confirmation of the ledger 7 -> 5 claim: the
+degenerate-radii guards flip at_zero and at_infinity, and nothing else in the
+file regressed under a trace. Checking the whole file rather than just the two
+flipped tests is the point -- a guard in a SHARED helper (`_bk_split_quad` feeds
+all six _gl kernels) could easily have perturbed something else.
+
+#1216: SIMBAD flakes all cleared on re-run, **152 pass / 0 fail**, waiting on the
+last re-run shard plus all-clear.
