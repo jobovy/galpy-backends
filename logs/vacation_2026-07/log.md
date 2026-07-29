@@ -4003,3 +4003,15 @@ So the array path broadcasts *and* reproduces the scalar path bit-for-bit -- not
 graph is unchanged, which is exactly why byte-identity is structural here rather
 than something to re-argue per method. Patch reverted; the PR gets built properly
 (all six `_gl` methods + decorator opt-in + tests) rather than half-landed now.
+
+**And the second potential is the same fix.** I expected `DoubleExponentialDisk`
+to be the hard one -- a fixed 10000-node Ogata table sounded like it needed
+restructuring. It does not. Its `_Rforce` is already fully backend-native; `fun`
+just closes over `R`/`z` without a node axis, and `_de_quadsum` already accepts
+`axis=` (call sites currently omit it, i.e. `axis=None`, which for the 1-D
+scalar-input table is identical to `axis=-1`). So its fix is the same two moves:
+node-axis the closed-over coords, pass `axis=-1`. Byte-identical for scalars for
+the same structural reason.
+
+So #169 is one pattern applied twice, not two migrations -- materially smaller
+and safer than the ledger note implied. Both halves can go in one PR after all.
