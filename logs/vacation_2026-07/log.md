@@ -4089,3 +4089,36 @@ so DoubleExpDisk's mass integral keeps unrolling node-by-node even though it can
 now vectorise. That is a speed follow-up, not a correctness one (the two spellings
 reduce bitwise identically), and folding it in would widen a PR that is currently
 clean and verified.
+
+## Wake 31 -- #167 CLOSED: torch --jit is fully measured, and it is clean
+
+The last unmeasured traced surface is done. `test_orbit.py` under
+`--backend torch --jit`, all 8 pytest-split groups:
+
+```
+581 tests, 0 fail, 0 err, 23 skip
+```
+
+Combined with the 11 suites measured earlier, torch tracing now has **zero known
+failures anywhere**, from a starting position two days ago of "0 torch-jit ledger
+entries, because nobody had ever run it". The two entries #1218 added are the
+only ones that have ever existed, and #169 removes one of them.
+
+**#169 verification is complete and green on every axis:**
+
+| run | result |
+|---|---|
+| numpy `test_potential` (full) | **1326 tests, 0 fail** |
+| jax --jit `test_potential` (4 groups) | **1326 tests, 0 fail** |
+| torch --jit (poisson_surfdens + new tests) | **8 tests, 0 fail** (DoubleExpDisk pass, AnyAxisym xfail) |
+| `test_backend_array_inputs.py` | 6 pass |
+
+The numpy run is the one that mattered -- `check_potential_inputs_not_arrays`
+wraps a large fraction of the potential library, so a gate rewrite there is the
+kind of change that breaks things far from where it was edited. It did not.
+
+**#1218 status:** 148/154 green, 3 pending (two py3.14 `test_backend` shards at
+90+ minutes, plus all-clear). codecov reads 86.17% against a ~99.6% baseline --
+a 13-point drop that a 3-file change cannot produce, so this is the
+partial-upload signature with the heaviest shards still running, not a real gap.
+Per my own discriminator: wait, do not chase. Not touching it.
