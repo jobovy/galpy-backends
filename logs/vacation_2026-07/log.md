@@ -3930,3 +3930,61 @@ vacation (isort this time, ruff-format twice before). The pattern is now
 unmistakable -- any hook that *modifies* files fails the commit, and `git log`
 afterwards is the only reliable confirmation. I have caught it every time by
 checking, which is the habit worth keeping rather than the mistake worth fixing.
+
+### Wake 29 (cont.) -- the poisson_surfdens ledger entries: I built the wrong fix, measured it, and threw it away
+
+The four remaining `poisson_surfdens` ledger entries (2 jax-jit + 2 torch-jit)
+were labelled "scalar-only decorator; needs an array-safety migration". Under a
+trace the Poisson route hands `Rforce` **50 GL nodes at once** and
+`check_potential_inputs_not_arrays` rejects them.
+
+**Attempt 1 (built, measured, discarded).** galpy already has the machinery for
+this: `fixed_quad(vectorized=False)` calls a scalar-only integrand node-by-node,
+with `_galpy_scalar_only` as the marker and `_force_accepts_arrays` as the
+dispatch that `Potential.mass` already uses. The Poisson route simply never
+adopted it. I threaded `vectorized=` through the three rules surfdens uses
+(`symmetric_quad` / `transformed_quad` / `fixed_quad_semiinfinite`), extracting
+the node-evaluation into one shared `_eval_on_nodes` (which also removed an
+inline duplicate already sitting in `fixed_quad`).
+
+It works, and it is **unusably slow**: the two tests did not finish in 25
+minutes. Each of the 50 unrolled scalar force calls itself runs a 3-panel
+order-100 GL quadrature, so the jaxpr contains 50 copies of a large subgraph.
+Shipping that would trade a clean xfail for a CI timeout. Diff parked at
+`scratchpad/vectorized-plumbing-prototype.diff`; worktree reset.
+
+**What the measurement bought.** Two experiments, both cheap, that reframed the
+problem:
+
+1. Is the decorator merely over-conservative? **No.** With numpy arrays both
+   potentials genuinely fail -- `AnyAxisym` does a `bool()` on an array
+   (`if R == 0 and z == 0`), `DoubleExpDisk` broadcasts against a fixed
+   10000-node grid.
+2. But those are the *numpy* paths. With **backend** arrays the failures are
+   different and much smaller:
+   - `AnyAxisym`: `Incompatible shapes: [(3,100), (3,)]`
+   - `DoubleExpDisk`: `(10000,) vs (3,)`
+
+   Both are **pure missing-node-axis broadcasting**, not value-decided branches.
+   The GL nodes already carry the right shape; a closed-over `R`/`z2` just lacks
+   its trailing axis.
+
+**The real fix, for the next PR.** Give the closed-over coordinates a node axis
+in the six `_gl` integrands. galpy already has the exact helper -- `_node_axis`,
+a no-op on 0-d input -- so the scalar path stays **byte-identical by
+construction** while arrays start broadcasting. That yields a *vectorised*
+traced surfdens rather than a 50x unroll, i.e. the fast fix and the correct one
+are the same fix.
+
+It needs one genuine design decision, which is why I am not rushing it into a
+tail-of-wake PR: the decorator must let arrays through, and that is public
+behaviour. Intended shape -- allow arrays only when the potential opts in AND
+the namespace is not numpy, so the documented numpy contract
+("do not accept array inputs") is preserved exactly and only the
+already-vectorised backend path opens up. `_node_axis` should also move to
+`galpy.backend.quadrature` once it has two consumers in different subpackages.
+
+Worth naming the misread: I took "needs an array-safety migration" from my own
+earlier ledger note at face value and started building around it, when ten
+minutes of probing showed the migration is far smaller than the note implied --
+and that the cheap-looking alternative was the expensive one.
