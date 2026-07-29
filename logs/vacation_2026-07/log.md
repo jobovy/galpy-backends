@@ -3865,3 +3865,27 @@ scipy fallback.
 
 Not phone-pinged: unreleased branch, nothing blocked, and I can document it fully.
 But it belongs near the top of Jo's queue.
+
+### Blast radius of the torch.compile concreteness-probe problem: exactly TWO sites
+
+Audited every `has_concrete_truth_value` gate and every raw float()-probe in
+galpy:
+
+| site | jax traced | torch traced | severity |
+|---|---|---|---|
+| `Potential._quad_needs_backend` (:134) | GL path (raises for scalar-only pots) | **scipy path -> 2.235e-15 instead of 0.0662** | silently wrong number |
+| `RazorThinExponentialDisk._R2deriv` (:255) | **NaN** (Jo's chosen contract) | **raises PotentialError** | contract violation |
+| `AnyAxisymmetricRazorThinDisk` float()-probe (:192) | -- | -- | already guarded by `under_trace`, NOT exposed |
+
+Two exposed sites, one root cause, one fix: use `under_trace` (which asks
+`torch.compiler.is_compiling()`) instead of a concreteness probe that dynamo
+turns symbolic. The third site is the counter-example that proves the pattern --
+someone already hit this and guarded it correctly, which is also where
+`under_trace`'s warning docstring came from.
+
+The second site is milder than the first: raising is honest, whereas returning
+2.235e-15 is not. But it is still a divergence from a contract Jo chose
+deliberately (NaN off-plane under a trace), and torch quietly does not honour it.
+
+Recorded in #168. Both are pre-existing, neither is from my PRs, and the fix is
+the single `under_trace` swap I reverted during #164.
