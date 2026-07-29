@@ -3702,3 +3702,40 @@ Two things this changes:
 
 test_potential under torch --jit now running (5 splits); test_orbit remains the
 one large unmeasured block on both traced backends.
+
+### torch --jit on test_potential: 4/5 groups clean, and a caveat I checked
+
+| group | tests | failures |
+|---|---|---|
+| 1 | 266 | 0 (253s) |
+| 3 | 266 | 0 (1215s) |
+| 4 | 266 | 0 (267s) |
+| 5 | 262 | 0 (585s) |
+| **2** | — | **still running** |
+
+Before calling that clean I checked two things that could have made it vacuous.
+
+**Is torch.compile actually engaged, or silently falling back to eager on graph
+breaks?** If it fell back, every "pass" would be a numpy/scipy pass wearing a
+traced label. Probed inside a real galpy call under `gb.jit("torch")`:
+
+    is_compiling = True ,  under_trace = True ,  value = -0.9422394447085976
+
+So torch.compile IS on, `under_trace` correctly detects it, the GL path is taken,
+and the value matches numpy. torch tracing is real, not a fallback.
+
+**Are the jax-jit failures merely masked by inherited `torch` ledger entries?**
+No -- **zero** of the four (2ndDeriv[AnyAxisym], poisson_surfdens[AnyAxisym],
+poisson_surfdens[DoubleExpDisk], ExpDisk_special) appear in the torch ledger.
+
+Which leaves a genuine and interesting asymmetry: tests that FAIL under jax
+tracing appear to PASS under torch tracing. But only partly measured -- **2 of
+those 4 live in group 2, which has not finished**. So the honest statement today
+is: 1060 test_potential tests measured under torch --jit with 0 failures, with
+the two most interesting cases still outstanding. Not "torch-jit is clean on
+test_potential".
+
+Worth understanding once group 2 lands: the two tracers disagree about the same
+code, which usually means one of them is taking a different branch (torch's
+`under_trace` goes through `torch.compiler.is_compiling()`, jax's through tracer
+type). A difference there is worth knowing regardless of which way it falls.
