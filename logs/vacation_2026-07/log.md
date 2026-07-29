@@ -4315,3 +4315,34 @@ work existed.
 **And a measured cost:** `test_noninertial.py` under jax --jit hit a **45-minute
 timeout** (exit 124) without finishing. That matches the known
 `jax-noninertial-timeout` flakes; now quantified rather than suspected.
+
+### The sweep paid off: two NEW jit-only gaps in `test_interp_potential.py`
+
+`test_interp_potential.py` under jax --jit: 40 tests, **2 failures** --
+`test_interpolation_potential_use_c` and `..._force_use_c`. The ledger already
+carries two entries for this file, but for DIFFERENT tests
+(`..._force_c`, `..._secondderivs`), so these are genuinely new.
+
+Both PASS under eager jax and fail only traced, which is the discriminating check
+I ran before drawing any conclusion. Both compare an interpRZPotential grid built
+with `use_c=True` against the same grid built in Python, to 1e-14:
+
+```
+            pot grid    rforce grid   (bar 1e-14)
+  eager     2.665e-15     1.776e-15
+  jax --jit 5.596e-14     6.621e-13
+```
+
+So the traced Python-side grid construction loses one to two digits. That makes
+this **numerical over-tolerance, not a wrong result** -- the traced grid is still
+correct to ~1e-13 -- and the distinction matters for how it gets fixed.
+
+Ledgered with the measured magnitudes (`ba4fa851`), not fixed: the honest fix is
+a backend-aware tolerance, and per standing policy loosening a tolerance needs
+Jo's sign-off. Verified they register as `xx`, not as reds. Two entries added
+against one removed this wake, which is the right trade -- the ledger got MORE
+accurate, and a silent traced gap became a documented one.
+
+Running never-measured suites has now produced findings four times
+(#164 #165 #166 #167, and this). It is the highest-yield thing I do while CI is
+queued.
