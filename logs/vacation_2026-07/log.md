@@ -4197,3 +4197,42 @@ That is twice this wake that measurement killed an attractive fix -- the
 `vectorized=` unroll and now this. Both looked right on paper and neither
 survived contact with the actual numbers. Cheap to find out, expensive to have
 shipped.
+
+## Wake 33 -- swept the never-measured suites; found a whole file invisible to jax
+
+With #1219 queued behind the runner backlog, I ran the 13 non-backend test files
+that have never been executed traced. Clean so far: `test_streamgapdf` (30),
+`test_streamgapdf_impulse` (14), `test_kuzminkutuzov`, all 0 failures.
+
+**The interesting one is `test_streamTrack.py`, which reported 45 tests and 45
+SKIPS.** It is not ledgered -- it is a FILE-LEVEL entry in
+`backend_slow_skip.txt` (`jax tests/test_streamTrack.py`, added because it pushed
+the shard over its timeout). Since `-jit` inherits plain `jax` entries, an entire
+suite has been invisible under both jax and jax --jit for its whole life. That is
+a bigger blind spot than any single ledger entry, and exactly the class of thing
+the ledger's own size metric cannot show.
+
+So I bypassed the slow-skip locally (temp edit, reverted) and measured it, split
+4 ways so it could not blow a timeout:
+
+```
+test_streamTrack.py under jax --jit: 45 tests, 5 failures
+  5x NotImplementedError
+     test_streamTrack_plot_smoke
+     test_streamTrack_out_of_range_returns_nan
+     test_streamTrack_cov_per_call_unit_overrides
+     test_streamTrack_cov_basis
+     test_streamTrack_plot_spread_non_cartesian
+```
+
+All five are ONE deliberate, documented gap: `streamTrack.cov()` on a backend
+track supports only `basis='galcenrect'`, and sky-frame bases are the deferred
+PR #861 follow-up (see memory `streamtrack_todo`). **40 of 45 pass traced.**
+
+No action taken, deliberately. Ledgering the five would add inert entries (they
+are skipped, so they would never fire), and narrowing the file-level slow-skip so
+the 40 passing tests actually run is a real coverage gain but re-risks the shard
+timeout that motivated the skip -- a CI-time judgement I would rather not make
+unprompted with a PR in flight and no ability to edit workflows. What this buys
+now is knowing the answer: if the skip is ever narrowed, expect exactly those
+five, for exactly that reason.
