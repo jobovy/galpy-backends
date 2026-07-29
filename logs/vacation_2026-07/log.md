@@ -3889,3 +3889,44 @@ deliberately (NaN off-plane under a trace), and torch quietly does not honour it
 
 Recorded in #168. Both are pre-existing, neither is from my PRs, and the fix is
 the single `under_trace` swap I reverted during #164.
+
+## Wake 29 -- #1217 MERGED, #1218 opened (the torch.compile silent-wrong fix)
+
+`1b6f74af` -- #1217 merged on a full green board (154 pass, 0 fail, CLEAN),
+closing the whole #164 arc. Audit passed: every new `if` structural (`z is None`
+identity, `xp is numpy` namespace, one short-circuit-guarded `bool()`),
+duplication net REMOVED, helpers in shared homes.
+
+**#1218** now open with the #168 fix, and it is the most consequential change of
+the vacation because it removes a way to get a wrong number:
+
+| site | before (torch.compile) | after |
+|---|---|---|
+| surfdens | **2.235e-15**, silently wrong, order-dependent | raises TypeError, same as jax |
+| R2deriv off-plane | raises, ignoring the traced contract | NaN, same as jax |
+
+The audit found exactly two exposed sites and no more. The third candidate --
+AnyAxisymmetricRazorThinDisk's own float() probe -- was already guarded with
+`under_trace`, and that guard is where the warning docstring came from. So the
+codebase already knew; two sites predated the knowledge.
+
+**Verification, including the part that had to come out red:**
+
+| check | result |
+|---|---|
+| torch --jit test_potential (5 splits) | 1326 tests, 0 failures |
+| jax --jit jeans + anyaxisymdisk + convenience | 141 tests, 0 failures |
+| numpy -k "RazorThin or AnyAxisym" | 15 passed |
+
+The two poisson_surfdens tests now FAIL under torch --jit, exactly as they
+already do under jax --jit, and are ledgered as the first two `torch-jit`
+entries (51 jax / 5 jax-jit / 99 torch / **2 torch-jit**). That is the point, not
+a regression: a loud shared failure beats an order-dependent silent wrong number.
+
+numpy cannot reach the changed line -- the gate returns False for numpy first.
+
+Process note: a pre-commit hook rejected the commit for the THIRD time this
+vacation (isort this time, ruff-format twice before). The pattern is now
+unmistakable -- any hook that *modifies* files fails the commit, and `git log`
+afterwards is the only reliable confirmation. I have caught it every time by
+checking, which is the habit worth keeping rather than the mistake worth fixing.
