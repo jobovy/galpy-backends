@@ -4122,3 +4122,30 @@ kind of change that breaks things far from where it was edited. It did not.
 a 13-point drop that a 3-file change cannot produce, so this is the
 partial-upload signature with the heaviest shards still running, not a real gap.
 Per my own discriminator: wait, do not chase. Not touching it.
+
+### #1218 MERGED (`0036e42e`), #1219 opened
+
+154/154 green. The two codecov reds **flipped to pass on their own** as the last
+uploads landed -- exactly the partial-upload signature I called earlier (86.17%
+against a ~99.6% baseline is not a drop a 3-file change can produce). Waiting
+instead of chasing was the right call; no action was ever needed.
+
+Audit before merge, on the three axes:
+* **if -> xp.where array class**: the new `if under_trace(z)` and `if xp is numpy`
+  are STRUCTURAL -- tracing context and namespace identity -- so they yield one
+  Python bool regardless of input shape and cannot mis-handle arrays. The genuinely
+  value-dependent decision uses `xp.where(inplane, val, nan)`, the array-safe form.
+  `if not allin` is reachable only on the concrete path, and `allin` is still used
+  there (checked -- the traced early return did not orphan it).
+* **duplication**: reuses the shared `under_trace`; removes the now-dead
+  `has_concrete_truth_value` import from both files. No new helper.
+* **placement**: nothing general buried in a potential module.
+
+`gh pr merge` reported "failed to run git" -- the API merge had already succeeded
+and only gh's LOCAL branch cleanup failed, because feat/backends-develop is checked
+out in another worktree. Checked the PR state before retrying rather than
+re-issuing the merge; it was already MERGED. Worth remembering: a gh error after a
+mutating call is not evidence the mutation failed.
+
+**#1219** is now open with the DoubleExpDisk work, rebased clean onto the squashed
+develop (1 unique commit, 5 files, no conflict markers).
