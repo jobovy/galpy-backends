@@ -4273,3 +4273,45 @@ memory, now with a second instance.
 
 Cancelled the five stale `30afbbe` runs on push (prior-SHA, so safe -- same-SHA
 push runs are branch-protection-required and must never be cancelled).
+
+## Wake 34 -- a real ledger flip, from reading what the test actually asserts
+
+**`test_ExpDisk_special` is un-ledgered (`08c3acf1`, next PR after #1219).**
+
+Its last block asserts that `RazorThinExponentialDisk.R2deriv` RAISES for
+z=/=0 -- correct, since off-plane is outside its domain. But #1218 (Jo's explicit
+"let's do NaN") made the traced path return NaN there instead, because under a
+trace z is a tracer, the domain cannot be decided, and raising would mean
+refusing to trace at all. The test could not express that, so it was ledgered.
+
+Now it asserts the actual two-regime contract: a non-raise is acceptable ONLY on
+a backend, and only as NaN. The numpy refusal is still required, so this is not a
+weakening -- it states the case the old assertion had no way to say.
+
+Verified in all four modes, and -- per my own stash-and-rerun rule -- confirmed
+the flip is real rather than a test that was passing anyway:
+
+```
+  numpy     -> PASS      WITHOUT the fix, jax --jit -> FAIL
+  jax       -> PASS      (tests/test_potential.py:4307 AssertionError)
+  jaxjit    -> PASS
+  torchjit  -> PASS
+```
+
+jax-jit ledger: 5 -> 4 with #1219, -> 3 with this. What remains is
+`test_2ndDeriv[AnyAxisym]` and `poisson_surfdens[AnyAxisym]` (the sheet limit
+characterised in wake 32) and `test_eccentricity` (same root cause, 7.7e-8
+against a 1e-8 bar). All three are one physics problem, now documented in detail.
+
+**Incidental find, worth a note:** the same test file has FIVE commented-out
+array-input blocks for DoubleExpDisk's forces and derivatives -- Rforce, zforce,
+R2deriv, z2deriv, Rzderiv -- disabled long ago precisely because the potential
+rejected arrays. #1219 makes exactly those work, but only for BACKEND arrays;
+they use `numpy.linspace`, so un-commenting them as-is would fail on numpy, where
+the scalars-only contract deliberately still stands. Left alone; noted because it
+shows the gap #1219 closes was felt in the test suite years before the backend
+work existed.
+
+**And a measured cost:** `test_noninertial.py` under jax --jit hit a **45-minute
+timeout** (exit 124) without finishing. That matches the known
+`jax-noninertial-timeout` flakes; now quantified rather than suspected.
