@@ -3667,3 +3667,38 @@ worth knowing before proposing one.
 
 Sweeping the suites already measured under jax-jit next, with a per-run
 TORCHINDUCTOR_CACHE_DIR so parallel runs cannot collide on the inductor cache.
+
+### torch --jit sweep: 10 suites, 702 tests, ZERO failures
+
+| suite | tests | torch --jit | jax --jit (where known) |
+|---|---|---|---|
+| test_sphericaldf | 223 | 0 fail, 1042s | 0 fail |
+| test_diskdf | 129 | 0 fail, 611s | 0 fail |
+| test_coords | 97 | 0 fail, 9s | 0 fail, 12s |
+| test_scf | 94 | 0 fail, 278s | 0 fail |
+| test_qdf | 56 | 0 fail, 1179s | 0 fail |
+| test_streamspraydf | 38 | 0 fail, 314s | 0 fail, 186s |
+| test_evolveddiskdf | 35 | 0 fail, 374s | 0 fail |
+| test_conversion | 18 | 0 fail, 110s | 0 fail, 14s |
+| test_dynamfric | 7 | 0 fail, 605s | 0 fail |
+| test_jeans | 5 | 0 fail, 139s | 0 fail (with #164) |
+
+**Zero torch-jit ledger entries are needed for any of it.** The blind spot turned
+out to be a blind spot in the *measurement*, not in the code: torch tracing has
+been working the whole time and nobody had looked.
+
+Two things this changes:
+
+1. `test_jeans` passes under torch-jit only *because* this branch carries the
+   #164 fix. So #1217 repairs torch tracing as well as jax -- the whole-line
+   surfdens change is backend-agnostic and I had only claimed eager-torch in the
+   PR body. Worth adding there.
+2. The cost profile is **uneven, not uniformly worse**. test_coords is FASTER
+   under torch (9s vs 12s) while test_conversion is 8x slower and test_dynamfric
+   ~2x. torch.compile warmup scales with the number of distinct graphs, not the
+   number of tests. Any future torch-jit CI shard should be composed by graph
+   count, not test count -- a naive "torch-jit costs about what jax-jit costs"
+   would be wrong by an order of magnitude on the wrong suite.
+
+test_potential under torch --jit now running (5 splits); test_orbit remains the
+one large unmeasured block on both traced backends.
