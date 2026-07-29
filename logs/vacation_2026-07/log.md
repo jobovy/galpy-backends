@@ -3647,3 +3647,23 @@ committing to a sweep. Deliberately not fixing anything until the scale is known
 
 Carried forward from the #165 retraction: a shard that reports NOTHING is not a
 pass, and with torch.compile a hang is a different animal from a failure.
+
+### torch --jit WORKS -- first measurement ever
+
+| suite | torch --jit | jax --jit (for scale) |
+|---|---|---|
+| test_coords | 97 tests, **0 failures**, 9s | 12s |
+| test_conversion | 18 tests, **0 failures**, 110s | 14s |
+
+So torch tracing is not broken -- it just has never been looked at. That is the
+best possible answer to the blind spot: no emergency, but a whole backend's
+traced status is unmeasured and evidently in decent shape.
+
+The interesting number is the **8x slowdown on test_conversion** (110s vs 14s)
+while test_coords is actually *faster* (9s vs 12s). torch.compile warmup
+dominates when there are many distinct graphs to compile and is free when there
+are few. That is a real scaling caveat for any future torch-jit CI shard, and
+worth knowing before proposing one.
+
+Sweeping the suites already measured under jax-jit next, with a per-run
+TORCHINDUCTOR_CACHE_DIR so parallel runs cannot collide on the inductor cache.
