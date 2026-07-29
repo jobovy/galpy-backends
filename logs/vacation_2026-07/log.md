@@ -4378,3 +4378,43 @@ Three residual blind spots, all now named rather than unknown:
 2. `test_noninertial` -- does not complete in 45 min traced, so it is
    unmeasurable in any reasonable CI budget without work on its speed first.
 3. The AnyAxisym sheet limit (wake 32), 3 entries, one physics problem.
+
+### Root-caused the interpRZPotential jit gap: it is XLA, not galpy
+
+Rather than leave "traced construction loses one to two digits" as a black box,
+I localised it. Evaluating each MWPotential component on the same grid, eager vs
+traced:
+
+```
+  MiyamotoNagaiPotential   3.465e-16
+  HernquistPotential       5.790e-16
+  NFWPotential             1.066e-14   <-- 30x the others
+```
+
+Then the decisive pair at the worst grid point (R=0.0896, z=0.02):
+
+```
+  eager numpy     -4.08407232333320369e+00
+  jax EAGER       -4.08407232333320369e+00   rel = 0.000e+00   (bit-identical)
+  jax jit         -4.08407232333324721e+00   rel = 1.066e-14   (same every run)
+```
+
+jax **eager** reproduces numpy bit for bit; only the **jitted** value moves, and
+it moves deterministically. So XLA compiles NFW's `log1p(r/a)/(r/a)` differently
+from how it evaluates it eagerly -- and that is precisely the cancellation-prone
+shape for a reassociation to show up in. It is a jit-mode numerical
+characteristic, **not a galpy defect**: there is nothing in the potential to fix.
+
+Two things this changes. The ledger entry now names the mechanism instead of the
+symptom, which is the difference between an entry someone can act on and one
+that just says "traced is worse". And it is the SECOND time this vacation that
+the answer was floating-point reassociation under compilation -- the first being
+my own over-strict bitwise test on py3.14 a few hours ago. Worth carrying
+forward: under `--jit`, bit-identity to the eager path is not a property to
+assume anywhere.
+
+An earlier probe of mine at nearby points showed only ~1e-16 and nearly sent me
+away; it entered and left the jit context per point instead of once for the
+grid. The reproduction only became stable when I matched the original
+measurement exactly. Same lesson as the torch.compile hunt: a non-reproduction
+is only evidence if the retry differs in the one way you think it does.
