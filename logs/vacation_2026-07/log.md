@@ -3814,3 +3814,54 @@ Hernquist/NFW traced finite surfdens unchanged at 8e-16..3.3e-15, 141 tests pass
 numpy never reaches the code at all.
 
 Pushed as `cc585e24`.
+
+## Wake 28 -- torch.compile can return a silently WRONG surfdens
+
+The most serious correctness finding of the vacation, and I got it wrong twice
+before getting it right. Recording the path, not just the answer.
+
+**The fact, reproducible with no instrumentation:**
+
+    AnyAxisymmetricRazorThinDisk.surfdens(1.0, 0.5, forcepoisson=True)
+      numpy / torch eager :  0.06621732146004472
+      under gb.jit("torch"):  2.2352231511396381e-15    <-- ~13 orders out
+      under jax.jit        :  raises TypeError (GL path, as ledgered)
+
+**Order-dependent.** In a loop that first compiled surfdens for Hernquist / NFW /
+MiyamotoNagai, the same AnyAxisym call returned the CORRECT value. So it depends
+on torch.compile's compile history within the process. Order-dependent silent
+wrongness is worse than deterministic wrongness -- a suite can go green while a
+user's script is wrong.
+
+**Two wrong calls of mine on the way, both worth keeping:**
+
+1. I first saw 2.235e-15 with a monkeypatched spy installed, then saw the loop
+   give the right answer, and concluded the wrong value was an instrumentation
+   artifact. **That was wrong** -- it reproduces with no patching. I had one real
+   instrumentation burn already this vacation (the symlinked .so), and pattern-
+   matched to it too eagerly.
+2. I then hypothesised a cold/warm cache interaction. **Also wrong** -- cold and
+   warm both give the wrong value in isolation.
+
+The lesson is narrow and useful: "it didn't reproduce" is only evidence if the
+second run differs from the first in the ONE way you think it does. My second run
+differed in two ways (no spy, AND three other potentials compiled first), and the
+second one was the operative difference.
+
+**Mechanism.** Non-invasive discriminator: the GL path RAISES for this scalar-only
+potential, so raises => GL, returns-a-number => scipy. jax raises, torch returns.
+So under torch.compile `_quad_needs_backend` answers False and scipy runs inside
+the compiled region. `under_trace`'s docstring predicted exactly this: dynamo
+makes `float(x)` symbolic, so a concreteness probe "wrongly takes the concrete
+branch and drags the scipy/numpy code into the graph".
+
+**Fix direction unchanged, motivation much stronger:** switch the gate to
+`under_trace`. That is the change I wrote during #164 and reverted as speculative
+churn after measuring it did not fix the jax NaN. It did not -- and it is exactly
+right for torch. Recorded in #168 with the pre-work: check every other
+has_concrete_truth_value gate for the same exposure, and re-run the torch --jit
+sweep afterwards, because some of that 702-test green may be resting on the same
+scipy fallback.
+
+Not phone-pinged: unreleased branch, nothing blocked, and I can document it fully.
+But it belongs near the top of Jo's queue.
