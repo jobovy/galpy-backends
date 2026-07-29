@@ -4631,3 +4631,30 @@ un-skip it in place -- a workflow change, which is his to make.
 This closes the second of the three residual blind spots as *understood*, not
 fixed. The third (`test_noninertial`, does not finish in 45 min traced) is the
 same shape of problem: a speed issue masquerading as a coverage gap.
+
+### #1221 red: SIMBAD outage, and the step-conclusion tell is worth keeping
+
+151/154 with one red, and this time I could NOT dismiss it by shape: my PR touches
+`linearPotential.py`, so a Windows ORBIT shard failing is at least conceivable.
+
+The step conclusions distinguished the two cases immediately:
+
+* #1220's Windows red -- `Test with pytest` had `conclusion: null`, and so did
+  every step after it. Never ran to completion. Lost runner.
+* #1221's Windows red -- `Test with pytest` has `conclusion: failure`. It RAN and
+  a test failed. Different animal, so I pulled the log instead of assuming.
+
+```
+tests/test_orbits.py::test_from_name_values FAILED
+pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint at:
+  https://simbad.cds.unistra.fr/simbad/sim-tap/capabilities: Connection failed
+```
+
+The known SIMBAD/VizieR network flake ([[no-rerun-vizier-notebook-flakes]]),
+nothing to do with 1D coercion. Re-ran the failed job (the run had settled, so
+`rerun --failed` was accepted this time without waiting).
+
+Keeping the tell explicitly: **`conclusion: null` on the pytest step means the
+job died; `conclusion: failure` means a test failed.** That one field is the
+difference between "re-run it" and "read the log", and I have now needed it twice
+in two PRs with opposite answers.
