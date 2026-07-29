@@ -4066,3 +4066,26 @@ about whether the fix should ship.
 
 Also worth noting: this is the fourth pre-commit rejection of the vacation
 (ruff-format again). Checking `git log` after every commit has caught all four.
+
+**#169 verification (both tracers, not just the one I fixed on).** I dropped a
+`torch-jit` ledger entry on the strength of a *jax* result, which is exactly the
+kind of inference that has bitten this project before, so I ran torch directly:
+
+```
+torch --jit: 8 tests, 0 fail, 107s
+  pass   test_poisson_surfdens_potential[DoubleExponentialDiskPotential]
+  xfail  test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+  pass   (all 6 new tests in test_backend_array_inputs.py)
+```
+
+So the drop is real on torch and the AnyAxisym refusal registers as xfail rather
+than a red. Plus **numpy `test_potential` in full: 1326 tests, 0 failures** --
+the decorator rewrite is global, so that was the check that mattered most -- and
+jax --jit group 1/4: 332 tests, 0 failures (2-4 still running).
+
+Deliberately NOT in this PR, noted for the reviewer: `Potential.mass`'s numerical
+path still asks `_force_accepts_arrays`, which sees only the scalar-only marker,
+so DoubleExpDisk's mass integral keeps unrolling node-by-node even though it can
+now vectorise. That is a speed follow-up, not a correctness one (the two spellings
+reduce bitwise identically), and folding it in would widen a PR that is currently
+clean and verified.
