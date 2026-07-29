@@ -4658,3 +4658,45 @@ Keeping the tell explicitly: **`conclusion: null` on the pytest step means the
 job died; `conclusion: failure` means a test failed.** That one field is the
 difference between "re-run it" and "read the log", and I have now needed it twice
 in two PRs with opposite answers.
+
+## Wake 40 -- #1221 MERGED (`5869d62f`); and I tripped my own import-shadow memory
+
+154/154 after the SIMBAD re-run. Audit: one new conditional in galpy/
+(`if not getattr(pot, "_backend_compatible", False)`) which decides on a class
+attribute -- structural, no value branch, no `xp.where` needed. `_coerce_x`: one
+definition, three uses, and it calls the SHARED `coerce_coords` rather than
+reinventing it. Placement is module-local beside the 1D raw entries it guards,
+symmetric with the 3D equivalent living inline in `Potential.py`'s decorator.
+
+**Then I wasted a probe on a mistake my own memory documents.** I launched
+`test_noninertial` under torch --jit as
+
+```
+python -m pytest /var/tmp/nogl/tests/test_noninertial.py ...
+```
+
+with cwd left at the MAIN repo. It "finished" in 12s with 48 errors, all of them:
+
+```
+AttributeError: module 'galpy.backend' has no attribute 'jit'
+    tests/conftest.py:456
+```
+
+That is not a finding about noninertial. `galpy` resolved to the main repo
+(`feat/backends @ dbb09ffc`), which predates `galpy.backend.jit` (#1202) -- the
+editable-install shadow that [[galpy-editable-install-import-shadow]] exists to
+prevent, and whose stated remedy is "always PYTHONPATH=<worktree> + assert
+galpy.__file__". I set PYTHONPATH and skipped the assert, and cwd beat it.
+
+Relaunched from inside the worktree, with the provenance asserted FIRST:
+
+```
+galpy: /var/tmp/nogl/galpy/__init__.py
+has jit: True
+```
+
+The tell was there in plain sight -- 12 seconds for a file that takes >45 min
+under jax, and errors in the FIXTURE rather than failures in the tests. A
+suspiciously fast green (or red) is itself evidence that the thing you meant to
+run did not run. Worth adding to the memory: assert `galpy.__file__` **and** run
+from inside the worktree; PYTHONPATH alone does not win against cwd.
