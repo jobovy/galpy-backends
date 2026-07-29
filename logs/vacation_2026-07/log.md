@@ -3616,3 +3616,34 @@ The PR body states the one rough edge rather than burying it: for a potential
 with an inf-capable closed form, z=None and z=inf can differ at quadrature level
 (~4e-14), because z=None integrates the density. The same property is why z=None
 returns a correct finite value where z=inf gives NaN even on numpy (NFW 0.2747).
+
+## Wake 26 -- a blind spot: torch --jit has never been measured
+
+#1217 is early in CI (2/151).
+
+Went looking for the next ledger cluster and found something more interesting.
+The remaining jax-jit entries are 5, and three of those are by-design or a policy
+question for Jo, so that ledger is essentially at its floor. Counting what the
+ledger actually contains:
+
+    51  jax
+     5  jax-jit
+    99  torch
+     0  torch-jit     <-- never measured
+
+The harness supports `--backend torch --jit` -- conftest says so explicitly, and
+the "<backend>-jit" inheritance rule is generic -- but **every traced measurement
+this vacation has been jax-only**. torch traced is a complete blind spot, and the
+mission is jax *and* torch.
+
+That reframes the next step. Squeezing the last two fixable jax-jit entries (the
+scalar-only `check_potential_inputs_not_arrays` pair) is a real migration for a
+2-entry gain; measuring torch-jit is unknown territory that could be anywhere
+from "works" to "nothing traces". Measurement first, as task #167.
+
+Started with test_coords and test_conversion -- the two fastest suites under
+jax-jit (12s, 14s) -- to learn whether torch tracing works at all before
+committing to a sweep. Deliberately not fixing anything until the scale is known.
+
+Carried forward from the #165 retraction: a shard that reports NOTHING is not a
+pass, and with torch.compile a hang is a different animal from a failure.
