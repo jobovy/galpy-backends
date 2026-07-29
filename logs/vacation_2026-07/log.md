@@ -4527,3 +4527,38 @@ logs returning `BlobNotFound` -- the infrastructure signature, not a test
 failure. My PR touches only `test_potential.py` and the ledger, so a Windows
 ORBIT shard is not plausibly mine. Cannot `rerun --failed` yet: the run still has
 5 jobs live and gh refuses while any are running. Waiting for it to settle first.
+
+### The 1D coercion fix is built and green in all five modes (`897199ed`)
+
+Held for #1220. `galpy/potential/linearPotential.py` +27, two test files +22.
+
+Added the coercion at the three shared raw 1D entries
+(`_call_nodecorator` / `_force_nodecorator` / `_force2deriv_nodecorator`), gated
+on `_backend_compatible` exactly as the 3D side is, leaving `t` alone for the
+same reason 3D does (it can be a hashable cache key). One helper, one place, all
+1D potentials -- not a per-potential patch.
+
+The KGPotential `sqrt` errors went away immediately; **3 of the 7 failures
+survived**, and they were a different thing: three test assertions feed a backend
+Orbit accessor straight into `numpy.amax`, which dispatches to
+`Tensor.max(axis=, out=)` and torch rejects. Cast with `as_numpy` at those sites
+(a no-op on numpy). Worth noting the fix was two distinct causes wearing one
+symptom -- had I stopped at "torch 7 -> 3, good enough", the PR would have been
+half a fix.
+
+```
+  numpy     21/21      torch      21/21      torch --jit  21/21
+  jax       21/21      jax --jit  21/21
+```
+
+Self-inflicted detour worth recording: my scripted insert of
+`from galpy.backend import as_numpy` anchored on `from galpy.orbit import Orbit`,
+which in these files is a FUNCTION-LOCAL import -- so it landed indented inside
+`_build_M` and produced a syntax error. Caught by the immediate `ast.parse`, not
+by the test run. Anchor on module-level text (`import pytest`) when injecting a
+module-level import.
+
+**#1220** meanwhile: the Windows red was NOT a test failure. `Test with pytest`
+has `conclusion: null` and so does every step after it -- a killed/lost runner.
+Re-ran the failed job once the run finished (gh refuses `rerun --failed` while
+any job is live, hence the wait). codecov/project cleared on its own again.
