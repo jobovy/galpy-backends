@@ -4236,3 +4236,40 @@ timeout that motivated the skip -- a CI-time judgement I would rather not make
 unprompted with a PR in flight and no ability to edit workflows. What this buys
 now is knowing the answer: if the skip is ever narrowed, expect exactly those
 five, for exactly that reason.
+
+### #1219 red was MY over-claim, not the code (`4e4e1fb7`)
+
+The py3.14 backend shard failed on my own new test:
+
+```
+R2deriv: vectorised evaluation is not bit-identical to the scalar one
+  array : [-0.12049472, -0.07845821, -0.04761014, -0.02634406]
+  scalar: [-0.12049472, -0.07845821, -0.04761014, -0.02634406]
+```
+
+Identical at print precision, differing in the last bits -- on py3.14, where all
+five methods are EXACTLY equal locally on py3.13.
+
+The cause is real and I had missed it: vectorising changes the **shape of the
+reduction**. A scalar call sums a `(10000,)` Ogata table; an array call sums
+`(len, 10000)` along the trailing axis, and a backend may associate a batched
+reduction differently. `R2deriv` is the one method summing TWO Ogata terms, so it
+has the most reassociation available -- which is exactly why it, and only it, is
+the one that broke.
+
+So "bitwise, not to a tolerance" was **too strong a claim**, and I had put it in
+the commit message, the PR body and this log. The operations are identical; only
+their grouping can differ. Corrected the assertion to a ~sqrt(10000)*eps
+reassociation bound, which is still tight enough that a dropped node, a wrong
+axis or a lost factor fails it by orders of magnitude. Locally the observed
+difference is exactly 0.0 for all five, so the bound is margin for the platform,
+not slack in the claim.
+
+Worth being precise about what survived: the FIX is unaffected -- the
+vectorisation is still correct, and numpy is still untouched. What was wrong was
+the strength of the property I asserted about it. My py3.13 box cannot see
+py3.14 reassociation, which is the same blind spot as the `regen-py-version`
+memory, now with a second instance.
+
+Cancelled the five stale `30afbbe` runs on push (prior-SHA, so safe -- same-SHA
+push runs are branch-protection-required and must never be cancelled).
