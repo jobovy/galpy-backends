@@ -3780,3 +3780,37 @@ right outcome and gets ledgered. A loud shared failure beats a silent divergence
 So the honest torch-jit headline is: 2028 tests measured across 11 suites with 0
 failures, but at least the surfdens-touching subset of that green is not evidence
 the traced path works.
+
+## Wake 27 -- a codecov failure that was NOT the phantom
+
+#1217 showed codecov/patch + codecov/project red. My reflex by now is "partial
+upload, wait" -- and that reflex was wrong here. Checking the number rather than
+assuming:
+
+    codecov project = 99.95%   (true is ~99.6; a partial upload reads 38-86%)
+
+Essentially complete. So by my own discriminator -- flat project + failing =
+REAL gap -- these were genuine. Good reminder that a heuristic that has been
+right five times running is exactly the one you stop checking.
+
+**The gap:** `symmetric_quad` had exactly ONE caller, the `z=None` path, which
+always passes `numpy.inf`. Its finite branch was never executed by anything.
+Uncovered, untested, and speculative generality besides.
+
+**The fix, which is better than a coverage patch:** the finite surfdens paths
+were already spelling out
+
+    transformed_quad(xp, f, -absz, absz, n=50, interior_point=0.0)
+
+which is exactly `symmetric_quad(xp, f, absz, ...)`. Routing them through it
+removes the duplicated spelling and covers the branch through REAL USE, rather
+than through a test written to satisfy a number. Three call sites now, one
+helper.
+
+Safe by construction: symmetric_quad only takes its infinite branch for a
+*concretely* infinite limit, and those two sites are reached only when the limit
+is traced -- so they land on the same transformed_quad call as before. Verified:
+Hernquist/NFW traced finite surfdens unchanged at 8e-16..3.3e-15, 141 tests pass.
+numpy never reaches the code at all.
+
+Pushed as `cc585e24`.
