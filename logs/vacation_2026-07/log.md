@@ -4149,3 +4149,51 @@ mutating call is not evidence the mutation failed.
 
 **#1219** is now open with the DoubleExpDisk work, rebased clean onto the squashed
 develop (1 unique commit, 5 files, no conflict markers).
+
+## Wake 32 -- attacked the AnyAxisym principal value, measured it, discarded it
+
+Three of the five remaining jit-ledger entries share one root cause (the `a=R`
+principal value), so it looked like the highest-leverage thing left. galpy already
+has the tool: `transformed_quad(interior_point=R)` clusters nodes at the split,
+where `_bk_split_quad` instead uses two PLAIN GL panels. A six-line swap.
+
+**It works spectacularly off-plane.** The Poisson integrand at R=0.5:
+
+```
+   |z|      before        after
+  1e-02   1.6e-12       4.4e-14
+  1e-03   6.0e-02       1.9e-14      <- 12 orders
+  1e-04   1.8e+01       3.0e-06      <-  7 orders
+  1e-05   2.2e+04       5.5e-03
+```
+
+and `test_eccentricity`'s circular orbit improves **5.4e-06 -> 7.7e-08**, a 70x
+gain.
+
+**And it regresses a passing test.** `test_forceAsDeriv_potential[AnyAxisym]`
+under --jit goes red at **(R,Z) = (0.500, 0.000)**, 8.9e-2 relative. The reason is
+worth keeping: at z != 0 the `a=R` pole is SOFTENED by z, so the feature has width
+~z and clustering finds it. At z = 0 exactly the pole is unsoftened, and plain GL's
+node placement -- which never lands near a=R -- was accidentally acting as a crude
+principal-value regularisation. Clustering deliberately puts nodes ON the pole. The
+two regimes pull in opposite directions.
+
+**Ledger arithmetic, so the trade is explicit:** the change clears **zero** entries.
+`test_2ndDeriv` still fails at z=0 (Hadamard finite part, a third distinct cause),
+`test_eccentricity` still misses its 1e-8 bar at 7.7e-8, and `poisson_surfdens`
+stays blocked for a reason I only found by building the whole thing: the OUTER
+surfdens quadrature uses `interior_point=0.0`, so it samples the integrand down to
+`z*xi^3 ~ 3e-12`, far below where even the improved scheme holds. The surfdens
+integrand is smooth and bounded near z=0 (it converges to 4.1644), so that outer
+clustering is not even buying anything there -- but changing it would affect every
+other potential.
+
+So: large accuracy gain off-plane, a real regression on-plane, no ledger movement,
+and the honest fix (choose the rule from z, guarding the dead branch so the z=0
+side cannot NaN-poison gradients) is a design, not a patch. **Reverted.** The
+entries keep the accurate explanation they got in #1219.
+
+That is twice this wake that measurement killed an attractive fix -- the
+`vectorized=` unroll and now this. Both looked right on paper and neither
+survived contact with the actual numbers. Cheap to find out, expensive to have
+shipped.
