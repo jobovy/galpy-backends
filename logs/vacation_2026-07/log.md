@@ -3538,3 +3538,28 @@ it both times.
 
 #164 branch now: whole-line surfdens, its cross-backend tests, the degenerate
 radii guards (ledger 7 -> 5), the gradient verification, and torch parity.
+
+## Wake 24 -- SIMBAD outage, five shards, one cause
+
+#1216 went to 5 reds. All five were the same thing:
+
+    FAILED tests/test_orbit(s).py::test_from_name_values / _errors
+      pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+SIMBAD is unreachable, so every shard that runs the from_name tests failed
+together. A cluster of reds appearing at once looks alarming and is exactly when
+it is worth reading one log before reacting -- five shards with one cause is a
+service outage, not five problems.
+
+Re-ran the failed jobs; four cleared immediately (150 pass). The fifth belonged
+to a third Linux/Mac run still in flight, which `gh run rerun --failed` refuses
+while any job in the run is live, so it had to wait for that run to complete
+before it could be re-queued. Now re-running too.
+
+The signal that mattered underneath the noise: **All-backend tests
+completed/success** -- the shard that actually exercises this PR's ledger change
+is green.
+
+Also started a full traced `test_potential.py` (5 parallel splits) on the #164
+branch, to verify the ledger 7 -> 5 claim end to end before it becomes a PR:
+only the 5 remaining entries should xfail, with nothing unexpected failing.
