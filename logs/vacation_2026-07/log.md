@@ -3585,3 +3585,34 @@ all six _gl kernels) could easily have perturbed something else.
 
 #1216: SIMBAD flakes all cleared on re-run, **152 pass / 0 fail**, waiting on the
 last re-run shard plus all-clear.
+
+## Wake 25 -- #1216 MERGED, #1217 opened (the #164 fix)
+
+`e2dd0759` -- merged on a full green board (154 pass, 0 fail). Every SIMBAD flake
+cleared on re-run; nothing about them was real.
+
+**#1217** now open with the whole #164 arc, five commits:
+
+1. `surfdens(R, z=None)` -- the whole line asked for STRUCTURALLY, because
+   `@backend_input` coerces z at the boundary and a traced z=inf is not
+   inspectable. Traced LogHalo/MiyamotoNagai/DoubleExpDisk all correct where two
+   were NaN. numpy asserted byte-equal (hex, not tolerance).
+2. Cross-backend tests for that path.
+3. RazorThin degenerate radii R=0 and R=inf, guarded in the shared
+   `_bk_split_quad` so all six _gl kernels benefit. Phi(0) and Phi(inf) now match
+   numpy exactly where both were NaN.
+4. Gradient verification -- grad-vs-FD with h-convergence, because commit 3's
+   claim that the dead branches cannot poison AD was reasoning, not evidence.
+5. Torch parity for the same, since `requires_grad` reaches the guarded split by
+   a different door than tracing does.
+
+jax-jit ledger **7 -> 5**, and `test_jeans` under --jit goes 4/1 -> **5/5**.
+
+Verification worth naming: the **full** traced test_potential.py, 1326 tests,
+0 failures. The guard lives in a shared helper feeding six kernels, so
+"the two tests I aimed at now pass" would have been the wrong evidence.
+
+The PR body states the one rough edge rather than burying it: for a potential
+with an inf-capable closed form, z=None and z=inf can differ at quadrature level
+(~4e-14), because z=None integrates the density. The same property is why z=None
+returns a correct finite value where z=inf gives NaN even on numpy (NFW 0.2747).
