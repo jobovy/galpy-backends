@@ -4451,3 +4451,29 @@ no conflict markers, no #1219 content leaked in.
 (real flip, stash-verified) and the two NFW/XLA interpRZPotential gaps recorded
 with their root cause. Re-verified on the new base after the cherry-pick --
 ExpDisk passes numpy/jax-jit/torch-jit, and the interp pair registers `xx`.
+
+## Wake 36 -- caught a gap in my OWN process: the README table was 24 PRs stale
+
+Dispatched the torch `--jit` sweep over the same 11 suites I ran under jax last
+wake (torch tracing only became real with #1218, so those files have never been
+traced on torch). Clean so far: streamgapdf 30, streamgapdf_impulse 14,
+kuzminkutuzov 10, all 0 fail; interp_potential still compiling.
+
+While that ran I checked something I had been quietly skipping. `README.md`'s
+PR table -- the surface Jo actually reads, per "I won't be reading through a
+two week trace, but will ask you to summarize" -- **stopped at #1196**. Every
+PR of this vacation (#1197 through #1219, 24 of them) was missing from it. I
+have been meticulous about `logs/vacation_2026-07/log.md` and let the summary
+surface rot, which is precisely backwards: the log is the trace he said he would
+NOT read.
+
+Added five rows covering the wave, at the granularity the rest of the table
+uses: the `--jit` harness (#1200/#1201/#1202/#1205), the ledger burndown
+(#1206→#1217, jax-jit 100 → 5), the torch.compile silently-wrong surfdens
+(#1218, with the 2.235e-15-instead-of-0.0662 number in it), DoubleExpDisk
+array-safety (#1219, including WHY AnyAxisym is deliberately excluded), and the
+measurement work with its two named residual blind spots.
+
+The memory `keep-galpy-jax-log-current` already said "update plan/track*.md +
+README table + logs/ as part of LANDING each PR" -- I was doing one of the
+three. Worth stating plainly rather than quietly fixing.
