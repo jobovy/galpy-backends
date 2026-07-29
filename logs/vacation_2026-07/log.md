@@ -4477,3 +4477,53 @@ measurement work with its two named residual blind spots.
 The memory `keep-galpy-jax-log-current` already said "update plan/track*.md +
 README table + logs/ as part of LANDING each PR" -- I was doing one of the
 three. Worth stating plainly rather than quietly fixing.
+
+## Wake 37 -- the torch sweep found a REAL pre-existing bug (not a jit gap)
+
+torch `--jit` over the 11 suites: 9 clean, **2 red**.
+
+```
+test_MultipoleExpansionPotential   107   0     test_streamgapdf          30   0
+test_interp_potential               40   0     test_streamgapdf_impulse  14   0
+test_SpiralArmsPotential            19   0     test_kuzminkutuzov        10   0
+test_pv2qdf                         10   0     test_util                  4   0
+test_linear_dxdv                     9   5  <-- RED
+test_symplectic_dxdv                12   2  <-- RED
+```
+
+**First, a confirmation worth having.** `test_interp_potential` PASSES on torch
+while failing on jax --jit. That is independent evidence for yesterday's root
+cause: the gap is XLA compiling NFW's `log1p(r/a)/(r/a)` differently, so it
+should NOT appear on torch's compiler -- and it does not.
+
+**Then the real find.** All 5 `test_linear_dxdv` failures are one TypeError:
+
+```
+  x = np.float64(0.3), t = np.float64(0.0)
+  return -x * (self._K / xp.sqrt(x**2 + self._D2) + 2.0 * self._F)
+  TypeError: sqrt(): argument 'input' must be Tensor, not numpy.float64
+      galpy/potential/KGPotential.py:79
+```
+
+I checked whether it was jit-specific before concluding anything. **It is not:
+torch EAGER fails identically, 5/9.** So this is a plain pre-existing torch bug,
+unledgered and unseen only because `test_linear_dxdv.py` had never been run under
+`--backend torch` at all -- not by the sweeps, not by CI.
+
+Root cause is the known `scalar-under-forced-backend` cluster.
+`_evaluatelinearForces` is deliberately "raw, undecorated for internal use", so
+the 1D variational RHS hands `_force` a raw numpy scalar; under a forced backend
+`get_namespace(x)` resolves to torch, and `xp.sqrt(numpy.float64)` dies. The 3D
+path does not have this problem because `check_potential_inputs_not_arrays`
+already coerces for `_backend_compatible` potentials -- **the 1D analogue of that
+coercion is simply missing**. Fix is to coerce (per
+[[coerce-under-forced-not-dataguard]]), not to special-case sqrt.
+
+Queued as the PR after #1220. Not started: #1220 is the active PR and its
+Windows orbit job went red.
+
+**#1220 Windows red**: job completed=failure with NO failing step recorded and
+logs returning `BlobNotFound` -- the infrastructure signature, not a test
+failure. My PR touches only `test_potential.py` and the ledger, so a Windows
+ORBIT shard is not plausibly mine. Cannot `rerun --failed` yet: the run still has
+5 jobs live and gh refuses while any are running. Waiting for it to settle first.
