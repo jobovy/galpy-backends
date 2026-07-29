@@ -4562,3 +4562,28 @@ module-level import.
 has `conclusion: null` and so does every step after it -- a killed/lost runner.
 Re-ran the failed job once the run finished (gh refuses `rerun --failed` while
 any job is live, hence the wait). codecov/project cleared on its own again.
+
+## Wake 38 -- #1220 MERGED (`07cb8426`), #1221 opened
+
+154/154. Audit was short because the diff has **zero galpy/ source changes** --
+tests + ledger only, so there is no if->xp.where surface at all. The two new
+asserts are a namespace identity check (`get_namespace(1.0) is not numpy`) and a
+value assertion inside a test, both correct. No helpers, no duplication.
+
+The Windows red resolved as diagnosed: not a test failure. `Test with pytest` had
+`conclusion: null`, as did every step after it -- a killed runner. Re-ran the
+failed job once the run finished (gh refuses `rerun --failed` while any job in
+the run is live, which is why it had to wait), and it came back green.
+codecov/project cleared on its own for the third time.
+
+**#1221** is the 1D coercion fix. Worth restating the headline honestly: this is
+NOT a jit finding. `test_linear_dxdv.py` and `test_symplectic_dxdv.py` had never
+been run under `--backend torch` by ANYTHING, so 7 plain torch failures had been
+sitting there unledgered. The `--jit` sweep is just what finally executed them.
+That is the third distinct thing this vacation that was invisible purely because
+nothing had ever run the relevant configuration -- after the torch-jit blind spot
+(#167) and the file-level slow-skip on test_streamTrack.
+
+Ledger arithmetic: **none**. These were never ledgered, because nothing had ever
+run them on torch. That is a worse state than a ledger entry, and the reason the
+"run the configuration nobody has run" habit keeps paying.
