@@ -4880,3 +4880,76 @@ Worth noting what the warning bought: had I "fixed" this by casting with as_nump
 as I first assumed, I would have changed nothing and then loosened a tolerance
 without understanding why -- and would not have found that the file has 882
 instances of the same latent pattern.
+
+---
+
+## Wake 45 (2026-07-30) — the ledger has been lying, and the tell is invisible
+
+**PR #1224 open: drop 16 stale torch `test_orbit` entries. Ledger 150 -> 134.**
+
+The overnight full torch orbit shard finished (`exit=0`, 2h15m). Its stdout was
+truncated -- the conftest force-exit that works around the torch+fork deadlock
+([[torch-fork-deadlock-streamdf]]) cuts the `-rX` summary off -- so `grep ^XPASS`
+found nothing even though the progress dots clearly showed a run of `X`s. Read the
+`--junitxml` instead, exactly as that note says to, and computed the set
+`(ledgered AND passed)`:
+
+```
+ledgered torch entries in test_orbit.py + test_orbits.py : 18
+of those, PASSED (= XPASS, stale)                        : 16
+of those, still xfailed                                  :  2
+```
+
+The 2 survivors are `test_orbit_obs_Orbits_issue322` and
+`test_orbit_obsvel_Orbits_issue322`; they stay. None of the 16 is
+torch-slow-skipped, so all 16 genuinely ran.
+
+**Every one of the 16 was added by `be996203` -- the commit that CREATED the
+ledger (#956).** They were fixed by the intervening dxdv/C-STM routing PRs, the
+energy-conservation work and the forced-backend coercion PRs, and never retired.
+
+### Why this went unnoticed for so long
+
+`conftest` applies `xfail(strict=False)`. A fixed entry therefore reports XPASS,
+the shard still exits 0, and the count keeps carrying it. **Nothing anywhere goes
+red, or yellow, or prints a warning.** The only way an entry retires is if someone
+re-measures and looks. That is a genuinely bad property for the number the project
+uses as its progress metric, so #1224 also adds a STALENESS paragraph to the
+reading-note saying so and giving the two-line recipe (`-rX`, or junitxml +
+`ledgered AND passed`).
+
+Also fixed a stale `108` I left in that note last wake, which disagreed with its
+own table. Now 134 / 48 / 86, each from a live `grep -c`.
+
+### The bigger implication, and the free way to test it
+
+16 of 18 stale in one file is not a local accident. The header's own prune log
+shows the sanctioned method is a `workflow_dispatch regen=true` full-matrix run,
+and the **last one was 2026-07-23 on `feat/backends` post-#1185**. Everything from
+#1196 to #1223 has landed since, none of it pruning. So the same backlog is
+presumably sitting in the other 14 files.
+
+I was about to spend runner time dispatching a regen when I noticed I do not have
+to: **a PR into `feat/backends-develop` already fires the whole matrix, and every
+shard uploads its JUnit XML as an artifact.** So #1224's own run yields exactly the
+input the computation above needs -- for all 15 files, in the authoritative CI
+environment, on both Python versions, at zero extra runner cost. Next wake: pull
+the artifacts, compute `(ledgered AND passed)` per shard, and prune what it finds.
+
+(Aside on reading workflow files: the `on:`/`if:` filters in the main checkout are
+gated to `feat/backends` only, which says my PRs should get no backend coverage at
+all. They do. The main checkout is on `feat/backends`, whose copy of the file is
+older -- `feat/backends-develop`'s version lists both branches, with a comment
+explaining that without it "the jax/torch dimension would go unverified on exactly
+the branch whose whole purpose is that dimension." Read the workflow from the
+branch that runs it.)
+
+### Self-inflicted, caught
+
+While breaking the ledger down per-file I ran `git checkout <ref> -- <file>` to
+get the pre-prune population, which silently reverted and STAGED away the prune I
+had just committed -- precisely
+[[checkout-ref-file-stages-a-revert]]. The commit was already made and pushed so
+nothing was lost, and `git status` was clean again before anything else touched
+that file. Reading the population from `git show <ref>:<file>` into a pipe, which
+is what I should have done, cannot do this.
