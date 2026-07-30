@@ -5670,3 +5670,38 @@ is the input to planning the tail, so it is worth its runtime.
 Remaining `-jit` ledger is **6 entries**: 3 AnyAxisym (the quadrature-accuracy
 problem awaiting the tolerance decision), 2 interpRZ (#112), 1 orbit eccentricity.
 Nothing in the DF families.
+
+### Wake 56 (2026-07-30) — #1226 MERGED, #1227 opened
+
+**#1226 merged as `bc6f079e`. Ledger 128 -> 122.** 154 checks green; both codecov
+checks cleared themselves once the coverage shard uploaded, which is now the third
+consecutive PR where the premature-codecov diagnosis held.
+
+Audit before merge: the three new conditionals in `hyp2f1.py` are all on **scalar
+DF/potential parameters** (`if b > a`, `if not _in_regime(a,b,c)`,
+`if _in_regime(c-a,c-b,c)`) — static under a trace, so this is not the
+`if`-should-be-`xp.where` class; the only data-dependent logic in the new code is
+already a `where`. The three new helpers live beside their sole consumer in
+`hyp2f1.py`, which is correct — they are hyp2f1-specific, not general utilities that
+belong in a shared module.
+
+**#1227 opened**: the Staeckel unbound-sentinel guard, rebased onto post-#1226
+develop, plus its 2-entry ledger drop. **Ledger 122 -> 120, reducible 74 -> 72.**
+
+Both PRs deliberately leave a neighbouring pair alone and say so in the description:
+#1226 kept the two `interpolatedpotentials` entries (measured: unrelated `vmap`
+cause), and #1227 keeps the `test_qdf::test_call_diffinoutputs` pair (requires
+`UnboundError` to be *raised*, which cannot happen under a trace). Both would have
+looked like natural companions to drop. Naming why they stay is the difference
+between a ledger that means something and one that just gets smaller.
+
+**Bookkeeping caught up.** The galpy-jax README PR table had stopped at #1219 —
+seven PRs of drift, against my own rule that it is part of landing each PR. Added
+rows for #1220-#1223 (eager-ledger wave), #1224 (artifact sweep, 150->130), #1225
+(the plain-numpy `IndexError`), #1226 (the beta>=0.5 unlock + `test_sphericaldf --jit`
+223/0). That table is what Jo will actually skim, so letting it lag is worse than it
+looks.
+
+Ledger arc for the fortnight so far: **156 -> 120**, and the composition is now
+understood rather than guessed — 48 structurally blocked, 2 by design, ~24 awaiting
+one tolerance decision, ~46 genuinely fixable.
