@@ -5553,3 +5553,59 @@ ledger measures tests that exist, so a capability nobody tried is invisible to i
 and "entries retired" undercounts what a fix actually buys.
 
 Queue: **#1226 in CI, then #175** (2 entries, committed and verified). 122 -> 120.
+
+### Wake 53 (2026-07-30) — the shape of what is left
+
+**#1226 in CI** (1 pass, 150 pending). **#175 rebased** onto post-#1225 develop and its
+four real shards launched (the ~2h `tests/test_backend*.py` among them).
+
+Re-derived the ledger's composition rather than trusting my running notes, and the
+picture has changed qualitatively. Of the 128 on develop (122 once #1226 lands):
+
+| | entries |
+|---|---|
+| `actionAngleVerticalInverse` (refuses backends by construction) | 48 |
+| both-backend clusters | 28 |
+| singletons | 52 |
+
+**Nearly every remaining both-backend cluster is already spoken for**: AdiabaticGrid
+off-grid (a design decision, #103), the qdf unbound pair (by design), and the rest
+tolerance-class. The genuinely-fixable both-backend work is close to exhausted — which
+means the remaining reducible work has moved into the **singletons**, and those are
+overwhelmingly **torch** (7 `test_actionAngle`, 5 `test_quantity`, 5
+`test_streamTrack`, 4 `test_noninertial`, ...).
+
+Diagnosed the six torch `test_actionAngle` singletons that form two thematic groups,
+and they split 5:1:
+
+```
+Spherical_linear_angles                 5.00909e-06 deviation from linear trend
+Spherical_linear_angles_fixed_quad      5.00909e-06
+Spherical_noninclinedorbit_linear_angles 1.17986e-06
+Spherical_almostnoninclinedorbit_...     1.17986e-06
+Vertical_Harmonic_actionsFreqs          2.76469e-07 %  (= 2.8e-9 relative)
+Vertical_linear_angles                  TypeError: all() received an invalid
+                                        combination of arguments ...
+```
+
+The last one is `numpy.all(<torch tensor>)` at an assertion site — test-side, not a
+source bug, byte-identical for numpy. One more free entry (#176).
+
+The other five join the tolerance batch, and I have now consolidated that batch with
+measured magnitudes (#171): **~24 of the ~72 reducible entries hinge on that single
+decision** — the 13 `test_quantity` absolute-1e-8-on-1e10 cluster, these 5, the
+Adiabatic cylsep pair at 4.4e-8, the StaeckelGrid pair asserting `|Jr| < 1e-16`
+against a 4.8e-14 numerical zero, and the AnyAxisym quadrature pair. That is a third
+of the reducible ledger sitting behind one call, so it is worth Jo seeing it as a
+single costed proposal rather than as recurring noise.
+
+Refined running total of what the ledger actually contains:
+
+| | entries |
+|---|---|
+| VerticalInverse — structurally blocked | 48 |
+| unbound-raise under trace — by design | 2 |
+| tolerance decision — awaiting Jo | ~24 |
+| genuinely code-fixable | ~48 |
+
+Two of those 48 are #175's (verified, queued), one is #176's.
