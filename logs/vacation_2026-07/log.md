@@ -5366,3 +5366,57 @@ structurally unreachable. Running total of what the ledger's 130 actually contai
 The honest "reducible by fixes" number is nearer **65 than 82**, and I would rather
 say that now than keep quoting a figure that flatters the work. Two of those 65 are
 #1225's (landing), 6 are #174's (ready), 2 are #175's (localised, one-liner).
+
+### Wake 50 (2026-07-30) — correcting yesterday's localisation, twice
+
+**#1225: 35 pass, 116 pending, 2 codecov reds** (`patch` and `project`).
+`project` shows `52.82% (-33.36%)`, which cannot come from a 34-line diff, and
+`patch` cannot report on lines whose shards have not uploaded — same premature
+pattern as #1224, which cleared on its own. I tried to settle it locally rather than
+assume, but `coverage run` in this env dies with
+`ImportError: cannot load module more than once per process` out of numpy's
+`_multiarray_umath`, so local coverage is simply unavailable. Falling back to direct
+evidence: all four branches of the new conditional are exercised — 3D-with-units and
+1D-with-units by the old/new probe I ran earlier, the two no-units paths by the new
+tests. No genuine gap; waiting on uploads.
+
+**#174: three of four shards clean** (torch `test_sphericaldf`, jax
+`test_sphericaldf`, numpy `test_potential` all exit 0); the full
+`tests/test_backend*.py` shard is still going.
+
+### I got #175's location wrong twice, and the correction is the useful part
+
+Yesterday I recorded: "`actionAngleStaeckel.py:628` folds the sentinel; the C path is
+skipped under a backend". Both halves were wrong.
+
+Getting exact values instead of `%.4g` was what broke it open. numpy and torch agree
+**bit-for-bit at exactly 9999.99 on all nine outputs** except `anglephi`, where torch
+gives `3.4421762772781` = `9999.99 mod 2*pi`. Bit-identical sentinels mean the C code
+ran in **both** cases — so "the C path is skipped" could not be true, and the fold
+had to be happening after C returned.
+
+Then I instrumented `_staeckel_angles` (the line-628 function) and it is **never
+called** for this test either. So neither of my candidate sites was involved. The
+c=True class under a backend routes to a *third* path: the C-native differentiable
+wrappers from #1051, which call a different C entry and do their own fold:
+
+```
+galpy/backend/_torch/staeckel_c.py:99   anglephi = torch.remainder(raw[6] + phi, 2.0 * torch.pi)
+galpy/backend/_jax/staeckel_c.py:155    anglephi = jnp.remainder(raw[6] + phi, 2.0 * jnp.pi)
+```
+
+unguarded, where the numpy C wrapper guards it (`actionAngleStaeckel_c.py:1017`,
+`badAngle = Anglephi != 9999.99`).
+
+This is a *better* place to fix it than what I had: those files are backend-only, so
+byte-identity on numpy is not something to argue for — no numpy code is touched at
+all.
+
+Two process notes worth keeping. My first spy said "the C entry is never called under
+torch", which was true of `actionAngleFreqAngleStaeckel_c` specifically; I
+generalised it to "the C path is skipped", which was not true — a different C entry
+fires. Wrapping *one* candidate and concluding from its silence is how that happens;
+wrap all the candidates and see which one speaks. And
+`galpy.actionAngle.actionAngleStaeckel` resolves to the **class**, not the module, so
+monkeypatching needs `sys.modules['galpy.actionAngle.actionAngleStaeckel']` —
+`setattr` on the name silently patches a class attribute that nothing calls.
