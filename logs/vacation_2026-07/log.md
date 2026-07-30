@@ -5752,3 +5752,44 @@ sampler needing its RNG migrated, one observer-parameter coercion, ~24 awaiting 
 tolerance decision, and the structurally-blocked remainder.** That is a plan, and it
 is the first time this fortnight the singletons have been anything other than a
 number.
+
+### Wake 58 (2026-07-30) — building the test-side cast PR, and a subtlety in it
+
+**#1227: 104 pass, 48 pending, `codecov/patch` the only red** (premature, fourth PR
+running). Watcher armed.
+
+**Built the 11-entry test-side cast branch** (`fix/torch-assertion-casts`). Six sites
+were the simple shape — `numpy.amax(numpy.fabs(<Tensor expr>))` in dynamfric ×4,
+`numpy.all(numpy.fabs(o.L() - ndarray))` in galpypaper, and two list comprehensions
+in `test_potential::test_rE_MWPotential2014` that build object arrays of Tensors.
+Two files needed the `as_numpy` import added.
+
+**The four `test_noninertial` sites were not that shape, and the difference matters.**
+Those tests already `as_numpy`-wrap every orbit accessor — carefully and
+consistently. The Tensors re-enter *afterwards*, through the `coords.*` helpers:
+
+```python
+op_xs = as_numpy(op.x(ts)) + x0[0](ts)          # already numpy
+Rp, phip, _ = coords.rect_to_cyl(op_xs, op_ys, op_zs)   # <- comes back a Tensor
+...
+vTp += omega * Rp                                # ndarray * Tensor -> TypeError
+```
+
+`coords.rect_to_cyl` is backend-agnostic, and under a **forced** backend it coerces
+even numpy inputs — which is correct, deliberate behaviour
+([[coerce-under-forced-not-dataguard]]). So the test's numpy reference arithmetic,
+which mixes in the plain-Python `x0`/`v0` callables, collides with a backend array
+that arrived from a *helper*, not from the object under test.
+
+The fix therefore is not "cast at the assertion" — the TypeError fires well before
+any assertion. It is to land each `coords.*` result back on numpy at the point it
+returns, which is exactly what the surrounding code already does for the accessors.
+12 casts across the 4 tests, each with the reason stated once at the top.
+
+Worth naming as a pattern: **a test can be fully as_numpy-converted at its
+boundaries and still fail, if a migrated helper re-introduces backend arrays in the
+middle.** Looking only at assertion sites would not have found these.
+
+Verification of the six simple sites is running (they are slow orbit-integration
+tests); the four noninertial ones are running separately. Neither is finished, so
+nothing is claimed yet.
