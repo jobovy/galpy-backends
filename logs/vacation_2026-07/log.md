@@ -5793,3 +5793,42 @@ middle.** Looking only at assertion sites would not have found these.
 Verification of the six simple sites is running (they are slow orbit-integration
 tests); the four noninertial ones are running separately. Neither is finished, so
 nothing is claimed yet.
+
+### Wake 58b — the cast PR is not as free as it looked
+
+Verification of the 11-site cast branch came back mixed, which is the useful part.
+
+**Worked (8/8):** all four ledgered `test_noninertial` tests pass, plus the four
+unledgered siblings in the same `-k` selection — so the `coords.*` casts fixed the
+target without perturbing neighbours. 5.8 min for the batch.
+
+**Two problems, both worth having found locally:**
+
+*1. `test_rE_MWPotential2014` still failed after my first patch.* I had cast the two
+list comprehensions, but missed that the grid itself is seeded from backend values:
+
+```python
+Emin = Ec(rmin)          # <- Tensor under a forced backend
+Es   = numpy.linspace(Emin, Emax, 101)   # carries Tensors into Es
+```
+
+so `Ecs - Es` still met a Tensor. Casting the comprehensions treated the symptom;
+the fix is to land `Emin`/`Emax` on numpy at the source. Re-running. The lesson is
+the same one as the noninertial sites from the other direction: I patched where the
+*error* surfaced instead of where the backend value *entered*.
+
+*2. `test_dynamfric_c` TIMED OUT at 600s.* Not a cast failure — the test now runs to
+completion instead of aborting early at the TypeError, and integrating orbits with
+dynamical friction under torch eager is genuinely slow. This is
+[[migration-flips-numpy-fallthrough-to-eager-slow]] exactly: fixing an error can
+convert a fast failure into a slow pass, and a slow pass **fails CI as a timeout**
+([[timeout-overrides-xfail-move-to-slowskip]]). So this entry may belong in
+`backend_slow_skip.txt` rather than being un-ledgered. Measuring how slow it actually
+is with a 3600s allowance before deciding — un-ledgering it on the strength of "it
+passes locally in 10 minutes" would hand CI a red.
+
+That reframes the PR honestly: of the 11 entries, some are clean un-ledgers, at least
+one is a slow-skip re-home, and the count is not final until measured. Better to know
+that now than after pushing.
+
+**#1227: 111 pass, 42 pending, `codecov/patch` cleared — zero failures.**
