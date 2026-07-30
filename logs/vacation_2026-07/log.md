@@ -5705,3 +5705,50 @@ looks.
 Ledger arc for the fortnight so far: **156 -> 120**, and the composition is now
 understood rather than guessed — 48 structurally blocked, 2 by design, ~24 awaiting
 one tolerance decision, ~46 genuinely fixable.
+
+### Wake 57 (2026-07-30) — 52 opaque singletons resolve into three causes
+
+**#1227: 28 pass, 124 pending, `codecov/patch` the only red** (premature, as on the
+last three PRs). Watcher armed.
+
+**The singleton classification finally worked, after fixing how I ran it.** The
+first attempt — all 35 torch singletons in one pytest process — timed out at 3h
+(exit 124), wrote no junitxml, and left me with a row of dots: nothing enumerable,
+exactly [[triage-gather-misses-timed-out-shards]]. Relaunched as 10 per-file jobs
+with `--timeout=300` each; all completed in minutes, each writing its own XML. A
+hang in one test can no longer consume the whole run.
+
+**31 failures, and they are not 31 problems.** 21 are "a numpy function or operator
+meeting a torch Tensor". I was about to file all 21 as free test-side casts. Then I
+pulled the **failing frame** out of each junitxml rather than reading only the
+exception message — and the message cannot tell you where the collision is, because
+`ndarray OP Tensor` reads identically whether it happens in a test assertion or deep
+inside galpy:
+
+| where the failing frame lives | count |
+|---|---|
+| `tests/` — free `as_numpy` cast at the assertion site | **11** |
+| `galpy/` — **real source defect** | **10** |
+
+Casting at the test site would have hidden ten real bugs. That check cost one script
+and changed the conclusion completely.
+
+And the ten source ones collapse into **two** causes:
+
+- **8 at `quasiisothermaldf.py:2213`** (+1 at `:2420`):
+  `indx = VDatprop > numpy.log(numpy.random.random(size=nmore))` — a torch Tensor
+  compared against a freshly drawn **numpy** random array. This is the known qdf
+  sampler boundary, and [[qdf-sampler-numpy-boundary]] already records that a
+  boundary wrap alone is *insufficient* (tried before): it needs the backend RNG
+  shim, i.e. existing task #130. Folding them there rather than attempting a local
+  patch.
+- **2 at `Orbits.py:9738/9822`**: `thiso[3] - numpy.arctan2(obs[1], obs[0])` — the
+  orbit state is a backend array while `obs`, a user-supplied observer *parameter*,
+  stays numpy. Tractable with `as_backend_constant` at those sites, with care not to
+  coerce `obs` as if it were a coordinate.
+
+So the tail is not 52 separate problems. It is **~12 assertion-site casts, one
+sampler needing its RNG migrated, one observer-parameter coercion, ~24 awaiting the
+tolerance decision, and the structurally-blocked remainder.** That is a plan, and it
+is the first time this fortnight the singletons have been anything other than a
+number.
