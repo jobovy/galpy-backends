@@ -5283,3 +5283,32 @@ these parameters took the three tests to 0 failures (so hyp2f1 was the sole
 blocker), and the real fix reproduces that — **torch 3/0**. jax check running.
 63 hyp2f1 tests pass on both backends. Committed on
 `fix/hyp2f1-fallback-domain`, unpushed; #173 goes first.
+
+### Wake 48b — #1224 MERGED, #1225 opened
+
+**#1224 merged as `7fd43d7d`. Ledger 150 -> 130.** All 154 checks green;
+`gh pr merge` printed `failed to run git: 'feat/backends-develop' is already used
+by worktree at /var/tmp/nogl`, which is the known cosmetic worktree complaint — the
+merge itself had already succeeded (`state=MERGED`). Checking PR state rather than
+trusting the exit code is the habit that makes this a non-event.
+
+**#1225 opened**: the `physical_conversion_actionAngle` fix, rebased cleanly onto
+post-#1224 develop (disjoint files, no conflict) plus the 2-entry ledger drop it
+earns. **Ledger 130 -> 128, reducible 82 -> 80**, both refreshed against live greps.
+
+The PR leads with the plain-numpy reproducer rather than the backend symptom,
+because that is the real defect:
+
+```
+>>> aAV = actionAngleVertical(pot=IsothermalDiskPotential(...), ro=7., vo=230.)
+>>> aAV(numpy.linspace(-0.1, 0.2, 4), numpy.full(4, 0.1))
+IndexError: list index out of range
+```
+
+and flags the container change (tuple -> array for the 1D physical `__call__`) as
+user-visible even though all 16 byte-probes are identical, with a note that
+`conversion.py` is shared so this is arguably `main` material to cherry-pick later.
+
+Two PRs' worth of ledger burndown now sits behind #1225 and #174: 128 -> 126 -> 120
+if both land. Of the remainder, 48 are `actionAngleVerticalInverse` (refuses
+backends by construction), so the reducible count would be 72.
