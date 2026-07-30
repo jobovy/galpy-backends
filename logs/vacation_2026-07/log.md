@@ -5636,3 +5636,37 @@ pass/fail but the *shape* of each failure: a `TypeError`/`AttributeError` naming
 numpy function applied to a Tensor is a free test-side fix, a quantified `%`
 deviation joins the tolerance batch, anything else is real work. That distinction is
 what turns 52 opaque singletons into a plan.
+
+### Wake 55 (2026-07-30) — the spherical-DF suite is fully jittable
+
+**Measured, on the #1226 tree:**
+
+| run | tests | failures | skipped | time |
+|---|---|---|---|---|
+| `test_sphericaldf --backend jax --jit` | 223 | **0** | 28 | 10.5 min |
+| `test_sphericaldf --backend torch --jit` | 223 | **0** | 2 | 18.5 min |
+
+and — the part I checked rather than assumed — the three hyp2f1-blocked tests
+**PASS** under trace on both backends rather than inheriting their eager xfail. That
+distinction matters: `<backend>-jit` inherits `<backend>`, so a ledgered-eager test
+would have shown as skipped and the file would have looked "green" either way. They
+genuinely trace.
+
+So #1226 is not only "6 eager entries". **The whole spherical-DF suite now traces
+green on both backends** — constant-beta and OsipkovMerritt included, which
+previously could not be traced at all because `hyp2f1` raised before tracing began.
+That is the mission's actual currency (jittable, not merely backend-agnostic), and it
+is worth stating in those terms rather than as a ledger delta.
+
+**#1226: 108 pass, 43 pending, both codecov checks still red and still converging.**
+`patch` was 20% of diff hit when a fifth of the uploads were in; the shard that
+exercises the new code is `tests/test_backend*.py`, which is the coverage shard and
+reports late. Watcher armed.
+
+**#175: clean on numpy, torch and jax `test_actionAngle`**; its backend shard is
+still running. The 35-singleton classification probe is still running too — that one
+is the input to planning the tail, so it is worth its runtime.
+
+Remaining `-jit` ledger is **6 entries**: 3 AnyAxisym (the quadrature-accuracy
+problem awaiting the tolerance decision), 2 interpRZ (#112), 1 orbit eccentricity.
+Nothing in the DF families.
