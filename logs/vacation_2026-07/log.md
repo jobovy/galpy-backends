@@ -5079,3 +5079,81 @@ This one is arguably `main` material, not backend material — `conversion.py` i
 shared and the IndexError has nothing to do with jax. I am putting it on
 `feat/backends-develop` because that is where the ledger entries live and where I
 can merge; worth splitting a `main` cherry-pick when Jo is back.
+
+---
+
+## Wake 46 (2026-07-30) — a self-inflicted red, and the burndown map
+
+**#1224 still queued** (14 of 153 checks in; `codecov/project` shows
+`25.70% (-60.48%)` with 138 shards pending and `codecov/patch` green, which is the
+partial-upload artifact for a ledger-text-only PR — it has self-cleared five times
+on exactly these circumstances).
+
+### The numpy shard "failure" was mine
+
+Last wake's verification of the conversion fix came back `torch exit=0`,
+`jax exit=0`, **`numpy exit=1` with 104 failures**. All 104 were "does not return
+Quantity when it should" — across `Orbit.E`, `evaluatePotentials`, `jeans.sigmar`,
+`streamdf`, things my actionAngle-decorator change cannot reach. Cause: I ran
+
+```
+pytest tests/test_actionAngle.py tests/test_quantity.py
+```
+
+in one process. `tests/test_quantity.py` sets `astropy-units = True` **at import
+time, before any galpy import**, because the config is read once and latched; with
+`test_actionAngle.py` collected first, galpy is already imported and the setting
+never takes. CI never combines those two — `test_quantity.py` has its own shard.
+Re-run as CI shards it: **`quantity+coords exit=0`**. Clean.
+
+This is [[conftest-no-module-level-galpy-import]] from the other side: not conftest
+importing galpy, but *me* pairing a config-latching test file with one that imports
+galpy first. Worth remembering that "run more files together for coverage" is not
+free — some files are only correct alone.
+
+So the conversion fix now has torch aA clean (209 tests), jax aA clean (209), numpy
+quantity+coords clean; numpy aA still running. Waiting on #1224 to merge before
+pushing, per one-PR-at-a-time.
+
+### Mapped the 76 addressable failures into three classes
+
+First tried to classify all 124 from the CI artifacts, which does not work and is
+worth writing down: an xfail is recorded as
+`<skipped type="pytest.xfail" message="backend-xfail-ledger"/>` — conftest's reason
+string, no traceback. **The artifact sweep tells you WHICH entries are stale, never
+WHY the rest fail.** Noted in [[ledger-staleness-sweep-from-artifacts]] so I do not
+retry it. Classification still needs a local `--runxfail` per candidate.
+
+Did that for the both-backend clusters, and they fall into three groups:
+
+**A. `hyp2f1` fallback domain — 6 entries, one root cause, clearly fixable.**
+`_euler_labeling` needs a parameter that is positive *and* has `c - B >= 1`:
+
+| case | example | why it raises | scipy at z=-2 |
+|---|---|---|---|
+| (i) | `a=-3.2, b=4.4, c=5.2` | `b>0` but `c-b=0.8 < 1` | 24.7061738568 |
+| (ii) | `a=-0.51, b=-0.98, c=2.51` | **both** `a,b <= 0`, no valid `B>0` | 0.602686827309 |
+
+and the error message is **wrong for (ii)**: it reports "requires
+`c - max(a,b) >= 1`", but that quantity is 3.02 there. The real blocker is the sign.
+Euler's transformation maps (ii) to `(3.02, 3.49, 2.51)`, which lands straight in
+(i), so this needs the `t=1` endpoint regularized the way `X=xi^k` already handles
+`t=0` — real special-function work, not a patch. Task #174.
+
+**B. unbound-orbit detection — ~4 entries, probably one root cause.**
+`test_actionAngleStaeckel_unboundr_angles_c` ("does not have large ap") and
+`test_qdf.py::test_call_diffinoutputs` ("orbit that is supposed to be unbound is
+not") are the same story from two directions: the unbound sentinel does not survive
+the backend path.
+
+**C. absolute bounds that demand bit-identity — the [[torch-tolerance-loosening-ok]]
+pile.** `test_actionAngleStaeckelGrid_basicAndConserved_actions` asserts
+`|Jr| < 1e-16` for a circular orbit; torch gives `4.8354e-14`. That is a fine
+numerical zero being measured against a bound 480x tighter.
+`test_actionAngleAdiabatic_linear_angles_cylsep` misses by `4.36e-06 %` = 4.4e-8
+relative. Same family as the 13-entry `test_quantity` cluster in #171 — **all of it
+waits on one decision from Jo**, and I am accumulating the magnitudes so the
+proposal is quantified rather than a request to "loosen some tolerances".
+
+Incidental confirmation of #1224: `test_actionAngleIsochroneApprox_plotting`, one of
+the 20 entries it drops, **passes** in an independent isolated run too.
