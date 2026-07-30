@@ -5420,3 +5420,57 @@ wrap all the candidates and see which one speaks. And
 `galpy.actionAngle.actionAngleStaeckel` resolves to the **class**, not the module, so
 monkeypatching needs `sys.modules['galpy.actionAngle.actionAngleStaeckel']` —
 `setattr` on the name silently patches a class attribute that nothing calls.
+
+### Wake 51 (2026-07-30) — #175 implemented; codecov converging as diagnosed
+
+**#1225: 138 pass, 14 pending, `codecov/project` the only red.** `codecov/patch`
+cleared on its own, and `project` is walking up as shards upload:
+`52.82% (-33.36%)` -> `86.18% (-13.78%)`. That is the partial-upload signature
+converging, not a real drop.
+
+**#175 implemented and committed** on `fix/staeckel-unbound-anglephi`, guarding the
+sentinel in both C-grad wrappers:
+
+```python
+anglephi = xp.where(raw[6] == 9999.99, raw[6],
+                    xp.remainder(raw[6] + phi, 2.0 * pi))
+```
+
+Under the CI configuration (jax x64 / torch float64) both backends are now
+**bit-identical to numpy on all nine outputs**, and the ledgered test passes on both
+with `--runxfail`.
+
+Worth naming why this bug was worse than a wrong number: `9999.99 mod 2pi = 3.442`
+lands *inside* `[0, 2pi)`, so it reads as a perfectly ordinary azimuthal angle. Any
+caller testing "is this unbound?" against the other eight outputs — which all carry
+9999.99 — would pass, while `anglephi` silently said "bound". A NaN would have been
+loud; this was quiet.
+
+Three judgement calls in it:
+
+- **Where the constant lives.** I first wrote `_UNBOUND` and then had to decide where
+  to define it. `galpy/backend/` has no constants module, and importing it from
+  `galpy.actionAngle` is impossible — that package imports *these* files. Creating a
+  module for one number to avoid two literals is worse than the literals, especially
+  since ~8 existing consumers already spell it out. So: literal, with a comment
+  naming the numpy guard it mirrors and why the import is not available.
+- **Exact equality on a float.** It mirrors the numpy wrapper (`!= 9999.99`) and the
+  value is a constant C writes, so there is no arithmetic to perturb it. I did check
+  the float32 case out of caution: my first probe (no x64) showed `9999.990234`, and
+  the comparison still worked because both sides downcast identically — but that was
+  my probe missing `jax_enable_x64`, which conftest sets. Re-ran in the CI
+  configuration to confirm exactness rather than rely on a coincidence.
+- **Test placement.** `tests/test_backend_actionAngle.py`, not
+  `tests/test_actionAngle.py` — partly because that is where backend-behaviour tests
+  belong, and partly to keep files disjoint from #1225, which is editing the other
+  file right now.
+
+Ledger drop deferred until this rebases onto post-#1225 develop, so the two PRs never
+touch `backend_xfail.txt` simultaneously.
+
+Also: `ruff-format` rejected the first commit attempt (reformatted a file). Re-added
+and re-committed — the pre-commit hooks modify files rather than just complaining, so
+a rejected commit is normal and needs `git add -A` again, not investigation.
+
+**Queue: #1225 landing, then #174 (6 entries), then #175 (2 entries).** 128 -> 122 ->
+120.
