@@ -4700,3 +4700,44 @@ under jax, and errors in the FIXTURE rather than failures in the tests. A
 suspiciously fast green (or red) is itself evidence that the thing you meant to
 run did not run. Worth adding to the memory: assert `galpy.__file__` **and** run
 from inside the worktree; PYTHONPATH alone does not win against cwd.
+
+## Wake 41 -- third blind spot ANSWERED, and the ledger metric is 44% inflated
+
+**`test_noninertial` under torch --jit: 53 tests, 0 fail, 0 err, 670s.** It
+completes cleanly in 11 minutes on torch, where jax --jit did not finish in 45.
+So the last residual blind spot is **jax-specific** -- a jax eager-XLA compile
+cost, not a galpy limitation -- and torch already has full traced coverage of that
+file. All three blind spots from wake 33 are now answered:
+
+1. `test_streamTrack` -- file-level jax slow-skip, 779s eager, 5 gaps already
+   ledgered on torch. Justified; leave it (wake 39).
+2. `test_noninertial` -- jax-only compile-time problem; torch traces it in 11 min.
+3. AnyAxisym sheet limit -- 3 entries, one physics problem, characterised (wake 32).
+
+**Then I clustered the eager ledger to pick the next burndown slice, and found the
+metric itself is wrong.** `test_actionAngle.py` is 38 torch + 29 jax entries, 45%
+of the total -- but 24 of the 38 torch and 24 of the 29 jax are ONE class:
+
+```
+  total entries                156
+  actionAngleVerticalInverse    48   (31% of the ledger)
+  reducible by fixes           108
+```
+
+`actionAngleVerticalInverse._reject_backend` raises NotImplementedError as soon as
+a backend is active, so those 48 cannot be moved by incremental fixes at all.
+Since [[ledger-milestone-burndown]] treats ledger size AS the progress metric,
+quoting 156 overstates the remaining work by ~44%.
+
+**#1222** states the split in the file itself. Comment-only; verified the ledger
+still parses (156 counted), its self-test passes 5/5, and a ledgered test still
+registers `x` rather than a red.
+
+One deliberate restraint: my memory says Jo decided VerticalInverse stays
+`_reject_backend`-guarded ("Inverse migration = Harmonic+Isochrone only"), but
+the class docstring says "NOT **yet** backend-migrated (under active
+development)" -- and task #94 is marked completed, which contradicts both. Three
+sources, three stories. So the note asserts only the mechanical fact (incremental
+fixes cannot reduce those entries) and explicitly leaves the scope question to
+Jo. Verified the guard still exists in current code before writing any of it,
+rather than trusting the memory.
