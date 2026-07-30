@@ -5940,3 +5940,38 @@ the two untested sites for free.
 
 That is the third time this fortnight that "where is the failing frame?" changed the
 classification of a failure. It is becoming the single highest-yield question to ask.
+
+### Wake 62 (2026-07-30) — a real red on #1228, and a self-inflicted git mess
+
+**#1228 has a genuine failure**, not a codecov artefact:
+`tests/test_noninertial.py::test_linacc_changingacc_xyz_accellsrframe_scalaromegaz`
+**FAILED under jax**. That test was ledgered for **torch only**, i.e. it was passing
+under jax before — so my cast broke it. A regression I introduced.
+
+The cause of the miss is plain: I verified the noninertial casts under **torch** and
+never ran them under **jax**. The four entries were torch-ledgered, so I reasoned
+about torch and stopped. But the file is shared, and a test-side change lands on
+every backend. [[verify-exact-ci-shard-context]] says run the shard; I ran the
+backend I was fixing.
+
+**Then I made it worse trying to A/B it.** I reached for
+`git stash` → run baseline → `git stash pop`. The tree was clean (I had just
+committed), so the stash saved **nothing**, and the pop restored
+`stash@{0}: On feat/native-grid-spline: WIP ...` — an unrelated branch's work — into
+the worktree, conflicting in `actionAngleStaeckelGrid.py` and
+`backend/interpolate.py`, files this branch never touches. **The stash stack is
+per-repository, not per-worktree.**
+
+Damage assessment, done before anything else: worktree clean, both commits intact,
+`git diff develop..HEAD --name-only` shows only my 8 files, and local HEAD ==
+`origin/fix/torch-assertion-casts`, so CI ran exactly what I intended and the mess
+never left my machine. The stash itself was kept (the pop failed), so nobody's WIP
+was lost. Recorded as [[git-stash-is-repo-wide-not-worktree]] — for A/B use two
+worktrees, never stash.
+
+Re-running the comparison properly now: AFTER in `/var/tmp/casts`, BEFORE in
+`/var/tmp/nogl` (which sits at develop). No stash involved.
+
+The honest read on the PR: the torch half is verified and the jax half was never
+checked, which is exactly the kind of gap that makes a "free test-side cast" PR not
+free. It stays open until jax is green.
