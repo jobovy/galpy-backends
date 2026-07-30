@@ -4953,3 +4953,57 @@ had just committed -- precisely
 nothing was lost, and `git status` was clean again before anything else touched
 that file. Reading the population from `git show <ref>:<file>` into a pipe, which
 is what I should have done, cannot do this.
+
+### Wake 45, part 2 — did the sweep immediately instead of waiting, and it corrected me
+
+I did not need to wait for #1224's own run. **A completed earlier run's artifacts
+were already sitting there**: run `30510631354`, the post-#1223 push on
+`feat/backends-develop`, all 44 shards green, 45 artifacts totalling **103 KB**.
+Downloaded them and computed `(ledgered AND passed)` over the whole matrix.
+
+One wrinkle: pytest's junitxml has no `file` attribute, only
+`classname="tests.test_quantity"`, so the nodeid has to be rebuilt as
+`tests/<mod>.py::[<Class>::]<name>`. First pass silently matched 0 of 7270
+testcases, which is the kind of zero that means "my parser is wrong", not "nothing
+is stale".
+
+```
+ledger entries                 150
+observed running                144   (the 6 unobserved are exactly the -jit
+                                       entries -- this workflow has no --jit
+                                       dimension, so unmeasured, not stale)
+  of those, xfailed (still real) 124
+  of those, PASSED  -> stale      20
+```
+
+**The sweep overruled my local measurement, in both directions.**
+
+*It removed one.* My local run said 16 stale in `test_orbit`; CI says 15.
+`test_analytic_ecc_rperi_rap` passes on my box and **xfails in CI**, so it stays
+ledgered. Two reasons, and the second is the one I had not internalised: the
+backend matrix is **python 3.14** and this box is 3.13
+([[regen-py-version-blind-spot]]), *and* CI shards `test_orbit` into **5
+pytest-split groups** -- this test lands in `g3`. So a local run of "the whole
+shard" is not the CI shard even when it is the whole file, because CI's shard is a
+*split* of the file. That sharpens [[verify-exact-ci-shard-context]]: match the
+split, not just the file list.
+
+*It added five*, in files I had not looked at: 2 `test_actionAngle` (
+`IsochroneApprox_plotting`, `Staeckel_indivdelta_EccZmaxRperiRap`), 1
+`test_noninertial`, 1 `test_quantity` (`test_potential_paramunits`), 1
+`test_streamdf` (`test_bovy14_callMargXZ`).
+
+#1224 rewritten to the CI-authoritative set of 20. **Ledger 150 -> 130, reducible
+102 -> 82.** Force-pushed and cancelled the prior SHA's 8 queued runs -- one of
+which was the 44-shard matrix, so that is real runner time back
+([[cancel-stale-pr-ci-on-push]]).
+
+The reading-note now carries the recipe, so the next person does not have to
+rediscover it: PR into an integration branch -> matrix runs -> download
+`backend-junit-*` artifacts -> `(ledgered AND passed)`. And a warning not to do it
+on a dev box, with this exact miss as the evidence.
+
+**The healthy number to take away: 124 of 150 entries are genuinely still
+failing.** The ledger was carrying ~13% dead weight, not the majority I half
+expected after seeing 16/18 in one file. `test_orbit` was the outlier because it
+is where the most fixing has happened.
