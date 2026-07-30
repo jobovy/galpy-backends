@@ -5220,3 +5220,66 @@ Prototypes kept in `scratchpad/hyp_proto{,2}.py`. This is the shape of PR #174: 
 routes, the in-regime path untouched so everything working today stays
 byte-identical, plus the misleading error message corrected to name the real
 condition (the sign, not `c - max(a,b)`).
+
+### Wake 48 (2026-07-30) — #1224 green bar one shard; #174 built and passing
+
+**#1224: 153 pass, 1 pending, 0 failures.** `codecov/project` cleared on its own
+exactly as expected once the shards finished uploading — the sixth time that
+partial-upload pattern has self-resolved. The last check is the
+`test_backend*.py` coverage shard. Pre-merge audit done and clean: one file, zero
+`galpy/` source changes (so the `if`->`xp.where`, duplication and helper-placement
+checks are all vacuous here), header counts match live greps exactly (130 - 48 =
+82), no conflict markers, exactly 20 removals and 0 additions.
+
+**#174 (hyp2f1 domain) is implemented, tested and committed locally.** Three
+things worth recording, because two of them changed the design.
+
+*The Pfaff transformation cannot be used for route 2.* My first plan was "Pfaff to
+get in regime, reuse the quadrature". Wrong: Pfaff maps `z <= 0` to `z/(z-1)` in
+`[0,1)`, and the integral's boundary-layer substitutions assume `z <= 0`
+(`log1p(-z)` etc.). **Euler's** transformation is the one that leaves `z` alone,
+turning `(-3.2,4.4,5.2)` into `(8.4,0.8,5.2)` — in regime, and measured **7e-15**
+across `|z| = 0.06 .. 500`. Caught by testing rather than by reading, which is the
+only reason it did not ship wrong.
+
+*Route choice is not a free improvement, so I did not touch it.* Measuring all
+three routes on in-regime triples:
+
+| (a,b,c) | route 1 (today) | route 2 Euler | route 3 series |
+|---|---|---|---|
+| (1.5, 2.5, 3.5) | **6.8e-15** | 1.1e-06 | 0 |
+| (-2.2, 2.4, 4.2) | 2.1e-06 | **1.0e-14** | 2.2e-11 |
+| (-1.2, 0.4, 3.2) | 2.7e-08 | n/a | 1.9e-05 |
+
+They are complementary — no route dominates. So re-routing in-regime parameters
+would change existing numpy values in *both* directions, which is not this PR's
+business. `_in_regime` is therefore checked **first**, and I verified byte-identity
+over 10 in-regime triples x 9 values of z: **all identical.** The change is a pure
+capability addition.
+
+**A separate finding worth Jo's attention:** that table shows route 1 is only
+**2.1e-06** at `|z|=50` for `(-2.2,2.4,4.2)` — a triple galpy itself requests —
+while the docstring claims "~1e-10 or better vs scipy at realistic radii
+(|z| <~ 50)". It is already 1.9e-07 at `|z|=1`. The claim does not hold for
+negative `a`. Not fixed here (it would change numpy values), but it means the
+in-regime path is weaker than advertised, and Euler's transformation would
+*improve* exactly those cases if we ever decide to prefer it.
+
+*The honest limit on route 3.* `a == b` (so `|a-b| = 0`) reaches the series and,
+at 128 terms, returned a **1.25e-02** error at `|z|=50` — a silently wrong number,
+precisely what the original author's comment refused. I checked whether a static
+gate on `|a-b|` would help: it would not, because the dominant variable is `|z|`,
+not the parameters (even `|a-b|=4` degrades at `|z|=50`, while at `|z| <= 1`
+everything including `a == b` is exact). Since `|z|` is data, it cannot be raised
+on under a trace. So I sized the term count instead: **512 terms** makes route 3
+exact to <=9e-13 through `|z|=20` and 2e-6 at `|z|=50` — which is what the
+quadrature route also delivers there, so up to `|z|=50` the new route is no less
+accurate than the one galpy already ships. Beyond that it falls off faster;
+documented with measured numbers and pinned by a test **from both sides**, so a
+silent loss and an accidental improvement both fail.
+
+Payoff verified before and after: making the fallback return scipy's value for just
+these parameters took the three tests to 0 failures (so hyp2f1 was the sole
+blocker), and the real fix reproduces that — **torch 3/0**. jax check running.
+63 hyp2f1 tests pass on both backends. Committed on
+`fix/hyp2f1-fallback-domain`, unpushed; #173 goes first.
