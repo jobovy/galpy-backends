@@ -4741,3 +4741,39 @@ sources, three stories. So the note asserts only the mechanical fact (incrementa
 fixes cannot reduce those entries) and explicitly leaves the scope question to
 Jo. Verified the guard still exists in current code before writing any of it,
 rather than trusting the memory.
+
+## Wake 42 -- first eager-ledger burndown: 6 entries, and two over-claims I caught myself
+
+#1222 (ledger reading note) still in CI. Meanwhile, started the eager burndown by
+clustering the 108 reducible entries: after VerticalInverse, `test_quantity.py` is
+the largest cluster at 20, and inside it the tightest is `*_turnphysicaloff` --
+3 tests x 2 backends = 6 entries, one shared mechanism.
+
+Cause: those tests assert `isinstance(result, float)`, a numpy-specific PROXY for
+"not a Quantity". Under a forced backend galpy returns a 0-d BACKEND array by
+design -- exactly what makes the call traceable -- so a CORRECT result fails.
+Test-side, same class as #1220's ExpDisk work. Committed `1489fb1d`, held for
+#1222. Ledger **156 -> 150**.
+
+**Two mistakes of mine, both caught before they shipped, both worth recording.**
+
+1. *A regex that produced valid syntax and broken semantics.* My first pass used
+   `re.subn(r"isinstance\((.*?), float\)", ..., flags=re.S)` and it ate across a
+   boundary, leaving `assert isinstance(potential.evaluatelinearPotentials(pot, 1.1)), (`
+   -- a ONE-ARGUMENT isinstance. `ast.parse` passed happily; it would have raised
+   TypeError at runtime. **`ast.parse` is not validation for this class of edit.**
+   Redid it with 11 exact string replacements plus an explicit residual count.
+
+2. *An over-claim in my own docstring.* I wrote that the numpy contract "is not
+   relaxed", then probed it and saw a 0-d numpy array apparently accepted -- so I
+   added a guard against `numpy.ndarray`. Probing further, BOTH readings were
+   wrong: `is_backend_array(numpy.array(1.5))` is **False**, so numpy 0-d arrays
+   were never accepted, and the True I saw came from `numpy.float64` being a
+   `float` SUBCLASS -- which the original `isinstance(v, float)` accepted too. My
+   guard was dead code resting on a false premise. Removed it, and replaced the
+   prose claim with a case-by-case table proving the only changed case is
+   `0-d jax -> True`.
+
+That second one is the same failure mode as the py3.14 "bitwise" over-claim
+earlier this vacation: I asserted a property about my own change instead of
+measuring it. The fix both times was a table of cases, not a better sentence.
