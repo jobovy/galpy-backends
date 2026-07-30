@@ -5832,3 +5832,40 @@ one is a slow-skip re-home, and the count is not final until measured. Better to
 that now than after pushing.
 
 **#1227: 111 pass, 42 pending, `codecov/patch` cleared — zero failures.**
+
+### Wake 59 (2026-07-30) — #1227 MERGED; the cast branch committed with an honest caveat
+
+**#1227 merged as `d2a0e8c8`. Ledger 122 -> 120.** 154 checks green;
+`codecov/patch` cleared itself again (fourth PR running). The audit was unusually
+easy: this PR *is* the correct form of the class I audit for — a `where()` on a data
+mask rather than a Python branch. The one thing I'd normally flag is that the
+explanatory comment is duplicated verbatim across `_jax` and `_torch`, but those two
+files are strict mirrors of each other throughout, so keeping them symmetric is the
+local convention rather than accidental duplication.
+
+**Cast branch rebased and committed** (`fix/torch-assertion-casts`), with the ledger
+drop deliberately withheld.
+
+`test_rE_MWPotential2014` needed a second pass. My first patch cast its two list
+comprehensions and it still failed, because the energy grid is *seeded* from backend
+values:
+
+```python
+Emin = Ec(rmin)                          # Tensor under a forced backend
+Es   = numpy.linspace(Emin, Emax, 101)   # carries Tensors into Es
+```
+
+Casting `Emin`/`Emax` at the source fixes it (11s, green). Same lesson as the
+noninertial sites, arriving from the other direction: **patch where the backend value
+enters, not where the error surfaces.** It is now the commit's title.
+
+**And one entry is not a free un-ledger.** `test_dynamfric.py::test_dynamfric_c` hit
+a 600s timeout once the TypeError was gone — it used to abort early, now it runs to
+completion, and orbit integration with dynamical friction under torch eager is slow.
+A timeout **overrides** xfail and reds the shard, so "it passes locally" is not
+grounds to drop it; it may belong in `backend_slow_skip.txt` instead. Measuring with
+a 3600s allowance before deciding. The commit says so explicitly rather than quietly
+un-ledgering 11 and hoping.
+
+That is the whole point of running these locally: the PR is 11 sites but not 11
+un-ledgers, and I would rather find that here than in a red shard.
