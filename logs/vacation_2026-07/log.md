@@ -5609,3 +5609,30 @@ Refined running total of what the ledger actually contains:
 | genuinely code-fixable | ~48 |
 
 Two of those 48 are #175's (verified, queued), one is #176's.
+
+### Wake 54 (2026-07-30) — measuring the traced state while #1226 uploads
+
+**#1226: 21 pass, 130 pending, both codecov checks red and both premature.**
+`patch: 20.00% of diff hit (target 86.18%)` is not a coverage gap — it is 20% of the
+*uploads* being in. The shard that exercises the new code is
+`tests/test_backend*.py`, which is also the coverage shard, and it has not reported
+yet. Same for `project: 61.37% (-24.81%)`; a 173-line diff cannot move the project
+figure by 25 points. On #1225 both cleared at ~40 shards pending; here we are at 130.
+
+**#175's actionAngle shards are clean on all three backends** (numpy, torch, jax);
+the ~2h `tests/test_backend*.py` is still going.
+
+**Dispatched `--jit` runs of `test_sphericaldf` on both backends** against the #1226
+tree. This is the measurement the mission actually cares about — the ledger's
+`-jit` section is down to **6 entries** (3 AnyAxisym, 2 interpRZ, 1 orbit
+eccentricity), and the constant-beta / OsipkovMerritt DFs previously could not be
+traced at all because `hyp2f1` raised before tracing began. Whether they now trace,
+rather than merely evaluate eagerly, is a separate question from the 6 entries #1226
+retires, and worth knowing before claiming the DF family is "backend-ready".
+
+Also probing all 35 remaining torch singletons with `--runxfail` to classify them the
+way the six `test_actionAngle` ones were classified — the useful output is not the
+pass/fail but the *shape* of each failure: a `TypeError`/`AttributeError` naming a
+numpy function applied to a Tensor is a free test-side fix, a quantified `%`
+deviation joins the tolerance batch, anything else is real work. That distinction is
+what turns 52 opaque singletons into a plan.
