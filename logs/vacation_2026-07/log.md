@@ -5474,3 +5474,47 @@ a rejected commit is normal and needs `git add -A` again, not investigation.
 
 **Queue: #1225 landing, then #174 (6 entries), then #175 (2 entries).** 128 -> 122 ->
 120.
+
+### Wake 52 (2026-07-30) — #1225 MERGED; the full shard earns its keep
+
+**#1225 merged as `48146a7e`. Ledger 130 -> 128.** `codecov/project` cleared itself
+once the last shards uploaded (52.82% -> 86.18% -> green), exactly the partial-upload
+pattern. Audit before merge: the two new `if`s are `isinstance(out, (tuple, list))` —
+a *type* check — and `_APY_UNITS`, a module-level flag; neither branches on array
+values, so neither is the `if`-should-be-`xp.where` class. The restructure also
+*removes* duplication (two near-identical try/except blocks became one type dispatch),
+and adds no helpers.
+
+**The full `tests/test_backend*.py` shard caught something my subset run missed** —
+2h13m, 6460 passed, **2 failed**:
+`tests/test_backend_constantbetadf.py::test_hyp2f1_domain_limit[jax,torch]`.
+
+That test exists to lock the *old* boundary:
+
+```python
+# ... cannot reach the general-beta Hernquist DF for beta>=0.5
+# (b=1-2beta<=0 after the Pfaff transform) ... This locks that documented boundary.
+with pytest.raises(NotImplementedError):
+    dfh.fE(_arr(backend, ...))
+```
+
+My fix moves that boundary, so the test fails by construction. Had I pushed on the
+strength of the three quick shards, CI would have caught it — but the point of
+running the real shard locally is not to be caught. Worth noting the shard took
+**2h13m**, which is why the temptation to run a two-file subset exists and why it
+keeps being wrong.
+
+**And the failure is good news.** `constantbetaHernquistdf(beta=0.7)` does not just
+stop raising — it now agrees with scipy to **1.55e-15** on both backends. So this PR
+is bigger than "6 ledger entries": **the entire general-beta Hernquist family
+(beta >= 0.5) was numpy-only and is now available on jax and torch.** That is a
+capability the ledger never measured, because there was no test asserting it could
+work — only one asserting it could not.
+
+Rewrote the test accordingly: parametrised over beta = 0.5, 0.7, 0.9, asserting value
+parity against the scipy path at `rtol=1e-13`. It locks the *new* boundary as tightly
+as the old one was locked, rather than just deleting an assertion.
+
+Also measured, rather than assumed, whether two further torch entries
+(`test_constantbeta_interpolatedpotentials_{beta,dens_directint}`) fall out of the
+same fix — runs in flight on both backends before I finalise the ledger drop.
