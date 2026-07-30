@@ -5518,3 +5518,38 @@ as the old one was locked, rather than just deleting an assertion.
 Also measured, rather than assumed, whether two further torch entries
 (`test_constantbeta_interpolatedpotentials_{beta,dens_directint}`) fall out of the
 same fix — runs in flight on both backends before I finalise the ledger drop.
+
+### Wake 52b — #1226 opened (hyp2f1 domain)
+
+**#1226 open. Ledger 128 -> 122.**
+
+Measured the two extra torch `constantbeta` entries rather than assuming they came
+along with the fix, and they did not:
+
+```
+torch  PASS constantbetadf_against_hernquist
+torch  PASS osipkovmerritt_hernquist_dMdE_limits
+torch  PASS osipkovmerritt_hernquist_dMdE_limits_generalimplementation
+torch  FAIL constantbeta_interpolatedpotentials_beta
+torch  FAIL constantbeta_interpolatedpotentials_dens_directint
+         RuntimeError: vmap: ... calling .item() on a Tensor or ...
+         data-dependent control flow
+jax    3 PASS, 2 skipped (slow-skip)
+```
+
+Same file, same DF family, unrelated cause — the interpRZPotential track (#112).
+Dropping them because they looked related would have been a silent false prune, and
+the ledger has burned me in both directions this fortnight, so: 6 entries, each
+verified with `--runxfail` on both backends.
+
+`test_backend_constantbetadf.py` full file: 36 tests, 0 failures with the rewritten
+domain test.
+
+The PR leads with what the ledger could not count — `beta >= 0.5` gives
+`b = 1-2beta <= 0`, the both-non-positive case, so the whole general-beta Hernquist
+family was numpy-only. **No ledger entry existed for it, because no test asserted it
+should work; one asserted it could not.** That is a blind spot worth naming: the
+ledger measures tests that exist, so a capability nobody tried is invisible to it,
+and "entries retired" undercounts what a fix actually buys.
+
+Queue: **#1226 in CI, then #175** (2 entries, committed and verified). 122 -> 120.
