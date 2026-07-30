@@ -5312,3 +5312,57 @@ user-visible even though all 16 byte-probes are identical, with a note that
 Two PRs' worth of ledger burndown now sits behind #1225 and #174: 128 -> 126 -> 120
 if both land. Of the remainder, 48 are `actionAngleVerticalInverse` (refuses
 backends by construction), so the reducible count would be 72.
+
+### Wake 49 (2026-07-30) — the "unbound" cluster is two different things
+
+**#1225: 2 pass, 149 pending, no reds.** #174 is committed and its four real CI
+shards are running locally (`tests/test_backend*.py` with the exact
+`-W error::DeprecationWarning -W error::FutureWarning` CI invocation, torch and jax
+`test_sphericaldf`, numpy `test_potential`). Note I first launched the backend shard
+as just two files and corrected it to the full ~78-file glob — "the shard" means
+CI's whole `TEST_FILES`, and a two-file subset is exactly the mistake
+[[verify-exact-ci-shard-context]] is about.
+
+**Diagnosed cluster B, and it is not one bug.** I had it filed as "unbound-orbit
+detection, ~4 entries, probably one root cause". Wrong on both counts.
+
+*2 entries are a real, narrow bug.* For an unbound orbit numpy returns the 9999.99
+sentinel in every angle; torch returns **3.442** for `js[7]` and the sentinel
+everywhere else. `9999.99 mod 2*pi = 3.4421762772780866` — the sentinel is being
+*folded*, not preserved. Located at `actionAngleStaeckel.py:628`:
+
+```python
+anglephi = xp.remainder(anglephi + phi, 2.0 * numpy.pi)  # fold in the azimuth
+```
+
+which folds unconditionally, where the C wrapper explicitly guards it
+(`actionAngleStaeckel_c.py:1017`, `badAngle = Anglephi != 9999.99`). The test uses
+`c=True`, but I instrumented `actionAngleFreqAngleStaeckel_c` and **it is never
+called under a forced backend** — the C path is skipped entirely and the backend
+implementation, which lacks the guard, runs instead. Fix is an `xp.where` on a data
+mask (traceable, no Python branch), and byte-identical on numpy because the numpy
+path raises `UnboundError` at line 299 before any unbound value reaches the angle
+code. Task #175.
+
+*The other 2 are by design and will never pass.* `test_qdf::test_call_diffinoutputs`
+requires `UnboundError` to be **raised**; under a backend it gets `Jr=inf`. The code
+says why, at `actionAngleStaeckel.py:293`: "Unbound orbits raise eagerly on the
+numpy path ...; under a backend they must stay jit-traceable, so we cannot branch on
+the traced `unbound`". Raising means branching on a traced value. So the test asserts
+numpy-only behaviour, and either it becomes backend-aware (assert non-finite instead
+of a raise) or those 2 stay ledgered forever.
+
+**That matters for the burndown arithmetic.** They belong with the
+`actionAngleVerticalInverse` 48 in a third category: not stale, not a bug, just
+structurally unreachable. Running total of what the ledger's 130 actually contains:
+
+| | entries |
+|---|---|
+| VerticalInverse (refuses backends by construction) | 48 |
+| unbound-raise under trace (by design) | 2 |
+| absolute bounds demanding bit-identity (awaits one decision) | ~15 |
+| genuinely code-fixable | ~65 |
+
+The honest "reducible by fixes" number is nearer **65 than 82**, and I would rather
+say that now than keep quoting a figure that flatters the work. Two of those 65 are
+#1225's (landing), 6 are #174's (ready), 2 are #175's (localised, one-liner).
