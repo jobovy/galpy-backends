@@ -4827,3 +4827,56 @@ That is a small thing but the general shape matters: **a note that states counts
 becomes wrong the moment the counts move, so whoever moves them owns the note.**
 Worth remembering for every future burndown PR -- the ledger now has a header that
 must be updated in lockstep.
+
+## Wake 44 -- task #171 root-caused: it is a LATENT TEST-DESIGN issue, measured at 1 ulp
+
+Took on the sphericaldf/qdf cluster (13 entries) with the warning I had written
+myself: do not assume another as_numpy fix, verify first. Good thing.
+
+**It is not a units bug and not a backend bug.** Reproducing the test's exact
+comparison:
+
+```
+  numpy  lhs= 1.64026633916166115e+10
+         rhs= 1.64026633916166115e+10   absdiff = 0          (bit-identical)
+  jax    lhs= 1.64026634257233601e+10
+         rhs= 1.64026634257233620e+10   absdiff = 1.9073e-06
+                                        reldiff = 1.16e-16   (~1 ulp)
+```
+
+The two sides agree to **one ulp**. The test's bound is
+`numpy.fabs(physical - scaled_natural) < 1e-8` -- **ABSOLUTE**, on a quantity of
+magnitude 1.6e10. Float64 eps at that magnitude is 3.6e-6, so the bound is
+strictly tighter than representable: it can only be satisfied by BIT-IDENTITY.
+numpy satisfies it by accident of identical operation order; jax misses by a
+single ulp.
+
+`test_quantity.py` uses that absolute form **882 times**. It is fine for
+quantities of order unity and silently demands bit-identity for large ones
+(masses ~1e10, densities). So the cluster is one story: *tests whose compared
+quantity is large enough that an absolute 1e-8 bound means bit-identity.* This is
+**latent test design that predates the backend work** -- the backends only exposed
+it.
+
+**Deliberately did NOT change it.** The only real fix is absolute -> relative
+tolerance, and the standing rule is that tolerance changes get PROPOSED and
+approved per batch ([[torch-tolerance-loosening-ok]]), not taken unilaterally. It
+is also not blocking: the entries are ledgered and CI is green. So this waits for
+Jo, with the numbers ready.
+
+Options for him, cheapest first:
+1. leave ledgered (13 entries, now accurately explained);
+2. targeted: make the ~13 affected assertions relative -- small diff, looks
+   arbitrary next to 869 untouched absolute ones;
+3. a shared `assert_physical_matches_natural(...)` helper with a relative bound,
+   used at the affected sites and available for the rest -- cleanest, extensible,
+   biggest diff.
+
+My recommendation is (3) scoped to the affected sites only, because it names the
+comparison being made instead of hiding it in an arithmetic expression, and gives
+the remaining 869 an obvious migration path if they ever bite.
+
+Worth noting what the warning bought: had I "fixed" this by casting with as_numpy
+as I first assumed, I would have changed nothing and then loosened a tolerance
+without understanding why -- and would not have found that the file has 882
+instances of the same latent pattern.
