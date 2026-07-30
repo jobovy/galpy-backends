@@ -5007,3 +5007,75 @@ on a dev box, with this exact miss as the evidence.
 failing.** The ledger was carrying ~13% dead weight, not the majority I half
 expected after seeing 16/18 in one file. `test_orbit` was the outlier because it
 is where the most fixing has happened.
+
+### Wake 45, part 3 — mined the 124 real failures, found a plain-numpy bug
+
+With the ledger now telling the truth, I broke the **124 genuinely-failing**
+entries down. 48 are `actionAngleVerticalInverse` (refuses backends by
+construction), leaving **76 addressable**. Of those, 14 clusters fail on **both**
+jax and torch — and a both-backend failure is not a backend idiosyncrasy, it is a
+galpy-side gap. That is the list worth working.
+
+Picked `test_physical_vertical` (2 entries) because my notes already called it "a
+pre-existing decorator quirk". It is worse than a quirk.
+
+`physical_conversion_actionAngle` decides whether a method returned a *sequence*
+of quantities or *one* quantity like this:
+
+```python
+try:
+    for ii in range(len(out)):
+        newOut = newOut + (out[ii] * fac[ii],)
+except TypeError:   # happens if out = scalar
+    newOut = out * fac[0]
+```
+
+`len()` does not answer that question — a length-N array has a `len()` too. A 1D
+`__call__` returns the action J alone, one array-valued quantity, so it took the
+loop; and `fac` for `"__call__"` is always three long. Therefore, **on plain numpy,
+no backend anywhere:**
+
+```
+>>> aAV = actionAngleVertical(pot=IsothermalDiskPotential(...), ro=7., vo=230.)
+>>> aAV(numpy.linspace(-0.1, 0.2, 4), numpy.full(4, 0.1))
+IndexError: list index out of range
+```
+
+and at n ≤ 3 it returns a *tuple of n scalars* where the natural call returns a
+length-n array. Both `actionAngleVertical` and `actionAngleHarmonic`, in the plain
+and the astropy-Quantity branch alike. `numpy` broadcasting `tuple - ndarray` is
+the only reason nobody noticed; jax/torch raise on `tuple - Tensor`, which is how
+the ledger entry came to exist. **The backend work found a latent numpy bug** —
+the same pattern as the `test_quantity` 1e-8 discovery, and the second time this
+week that a "backend failure" turned out to be galpy telling the truth.
+
+Fix: dispatch on type, which is what the code meant. `_actionAngleInverse` has the
+same shape but not the bug (its 1D `__call__` genuinely returns `(x, v)`) — left
+alone rather than "made consistent".
+
+**Byte-identity, checked rather than asserted:** ran 16 probes against both
+revisions and compared float *bytes* — 3D `__call__`/`actionsFreqs`/`aFA`/
+`EccZmaxRperiRap` for Staeckel, Isochrone, Spherical, array-valued 3D input, and
+the 1D `actionsFreqs`/`aFA`. **All 16 identical.** What changes is the container of
+the 1D `__call__` under physical output, plus n ≥ 4 no longer raising. Flagging it
+as a user-visible API change even though no value moves
+([[flag-numpy-byte-identical-changes]]).
+
+Tests: containers must match at n = 1,2,3,4,9 (straddling the old ceiling) with
+**exact** equality — the decorator's only arithmetic is one multiply by `ro*vo`, so
+a tolerance would be admitting I did not know what it computes. Plus a counterpart
+pinning 3D methods as tuples whose entries keep their **own** factors (actions by
+`ro*vo`, frequencies by `freq_in_Gyr`), which is exactly what collapsing to one
+shared factor would break. Pass on numpy/jax/torch; both fail without the fix
+(stash-reran, [[verify-burndown-flips-stash-rerun]]).
+
+Committed locally on `fix/aa-physical-conversion-1d`, **not pushed** — #1224 is
+still the one PR in flight. Full-shard verification running meanwhile (numpy
+aA+quantity, torch aA, jax aA). The ledger drop for the 2 entries goes in after
+#1224 merges and this rebases, so the two PRs never touch the ledger at once
+([[all-clear-queued-rerun-and-ledger-rebase]]).
+
+This one is arguably `main` material, not backend material — `conversion.py` is
+shared and the IndexError has nothing to do with jax. I am putting it on
+`feat/backends-develop` because that is where the ledger entries live and where I
+can merge; worth splitting a `main` cherry-pick when Jo is back.
