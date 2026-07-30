@@ -4806,3 +4806,24 @@ mistake gets repeated rather than avoided.
 all-clear outstanding, and codecov/project red. Comment-only PR, so coverage
 cannot actually have moved -- consistent with the partial-upload pattern that has
 self-cleared every time this vacation. Watching, not touching.
+
+## Wake 43 -- #1222 MERGED (`08e19572`), #1223 opened (first eager burndown lands)
+
+154/154, codecov self-cleared for the FOURTH time. Audit was mechanical and I made
+it provable rather than eyeballed: 16 added lines, `grep -vc "^+#"` gives **0
+non-comment additions**, and `grep -E "^[+-](jax|torch)"` gives **0 entry-line
+changes**. A comment-only ledger change should be demonstrably inert, not asserted
+to be.
+
+**#1223** is the turnphysicaloff burndown, ledger **156 -> 150**.
+
+Caught a self-consistency problem before pushing: the reading note I merged in
+#1222 says "total entries 156", and this very PR makes it 150. Left alone I would
+have shipped a note that its own file contradicts one commit later. Refreshed it to
+150 / 48 / 102 and verified each number against a live count rather than arithmetic
+(`grep -c` for both the total and the VerticalInverse subset).
+
+That is a small thing but the general shape matters: **a note that states counts
+becomes wrong the moment the counts move, so whoever moves them owns the note.**
+Worth remembering for every future burndown PR -- the ledger now has a header that
+must be updated in lockstep.
