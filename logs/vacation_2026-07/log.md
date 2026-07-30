@@ -5869,3 +5869,39 @@ un-ledgering 11 and hoping.
 
 That is the whole point of running these locally: the PR is 11 sites but not 11
 un-ledgers, and I would rather find that here than in a red shard.
+
+### Wake 60 (2026-07-30) — #1228 opened: 120 -> 109, and one entry that is not a win
+
+The dynamfric measurement came back and settled the question:
+
+| test | torch | vs the 300s CI per-test timeout |
+|---|---:|---|
+| `test_dynamfric::test_dynamfric_c` | **3598s** | **12x over** |
+| `test_FDMdynamfric::test_dynamfric_c` | 208s | 69% |
+| both `_minr` | 36s | fine |
+| `test_rE_MWPotential2014` | 11s | fine |
+| `test_quasiisothermaldf_method_value` | 67s | fine |
+| the four noninertial | ~43s each | fine |
+
+So **10 un-ledgered, 1 re-homed to `backend_slow_skip.txt`** — not 11 retired.
+
+**The reasoning that decides it is worth stating, because I nearly got it backwards.**
+My first instinct was to slow-skip *both* `test_dynamfric_c` variants, since 208s
+felt uncomfortably close to 300s on a loaded runner. That is wrong, and the reason is
+that **an xfail test still RUNS**. The FDM sibling already spends its 208s in CI
+today, as a ledgered xfail, without timing out — un-ledgering changes its status, not
+its cost. Only `test_dynamfric_c`'s *runtime* actually changes, because only it was
+exiting early at the TypeError. Fixing the error converted a fast failure into an
+hour-long pass.
+
+That is [[migration-flips-numpy-fallthrough-to-eager-slow]] in its purest form, and
+the ledger note records the measured 3598s so the next person does not have to
+rediscover it.
+
+Also finished the 11th site, which I had listed but not actually patched:
+`test_quantity.py:16774`, `qdf(o).to(...).value - qdfnou(o)/ro**3/vo**3` — the
+Quantity side is numpy, the DF side a Tensor. Evaluation, not sampling, so it is
+genuinely test-side rather than the qdf-sampler source bug that accounts for the
+other eight `test_quantity`/`test_qdf` entries. 67s, green.
+
+**#1228 open. Ledger 120 -> 109, reducible 72 -> 61.** Fortnight arc: 156 -> 109.
