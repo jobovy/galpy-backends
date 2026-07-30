@@ -5157,3 +5157,66 @@ proposal is quantified rather than a request to "loosen some tolerances".
 
 Incidental confirmation of #1224: `test_actionAngleIsochroneApprox_plotting`, one of
 the 20 entries it drops, **passes** in an independent isolated run too.
+
+### Wake 47 (2026-07-30) — #174 designed off measurements, not guesses
+
+**#1224: 98 pass / 54 pending / codecov-only red.** Still the partial-upload artifact.
+**All of #173's local verification is now green** — numpy `test_actionAngle` exit 0,
+numpy `test_quantity`+`test_coords` exit 0, torch aA 209/0, jax aA 209/0. It is
+ready to push the moment #1224 merges.
+
+**Second confirmation that this box over-reports XPASS.** The jax orbit shard from
+wake 45 finished: 584 tests, 0 failures, and **both** jax `test_orbit` ledger
+entries (`test_analytic_ecc_rperi_rap`, `test_analytic_zmax`) XPASS locally — while
+CI says both still xfail. Combined with the torch disagreement on
+`test_analytic_ecc_rperi_rap`, that is three data points where local py3.13 XPASSes
+and py3.14 CI xfails, all in the same ecc/zmax family. Systematic, not noise, and
+exactly why #1224 was rebuilt off CI artifacts. (There is a `galpy-py314` conda env,
+but it is the **free-threaded** 3.14t build — it looks for
+`libgalpy.cpython-314t-*.so` — so it is not a faithful CI proxy. Parked rather than
+chased.)
+
+**Spent the CI wait designing #174 properly.** Three findings, each measured:
+
+*1. hyp2f1 is the ONLY blocker for those 6 entries.* Patched `hyp2f1_fallback` to
+return scipy's value for the out-of-regime parameters and ran the three tests under
+jax `--runxfail`: **tests=3 failures=0**. So this is not "a fix that might help" —
+it is the whole gap.
+
+*2. The gap is only ever hit at small |z|.* Instrumented spy over a full run:
+
+| (a, b, c) | in regime | \|z\| |
+|---|---|---|
+| (-3.2, 4.4, 5.2) | no | 0.617 |
+| (-0.98, -0.04, 2.98) | no | 0.617 |
+| (-0.51, -0.98, 2.51) | no | 0.060 |
+| (-2.2,2.4,4.2), (-1.9,1.8,3.9), (-1.2,0.4,3.2) | yes | 0.617 |
+
+I had been sizing this problem against `|z| ~ 500`. The actual requests are all
+below 0.62, which changes the cost picture completely.
+
+*3. There are two sub-cases, and only one is representable by the existing
+integral.* Enumerating identity/Euler/Pfaff-1/Pfaff-2 for a parameter in `(0, c)`:
+
+- `(-3.2, 4.4, 5.2)`: Pfaff-1 gives `(A,B) = (-3.2, 0.8)` with `c-B = 4.4 >= 1` —
+  **in regime**. So the current guard is stricter than mathematically necessary; it
+  is a quadrature-accuracy condition, and a Pfaff transformation first makes the
+  existing 128-node machinery apply unchanged.
+- both `a,b <= 0`: **none** of the four transformations lands a parameter in
+  `(0, 2.51)` (identity `(-0.51,-0.98)`, Euler `(3.02,3.49)`, Pfaff-1
+  `(-0.51,3.49)`, Pfaff-2 `(3.02,-0.98)`). The Euler integral genuinely cannot
+  represent it — so this branch needs a series, not a smarter labeling.
+
+For that branch there is a tidy general result: apply the Pfaff transformation that
+puts `max(a,b)` in the `c-·` slot and the Gauss series has `C-A-B = |a-b| > 0`,
+hence converges even in the `x -> 1` (`z -> -inf`) limit. Prototype vs scipy:
+**machine precision (1e-16..1e-14) at |z| = 0.5 .. 500** for both gap cases. Term
+counts to 1e-10: case (i) 10 terms at |z|=1 and only 27 at |z|=500; case (ii) 22 at
+|z|=1, 166 at 10, 732 at 50. Given measured usage below 0.62, a small fixed-length
+sum is ample and trace-friendly — with an accuracy-vs-|z| table in the docstring,
+matching how the existing quadrature documents its own degradation.
+
+Prototypes kept in `scratchpad/hyp_proto{,2}.py`. This is the shape of PR #174: two
+routes, the in-regime path untouched so everything working today stays
+byte-identical, plus the misleading error message corrected to name the real
+condition (the sign, not `c - max(a,b)`).
