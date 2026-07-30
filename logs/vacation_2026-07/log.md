@@ -5905,3 +5905,38 @@ genuinely test-side rather than the qdf-sampler source bug that accounts for the
 other eight `test_quantity`/`test_qdf` entries. 67s, green.
 
 **#1228 open. Ledger 120 -> 109, reducible 72 -> 61.** Fortnight arc: 156 -> 109.
+
+### Wake 61 (2026-07-30) — the `obs=` failure is a real API gap, not a test artefact
+
+**#1228 converging** (70+ pass, `codecov/project` the only red — premature, fifth PR
+running). Watcher armed.
+
+Used the wait to settle the `Orbits.py obs=` pair properly, and the conclusion
+changed once I probed instead of read.
+
+The test does this:
+
+```python
+o.helioX(times[ii], obs=[obs.x(times[ii]), obs.y(times[ii]), 0.0], ro=1.0)
+```
+
+and under a forced backend `obs.x(t)` returns a **Tensor**, so the list galpy
+receives is `[Tensor, Tensor, float]`, which then meets a numpy `thiso` at
+`Orbits.py:9738`. My first instinct was to file this with the test-side casts — the
+test is, after all, constructing the awkward list. But that is exactly what **any
+user** would produce under a forced backend: they call an accessor and pass the
+result to `obs=`. So this is a genuine backend-agnosticism gap in a **user-facing
+parameter**, and casting in the test would hide it.
+
+Design settled rather than implemented, because #1228 is the PR in flight:
+`Orbits.py` has **four** `isinstance(obs, (numpy.ndarray, list))` branches (9735,
+9766, 9818, 9904) and **no** obs-normalising helper. The fix is one module-level
+private helper landing an obs sequence in the orbit state's namespace, called at all
+four — not inline at the two that happen to be covered by a ledgered test. It stays
+in `Orbits.py` rather than `galpy/backend` because it is Orbits-specific, not general
+([[audit-placement-and-duplication]]). Byte-identity on numpy is a strict
+pass-through and must be probe-verified, and the change fixes the same latent bug at
+the two untested sites for free.
+
+That is the third time this fortnight that "where is the failing frame?" changed the
+classification of a failure. It is becoming the single highest-yield question to ask.
