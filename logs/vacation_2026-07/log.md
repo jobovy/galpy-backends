@@ -4777,3 +4777,32 @@ Test-side, same class as #1220's ExpDisk work. Committed `1489fb1d`, held for
 That second one is the same failure mode as the py3.14 "bitwise" over-claim
 earlier this vacation: I asserted a property about my own change instead of
 measuring it. The fix both times was a table of cases, not a better sentence.
+
+### Next cluster probed and deliberately NOT started
+
+Looked at the sphericaldf cluster (8 entries) expecting another type-proxy fix.
+It is not. From `test_sphericaldf_method_value` under jax:
+
+```
+  dfh.vmomentdensity(1.1, 0, 2)      = 1.64026634e+10   (physical output)
+  dfh_nou.vmomentdensity(1.1, 0, 2)  = 0.00192737       (natural units)
+```
+
+and the physical number is **correct** -- `0.00192737 * (9.0027e10 / 8**3) * 220**2`
+= 1.64e10 exactly, so there is no missing conversion factor. The test also flips
+`galpy.util._optional_deps._APY_UNITS = False` mid-test as a documented hack, and
+the failing comparison has backend Arrays on both sides. So the suspect is
+physical_conversion x the _APY_UNITS hack x backend arrays -- a real
+investigation, not a mechanical cast.
+
+Recorded as task #171 with the numbers and an explicit warning to myself: **do not
+assume it is another as_numpy fix; verify first.** Two hours ago I assumed
+"sqrt(numpy.float64)" was the whole 1D story and 3 of 7 failures turned out to be
+a second cause. Starting a units investigation at the tail of a long wake, with a
+finished 6-entry commit already in hand and #1222 still mid-CI, is how that
+mistake gets repeated rather than avoided.
+
+**#1222**: 150/154 with the two py3.14 backend shards (90+ min each) plus
+all-clear outstanding, and codecov/project red. Comment-only PR, so coverage
+cannot actually have moved -- consistent with the partial-upload pattern that has
+self-cleared every time this vacation. Watching, not touching.
