@@ -6114,3 +6114,42 @@ not the exception message.** The message is identical for a test-side cast and a
 source defect; the frame separates them. It changed the classification four separate
 times this fortnight, and twice stopped me from "fixing" a test that was correctly
 reporting a real bug.
+
+### Wake 66b — the fork deadlock has a cheaper exit than I thought, and a stale premise fell over
+
+Investigated the `parallel_map` deadlock (3 entries). Last wake I ranked "switch to
+spawn" as the preferred fix. **It is blocked, and the block is written in the source
+I had not read**, `galpy/util/multi.py:202`:
+
+```python
+# Use fork-based parallelism (because spawn fails with pickling issues, #457)
+ctx = multiprocessing.get_context("fork")
+```
+
+So I measured *how* blocked, by sweeping every default-constructible potential:
+
+```
+picklable = 57,  UNPICKLABLE = 3,  skipped 8 (need args)
+  AnySphericalPotential            <lambda> held as an attribute
+  DiskMultipoleExpansionPotential  local object KuijkenDubinski._parse_S...
+  DiskSCFPotential                 same
+```
+
+The "spawn fails with pickling issues" blocker is therefore **three closures**, not a
+general problem — hoist them to module-level callables and spawn becomes viable,
+which would retire this whole deadlock class. Scoped as its own piece of work
+(measure spawn's runtime first: it re-imports galpy per worker), definitely not
+bundled into a ledger PR.
+
+**And a premise of mine fell over, which is the more useful outcome.** Task #68 has
+sat for weeks as "un-picklable *migrated* potentials (stored namespace modules)". A
+`HernquistPotential` pickles fine **after a forced-torch evaluation** — the backend
+migration does not break picklability at all. The three failures have nothing to do
+with backends. Corrected the task rather than leaving a plausible-sounding but wrong
+diagnosis in the queue for whoever picks it up.
+
+Worth noting the shape of the error: I had a *reasonable-sounding* cause recorded,
+never tested it, and it survived weeks because nothing forced it to be checked. The
+sweep took one command.
+
+**#1229: 15 pass, 137 pending, `codecov/project` the only red.**
