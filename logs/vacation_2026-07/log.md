@@ -6918,3 +6918,26 @@ The other structural block is the **~24-entry tolerance cluster** that hinges on
 one decision from Jo (torch-vs-numpy absolute-vs-relative bounds, magnitudes all
 measured). Between VerticalInverse (48) and the tolerance batch (~24), roughly two
 thirds of the remaining ledger is waiting on decisions rather than on work.
+
+### Wake 73 — #1230 MERGED, #1231 opened
+
+**#1230 merged** (`b68b3f02`): every shipped potential picklable, 64/0 on scipy
+1.17 (was 61/3), numpy byte-identical over 858 probed values, 6 new tests.
+
+The last red before merge was `all-clear`, and it was worth diagnosing rather than
+blind-rerunning: its log listed **every** check as `success` and still reported "1
+failing check run". It had evaluated at 14:05 while `codecov/project` was red, and
+that cleared afterwards — the documented codecov-blocks-via-all-clear pattern. One
+re-run, green.
+
+**#1231 opened**: qdf sampler boundary, ledger **107 → 101**.
+
+Worth recording what the merge audit caught on this PR, because CI could not have:
+two stray `.coverage.geir.pid*` binaries swept in by `git add -A`. `.gitignore` had
+`.coverage` but not the per-process `.coverage.<host>.<pid>.*` files coverage writes
+under xdist. All 154 checks passed *with them committed* — binaries in the tree break
+no test. Removed, and the pattern widened to `.coverage.*`.
+
+That is two PRs running where the audit found the only real problem: #1229's
+ndarray→list type change (`obs * 2` would have repeated, not scaled) and this. Both
+invisible to the test suite by construction. The audit step is not ceremony.
