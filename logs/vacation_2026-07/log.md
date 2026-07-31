@@ -6481,3 +6481,36 @@ dependency: all default-constructible potentials round-trip on scipy 1.17, all
 but the two multipole classes on 1.18.
 
 Also cancelled the superseded run on the prior SHA — the project is runner-bound.
+
+**Reproduced the scipy 1.18 break properly** (throwaway venv, scipy 1.18.0 + numpy
+2.5.1; the main env stays on 1.17.1):
+
+```
+fresh BPoly dict keys: ['_delegate_to', '_xp', '_xp_internal']
+fresh pickles: FAIL TypeError cannot pickle 'module' object
+```
+
+Two things this changes. First, the attributes are there **from construction**,
+not cached lazily on first call — so the trigger is not "some earlier test warmed
+it", it is simply "scipy 1.18 is installed". Second, and more important, the blast
+radius is much larger than the two multipole potentials: **any** galpy object
+holding a `PPoly`/`BPoly` is unpicklable on scipy 1.18 — `interpRZPotential`, the
+`galpy.backend.interpolate` wrappers, DF interpolants. Same family as the
+numpy-2.5.0 break.
+
+Fix viability, measured rather than assumed:
+- stripping `_xp`/`_xp_internal` before pickling **does not work** — scipy does not
+  recreate them and the unpickled spline raises `AttributeError` when evaluated;
+- reconstructing through the **public constructor** does, and is bit-identical:
+  `(type(p), (p.c, p.x, p.extrapolate, p.axis))` round-trips `BPoly` and `PPoly`
+  with `array_equal` on the evaluated values.
+
+So a fix exists. Which shape it should take is a real decision and I am not taking
+it unilaterally: a global `copyreg` reducer inside galpy is one place and
+future-proof but changes pickle behaviour for a third-party class for anyone who
+imports galpy; per-class `__getstate__`/`__setstate__` is conventional and
+contained but has to be found everywhere and will silently miss future holders. My
+recommendation is to report it upstream (a class that pickled for years no longer
+does is almost certainly unintended) *and* ship the contained version so users on
+1.18 are not broken meanwhile. Recorded with the measurements; not blocking, since
+#1230 already excludes the two classes with the cause named in code.
