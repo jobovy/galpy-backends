@@ -6658,3 +6658,33 @@ and an unexplained xfail became an explained one.** I spent five scoping attempt
 getting there, four of them wrong, but the failure now has a cause anyone can read
 rather than "RazorThin fails under trace". That is a smaller deliverable than I
 projected and a real one.
+
+**test_orbit.py traced, complete: 581 tests, 3 failures, 121 skipped** (3856s over
+5 pytest-split groups). That is the last big file measured under `--jit`.
+
+| file | jax `--jit` |
+|---|---|
+| `test_potential.py` | 1326 / 0 fail (torch: 1326 / 0) |
+| `test_actionAngle.py` | 209 / 0 fail |
+| `test_orbit.py` | 581 / **3** fail |
+| `test_qdf.py` | 0 fail |
+| `test_diskdf.py` | 129 / 0 fail |
+| `test_sphericaldf.py` | 223 / 0 fail (torch: 223 / 0) |
+
+The three orbit failures: two are 1800s **timeouts** (`test_integrate_indiv_t_1D/2D`
+— performance, not correctness) and one is `test_orbit_c_sigint_fulldxdv`.
+
+I checked the sigint one in isolation rather than assuming xdist had mangled the
+signal — **it fails serially too**, so it is real. Then, checking further: it fails
+under jax **eager** as well, and it appears in **no** list — while its three
+siblings (`sigint_full`, `sigint_planar`, `sigint_planardxdv`) are all jax
+slow-skipped at `backend_slow_skip.txt:317-319`. The matcher is exact-nodeid /
+param-stripped / file-level, not prefix, so `...sigint_full` does not cover
+`...sigint_fulldxdv`. It looks like the fourth sibling was simply missed.
+
+**But develop CI is green**, so I am not calling it a hole. Either CI skips it for
+an environment reason (signal delivery on runners) or my box differs. Filed with an
+explicit instruction to confirm against a backend-jax orbit shard artifact before
+touching any list — the same discipline that stopped the torch-jit RazorThin entry
+from being dropped wrongly. Local-only evidence has now misled me twice this
+fortnight in both directions; a list edit needs the shard.
