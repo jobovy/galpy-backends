@@ -6346,3 +6346,27 @@ them as such.
 
 **#1229: 152 pass, 2 pending, 0 red.** Ready to merge as soon as `all-clear` and
 the last backend shard land.
+
+**#1229 MERGED** (`f9ecaaa5`) — 154/154 green. Ledger **109 → 107**.
+
+Audit before merging, against the three things I check every time:
+- *`if` → `xp.where` array-input class*: nothing added. `is_backend_array(o)` is a
+  **type** check over a user-supplied sequence, not value-dependent branching, and
+  these accessors are numpy-by-construction so they are never traced.
+- *Duplication*: the helper is defined once and called at four sites; inline it and
+  the cast appears four times.
+- *Placement*: `as_numpy` is scalar/array-only (a list passes straight through), so
+  it cannot absorb this. `_obs_asnumpy` sits next to its only two consumers and is
+  named and documented for galpy's `obs=` contract. Hoisting a one-line comprehension
+  into `galpy.backend` with a single consumer would be designing against one example;
+  revisit if a second appears.
+
+One thing the audit caught that green CI would not have: the helper converts an
+**ndarray `obs` into a list**. That is the sort of type change that goes wrong
+silently — `obs * 2` would repeat rather than scale. Checked every use in both
+branches: `obs` is only ever indexed (`obs[0]`, `obs[1]`, `obs[2]`), never used in
+whole-object arithmetic. Safe. But "the tests pass" would not have told me that.
+
+**PR #1230 opened**: potential picklability (64/0, byte-identical, 5 tests that fail
+on the parent). Next in the queue behind it is the qdf sampler boundary, already
+built and committed on `fix/qdf-sampler-boundary`.
