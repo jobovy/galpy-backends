@@ -8,11 +8,10 @@
 ## Ledger (the burndown metric)
 
 ```
-156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107   merged
-                                                 -> 101  in CI (#1231)
+156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107 -> 101   merged
 ```
 
-**107 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 58 / torch-jit 1`.
+**101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 58 / torch-jit 1`.
 
 By file (post-#1231 numbers):
 
@@ -54,8 +53,8 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **#1231** qdf sampler boundary | CI; ledger 107 -> 101 |
-| **scipy 1.18 fix** `d47e5d65` | built, held (one PR at a time) |
+| **#1232** scipy 1.18 spline pickling | CI |
+
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
 
 ## Waiting on you (roughly two thirds of the remaining ledger)

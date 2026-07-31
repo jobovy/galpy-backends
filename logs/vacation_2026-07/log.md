@@ -7059,3 +7059,27 @@ positive evidence for the missing-session explanation rather than an inference
 from a count. On #1230 the same query pinpointed `AnySphericalPotential.py:150`
 immediately. Still confirming at 28/28 before merging, but the reasoning is now
 grounded in *where* rather than *how many*.
+
+### Wake 79 — #1231 MERGED, #1232 opened
+
+**#1231 merged** (`87c5e7de`): qdf sampler boundary, ledger **107 -> 101**. Six
+torch entries retired, each verified to fail without it.
+
+Final codecov read at **28/28 sessions: head misses 20 = base 20**. The per-file
+check called it early and correctly — when head showed 8 extra at 27 sessions,
+both touched files reported 0 misses, so the extras were elsewhere. That is the
+discriminator #1230 taught me, applied before rather than after being wrong.
+
+**#1232 opened**: scipy 1.18 spline pickling. One `__getstate__`/`__setstate__` on
+`MultipoleExpansionPotential`, bit-identical on both scipy versions including the
+non-axisymmetric case.
+
+What #1231 cost, honestly: **three rounds**, because each boundary I landed exposed
+the next (DF value -> `logmaxVD` -> `fmin_powell` objective), and the last was
+invisible to my local scipy. Not three careless passes — one instrument that could
+not see the far edge. The remedy now exists as a tool rather than a resolution: the
+scipy-1.18 venv, plus a memory note saying to use it for anything crossing into
+`scipy.optimize`/`integrate`/`interpolate`.
+
+Ledger **101**. Of which 48 are `actionAngleVerticalInverse` and ~24 the tolerance
+cluster — so the reducible-by-work remainder is now roughly **29**.
