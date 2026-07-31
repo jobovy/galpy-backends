@@ -7236,3 +7236,38 @@ failed silently in the direction of "looks fine". The two that held up — the
 junit traceback and running the helpers under torch — were the two where I
 executed the actual thing. Cheap proxies are fine for search; they are not
 evidence for a claim I put in front of Jo.
+
+**#1232 verified functionally, not just by CI colour.** 148/153 green, 4 pending,
+`codecov/project` red at 26 of 28 sessions. The per-line API said 27 of my 54
+added lines were missed — which would mean the fix is untested. Chased it instead
+of waiting, and the chase produced two more self-inflicted measurement errors plus
+one real verification:
+
+* `import galpy.potential.MultipoleExpansionPotential as M` binds the **class**,
+  not the module (galpy re-exports the class under the module's name). My
+  monkeypatch `M._pack_splines = counting` therefore set an attribute on the class
+  and intercepted nothing — reported as "0 invocations", i.e. "the fix never
+  runs". Reached the module via `sys.modules[...]` instead.
+* A nesting error: the spline attrs are lists-of-lists, so checking `v[0]` for the
+  surrogate tuple looked one level too shallow and found none.
+
+The real verification, via the flip test (`verify-burndown-flips-stash-rerun`),
+run on scipy **1.18** in `venv118` against two worktrees:
+
+```
+WITHOUT fix (develop 87c5e7de):  MultipoleExpansion  -> TypeError: cannot pickle 'module'
+                                 DiskMultipole nonaxi -> TypeError: cannot pickle 'module'
+WITH fix    (#1232 head):        axisym  live_splines=2 packed=2 unpacked_left=0 roundtrip=True
+                                 DiskMultipole nonaxi  pickles=True  roundtrip=True
+```
+
+So the fix is real, and `_pack_splines` demonstrably executes. Two incidental
+facts worth keeping: an *axisymmetric* multipole populates only the `_cos` spline
+attrs (`_sin` are empty), which is exactly why the PR adds a non-axisymmetric
+case; and `DiskMultipoleExpansionPotential` does **not** inherit from
+`MultipoleExpansionPotential` — the one-class fix reaches it by composition, which
+I had asserted in the PR body and have now actually tested.
+
+Conclusion on the codecov red: the lines are exercised, so the 27 misses are the
+26-of-28 incomplete-upload artifact, same shape as #1231. Not merging on that
+inference alone — waiting for sessions to complete and re-reading.
