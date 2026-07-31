@@ -6618,3 +6618,43 @@ they are provably neutral — but to compare vectorised vs per-scalar evaluation
 the same node array directly, to localise which term diverges only under array
 input. Suspects: `_bk_split_quad`'s `finite`/`positive` guards, computed from a
 scalar `R` while `inner` carries the z batch, and the semi-infinite tail panel.
+
+**RazorThin resolved — as a diagnosis, not a fix, and the distinction is the point.**
+
+Localised it properly instead of re-reading my edits. Vectorised vs per-scalar,
+array `z`, all six integrands:
+
+```
+_evaluate_gl   max rel 0.000e+00  OK
+_Rforce_gl     max rel 0.000e+00  OK
+_zforce_gl     max rel 0.000e+00  OK
+_R2deriv_gl    max rel 0.000e+00  OK
+_z2deriv_gl    max rel 0.000e+00  OK
+_Rzderiv_gl    max rel 0.000e+00  OK
+```
+
+Exactly zero. **The vectorisation is right.** So the Poisson assertion is not mine:
+
+```
+surfdens traced = -4.16e-06     truth = 0.2967679     rel diff = 1.000014
+```
+
+It returns *zero*, not a slightly-wrong number. That is the physics. A razor-thin
+disk's volume density is a **delta function at z=0**; the traced path integrates it
+over z with fixed-order Gauss-Legendre, whose nodes never land on z=0, so the delta
+contributes nothing. Eager passes only because concrete scalars route to scipy's
+**adaptive** quad, which finds the spike. No amount of node-axis work touches this —
+it is a quadrature-versus-distribution mismatch.
+
+So the guard has been **hiding a real limitation behind a TypeError**. Turning the
+flag on trades a loud error for a meaningless ~0. That is a policy question, not a
+coding one, and it is the same question already decided once for
+`RazorThin.R2deriv` off-plane under trace (answer then: return NaN). I am not
+deciding it again unilaterally — options and a recommendation (mirror the NaN
+decision) are in the task; the branch stays uncommitted.
+
+What this wake actually produced is worth naming honestly: **no ledger entry moved,
+and an unexplained xfail became an explained one.** I spent five scoping attempts
+getting there, four of them wrong, but the failure now has a cause anyone can read
+rather than "RazorThin fails under trace". That is a smaller deliverable than I
+projected and a real one.
