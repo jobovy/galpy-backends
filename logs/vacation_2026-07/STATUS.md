@@ -11,16 +11,16 @@
 156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107 -> 101   merged
 ```
 
-**101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 58 / torch-jit 1`.
+**101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 52 / torch-jit 1`.
 
 By file (post-#1231 numbers):
 
 ```
 61  test_actionAngle.py     <- 48 are actionAngleVerticalInverse
-12  test_quantity.py        <- mostly the tolerance cluster
- 5  test_streamTrack.py   5  test_qdf.py   4  test_orbit.py
- 4  test_interp_potential.py    3 each: streamdf, sphericaldf, potential, diskdf
- 2  test_noninertial.py    1 each: SpiralArms, galpypaper
+10  test_quantity.py        <- mostly the tolerance cluster
+ 5  test_streamTrack.py   4  test_orbit.py   4  test_interp_potential.py
+ 3 each: streamdf, sphericaldf, potential, diskdf
+ 2  test_qdf.py   2  test_noninertial.py   1  test_SpiralArmsPotential.py
 ```
 
 **Two thirds of what remains is decisions, not work** — see "Waiting on you".
@@ -54,8 +54,10 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 | item | state |
 |---|---|
 | **#1232** scipy 1.18 spline pickling | CI |
-
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
+
+**Reducible-by-work remainder: ~29.** 48 are `actionAngleVerticalInverse` and ~24
+the tolerance cluster; both are decisions below.
 
 ## Waiting on you (roughly two thirds of the remaining ledger)
 
