@@ -7116,3 +7116,18 @@ re-reading the result.
 real failure modes rather than assuming they are the `as_numpy`-at-assertion
 class (#176). Two of the 3 streamdf entries are separately explained: one is the
 `parallel_map` fork deadlock (#178).
+
+**Correction, same wake.** I reported the first stream run's zero-byte output as
+the `torch`+fork stdout truncation (a real, documented failure mode I have a
+memory note for). It was not. Both runs exited `RC=4` — pytest *usage* error —
+because I passed `--backend-no-xfail`, a flag that does not exist. The conftest
+exposes only `--backend` and `--jit`; the ledger is applied automatically and the
+way to see through it is pytest's own `--runxfail`.
+
+Worth naming the failure mode, because it is subtler than a typo: an invented
+flag produced an empty result, and I reached for a remembered phenomenon that
+*explained empty results* and fit the surface facts (torch, streams, no output).
+The memory was correct; it just wasn't what happened. A remembered failure mode
+matching the symptom is not evidence it is the cause — `RC=4` was sitting in the
+return code the whole time and settles it in one look. Check the exit code before
+reaching for the explanation.
