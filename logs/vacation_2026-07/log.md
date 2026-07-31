@@ -7160,3 +7160,42 @@ Two lessons, both about my own inference:
 Next PR after #1232 is therefore **not** "the stream cluster". Candidates, honest
 sizes: the 1 boundary bug (small, real), or the sky-basis Jacobian feature (4
 entries, substantial, and worth doing on its merits).
+
+**Sky-basis cov: scoped properly, and one more correction.** Last wake I offered
+the `out_of_range_returns_nan` boundary bug as a small standalone next PR. It is
+not standalone: the failing assertion is `numpy.all(numpy.isnan(Cs[0]))` on a
+torch tensor (genuinely the #176 as_numpy-at-assertion class), but four lines
+later the same test calls `track.cov(tps, basis="sky")`. Fixing the casts just
+advances it into the same `NotImplementedError` as the other four. **All 5
+streamTrack entries are gated on the sky-basis feature.** There is no cheap
+subset here.
+
+Scoped the real work by reading it rather than estimating:
+
+| blocker | n | why it breaks under a backend |
+|---|---|---|
+| `float(...)` scalarisation in `_analytical_jacobian` | 13 | severs trace and gradient |
+| in-place `J[0] *= 1/_DEGTORAD` | 6 | jax arrays are immutable |
+| `numpy.eye(6)[perm]` | 1 | wrong namespace/device |
+| `coords.XYZ_to_lbd_jac` numpy refs | 5 | the only chain link needing migration |
+
+The other four `coords.*_jac` helpers contain zero numpy references — pure
+arithmetic, so backend-agnostic by construction. That is the good news: the
+Jacobian *chain* is already portable; only the scalarising glue around it is not.
+
+Also note the numpy branch carries the exact pattern Jo asked me to audit for:
+
+```python
+for k, tp_k in enumerate(tp_arr):
+    if not in_range[k]:
+        continue        # data-dependent branch + per-element Python loop
+```
+
+so the migration is a batched `xp.where` formulation, with the dead branch
+guarded (`xp-where-dead-branch-guards`) so out-of-range entries don't NaN-poison
+the gradient.
+
+This is real feature work that serves the mission directly — it makes sky-frame
+stream covariances differentiable, which is what Track G's showpiece needs — and
+it retires 5 ledger entries. Sized at one focused PR. Not started: #1232 is still
+in CI and the rule is one PR at a time.
