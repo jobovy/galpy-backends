@@ -5975,3 +5975,41 @@ Re-running the comparison properly now: AFTER in `/var/tmp/casts`, BEFORE in
 The honest read on the PR: the torch half is verified and the jax half was never
 checked, which is exactly the kind of gap that makes a "free test-side cast" PR not
 free. It stays open until jax is green.
+
+### Wake 63 (2026-07-30) — regression found, root-caused, fixed, verified on both backends
+
+The A/B settled it without argument: **develop `exit=0`, my branch `exit=1`** on the
+same test under jax. The error:
+
+```
+ValueError: output array is read-only
+```
+
+**jax arrays are immutable, so `as_numpy` returns a READ-ONLY view**, and the
+reference arithmetic in those tests mutates in place (`phip += ...`,
+`vTp += ...`). **torch's cast is writable.** That asymmetry is the whole story: my
+torch verification was green and told me *nothing* about jax.
+
+Fixed with a module-level `_np_rw` (`as_numpy` + copy) at the 16 cast sites.
+**Now green on both: jax 8/8 (14.7 min), torch 8/8 (5.7 min)** over the full
+`-k linacc_changingacc_xyz_accellsrframe` selection, which includes 4 unledgered
+siblings. Pushed; prior-SHA runs cancelled.
+
+Two memories written, both about traps that produce *silent asymmetry* — the
+dangerous kind, because the happy backend tells you everything is fine:
+
+- **[[as-numpy-on-jax-is-readonly]]** — `as_numpy(jax)` is read-only, torch's is
+  writable, so cast-then-mutate is a jax-only bug. And the generalisation that
+  actually matters: **ledger entries are per-backend, test files are not.** A
+  test-side change lands on every backend and must be verified on every backend, not
+  merely the one whose entries are being retired. That was the entire cause of this
+  miss.
+- **[[git-stash-is-repo-wide-not-worktree]]** — from the cleanup: `git stash` is
+  per-repository, so `stash pop` in a worktree can restore an unrelated branch's WIP.
+  Use two worktrees for A/B, never stash.
+
+Worth being blunt in this log: I shipped a regression into a PR because I reasoned
+about the backend I was fixing instead of running the one I wasn't. CI caught it,
+which is the system working, but the cost was a wasted full-matrix run on a
+runner-constrained project. The fix to my process is mechanical rather than
+attitudinal — for any change under `tests/`, run jax and torch before pushing.
