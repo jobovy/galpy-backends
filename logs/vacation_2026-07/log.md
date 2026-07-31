@@ -6514,3 +6514,34 @@ recommendation is to report it upstream (a class that pickled for years no longe
 does is almost certainly unintended) *and* ship the contained version so users on
 1.18 are not broken meanwhile. Recorded with the measurements; not blocking, since
 #1230 already excludes the two classes with the cause named in code.
+
+**RazorThin (A) is much smaller than I scoped it.** I had written that the
+R-dependent panel split `(0, R, 2R, inf)` meant the split quadrature would have to
+be rewritten to carry a trailing node axis per point — a PR of its own. I tested
+it instead of trusting the reading:
+
+```
+array _evaluate_gl -> ValueError: Incompatible shapes for broadcasting: [(3, 100), (3,)]
+```
+
+`_bk_split_quad` and `fixed_quad` **already** handle array limits — they produced
+the `(3, 100)` node array. The only gap is that the integrands close over
+scalar-shaped `R`/`z2`, so the node axis has nothing to broadcast against. Adding
+it in-memory:
+
+```
+broadcast  -> [-1.52980074 -1.11440673 -0.7851416 ]
+per-scalar -> [-1.52980074 -1.11440673 -0.7851416 ]
+max rel diff = 0.0
+```
+
+Bit-identical. So the fix is `R[..., None]` / `(z**2)[..., None]` in three
+integrands plus `_backend_accepts_arrays = True` — not a quadrature rewrite.
+
+That is the third time this fortnight that reading the code produced a plausible
+scope and running it produced a much smaller one (hyp2f1, the qdf sampler, now
+this). The pattern is consistent enough to be worth acting on: **for "how big is
+this?", the cheapest experiment beats the careful read**, because the read
+compounds every uncertainty pessimistically while the experiment answers the
+actual question. I have been treating measurement as verification-after-deciding;
+it is cheaper as the deciding step.
