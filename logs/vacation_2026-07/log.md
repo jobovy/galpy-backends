@@ -6370,3 +6370,48 @@ whole-object arithmetic. Safe. But "the tests pass" would not have told me that.
 **PR #1230 opened**: potential picklability (64/0, byte-identical, 5 tests that fail
 on the parent). Next in the queue behind it is the qdf sampler boundary, already
 built and committed on `fix/qdf-sampler-boundary`.
+
+### Wake 69 — a headline of mine was wrong, and the ledger said so
+
+I reported last wake that "the ledger has no `-jit` entries at all" and closed the
+jit-burndown task on it. **That was wrong.** I ran the check in
+`/home/bovy/Repos/galpy`, which is the MAIN worktree sitting on `feat/backends` —
+a different branch, ~30 commits behind. Against `origin/feat/backends-develop`
+there are **six**:
+
+```
+jax-jit   test_orbit.py::test_eccentricity
+jax-jit   test_interp_potential.py::test_interpolation_potential_use_c
+jax-jit   test_interp_potential.py::test_interpolation_potential_force_use_c
+jax-jit   test_potential.py::test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+jax-jit   test_potential.py::test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+torch-jit test_potential.py::test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+```
+
+This is exactly the trap I have a memory note about — *diff the ledger against
+origin, not the main repo* — written after making the same mistake before.
+
+**What it does to the traced result.** "test_potential.py under jax `--jit`: 1326
+tests, 0 failures" is literally true and materially misleading. I checked the
+junit: both `AnyAxisymmetricRazorThinDiskPotential` entries were **xfail-SKIPPED**
+under the ledger, so they never ran. A suite reports zero failures precisely
+because the failures are ledgered — that is what the ledger is *for*, and I quoted
+the number as if it meant the opposite.
+
+The torch run is the stronger of the two after all: both tests **ran**, and the
+`torch-jit` poisson_surfdens entry now **XPASSes**, i.e. it is stale and can be
+dropped.
+
+Corrected statement: the potential suite is traced-green under torch, and under
+jax **except** `AnyAxisymmetricRazorThinDiskPotential`'s 2nd derivatives and
+Poisson-surfdens check. Task reopened with the real remaining list.
+
+The general form of this mistake is worth naming, because it is the second time
+this fortnight: **"0 failures" is a claim about the run, not about the code.**
+With an xfail ledger in play, the two only coincide if you also check what the
+ledger suppressed. `xfail(strict=False)` means a green shard can hide both a
+known failure and a silently-fixed one.
+
+**Merged + queued.** `fix/qdf-sampler-boundary` is rebased onto post-#1229
+develop with the ledger drop applied: **107 -> 101** (reducible-by-fixes 59 -> 53),
+6 entries retired. Waiting behind #1230 (picklability), whose CI is running.
