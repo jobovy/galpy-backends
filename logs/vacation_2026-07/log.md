@@ -7131,3 +7131,32 @@ The memory was correct; it just wasn't what happened. A remembered failure mode
 matching the symptom is not evidence it is the cause — `RC=4` was sitting in the
 return code the whole time and settles it in one look. Check the exit code before
 reaching for the explanation.
+
+**Stream cluster characterised — and my grouping of it was wrong.** I described
+the 8 torch stream entries as "the largest coherent cluster" and the natural next
+PR. Measured, they are not one thing:
+
+| n | entries | cause |
+|---|---|---|
+| 4 | streamTrack `cov_basis`, `cov_per_call_unit_overrides`, `plot_smoke`, `plot_spread_non_cartesian` | `NotImplementedError` at `streamTrack.py:2368` — backend `cov()` supports only `basis='galcenrect'` |
+| 1 | streamTrack `out_of_range_returns_nan` | numpy `fromnumeric` calling `.max(out=, axis=)` on a torch Tensor |
+| 3 | streamdf trio | one is the `parallel_map` fork deadlock (#178); other two unmeasured |
+
+The 4 are a **deliberate, self-documented deferral** — sky/cyl-frame covariance
+bases via Jacobians, the follow-up parked in PR #861 (see memory
+`streamtrack_todo`). They are not a boundary-coercion fix and cannot be swept up
+in one; un-ledgering them means *implementing the Jacobian transform* backend-
+agnostically, which is real feature work that happens to serve the differentiable
+-track goal.
+
+Two lessons, both about my own inference:
+1. I grouped by **file name and backend**, which is a property of the ledger's
+   formatting, not of the failures. Same file + same backend implied same cause
+   to me; it was four causes across eight entries.
+2. I had already written down the true cause of the 4 — `streamtrack_todo` names
+   the deferred #861 sky-basis work — and did not connect it until the traceback
+   said so. Memory is only useful if consulted against the specific claim.
+
+Next PR after #1232 is therefore **not** "the stream cluster". Candidates, honest
+sizes: the 1 boundary bug (small, real), or the sky-basis Jacobian feature (4
+entries, substantial, and worth doing on its merits).
