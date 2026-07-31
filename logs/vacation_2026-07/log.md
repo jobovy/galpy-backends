@@ -7039,3 +7039,23 @@ summaries, and this log is now long enough that "read the tail" no longer answer
 is in flight, and the three decisions waiting on him; `log.md` stays the trace for
 the *why*. Reaching for a growing file when the question is "what is true now" was
 the wrong shape.
+
+**A better discriminator for codecov reds.** #1231 shows `head 28 misses / 27
+sessions` vs `base 20 / 28` — 8 extra at one fewer upload. On #1230 I read that
+same shape (1 extra, 1 fewer) as "the missing shard explains it" and was **wrong**;
+it was a real uncovered branch. So the session count alone is not a discriminator.
+
+The check that actually separates the two cases is **"are the missed lines inside
+this PR's diff?"** — via codecov's `report/?path=...&sha=...` endpoint, which is the
+one that returns per-line data (`file_report` and `compare` do not):
+
+```
+galpy/df/quasiisothermaldf.py             misses 0  cov 100.0
+galpy/potential/MultipoleExpansionPotential.py  misses 0  cov 100.0
+```
+
+Both touched files clean, so the 8 misses are in files this PR never edits —
+positive evidence for the missing-session explanation rather than an inference
+from a count. On #1230 the same query pinpointed `AnySphericalPotential.py:150`
+immediately. Still confirming at 28/28 before merging, but the reasoning is now
+grounded in *where* rather than *how many*.
