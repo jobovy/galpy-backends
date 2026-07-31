@@ -6153,3 +6153,65 @@ never tested it, and it survived weeks because nothing forced it to be checked. 
 sweep took one command.
 
 **#1229: 15 pass, 137 pending, `codecov/project` the only red.**
+
+### Wake 67 — the whole potential suite is jittable, and the pickle class is closed
+
+Two results this wake, one measured and one built.
+
+**Measured: `test_potential.py` under `--backend jax --jit` is fully green.**
+
+```
+tests 1326   failures 0   errors 0   skipped 120   time 338s
+```
+
+That is every potential in galpy, every method, traced end-to-end through
+`jax.jit` at the `@backend_input` boundary. Task #158 was written as "fix the ~5
+potentials that block traced-green"; there are now zero, and the ledger has no
+`-jit` entries at all. The torch counterpart is running as I write this. I had
+not measured this file traced since the jit stack landed, so the number was
+stale by several PRs' worth of fixes — worth re-measuring the other big files on
+the same basis rather than assuming the old gaps are still there.
+
+**Built: every potential galpy ships now pickles.** 61/3 → **64/0**.
+
+The three failures were `AnySphericalPotential`, `DiskSCFPotential`,
+`DiskMultipoleExpansionPotential`, and the cause in both cases was a closure
+pickle cannot look up by qualname: the `dens=` default was a lambda (in three
+separate copies), and the dict-specified Sigma/hz profiles, the axisymmetric
+`dens` wrapper and the phiME density are all built as closures at construction.
+
+The design question — hoist the closures to module level, or drop-and-rebuild
+them on unpickle — I did not have to answer myself: `ChandrasekharDynamicalFrictionForce`
+already does the second, so the house idiom decided it. `__getstate__` deletes
+the derived callables, `__setstate__` re-derives them from `_Sigma_dict` /
+`_hz_dict`, which were already being kept for precisely this purpose. The
+construction moved into `_set_dens_funcs` / `_set_rawdens` so `__init__` and
+`__setstate__` share one copy rather than two that can drift.
+
+The part worth stating: **the fix must not make a user's lambda pickle.** That
+is a documented limitation with a test asserting it raises, and a `__getstate__`
+that quietly dropped the density would have "fixed" the failure by discarding
+the physics. The wrappers are dropped, the wrapped callable is kept, so a
+`dens=lambda ...` still raises — asserted.
+
+Verification, in the order that mattered:
+- **858 method values bit-for-bit unchanged** on numpy across the four touched
+  classes (`__call__`/forces/`dens`/2nd derivs/`mass` on a 5×4 (R,z) grid).
+- **The new tests fail on the parent commit** — 5 failed / 54 passed there, 59
+  passed here. A green test that was already green proves nothing.
+- Coverage of the configurations the default constructor cannot reach: both
+  Sigma profiles, both hz profiles, user-supplied profile callables, a
+  non-axisymmetric density, and all three astropy-units combinations.
+
+Two process notes. The first byte-identity probe reported "BYTE-IDENTICAL" over
+**zero lines** — it had died on its own import assertion with stderr suppressed,
+and an empty file diffs equal to an empty file. A clean-looking all-clear from a
+comparison that never ran is the most expensive kind. Second, the test helpers
+had to be hoisted to module level too: a `def` inside a test body is just as
+unpicklable as a lambda, so the first run failed on its own fixtures rather than
+on the code under test.
+
+**#1229: 127 pass, 21 pending, 5 red — all five are `test_from_name_values`
+failing on `DALServiceError: 503` from SIMBAD.** An upstream outage, not the
+diff; the run has to finish before the jobs can be re-run. `codecov/project`
+cleared itself again, as it has on all six PRs now.
