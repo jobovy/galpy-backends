@@ -6047,3 +6047,35 @@ did not match, because I had read the worktree *while `git worktree add` was sti
 settling* and acted on a stale view. The assert caught it and nothing was written —
 which is the argument for asserting on the exact text you expect to replace rather
 than doing a blind `str.replace`.
+
+### Wake 65 (2026-07-30) — #1228 MERGED green; #1229 opened
+
+**#1228 merged as `69c2fd29`. Ledger 120 -> 109.** All 154 checks pass, *including
+the jax shard that caught my regression* — which is the only check I actually cared
+about. Audit: zero `galpy/` changes (so the `if`->`xp.where` class is vacuous),
+`_np_rw` defined once and used 16 times (the opposite of duplication), living in the
+test file that needs it, no data-dependent branches, ledger counts matching the
+header.
+
+**#1229 opened: `obs=` accepts backend arrays. Ledger 109 -> 107.**
+
+Nearly made a mess of the sequencing, and the failure mode is worth recording. I ran
+the ledger-drop script *before* the rebase, the rebase then refused ("Please commit
+or stash them" — my uncommitted `Orbits.py`), and the script had already edited the
+**pre-#1228** ledger: 2 entries dropped from 120, while the header string it looked
+for ("109"/"61") did not exist yet, so the count and the header disagreed. A silently
+inconsistent ledger.
+
+Two things saved it. The script `assert`s on the exact header text before replacing,
+so the mismatch surfaced rather than being papered over. And — having learned this
+the hard way an hour earlier — I did **not** reach for `git stash`; I restored the
+file from HEAD, committed the source change, rebased, and only then applied the drop
+against the correct 109 baseline. Order matters: **commit, rebase, then touch the
+ledger.**
+
+Verification followed the new rule rather than the old habit: numpy byte-identity
+first (15 probes, all identical), then jax **and** torch together (2/2 each), plus
+numpy `-k obs` 7/7 as a regression guard.
+
+Fortnight arc: **156 -> 107**, with 48 of the remainder structurally blocked and ~24
+awaiting one tolerance decision.
