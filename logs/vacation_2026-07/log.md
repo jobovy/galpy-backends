@@ -6545,3 +6545,43 @@ this?", the cheapest experiment beats the careful read**, because the read
 compounds every uncertainty pessimistically while the experiment answers the
 actual question. I have been treating measurement as verification-after-deciding;
 it is cheaper as the deciding step.
+
+### Wake 71 — RazorThin: four scopings, and the fix I shipped in my head was wrong
+
+I said last wake this was "a small PR: 3 integrands + a flag". It is not, and the
+way I found out is worth writing down because the same mistake produced all four
+wrong estimates.
+
+Sequence:
+1. Read the code → "needs a per-point panel-split rewrite". **Wrong**: `fixed_quad`
+   already takes array limits.
+2. Measured one integrand → "3 integrands + a flag, bit-identical". **Wrong**: there
+   are **six** `_*_gl` methods; `grep 'def _.*_gl'` would have said so in one second.
+3. Patched all six → the original TypeError is gone, but now:
+   - `test_2ndDeriv` fails with `unsupported format string passed to
+     numpy.ndarray.__format__` — R2deriv returns shape `(1,)` for **scalar** input.
+     `[..., None]` is not shape-preserving for the second derivatives: unlike
+     `_evaluate_gl` they combine terms *outside* `_bk_split_quad`, which keep the
+     added axis.
+   - `test_poisson_surfdens` now **runs and asserts** — silently wrong numbers,
+     which is a worse state than the TypeError it replaced.
+
+So the current branch is **not shippable** and I am not committing it.
+
+The common thread in all four: **I generalised from a representative measurement
+to a universal claim.** One integrand measured bit-identical, so I assumed six
+would be; one scipy version pickled, so I said "every potential pickles"; one
+worktree's ledger had no `-jit` entries, so I said the ledger had none. Each
+measurement was real. Each conclusion was broader than what was measured. The
+cheap discipline is to state the scope of the evidence *in the claim* — "bit-identical
+for `_evaluate_gl` on jax" is a sentence I could have written and then noticed was
+not what I needed.
+
+Untested next step recorded in the task: make the axis conditional on
+`R.ndim != 0` (shapes are static under trace, so this is traceable), which leaves
+the scalar path byte-identical by construction rather than by luck, then re-derive
+the Poisson assertion by hand — the second-derivative integrands were edited by
+regex and need reading, not trusting.
+
+**#1230**: 39 pass, 112 pending, reds are codecov-only at ~40/153 shards reported.
+**test_orbit.py jax --jit, groups 1-3 of 5: 300 tests, 0 failures.**
