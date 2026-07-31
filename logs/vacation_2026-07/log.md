@@ -6721,3 +6721,50 @@ is just as costly, which is acting on a local reproduction as if it were the sha
 
 **#1230: 151 pass, 2 pending, `codecov/project` cleared** (seventh consecutive PR).
 Only `codecov/patch` outstanding, with the coverage shard still to report.
+
+### Wake 72 — the codecov patch red was real, and I nearly waved it through
+
+`codecov/patch` stayed red on #1230 while `codecov/project` cleared as usual. My
+first read was the familiar premature-codecov pattern, and the numbers seemed to
+back it:
+
+```
+head: 48437 lines, 21 misses, 27 sessions
+base: 48255 lines, 20 misses, 28 sessions
+```
+
+One extra miss, **and** one fewer upload session — so I reasoned the miss belonged
+to the shard that had not reported yet. Wrong. When the last shard landed:
+
+```
+head: 21 misses, 28 sessions      base: 20 misses, 28 sessions
+```
+
+Equal sessions, still one extra miss. **A real gap**, and `all-clear` had gone red
+behind it. Waving it through on the pattern-match would have merged uncovered code
+and normalised ignoring the one check that was telling the truth.
+
+The line, from codecov's `report` endpoint after the `file_report` and `compare`
+endpoints gave nothing usable: `AnySphericalPotential.py:150`, the
+`del pdict["_rawdens"]` in `__getstate__`. It runs only when `_dens_needs_numpy` is
+True, which is only ever set inside `if _APY_LOADED` — so the unitful test that
+covers it is **skipped wherever coverage is collected**. I have a note for exactly
+this shape (astropy-gated branches need an astropy-free cover); it took finding the
+line to recognise it.
+
+Fixed with a forced-flag synthetic rather than an astropy requirement, asserting
+what the branch is *for*: the wrapper leaves the state, **the callable it wraps
+stays** (or the density is silently lost), and `__setstate__` rebuilds an
+equivalent. Verified the branch actually executes before committing:
+
+```
+before force: _dens_needs_numpy = False | '_rawdens' in getstate: True
+after  force: '_rawdens' in getstate: False -> del branch executed: True
+```
+
+The lesson is narrower than "don't trust patterns": the premature-codecov pattern
+is real and has held seven times. What I got wrong was letting a **second**
+observation (sessions 27 vs 28) that *fit* the pattern substitute for the one check
+that would have distinguished them — waiting for equal sessions. Two pieces of
+weak evidence pointing the same way is not the same as one piece of decisive
+evidence, and it took me an extra cycle to go get the decisive one.
