@@ -6300,3 +6300,49 @@ attribute ...` repeated six times is shared fixture state, not six independent
 numerical failures — plus the fact that `test_diskdf` is already on the
 run-serially list for precisely this reason. Read the failures, then classify;
 the count alone carries no information.
+
+### Wake 68 — the qdf sampler fix, and my "two lines" was wrong
+
+Built the qdf sampler boundary fix (branch `fix/qdf-sampler-boundary`, commit
+`6dbce4ee`). It flips **6 torch ledger entries**, every one verified to fail
+without it.
+
+**I have to correct the previous entry.** I wrote that the fix was "exactly two
+lines", on the strength of a probe where I hand-built `VDatprop` and checked the
+comparison. Running it through the real path, `logmaxVD` — `fmin_powell`'s
+optimum, fed straight into the same arithmetic — is *also* a backend scalar. So
+it is four source sites, not two: the DF value and the optimum, in each of
+`sampleV` and `_sampleV_preoptimized`. Then three test-side
+`samples - qdf.meanvT(...)` assertions needed the same landing.
+
+That is precisely the error the old note warned about and that I criticised the
+old note for: **verifying a fix on a reconstruction of the code path instead of
+the path itself.** I caught the July-21 version of this mistake and then made my
+own variant of it within the hour. The difference is only that this one surfaced
+in minutes rather than sitting in a memory file for ten days.
+
+The direction still held — a boundary cast, not the whole-body `use("numpy")`
+wrap — so the correction was additive rather than a rethink. Worth separating
+those two things when judging a plan: *where* to put the boundary was right,
+*how many* values cross it was guesswork I presented as measurement.
+
+Two details worth keeping:
+
+- `as_numpy` on a numpy array returns **the same object**, so the numpy path is
+  structurally unchanged rather than merely numerically equal. That is a stronger
+  byte-identity argument than a value diff.
+- The samples are **not** bit-identical numpy-vs-torch, and I deliberately did
+  not assert that they are. `fmin_powell` converges in a different number of
+  evaluations on a backend (46 vs 37), so `maxVT` differs in its last bits and
+  shifts the proposals themselves. Measured max difference 4.5e-10 over a
+  12-sample draw, so the test asserts 1e-8 — a ~20x margin, tight enough that a
+  real regression in draw order or values cannot slip through, and honest about
+  where the difference comes from.
+
+Also worth noting the two new backend tests are parametrised over jax and torch,
+but only the **torch** cases fail without the fix — `jax_array > ndarray` happens
+to work. The jax parametrisations are guards, not flips, and I am not counting
+them as such.
+
+**#1229: 152 pass, 2 pending, 0 red.** Ready to merge as soon as `all-clear` and
+the last backend shard land.
