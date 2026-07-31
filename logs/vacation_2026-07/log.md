@@ -6279,3 +6279,24 @@ consume, scattered across xdist workers. `test_diskdf` is on the known
 run-serially list and I ran it `-n 12`. `test_qdf.py` contributed zero failures.
 The serial re-run is still going; until it finishes I am not claiming the file is
 clean, only that the six do not mean what they appear to.
+
+**Confirmed: `test_diskdf.py` traced serially is 129 tests, 0 failures** (678s).
+So the six were entirely the xdist artifact, and the traced picture for this wake
+is clean across the board:
+
+| file | jax `--jit` | torch `--jit` |
+|---|---|---|
+| `test_potential.py`   | 1326 / 0 fail | 1326 / 0 fail |
+| `test_actionAngle.py` | 209 / 0 fail  | — |
+| `test_qdf.py`         | 0 fail        | — |
+| `test_diskdf.py`      | 129 / 0 fail  | — |
+| `test_sphericaldf.py` | 223 / 0 fail (measured wake 66) | 223 / 0 fail |
+
+The lesson I nearly published as a finding: **a parallel-runner artifact and a
+real defect look identical in a summary line.** Six failures in a traced run is
+exactly the shape of "the trace exposed something", and I said as much before
+reading them. What separated them was the *signature* — `'NoneType' object has no
+attribute ...` repeated six times is shared fixture state, not six independent
+numerical failures — plus the fact that `test_diskdf` is already on the
+run-serially list for precisely this reason. Read the failures, then classify;
+the count alone carries no information.
