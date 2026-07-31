@@ -6013,3 +6013,37 @@ about the backend I was fixing instead of running the one I wasn't. CI caught it
 which is the system working, but the cost was a wasted full-matrix run on a
 runner-constrained project. The fix to my process is mechanical rather than
 attitudinal — for any change under `tests/`, run jax and torch before pushing.
+
+### Wake 64 (2026-07-30) — #1228 re-running green so far; obs= implemented with the new discipline
+
+**#1228 after the fix: 133 pass, 19 pending, only `codecov/project` red.** The jax
+shard — the one that caught my regression — is still running; that is the check that
+matters, and I am not calling this green until it lands.
+
+**Implemented the `Orbits.py obs=` fix** (task #177B) on
+`fix/orbits-obs-backend-arrays`. One module-level `_obs_asnumpy` helper called at all
+**four** `isinstance(obs, (numpy.ndarray, list))` branches, not just the two a
+ledgered test covers:
+
+```python
+return [as_numpy(o) if is_backend_array(o) else o for o in obs]
+```
+
+Scope stated honestly in the docstring: this makes `obs=` **accept** backend arrays;
+it does **not** migrate those accessors, which are numpy by construction
+(`numpy.arctan2`/`numpy.sqrt`/`numpy.zeros_like` throughout). Calling that out
+matters — it would be easy to present a 4-line coercion as "helioX is now
+backend-agnostic", and it is not.
+
+Two details the recent mistakes fed directly into:
+- the read-only trap does **not** apply here, because `obs` is only ever *read*
+  (arctan2/sqrt/divide), never mutated — checked rather than assumed;
+- **verified on numpy first**: 15 float-byte probes across `helioX/Y/Z`, the 3D
+  `U/V/W`, both `obs=Orbit` and `obs=[list]` forms — **all identical**. Then jax AND
+  torch launched together, not sequentially-and-optimistically.
+
+Also a near-miss worth noting: my first patch attempt asserted on an import line that
+did not match, because I had read the worktree *while `git worktree add` was still
+settling* and acted on a stale view. The assert caught it and nothing was written —
+which is the argument for asserting on the exact text you expect to replace rather
+than doing a blind `str.replace`.
