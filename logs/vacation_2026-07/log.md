@@ -6811,3 +6811,24 @@ now with a clean statement of it: **a grep tells you where a name appears, not w
 the program does.** I keep reaching for static reads when a five-line runtime probe
 is available, and the static read is systematically pessimistic — it cannot tell
 "references" from "stores", or "stores" from "stores in a way that matters".
+
+**And the fix works — with a caveat about what "works" covers.** Under scipy 1.18,
+reconstructing `BPoly` through its public constructor makes both affected classes
+round-trip bit-identically:
+
+```
+MultipoleExpansionPotential:     round-trips, bit-identical=True
+DiskMultipoleExpansionPotential: round-trips, bit-identical=True
+```
+
+The caveat, stated up front this time rather than discovered later: I verified it by
+registering a **global `copyreg` reducer** — the mechanism I explicitly said galpy
+should not ship. So what is proven is that *the reconstruction preserves values
+exactly*. The per-class `__getstate__`/`__setstate__` packaging is different code
+walking the stored `BPoly` lists, and it is **not** verified. Writing that down as
+part of the result is the whole correction I have been making all fortnight: the
+measurement is real, the claim must not be wider than it.
+
+Net effect on the escalation: the global-mechanism question I raised for Jo has
+dissolved. Radius is two classes, fix is contained, #1230's exclusion is
+proportionate. What is left is optional and small.
