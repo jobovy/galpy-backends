@@ -7308,3 +7308,28 @@ the float32 signature — jax defaults to 32-bit and I had not set
 converges properly and the jax/numpy difference is exactly 0. **A gradient test
 that gets worse as h shrinks is a dtype bug in the harness, not a correctness
 finding in the code.**
+
+**#1232 MERGED** — `0eeae2fc`, 154/154 green. Fourth merge of the vacation
+(#1229, #1230, #1231, #1232). This one carries no ledger entries: it is a
+correctness fix for a dependency regression, so the count stays at 101.
+
+Merge audit:
+
+| check | result |
+|---|---|
+| if -> `xp.where` array-input class | N/A — pure Python serialization, no array code |
+| duplication | no existing spline-pickling helper; `backend/interpolate.py` converts splines to coefficient *tables*, so it never stores the scipy object (which is also why interpRZ / AA grids were unaffected — verified, not assumed) |
+| shadowed parent `__getstate__` | none; no ancestor in the MRO defines it |
+| helper placement | **judgment call, flagged** — see below |
+
+**Placement call I want Jo to see.** `_pack_splines`/`_unpack_splines` are
+general-ish ("make a nested list of scipy piecewise-polynomials picklable") and
+Jo's standing directive is to hoist general functions into utilities rather than
+leave them in specific potential files. I kept them module-local in
+`MultipoleExpansionPotential.py` because they have exactly **one** consumer, and
+no existing utility is a natural home (`galpy/backend/interpolate.py` is about
+backend-agnostic *evaluation*, not serialization; `galpy/util/` has no
+serialization module). Creating a new util module for two 8-line private
+functions with a single caller seemed worse than the alternative. **Trigger for
+revisiting: the moment a second class needs to pickle PPoly/BPoly, hoist them.**
+Happy to move them now if Jo prefers the rule applied strictly.

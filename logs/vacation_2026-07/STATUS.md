@@ -9,6 +9,7 @@
 
 ```
 156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107 -> 101   merged
+(#1232 merged: a correctness fix, no ledger entries -- count unchanged at 101)
 ```
 
 **101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 52 / torch-jit 1`.
@@ -95,7 +96,7 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **#1232** scipy 1.18 spline pickling | CI |
+| **PR-A** `coords.*_jac` backend-agnostic | 1 of 6 helpers done, local |
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
 
 ## Waiting on you (roughly two thirds of the remaining ledger)
