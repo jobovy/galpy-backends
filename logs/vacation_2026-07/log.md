@@ -6993,3 +6993,41 @@ accumulated entries whose premise expired, and I have now hit three of them
 (#68's "namespace modules", #158's "zero -jit entries", #55). Checking a task's
 premise against the tree before working it costs one grep and has twice saved a
 wasted branch.
+
+### Wake 75 — #1231 went red on my own fix, and the cause was my instrument
+
+`backend torch tests/test_conversion.py tests/test_galpypaper.py ...` failed on
+`test_galpypaper::test_qdf`, one of the six entries this PR un-ledgers. The
+traceback was not in stdout (conftest force-exit truncates it); the junit artifact
+had it:
+
+```
+AttributeError: 'torch.dtype' object has no attribute 'type'
+  scipy/optimize/_optimize.py:568:  fx = _dt.type(np.asarray(fx).item())
+```
+
+`fmin_powell`'s objective returns `-self(...)` — a **torch scalar** under a forced
+backend — and scipy coerces a non-scalar return via `fx.dtype.type(...)`, which
+torch does not implement.
+
+**The reason I missed it is the reason I keep missing things.** I measured, and
+wrote down, "`fmin_powell` on the DF **already succeeds**", and used it to bound
+this fix at two sites (later four). That measurement was *true* — on the local
+**scipy 1.17.1**, which coerces silently. CI's py3.14 runner ships a newer scipy
+that raises. It is the same single-version blind spot as the pickle sweep, in the
+same PR family, hours after I had written that lesson up.
+
+So the honest framing is not "I was careless three times". It is: **my local
+environment is one point in a version space and I have been treating it as ground
+truth.** The 2 -> 4 -> 6 site progression was not compounding sloppiness; it was
+one instrument that could not see the last boundary. The remedy is a better
+instrument, not more care — the scipy-1.18 venv now exists and boundary-sensitive
+verification should run against it, not only the main env.
+
+Fixed both `fmin_powell` objectives (`6894ac28`). torch: `test_galpypaper::test_qdf`
+1/0, `test_qdf` sampleV 3/0. numpy `test_qdf` + `test_backend_qdf`: **106/0** once
+I forced CPU — the first run's 5 "failures" were jax CUDA-init noise from my own
+box, not the code.
+
+Pushed; prior-SHA runs cancelled (5 of them — the project is runner-bound and
+#1231 had already queued ~180 jobs once).
