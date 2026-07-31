@@ -6864,3 +6864,38 @@ Also worth noting for the record: `test_orbit` traced is **581/0 on torch** and
 581/3 on jax, where all three jax failures are the two performance timeouts plus
 the local-only sigint artifact. So torch is the *cleaner* of the two traced
 backends on orbit, which is the reverse of the eager picture.
+
+### Traced matrix COMPLETE — both backends, every major suite
+
+`test_qdf.py` torch `--jit`: **56 / 0** (232s). `test_diskdf.py` torch `--jit`,
+serial: **129 / 0** (685s).
+
+| file | jax `--jit` | torch `--jit` |
+|---|---|---|
+| `test_potential.py`   | 1326 / 0  (338s) | 1326 / 0  (**1792s**) |
+| `test_orbit.py`       | 581 / 3          | 581 / 0 |
+| `test_actionAngle.py` | 209 / 0  (166s)  | 209 / 0  (168s) |
+| `test_sphericaldf.py` | 223 / 0          | 223 / 0 |
+| `test_diskdf.py`      | 129 / 0  (678s)  | 129 / 0  (685s) |
+| `test_qdf.py`         | 0 fail           | 56 / 0   (232s) |
+
+**Every major suite runs traced on both backends with nothing failing**, except
+`test_orbit` on jax, whose 3 are two 1800s performance timeouts and one local-only
+signal artifact (CI-confirmed passing). Modulo the six `-jit` ledger entries, which
+suppress the RazorThin pair and the interpRZ `use_c` pair, that is the mission's
+headline in one table.
+
+It also settles the cost question properly. Wall-clock parity holds on
+action-angle (168 vs 166s) and diskdf (685 vs 678s); the only place torch is
+dramatically slower is `test_potential` (1792 vs 338s). So the "torch traced costs
+~3.5x" line I wrote — and used to argue a torch-traced CI shard is unaffordable —
+was one file generalised to a backend. The defensible version: **`test_potential`
+traced is expensive on torch and everything else measured is at parity**, which
+points at per-entry-point compile cost dominating where there are ~1300 small
+distinct traces, not at `torch.compile` being slow.
+
+That is now the third measurement this fortnight that came in *cheaper* than my
+projection once actually run (hyp2f1, qdf sampler, RazorThin scope) and the second
+where a number I had generalised turned out to be file-specific. The habit worth
+keeping: when a figure is going to justify a decision, re-measure it on a second
+instance before quoting it as a property.
