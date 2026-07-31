@@ -6585,3 +6585,36 @@ regex and need reading, not trusting.
 
 **#1230**: 39 pass, 112 pending, reds are codecov-only at ~40/153 shards reported.
 **test_orbit.py jax --jit, groups 1-3 of 5: 300 tests, 0 failures.**
+
+**RazorThin, continued — the guard works, the goal does not, and I am not shipping it.**
+
+The per-value `ndim` guard was right: `v if v.ndim == 0 else v[..., None]`, per
+value and only for arrays. It has to be per value because the traced Poisson
+quadrature calls with a **scalar R and an array z**, so which arguments need the
+node axis differs *within one call* — a single check on `R` would have been wrong
+again.
+
+With it:
+- **scalar GL path bit-identical** — 18 values across all six integrands, byte-for-byte;
+- **no regression** — RazorThin under jax eager 10/10, under numpy 10/10;
+- `test_2ndDeriv` traced is back to its *original* pre-existing assertion, so my
+  change is shape- and value-neutral there.
+
+But `test_poisson_surfdens` traced now **runs and asserts**. And that is the point:
+turning the flag on while the vectorised path returns wrong numbers replaces a
+loud `TypeError` with a silently wrong value. **That is strictly worse than the
+bug I set out to fix**, so the branch stays uncommitted with the flag off until
+the vectorised Poisson value is explained.
+
+Worth separating two things I had been treating as one: the *diagnosis* was right
+(the guard rejects arrays; the integrands lacked a node axis) and the *fix for
+that diagnosis* works. The failure is that fixing it revealed a second, unrelated
+problem in the vectorised path — which the original TypeError had been hiding.
+"The error I predicted is gone" is not the same as "the test passes", and only
+the second one is the deliverable.
+
+Since the scalar path is bit-identical, the next step is not to re-read my edits —
+they are provably neutral — but to compare vectorised vs per-scalar evaluation on
+the same node array directly, to localise which term diverges only under array
+input. Suspects: `_bk_split_quad`'s `finite`/`positive` guards, computed from a
+scalar `R` while `inner` carries the z batch, and the semi-infinite tail panel.
