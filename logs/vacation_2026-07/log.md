@@ -6832,3 +6832,35 @@ measurement is real, the claim must not be wider than it.
 Net effect on the escalation: the global-mechanism question I raised for Jo has
 dissolved. Radius is two classes, fix is contained, #1230's exclusion is
 proportionate. What is left is optional and small.
+
+**Traced matrix completed — and the torch-is-3.5x claim needs qualifying.**
+
+`test_actionAngle.py --backend torch --jit`: **209 tests, 0 failures, 168s.**
+
+| file | jax `--jit` | torch `--jit` |
+|---|---|---|
+| `test_potential.py`   | 1326 / 0 (338s) | 1326 / 0 (**1792s**) |
+| `test_actionAngle.py` | 209 / 0 (166s)  | 209 / 0 (**168s**) |
+| `test_orbit.py`       | 581 / 3 | 581 / 0 |
+| `test_sphericaldf.py` | 223 / 0 | 223 / 0 |
+| `test_qdf.py`         | 0 fail | — |
+| `test_diskdf.py`      | 129 / 0 | — |
+
+I wrote earlier that torch tracing costs "~3.5x the compute" and framed it as a
+property of `torch.compile` — enough to say a per-push torch-traced shard "is not
+affordable". On action-angle it is **168s vs 166s, i.e. parity**. So the 3.5x is
+`test_potential`-specific, not a characteristic of torch tracing.
+
+That is the same over-generalisation again, in a place I did not expect it: one
+file's wall-clock became a claim about the backend. The mechanism is presumably
+that `test_potential` has an enormous number of distinct small traced entry points
+(1326 tests over ~60 potential classes) so front-end compile cost dominates, while
+`test_actionAngle` re-enters a few big kernels. Whether a traced CI shard is
+affordable therefore depends on which file, and the honest version of my earlier
+recommendation is: `test_potential` traced is expensive on torch, and I have no
+evidence either way about the rest.
+
+Also worth noting for the record: `test_orbit` traced is **581/0 on torch** and
+581/3 on jax, where all three jax failures are the two performance timeouts plus
+the local-only sigint artifact. So torch is the *cleaner* of the two traced
+backends on orbit, which is the reverse of the eager picture.
