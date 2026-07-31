@@ -6969,3 +6969,27 @@ after being burned. Two probes, thirty seconds.
 
 Implementation spec is recorded in the task. Not started: #1231 is in CI and the
 rule is one PR at a time.
+
+**What is actually left in the ledger** (101 post-qdf), by file:
+
+```
+61  test_actionAngle.py      <- 48 are actionAngleVerticalInverse
+12  test_quantity.py         <- mostly the tolerance cluster + the 2 qdf sample entries qdf drops
+ 5  test_streamTrack.py       5  test_qdf.py         4  test_orbit.py
+ 4  test_interp_potential.py  3  test_streamdf.py    3  test_sphericaldf.py
+ 3  test_potential.py         3  test_diskdf.py      2  test_noninertial.py
+ 1  test_SpiralArmsPotential.py   1  test_galpypaper.py
+```
+
+Two clusters are **two thirds of the total and both are decisions, not work**:
+`actionAngleVerticalInverse` (48, refuses backends by construction — moves only if
+that class is migrated) and the tolerance batch (~24, one call on torch-vs-numpy
+bounds). The genuinely mechanical remainder is a long tail of 2–5 per file.
+
+Also closed **task #55** as stale: the 4 KuzminKutuzov torch entries it existed to
+remove are already gone from the ledger, cleared by some earlier coords wave
+without the task being updated. Worth noting the pattern — the task list has
+accumulated entries whose premise expired, and I have now hit three of them
+(#68's "namespace modules", #158's "zero -jit entries", #55). Checking a task's
+premise against the tree before working it costs one grep and has twice saved a
+wasted branch.
