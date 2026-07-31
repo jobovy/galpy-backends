@@ -6768,3 +6768,46 @@ observation (sessions 27 vs 28) that *fit* the pattern substitute for the one ch
 that would have distinguished them — waiting for equal sessions. Two pieces of
 weak evidence pointing the same way is not the same as one piece of decisive
 evidence, and it took me an extra cycle to go get the decisive one.
+
+**scipy 1.18: I measured the blast radius and it is 2 classes, not 22 modules.**
+
+I had written that "22 galpy modules reference scipy splines, so `interpRZPotential`,
+`interpSphericalPotential`, the Staeckel/Adiabatic action-angle grids, `sphericaldf`,
+`kingdf`, `qdf`, `diskdf` and the whole stream family all become unpicklable" and
+flagged it as the most user-visible thing found this fortnight. That came from a
+**grep for spline references**, not from what objects actually hold. Installed
+matplotlib+astropy into the scipy-1.18 venv, pointed it at the worktree, and ran it:
+
+```
+default-constructible potentials:  62 picklable, 2 UNPICKLABLE
+interpRZPotential ......... OK      actionAngleStaeckelGrid ... OK
+interpSphericalPotential .. OK      actionAngleAdiabaticGrid .. OK
+quasiisothermaldf ......... OK      dehnendf .................. OK
+isotropicHernquistdf ...... OK      Orbit(integrated) ......... OK
+```
+
+**Real radius: `MultipoleExpansionPotential` and `DiskMultipoleExpansionPotential`.**
+That is it. And the reason is now principled rather than empirical:
+
+```
+BPoly / PPoly / CubicSpline    _xp=True   pickle FAIL
+make_interp_spline             _xp=True   pickle OK
+InterpolatedUnivariateSpline   _xp=False  pickle OK
+UnivariateSpline               _xp=False  pickle OK
+RectBivariateSpline            _xp=False  pickle OK
+```
+
+Only `_interpolate.py`'s polynomial classes gained `_xp`; the FITPACK-backed splines
+galpy leans on did not. The multipoles are the ones storing `BPoly`.
+
+So this is **not** a repo-wide compat break and needs **no global `copyreg` reducer** —
+the decision I escalated to Jo has largely dissolved. #1230's workaround (exclude
+those two, cause named in code) turns out to be exactly proportionate. What is left
+is small and optional: report upstream, and optionally a contained two-class
+`__getstate__`/`__setstate__` rebuilding the `BPoly` through its public constructor.
+
+Same error as the RazorThin scopings and the "every potential pickles" claim, and
+now with a clean statement of it: **a grep tells you where a name appears, not what
+the program does.** I keep reaching for static reads when a five-line runtime probe
+is available, and the static read is systematically pessimistic — it cannot tell
+"references" from "stores", or "stores" from "stores in a way that matters".
