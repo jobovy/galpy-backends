@@ -6079,3 +6079,38 @@ numpy `-k obs` 7/7 as a regression guard.
 
 Fortnight arc: **156 -> 107**, with 48 of the remainder structurally blocked and ~24
 awaiting one tolerance decision.
+
+### Wake 66 (2026-07-30) — the tail is now fully classified
+
+**#1229 early in CI** (1 pass, 150 pending, no reds). Used the wait to finish the
+last unexamined group: the 7 singleton failures my classifier had binned as "other".
+They are not miscellaneous — they are four more known causes:
+
+| what | n | cause |
+|---|---|---|
+| `Timeout` at `galpy/util/multi.py:143` | **3** | the torch+fork `parallel_map` deadlock ([[torch-fork-deadlock-streamdf]]) — `test_fardalwmwpot_trackaa`, `test_plotting`, `test_streamTrack_multi_parallel`, all the same frame |
+| `Timeout` at `exp1.py:66` | 1 | `test_analytic_ecc_rperi_rap`, the py-version-sensitive ecc/zmax family |
+| `vmomentdensity does not return correct Quantity` | 2 | the `test_quantity` units cluster → tolerance batch |
+| `supposed to be unbound is not` | 1 | by design (cannot raise under a trace) |
+
+So **every one of the 52 torch singletons now has a named cause**, and the tail is
+not 52 problems but a handful:
+
+| group | entries | status |
+|---|---|---|
+| assertion-site casts | 11 | **DONE** (#1228) |
+| `obs=` user-facing coercion | 2 | **#1229 in CI** |
+| qdf sampler (`Tensor > numpy.random`) | 8 | needs the backend RNG shim (#130) |
+| `parallel_map` torch+fork deadlock | 3 | known; slow-skip or fork-mode fix |
+| tolerance / absolute-bound cluster | ~24 | **awaiting Jo's one decision** |
+| by design (unbound raise under trace) | 2 | permanent |
+| `actionAngleVerticalInverse` | 48 | structurally refuses backends |
+
+That is the whole remaining ledger, accounted for. Two weeks ago it was a number;
+it is now a list of six causes with owners.
+
+The method that produced it, and the one I would repeat: **read the failing frame,
+not the exception message.** The message is identical for a test-side cast and a
+source defect; the frame separates them. It changed the classification four separate
+times this fortnight, and twice stopped me from "fixing" a test that was correctly
+reporting a real bug.
