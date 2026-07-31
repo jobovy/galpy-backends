@@ -6941,3 +6941,31 @@ no test. Removed, and the pattern widened to `.coverage.*`.
 That is two PRs running where the audit found the only real problem: #1229's
 ndarray→list type change (`obs * 2` would have repeated, not scaled) and this. Both
 invisible to the test suite by construction. The audit step is not ceremony.
+
+**scipy 1.18 fix: attribute set mapped, and checking the second case mattered.**
+
+Walked the object graph for where the `BPoly`s actually live:
+
+```
+MultipoleExpansionPotential      -> _I_inner_cos, _I_outer_cos        (axisymmetric)
+                                 -> + _I_inner_sin, _I_outer_sin      (NON-axisymmetric ONLY)
+DiskMultipoleExpansionPotential  -> only via `_me`, which IS a MultipoleExpansionPotential
+```
+
+So **one** `__getstate__`/`__setstate__` on `MultipoleExpansionPotential` fixes both
+classes — DiskMultipole inherits it through `_me`.
+
+The part worth flagging: the `_sin` attributes exist **only** for a non-axisymmetric
+density. My first probe used the default (axisymmetric) potential and found two
+attributes; the non-axi one has four. Had I written the fix from the first probe it
+would have looked correct, passed the default-constructed test, and **silently
+failed to restore non-axisymmetric potentials** — the values would come back wrong
+rather than the pickle raising.
+
+That is the same class of error as everything else this fortnight (evidence
+narrower than the claim), but caught before it cost anything, and only because I
+had started asking "what did this measurement *not* cover?" as a habit rather than
+after being burned. Two probes, thirty seconds.
+
+Implementation spec is recorded in the task. Not started: #1231 is in CI and the
+rule is one PR at a time.
