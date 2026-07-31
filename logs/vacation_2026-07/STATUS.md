@@ -53,8 +53,13 @@ So **71 of 101 are decisions, not work.** The 30 that are work:
  1  SpiralArms (jax)         test_Rzderiv
 ```
 
-The largest single coherent cluster is the **8 torch stream entries**
-(streamTrack 5 + streamdf 3) — the natural next PR after #1232.
+**The 8 torch stream entries are NOT one cluster** (measured 2026-07-31, not
+assumed): 4 are a deliberate `NotImplementedError` — backend `cov()` supports
+only `basis='galcenrect'`, the sky/cyl-frame Jacobian follow-up parked in #861;
+1 is a real numpy/Tensor boundary bug (`fromnumeric` `.max(out=, axis=)`); 3
+streamdf are mixed, one of them the `parallel_map` fork deadlock (#178).
+Un-ledgering the 4 means implementing the sky-basis Jacobian transform, which is
+feature work worth doing on its merits — not a sweep.
 
 ---
 
