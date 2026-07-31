@@ -6446,3 +6446,38 @@ interpRZPotential migration.
 
 **#1230**: 5 pass, 146 pending, 2 red — both codecov, at 5 of 151 shards reported.
 The premature-codecov pattern; leaving it to fill in.
+
+### Wake 70 — #1230's red was upstream, and my sweep had a blind spot
+
+`build (windows-latest, 3.14, ...)` went red on my own new tests:
+
+```
+TypeError: cannot pickle 'module' object
+  when serializing dict item '_xp'
+  when serializing scipy.interpolate._interpolate.BPoly state
+  ... dict item '_I_inner_cos' ... MultipoleExpansionPotential
+```
+
+**scipy 1.18.0** on that runner (read out of the install log); my local env is
+**1.17.1**. scipy 1.18 caches the array namespace — a *module* — on `PPoly`/`BPoly`,
+so any object holding one stops pickling. `MultipoleExpansionPotential` is
+affected and **nothing in this branch touches it**: the new test surfaced a
+pre-existing upstream problem rather than a regression I introduced.
+
+Two things worth recording.
+
+**My 64/0 sweep had a blind spot I did not state.** It ran on one scipy version.
+"Every potential pickles" was really "every potential pickles on scipy 1.17.1",
+and I quoted the first. The number was right about the closures I fixed and wrong
+as a general claim.
+
+**I did not guess a fix.** The tempting move is a `__getstate__` that strips the
+cached `_xp` — five lines, plausible, and completely unverifiable here because I
+cannot reproduce the failure on 1.17.1. Pushing that would have cost a full CI
+cycle to learn whether a guess was right. Excluded the two multipole entries with
+the cause named in the code, and filed the reproduction (install 1.18 in a
+throwaway env) as its own piece of work. The PR's claim is now stated with its
+dependency: all default-constructible potentials round-trip on scipy 1.17, all
+but the two multipole classes on 1.18.
+
+Also cancelled the superseded run on the prior SHA — the project is runner-bound.
