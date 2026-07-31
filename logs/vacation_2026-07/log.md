@@ -7083,3 +7083,36 @@ scipy-1.18 venv, plus a memory note saying to use it for anything crossing into
 
 Ledger **101**. Of which 48 are `actionAngleVerticalInverse` and ~24 the tolerance
 cluster — so the reducible-by-work remainder is now roughly **29**.
+
+## Wake 80 — 2026-07-31
+
+**#1232** (scipy 1.18 spline pickling) in CI: 17/153 pass, 134 pending, both
+codecov checks red — premature at that shard count, same self-clearing pattern
+as #1230/#1231. Watcher armed for non-codecov reds.
+
+**Verified the ledger's composition instead of inferring it.** Last wake I
+published "~29 reducible by work" in STATUS.md; that number came from subtracting
+two remembered cluster sizes (48 VerticalInverse + ~24 tolerance) from 101, and
+the tolerance cluster's membership was stale — it had shrunk as other PRs landed,
+and several of its entries live in `test_actionAngle.py`, so the two buckets
+overlapped in a way subtraction cannot see. Enumerated from the tree:
+
+```
+101 = 48 VerticalInverse + 21 tolerance + 2 RazorThin-jit + 30 workable
+```
+
+So 71 of 101 are gated on one of Jo's three decisions, and **30 are work**. The
+answer landed near my estimate, but the method was unsound and I would not have
+known if it hadn't. STATUS.md now carries the enumerated list, not the estimate.
+
+Also repaired STATUS.md: the previous edit had left the old 107-era split
+(`torch 58`) under the new 101 headline, and had split the in-flight table with a
+stray blank line. Both were mine, both from editing by string-replacement without
+re-reading the result.
+
+**Largest coherent workable cluster: the 8 torch stream entries** (streamTrack 5
++ streamdf 3) — the natural PR after #1232. Built `/var/tmp/streamtorch` off
+`87c5e7de` and started an un-ledgered run of the 5 streamTrack entries to get
+real failure modes rather than assuming they are the `as_numpy`-at-assertion
+class (#176). Two of the 3 streamdf entries are separately explained: one is the
+`parallel_map` fork deadlock (#178).
