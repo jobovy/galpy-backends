@@ -6688,3 +6688,36 @@ explicit instruction to confirm against a backend-jax orbit shard artifact befor
 touching any list — the same discipline that stopped the torch-jit RazorThin entry
 from being dropped wrongly. Local-only evidence has now misled me twice this
 fortnight in both directions; a list edit needs the shard.
+
+**Checked the sigint finding against real CI artifacts — and I was wrong, usefully.**
+
+Pulled the five `backend-junit-jax-test_orbit_*` artifacts from #1230's own
+All-backend run:
+
+```
+test_orbit_c_sigint_fulldxdv  -> PASS
+test_integrate_indiv_t_1D     -> PASS
+test_integrate_indiv_t_2D     -> PASS
+```
+
+So `sigint_fulldxdv` is **not** a missed skip-list entry. It passes on CI and fails
+only on this box — a local difference in signal delivery. Had I acted on the local
+evidence I would have added a `backend_slow_skip` entry that permanently hid a
+**passing** test, and nothing would ever have flagged it. That is the more expensive
+direction of this error: a wrong xfail gets caught by an XPASS sweep eventually, a
+wrong *skip* is invisible forever.
+
+Second thing the artifacts settled, which I would otherwise have got wrong in the
+other direction: **CI's backend shards run EAGER, not `--jit`.** So these artifacts
+can confirm eager claims and can say *nothing* about traced ones. The
+`indiv_t_1D/2D` timeouts are traced-only and simply have no CI counterpart today —
+nothing to ledger, just a note for whenever traced orbit joins CI (and then as
+`slow_skip`, since a timeout records FAILED and xfail is the wrong key).
+
+Worth stating plainly because it is the third time the rule has paid: I predicted a
+gap, the check refuted it, and the check cost one command. The pattern from earlier
+in the fortnight — measurement scoped narrower than the claim — has an inverse that
+is just as costly, which is acting on a local reproduction as if it were the shard.
+
+**#1230: 151 pass, 2 pending, `codecov/project` cleared** (seventh consecutive PR).
+Only `codecov/patch` outstanding, with the coverage shard still to report.
