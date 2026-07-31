@@ -7199,3 +7199,40 @@ This is real feature work that serves the mission directly — it makes sky-fram
 stream covariances differentiable, which is what Track G's showpiece needs — and
 it retires 5 ledger entries. Sized at one focused PR. Not started: #1232 is still
 in CI and the rule is one PR at a time.
+
+**Correction to the sizing I published one turn earlier.** I wrote that four of
+the five `coords.*_jac` helpers are "backend-agnostic by construction — zero
+numpy references". That is false. Ran them under torch: all four return numpy
+`ndarray` when fed tensors. Counted properly, every link in the chain is
+pure-numpy:
+
+```
+galcenrect_to_galcencyl_jac    50 lines   3 numpy refs   0 xp
+galcenrect_to_XYZ_jac          48        15              0
+XYZ_to_lbd_jac                126         5              0
+galsky_to_sky_jac             109        12              0
+sky_to_customsky_jac          100        14              0
+lbd_to_XYZ_jac                 76        12              0
+```
+
+The "zero references" came from `awk '/^def f/,/^def [a-z]/'` — the start line
+*also* matches the end pattern, so the window was **one line long**. I counted
+numpy references in a function signature and reported it as a property of the
+implementation.
+
+So the PR is ~5x the size I stated, and splits the way this project has split
+this shape before (Streams PR-1 did the coords leaf as a keystone, then
+consumers):
+
+* **PR-A (keystone):** `coords.*_jac` family backend-agnostic, numpy byte-identical.
+* **PR-B:** streamTrack sky-basis `cov()` consuming it — batched `xp.where` over
+  `tp`, drop the 13 `float()` casts and 6 in-place row-scalings. Un-ledgers 5.
+
+**The pattern across four corrections in this cluster is one thing:** subtraction
+over remembered cluster sizes, a grep in a malformed awk window, a remembered
+failure mode that merely fit the symptom, a `-k` filter I never confirmed
+selected anything. Every one was a *proxy* for the measurement, and every proxy
+failed silently in the direction of "looks fine". The two that held up — the
+junit traceback and running the helpers under torch — were the two where I
+executed the actual thing. Cheap proxies are fine for search; they are not
+evidence for a claim I put in front of Jo.
