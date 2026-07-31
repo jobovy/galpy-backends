@@ -7031,3 +7031,11 @@ box, not the code.
 
 Pushed; prior-SHA runs cancelled (5 of them — the project is runner-bound and
 #1231 had already queued ~180 jobs once).
+
+**Added `logs/vacation_2026-07/STATUS.md`** — a snapshot that is OVERWRITTEN each
+time, not appended. Jo said he will not read a two-week trace but will ask for
+summaries, and this log is now long enough that "read the tail" no longer answers
+"where are things". STATUS.md holds the ledger trajectory, the traced matrix, what
+is in flight, and the three decisions waiting on him; `log.md` stays the trace for
+the *why*. Reaching for a growing file when the question is "what is true now" was
+the wrong shape.
