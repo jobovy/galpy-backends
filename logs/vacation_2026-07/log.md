@@ -6215,3 +6215,40 @@ on the code under test.
 failing on `DALServiceError: 503` from SIMBAD.** An upstream outage, not the
 diff; the run has to finish before the jobs can be re-run. `codecov/project`
 cleared itself again, as it has on all six PRs now.
+
+**Traced measurements, same wake (jax, `--jit`, whole file):**
+
+| file | tests | failures | errors | skipped | time |
+|---|---|---|---|---|---|
+| `test_potential.py` | 1326 | **0** | 0 | 120 | 338s |
+| `test_actionAngle.py` | 209 | **0** | 0 | 30 | 166s |
+
+Two of the three biggest files in the suite run end-to-end under `jax.jit` with
+nothing failing. `test_qdf.py`+`test_diskdf.py` and the torch counterparts are
+running. The point of re-measuring rather than trusting the old gap lists: task
+#158 had said "~5 potentials block traced-green" and the real answer today is zero.
+
+**qdf sampler (8 ledger entries) — scoped, and a recorded conclusion was wrong.**
+
+I had this filed as needing a "focused investigation of ALL frozen attrs the
+sampler path touches — whack-a-mole". Measured on a qdf **built under forced
+torch** (the construction context that matters):
+
+- exactly **2** frozen torch attrs exist, `_precomputergLzgrid` and `_precomputergLzmax`;
+- `fmin_powell` on the DF **already succeeds**;
+- the only failure is `Tensor > ndarray` at the accept step.
+
+So the fix is `as_numpy(VDatprop)` at **two lines** — `quasiisothermaldf.py:2212`
+(before the `numpy.reshape`, which also removes an `__array__`-on-Tensor
+deprecation that would fail CI-only under `-W error::Deprecation`) and `:2420`.
+`as_numpy` is a no-op on numpy, so the numpy path and the RNG draw order are
+untouched.
+
+Why the old note was wrong is the useful part. The July-21 attempt wrapped the
+*whole sampler body* in `use("numpy", force=True)`, which makes new values numpy
+while frozen attrs stay torch, so `_rg`'s `lz > self._precomputergLzmax` becomes
+`numpy > torch`. That failure was caused by the wrap. Casting only the DF
+*result* at the comparison leaves the DF evaluation on torch and the collision
+never arises. **A fix that failed does not prove the class of fix is
+insufficient** — the note should have named which approach failed and why, and
+because it did not, it sat for ten days looking like a hard problem.
