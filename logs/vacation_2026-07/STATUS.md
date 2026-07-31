@@ -23,7 +23,38 @@ By file (post-#1231 numbers):
  2  test_qdf.py   2  test_noninertial.py   1  test_SpiralArmsPotential.py
 ```
 
-**Two thirds of what remains is decisions, not work** — see "Waiting on you".
+**Verified composition** (enumerated from the tree, not inferred by subtraction):
+
+| bucket | n | gate |
+|---|---|---|
+| `actionAngleVerticalInverse` | 48 | scope decision |
+| tolerance cluster | 21 | bounds decision |
+| RazorThin `-jit` poisson_surfdens | 2 | #181 decision |
+| **workable now** | **30** | — |
+
+So **71 of 101 are decisions, not work.** The 30 that are work:
+
+```
+ 5  streamTrack (torch)      cov_basis, cov_per_call_unit_overrides,
+                             out_of_range_returns_nan, plot_smoke,
+                             plot_spread_non_cartesian
+ 4  interp_potential (jax)   force_c, secondderivs, +2 jax-jit use_c   -> #112
+ 4  orbit                    analytic_ecc_rperi_rap x2, analytic_zmax,
+                             jax-jit eccentricity
+ 3  diskdf (jax)             dehnendf_sample_* x3
+ 3  streamdf (torch)         fardalwmwpot_trackaa, plotting,
+                             streamTrack_multi_parallel  (-> #178 fork deadlock)
+ 3  sphericaldf              anisotropic_hernquist_negdf (jax),
+                             constantbeta_interpolatedpotentials x2 (torch)
+ 2  actionAngle              AdiabaticGrid_outsidegrid_c (jax+torch) -> #103
+ 2  qdf                      call_diffinoutputs (jax+torch)
+ 2  noninertial (jax)        arbitraryaxisrotation, _omegafunc      -> #61
+ 1  potential (jax-jit)      2ndDeriv RazorThin
+ 1  SpiralArms (jax)         test_Rzderiv
+```
+
+The largest single coherent cluster is the **8 torch stream entries**
+(streamTrack 5 + streamdf 3) — the natural next PR after #1232.
 
 ---
 
@@ -55,9 +86,6 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 |---|---|
 | **#1232** scipy 1.18 spline pickling | CI |
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
-
-**Reducible-by-work remainder: ~29.** 48 are `actionAngleVerticalInverse` and ~24
-the tolerance cluster; both are decisions below.
 
 ## Waiting on you (roughly two thirds of the remaining ledger)
 
