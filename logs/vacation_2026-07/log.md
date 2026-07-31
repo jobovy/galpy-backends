@@ -7271,3 +7271,40 @@ I had asserted in the PR body and have now actually tested.
 Conclusion on the codecov red: the lines are exercised, so the 27 misses are the
 26-of-28 incomplete-upload artifact, same shape as #1231. Not merging on that
 inference alone — waiting for sessions to complete and re-reading.
+
+**#1232 codecov resolved itself, as the functional check predicted.** Coverage
+went 86.17 -> 99.95 as sessions reached 27 and `codecov/project` cleared. 150
+pass / 3 pending, zero failures. The 27 "missed" added lines were the incomplete
+upload; the flip test had already established the code runs. Merging once
+`all-clear` and the two slow shards (jax `test_qdf` ~45min, the 3.14 backend
+build ~70min) finish.
+
+**Started PR-A: `coords.*_jac` backend-agnostic.** Branch `feat/coords-jac-backend`
+in `/var/tmp/streamtorch`, first of six helpers done
+(`galcenrect_to_galcencyl_jac`, commit 3837b53e). Two shape changes:
+
+* `numpy.zeros((6,6))` + 14 item assignments -> rows built with `xp.stack`.
+  jax arrays are immutable, and stacking is also what makes a batched
+  `(..., 6, 6)` fall out for free.
+* `if R == 0.0: R = 1e-30` -> `xp.where(R == 0.0, 1e-30, R)` — the exact
+  if->array-input class Jo asked me to audit for.
+
+Verified on every axis rather than asserted:
+
+```
+numpy byte-identical      400/400 random states, incl. the R==0 edge
+torch vs numpy            max|diff| 0.0
+jax (x64) vs numpy        max|diff| 0.0
+jax.jit                   traces
+batched (5,6,6)           matches per-element construction
+grad-vs-FD (central)      4.6e-07 -> 4.6e-09 -> 4.6e-11   (clean h^2)
+torch grad vs jax grad    max|diff| 0.0
+```
+
+One trap worth recording: the **first** gradient run showed rel err *growing* as
+h shrank (6.8e-04 -> 5.6e-02) and jax differing from numpy by 7.6e-06. That is
+the float32 signature — jax defaults to 32-bit and I had not set
+`JAX_ENABLE_X64`. As run, that test was not evidence of anything. With x64 it
+converges properly and the jax/numpy difference is exactly 0. **A gradient test
+that gets worse as h shrinks is a dtype bug in the harness, not a correctness
+finding in the code.**
