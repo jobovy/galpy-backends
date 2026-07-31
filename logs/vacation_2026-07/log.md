@@ -6252,3 +6252,30 @@ while frozen attrs stay torch, so `_rg`'s `lz > self._precomputergLzmax` becomes
 never arises. **A fix that failed does not prove the class of fix is
 insufficient** — the note should have named which approach failed and why, and
 because it did not, it sat for ten days looking like a hard problem.
+
+**Torch-traced result, and the cost that comes with it.**
+
+`test_potential.py --backend torch --jit`: **1326 tests, 0 failures, 0 errors,
+102 skipped — in 1792s.** So both backends are fully traced-green on the whole
+potential suite. But the wall-clock is worth writing down next to jax's:
+
+| backend | tests | failures | workers | wall |
+|---|---|---|---|---|
+| jax   | 1326 | 0 | 24 | 338s |
+| torch | 1326 | 0 | 16 | 1792s |
+
+Normalised for workers that is ~8.1k core-seconds for jax against ~28.7k for
+torch — **~3.5x** the compute for the same suite, essentially all of it
+`torch.compile` front-end cost (the run sat at 97% for roughly 25 minutes on the
+last handful of tests). Green is green, but this says a per-push torch-traced CI
+shard is not affordable at present; it belongs in a nightly. Filing that
+observation rather than acting on it now — I cannot edit workflows anyway.
+
+**Correction to the df numbers above.** The 6 failures I first got from
+`test_qdf.py + test_diskdf.py` traced were **my harness's fault, not traced
+gaps**: all six are in `test_diskdf.py` and all read `'NoneType' object has no
+attribute ...`, i.e. the `DFcorrection` savefile one test writes and others
+consume, scattered across xdist workers. `test_diskdf` is on the known
+run-serially list and I ran it `-n 12`. `test_qdf.py` contributed zero failures.
+The serial re-run is still going; until it finishes I am not claiming the file is
+clean, only that the six do not mean what they appear to.
