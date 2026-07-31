@@ -6415,3 +6415,34 @@ known failure and a silently-fixed one.
 **Merged + queued.** `fix/qdf-sampler-boundary` is rebased onto post-#1229
 develop with the ledger drop applied: **107 -> 101** (reducible-by-fixes 59 -> 53),
 6 entries retired. Waiting behind #1230 (picklability), whose CI is running.
+
+**And a correction to the correction, within the hour.** I wrote above that the
+`torch-jit` RazorThin poisson_surfdens entry "now XPASSes, i.e. it is stale and
+can be dropped". Then I ran it directly:
+
+```
+torch-jit RazorThin poisson_surfdens (isolated, --runxfail): 1 test, 1 failure
+  TypeError: Methods in AnyAxisymmetricRazorThinDiskPotential do not accept array inputs
+```
+
+**Full-file and isolated disagree.** In the whole-file `--jit` run it recorded as
+a plain pass; alone it fails with the same TypeError as its jax twin. So it is
+**context-dependent** — trace-cache warmth or test ordering — not stale. Had I
+acted on the first reading I would have dropped a live entry, and the shard would
+have gone red on a future run with nothing pointing at why.
+
+Both readings were of real data; neither was sufficient alone. The rule I already
+have written down covers it — *reproduce the exact CI shard context, not an
+isolated subset* — and I applied it in the direction I happened to start from. The
+useful generalisation is that **it cuts both ways**: an isolated run can make a
+passing test look broken just as easily as a full-file run can make a broken test
+look fixed. A ledger edit needs the shard.
+
+Meanwhile the other two jax-jit entries are confirmed **real**:
+`test_interp_potential::test_interpolation_potential_use_c` and
+`::test_interpolation_potential_force_use_c` both fail in isolation (interpolation
+grid disagrees with the C result under trace). Those tie into the pending
+interpRZPotential migration.
+
+**#1230**: 5 pass, 146 pending, 2 red — both codecov, at 5 of 151 shards reported.
+The premature-codecov pattern; leaving it to fill in.
