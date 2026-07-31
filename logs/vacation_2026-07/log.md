@@ -6899,3 +6899,22 @@ projection once actually run (hyp2f1, qdf sampler, RazorThin scope) and the seco
 where a number I had generalised turned out to be file-specific. The habit worth
 keeping: when a figure is going to justify a decision, re-measure it on a second
 instance before quoting it as a property.
+
+**Ledger trajectory this fortnight** (for the summary Jo will want, rather than a
+two-week trace):
+
+```
+156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107   (merged)
+                                                 -> 101  (qdf, built & waiting)
+```
+
+Current 107 on develop, split `jax 43 / jax-jit 5 / torch 58 / torch-jit 1`.
+Of those, **48 are `actionAngleVerticalInverse`** (24 jax + 24 torch), which
+refuses backends by construction and moves only if that class is migrated — a
+scoping decision, not a bug hunt. So the reducible remainder is **59**, dropping to
+**53** once the qdf sampler PR lands.
+
+The other structural block is the **~24-entry tolerance cluster** that hinges on
+one decision from Jo (torch-vs-numpy absolute-vs-relative bounds, magnitudes all
+measured). Between VerticalInverse (48) and the tolerance batch (~24), roughly two
+thirds of the remaining ledger is waiting on decisions rather than on work.
