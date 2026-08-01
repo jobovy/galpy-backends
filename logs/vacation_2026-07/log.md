@@ -8164,3 +8164,16 @@ the assertion is backend-vs-numpy parity, which holds either way.
 
 `all-clear`'s red is the documented stale evaluation (it gates on all checks and
 ran while codecov was red); it clears on re-run.
+
+## Merge audit for #1234 (done ahead of green)
+
+Diff: `coords.py` +231, `test_backend_coords.py` +46, `test_coords.py` +72,
+`test_orbit.py` +10, `test_orbits.py` +473 (100 casts plus ruff rewrapping).
+
+| check | finding |
+|---|---|
+| **if -> array-input class** | 4 in-place mutations converted, all verified in the diff: `l[l<0] += 2pi` and `dec[dec==dec_ngp] += 1e-16` (x2, two functions) -> `xp.where`; `out[:, i] *= 180/pi` and `out[3:5,0:2] *= _DEGTORAD` (x2) -> out-of-place scale multiplies. No masked or sliced in-place assignment remains on a migrated path. |
+| **new module-level helpers** | Exactly one: `backendNative`. Placed beside `scalarDecorator`, its only consumer; `galpy.backend` checked first and has no per-function marker (`is_backend_compatible` is for galpy *objects*). |
+| **duplication** | The degree-scaling blocks in `lbd_to_XYZ_jac` (columns, `_DEGTORAD`) and `XYZ_to_lbd_jac` (rows, `1/_DEGTORAD`) remain separate — considered and rejected in #1233's audit for the same reason (different axis, inverse factor; a shared helper would need 5 parameters to save ~7 lines twice). |
+| **shared-decorator safety** | Two `is_backend_array` dispatch sites, both deliberate: `degreeDecorator` and `pmrapmdec_to_custom` are shared with functions that are still numpy-only, so they must branch on what the array *is* rather than on the forced namespace. This is the bug I hit three times; the audit confirms both sites now have it. |
+| **byte-identity** | numpy verified against pre-change: 1200/1200 (decorators + lb_to_radec family), 600/600 (galsky_to_sky_jac), 1000/1000 (custom-sky family). |
