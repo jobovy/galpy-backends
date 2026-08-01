@@ -7653,3 +7653,20 @@ implemented**: applying it changes `galcenrect_to_XYZ_jac`'s numpy output by
 alternative (make callers pass `_extra_rot=False`) keeps byte-identity but leaves
 the pairing easy to get wrong — it already was wrong. Recommended option 1 to Jo
 and left the decision.
+
+**Quantified the `_extra_rot` impact so the priority is honest.** Propagated a
+realistic stream covariance (30 pc / 2 km/s, random correlations) through both
+Jacobians:
+
+```
+max relative diff in covariance : 2.1e-06
+relative diff in 1-sigma widths : 1.1e-06
+position sigma                  : 0.029967 kpc either way
+on-sky at D = 20 kpc            : 1.4e-04 arcsec
+```
+
+**Real but negligible** — 0.1 mas against stream widths measured in arcminutes.
+So it is a correctness fix, not an urgent one, and nothing published is
+meaningfully wrong. Worth saying plainly because "the Jacobian is wrong" reads as
+alarming without the magnitude; the number turns it into a routine cleanup with a
+known exact form. Posted to #1233.
