@@ -8075,3 +8075,17 @@ the interesting one.** The import insertion felt like boilerplate and got no
 scrutiny; that is precisely where it bit.
 
 Full `test_orbit.py` on numpy and torch running before re-push.
+
+**Local torch `test_orbit.py` check: TIMED OUT, not failed** — hit my own 2900s
+budget with no junit written. Stating that precisely because "NO JUNIT" is easy
+to misread as a failure; it is an absence of evidence, not evidence of a problem.
+
+Operational reason, worth keeping: the CI shard runs
+`--splits 5 --group N` (pytest-split), so each job takes a fifth of the file.
+Reproducing it as one serial full-file run is ~5x the work and blows a sane
+timeout. To reproduce that shard locally, pass the same `--splits/--group`, not
+the bare file.
+
+What IS established for that file: numpy 581/581 full-file, and `test_SkyCoord`
+(the only failing test) green on torch individually. CI is the authority for the
+shard and is running it now.
