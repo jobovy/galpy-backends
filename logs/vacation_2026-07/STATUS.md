@@ -88,7 +88,13 @@ lines later. Sized by running the code, not grepping it: every one of the six
 
 ## Traced (`--jit`) coverage — the mission's headline
 
-| file | jax | torch |
+**Every number below is `--jit`, not eager.** The test *counts* are identical to
+eager (same test set, different mode), so counts alone cannot tell the two apart
+— the wall-clocks are the tell. `0 fail` is **with the ledger and slow-skips
+applied**; only `test_coords.py` is green with nothing suppressed. There is no
+eager counterpart to this table because the eager view *is* `backend_xfail.txt`.
+
+| file (all `--jit`) | jax | torch |
 |---|---|---|
 | `test_potential.py`   | 1326 / 0 (338s) | 1326 / 0 (1792s) |
 | `test_orbit.py`       | 581 / 3 | 581 / 0 |
