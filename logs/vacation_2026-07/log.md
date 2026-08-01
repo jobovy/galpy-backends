@@ -7626,3 +7626,30 @@ output and were not:
 The discriminator that separates them is not the session count; it is "does any
 test actually call this code". Tracing answers that in seconds and does not
 depend on codecov settling.
+
+**The `_extra_rot` mismatch now has an exact, verified correction.** `_extra_rot`
+applies `galcen_extra_rot`, a *constant* orthogonal matrix (`max|R-I| = 1.47e-06`,
+`det = 1`), and `galcenrect_to_XYZ` rotates its **output** by `R.T`. So:
+
+```
+J_true = blockdiag(R.T, R.T) @ J_analytic
+```
+
+Checked it the way that distinguishes a real residual from FD noise — sweep the
+step and watch the direction:
+
+```
+h_scale 1e-4 -> 9.609e-12      h_scale 1e-6 -> 2.244e-09
+h_scale 1e-5 -> 9.917e-11      h_scale 1e-7 -> 1.603e-08
+```
+
+The residual GROWS as h shrinks: roundoff-dominated, so the identity is exact
+(best estimate ~1e-11). Had I looked at only the 1e-6 row I would have reported a
+2e-9 "discrepancy" that does not exist.
+
+Posted both the finding and the correction to #1233 as comments. **Not
+implemented**: applying it changes `galcenrect_to_XYZ_jac`'s numpy output by
+~1.5e-6, which breaks the byte-identity guarantee this PR rests on. The
+alternative (make callers pass `_extra_rot=False`) keeps byte-identity but leaves
+the pairing easy to get wrong — it already was wrong. Recommended option 1 to Jo
+and left the decision.
