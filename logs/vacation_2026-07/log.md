@@ -7502,3 +7502,20 @@ code (subtraction over cluster sizes; grep in a malformed awk window; "74 lines,
 migration, the only sound size estimate comes from running the thing and looking
 at what type comes out.** Reading the source undercounts, because the numpy-ness
 hides in decorators, in library delegation, and in constructors.
+
+## Wake 87 — the torch fix is confirmed green by CI
+
+`backend torch tests/test_quantity.py tests/test_coords.py` **PASS (6m38s)** on
+the fixed commit. The 3 `as_numpy` reds are gone. Confirmed by the shard itself,
+not inferred from a local subset.
+
+Process note worth keeping: I started a local reproduction of the *exact* shard
+pairing (`test_quantity.py + test_coords.py` together under torch, serial —
+`verify-exact-ci-shard-context` plus the `xdist-shared-state` rule for
+test_quantity) because last wake I had only verified `test_coords.py` in
+isolation. That was the right instinct, but CI answered first and CI is the
+authoritative context. The local run is redundant here; the instinct is still
+correct for cases where CI has not reached the shard yet.
+
+Remaining on #1233: other backend shards + all-clear still running, codecov/project
+red (premature, 100+ of 154 uploaded). No real reds outstanding.
