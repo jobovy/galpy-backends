@@ -8405,3 +8405,21 @@ tracing absent), now the traced fraction itself (ratio right, denominator
 excludes the failure mode). The general form: **when a metric can only see the
 cases that reached the instrument, absence of failure is not evidence of
 coverage.**
+
+**First real number, `test_orbit.py` slice 1/20 under `--backend jax --jit`:**
+
+```
+BOUNDARY CALLS:      traced=10363  not_traced=20   (99.8% traced)
+C-LIBRARY ENTRIES:   162
+NOT-TRACEABLE:       20 tests  (of 28 that ran; 3 skipped)
+```
+
+So **~71% of the executed tests in that slice entered C**, while the headline
+traced fraction read **99.8%**. Both numbers are correct; only one of them was
+ever going to be quoted. That is the whole argument for the third column in one
+data point, and it is the number I would have reported as "the orbit suite is
+traced" if Jo had not pushed back.
+
+The detector is per-test (`pytest_runtest_logreport` deltas), so the
+`not-traceable` list is generated, not curated — which was the precondition Jo
+named for the metric being worth building.
