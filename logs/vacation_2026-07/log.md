@@ -7719,3 +7719,41 @@ Reclassified: 73 of 101 are decisions or design-permanent, 28 are work.
 | **byte-identity** | Verified per helper against the pre-edit implementation: 400/600/800/800 random states, plus the `R=0` and `r=0` pole edges. |
 
 Diff is 349 lines in `coords.py` (net +129) and 80 in `test_coords.py`.
+
+## CORRECTION: the codecov per-line "discriminator" was bogus
+
+I have been enumerating "missed lines" from the codecov v2 `report/?path=` endpoint as
+
+```python
+miss = set(l[0] for l in file['line_coverage'] if l[1] == 0)
+```
+
+and intersecting that with the PR's added lines. On #1233 that returned 71
+"missed" lines. The same query's **file totals** say:
+
+```
+galpy/util/coords.py   coverage=100.0  lines=971  hits=971  misses=0
+```
+
+and the distribution of the second element is `Counter({0: 971})` — **every**
+entry is 0, in a fully covered file. So `l[1] == 0` does not mean "missed"; the
+parse was enumerating every executable line in the file.
+
+**This invalidates the method, not just this reading.** I used the same parse on
+#1230 ("1 uncovered line"), #1231, #1232 ("27 missed") and here, and described it
+to Jo as *the* discriminator for whether a codecov red is real. It never
+distinguished anything. That the conclusions came out right each time was luck
+plus the independent checks I happened to also run.
+
+**What actually worked, and should be the method going forward:**
+1. **Per-file `totals`** from the same endpoint — `coverage / lines / hits /
+   misses` are real. `misses=0` is the answer I wanted all along.
+2. **Local `trace.Trace`** over the tests — definitive, offline, and it is what
+   found that `galcenrect_to_XYZ_jac` had no test at all (that finding stands
+   independently: 0 references in `test_coords.py`, verifiable by grep, and it
+   led to the `_extra_rot` bug).
+3. The `codecov/project` / `codecov/patch` check states — the actual merge gate.
+
+The uncomfortable part is that #1230's "real uncovered line" conclusion was also
+derived this way. It happened to be true — I confirmed it by adding a test that
+changed the check from red to green — but the reasoning I gave for it was wrong.
