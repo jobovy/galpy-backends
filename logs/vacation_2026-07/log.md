@@ -7376,3 +7376,36 @@ meaningless green:**
 Remaining: `XYZ_to_lbd_jac` (126 lines), `galsky_to_sky_jac` (109),
 `sky_to_customsky_jac` (100). Then PR-A opens; PR-B (streamTrack sky-basis cov)
 consumes it and retires 5 ledger entries.
+
+## Wake 85 — PR-A opened as #1233 (4 of 6), scope honestly cut
+
+`XYZ_to_lbd_jac` done (the singular one) — three data-dependent guards to
+`xp.where`, each over a SAFE denominator, and the `out[3:6,0:3] = -M @ Q @ P`
+block assignment rewritten as a concat of `[[P, 0], [C, M]]`. 800/800
+byte-identical incl. the r=0 pole, torch 6.9e-17, jax x64 0.0, jit traces,
+grad-vs-FD to 6.1e-11.
+
+**Finding that would have shipped silently under a weaker test.** The gradient
+AT the exact pole is NaN, and my guards do NOT prevent it: the source is
+`r = sqrt(X^2+Y^2)`, whose derivative is infinite at 0, not the `where`. I could
+force it to zero by guarding the sqrt as well, but `dl/dX` genuinely does not
+exist at the pole, so NaN is the honest signal — consistent with Jo's RazorThin
+`R2deriv` off-plane call. The property that actually matters for batched work is
+that it is **element-local**: verified a pole element in a batch of 4 leaves its
+neighbours finite. Only the pole-edge gradient check surfaced this; the
+well-conditioned check was clean.
+
+**Scope cut, stated not smuggled.** The last two helpers cannot be finished
+inside this PR's premise. `galsky_to_sky_jac` calls `lb_to_radec` and
+`sky_to_customsky_jac` calls `custom_to_radec`/`radec_to_custom` — all numpy-only
+(74 lines / 32 numpy refs / 0 xp for `lb_to_radec`; measured by running them,
+which return numpy float64 whatever backend goes in). Two dishonest options were
+available: duplicate their math inline inside the jac helpers (violates the
+no-duplication directive Jo set), or quietly grow PR-A by ~200 lines of unrelated
+leaf migration. Took neither. **#1233 ships the 4 verified helpers** — a complete
+galactocentric<->heliocentric<->lbd sub-chain — and the sky-frame leaves become
+PR-A2.
+
+Consequence for PR-B worth being clear about: `cov(basis='sky')` still needs
+`galsky_to_sky_jac`, so the 5 streamTrack ledger entries stay blocked until PR-A2
+lands. `basis='galcencyl'` only needs a helper that is already done.
