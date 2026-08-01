@@ -8052,3 +8052,26 @@ estimates in this migration have now been wrong — twice too small, once too
 large. The cause is never optimism or pessimism, it is counting a **proxy**
 (reference counts, call sites, remembered cluster sizes) instead of running the
 thing that actually fails. Each probe that settled it cost seconds.
+
+**#1234 second red: `test_orbit.py::test_SkyCoord`** — same class (`ndarray -
+Tensor` where `o.ra(times)` is now a backend array), one site, fixed.
+
+**And I made the blind-replace mistake again, in the same wake I claimed to have
+learned it.** I verified the match count for the assertion patch (count 1, good)
+and then inserted the `as_numpy` import with
+
+```python
+s.replace("from galpy import potential", "...\nfrom galpy.backend import as_numpy", 1)
+```
+
+without checking that string's count. In `test_orbit.py` it is **not** a
+module-level import — it appears inside function bodies as a local import, so
+mine landed inside two functions and the module-scope name was still undefined
+(`NameError`). Removed both, put one import at module level.
+
+The lesson is not "check match counts" — I did that, for the edit I was thinking
+about. It is that **the check has to cover every pattern edit in the change, not
+the interesting one.** The import insertion felt like boilerplate and got no
+scrutiny; that is precisely where it bit.
+
+Full `test_orbit.py` on numpy and torch running before re-push.
