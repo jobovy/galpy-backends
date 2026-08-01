@@ -8483,3 +8483,43 @@ less than it reads.
 
 Note the inventory is cheap: three suites in the time one CI run took, all of it
 while blocked. Measurement is the highest-yield thing to do against a queue.
+
+### #184 in progress: the sky chain is FIVE links, not two
+
+Branch `feat/coords-galcenrect-native` off the merged develop. The task assumed
+two functions; measuring the chain showed five. The `*_jac` helpers turned out
+NOT to be the problem — they carry no `@scalarDecorator` at all (migrated in
+#1233), so they are naturally agnostic. The promoters are the
+`@scalarDecorator`-wrapped links missing `@backendNative`:
+
+| link | status | notes |
+|---|---|---|
+| `galcenrect_to_XYZ` | DONE `b64b2a55` | rotation is config-only -> stays a numpy constant |
+| `galcenrect_to_vxvyvz` | DONE `b64b2a55` | shared `_galcen_rot` (was copy-pasted) |
+| `XYZ_to_lbd` | DONE `3708fe6e` | masked in-place add + `numpy.empty` assign |
+| `vxvyvz_to_vrpmllpmbb` | TODO | 25 code lines, 16 numpy refs |
+| `pmllpmbb_to_pmrapmdec` | TODO | 22 code lines, 9 numpy refs |
+
+Byte-identity held at every step: 16 cases for the first pair (scalar/array
+inputs, both `_extra_rot`, scalar AND array `Xsun`/`Zsun` — the einsum's two
+branches — plus the `galcencyl_*` siblings), 12 for `XYZ_to_lbd` (including the
+`l<0` wrap branch and the scalar-input path). Both references captured BEFORE
+any edit. The technique that makes this cheap: keep the numpy branch verbatim
+under `if xp is numpy:` and add the backend branch beside it, so byte-identity
+is structural rather than argued.
+
+Caller sweep before widening scope (the #1234 lesson): `XYZ_to_lbd` has 1
+`Orbits.py` caller, `vxvyvz_to_vrpmllpmbb` 0, `pmllpmbb_to_pmrapmdec` 2. Three
+Orbit sites total, and #1234 already moved Orbit's sky accessors in this same
+direction, so the ripple is bounded and expected.
+
+Sky bases still raise unforced — correctly, since `vxvyvz_to_vrpmllpmbb` supplies
+pmll/pmbb. The acceptance test for this PR is the pair that failed in #1235:
+`cov(basis='sky')` unforced must return a backend array, and must survive a
+gradient (it raised `Can't call numpy() on Tensor that requires grad`).
+
+**Also re-made a known mistake**: sized the remaining functions with
+`awk '/^def f/,/^def [a-z]/'` and got "~1 code line", the exact window bug in
+[[cd-does-not-survive-ampersand]]'s sibling memory. Caught it because 1 line was
+absurd, then sized properly in Python: 25 and 22 lines. A memory did not stop me
+re-running the bad command; noticing the implausible number did.
