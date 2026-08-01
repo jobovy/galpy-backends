@@ -9,8 +9,9 @@
 
 ```
 156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107 -> 101   merged
-(#1232 and #1233 both merged: a correctness fix and a keystone, neither
-carries ledger entries -- count unchanged at 101)
+(#1232/#1233/#1234 merged: a correctness fix and the two coords keystones.
+None carries ledger entries, so the count is unchanged at 101. **PR-B is the
+first ledger movement since #1231** -- it retires the 5 streamTrack entries.)
 ```
 
 **101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 52 / torch-jit 1`.
@@ -116,7 +117,7 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **#1234** sky-frame coords leaves (completes 6 of 6) | CI, one red found+fixed |
+| **PR-B** streamTrack sky-basis `cov()` | next; retires 5 ledger entries |
 
 **#1234 note.** Making `lb_to_radec` framework-preserving changed `Orbit.ra()`
 /`.dec()`/`.ll()` from returning numpy-even-under-a-forced-backend to returning

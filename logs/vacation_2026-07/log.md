@@ -8177,3 +8177,34 @@ Diff: `coords.py` +231, `test_backend_coords.py` +46, `test_coords.py` +72,
 | **duplication** | The degree-scaling blocks in `lbd_to_XYZ_jac` (columns, `_DEGTORAD`) and `XYZ_to_lbd_jac` (rows, `1/_DEGTORAD`) remain separate — considered and rejected in #1233's audit for the same reason (different axis, inverse factor; a shared helper would need 5 parameters to save ~7 lines twice). |
 | **shared-decorator safety** | Two `is_backend_array` dispatch sites, both deliberate: `degreeDecorator` and `pmrapmdec_to_custom` are shared with functions that are still numpy-only, so they must branch on what the array *is* rather than on the forced namespace. This is the bug I hit three times; the audit confirms both sites now have it. |
 | **byte-identity** | numpy verified against pre-change: 1200/1200 (decorators + lb_to_radec family), 600/600 (galsky_to_sky_jac), 1000/1000 (custom-sky family). |
+
+## #1234 MERGED — b440b5d2, 154/154
+
+Sixth merge of the vacation. `coords.py` finished at **100.0% coverage
+(978/978, 0 misses)** — the two backend-branch tests closed the one real gap.
+
+All six `*_jac` helpers and the three sky-frame leaves are now backend-agnostic,
+numpy byte-identical, exact on torch/jax, jit-traceable, with h-convergent
+gradients. Ledger unchanged at 101: this was a keystone.
+
+**What this PR cost, honestly.** The coords work itself was right the first time
+and stayed verified throughout. Everything after was the blast radius of one
+intended behaviour change — `Orbit.ra()/.dec()/.ll()` no longer silently
+downgrading to numpy under a forced backend:
+
+* 9 reds in `test_orbits.py` -> 100 assertion casts
+* 1 red in `test_orbit.py` -> 1 cast (+ an import I placed inside two functions)
+* 1 real `codecov/patch` gap -> 2 backend-branch tests
+
+Four separate CI rounds. Each wave was legitimate, but I only found each one
+*after* CI ran a shard I had not checked. The verification I did was always
+scoped to what I had just edited, never to what depended on it. That is the
+single correctable thing from this PR: **after a migration changes a return
+type, enumerate the callers and run their tests before pushing.**
+
+**Next: PR-B**, streamTrack sky-basis `cov()`. Scope re-measured on the merged
+tree (17 `float()` casts, 2 numpy refs, 6 in-place row scalings, 1 per-k loop),
+and its numpy baseline is already captured for all four bases plus the
+out-of-range NaN case — recorded *before* any edit, so the migration is checked
+against a reference rather than against itself. It retires the 5 streamTrack
+entries: the first ledger movement since #1231.
