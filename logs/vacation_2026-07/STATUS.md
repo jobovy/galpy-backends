@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-07-31
+# Vacation status snapshot — 2026-08-01
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now" answer.
 `log.md` is the trace; read this first and go there only for the why.
@@ -96,10 +96,35 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **PR-A** `coords.*_jac` backend-agnostic | 1 of 6 helpers done, local |
+| **#1233** `coords.*_jac` backend-agnostic (4 of 6) | CI |
+| **PR-A2** sky-frame coords leaves | scoped, not started |
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
 
+**#1233** migrates 4 of the 6 `*_jac` helpers (rows stacked instead of assigned
+into `numpy.zeros`, `if` guards -> `xp.where` over safe denominators). Each is
+numpy byte-identical over hundreds of random states, exact on torch and jax x64,
+jit-traceable, with grad-vs-FD converging to ~1e-11. It moves the ledger by
+**zero** — it is a keystone, not a burndown.
+
+**PR-A2** is bigger than I first implied. The last two helpers depend on
+`lb_to_radec` / `custom_to_radec` / `radec_to_custom`, and measuring (not reading)
+showed backend type is stripped on every path for three independent reasons: the
+default branch delegates to **astropy**, the fallback uses `numpy.array`/`numpy.dot`,
+and `@scalarDecorator` re-wraps scalars as numpy. It is a coords-leaf wave.
+Consequence: the 5 streamTrack ledger entries stay blocked until it lands.
+
 ## Waiting on you (roughly two thirds of the remaining ledger)
+
+0. **`galcenrect_to_XYZ_jac` differentiates the wrong variant** (found 2026-08-01
+   while adding coverage; the helper had **no test at all**). It differentiates
+   `_extra_rot=False` while `galcenrect_to_XYZ` defaults to `_extra_rot=True`.
+   Exact correction, verified to ~1e-11 by an FD step-sweep:
+   `J_true = blockdiag(R.T, R.T) @ J`, `R = galcen_extra_rot`. **Impact measured
+   and negligible**: 2.1e-6 relative on a stream covariance, 1.4e-4 arcsec at
+   20 kpc. Pre-existing, not from the migration. Not fixed in #1233 because it
+   breaks byte-identity. Options: correct the Jacobian (my recommendation — a
+   helper should differentiate the function as callers actually call it), or make
+   callers pass `_extra_rot=False`.
 
 1. **RazorThin traced `surfdens`** (#181). With the array-input flag on, traced
    `surfdens` returns a meaningless ~0 instead of today's loud `TypeError`, because
