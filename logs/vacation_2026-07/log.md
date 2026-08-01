@@ -7757,3 +7757,30 @@ plus the independent checks I happened to also run.
 The uncomfortable part is that #1230's "real uncovered line" conclusion was also
 derived this way. It happened to be true — I confirmed it by adding a test that
 changed the check from red to green — but the reasoning I gave for it was wrong.
+
+## #1233 MERGED — 618fc6c9, 154/154 green
+
+Fifth merge of the vacation (#1229, #1230, #1231, #1232, #1233). Like #1232 it
+carries **zero ledger entries**: it is the coords keystone, and the ledger stays
+at 101.
+
+What landed: 4 of 6 `*_jac` helpers backend-agnostic (rows stacked, four
+data-dependent guards -> `xp.where` over safe denominators), byte-identical numpy
+over 400/600/800/800 random states plus both singular edges, exact on torch and
+jax x64, jit-traceable, grad-vs-FD converging to ~1e-11. Plus a real test for
+`galcenrect_to_XYZ_jac`, which had none.
+
+Two things found along the way that are NOT fixed here and are recorded as
+decisions:
+* the `_extra_rot` Jacobian mismatch — exact correction known
+  (`blockdiag(R.T,R.T) @ J`, ~1e-11), impact measured (1.4e-4 arcsec at 20 kpc);
+  fixing it breaks this PR's byte-identity guarantee.
+* my codecov per-line parse was bogus — see the correction above; the method is
+  now per-file `totals` plus local `trace.Trace`.
+
+**Next: PR-A2**, the sky-frame coords leaves (`lb_to_radec`, `custom_to_radec`,
+`radec_to_custom`) plus the last 2 `*_jac` helpers. Sized by measurement, not
+reading: backend type is stripped on every path for three independent reasons
+(astropy delegation, `numpy.array`/`numpy.dot` in the fallback, `@scalarDecorator`
+re-wrapping scalars). That unblocks PR-B, which retires the 5 streamTrack entries
+and is the first ledger movement since #1231.

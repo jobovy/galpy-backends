@@ -9,7 +9,8 @@
 
 ```
 156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107 -> 101   merged
-(#1232 merged: a correctness fix, no ledger entries -- count unchanged at 101)
+(#1232 and #1233 both merged: a correctness fix and a keystone, neither
+carries ledger entries -- count unchanged at 101)
 ```
 
 **101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 52 / torch-jit 1`.
@@ -115,8 +116,7 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **#1233** `coords.*_jac` backend-agnostic (4 of 6) | CI |
-| **PR-A2** sky-frame coords leaves | scoped, not started |
+| **PR-A2** sky-frame coords leaves | scoped, next up |
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
 
 **#1233** migrates 4 of the 6 `*_jac` helpers (rows stacked instead of assigned
