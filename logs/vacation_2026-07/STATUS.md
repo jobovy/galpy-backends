@@ -62,11 +62,15 @@ streamdf are mixed, one of them the `parallel_map` fork deadlock (#178).
 All 5 (not 4) are gated on it: the boundary-cast one hits the same guard four
 lines later. Sized by running the code, not grepping it: every one of the six
 `coords.*_jac` helpers is pure-numpy (~433 lines, 49 numpy refs, zero xp), and
-`_analytical_jacobian` adds 13 `float()` casts + 6 in-place row-scalings. Splits
-as **PR-A** (coords `*_jac` keystone, numpy byte-identical) then **PR-B**
-(streamTrack sky-basis cov, batched `xp.where`) — the same keystone-then-consumer
-shape as Streams PR-1. Retires 5 entries and makes sky-frame stream covariance
-differentiable, which Track G's showpiece needs.
+`_analytical_jacobian` adds 13 `float()` casts + 6 in-place row-scalings. Splits three ways
+(the middle step only became visible once I measured rather than read):
+
+* **#1233** — the 4 `*_jac` helpers that have no sky-frame dependency. In CI.
+* **PR-A2** — the sky-frame coords leaves (`lb_to_radec`, `custom_to_radec`,
+  `radec_to_custom`) plus the last 2 `*_jac` helpers. Scoped, not started.
+* **PR-B** — streamTrack sky-basis `cov()`, batched `xp.where`. Retires the 5
+  entries and makes sky-frame stream covariance differentiable, which Track G's
+  showpiece needs.
 
 ---
 
