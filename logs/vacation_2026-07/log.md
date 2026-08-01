@@ -8272,3 +8272,40 @@ First ledger movement since #1231.
 Both errors shared a cause: trusting a cheap measurement whose *context* differed
 from the real one. The baseline CI junit artifact settled both questions
 authoritatively and for free — it is the exact shard, already run.
+
+### Correction to the entry above (same day, after running `test_backend_streamTrack.py`)
+
+I claimed this PR makes sky-frame `cov()` work on backends and "keeps the
+covariance differentiable through the basis rotation". Both claims were too
+strong, and I only found out because the backend test file asserted the
+`NotImplementedError` I had removed — so I had to open it. Had that assertion
+not existed, this would have merged overclaimed.
+
+What is actually true, measured three ways:
+
+| mode | galcenrect / galcencyl | sky / galsky |
+|---|---|---|
+| forced backend, eager | backend array, exact | backend array, matches numpy (torch 1e-9, jax 6e-15) |
+| unforced / mixed arrays | backend array, exact | **`TypeError: Multiple namespaces`** |
+| gradient (torch, requires_grad) | **AD vs FD = 1.9e-9** | **`RuntimeError: Can't call numpy() on Tensor that requires grad`** |
+
+One root cause for both sky failures: `coords.galcenrect_to_XYZ` and
+`galcenrect_to_vxvyvz` are still plain `@scalarDecorator` without the
+`@backendNative` marker from #1234, so they promote inputs through numpy.
+`galcenrect_to_XYZ_jac` *is* backend-native — so the two halves of the chain
+disagree, and a `requires_grad` tensor refuses the numpy hop outright.
+
+The lesson is not "I missed a test file". It is that **every check I ran was
+value-based** — byte-identity, `assert_allclose`, 45/45 — and value checks
+cannot see a numpy fallback, because the fallback computes the *right values*.
+The three things that would have caught it are exactly the three that did:
+`is_backend_array` on the result, an unforced/mixed construction, and a
+gradient. Byte-identity proves the numpy path is intact; it says nothing about
+whether the backend path exists. **For a migration, at least one assertion must
+be about the array's type or its gradient, not its value.**
+
+Scope call: #1235 stays as-is with corrected claims (guard gone, 20 `float()`
+casts gone, galcencyl differentiable, 5 ledger entries genuinely retired), and
+the `@backendNative` migration of those two coords functions is the next PR
+(task #184). Folding it in would mean a coords migration with a caller sweep —
+the expensive half of #1234 — inside a PR that is already verified and green-ish.
