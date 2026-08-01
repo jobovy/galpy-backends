@@ -8423,3 +8423,29 @@ traced" if Jo had not pushed back.
 The detector is per-test (`pytest_runtest_logreport` deltas), so the
 `not-traceable` list is generated, not curated — which was the precondition Jo
 named for the metric being worth building.
+
+**Jo: "will the C instrumentation only be for the tests or general?" — general.**
+
+What I built today is test-only and hardcodes the six modules that hold a
+`libgalpy` CDLL reference. That list is exactly the kind of thing that goes
+stale: a seventh module loading the library would be silently invisible, and
+the metric would go back to flattering itself.
+
+The right home is `_load_extension_libs.load_libgalpy()`. Checked before
+proposing it: all six consumers do `_lib, _ext_loaded = load_libgalpy()` and
+then only `_lib.<symbol>`; nothing type-checks the CDLL, and the only `is None`
+checks are inside the loader. So wrapping the returned object once covers every
+consumer present and future, with one place to maintain instead of a list.
+
+It is also worth more as a library feature than as test tooling. The silent
+bypass is a *user-facing* trap: someone who jits their pipeline and gets
+numpy+C back has no way to find out today — no error, no warning, correct
+numbers, no tracing and no gradient. Exposing "did this touch C?" in
+`galpy.backend`, and optionally warning when C is entered while a trace is
+requested, turns the silent fallback into a visible one. That is the same class
+of bug I hit three times today, promoted from something I catch by hand to
+something the library reports.
+
+Guardrails for that PR: default off, zero behaviour change with it off, numpy
+byte-identity untouched, and the cost is one branch per C-symbol *resolution*
+(per integration, not per force evaluation).
