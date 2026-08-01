@@ -7409,3 +7409,31 @@ PR-A2.
 Consequence for PR-B worth being clear about: `cov(basis='sky')` still needs
 `galsky_to_sky_jac`, so the 5 streamTrack ledger entries stay blocked until PR-A2
 lands. `basis='galcencyl'` only needs a helper that is already done.
+
+**PR-A2 scoped by reading `lb_to_radec`, and it is not what the reference count
+implied.** I had sized it as "74 lines, 32 numpy refs". The real structure: the
+**default path delegates to astropy** `SkyCoord`, with a pure-numpy
+rotation-matrix fallback used only when astropy is absent (`_APY_COORDS`, which
+is 1 here). astropy is neither traceable nor differentiable, so "migrate
+lb_to_radec" cannot mean "replace numpy with xp" — the numpy path is not numpy.
+
+Measured the two paths against each other over 200 random (l, b):
+
+```
+max |astropy - manual| = 1.554e-15 rad  (3e-10 arcsec)   byte-identical: False
+```
+
+Roundoff-level agreement. So the shape of PR-A2 is the **dual path** already
+established in this project (and explicitly not a numpy island per
+`no-numpy-islands-eliminate-fast`): numpy input keeps the astropy branch
+untouched and byte-identical; a backend array routes to the rotation-matrix
+branch migrated to `xp`. The 1.55e-15 rad discrepancy is the cost, and it is
+below any tolerance in the suite.
+
+Also noted for the migration: the fallback ends with
+`ra[ra < 0.0] += 2.0 * numpy.pi` — an in-place boolean-mask assignment that jax
+cannot do and that assumes an array (it would fail on a scalar). Becomes
+`xp.where(ra < 0, ra + 2*pi, ra)`.
+
+Not implemented this wake — #1233 is the open PR and the rule is one at a time.
+Recorded so the next wake starts from the real design rather than re-deriving it.
