@@ -116,7 +116,16 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **#1234** sky-frame coords leaves (completes 6 of 6) | CI |
+| **#1234** sky-frame coords leaves (completes 6 of 6) | CI, one red found+fixed |
+
+**#1234 note.** Making `lb_to_radec` framework-preserving changed `Orbit.ra()`
+/`.dec()`/`.ll()` from returning numpy-even-under-a-forced-backend to returning
+the backend's array. That is the mission's direction (differentiable sky
+coordinates on an Orbit), but it broke 9 `test_orbits.py` tests whose assertions
+were written against the old silent downgrade. Fixed with 100 assertion-level
+casts; `test_orbits.py` is 115/115 on torch. If you would rather this PR stayed
+coords-only, the lever is to not mark `lb_to_radec` backendNative — that reverts
+the accessor change and re-blocks the streamTrack sky-basis work.
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
 
 **#1233** migrates 4 of the 6 `*_jac` helpers (rows stacked instead of assigned
