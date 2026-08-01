@@ -8100,3 +8100,27 @@ torch. CI's split shards answered it in the time my serial run was still going.
 The rule to keep is not "run more locally" but **match the shard's own
 `--splits/--group`** — otherwise the local reproduction is strictly slower than
 the thing it is checking.
+
+## PR-B re-measured on the migrated branch (do not reuse the old number)
+
+`StreamTrack._analytical_jacobian`, 91 lines:
+
+```
+float( casts    17     (my earlier estimate said 13 -- low by 4 again)
+numpy. refs      2     (was the bulk; the six *_jac migrations removed them)
+in-place row *=  6
+per-k loop       1     `for k, tp_k in enumerate(tp_arr): if not in_range[k]: continue`
+```
+
+The shape of the remaining work is now clear and small: the numpy dependency is
+gone (2 refs left), so PR-B is **strip 17 `float()` casts, make 6 row-scalings
+out-of-place, and batch the per-k loop into an `xp.where`** — plus lifting the
+`NotImplementedError` guard at streamTrack.py:2314/2368.
+
+That retires the 5 streamTrack ledger entries and is the first ledger movement
+since #1231.
+
+Recording the re-measurement rather than reusing the old estimate because the old
+one was taken *before* the helpers were migrated, so both its numpy count and its
+float() count were describing a different tree. Estimates have a shelf life; this
+one expired the moment #1234's commits landed.
