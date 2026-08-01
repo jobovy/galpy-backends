@@ -8010,3 +8010,34 @@ backendNative in this PR, which would keep Orbit's accessors numpy and shrink
 this to a coords-only change — at the cost of leaving streamTrack's sky-basis
 cov still blocked. I lean toward doing the test work, since the accessor
 behaviour change is the mission, but it is a legitimate fork.
+
+## #1234 red fixed — and the 270-site estimate was wrong (too big)
+
+Before editing anything I probed which numpy op actually fails on a Tensor:
+
+```
+numpy.fabs(Tensor)        OK  -> Tensor   (but emits a DeprecationWarning)
+Tensor < 1e-7             OK  -> Tensor
+numpy.all(bool Tensor)    RAISES TypeError
+```
+
+So the 270 sky-accessor call sites were never the unit of work; the unit is the
+**assertion**, and there are 100 of them across the 9 tests. My estimate was 2.7x
+too big because I counted the wrong thing — the same error shape as the earlier
+over-estimates, just in the other direction.
+
+Placement matters and the probe decided it: `numpy.fabs(Tensor)` *works* but
+warns, and the coverage shard runs `-W error::Deprecation`
+(`test-backend-W-error-deprecation`), so casting only around `numpy.all` would
+have passed this shard and failed the coverage one later. Cast goes **inside**
+`numpy.fabs`.
+
+Applied with a paren-matching transform scoped to the 9 target function bodies
+(not a blind `s.replace` — that is the mistake from earlier today), 100 sites,
+count reported and checked.
+
+```
+the 9 tests    numpy 9/9    torch 9/9
+```
+
+Full `tests/test_orbits.py` on torch running now before re-push.
