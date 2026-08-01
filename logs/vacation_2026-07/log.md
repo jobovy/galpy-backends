@@ -7519,3 +7519,37 @@ correct for cases where CI has not reached the shard yet.
 
 Remaining on #1233: other backend shards + all-clear still running, codecov/project
 red (premature, 100+ of 154 uploaded). No real reds outstanding.
+
+**Local shard run disagreed with CI — both failures explained, neither real.**
+My local reproduction of the exact shard found 2 failures that CI's identical
+shard passed. Rather than "fix" them, ran them down:
+
+1. `test_streamgapdf_sample` — already documented in the `backend_xfail.txt`
+   header from an earlier session: *"a local clean-CPU regen had env-specific
+   false failures, e.g. test_streamgapdf_sample, that CI passes"*. Known
+   local-only artifact.
+2. `test_sphericaldf_quantity_radius_is_not_coerced_on_a_backend[jax]` — fails
+   with `TypeError: unsupported operand type(s) for /: 'jaxlib._jax.ArrayImpl'
+   and 'Tensor'`. Not the jax-GPU default (still fails with
+   `JAX_PLATFORMS=cpu`). The cause is structural:
+
+```python
+_BACKENDS = [b for b in ("jax","torch") if importlib.util.find_spec(b) is not None]
+```
+
+The test parametrizes over **installed** backends, independently of the forced
+`--backend`. My dev box has both installed, so under `--backend torch` the
+`[jax]` case builds the DF's `_psi0` as a torch Tensor and then feeds it a jax
+array. `backend-tests.yml` installs jax only when `matrix.BACKEND == 'jax'` and
+torch only when `matrix.BACKEND == 'torch'`, so on any CI shard `_BACKENDS` has
+exactly one entry and this case **cannot occur**.
+
+**That is a structural blind spot, not a flake:** no CI job ever exercises
+jax-array-meets-torch-state, because no CI job has both frameworks installed. The
+crash it exposes is real (mixing frameworks is unsupported and fails with a raw
+TypeError rather than a clear error), but it is out of scope for #1233 and not a
+regression from it. Worth a deliberate decision later: either make the mixed case
+raise something informative, or assert single-framework use at the boundary.
+
+Neither failure blocks #1233. The authoritative signal remains CI's own shard,
+which passed.
