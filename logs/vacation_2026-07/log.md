@@ -7600,3 +7600,29 @@ this PR rests on, and the right fix (align the Jacobian with the default, or mak
 the caller pass `_extra_rot=False`) is Jo's call.
 
 `tests/test_coords.py`: 98/98 on numpy, torch and jax. Pushed as cb0f6511.
+
+**Closed the coverage question by tracing, not by waiting.** Rather than assume
+the remaining 61 misses were the same incomplete-upload artifact, ran
+`trace.Trace` over exactly the calls `test_coords.py` makes and intersected with
+codecov's missed set:
+
+```
+codecov-missed lines the tests DO execute: 70/71
+not executed:                              [2114]
+```
+
+and 2114 is the `def galcenrect_to_galcencyl_jac(...)` statement itself, executed
+at import before the trace starts — covered in reality. So **all 71 are
+exercised**: the 10 in `galcenrect_to_XYZ_jac` by the test added this wake, the
+other 61 already. The codecov misses were purely the 26-of-28 upload.
+
+Worth separating the two cases, because they looked identical in the codecov
+output and were not:
+* `galcenrect_to_XYZ_jac` — **genuinely uncovered**, because the function had no
+  test whatsoever. Waiting for sessions would never have fixed it, and it hid a
+  real defect (the `_extra_rot` mismatch).
+* the other three — upload artifact, would have cleared on its own.
+
+The discriminator that separates them is not the session count; it is "does any
+test actually call this code". Tracing answers that in seconds and does not
+depend on codecov settling.
