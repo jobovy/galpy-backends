@@ -8309,3 +8309,21 @@ casts gone, galcencyl differentiable, 5 ledger entries genuinely retired), and
 the `@backendNative` migration of those two coords functions is the next PR
 (task #184). Folding it in would mean a coords migration with a caller sweep —
 the expensive half of #1234 — inside a PR that is already verified and green-ish.
+
+**Caller sweep for the follow-up (done before writing any code, per the #1234
+lesson).** Blast radius of marking `galcenrect_to_XYZ` / `galcenrect_to_vxvyvz`
+`@backendNative`:
+
+| function | Orbits.py | streamdf | streamTrack | coords-internal |
+|---|---|---|---|---|
+| `galcenrect_to_XYZ` | **0** | 3 | 2 | 2 |
+| `galcenrect_to_vxvyvz` | **0** | 1 | 2 | 2 |
+| `galcencyl_to_XYZ` | 13 | 2 | – | – |
+| `galcencyl_to_vxvyvz` | 7 | 2 | – | – |
+
+The Orbit ripple that made #1234 expensive lives entirely in the `galcencyl_*`
+wrappers, and those are themselves plain `@scalarDecorator` — they promote their
+inputs to numpy *before* delegating to `galcenrect_*`. So the inner call receives
+numpy regardless, and migrating only the two `galcenrect_*` functions provably
+cannot change `Orbits.py` behaviour. That makes the follow-up a contained 12-site
+change rather than a repeat of #1234's four CI rounds.
