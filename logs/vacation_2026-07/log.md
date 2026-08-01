@@ -7333,3 +7333,46 @@ serialization module). Creating a new util module for two 8-line private
 functions with a single caller seemed worse than the alternative. **Trigger for
 revisiting: the moment a second class needs to pickle PPoly/BPoly, hoist them.**
 Happy to move them now if Jo prefers the rule applied strictly.
+
+## Wake 84 — PR-A progress (3 of 6 jac helpers)
+
+No PR open (#1232 merged), so the whole wake went to PR-A on
+`feat/coords-jac-backend`. Three helpers migrated, each verified before commit:
+
+| helper | numpy byte-identical | torch | jax x64 | jit | grad-vs-FD floor |
+|---|---|---|---|---|---|
+| `galcenrect_to_galcencyl_jac` | 400/400 (+ R=0 edge) | 0.0 | 0.0 | yes | 4.6e-11 |
+| `galcenrect_to_XYZ_jac` | 600/600 (3- and 6-arg, ±Xsun) | 0.0 | 0.0 | yes | 1.4e-11 |
+| `lbd_to_XYZ_jac` | 800/800 (4 call forms) | 0.0 | 0.0 | yes | 6.5e-11 |
+
+`tests/test_coords.py` 97 passed.
+
+The shared pattern is now settled and mechanical: rows built with `xp.stack`
+instead of assigned into `numpy.zeros((6,6))` (jax immutability, and it gives
+batched `(..., 6, 6)` for free), `numpy.*` -> `xp.*`, namespace via
+`get_namespace(...)` + `promote_scalars`. Per-helper extras found by reading
+rather than assuming:
+
+* #1 `if R == 0.0: R = 1e-30` -> `xp.where` (the if->array-input class).
+* #3 `l *= _DEGTORAD` mutated the **caller's** array in place; and
+  `out[:, 0] *= _DEGTORAD` scaled a column, which becomes a broadcast
+  column-vector multiply sized from the 3x3-vs-6x6 result.
+
+Static Python branches (`len(args)`, `degree=`) stay Python-level — they are
+arity/flag decisions, not data-dependent, so they neither block tracing nor need
+`where`.
+
+**Two harness traps caught this wake, both of which would have produced
+meaningless green:**
+
+1. jax defaults to **float32**. My first gradient check showed rel err *growing*
+   as h shrank (6.8e-04 -> 5.6e-02) and jax-vs-numpy at 7.6e-06. With
+   `JAX_ENABLE_X64=1` the difference is exactly 0.0 and FD converges cleanly.
+   A gradient test that degrades as h shrinks is a dtype bug in the test.
+2. For helper #2 my first objective was `sum(J**2)`, whose gradient is
+   identically **zero** — cos^2+sin^2 = 1 makes it invariant. It "passed" while
+   testing nothing. Re-done with a random weight matrix.
+
+Remaining: `XYZ_to_lbd_jac` (126 lines), `galsky_to_sky_jac` (109),
+`sky_to_customsky_jac` (100). Then PR-A opens; PR-B (streamTrack sky-basis cov)
+consumes it and retires 5 ledger entries.
