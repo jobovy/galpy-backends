@@ -7467,3 +7467,38 @@ Process note: stdout was truncated again (conftest force-exit), and the run
 looked like a bare `FFF` with no traceback. Read the tracebacks from
 `--junitxml`, which is what my own note says to do for exactly this shard. That
 worked first try this time.
+
+**PR-A2 sized properly, and it is a wave rather than a follow-up.** Measured the
+actual return types instead of reasoning from the source:
+
+```
+lb_to_radec, ARRAY input        numpy -> ndarray   torch -> ndarray   jax -> ndarray
+lb_to_radec, manual path only   numpy -> ndarray   torch -> ndarray   jax -> ndarray
+```
+
+Backend type is stripped on **every** path, and there are three separate reasons,
+each needing its own fix:
+
+1. **astropy branch** (the default, `_APY_COORDS=1`) ends in
+   `numpy.array([...]).T` — always numpy, by construction.
+2. **manual branch** uses `numpy.array` / `numpy.dot` for the rotation matrices,
+   which convert their inputs.
+3. **`@scalarDecorator`** does `numpy.array([args[ii]])` on the scalar path,
+   stripping the backend type before the function even runs. (Array input passes
+   through it untouched — so this one only bites scalars.)
+
+So "migrate `lb_to_radec`" is really: migrate the manual branch to `xp`, make
+`scalarDecorator` backend-preserving, and add the dispatch that routes a backend
+array to the manual branch even when astropy is importable. Then the same again
+for `custom_to_radec` / `radec_to_custom`. That is a coords-leaf **wave**, not the
+small follow-up I implied when I cut #1233's scope.
+
+Not started — #1233 is the open PR. Recorded so the estimate is on the table
+before the work rather than after it.
+
+This is the third size estimate in this cluster that was wrong until I ran the
+code (subtraction over cluster sizes; grep in a malformed awk window; "74 lines,
+32 numpy refs"). The pattern is consistent enough to state as a rule: **for a
+migration, the only sound size estimate comes from running the thing and looking
+at what type comes out.** Reading the source undercounts, because the numpy-ness
+hides in decorators, in library delegation, and in constructors.
