@@ -7872,3 +7872,41 @@ second half of it. Fixed with `promote_scalars`; torch went 93 -> 95.
 
 Both are the boundary moving outward, which is what a leaf migration does. Next
 wake: fix those, then the last two `*_jac` helpers, then open the PR.
+
+## PR-A2 step 1 GREEN — 98/98 on all three backends
+
+Commit 33486d20 on `feat/coords-sky-leaves`.
+
+```
+tests/test_coords.py     numpy 98/98    torch 98/98    jax 98/98
+numpy byte-identity      1200/1200 scalar-form checks across 6 functions,
+                         worst diff 0.0; plus the ARRAY form of lb_to_radec and
+                         radec_to_lb, which is what exercises degreeDecorator's
+                         column scaling
+```
+
+Four changes, sequenced so no step regressed anything:
+1. `backendNative` marker — opt-in, verified a no-op until used.
+2. `degreeDecorator`: `out[:, i] *= 180/pi` -> multiply by a scale row.
+3. `pmllpmbb_to_pmrapmdec`: `dec[dec == dec_ngp] += 1e-16` -> `xp.where`.
+4. `lb_to_radec`: numpy keeps astropy; backend arrays take the xp-native
+   rotation-matrix branch.
+
+**I made the same mistake twice in one wake, in two different places.** Both
+times I resolved the namespace and then failed to reconcile it with what the
+data actually was:
+
+* In `lb_to_radec` — resolved `xp` but did not coerce `l`/`b`, so under a forced
+  backend `xp` was torch while the inputs were numpy. `promote_scalars` fixed it.
+* In `degreeDecorator` — used `get_namespace(out)` to build the scale, but this
+  decorator also wraps 17 functions that still return **numpy** even under a
+  forced backend. Multiplying their ndarray by a torch scale took torch from
+  95/98 to **62/98**. Fixed by dispatching on `is_backend_array(out)`.
+
+The rule that covers both, which I clearly do not have internalised: *resolving
+a namespace tells you what the caller wants, not what the array is.* Under a
+forced backend those differ, and every migration boundary has to reconcile them
+explicitly — by coercing the input, or by dispatching on the actual type.
+
+Next: the last two `*_jac` helpers (`galsky_to_sky_jac`, `sky_to_customsky_jac`)
+now that `lb_to_radec` preserves the framework, then open the PR.
