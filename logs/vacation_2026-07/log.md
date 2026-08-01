@@ -8523,3 +8523,42 @@ gradient (it raised `Can't call numpy() on Tensor that requires grad`).
 [[cd-does-not-survive-ampersand]]'s sibling memory. Caught it because 1 line was
 absurd, then sized properly in Python: 25 and 22 lines. A memory did not stop me
 re-running the bad command; noticing the implausible number did.
+
+### The four migrations were dead code — decorator order
+
+Fourth link done (`vxvyvz_to_vrpmllpmbb`), and finishing it exposed that the
+three before it did **nothing**.
+
+`scalarDecorator` reads the opt-in marker off the function it wraps:
+`getattr(func, "_galpy_backend_native", False)`. So `@backendNative` has to be
+the **innermost** decorator, directly above `def`. I had written it outermost on
+all four, which marks the `scalarDecorator` *wrapper* — the attribute lands on
+an object nobody inspects, promotion through numpy continues, and the migration
+is inert.
+
+What makes this worth recording is why it survived three commits: **every
+byte-identity check passed, 28 cases, `worst |diff| = 0.000e+00` — because the
+backend path was never taken.** A byte-identity check is satisfied perfectly by
+a migration that does nothing. I had the correct reference sitting in the same
+file the whole time: `lb_to_radec` from #1234 has the marker innermost.
+
+That is the fourth time this fortnight a green check has certified something
+narrower than the claim it was being used for. The pattern is now explicit
+enough to state as a rule: **byte-identity proves the numpy path is intact and
+says nothing whatever about whether the backend path exists.** Only a type
+assertion or a gradient can distinguish "migrated" from "unchanged".
+
+With the order fixed, the sky chain is closed end to end:
+
+| check | before | after |
+|---|---|---|
+| unforced `sky` | `TypeError: Multiple namespaces` | backend array, 5.6e-15 vs numpy |
+| unforced `galsky` | `TypeError: Multiple namespaces` | backend array, 2.5e-15 vs numpy |
+| gradient `sky` | `Can't call numpy() on Tensor that requires grad` | AD vs FD 6.8e-10 |
+| gradient `galsky` | same | AD vs FD 2.1e-11 |
+
+Those are exactly the two failures #1235 shipped with and named as the
+follow-up's acceptance criteria. Byte-identity still holds on all 28 cases.
+
+Remaining: `pmllpmbb_to_pmrapmdec` (customsky only), then the caller sweep of
+the three `Orbits.py` sites before pushing.
