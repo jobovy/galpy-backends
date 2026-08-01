@@ -7553,3 +7553,50 @@ raise something informative, or assert single-framework use at the boundary.
 
 Neither failure blocks #1233. The authoritative signal remains CI's own shard,
 which passed.
+
+## Wake 88 — codecov gap was real, and chasing it found a pre-existing bug
+
+The codecov per-line discriminator on #1233 showed 71 of 212 added lines missed
+at 26 sessions. Instead of assuming the incomplete-upload pattern again,
+attributed the misses to functions:
+
+```
+33 XYZ_to_lbd_jac | 20 lbd_to_XYZ_jac | 10 galcenrect_to_XYZ_jac | 8 galcenrect_to_galcencyl_jac
+```
+
+`galcenrect_to_XYZ_jac` appears **0 times** in `tests/test_coords.py` — it had no
+test at all. So its misses were a genuine gap, not an upload artifact, and per
+`no-hiding-uncovered-code` the fix is a test, not a wait.
+
+**Writing that test found a real pre-existing defect.** The FD check failed on
+all three backends. First reaction was "my tolerance is too tight" — I loosened
+the step to per-component relative, and the disagreement did **not** move
+(1.469e-06 either way). A discrepancy invariant to h is not truncation error.
+Located it:
+
+```
+_extra_rot=True  (the DEFAULT)   max|J - J_fd| = 1.469e-06
+_extra_rot=False                 max|J - J_fd| = 1.902e-10
+```
+
+`galcenrect_to_XYZ_jac` differentiates the **`_extra_rot=False`** transform, while
+`galcenrect_to_XYZ` **defaults to `_extra_rot=True`**. The FD had non-zero
+couplings exactly where the analytic Jacobian has structural zeros — the
+signature of an unmodelled rotation.
+
+**This predates the migration.** My change restructured the formula
+byte-identically (600/600 random states), so the mismatch is in galpy already.
+It matters because `streamTrack._analytical_jacobian` calls
+`coords.galcenrect_to_XYZ(x, y, z, Xsun=ro, Zsun=zo)` with the default and pairs
+it with this Jacobian — so sky-frame covariance transforms inherit a ~1.5e-6
+inconsistency. Small, but wrong, and exactly the kind of thing a "does it run"
+test never catches.
+
+Handled honestly rather than blessed: the test pins the contract the function
+actually implements (`_extra_rot=False`, matching to 1.9e-10 — a genuinely tight
+bound) and names the discrepancy in a comment and the commit message. **Not fixed
+in #1233**: changing the formula would break the byte-identical numpy guarantee
+this PR rests on, and the right fix (align the Jacobian with the default, or make
+the caller pass `_extra_rot=False`) is Jo's call.
+
+`tests/test_coords.py`: 98/98 on numpy, torch and jax. Pushed as cb0f6511.
