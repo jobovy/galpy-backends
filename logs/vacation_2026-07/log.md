@@ -8124,3 +8124,43 @@ Recording the re-measurement rather than reusing the old estimate because the ol
 one was taken *before* the helpers were migrated, so both its numpy count and its
 float() count were describing a different tree. Estimates have a shelf life; this
 one expired the moment #1234's commits landed.
+
+## #1234: codecov/patch was REAL — the backend-branch coverage gap
+
+`codecov/project` cleared; `codecov/patch` stayed red with all 152 other checks
+green, so it was not premature. Located the line without guessing, using the
+**per-file totals** (the reliable field):
+
+```
+galpy/util/coords.py   coverage=99.89   lines=978   hits=977   misses=1
+```
+
+One line. My own note names the mechanism: backend-only branches cannot be
+covered because the coverage-uploading shards run numpy. The line is
+`degreeDecorator`'s
+
+```python
+if is_backend_array(out):
+    scale = asarray_on_device(get_namespace(out), scale, device_of(out))
+```
+
+Two instruments failed honestly on the way there and are worth recording as
+*not* usable for this:
+* `trace.Trace` flags import-time lines (imports, docstrings) as unexecuted,
+  because tracing starts after import — its "23 uncovered" list was noise.
+* local `coverage.py` returns "No data to report" (the editable-install
+  interaction already in my notes).
+
+Fix: two tests in `tests/test_backend_coords.py`, which the build shard
+`tests/test_backend*.py` runs **with jax and torch installed**
+(`REQUIRES_JAX/TORCH: true`) and therefore uploads coverage for. 23/23.
+
+**Checking that assumption caught a second error.** That same shard is
+deliberately **astropy-free** (`REQUIRES_ASTROPY: false`), so its numpy reference
+takes the rotation branch, not `SkyCoord`. My test comment asserted "numpy
+reference goes through astropy" — false on precisely the shard the test targets.
+Rewrote it to state that the reference path is environment-dependent and that
+the assertion is backend-vs-numpy parity, which holds either way.
+
+`all-clear`'s red is the documented stale evaluation (it gates on all checks and
+ran while codecov was red); it clears on re-run.
