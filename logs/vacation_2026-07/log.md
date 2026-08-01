@@ -7684,3 +7684,26 @@ reference point for what "traced-green" should mean.
 
 It is also 20-100x faster than the other files, so it is cheap to keep in a
 per-push traced run rather than a nightly.
+
+**Workable count corrected 30 -> 28: the qdf unbound pair is design-permanent.**
+Ran `test_call_diffinoutputs` un-ledgered rather than trusting my own "by-design"
+label:
+
+```
+AssertionError: Test orbit in qdf that is supposed to be unbound is not
+```
+
+and then found the mechanism instead of stopping at the label. Both
+`UnboundError` raise sites in `actionAngleSpherical.py` (898, 1273) fire from
+**scipy solver failure modes** — `except RuntimeError` from `brentq`, and an
+`rtry > 100.0` escape hatch. The backend path replaced scipy's solver with a
+fixed-iteration bisection: it cannot fail, and has no escape, so it returns a
+finite (wrong) answer rather than raising.
+
+Note the run was **eager** torch, so "you can't raise under a trace" is not the
+explanation for what I observed — I nearly asserted that and it would have been
+wrong. Eagerly a check *could* be added; it is under `--jit` that a
+data-dependent raise becomes impossible. So the design constraint is real but
+applies one level further out than the failing test shows.
+
+Reclassified: 73 of 101 are decisions or design-permanent, 28 are work.

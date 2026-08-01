@@ -31,9 +31,19 @@ By file (post-#1231 numbers):
 | `actionAngleVerticalInverse` | 48 | scope decision |
 | tolerance cluster | 21 | bounds decision |
 | RazorThin `-jit` poisson_surfdens | 2 | #181 decision |
-| **workable now** | **30** | — |
+| qdf unbound pair | 2 | design-permanent (below) |
+| **workable now** | **28** | — |
 
-So **71 of 101 are decisions, not work.** The 30 that are work:
+So **73 of 101 are decisions or design-permanent, not work.** The 28 that are work:
+
+The qdf pair (`test_call_diffinoutputs`) expects `UnboundError` for an unbound
+orbit. Both raise sites in `actionAngleSpherical.py` fire from **failure modes of
+scipy's solver** — `except RuntimeError` out of `brentq`, and an `rtry > 100.0`
+escape. The backend path uses a fixed-iteration bisection, which cannot fail and
+has no escape, so it returns a finite answer instead of raising. Detecting
+unboundness on a backend needs a data-dependent branch, which is exactly what a
+trace cannot do. Not a bug to fix; the honest options are to accept no-raise on
+backends (current) or return a NaN sentinel. Reclassified out of "workable".
 
 ```
  5  streamTrack (torch)      cov_basis, cov_per_call_unit_overrides,
@@ -48,7 +58,7 @@ So **71 of 101 are decisions, not work.** The 30 that are work:
  3  sphericaldf              anisotropic_hernquist_negdf (jax),
                              constantbeta_interpolatedpotentials x2 (torch)
  2  actionAngle              AdiabaticGrid_outsidegrid_c (jax+torch) -> #103
- 2  qdf                      call_diffinoutputs (jax+torch)
+ 2  qdf   call_diffinoutputs   NOT workable — design-permanent, see below
  2  noninertial (jax)        arbitraryaxisrotation, _omegafunc      -> #61
  1  potential (jax-jit)      2ndDeriv RazorThin
  1  SpiralArms (jax)         test_Rzderiv
