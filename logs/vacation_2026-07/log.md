@@ -8449,3 +8449,37 @@ something the library reports.
 Guardrails for that PR: default off, zero behaviour change with it off, numpy
 byte-identity untouched, and the cost is one branch per C-symbol *resolution*
 (per integration, not per force evaluation).
+
+### #1235 MERGED (`3e002f61`) — ledger 101 → 96, seventh merge this vacation
+
+All 154 checks green. The two `codecov` reds cleared on their own once the last
+ubuntu coverage shards uploaded, exactly as predicted — chasing them earlier
+would have been wasted work. Pre-merge audit was done during the wait: the four
+added `if`s all branch on non-array data (`use_phys`, `self._backend` ×2,
+`degree`), duplication is net-negative (rad→deg row scaling 4 prospective copies
+→ 1), the helper sits beside `_DEGTORAD` in `coords`, and no in-place writes on
+possibly-backend arrays survive.
+
+### First not-traceable inventory — and `test_streamgapdf` is the punchline
+
+Ran the C detector over three more suites under `--backend jax --jit`:
+
+| suite | traced fraction | C entries | tests entering C |
+|---|---|---|---|
+| `test_actionAngle` | 99.3% (70409/529) | 707 | **128** |
+| `test_kuzminkutuzov` | 92.0% (7608/666) | 4 | 3 |
+| `test_streamgapdf` | **100.0%** (20/0) | **3186** | 4 |
+| `test_orbit` slice 1/20 | 99.8% (10363/20) | 162 | 20 of 28 |
+
+`test_streamgapdf` scores a **perfect 100% traced** on twenty boundary calls
+while making **3186** calls into libgalpy. That is the metric failing as loudly
+as it can: the fewer boundary calls a suite makes, the easier it is to score
+100%, and C work makes none at all. A ratio whose denominator excludes the
+failure mode rewards exactly the code that avoids the instrument.
+
+`test_actionAngle` is the volume case — 128 tests enter C, and it is currently
+listed in STATUS.md as "209 / 0 traced" on both backends. That row means far
+less than it reads.
+
+Note the inventory is cheap: three suites in the time one CI run took, all of it
+while blocked. Measurement is the highest-yield thing to do against a queue.
