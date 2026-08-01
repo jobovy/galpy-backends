@@ -88,6 +88,16 @@ lines later. Sized by running the code, not grepping it: every one of the six
 
 ## Traced (`--jit`) coverage — the mission's headline
 
+> ⚠ **These are pass counts, not jit coverage.** Measured 2026-08-01: C-method
+> tests **bypass the trace silently and still pass** — under forced torch +
+> `jit("torch")`, `method="dop853_c"` stores an `ndarray` bit-identical to the
+> pure-numpy C run. So `test_orbit.py` "581 / 0" means *581 ran with jit on and
+> none failed*, NOT *581 traced*. It is not uniformly hollow, though: counting
+> boundary calls on a 149-test slice of `test_potential.py` gives **63742 traced
+> / 169 not (99.7%)**. Tracing is real on pure-Python/backend paths and bypassed
+> where C methods are requested. A traced-fraction column + a `not-traceable`
+> category are pending (task #185).
+
 **Every number below is `--jit`, not eager.** The test *counts* are identical to
 eager (same test set, different mode), so counts alone cannot tell the two apart
 — the wall-clocks are the tell. `0 fail` is **with the ledger and slow-skips
