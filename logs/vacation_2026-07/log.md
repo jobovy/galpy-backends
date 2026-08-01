@@ -7952,3 +7952,11 @@ applying pattern edits — did that for the remaining three edits.
 
 Next: push, open the PR. It unblocks PR-B (streamTrack sky-basis cov), which is
 the first ledger movement since #1231.
+
+**#1234 opened.** Pre-push check: ran the exact CI shard pairing
+(`test_quantity` + `test_coords`, torch, serial) — 342 tests, 2 failures, both
+the known local-only pair (`test_streamgapdf_sample`, documented in the ledger
+header; and the `[jax]` param that **cannot exist** on a CI shard because
+`backend-tests.yml` installs one framework per shard). `test_coords.py`
+contributed zero. That check is worth its cost: the previous PR's only real red
+appeared in exactly this pairing.

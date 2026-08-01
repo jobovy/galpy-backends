@@ -116,7 +116,7 @@ dominate. Do not generalise the 5x to "torch tracing is slow".
 
 | item | state |
 |---|---|
-| **PR-A2** sky-frame coords leaves | scoped, next up |
+| **#1234** sky-frame coords leaves (completes 6 of 6) | CI |
 | **RazorThin array inputs** | branch uncommitted, blocked on a decision |
 
 **#1233** migrates 4 of the 6 `*_jac` helpers (rows stacked instead of assigned
