@@ -7437,3 +7437,33 @@ cannot do and that assumes an array (it would fail on a scalar). Becomes
 
 Not implemented this wake — #1233 is the open PR and the rule is one at a time.
 Recorded so the next wake starts from the real design rather than re-deriving it.
+
+## Wake 86 — #1233 real red, fixed
+
+`backend torch tests/test_quantity.py tests/test_coords.py` went red with 3
+failures NOT in the ledger: `test_lbd_to_XYZ_jac`,
+`test_galcenrect_to_galcencyl_jac_on_z_axis`,
+`test_XYZ_to_lbd_jac_at_celestial_pole`. All three the same
+`numpy/_core/fromnumeric.py:97: TypeError` — numpy calling a reduction with
+`out=/axis=` on a torch Tensor.
+
+**This is the migration working, not a regression.** Before #1233 these helpers
+returned a numpy `ndarray` even when fed torch tensors (I measured exactly that
+two wakes ago, when checking whether they were "backend-agnostic by
+construction"). So `numpy.fabs(jac[0,0])` in the tests worked *by accident*. Now
+they correctly return a torch Tensor and the numpy-side assertions break — the
+#176 as_numpy-at-assertion-site class, showing up as a direct consequence of the
+source fix.
+
+Fix: wrapped all **12** jac call sites in `as_numpy(...)`, including the ones
+that happened to still pass, so the trap cannot resurface when helpers 5 and 6
+land. `as_numpy` on a numpy array returns THE SAME OBJECT, so the numpy path is
+structurally unchanged, not merely numerically equal.
+
+Verified locally on all three backends before pushing: `tests/test_coords.py`
+97/97 on numpy, torch and jax.
+
+Process note: stdout was truncated again (conftest force-exit), and the run
+looked like a bare `FFF` with no traceback. Read the tracebacks from
+`--junitxml`, which is what my own note says to do for exactly this shard. That
+worked first try this time.
