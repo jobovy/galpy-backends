@@ -8365,3 +8365,43 @@ The traced matrix needs a second column — *fraction of boundary calls actually
 traced* — and C-method tests need a third category, `not-traceable`, distinct
 from xfail and slow-skip, so they stop being counted as traced-green. That is
 its own PR; `test_orbit.py` is being measured now to size it.
+
+### The traced fraction is self-flattering — three numbers, not one
+
+Measured after building the C detector. For `Orbit.integrate(method="dop853_c")`
+under `use("torch", force=True)` + `jit("torch")`:
+
+```
+boundary calls : traced=0  not_traced=0   (0.0% traced)
+C entries      : 1
+orbit array    : ndarray
+```
+
+The C path makes **zero** `@backend_input` boundary calls. It is not counted as
+`not_traced` — it is not counted *at all*. So C work contributes to neither the
+numerator nor the denominator of a traced fraction, and a file can read "99.8%
+traced" while most of its real work went through C. That is exactly what
+happened: `test_orbit.py` slice 1/20 under `--backend jax --jit` reported
+**traced=10363 / not_traced=20 (99.8%)** — a number I would have quoted as
+evidence the orbit suite is traced, and which says nothing of the kind.
+
+So the metric needs **three** numbers per file, not one ratio:
+
+| | meaning |
+|---|---|
+| `traced` | boundary calls that were actually traced |
+| `not_traced` | boundary calls that reached the boundary and were not traced |
+| `c_entries` | work that **bypassed** the boundary into libgalpy |
+
+Reporting `traced / (traced + not_traced)` alone hides the third column by
+construction. Either report all three, or use
+`traced / (traced + not_traced + c_entries)` so C dilutes the score instead of
+vanishing from it.
+
+This is the third variant of the same error today: a green-looking number that
+measures something narrower than the claim it is used to support. First the sky
+bases (values right, backend path fake), then the traced matrix (passes right,
+tracing absent), now the traced fraction itself (ratio right, denominator
+excludes the failure mode). The general form: **when a metric can only see the
+cases that reached the instrument, absence of failure is not evidence of
+coverage.**
