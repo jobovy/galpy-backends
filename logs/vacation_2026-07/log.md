@@ -8327,3 +8327,41 @@ inputs to numpy *before* delegating to `galcenrect_*`. So the inner call receive
 numpy regardless, and migrating only the two `galcenrect_*` functions provably
 cannot change `Orbits.py` behaviour. That makes the follow-up a contained 12-site
 change rather than a repeat of #1234's four CI rounds.
+
+### Jo's challenge: "tests involving C code are not jittable, so I don't believe the table"
+
+Correct instinct, and it forced a real measurement. Two findings, the second of
+which corrected the first.
+
+**1. C paths bypass the trace silently.** Under `use("torch", force=True)` *and*
+`jit("torch")`, `Orbit.integrate(..., method="dop853_c")` stores an `ndarray`
+and returns values bit-identical to the pure-numpy C run. The C integrator ran,
+on numpy, untraced, inside a "traced" session — and the test passes. So
+`test_orbit.py` "581 / 0" does **not** mean 581 orbit tests traced; it means 581
+tests ran with jit mode on and none failed.
+
+**2. But the table is not uniformly hollow — I over-corrected.** Instrumenting
+`traced_call` as a pytest plugin and counting `traced` vs `NOT_TRACED` boundary
+calls on a 149-test slice of `test_potential.py` under `--backend jax --jit`:
+
+```
+BOUNDARY CALLS: traced=63742  not_traced=169   (99.7% traced)
+```
+
+So `test_potential` genuinely traces. I had generalised from a single
+`dop853_c` probe to the whole matrix and told Jo the metric was hollow before
+the aggregate came back. The accurate claim is narrower: **tracing is real on
+pure-Python/backend paths and bypassed where C methods are requested**, which
+concentrates in orbit integration rather than potential evaluation.
+
+This is the same error twice in one day in opposite directions: first I trusted
+a pass count that proved less than I claimed (the sky bases), then I distrusted
+one that proved more. Both times the fix was the same — instrument the property
+directly (`is_backend_array`, a gradient, a traced/not-traced counter) instead
+of inferring it from green.
+
+**Consequence for the metric.** Pass counts alone cannot express jit coverage.
+The traced matrix needs a second column — *fraction of boundary calls actually
+traced* — and C-method tests need a third category, `not-traceable`, distinct
+from xfail and slow-skip, so they stop being counted as traced-green. That is
+its own PR; `test_orbit.py` is being measured now to size it.
