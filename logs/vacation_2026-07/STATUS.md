@@ -157,6 +157,18 @@ Consequence: the 5 streamTrack ledger entries stay blocked until it lands.
 3. **`actionAngleVerticalInverse` scope** (48 entries). Refuses backends by
    construction; moves only if that class is migrated.
 
+## How to check a codecov red (I got this wrong for four PRs)
+
+The codecov v2 `report/?path=` endpoint returns a `line_coverage` array whose
+second element is **0 for every line**, including in a 100%-covered file. I was
+reading `l[1] == 0` as "missed" and intersecting with the PR's added lines. That
+enumerates every executable line and discriminates nothing. Used it on
+#1230/#1231/#1232/#1233 and described it as the method.
+
+Use instead: the **per-file `totals`** from the same call (`coverage / lines /
+hits / misses` are correct), or a local `trace.Trace` over the tests. The latter
+is what actually found a helper with no test at all.
+
 ## Notable finding for when you're back
 
 **scipy 1.18 breaks pickling of `PPoly`/`BPoly`/`CubicSpline`** (they cache the
