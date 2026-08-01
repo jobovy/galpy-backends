@@ -7784,3 +7784,48 @@ reading: backend type is stripped on every path for three independent reasons
 (astropy delegation, `numpy.array`/`numpy.dot` in the fallback, `@scalarDecorator`
 re-wrapping scalars). That unblocks PR-B, which retires the 5 streamTrack entries
 and is the first ledger movement since #1231.
+
+## PR-A2: the obvious sequencing is wrong — measured, not guessed
+
+Started PR-A2 with what looked like the natural first step: make
+`scalarDecorator` backend-preserving, since it is the layer that converts inputs
+via `numpy.array([arg])` and strips the framework before the wrapped function
+even runs. Verified first that a uniform `xp` formulation is byte-identical on
+numpy for float / float64 / 0-d ndarray / int64, so no data-guard was needed, and
+made the change.
+
+**It regressed both backends.**
+
+```
+                numpy    torch    jax
+before          98/98    98/98    98/98
+after change    98/98    97/98    94/98
+```
+
+New failures: `test_vrpmllpmbb_to_vxvyvz` (torch); `test_pmrapmdec_to_pmllpmbb`,
+`test_sky_to_customsky_jac`, `test_pmrapmdec_to_custom_againstlb`,
+`test_custom_to_pmrapmdec_againstlb` (jax). Cause is structural, and counting it
+made it obvious:
+
+```
+functions wrapped by @scalarDecorator : 18
+of those, backend-aware               :  0
+```
+
+The decorator is a **shared choke point for 18 coords functions, none of which
+are backend-aware**. Making it preserve the framework stops it from protecting
+them: backend arrays start flowing into numpy-only bodies. The conversion I was
+treating as a bug is currently load-bearing.
+
+Reverted; back to 98/98 on all three.
+
+**Revised plan for PR-A2 — opt-in, not big-bang.** Migrating all 18 at once is
+too large for one reviewable PR, and leaving the decorator alone blocks the sky
+path. The incremental route is an **opt-in marker**: the decorator preserves the
+framework only for functions explicitly marked backend-aware, and keeps today's
+numpy conversion for everything else. Then functions migrate one at a time,
+each flipping its own marker, with no flag day.
+
+Worth noting how cheap this was to discover: one edit, one test run, three
+numbers. I could equally have written the whole sky-leaf migration on top of a
+sequencing that was wrong from the first commit.
