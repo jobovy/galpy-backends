@@ -162,10 +162,15 @@ Consequence: the 5 streamTrack ledger entries stay blocked until it lands.
    keep the error, or **return NaN** mirroring your earlier `R2deriv` off-plane
    call. Recommend NaN. My part is verified correct and value-neutral: all six GL
    integrands vectorise bit-identically, eager and numpy unaffected.
-2. **Tolerance batch** (#171, ~24 entries). One call on torch-vs-numpy bounds;
-   magnitudes all measured and recorded.
-3. **`actionAngleVerticalInverse` scope** (48 entries). Refuses backends by
-   construction; moves only if that class is migrated.
+2. ~~**Tolerance batch** (#171, ~21 entries)~~ — **ANSWERED 2026-08-01.**
+   (A) shared `assert_physical_matches_natural` helper with a **relative** bound
+   (option 3), (B) **traced-only** loosening, numpy/eager untouched. Both
+   conditional on staying **stringent**: bounds set from the measured magnitude
+   with a small margin, never a blanket number — and *"a really big difference
+   is a red flag"*, i.e. investigate rather than absorb it into the tolerance.
+3. ~~**`actionAngleVerticalInverse` scope** (48 entries)~~ — **ANSWERED: stays
+   out of scope**, together with `actionAngleTorus` (reconfirmed 2026-08-01,
+   third time). Those entries are permanent; do not count them as remainder.
 
 ## How to check a codecov red (I got this wrong for four PRs)
 
