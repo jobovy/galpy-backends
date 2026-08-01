@@ -7960,3 +7960,53 @@ header; and the `[jax]` param that **cannot exist** on a CI shard because
 `backend-tests.yml` installs one framework per shard). `test_coords.py`
 contributed zero. That check is worth its cost: the previous PR's only real red
 appeared in exactly this pairing.
+
+## #1234 REAL RED — the migration's blast radius exceeds the PR
+
+`backend torch tests/test_orbit.py tests/test_orbits.py`: **9 FAILED**, all
+`test_integrate_{2d,3d}_diff{ro,zo,vo,solarmotion,allsolarparams}`. Reproduced
+locally in one run. Cause understood and **not a defect**:
+
+```
+tests/test_orbits.py:1218   numpy.fabs(...) / numpy.all(...) on a torch Tensor
+```
+
+`Orbit.ra()`, `.dec()`, `.ll()` etc. route through `lb_to_radec`/`radec_to_lb`.
+Before this PR those silently returned **numpy even under a forced backend**;
+now they correctly preserve the framework. That is the intended direction — an
+Orbit's sky coordinates being differentiable is the point — but `test_orbits.py`
+was written against the old behaviour.
+
+**Scale, counted before touching anything** (I am not repeating the blind
+`s.replace()` mistake):
+
+```
+test_integrate_3d_diffro            54 sky-accessor calls
+test_integrate_3d_diffzo            48
+test_integrate_3d_diffvo            42
+test_integrate_3d_diffsolarmotion   36
+test_integrate_3d_diffallsolarparams 30
+test_integrate_2d_diffro            24
+test_integrate_2d_diffvo            18
+test_integrate_2d_diffsolarmotion   12
+test_integrate_2d_diffallsolarparams 6
+                                   ---
+                                   270 call sites (~135 assertions)
+```
+
+So a coords-leaf PR now requires ~135 mechanical casts in `test_orbits.py`, a
+file it otherwise does not touch. **This is the fourth time this migration has
+been bigger than my estimate of it**, and the pattern is consistent: each leaf I
+make framework-preserving pushes the numpy boundary one layer outward, and the
+next layer's tests were written against the silent downgrade.
+
+I stopped rather than mass-editing 135 assertions at the end of a long stretch —
+that is exactly the condition under which I made the `s.replace()` error earlier.
+Next wake, with the count known: wrap the assertion expressions, verify on all
+three backends plus the exact shard, then re-push.
+
+Worth flagging for Jo: an alternative to consider is *not* marking `lb_to_radec`
+backendNative in this PR, which would keep Orbit's accessors numpy and shrink
+this to a coords-only change — at the cost of leaving streamTrack's sky-basis
+cov still blocked. I lean toward doing the test work, since the accessor
+behaviour change is the mission, but it is a legitimate fork.
