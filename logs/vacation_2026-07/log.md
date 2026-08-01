@@ -7829,3 +7829,46 @@ each flipping its own marker, with no flag day.
 Worth noting how cheap this was to discover: one edit, one test run, three
 numbers. I could equally have written the whole sky-leaf migration on top of a
 sequencing that was wrong from the first commit.
+
+## PR-A2 in progress (NOT green) — opt-in marker + lb_to_radec
+
+Branch `feat/coords-sky-leaves` off the merged develop, commit 7dcba9f1. No PR
+open: this is honestly mid-migration, and I am recording the measured state
+rather than a claim of completion.
+
+**Landed on the branch:**
+* `backendNative` marker. `scalarDecorator` keeps promoting scalars through
+  numpy by default — that conversion is load-bearing for the 17 wrapped
+  functions that are still numpy-only — and promotes through the resolved
+  namespace only for functions that opt in. Verified byte-identical on numpy for
+  float / float64 / 0-d ndarray / int64, and verified it is a **no-op** until
+  something is marked (98/98 on all three backends with the marker in but
+  unused). Placed next to `scalarDecorator`, its only consumer; checked
+  `galpy.backend` first and found no existing per-function marker
+  (`is_backend_compatible` is for galpy *objects*).
+* `lb_to_radec` dual path: numpy keeps astropy (untouched, byte-identical); a
+  backend array takes the rotation-matrix branch, now `xp`-native, with
+  `ra[ra<0] += 2pi` -> `xp.where`.
+
+**Measured:**
+
+```
+                 numpy    torch    jax
+after            98/98    95/98    92/98
+backend type     ndarray  Tensor   ArrayImpl     <- preserved, array AND scalar
+```
+
+**One bug of mine, found and fixed mid-wake:** I resolved the namespace but did
+not coerce the inputs onto it, so under a *forced* backend `xp` was torch while
+`l`/`b` were still numpy -> `cos(): argument 'input' must be Tensor`. That is
+the documented pattern (`coerce-under-forced-not-dataguard`) and I skipped the
+second half of it. Fixed with `promote_scalars`; torch went 93 -> 95.
+
+**Remaining, characterised not guessed:**
+* torch x3 — numpy reductions on a Tensor at *test assertion* sites, the #176
+  `as_numpy` class, same as #1233.
+* jax x6 — includes an in-place item assignment still present in a consumer or
+  test (`x[idx] = y` is not available on jax). Not in the function I migrated.
+
+Both are the boundary moving outward, which is what a leaf migration does. Next
+wake: fix those, then the last two `*_jac` helpers, then open the PR.
