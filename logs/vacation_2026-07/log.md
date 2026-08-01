@@ -8089,3 +8089,14 @@ the bare file.
 What IS established for that file: numpy 581/581 full-file, and `test_SkyCoord`
 (the only failing test) green on torch individually. CI is the authority for the
 shard and is running it now.
+
+**#1234 torch orbit shards GREEN on b7d3b446** — all five `--splits 5` groups
+plus the `energy_jacobi/from_name` shard pass. The group that was red is fixed.
+
+Note the resolution came from CI, not from me: my local check on that file timed
+out *because* I ran the whole file instead of a fifth of it, so the only evidence
+I could produce locally was numpy-full-file plus the single failing test on
+torch. CI's split shards answered it in the time my serial run was still going.
+The rule to keep is not "run more locally" but **match the shard's own
+`--splits/--group`** — otherwise the local reproduction is strictly slower than
+the thing it is checking.
