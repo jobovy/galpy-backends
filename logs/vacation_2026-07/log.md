@@ -7910,3 +7910,45 @@ explicitly — by coercing the input, or by dispatching on the actual type.
 
 Next: the last two `*_jac` helpers (`galsky_to_sky_jac`, `sky_to_customsky_jac`)
 now that `lb_to_radec` preserves the framework, then open the PR.
+
+## PR-A2 complete locally: all six *_jac helpers backend-agnostic
+
+Commits 33486d20 / d788b3ff / d742c6c7 on `feat/coords-sky-leaves`.
+
+```
+tests/test_coords.py        numpy 98/98   torch 98/98   jax 98/98
+numpy byte-identity         1200/1200 (decorators + lb_to_radec family)
+                            600/600   (galsky_to_sky_jac)
+                            1000/1000 (custom-sky family)
+torch / jax vs numpy        8.9e-16
+jax.jit                     traces
+grad-vs-FD                  7.4e-07 -> 1.1e-10
+```
+
+Shape of the finished migration: three shared pieces (`backendNative` opt-in
+marker, `scalarDecorator`, `degreeDecorator`), three leaves (`lb_to_radec`,
+`radec_to_custom`, `custom_to_radec`), two jac helpers, 30 test call sites cast.
+
+**The honest headline of this stretch is that I hit one bug class three times.**
+`xp` resolved from a *forced* backend while the data was still numpy —
+in `lb_to_radec` (`xp.cos` on a numpy `b`), in `degreeDecorator` (a torch scale
+against 17 functions that still return ndarray; torch fell 95 -> 62), and in
+`pmrapmdec_to_custom` (`xp.where` on a numpy `dec`). Each time I found it from a
+traceback rather than applying the rule up front.
+
+The invariant, stated so it is actionable rather than a moral:
+**`get_namespace()` reports the caller's intent, not the array's type.** Under a
+forced backend they differ. Every boundary must therefore either
+(a) coerce the data onto the resolved namespace (`promote_scalars`) when the
+function IS backend-native, or (b) dispatch on `is_backend_array(x)` when it is
+shared with functions that are not. Choosing (a) where (b) was needed is exactly
+the degreeDecorator regression.
+
+One new failure mode, caught cleanly: a scripted `s.replace()` matched the same
+line in a *second*, unmigrated function and broke **numpy** too. All-three-
+backends-failing is the signature of shared-behaviour damage rather than a
+backend bug, which pointed straight at it. Now verifying match counts before
+applying pattern edits — did that for the remaining three edits.
+
+Next: push, open the PR. It unblocks PR-B (streamTrack sky-basis cov), which is
+the first ledger movement since #1231.
