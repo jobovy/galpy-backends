@@ -8041,3 +8041,14 @@ the 9 tests    numpy 9/9    torch 9/9
 ```
 
 Full `tests/test_orbits.py` on torch running now before re-push.
+
+**Fix pushed (553e9014).** `tests/test_orbits.py` **115/115 on torch** — full
+file, not just the 9 targeted tests, so the 100 casts did not break anything
+adjacent. The 9 also pass on numpy.
+
+Estimate history for this one red, worth keeping because it is the pattern:
+270 (counted accessor calls) -> 100 (counted assertions, the real unit). Three
+estimates in this migration have now been wrong — twice too small, once too
+large. The cause is never optimism or pessimism, it is counting a **proxy**
+(reference counts, call sites, remembered cluster sizes) instead of running the
+thing that actually fails. Each probe that settled it cost seconds.
