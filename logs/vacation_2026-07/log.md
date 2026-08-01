@@ -7707,3 +7707,15 @@ data-dependent raise becomes impossible. So the design constraint is real but
 applies one level further out than the failing test shows.
 
 Reclassified: 73 of 101 are decisions or design-permanent, 28 are work.
+
+## Merge audit for #1233 (done ahead of green, so the merge is immediate)
+
+| check | finding |
+|---|---|
+| **if -> `xp.where` array-input class** | This is what the PR *is*. Four data-dependent guards converted (`R==0`, `r==0`, `D*cb==0`, `K*D==0`), each dividing by a **safe** denominator first so the dead branch cannot NaN-poison the gradient. Static branches (`len(args)`, `degree=`) deliberately left as Python — arity/flag, not data. |
+| **new module-level helpers** | **None.** The only added `def` is a local closure `_degree_scale` inside `XYZ_to_lbd_jac`; the other diff hit is `galcenrect_to_galcencyl_jac`'s signature gaining `*, xp=None`. Nothing general-ish was parked in a specific module. |
+| **duplication** | One borderline case, **considered and rejected**: `lbd_to_XYZ_jac` scales *columns* 0,1 by `_DEGTORAD` (inputs in degrees) and `XYZ_to_lbd_jac` scales *rows* 0,1 by `1/_DEGTORAD` (outputs in degrees). Same shape (~7 lines each: build a scale vector, broadcast-multiply), different axis and inverse factor. A shared helper would need to parameterize matrix, reference array, factor, axis and length — more indirection than the lines it saves, and it would obscure that one is an input convention and the other an output convention. Left separate; recording the reasoning so it is a decision, not an oversight. |
+| **shadowed/duplicated behaviour** | `as_numpy` wrapped at all 12 test call sites, including ones that still passed, so the trap cannot resurface as helpers 5-6 land. |
+| **byte-identity** | Verified per helper against the pre-edit implementation: 400/600/800/800 random states, plus the `R=0` and `r=0` pole edges. |
+
+Diff is 349 lines in `coords.py` (net +129) and 80 in `test_coords.py`.
