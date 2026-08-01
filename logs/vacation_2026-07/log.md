@@ -7670,3 +7670,17 @@ So it is a correctness fix, not an urgent one, and nothing published is
 meaningfully wrong. Worth saying plainly because "the Jacobian is wrong" reads as
 alarming without the magnitude; the number turns it into a routine cleanup with a
 known exact form. Posted to #1233.
+
+**New traced-matrix row: `test_coords.py` 98/98 on both backends, 0 fail,
+0 skip** (jax 17s, torch 7s). Measured after #1233's four migrations plus the new
+`galcenrect_to_XYZ_jac` test.
+
+Worth noting what makes this row different from the others in the matrix: it has
+**zero ledger entries and zero slow-skips**. Every other traced-green file in
+STATUS.md is green *with suppressions* — `test_potential` and `test_orbit` carry
+`-jit` xfails, `test_orbit` has two 1800s timeouts. `test_coords` is green with
+nothing hidden, which is the actual target state for the whole suite and a useful
+reference point for what "traced-green" should mean.
+
+It is also 20-100x faster than the other files, so it is cheap to keep in a
+per-push traced run rather than a nightly.

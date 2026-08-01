@@ -84,6 +84,11 @@ lines later. Sized by running the code, not grepping it: every one of the six
 | `test_sphericaldf.py` | 223 / 0 | 223 / 0 |
 | `test_diskdf.py`      | 129 / 0 (678s) | 129 / 0 (685s) |
 | `test_qdf.py`         | 0 fail | 56 / 0 (232s) |
+| `test_coords.py`      | 98 / 0 (17s) | 98 / 0 (7s) |
+
+`test_coords.py` is new (measured 2026-08-01, post-#1233): **zero** ledger
+entries and **zero** skips on either backend — the only file in the matrix that
+is clean with nothing suppressed, and the fastest by an order of magnitude.
 
 Every major suite runs traced on both backends with nothing failing, except
 `test_orbit` on jax: 2 are 1800s performance timeouts, 1 is a local-only signal
