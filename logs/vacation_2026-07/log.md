@@ -8208,3 +8208,67 @@ and its numpy baseline is already captured for all four bases plus the
 out-of-range NaN case — recorded *before* any edit, so the migration is checked
 against a reference rather than against itself. It retires the 5 streamTrack
 entries: the first ledger movement since #1231.
+
+---
+
+## 2026-08-01 — PR-B (#1235): streamTrack sky-frame `cov()` on backends
+
+**The guard was not the constraint.** `cov(basis=...)` raised
+`NotImplementedError` for anything but `galcenrect` on a backend track, and the
+error text called sky bases "a numpy-only follow-up". That framing was wrong:
+the guard was a *symptom*. The real pin was **20 `float()` casts** across
+`_cart_mean_at` (6) and `_analytical_jacobian` (14), which collapsed the traced
+state to Python floats before any coords helper saw it. Delete those and the
+sky bases work; the guard had nothing left to protect.
+
+The single most load-bearing discovery was that `_cart_mean_at` returned
+`numpy.array([float(self.x(tp)), ...])`. Every downstream link inherited numpy
+from that one line, so migrating `_analytical_jacobian` first — which is what I
+did — was inert until the mean was fixed. Worth remembering as a shape: when a
+chain is numpy-pinned, find the *source* of the pin before migrating the links.
+
+**Scope I declined.** `galsky_to_sky_jac` / `sky_to_customsky_jac` are
+scalar-only by construction (`radec[0,0]`, `zeros_like(reshape(cosa, ()))`,
+and an `_r` helper that reshapes every row entry to `()`). That is pre-existing,
+not something this PR introduced. I tried full batching, hit it, and backed out
+to a per-`tp` comprehension feeding **one** batched `(len,6,6)` matmul. The
+matmul still had to change — the old `out[k] = J @ out[k] @ J.T` is an in-place
+write, which is exactly what immutable backend arrays forbid. Batching those two
+helpers is a clean follow-up PR.
+
+**De-duplication caught mid-flight.** The rad→deg Jacobian row scaling already
+existed as a closure in `coords.XYZ_to_lbd_jac`, and I was about to write it
+three more times in `streamTrack`. Hoisted to `coords._scale_angle_rows` beside
+`_DEGTORAD` — a coords convention belongs in coords, not in a DF file — so there
+is one copy rather than four.
+
+**Verification.** numpy byte-identical, worst `|diff| = 0.000e+00`, all four
+bases plus the out-of-range NaN case, against a reference captured before any
+edit. numpy 143 passed (streamTrack+coords) and 244 passed (quantity); torch
+`test_streamTrack.py` **45/45**, up from 40/45.
+
+**Ledger 101 → 96.** All five were genuine, not stale — the baseline junit at
+`618fc6c9` shows 51 streamTrack-named torch tests passing and exactly 6 xfailing:
+these 5 plus `test_streamTrack_multi_parallel`, which stays (fork deadlock).
+First ledger movement since #1231.
+
+### Two process errors worth keeping
+
+1. **I read the wrong ledger for ~20 minutes.** A compound command
+   `cd <worktree> && (pytest ...) & grep ... tests/backend_xfail.txt` — the `&`
+   backgrounded the `cd`, so the `grep` ran in the *main* repo, whose ledger is
+   older and much larger. I concluded "46 streamTrack entries, 31 of them stale"
+   and started planning a large prune. The real file has 6. The tell was that
+   line numbers ran to 715 in a 323-line file, and I did not check it.
+   **`cd` in a compound command does not survive `&`.**
+
+2. **A `-k` subset is not the shard context.** Running the 5 quantity entries
+   with `-k` gave 7 failures ("did not return Quantity"). Running the *whole*
+   file gave 0 — `test_quantity.py` carries cross-test unit state, so selecting
+   a subset breaks tests that depend on earlier ones. I nearly filed this as a
+   regression. This is the recurring miss recorded in
+   `verify-exact-ci-shard-context`, and it cost a full re-run to disprove.
+
+Both errors shared a cause: trusting a cheap measurement whose *context* differed
+from the real one. The baseline CI junit artifact settled both questions
+authoritatively and for free — it is the exact shard, already run.
