@@ -8966,3 +8966,27 @@ from opposite directions.
 Pushed `d68fd1b7`; 15 passed locally across both backends. Also: pre-running
 `ruff format`/`isort` before committing made the commit land first try, after
 three aborted commits earlier today.
+
+### A wall of local failures that was entirely my own setup
+
+Ran a local replica of the `test_backend*.py` CI shard to double-check the
+calcaAJac fix, and got **1501 failed / 5033 passed** — against CI's 2 failed on
+the *identical* 6825 tests. Spent most of a wake narrowing it: A/B'd CI's
+`-W error::DeprecationWarning -W error::FutureWarning` (47 pass either way),
+then A/B'd xdist `-n 4 --dist loadfile` (47 pass). Neither was the cause.
+
+What gave it away was splitting the failures by parametrization: **718 `[jax]`
+vs 1 `[torch]`**. I had omitted `CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu`, so
+jax tried to use the TITAN Xp. I have a memory for precisely this, and had
+applied it to a torch run earlier in the same session.
+
+Re-dispatched correctly. Lesson folded back into
+[[jax-defaults-to-gpu-force-cpu]]: a wall of local failures CI does not show is
+far likelier to be a harness mistake than a real regression, and the
+parametrization split is the cheapest first check — lopsided by backend means
+environment, spread evenly means code. I had that backwards for an hour,
+treating an env artifact as a possible regression.
+
+Worth stating plainly since it cuts against the day's other finding: I have been
+right to distrust green checks, but distrust has to cut both ways. A red result
+from a harness I just hand-assembled deserves the same scepticism as a green one.
