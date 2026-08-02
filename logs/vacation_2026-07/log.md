@@ -9201,3 +9201,27 @@ Two PRs merged today (#1237, #1236) and one open (#1238). The develop branch has
 moved twice; #1238 needs no rebase — its files (ledger + conftest) are disjoint
 from both, and per [[dont-reflexively-rebase-disjoint-prs]] a stale base is
 harmless without a real conflict.
+
+### Next-PR investigation: first hypothesis was wrong
+
+Chasing `AttributeError: 'numpy.float64' object has no attribute 'to'` in
+`test_sphericaldf_method_inputAsQuantity`, I noticed `vmomentdensity` carries
+only `@backend_input("r")` while its sibling `dMdE` carries
+`@physical_conversion("massenergydensity", pop=True)`, and hypothesised that
+#1197 had replaced a `physical_conversion` decorator with the coercion one.
+
+**Git history refuted that**: `@backend_input("r")` was *added* by #1197 on top
+of a method that had no decorator at all. And a direct probe refuted it again —
+`vmomentdensity(1.1*ro*units.kpc, 0, 0)` returns a bare `float64` with no `.to`
+on **numpy as well as torch**, so the Quantity in the passing test comes from
+fixture/config state my probe did not reproduce.
+
+Confirmed the real asymmetry: the test **passes on numpy** (1 passed, 48s) and
+fails on torch. So it is a genuine torch-only regression, but the mechanism is
+not a missing decorator, and I do not yet know what it is. Next step is to
+reproduce under the test's own fixture rather than a hand-built df.
+
+Recording the dead end deliberately: two plausible-looking signals (an
+asymmetric decorator, a suggestive git blame) both pointed the wrong way, and
+the cheap probe is what caught it. Same discipline that caught the 1501-failure
+false alarm — check the hypothesis before building on it.
