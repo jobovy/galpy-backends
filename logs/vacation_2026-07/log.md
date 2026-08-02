@@ -9259,3 +9259,38 @@ Also worth noting the shape of the find: the failing construct is a
 data-dependent *index*, a close cousin of the data-dependent *branch* class the
 standing audit looks for. The audit greps for `if` on arrays; it would not have
 caught this.
+
+### Correction: the vmap root cause I gave last wake was wrong
+
+Last wake I said `xb[idx]` in `eval_ppoly` was "advanced indexing with a
+data-dependent tensor index, which functorch cannot batch", and named
+`xp.take` as the candidate fix. I flagged that I had not verified it. Good,
+because **the diagnosis was wrong**: a toy showed bare `xb[idx]` batches fine
+under plain `vmap`, as do `xp.clip` and `xp.searchsorted`.
+
+The real cause is the **composition**. `galpy/backend/autodiff.py` builds
+`torch.func.grad` + `torch.func.vmap` for the fE chain, and the construct fails
+only under `vmap(grad(f))` — not under plain `vmap`, not under `grad` alone.
+Isolated it op by op:
+
+| construct (under `vmap(grad(...))`) | result |
+|---|---|
+| `searchsorted` alone | OK |
+| index with a **constant** index | OK |
+| index with a **computed** index | **FAIL** |
+| `torch.take(xb, idx)` | OK (warns: no batching rule, falls back) |
+| `torch.index_select(xb, 0, idx)` | OK, no warning |
+
+So `take`/`index_select` *is* the right fix — but for a different reason than I
+gave, and it matters only under the composed transform. `index_select` avoids
+the fallback perf warning that `take` emits; choosing between portability
+(`xp.take`) and that warning is the open question for the PR.
+
+Two lessons, both already cost me time today: torch's vmap error message names
+three causes and the real one was none of them, and a composed transform has to
+be bisected layer by layer (`f`, `grad(f)`, `vmap(f)`, `vmap(grad(f))`) rather
+than reasoned about. Written up as [[vmap-grad-computed-index]].
+
+Also of note: the failing construct is a data-dependent **index**. The standing
+pre-merge audit greps for data-dependent **branches** (`if` on arrays) and would
+never have caught this.
