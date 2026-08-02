@@ -8744,3 +8744,33 @@ Revised plan: the tolerance PR covers **2** entries (both genuine, both passing
 comfortably under a relative bound), the 3 type leaks become a separate
 source-side fix, and 2 stale entries get pruned. That is a smaller and more
 honest PR than the "~21 entries" I quoted.
+
+### #1236: stop iterating, enumerate — and the blast radius was smaller than it looked
+
+Three CI rounds had each surfaced exactly one more shard, which is the wrong
+loop: an hour of queued CI per fact I could measure locally. Switched to running
+the affected shards under torch in one pass.
+
+**First, a wrong hypothesis corrected by measurement.** The three streamdf
+failures looked like streamdf's own `coords.*` calls returning Tensors, so I
+wrapped all 12 of them in `as_numpy`. **Nothing changed.** The Tensor actually
+enters through `self._progenitor.dist(**obskwargs)` — an *Orbit accessor*.
+`Orbit.dist()` -> `_lbd` -> `XYZ_to_lbd`, which this PR made backend-native. So
+the real surface is **six Orbit sky accessors** (`ll`, `bb`, `dist`, `pmll`,
+`pmbb`, `vlos`) changing return type under a forced backend — the same thing
+#1234 did for `ra`/`dec`/`ll` at the cost of 100 assertion casts. Reverted the
+12 wraps rather than leave churn from a disproved hypothesis in the diff.
+
+**Then the enumeration.** `test_quantity.py` on torch: **244 tests, 2 failed,
+both pre-existing** — the cross-framework `[jax]` artifact that does not exist
+in CI's single-framework shards, and the already-ledgered
+`test_streamgapdf_sample` tolerance. **Zero new failures.** That is a much
+better answer than the last wake's trajectory implied: the accessor type change
+does not ripple through the units layer at all.
+
+The lesson is not "the blast radius was large" — it is that **three sequential
+CI rounds told me less than one local pass**, and that a plausible causal story
+("streamdf calls coords, coords now returns Tensors") survived long enough to
+produce a 12-site edit before a five-minute rerun disproved it. Wrapping call
+sites *looked* like the systematic fix and was not; finding the actual producer
+was.
