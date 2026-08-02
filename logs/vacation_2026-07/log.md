@@ -8562,3 +8562,47 @@ follow-up's acceptance criteria. Byte-identity still holds on all 28 cases.
 
 Remaining: `pmllpmbb_to_pmrapmdec` (customsky only), then the caller sweep of
 the three `Orbits.py` sites before pushing.
+
+### Sky chain 5/5, and the regression test took three attempts to become real
+
+Fifth link (`pmllpmbb_to_pmrapmdec`) done — it was already half-migrated
+(`xp.where` for the pole) but still built the final rotation with `numpy.array`
+and divided in place. That contraction is a per-point rotation of (pmll, pmbb)
+by phi, so the backend path writes the two components out. Byte-identical
+across all 28 reference cases; all five links verified to return backend arrays.
+
+**Then I tried to write the regression test, and it passed with the bug
+reintroduced. Twice.** Each version was wrong for a different reason, and both
+reasons are properties of the system I did not know until I measured:
+
+1. **Forcing hides it.** Under `use(..., force=True)` the functions recover even
+   with the marker misplaced — `get_namespace` reports the caller's *intent*, so
+   the body takes its backend branch and `promote_scalars` re-coerces the numpy
+   args that `scalarDecorator` just produced. The marker is irrelevant when
+   forced.
+2. **Array inputs hide it.** `scalarDecorator` only rewrites its arguments when
+   they are 0-d: `if xp.asarray(args[0]).ndim == 0`. With arrays it passes them
+   straight through, so the marker is never consulted. It is *only* consulted
+   for scalars — which is exactly how `streamTrack` calls these, once per `tp`.
+
+So the discriminating configuration is **unforced + scalar**, and nothing else:
+
+| | scalar-in | array-in |
+|---|---|---|
+| marker correct | tuple of Tensor | Tensor |
+| marker misplaced | tuple of **float64** | Tensor |
+
+A third trap on the way: the first check asserted `is_backend_array(result)` on
+a call that returns a **tuple** for scalar input, so it read False either way and
+I briefly believed the fix had not worked at all. The check has to look at the
+elements.
+
+Final test: 20 cases (5 links x 2 backends x 2 shapes), and **verified by flip** —
+reintroducing the bad decorator order fails 2 of 20 with "dropped back to numpy
+(scalar, unforced)", restoring gives 20/20. A test that has not been watched to
+fail is a guess about what it measures; this one took three tries to stop being
+a guess.
+
+Caller sweep: `test_coords.py` + `test_streamTrack.py` **143 passed** on numpy.
+`test_orbit.py` still running (the 3 `Orbits.py` call sites are the #1234 ripple
+risk, and it is not pushing until that is clean).
