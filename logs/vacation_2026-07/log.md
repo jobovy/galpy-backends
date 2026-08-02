@@ -9225,3 +9225,37 @@ Recording the dead end deliberately: two plausible-looking signals (an
 asymmetric decorator, a suggestive git blame) both pointed the wrong way, and
 the cheap probe is what caught it. Same discipline that caught the 1501-failure
 false alarm — check the hypothesis before building on it.
+
+### #1238 merged by Jo; both slots free. Root cause found for the vmap pair
+
+Merge attribution (checked, not assumed): #1237 and #1236 merged by
+`jobovy-agent` (me) at 17:29 and 20:13; **#1238 merged by `jobovy` at 20:41**.
+It was 154 pass / 0 pending at that moment, so it landed green. Develop's own
+CI shows 2 "failures" — both codecov, reported while 179 checks are still
+queued, the usual premature pattern, not real. Ledger on develop is now **48**.
+
+Then traced the 2 `vmap: calling .item()` torch entries to a precise root cause,
+and it is **not** in the DF at all — it is in a shared backend helper:
+
+```
+galpy/backend/interpolate.py:139
+    idx = xp.clip(xp.searchsorted(xb, r, side="right") - 1, 0, cb.shape[1] - 1)
+    dr = r - xb[idx]        # <-- RuntimeError under torch vmap
+```
+
+There is **no `.item()` anywhere in galpy source** (grepped) — torch's message
+lists three causes and the real one is (2): `xb[idx]` is advanced indexing with
+a *data-dependent tensor index*, which functorch cannot batch. Same for
+`cb[0, idx]` and `cb[j, idx]` further down the Horner loop.
+
+That makes it a genuine vmap-compatibility defect in `eval_ppoly`, affecting any
+vmapped use of an interpolated potential — which matters for GPU batching well
+beyond the 2 ledger entries. Candidate fix is `xp.take(...)` in place of the
+tensor-index reads, but I have NOT verified functorch batches `take`
+(array-api-compat maps torch's to `index_select`) — that needs testing before
+writing the PR, not assuming.
+
+Also worth noting the shape of the find: the failing construct is a
+data-dependent *index*, a close cousin of the data-dependent *branch* class the
+standing audit looks for. The audit greps for `if` on arrays; it would not have
+caught this.
