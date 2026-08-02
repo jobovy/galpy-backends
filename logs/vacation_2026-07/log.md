@@ -9335,3 +9335,33 @@ So the failure depends on state accumulated earlier *within* the test, not on
 construction — which is why three successive hand-built probes have all come
 back clean. Next attempt should bisect the test body itself (it makes many
 calls before reaching vmomentdensity), not rebuild the fixture again.
+
+### Type-leak: five negative reproductions. Stopping the reconstruct approach.
+
+`test_sphericaldf_method_inputAsQuantity` fails under `--backend torch` with
+`AttributeError: 'numpy.float64' object has no attribute 'to'` at
+`dfh.vmomentdensity(1.1*ro*units.kpc, 0, 0).to(...)`. Five attempts to
+reproduce it outside the suite, each controlling for one more variable:
+
+| # | construction | result |
+|---|--------------|--------|
+| 1 | hand-built df, default config | float64 on **both** backends (config, not a bug) |
+| 2 | + `astropy-units=True` | **Quantity on both** |
+| 3 | + warm-up `__call__` then `dMdE` first (as the test does) | Quantity on both |
+| 4 | + the test's exact potential (no ro/vo on the potential) | Quantity on both |
+| 5 | + everything constructed INSIDE `use("torch", force=True)` | Quantity on both |
+
+So the isolated call is correct on torch. The real run genuinely returns
+`numpy.float64` at that same line, so the difference is something the suite does
+that a script cannot: the conftest forces the backend at session start, **before
+galpy is imported**, whereas every probe imports galpy first and forces after.
+That is a real distinction here (cf. [[conftest-no-module-level-galpy-import]]).
+
+**Stopping the reconstruct approach** — it has now cost five rounds and produced
+no signal. The next attempt instruments the *actual* failing run (a print/hook
+inside a real `--backend torch` session at that call site) rather than trying to
+rebuild the conditions. Recording the whole table so nobody, including me,
+re-runs any of these five.
+
+Meanwhile #1239 is healthy: 65 pass, 86 pending, only the usual premature
+codecov reds.
