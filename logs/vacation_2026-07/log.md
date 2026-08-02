@@ -8699,3 +8699,48 @@ rather than waiting for each one to surface.
 Fixups verified: `test_coords` 98/98 torch and 98 numpy; `test_orbit` +
 `test_coords` 675 passed / 4 skipped numpy; jax orbit sky accessors 8/8. Pushed
 as `72b087ea`; stale prior-SHA runs cancelled.
+
+### Tolerance batch re-classified — it is not one cluster, and I mis-described it
+
+Jo approved a shared relative-bound helper for "~13 `test_quantity` entries" on
+my description. Measuring the actual cluster in full-file torch context shows
+**10 ledger entries with four different causes**, and only two are tolerances:
+
+| entry | cause | ratio |
+|---|---|---|
+| `test_streamgapdf_sample` | tolerance | 1.31e-5 vs 1e-5 -> **1.3x** |
+| `test_sphericaldf_method_value` | tolerance | 1.9e-6 vs 1e-8 -> **190x** |
+| `test_sphericaldf_method_inputAsQuantity` | **type leak** (`numpy.float64` has no `.to`) | — |
+| `test_sphericaldf_sample_outputunits` | **type leak** (`ndarray` has no `.to_value`) | — |
+| `test_sphericaldf_densitymatch_issue677` | **unit error** | — |
+| 2x `test_quasiisothermaldf_*` | **stale** (pass now) | — |
+
+Three are numpy leaking into a Quantity path — a source-side coercion bug, not a
+bound. Applying the relative-bound helper to them would fix nothing. They do not
+belong in the tolerance PR.
+
+**The 190x entry, investigated rather than absorbed** (Jo: "a really big
+difference is a red flag"). The assertion is
+
+```python
+numpy.fabs(dfh.vmomentdensity(...).to(Msun/kpc**3).value
+           - dfh_nou.vmomentdensity(...) * mass_in_msol(vo, ro) / ro**3) < 1e-8
+```
+
+Measured: `mass_in_msol(220, 8) / 8**3 = 1.758e+08`, so the compared quantity is
+~1.8e8 Msun/kpc^3. An **absolute** 1e-8 bound on that demands **5.69e-17
+relative** — *below* float64 eps (2.22e-16). The test as written demands better
+than machine precision; it passed only because numpy reproduced the identical
+operation order. The observed 1.9e-6 absolute is **1.08e-14 relative**, about
+50 ULP, which is ordinary for a different summation order.
+
+So the red flag resolves benignly, and the rule worked exactly as intended: it
+forced me to find that the *bound* was unmeetable by construction rather than
+quietly widening it. This is the strongest evidence yet for option (3) — the
+shared relative helper — because it shows the absolute bound is not merely
+awkward, it is unsatisfiable in principle for large-magnitude quantities.
+
+Revised plan: the tolerance PR covers **2** entries (both genuine, both passing
+comfortably under a relative bound), the 3 type leaks become a separate
+source-side fix, and 2 stale entries get pruned. That is a smaller and more
+honest PR than the "~21 entries" I quoted.
