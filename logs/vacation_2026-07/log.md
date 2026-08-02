@@ -9054,3 +9054,35 @@ All three touch disjoint files, so none needs rebasing on the others:
 Holding at two open rather than three: the project is runner-constrained, and
 three concurrent PRs x ~150 checks would starve the queue that #1236 is already
 waiting on.
+
+### #1236: the only blocker was 2 lines
+
+All 152 build/backend checks passed; `all-clear` failed for one reason, visible
+only inside its log: `{"conclusion":"failure","name":"codecov/patch"}`. So the
+whole PR was gated on uncovered new lines, nothing else.
+
+Pinning down *which* lines took two dead ends worth recording. Running
+`coverage.py` locally is not an option — tracing **aborts the interpreter** on
+`jaxlib.xla_client` import (`Fatal Python error: Aborted`). And codecov's v2
+`compare` endpoint does carry per-line diff data, but with an inverted encoding:
+`coverage.head == 0` means HIT, `== 1` means MISS. I filtered for `0` first and
+got a confident list of 81 "uncovered" lines — which was the covered set. The
+tell was the count: `totals.head.patch` said 81 hits / 2 misses. Both folded
+into [[codecov-line-coverage-parse-is-bogus]].
+
+The real gap was 2 lines, and it was genuine untested logic rather than a
+coverage artifact. `vxvyvz_to_vrpmllpmbb` with **both** `XYZ=True` and
+`degree=True`: `degreeDecorator` has already converted args 3/4 deg->rad, which
+is wrong when they are X/Y rather than l/b, so the body undoes it — numpy in
+place (`l *= ...`), backend arrays out-of-place because they are immutable.
+Nothing in the suite passed both flags with backend arrays. Per-file patch
+coverage: coords.py 81/83, streamdf.py 10/10, Orbits.py 4/4.
+
+Added a test asserting `is_backend_array` (so a silent numpy fallback cannot
+pass it) plus a match to numpy at rtol=1e-13. Flip-verified: perturbing the
+backend branch by 1e-7 relative fails both jax and torch; restored byte-exact.
+Pushed `961934d5`.
+
+Parallel status: #1237 at 133 pass / 19 pending with codecov/project red — on a
+test-only PR that is most likely the stale-base phantom
+([[codecov-stale-base-892-suppression]]), to confirm once its coverage shards land.
