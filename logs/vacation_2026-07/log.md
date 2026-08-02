@@ -9086,3 +9086,25 @@ Pushed `961934d5`.
 Parallel status: #1237 at 133 pass / 19 pending with codecov/project red — on a
 test-only PR that is most likely the stale-base phantom
 ([[codecov-stale-base-892-suppression]]), to confirm once its coverage shards land.
+
+### #1237 MERGED — first result of running two PRs in parallel
+
+`03a81be7` on `feat/backends-develop`. 154 checks green, 0 pending. Audit before
+merging: tests-only (no source changes), exactly 14 rewritten `numpy.all(` sites
+plus two `numpy.fabs(` reflows from the multi-line restructures, no new helpers,
+nothing to place. `codecov/project` had gone red mid-run and cleared itself —
+the stale-base phantom again, not a real drop.
+
+Net effect: 14 assertions that passed when the values were wrong now actually
+check them, and one ledgered torch entry burns down.
+
+The parallelism paid immediately. #1237 went from opened to merged inside the
+window where #1236 was still grinding through its 1.5h coverage shards — under
+the old serial rule that whole window was spent polling.
+
+#1238 opened in the freed slot: the ledger scope split, 96 -> 48. Rebased onto
+the new develop head first. Verified on the shard it affects —
+`test_actionAngle.py --backend torch` shows the 24 torch `VerticalInverse`
+entries as `s` and the remaining ledger entries still as `x`.
+
+State: #1236 (coords, mid-matrix on `961934d5`) + #1238 (ledger split, fresh).
