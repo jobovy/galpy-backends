@@ -8839,3 +8839,46 @@ Now pushed: `d4e669a0` (streamdf boundary + calcaAJac fallback) and `729b2e67`
 perturbing the batched contraction by 1e-7 fails all 4 new cases). numpy
 regression on the affected streamdf tests: 4 passed. 7 stale prior-SHA runs
 cancelled to free runners.
+
+### The ledger has been overstating remaining work by 2×
+
+While waiting on #1236 CI I characterized the 34 ledgered torch `test_actionAngle`
+entries by running them with `--runxfail` and clustering the real failures.
+**24 of the 34 are `actionAngleVerticalInverse`** — the module Jo has twice
+declared permanently out of scope (most recently: "the actionAngleVerticalInverse
+and actionAngleTorus modules remain out of scope").
+
+Extending the count across the whole ledger:
+
+| backend   | total | out-of-scope | real burndown |
+|-----------|------:|-------------:|--------------:|
+| jax       |    43 |           24 |            19 |
+| jax-jit   |     5 |            0 |             5 |
+| torch     |    47 |           24 |            23 |
+| torch-jit |     1 |            0 |             1 |
+| **ALL**   |  **96** |       **48** |        **48** |
+
+All 48 are `VerticalInverse` (Torus is already excluded from the suite outright).
+So "ledger size = progress metric" has been reading 96 when the actual remaining
+work is 48 — every burndown number I have reported is inflated ~2×, and it will
+never converge to zero, because half of it is not work.
+
+**The fix already exists in the harness.** `tests/backend_skip.txt` is a
+conftest-driven skip list whose own docstring states the case exactly: *"a
+PERMANENT exclusion, not pending work, so they are NOT part of any burndown."*
+Verified the mechanism holds: the `backend_skip` block runs BEFORE the regen
+early-return, so skipped entries are skipped in regen mode too and cannot creep
+back into the ledger on the next regen. It is a `tests/` file, so no workflow
+edit is needed.
+
+One wrinkle: that list is currently documented (and its skip reason worded) for
+external-service/network/flaky tests. Moving VerticalInverse there means
+broadening it to "permanently out of scope" with two sub-categories. That is a
+doc/reason-string change in `conftest.py`, not a mechanism change.
+
+Queued as the next PR after #1236. The residual 10 real torch actionAngle
+entries cluster as: 4 Spherical `linear_angles`, 2 Vertical Harmonic
+`actionsFreqs`, 1 AdiabaticGrid outside-grid, 1 Adiabatic `linear_angles_cylsep`,
+1 StaeckelGrid circular-orbit Jr=0, and 1 genuine torch bug —
+`test_actionAngleVertical_linear_angles` raises `TypeError: all() received an
+invalid combination of arguments`.
