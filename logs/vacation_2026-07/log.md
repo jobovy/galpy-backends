@@ -9182,3 +9182,22 @@ method returns a bare float instead of a Quantity, i.e. the `physical_conversion
 wrapper is being lost somewhere in the backend path. Real source-side defect,
 and the same shape as the `'numpy.ndarray' has no attribute 'to_value'` and the
 two `UnitConversionError` entries. Those 4 are one coherent PR.
+
+### #1236 MERGED
+
+`6da07cff` on `feat/backends-develop`. 154 checks green. The starved
+`backend status report` job cleared on its own about an hour after I diagnosed
+it — no intervention needed, which vindicates not cancelling anything.
+
+What landed: the five-link coords sky chain is backend-native
+(`vxvyvz_to_vrpmllpmbb`, `XYZ_to_lbd`, `pmllpmbb_to_pmrapmdec`,
+`galcenrect_to_XYZ`, `galcenrect_to_vxvyvz`), with the numpy path byte-identical
+(0.000e+00 against a pre-edit reference on 4 bases + a NaN case). Plus the
+fallout it exposed: three masked in-place nudges in `Orbits.py` converted to
+`xp.where`, the `streamdf` accessor boundary, and the `calcaAJac` lb/coordFunc
+numpy fallback with its read-only fix.
+
+Two PRs merged today (#1237, #1236) and one open (#1238). The develop branch has
+moved twice; #1238 needs no rebase — its files (ledger + conftest) are disjoint
+from both, and per [[dont-reflexively-rebase-disjoint-prs]] a stale base is
+harmless without a real conflict.
