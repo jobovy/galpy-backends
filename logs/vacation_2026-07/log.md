@@ -8815,3 +8815,27 @@ supported surface inside an unrelated PR.
   function**, producing an IndentationError — the same mistake as #1234. Fixed
   by computing the module-level import block explicitly (last top-level import
   before the first `def`/`class`) instead of pattern-matching.
+
+### A process failure worth more than the code fix
+
+Jo asked "Nothing happening on CI?" — and the answer was that I had three
+verified streamdf fixes sitting **uncommitted in the worktree** while I kept
+iterating locally. `HEAD == origin`, so CI had nothing to run for an entire
+wake, and the 150/4 he was looking at was the *previous* commit's result.
+
+Two habits combined to produce that:
+
+1. **Batching.** I was holding fixes until the whole set was verified, instead
+   of pushing each verified piece and letting CI chew on it in parallel. The
+   marginal cost of a push is zero; the cost of not pushing is a wasted CI cycle
+   *and* an inaccurate picture for anyone watching.
+2. **Not checking the SHA after committing.** galpy's `ruff format` / `isort`
+   hooks rewrite files and then *fail* the commit — HEAD stays put and the
+   subsequent push says "Everything up-to-date". That happened three times this
+   day. Written up as [[precommit-hooks-reject-first-commit]].
+
+Now pushed: `d4e669a0` (streamdf boundary + calcaAJac fallback) and `729b2e67`
+(coverage for the batched rotation and `_extra_rot=False`, verified by flip —
+perturbing the batched contraction by 1e-7 fails all 4 new cases). numpy
+regression on the affected streamdf tests: 4 passed. 7 stale prior-SHA runs
+cancelled to free runners.
