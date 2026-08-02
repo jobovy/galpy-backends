@@ -8882,3 +8882,50 @@ entries cluster as: 4 Spherical `linear_angles`, 2 Vertical Harmonic
 1 StaeckelGrid circular-orbit Jr=0, and 1 genuine torch bug —
 `test_actionAngleVertical_linear_angles` raises `TypeError: all() received an
 invalid combination of arguments`.
+
+### 14 assertions that pass when the values are wrong
+
+Chasing the one genuine torch bug in the actionAngle cluster
+(`test_actionAngleVertical_linear_angles`, `TypeError: all() received an invalid
+combination of arguments`) led somewhere more interesting than a type leak.
+
+The failing line was:
+
+```python
+assert numpy.all(numpy.fabs(a - b)) < 1e-100
+```
+
+The `< 1e-100` is **outside** `numpy.all(...)`. So it computes `all(|a-b|)` —
+a *bool*, True iff every element is non-zero — and compares that to 1e-100.
+`True < 1e-100` is False and `False < 1e-100` is True, so the assertion passes
+**iff at least one element of |a-b| is exactly zero**. That is close to the
+opposite of the intent. Demonstrated:
+
+```
+d = [0.0, 5.0, 5.0]                     # one exact match, two wild errors
+numpy.all(fabs(d)) < 1e-16   ->  True   # as written: PASSES
+numpy.all(fabs(d)  < 1e-16)  ->  False  # as intended: fails
+```
+
+A repo-wide sweep found **14 instances**: 2 in `test_actionAngle.py`, 6 in
+`test_orbit.py`, 6 in `test_orbits.py` (all six `getOrbit` component checks in
+each). These are numpy-path defects — nothing to do with backends — and they
+have been green the whole time.
+
+Fixed all 14 by moving the comparison inside the `all()`. **All 4 affected tests
+still pass on numpy**, so the underlying values really do agree to <1e-16 /
+<1e-100; the assertions were just not checking it. The torch entry additionally
+needed `as_numpy` (bare `numpy.all(Tensor)` delegates to
+`Tensor.all(axis=, out=)`, which torch rejects) and now passes under torch too,
+burning down a ledger entry — verified real, since it failed with the TypeError
+before the fix.
+
+Parked as a patch rather than folded into #1236: the files are disjoint
+(`test_actionAngle`/`test_orbit`/`test_orbits` vs #1236's coords/streamdf), so it
+is a clean separate PR, and #1236's worktree was reverted to keep it from
+leaking (cf. [[stacked-pr-branch-surgery-leak]]).
+
+This is the second time this wake that a green check turned out to certify
+something narrower than its message claimed — the first being the ledger's
+out-of-scope half. Worth a standing habit: when a test is *already* green, that
+is not evidence the assertion is meaningful.
