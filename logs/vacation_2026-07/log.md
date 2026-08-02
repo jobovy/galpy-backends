@@ -9294,3 +9294,44 @@ than reasoned about. Written up as [[vmap-grad-computed-index]].
 Also of note: the failing construct is a data-dependent **index**. The standing
 pre-merge audit greps for data-dependent **branches** (`if` on arrays) and would
 never have caught this.
+
+### #1239 opened: eval_ppoly survives vmap(grad)
+
+Fixed and landed in one pass after Jo pointed out I had deferred a verified fix
+for no reason. `_take0()` over the 5 computed-index reads in `eval_ppoly`.
+Burns down `test_constantbeta_interpolatedpotentials_dens_directint` (torch).
+
+Two self-inflicted problems caught during the work, both worth recording:
+
+1. **I broke the numpy path.** First version routed numpy through `take` too.
+   `take` with a 0-d index returns a 0-d ARRAY where `a[idx]` returns a numpy
+   SCALAR — same value, same shape, different type — and
+   `interpSphericalPotential._revaluate` depends on the scalar, so it raised
+   `Concatenation operation is not implemented for NumPy arrays`. numpy now
+   takes `a[idx]` verbatim: byte-identical BY CONSTRUCTION, not by measurement.
+2. **My first flip-verification was invalid.** `git stash` removed the new test
+   along with the fix, so the run reported "150 deselected" — which I nearly
+   read as a pass. Reverting only the source file gives the real answer: fails
+   without, passes with.
+
+The sibling `..._beta` now fails LATER, for a different reason (torch-built
+`_Phimax` meeting numpy `r` in `_revaluate`). Distinct bug, left ledgered rather
+than folded in.
+
+### Type-leak investigation: negative result, recorded so I stop repeating it
+
+Third attempt at `test_sphericaldf_method_inputAsQuantity`
+(`'numpy.float64' has no attribute 'to'`). Established:
+
+* `sphericaldf.vmomentdensity` resolves to itself, wrapped exactly once (by
+  `@backend_input("r")`), with **no** `physical_conversion` anywhere in the
+  chain or its closure. So the Quantity is inherited from an inner decorated
+  call, not applied at this level.
+* With `astropy-units=True` in config, a hand-built `isotropicHernquistdf`
+  returns a **Quantity on BOTH numpy and torch**. The isolated reproduction does
+  not exhibit the bug.
+
+So the failure depends on state accumulated earlier *within* the test, not on
+construction — which is why three successive hand-built probes have all come
+back clean. Next attempt should bisect the test body itself (it makes many
+calls before reaching vmomentdensity), not rebuild the fixture again.
