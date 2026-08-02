@@ -8774,3 +8774,44 @@ CI rounds told me less than one local pass**, and that a plausible causal story
 produce a 12-site edit before a five-minute rerun disproved it. Wrapping call
 sites *looked* like the systematic fix and was not; finding the actual producer
 was.
+
+### #1236: the 3 streamdf regressions, and what each one actually was
+
+The census line in the CI job log had already named them; I re-derived it the
+expensive way first (see below). All three are the same family — downstream code
+that assumed numpy — but the *fix* differs per case, and two of the three are
+not in streamdf's own coords calls at all:
+
+1. **`test_bovy14_track_spread`** — `_ErrCovsLBScale` is built from
+   `self._progenitor.dist/vlos/pmll/pmbb(...)`, i.e. **Orbit sky accessors**, and
+   is then multiplied into numpy covariance arrays. Landed those four on numpy
+   at construction. FIXED.
+2. **`test_density_ll_wsampling`** — entirely **test-side**: a local `ll(apar)`
+   helper calls `coords` directly and returns a Tensor, compared against a numpy
+   `sample(lb=True)`. One `as_numpy` on the helper's return.
+3. **`test_calcaAJacLB`** — `calcaAJac` dispatches on `is_backend_array(xv)`, and
+   the backend path raises `NotImplementedError` for `lb=True`. Its own docstring
+   explains why: *"the stream track never uses them on the backend"*. That was
+   true only because `xv` used to arrive as numpy. Now it can arrive as a backend
+   array, so the honest fix is a **numpy fallback**, not an error: `lb`/
+   `coordFunc` land `xv` on numpy and take the finite-difference path, which is
+   exactly what happened before.
+
+Case 3 is the interesting one. A guard whose justification is "this can't
+happen" becomes a bug the moment an upstream migration makes it happen, and the
+right response is to restore the old behaviour rather than to widen the guard's
+supported surface inside an unrelated PR.
+
+**Two self-inflicted detours this wake, both already in my memories:**
+
+* I tried to enumerate the shard locally. It **deadlocked** — 0.0% CPU, 0s CPU
+  time, 60 min elapsed — on the `parallel_map` torch+fork hang, because several
+  `test_streamdf` tests build streamdfs with `multi=` beyond the one I
+  deselected. Meanwhile the CI job log had already printed
+  `153 passed, 3 xfail, 3 FAILED` — a complete census. Written up as
+  [[backend-shard-prints-full-census]].
+* Inserting the `as_numpy` import into `test_streamdf.py`, I anchored on
+  `from galpy.util import conversion, coords` and hit an occurrence **inside a
+  function**, producing an IndentationError — the same mistake as #1234. Fixed
+  by computing the module-level import block explicitly (last top-level import
+  before the first `def`/`class`) instead of pattern-matching.
