@@ -8660,3 +8660,42 @@ Worth noting what the caller sweep cost and bought: ~33 minutes of wall-clock on
 `Orbits.py` call sites are clean. #1234 skipped that step and paid four CI rounds
 for it. Running it locally is strictly cheaper than discovering it in CI, and it
 is free when there is nothing else gating.
+
+### #1236: two CI reds, both mine, neither reachable by my local gates
+
+`test_coords.py` on torch (9 tests) and `test_orbit_setup` on jax.
+
+**Red 1 split two ways.** Eight were `numpy.all(Tensor)` at assertion sites —
+the migration *working*, same as #1233/#1234 — fixed with 21 `as_numpy` wraps on
+the call results (matching the file's own idiom at line 295, one cast per call
+instead of three per test). The ninth was a genuine bug: `vxvyvz_to_vrpmllpmbb`'s
+backend branch called `xp.cos(l)` without `promote_scalars`, so a forced backend
+with numpy inputs hit `torch.cos(ndarray)`.
+
+**Red 2 was more interesting.** `Orbits._lbd` does `X[bad_indx] += 1e-15` behind
+`if True in bad_indx` — a masked in-place nudge to move the exact origin off
+itself. Harmless for years while `X` was numpy; fatal the moment
+`galcenrect_to_XYZ` became backend-native and returned an immutable jax array.
+I fixed it, re-ran, and a **sibling site** failed identically. At that point I
+stopped iterating and grepped: **three** sites (`_helioXYZ`, `_lbd`,
+`_lbdvrpmllpmbb`). All now `xp.where`, which is out-of-place *and* removes the
+data-dependent `if True in ...` branch, so it helps tracing too.
+
+**The real finding is about my gates, not the code.** I ran three things before
+pushing: numpy byte-identity, unforced backend-array type assertions, and numpy
+caller sweeps (including a 33-minute `test_orbit.py`). All three passed. **None
+of them runs the library forced onto a backend** — which is exactly how the
+all-backend shards run it, and exactly what both reds needed.
+`test_coords.py --backend torch` takes about ten seconds and would have caught
+the first outright. Added as a standing fourth gate.
+
+There is a pattern across this whole PR worth stating once: a migration that
+makes a function return backend arrays does not fail *in* that function — it
+fails in whatever downstream code was quietly mutating its result. Byte-identity
+cannot see that, because the numpy path is unchanged. The cheap systematic check
+is to grep callers for in-place mutation the moment a return type changes,
+rather than waiting for each one to surface.
+
+Fixups verified: `test_coords` 98/98 torch and 98 numpy; `test_orbit` +
+`test_coords` 675 passed / 4 skipped numpy; jax orbit sky accessors 8/8. Pushed
+as `72b087ea`; stale prior-SHA runs cancelled.
