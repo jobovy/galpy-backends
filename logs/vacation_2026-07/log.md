@@ -9150,3 +9150,35 @@ Ran the 10 non-actionAngle, non-streamdf torch entries under `--runxfail`
 
 The 4 type leaks form the natural next PR (source-side, one coherent fix). The
 2 vmap ones are a real defect worth its own investigation.
+
+### #1236 blocked >1h on a single queued job
+
+152 pass / 0 fail. 44 of 45 jobs in its `All-backend tests` run completed; the
+45th (`backend status report`, which just posts a sticky comment) has been
+`queued` since 16:20, assigned at 18:04, still unstarted at 19:16.
+
+Ruled out the obvious causes rather than assuming: the run is on the **correct
+head SHA** (`961934d5`), and there is **no stale same-branch run** holding a
+concurrency slot (every older `All-backend tests` run on the branch is
+completed). It is plain runner starvation — the repo's in-progress list is all
+`feat/ledger-scope-split` and post-merge `feat/backends-develop` work.
+
+Deliberately did not cancel anything this wake. Cancelling #1238's runs would
+re-queue identical work; cancelling the `feat/backends-develop` push runs risks
+[[cancel-push-run-leaves-cosmetic-red]]. If it is still stuck next wake I will
+cancel #1238's CI to prioritise the merge, and re-trigger it after — that
+reorders work rather than discarding it.
+
+Worth stating plainly for the parallel-PR experiment: two concurrent PRs is
+enough to starve a trailing job for over an hour on this runner budget. The
+throughput win is real (#1237 merged inside #1236's window), but it is not free.
+
+### Next-PR target located
+
+`test_sphericaldf_method_inputAsQuantity` fails at
+`dfh.vmomentdensity(1.1 * ro * units.kpc, 0, 0).to(...)` with
+`AttributeError: 'numpy.float64' object has no attribute 'to'` — under torch the
+method returns a bare float instead of a Quantity, i.e. the `physical_conversion`
+wrapper is being lost somewhere in the backend path. Real source-side defect,
+and the same shape as the `'numpy.ndarray' has no attribute 'to_value'` and the
+two `UnitConversionError` entries. Those 4 are one coherent PR.
