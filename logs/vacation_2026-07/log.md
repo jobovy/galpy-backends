@@ -8990,3 +8990,37 @@ treating an env artifact as a possible regression.
 Worth stating plainly since it cuts against the day's other finding: I have been
 right to distrust green checks, but distrust has to cut both ways. A red result
 from a harness I just hand-assembled deserves the same scepticism as a green one.
+
+### Next PR verified before opening, on a risk I nearly shipped blind
+
+#1236 sits at 149 pass / 3 pending (the two 1.5h `3.14 test_backend` coverage
+shards plus all-clear). Those are the shards that caught the calcaAJac bug, so
+no merge until they report.
+
+Used the wait to de-risk the queued vacuous-assertion patch, and found a real
+hazard in it. My rewrite turns
+
+    numpy.all(numpy.fabs(a - b)) < tol   ->   numpy.all(numpy.fabs(a - b) < tol)
+
+and 12 of the 14 sites are in `test_getOrbit`, which is **not ledgered** — it
+runs live under torch and jax. If the new form broke on Tensors, it would red
+the backend shards. Checked the primitive directly:
+
+```
+OLD  numpy.all(fabs(d))       < tol  ->  TypeError: all() received an invalid ...
+NEW  numpy.all(fabs(d)        < tol) ->  TypeError: all() received an invalid ...
+```
+
+Identical. Both call `numpy.all` on the same object, so the rewrite cannot be
+worse than what is already green — and since these sites ARE green under torch
+today, their values must already be numpy.
+
+That argument is airtight, and I still ran it end to end, because "essentially
+nil risk" reasoning is exactly what let the dead `@backendNative` marker through
+a week ago. Built the C extension in a fresh worktree off `feat/backends-develop`
+(not symlinked — cf. [[worktree-so-provenance]]) and ran `test_getOrbit` under
+`--backend torch` and `--backend jax`: both pass. Committed locally as
+`7b8301de`, unpushed, since #1236 is still the active PR.
+
+So the patch is now verified on numpy, torch, and jax, and the ledger split
+(96 → 48) is staged behind it.
