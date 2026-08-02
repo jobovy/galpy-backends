@@ -9108,3 +9108,45 @@ the new develop head first. Verified on the shard it affects —
 entries as `s` and the remaining ledger entries still as `x`.
 
 State: #1236 (coords, mid-matrix on `961934d5`) + #1238 (ledger split, fresh).
+
+### Parallelism has a cost, and it showed up
+
+#1236 reached **152 pass / 0 fail**, with only `all-clear` and `backend status
+report` pending. Every shard in the `All-backend tests` run succeeded; the run
+itself is **queued**, waiting for a runner to post a sticky comment. So the PR
+is substantively green and blocked on a cosmetic job.
+
+Cause: #1238's ~149 checks entered the queue ahead of it. Repo-wide queue depth
+was 15 (8 x ledger-split, 5 x feat/backends-develop post-merge, 1 x coords,
+1 x feat/backends). This is exactly the contention I flagged when declining to
+open a third PR — two is the right ceiling on this runner budget, and even two
+can stall a trailing job.
+
+Did NOT cancel anything to clear it. The `feat/backends-develop` runs are
+same-SHA push runs from the #1237 merge, and cancelling those blocks merges
+([[cancel-push-run-leaves-cosmetic-red.md]]); cancelling #1238's would just
+re-queue the same work.
+
+Re-audited #1236's grown diff (it gained the streamdf fix and the coverage
+test). Clean on all three dimensions. One self-inflicted scare: my
+"in-place mutation added?" grep flagged `l[l < 0.0] += 2.0 * numpy.pi`, and my
+guard-walker attributed it to line 339 under `if _APY_COORDS:`. That was the
+walker matching the FIRST occurrence in the file by string equality, not the
+diff's. The actual added occurrence is at 733, inside `if xp is numpy:` at 729,
+where it belongs for byte-identity. Line 339 is pre-existing and untouched.
+
+### Remaining torch ledger entries characterized (next PR planning)
+
+Ran the 10 non-actionAngle, non-streamdf torch entries under `--runxfail`
+(streamdf still deadlocks locally). Four distinct causes, not one:
+
+| cause | n | note |
+|---|--:|------|
+| astropy `UnitConversionError` | 2 | type leak |
+| `vmap: calling .item()` | 2 | **genuine backend bug** (constantbeta interpolated potentials) |
+| `numpy.float64`/`ndarray` lacks `.to`/`.to_value` | 2 | type leak |
+| unsatisfiable tolerance bound | 1 | `sphericaldf_method_value` — the 1e-8 ABSOLUTE bound needs 5.69e-17 relative, below float64 eps |
+| by-design | 1 | qdf unbound orbit |
+
+The 4 type leaks form the natural next PR (source-side, one coherent fix). The
+2 vmap ones are a real defect worth its own investigation.
