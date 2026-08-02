@@ -8637,3 +8637,26 @@ or `_extra_rot` (a bool kwarg). Duplication is net-negative: `_galcen_rot` /
 up a *second* such pair (`vxvyvz_to_vrpmllpmbb` and its inverse share an
 identical (3,3,N) build) — noted, not folded in, since the inverse is not in the
 sky chain.
+
+### #1236 OPENED — sky chain backend-native end to end
+
+All local gates green before pushing:
+
+| gate | result |
+|---|---|
+| numpy byte-identity | 28 cases, `0.000e+00` |
+| `test_orbit.py` numpy | 577 passed, 4 skipped |
+| `test_coords` + `test_streamTrack` numpy | 143 passed |
+| `test_quantity.py` numpy | 244 passed |
+| `test_streamTrack.py` torch | 45/45 |
+| new type-assertion tests | 20/20, verified by flip |
+
+The two acceptance criteria #1235 shipped with are met: unforced `sky`/`galsky`
+return backend arrays (5.6e-15 / 2.5e-15 vs numpy), and gradients work
+(AD vs FD 6.8e-10 / 2.1e-11).
+
+Worth noting what the caller sweep cost and bought: ~33 minutes of wall-clock on
+`test_orbit.py` alone, entirely while otherwise blocked, to confirm the three
+`Orbits.py` call sites are clean. #1234 skipped that step and paid four CI rounds
+for it. Running it locally is strictly cheaper than discovering it in CI, and it
+is free when there is nothing else gating.
