@@ -8606,3 +8606,34 @@ a guess.
 Caller sweep: `test_coords.py` + `test_streamTrack.py` **143 passed** on numpy.
 `test_orbit.py` still running (the 3 `Orbits.py` call sites are the #1234 ripple
 risk, and it is not pushing until that is clean).
+
+**Caller sweep clean.** `test_orbit.py` on numpy: **577 passed, 4 skipped** — so
+the three `Orbits.py` call sites (`XYZ_to_lbd` x1, `pmllpmbb_to_pmrapmdec` x2)
+produce no #1234-style ripple. Together with `test_coords.py` +
+`test_streamTrack.py` at 143 passed, the numpy side is clean before pushing.
+
+**Pre-push audit.** The in-place-op scan initially looked alarming — four
+unguarded `l *= 180/pi` / `l[l < 0] += 2pi` sites in the file — until I checked
+which function owned each:
+
+| line | function | `@backendNative` | guard |
+|---|---|---|---|
+| 339 | `radec_to_lb` | no | none needed — only ever sees numpy |
+| 590 | `vrpmllpmbb_to_vxvyvz` | no | none needed — only ever sees numpy |
+| 656 | `vxvyvz_to_vrpmllpmbb` | **yes** | `if xp is numpy:` |
+| 730 | `XYZ_to_lbd` | **yes** | `if xp is numpy:` |
+
+So every in-place op inside a backend-native function is guarded, and the two
+unguarded ones are pre-existing code in functions that are not backend-native.
+That distinction is the whole audit: an in-place op is only a bug if a backend
+array can reach it. Worth writing down because the naive grep flags all four and
+the wrong conclusion is "fix them all", which would churn two functions nobody
+asked me to migrate.
+
+Also: no added `if` branches on array **values** — they branch on `batched`
+(derived from `Xsun.ndim`, configuration), `xp is numpy` (namespace identity),
+or `_extra_rot` (a bool kwarg). Duplication is net-negative: `_galcen_rot` /
+`_apply_galcen_rot` were hoisted out of a copy-pasted pair, and the audit turned
+up a *second* such pair (`vxvyvz_to_vrpmllpmbb` and its inverse share an
+identical (3,3,N) build) — noted, not folded in, since the inverse is not in the
+sky chain.
