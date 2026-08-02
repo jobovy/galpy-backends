@@ -8929,3 +8929,40 @@ This is the second time this wake that a green check turned out to certify
 something narrower than its message claimed — the first being the ledger's
 out-of-scope half. Worth a standing habit: when a test is *already* green, that
 is not evidence the assertion is meaningful.
+
+### The guard I removed was right about something
+
+#1236's CI came back 149 pass / 2 real fails, both in `test_backend_streamdf.py`
+— a file this PR does not touch, failing because of a source change it does:
+
+```
+[jax]   ValueError: assignment destination is read-only
+[torch] Failed: DID NOT RAISE NotImplementedError
+```
+
+The torch one is the expected consequence: I replaced `calcaAJac`'s
+`NotImplementedError` for `lb=`/`coordFunc=` with a numpy fallback, and a test
+pinned the old contract with the comment *"they raise (not misbehave)"*. I
+changed a documented behaviour without updating the test that documented it —
+the audit checked for duplication and array-input branches but not for
+"does this PR invalidate an existing contract".
+
+The jax one is more interesting, and it vindicates the guard's instinct. My
+fallback did `xv = as_numpy(xv)`, and **jax's cast is read-only** while the FD
+path writes into `xv` in place. Worse, the in-place write is load-bearing: the
+`lb` coordFunc is `lambda x: lbCoordFunc(xv, ...)`, which ignores its argument
+and closes over `xv`, so mutating `xv` is the only way the FD perturbation
+reaches it. So the fallback was silently broken on jax — exactly the "misbehave"
+the raise existed to prevent. Fixed with `numpy.array(as_numpy(xv))`.
+
+I still think replacing the raise is correct: the stream track legitimately
+reaches `calcaAJac(lb=True)` with a backend `xv` now, and that call landed on
+numpy and worked before the coords migration. But I re-pointed the test at
+**matching numpy to rtol=1e-13** instead of at not-raising. A "does not raise"
+check is precisely what the read-only bug would have sailed through on torch —
+which is the same lesson as the 14 vacuous assertions, arriving twice in one day
+from opposite directions.
+
+Pushed `d68fd1b7`; 15 passed locally across both backends. Also: pre-running
+`ruff format`/`isort` before committing made the commit land first try, after
+three aborted commits earlier today.
