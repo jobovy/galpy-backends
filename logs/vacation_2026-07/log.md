@@ -9024,3 +9024,33 @@ a week ago. Built the C extension in a fresh worktree off `feat/backends-develop
 
 So the patch is now verified on numpy, torch, and jax, and the ledger split
 (96 → 48) is staged behind it.
+
+### Two PRs in parallel (Jo's call)
+
+Jo checked in: *"things move quite slow. So maybe work on two PRs at the same
+time if you can, two parallel ones."* Right diagnosis — the `3.14 test_backend*`
+coverage shards take ~1.5h, and serializing on them was burning most of each
+wake on polling. Folded into [[autonomous-vacation-mission]], superseding the
+"one PR at a time" line in the loop prompt.
+
+In flight now:
+
+| PR | what | state |
+|----|------|-------|
+| #1236 | coords sky chain backend-native (5 links) + streamdf/Orbits fallout | 149 pass, 3 pending |
+| #1237 | 14 assertions that compared a bool to the tolerance | just opened |
+
+Staged and committed locally but unpushed (`17248a46`), to go out the moment one
+of the above merges: the ledger scope split, 96 → 48 entries. Verified the moved
+`VerticalInverse` entries skip in **both** normal and regen mode, and that the
+nodeid appears in no other list, so the skip can only be coming from
+`backend_skip.txt` and cannot creep back on the next regen.
+
+All three touch disjoint files, so none needs rebasing on the others:
+- #1236: `coords.py`, `Orbits.py`, `streamdf.py`, `test_coords`, `test_backend_coords`, `test_streamdf`, `test_backend_streamdf`
+- #1237: `test_actionAngle.py`, `test_orbit.py`, `test_orbits.py`
+- staged: `backend_xfail.txt`, `backend_skip.txt`, `conftest.py`
+
+Holding at two open rather than three: the project is runner-constrained, and
+three concurrent PRs x ~150 checks would starve the queue that #1236 is already
+waiting on.
