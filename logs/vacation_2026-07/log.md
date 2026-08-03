@@ -9701,3 +9701,44 @@ detect.
 Sobering pattern: this is the third consecutive wake where my verification
 method, not the code, was the defect — batch-vs-full-file context, then Element
 truthiness, now dev-box-vs-shard. The code changes have been fine.
+
+### Spherical linear_angles: 118x–501x over bound — a RED FLAG, not a tolerance
+
+Measured the actionAngle cluster properly (bound is `10**toldar`, `toldar=-8.0`,
+so 1e-8):
+
+| test | observed | bound | over |
+|------|---------:|------:|-----:|
+| `Spherical_linear_angles` | 5.00909e-06 | 1e-8 | **501x** |
+| `Spherical_linear_angles_fixed_quad` | 5.00909e-06 | 1e-8 | **501x** |
+| `Spherical_noninclinedorbit_linear_angles` | 1.17986e-06 | 1e-8 | **118x** |
+| `Spherical_almostnoninclinedorbit_...` | 1.17986e-06 | 1e-8 | **118x** |
+
+Per Jo's standing rule — *"minor traced-only loosened tolerances are fine as
+long as they stay stringent; a really big difference is a red flag"* — 500x is
+emphatically a red flag. **These 4 are not tolerance candidates; they look like
+a real accuracy defect in the torch angle path** and must not be bundled into a
+tolerance PR.
+
+Two details that reinforce it: the deviations are IDENTICAL within each pair
+(5.00909e-06 twice, 1.17986e-06 twice), which points at one shared root cause
+rather than four independent numerical edges; and the magnitudes are ~1e-6,
+far above anything float64 round-off explains.
+
+Still unmeasured (messages truncate before the number): Vertical Harmonic
+freqs x2, Adiabatic cylsep, AdiabaticGrid outside-grid, StaeckelGrid Jr=0.
+
+Also: my first extraction of these numbers was **wrong** — the regex pulled the
+exponent out of `10.0**-10.0` and reported "observed -10.0". I caught it because
+the values were implausible, printed the raw messages instead, and only then
+read the bound from the source. Reporting parsed numbers from an unvalidated
+parser is the same failure family as the ElementTree truthiness bug two wakes
+ago.
+
+### #1241 status
+
+macOS 3.14 job failed at step 16, **"Install torus code"** — an external C++
+dependency install, not a test. My change is ledger-only and numpy runs ignore
+the ledger entirely, so it is unrelated infra flake. Could not re-run it yet
+("workflow run containing this job is already running"); retry once the run
+completes. torch group-3 (the shard that caught the timeout) still pending.
