@@ -9505,3 +9505,37 @@ saying exactly this and I nearly scrolled past it. Correct form is
 Had I not re-read, I would have reported the torch ledger as fully burned down.
 Same family as the `numpy.all(...) < tol` bug I fixed in #1237: a truthiness
 mistake that fails silently in the optimistic direction.
+
+### #1239 audit clean, waiting on the 1.5h shard
+
+149 pass / 4 pending / **0 fail** — codecov cleared once the coverage shards
+uploaded, confirming last wake's patch fix was the right read.
+
+Pre-merge audit:
+* **2 files**: `galpy/backend/interpolate.py` + its test. No source sprawl.
+* **if→xp.where class**: none introduced. The one new branch is `if xp is
+  numpy`, a namespace dispatch — static, not data-dependent.
+* **Duplication**: 5 tensor-index reads collapse onto one `_take0`.
+* **Placement**: checked `galpy/backend/*` for a pre-existing gather/take
+  helper — there is none, so a new one is warranted. It lives in
+  `interpolate.py`, which IS the backend-utility module, module-private next to
+  its only consumer. Per the standing directive I checked before creating.
+
+**Deliberately NOT expanding scope**: found a sibling tensor-index read at
+`galpy/backend/random.py:354` (`a_t[idx].reshape(...)`) with the same shape as
+the bug. It is in the RNG shim, which is probably not vmapped, but it is worth
+checking. Logged as follow-up rather than folded into #1239.
+
+**Deliberately NOT adding the un-ledger commits either.** #1239 fixes
+`test_constantbeta_interpolatedpotentials_dens_directint`, so un-ledgering it
+would normally belong in the same PR — but #1239 is 4 checks from green and a
+new commit restarts the 1.5h `3.14 test_backend` shard. A stale ledger entry is
+harmless (strict=False xfail is green either way), so the three stale entries go
+into one follow-up burndown PR instead:
+
+* `test_actionAngleVertical_linear_angles` (fixed by #1237, already on develop)
+* `test_analytic_ecc_rperi_rap` (already on develop)
+* `test_constantbeta_interpolatedpotentials_dens_directint` (needs #1239 merged first)
+
+That ordering matters: un-ledgering the third before #1239 lands would red the
+PR doing it.
