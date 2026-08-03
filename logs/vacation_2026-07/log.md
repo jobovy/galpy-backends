@@ -9806,3 +9806,32 @@ re-run *after* macOS goes green, not before.
 State: 152 pass, 1 pending (macOS re-run), 1 fail (all-clear, stale).
 All 6 torch orbit shards green including group-3 — the entry restore fixed the
 only real red.
+
+### #1241 MERGED — ledger 48 → 44
+
+`3677e19f` on `feat/backends-develop`, 154 checks green. The macOS
+"Install torus code" flake passed on re-run and `all-clear` re-evaluated itself
+once it did — no manual re-run needed after all.
+
+Audit: ledger-only, net −4 (5 removed, `test_analytic_ecc_rperi_rap` restored at
+a different line, which is why it shows as a −/+ pair). No code, so the
+if→xp.where / duplication / placement dimensions don't apply.
+
+**Ledger trajectory this stretch: 96 → 48 → 44.** The 96→48 was the
+out-of-scope `VerticalInverse` family moving to `backend_skip` (#1238); 48→44 is
+four genuinely-fixed tests being un-guarded. Both matter for the metric being
+honest, but only the second is burndown in the real sense.
+
+Four PRs merged in this run: #1237 (14 vacuous assertions), #1238 (scope split),
+#1239 (eval_ppoly under vmap(grad)), #1241 (stale un-ledger).
+
+### Standing state for the next wake
+
+* develop at `3677e19f`; no PR open.
+* Remaining torch ledger work is the actionAngle set, now measured and split
+  into four categories — 5 defects, 1 bad bound, 1 minor loosening, 2 borderline.
+  The borderline pair needs Jo's call before any tolerance PR.
+* The 5 defects are ordinary bug-fix work and can start without him:
+  `AdiabaticGrid_outsidegrid_c` (0.0111 vs 0.0064 — disagrees in the 2nd digit)
+  is the clearest and most likely to be a single root cause shared with the
+  4 Spherical angle entries.
