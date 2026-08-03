@@ -9968,3 +9968,36 @@ notes: read the docstrings first, and keep pytest's output in a file.
 I opened dissolved on inspection. The re-validation cost one command for the
 migration claims and closed six tasks — far better than discovering each one
 individually by starting work on it.
+
+### #1242: two more isfinite-only tests strengthened (3 total)
+
+Continued the audit by READING candidates rather than trusting the sweep.
+`test_adiabatic_actions_grad_jit` and `test_adiabatic_ecczmax_grad_jit` both
+jit a C-native custom_vjp gradient and asserted only finiteness:
+
+```python
+assert numpy.isfinite(float(f(*args)))
+assert numpy.all(numpy.isfinite(numpy.asarray(g(*args))))
+```
+
+Their own comment says the purpose is *"jax jit survival of the C-native
+custom_vjp gradient"* — but finiteness does not test survival. A jitted
+gradient that is **wrong but finite** passes. The property actually under test
+is that jit must not CHANGE the value, so they now compare against the EAGER
+result (rtol 1e-12 value, 1e-10 gradient). Flip-verified: a 1e-7 perturbation
+of the jitted gradient fails.
+
+That is a nice illustration of the whole class: the *comment* stated the right
+property, and the *assertion* checked a much weaker one. Reading the stated
+intent is what makes these findable.
+
+#1242 now carries 3 strengthened tests (Hessian-vs-FD, and 2 jit-vs-eager),
+each flip-verified. Deliberately NOT batching the rest: the classifier
+over-flagged three times (missed `<=`, then `==` on shapes/orders), and
+spot-checks found proper grad-vs-FD and structural tests among the flagged.
+Remaining candidates need individual reading.
+
+Also worth recording: roughly half the 54 initially-flagged tests are
+LEGITIMATE — a `..._grad_degenerate` test asserting a gradient is finite at a
+degenerate point is checking exactly the right property (no NaN poisoning).
+A blanket conversion would have made the suite worse.
