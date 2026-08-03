@@ -9907,3 +9907,21 @@ jax side is spread thin — 4 test_quantity, 3 test_diskdf, 3 test_actionAngle,
 2 test_orbit, 2 test_noninertial, 2 test_interp_potential, 1 each for
 SpiralArms/sphericaldf/qdf. No large coherent cluster left on either side; the
 remaining work is mostly one- and two-entry investigations.
+
+### Threw away the diagnostic, then had to re-run
+
+The first `test_interp_potential.py` jax characterisation failed and I could not
+say why: I had written `pytest ... >/dev/null 2>&1; python -c "parse junitxml"`,
+so when pytest died early the parse hit `FileNotFoundError` and pytest's own
+output — the only evidence — was gone.
+
+Re-ran keeping the log. It is progressing (12 results so far) but genuinely
+slow: this file builds large interpolation grids and jax eager grinds on them.
+That is consistent with 2 of this file's 4 ledger entries being `jax-jit`
+rather than eager.
+
+Rule for myself: **never `>/dev/null` a command whose output is the only
+diagnostic if a later step depends on it succeeding.** Redirect to a file
+instead — costs nothing, and the one time it matters it saves the whole run.
+
+Leaving the characterisation running rather than reporting numbers I do not have.
