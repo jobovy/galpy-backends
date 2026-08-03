@@ -9634,3 +9634,34 @@ run the WHOLE file and filter the junitxml — see
 [[handpicked-nodeid-batch-is-not-a-context]]. The three contexts (isolation,
 hand-picked batch, full file) give three different answers, and only the last
 matches CI. Two of my recent conclusions came from the wrong one.
+
+### actionAngle cluster characterised in FULL-file context: all numerical
+
+Ran the whole `test_actionAngle.py` under torch with `--runxfail` (209 tests,
+9 failures) and filtered for the ledgered nodeids. Every remaining AA entry
+still fails, and **all 9 are AssertionErrors** — no type leaks, no exceptions:
+
+| n | cause |
+|--:|-------|
+| 4 | `Maximum deviation from linear trend` (Spherical linear_angles) |
+| 2 | `Frequencies of harmonic oscillator` (Vertical Harmonic) |
+| 1 | `Radial angle ... linear trend` (Adiabatic cylsep) |
+| 1 | `actionAngleAdiabaticGrid evaluation outside grid` |
+| 1 | `Circular orbit in MWPotential does not have Jr=0` (StaeckelGrid) |
+
+**Negative control worth having**: for this file the hand-picked batch and the
+full file AGREE. So the discrepancy that burned me on `test_quantity` is
+specific to files carrying cross-test state, not a universal property of batch
+runs. That bounds how expensive the corrected method has to be — full-file runs
+are only mandatory for the four state-carrying files.
+
+Consequence for planning: the AA cluster is **entirely a numerical/tolerance
+question**, which is the batch Jo pre-approved with the "keep them stringent, a
+really big difference is a red flag" caveat. It is not a code-fix cluster, so it
+should not be scoped as one. Each of the 9 needs its actual deviation measured
+against its bound before deciding fix-vs-loosen — and per the earlier
+`vmomentdensity` finding, at least some galpy bounds are ABSOLUTE where they
+should be relative, which makes them unsatisfiable rather than merely tight.
+
+#1241 (ledger 43) at 63 pass / 89 pending; its `codecov/project` red is the
+stale-base phantom — the PR contains no source changes at all.
