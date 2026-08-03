@@ -9429,3 +9429,40 @@ entry description and any saved traceback are both stale by default.
 Net for the type-leak PR: the "4 type leaks" grouping is wrong. At least one of
 the four is not a type leak at all. The remaining three need re-characterising
 against current HEAD before any of them becomes a PR.
+
+### #1239 red: my own fix broke 3 streamTrack torch tests
+
+The 3.14 test_backend shard (1h34m) caught 3 real reds I introduced:
+
+```
+test_backend_streamTrack.py::test_fit_track_backend_prog_grad[torch]
+                            ::test_fit_track_backend_prog_grad_jax_torch_agree
+                            ::test_fit_track_endtoend_torch_prog_grad
+TypeError: take() got an unexpected keyword argument 'axis'
+```
+
+`eval_ppoly`'s `xp` is sometimes the **RAW torch module**, not
+array-api-compat's wrapper — and `torch.take()` has no `axis` kwarg (it
+flattens). My local verification used `array_api_compat.torch`, which does
+accept `axis`, so it never exercised the failing path. Measured properly this
+time, across every namespace this is actually called with:
+
+|                       | numpy | jax | compat-torch | raw torch |
+|-----------------------|-------|-----|--------------|-----------|
+| `take(a, i, axis=0)`  | OK    | OK  | OK           | **FAIL**  |
+| `index_select(a,0,i)` | --    | --  | OK           | OK        |
+
+Fixed by preferring `index_select` when the namespace has it, falling back to
+`take(axis=0)`. Verified: streamTrack + interpolate = **218 tests, 0 failures**
+(was 3). Pushed `75037755`.
+
+**This is the second time in one PR that my local check used a narrower
+namespace than production.** First it was numpy scalar-vs-0-d-array; now it is
+compat-torch vs raw torch. The lesson generalises: when touching a helper that
+takes `xp` as a parameter, enumerate which namespace objects actually reach it
+rather than testing with the one that is convenient to import. galpy passes at
+least three distinct things as `xp`.
+
+Also vindicates the shard: a 1.5h coverage job I have grumbled about all week
+is exactly what caught this, and neither my local runs nor the earlier CI
+shards did.
