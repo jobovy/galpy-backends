@@ -9925,3 +9925,46 @@ diagnostic if a later step depends on it succeeding.** Redirect to a file
 instead — costs nothing, and the one time it matters it saves the whole run.
 
 Leaving the characterisation running rather than reporting numbers I do not have.
+
+### Task-list re-validation against HEAD (Jo approved)
+
+The task list had drifted badly from the code. One command settled the biggest
+category — every "backend-migrate X" target is **already migrated**:
+
+| module | backend refs | `_reject_backend` |
+|--------|-------------:|------------------:|
+| MovingObjectPotential | 16 | 0 |
+| NonInertialFrameForce | 10 | 0 |
+| interpRZPotential | 21 | 0 |
+| ExpTruncNFWPotential | 12 | 0 |
+| FerrersPotential | 29 | 0 |
+| AnyAxisymmetricRazorThinDiskPotential | 15 | 0 |
+
+**Closed 6 tasks as stale**: #46, #61, #109, #112, #181 (targets already
+migrated) and #72 (the ledger now has **zero** `jax tests/test_potential.py`
+entries — that set no longer exists).
+
+**Corrected 4 counts** rather than closing them, since the work is real but
+mis-sized:
+
+| task | claimed | grep-indicated now |
+|------|--------:|-------------------:|
+| #125 Pdf.2 residual-slow | 5 | **28** |
+| #177 qdf sampler | 8 | 6 |
+| #178 parallel_map deadlock | 3 | 5 |
+| #175 Staeckel angle-wrap | 2 | 5 (loose grep, unconfirmed) |
+
+#125 is the outlier: ~6x bigger than scoped, and now the single largest
+deferred bucket. #158 (~5 jax-jit) is the one count that held exactly.
+
+Every corrected entry is labelled **grep-indicated, causes unconfirmed** — I am
+not repeating the mistake of treating a count as a characterisation.
+
+Opened **#186** to supersede #112 with the actual remaining work (2 jax +
+2 jax-jit interp_potential entries), carrying forward both hard-won procedural
+notes: read the docstrings first, and keep pytest's output in a file.
+
+**Why this mattered more than picking the next task**: three consecutive targets
+I opened dissolved on inspection. The re-validation cost one command for the
+migration claims and closed six tasks — far better than discovering each one
+individually by starting work on it.
