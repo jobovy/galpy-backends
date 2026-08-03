@@ -9539,3 +9539,37 @@ into one follow-up burndown PR instead:
 
 That ordering matters: un-ledgering the third before #1239 lands would red the
 PR doing it.
+
+### #1239 MERGED; #1241 opened (ledger 48 → 45)
+
+`d66a3038` on `feat/backends-develop`, 154 checks green. `eval_ppoly`'s
+coefficient reads now survive `vmap(grad)`, which unblocks vmapped use of
+interpolated potentials generally — not just the two ledger entries it was
+hiding behind.
+
+Opened **#1241**: drop 3 stale torch ledger entries, verified PASS with
+`--runxfail` at `d66a3038` before removal.
+
+| entry | fixed by |
+|---|---|
+| `test_actionAngleVertical_linear_angles` | #1237 |
+| `test_analytic_ecc_rperi_rap` | intervening work |
+| `test_constantbeta_interpolatedpotentials_dens_directint` | #1239 |
+
+**Why staleness accumulates here, structurally**: ledger entries are
+`xfail(strict=False)` — green whether they fail OR pass. That is deliberate (it
+stops flaky-slow jax tests redding the gate) but it means a fixed test stays
+ledgered silently and the burndown metric overstates remaining work. Combined
+with the finding two wakes ago that recorded *causes* also drift, neither the
+entry list nor its descriptions can be trusted without re-running.
+
+Ledger trajectory: 96 → 48 (#1238, out-of-scope family moved to
+`backend_skip`) → 45 (#1241).
+
+Also cleaned up: deleted the merged `feat/torch-typeleaks` remote branch.
+
+Still open as follow-ups, deliberately not folded into #1241:
+* the `Tensor.to()` cluster (3 entries) — `torch.Tensor.to()` shadowing astropy
+  `Quantity.to()`; coherent single-mechanism group, real PR candidate
+* `galpy/backend/random.py:354` — sibling `a_t[idx]` tensor-index read, same
+  shape as the #1239 bug; needs checking for vmap exposure
