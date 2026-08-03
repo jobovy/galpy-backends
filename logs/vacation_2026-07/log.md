@@ -9466,3 +9466,42 @@ least three distinct things as `xp`.
 Also vindicates the shard: a 1.5h coverage job I have grumbled about all week
 is exactly what caught this, and neither my local runs nor the earlier CI
 shards did.
+
+### Re-characterised all 20 non-streamdf torch ledger entries at HEAD
+
+Acting on [[reread-failure-before-investigating]] rather than trusting the
+groupings. Ran them with `--runxfail` against current HEAD:
+
+**3 are STALE and now pass** — un-ledger candidates:
+* `test_actionAngleVertical_linear_angles` (fixed by #1237's assertion work)
+* `test_analytic_ecc_rperi_rap`
+* `test_constantbeta_interpolatedpotentials_dens_directint` (fixed by #1239)
+
+**17 still fail**, and the type-leak cluster is NOT what I had recorded:
+
+| n | cause |
+|--:|-------|
+| 4 | `AssertionError: Maximum deviation from linear trend` (Spherical linear_angles) |
+| **3** | **`TypeError: to() received an invalid combination of arguments`** |
+| 2 | `AssertionError: Frequencies of harmonic oscillator` |
+| 1 | `AttributeError: 'numpy.ndarray' has no attribute 'to_value'` |
+| 1 each | AdiabaticGrid outside-grid, Adiabatic cylsep, StaeckelGrid Jr=0, qdf unbound (by design), qdf `__call__` returntype, `Concatenation ... NumPy arrays`, Plummer densitymatch |
+
+The 3-entry cluster is `torch.Tensor.to()` shadowing astropy `Quantity.to()` —
+the method returns a **Tensor**, so `.to(units.Msun/...)` hits Tensor.to()'s
+dtype/device signature. That is a coherent, single-mechanism group and a real
+PR candidate. It is NOT `'numpy.float64' has no attribute 'to'`, which is what
+I chased for three wakes and which no longer exists anywhere in the set.
+
+### A parsing bug that told me everything passed
+
+First read of the junit reported "NOW PASSING: 20" — i.e. the entire ledger
+cleared. It was my parser: `tc.find('failure') or tc.find('error')`. An
+ElementTree Element **with no children is falsy**, so real `<failure>` elements
+were discarded and every test looked green. Python printed a DeprecationWarning
+saying exactly this and I nearly scrolled past it. Correct form is
+`f = tc.find('failure');  if f is None: f = tc.find('error')`.
+
+Had I not re-read, I would have reported the torch ledger as fully burned down.
+Same family as the `numpy.all(...) < tol` bug I fixed in #1237: a truthiness
+mistake that fails silently in the optimistic direction.
