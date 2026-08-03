@@ -9365,3 +9365,30 @@ re-runs any of these five.
 
 Meanwhile #1239 is healthy: 65 pass, 86 pending, only the usual premature
 codecov reds.
+
+### #1239: codecov/patch was REAL this time
+
+Unlike the premature codecov reds I have been dismissing all week, #1239's
+`codecov/patch` was a genuine gap: interpolate.py at 72.7% (11 patch lines,
+3 missed). Checked instead of assuming, which was the right call.
+
+    102  return a[idx]                        <- _take0's numpy branch
+    171  return _take0(xp, cb[0], idx) * 0.0  <- the nu > k zero shortcut
+    181  term = _take0(xp, cb[j], idx) * fall <- the analytic 0 < nu <= k branch
+
+Lines 171/181 were already untested before this PR; touching them made them
+count as added, which is a fair prompt to finally cover them.
+
+Covered with a nu-parametrised test {0,1,2,3,5} against **scipy
+PPoly.derivative(nu)** as an independent reference (rtol 1e-10). With k==3,
+nu==5 exercises the zero shortcut and nu in {1,2,3} the falling-factorial
+branch; running on numpy is also what covers `_take0`'s numpy branch. Value
+checks against an external reference, not "did not raise".
+
+Confirmed the three lines are actually hit using `trace.Trace` rather than
+assuming the parametrisation reaches them — coverage.py is unusable here
+because it aborts the interpreter on jaxlib import. Pushed `71c61a43`.
+
+Worth noting against the week's pattern: I have been right to treat codecov as
+noisy, but "usually premature" is not "always wrong". Reading the actual missed
+lines cost one API call.
