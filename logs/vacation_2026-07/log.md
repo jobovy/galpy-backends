@@ -9573,3 +9573,37 @@ Still open as follow-ups, deliberately not folded into #1241:
   `Quantity.to()`; coherent single-mechanism group, real PR candidate
 * `galpy/backend/random.py:354` — sibling `a_t[idx]` tensor-index read, same
   shape as the #1239 bug; needs checking for vmap exposure
+
+### The "Tensor.to() cluster" was an artifact of my own test selection
+
+Ran the FULL `test_quantity.py` under torch (244 tests) — the context CI
+actually uses — and it contradicts the batch sweep I based two wakes of
+conclusions on. Same commit, same backend:
+
+| test | 20-nodeid batch | FULL file |
+|------|-----------------|-----------|
+| `..._returnunit` | FAIL | **PASS** |
+| `..._returntype` | FAIL | **PASS** |
+| `test_sphericaldf_method_inputAsQuantity` | `TypeError: to() received an invalid combination` | `AttributeError: 'numpy.float64' has no attribute 'to'` |
+
+So:
+
+* The **"Tensor.to() cluster, 3 entries, one mechanism"** I reported as the next
+  PR candidate **does not exist**. It was an artifact of running the ledgered
+  nodeids together as a hand-picked list.
+* My conclusion the wake before — that the `'numpy.float64'` signature was
+  *stale* — was also wrong, and wrong in the opposite direction. The original
+  signature is the real one.
+
+The same flawed method produced two contradictory wrong answers on consecutive
+days, and I reported both with confidence. `test_quantity.py` carries cross-test
+state, so a hand-picked nodeid list is a *novel* context, distinct from both
+isolation and the full file. Written up as
+[[handpicked-nodeid-batch-is-not-a-context]]: characterise by running the whole
+file and filtering the junitxml.
+
+Silver lining: the full-file run found 2 genuinely stale entries the batch had
+marked failing. #1241 grew to **45 → 43** (`b2a26b4c`), still cheap to add since
+it was only 13 checks in.
+
+Ledger trajectory: 96 → 48 (#1238) → 45 → 43 (#1241).
