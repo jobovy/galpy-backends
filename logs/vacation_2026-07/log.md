@@ -9789,3 +9789,20 @@ real red. 151 pass / 1 fail / 2 pending; the only fail is macOS 3.14 step 16
 "Install torus code", an external C++ dependency install unrelated to a
 ledger-only change. GitHub still refuses the job re-run ("workflow run
 containing this job is already running").
+
+### #1241: 152 pass, macOS flake re-running
+
+The macOS 3.14 red was step 16 **"Install torus code"** — the external C++
+Torus library install, not a test. Ledger-only change, and numpy runs ignore the
+ledger entirely, so it cannot be caused by this PR. Re-ran the job once the
+parent run completed (GitHub refuses `jobs/<id>/rerun` while the run is still
+in_progress — worth knowing, it 403s with "workflow run containing this job is
+already running").
+
+**One manual step will be needed**: `all-clear` already evaluated and recorded
+the macOS failure, so it stays red even after the job passes. It has to be
+re-run *after* macOS goes green, not before.
+
+State: 152 pass, 1 pending (macOS re-run), 1 fail (all-clear, stale).
+All 6 torch orbit shards green including group-3 — the entry restore fixed the
+only real red.
