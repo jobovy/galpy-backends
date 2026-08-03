@@ -9882,3 +9882,28 @@ Consequence: there is **no autonomous defect work** in this cluster. It reduces
 to Jo's tolerance call, plus optionally task #103 (opt-in off-grid fallback),
 which is a feature, not a fix. Abandoned the fix branch rather than manufacture
 a change.
+
+### Started task #112 immediately; its premise is stale too
+
+Picked `interpRZPotential` (2 jax entries, task #112 "backend-migrate
+interpRZPotential") and read the module first, per the new discipline. It is
+**already substantially migrated** — `get_namespace`, `is_backend_array`,
+`backend.interpolate`, with explicit backend branches in `_evaluate`/`_Rforce`.
+So #112's framing ("backend-migrate") is stale; the 2 remaining jax entries are
+specific failures *inside* a migrated module, not an unported module.
+
+Dispatched the full-file jax characterisation (whole file, not a `-k` subset).
+It has been running >10 min locally — `test_interp_potential.py` builds large
+interpolation grids and jax eager is slow on them, which is consistent with 2 of
+this file's entries being `jax-jit` rather than eager.
+
+Leaving it running rather than reporting a number I do not have.
+
+### Ledger composition after #1241 (44 entries)
+
+    jax 19 | jax-jit 5 | torch 19 | torch-jit 1
+
+jax side is spread thin — 4 test_quantity, 3 test_diskdf, 3 test_actionAngle,
+2 test_orbit, 2 test_noninertial, 2 test_interp_potential, 1 each for
+SpiralArms/sphericaldf/qdf. No large coherent cluster left on either side; the
+remaining work is mostly one- and two-entry investigations.
