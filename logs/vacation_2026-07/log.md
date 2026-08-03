@@ -9665,3 +9665,39 @@ should be relative, which makes them unsatisfiable rather than merely tight.
 
 #1241 (ledger 43) at 63 pass / 89 pending; its `codecov/project` red is the
 stale-base phantom — the PR contains no source changes at all.
+
+### The ledger file warned me about this test by name, and I didn't read it
+
+#1241's torch orbit shard went red. Not an assertion — a **Timeout**:
+
+```
++++ Timeout +++
+FAILED                                            [ 99%]
+Backend torch: 123 passed, 0 xfail (ledger), 12 deferred, 1 FAILED, 0 ERROR
+```
+
+on `test_analytic_ecc_rperi_rap`, one of the entries I un-ledgered. And
+`backend_xfail.txt` documents that exact test, by name:
+
+> Do NOT re-measure on a dev box instead. The backend matrix is python 3.14 and
+> shards test_orbit into 5 pytest-split groups; a local py3.13 unsplit run of
+> the same files disagreed on exactly one entry (test_analytic_ecc_rperi_rap:
+> passes locally, xfails in CI group g3).
+
+I did exactly the invalid measurement it names — a py3.13 unsplit local run —
+and never opened the file's header. Compounding it, my verification was
+**pass/fail only, never wall-clock**: the test runs >120s on a 72-core box and
+blows the per-test timeout inside CI's g3 group, so "it passed locally" was true
+and useless.
+
+Restored verbatim; ledger is **44**, not 43. The other four un-ledgers stand —
+ordinary assertion-level entries with no split-group sensitivity.
+
+Two habits added to [[verify-exact-ci-shard-context]]: read the ledger file's
+comments for the nodeid before touching it, and check RUNTIME as well as
+outcome, because a timeout is a failure mode that a passing local run cannot
+detect.
+
+Sobering pattern: this is the third consecutive wake where my verification
+method, not the code, was the defect — batch-vs-full-file context, then Element
+truthiness, now dev-box-vs-shard. The code changes have been fine.
