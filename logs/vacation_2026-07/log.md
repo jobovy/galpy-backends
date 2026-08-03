@@ -9835,3 +9835,50 @@ Four PRs merged in this run: #1237 (14 vacuous assertions), #1238 (scope split),
   `AdiabaticGrid_outsidegrid_c` (0.0111 vs 0.0064 — disagrees in the 2nd digit)
   is the clearest and most likely to be a single root cause shared with the
   4 Spherical angle entries.
+
+### THIRD reclassification: the "5 defects" are documented behaviour
+
+Started the defect work immediately (Jo: "why do you keep waiting for wakes").
+Reproduced `AdiabaticGrid_outsidegrid_c` cleanly in one shot:
+
+```
+numpy  exact Jr=0.01111777119  grid Jr=0.01111777119  diff=8.639e-16
+torch  exact Jr=0.01111777119  grid Jr=0.006408796907 diff=0.004709
+```
+
+Then read the class docstring, which I had never opened:
+
+> jax/torch input is supported and differentiable, but evaluates the
+> interpolation grid only (**no off-grid fallback**): inputs must lie within
+> the grid, whereas the numpy path falls back to a per-point solve off-grid.
+
+The test evaluates R=3.0 against Rmax=2.0 — deliberately off-grid. **By design,
+not a defect.** And task #103 already exists for the enhancement ("AA grid
+backend: opt-in off-grid fallback, default off for jax/torch").
+
+Checked the Spherical four before repeating the mistake. Also documented:
+
+> 50 matches scipy's adaptive quadrature to <1e-7 over the physical orbit range
+> ... only at pathological L/Lcirc<~1e-4 does scipy's own adaptive quad fail to
+> ~1e-5, an **irreducible quadrature-method difference** where higher order does
+> not help.
+
+That is the GL-vs-adaptive floor already in [[match-numpy-quadrature-floor]],
+whose guidance is to compare against a GOLD reference rather than scipy's
+adaptive answer. So these are a tolerance/reference question, not defects.
+
+**My classification of this cluster has now been wrong three times**: first "~9
+tolerance entries", then "5 defects + 1 bad bound + 1 minor + 2 borderline", now
+"mostly documented limitations". Each correction came from reading something in
+the repo I had not read — the class docstring, the module comment, and two wakes
+ago the `backend_xfail.txt` header.
+
+The pattern is specific and fixable: **I classify from test output before
+reading the code's own documentation.** Test output tells you what happened;
+the docstring tells you whether it was supposed to. Reading first would have
+cost minutes and saved three rounds.
+
+Consequence: there is **no autonomous defect work** in this cluster. It reduces
+to Jo's tolerance call, plus optionally task #103 (opt-in off-grid fallback),
+which is a feature, not a fix. Abandoned the fix branch rather than manufacture
+a change.
