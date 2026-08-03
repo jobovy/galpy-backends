@@ -9607,3 +9607,30 @@ marked failing. #1241 grew to **45 → 43** (`b2a26b4c`), still cheap to add sin
 it was only 13 checks in.
 
 Ledger trajectory: 96 → 48 (#1238) → 45 → 43 (#1241).
+
+### Sibling tensor-index site: checked, NOT the same bug
+
+Followed up on `galpy/backend/random.py:354` (`return a_t[idx].reshape(tshape)`),
+which I flagged during #1239's audit as structurally identical to the
+`vmap(grad)` bug.
+
+It is inside `random.choice(key, a, shape=None, p=None)`, whose index comes from
+`torch.randint(..., generator=g)` or `torch.multinomial(..., generator=g)`.
+Explicit-generator RNG is neither differentiable nor vmappable, so this code can
+never sit inside the `vmap(grad)` composition that broke `eval_ppoly`. The bare
+`a_t[idx]` is correct here and needs no change.
+
+Closing it as a non-issue **with the reason recorded**, rather than leaving an
+open "should probably check this" that would get re-investigated later. The
+grep-alike was real; the exposure is not.
+
+### Method correction now applied prospectively
+
+`#1241` stands at ledger **43** (96 → 48 → 43). Its CI is early (9/142).
+
+Note for the remaining burndown: every future characterisation of
+`test_quantity` / `test_diskdf` / `test_sphericaldf` / `test_qdf` entries must
+run the WHOLE file and filter the junitxml — see
+[[handpicked-nodeid-batch-is-not-a-context]]. The three contexts (isolation,
+hand-picked batch, full file) give three different answers, and only the last
+matches CI. Two of my recent conclusions came from the wrong one.
