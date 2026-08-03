@@ -9392,3 +9392,40 @@ because it aborts the interpreter on jaxlib import. Pushed `71c61a43`.
 Worth noting against the week's pattern: I have been right to treat codecov as
 noisy, but "usually premature" is not "always wrong". Reading the actual missed
 lines cost one API call.
+
+### I spent three wakes chasing a stale error signature
+
+Instrumented the real `--backend torch` session (pytest plugin wrapping
+`sphericaldf.vmomentdensity`, writing to a file because the conftest force-exit
+truncates stdout). The probe recorded **zero calls** — and re-reading the
+CURRENT failure explains why:
+
+```
+AssertionError: sphericaldf method vmomentdensity does not return correct Quantity
+  at tests/test_quantity.py:18044
+```
+
+It is an **AssertionError**, i.e. a NUMERICAL mismatch. Not the
+`AttributeError: 'numpy.float64' object has no attribute 'to'` I have been
+hunting since 2026-08-02. That signature came from an older commit; the entry
+description I kept working from was stale.
+
+So all five "negative reproductions" were negative because **there was nothing
+to reproduce** — the Quantity machinery works, which is exactly why every
+probe returned a Quantity. I read that as "cannot reproduce the bug" when it
+actually meant "this is not the bug".
+
+And the real failure is one I had already classified weeks ago: the
+`vmomentdensity` numerical entry whose 1e-8 ABSOLUTE bound demands ~5.69e-17
+relative — below float64 eps (2.22e-16). Unsatisfiable by construction. It was
+in my own tolerance-batch table the whole time.
+
+**Lesson, and it is an expensive one**: I anchored on a traceback captured days
+earlier and never re-read the failure after the tree moved underneath it. Cost:
+five probe rounds plus a plugin. Re-reading the current failure took one command.
+Before investigating any ledger entry, re-run it and read TODAY's error — the
+entry description and any saved traceback are both stale by default.
+
+Net for the type-leak PR: the "4 type leaks" grouping is wrong. At least one of
+the four is not a type leak at all. The remaining three need re-characterising
+against current HEAD before any of them becomes a PR.
