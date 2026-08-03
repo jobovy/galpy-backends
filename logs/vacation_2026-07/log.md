@@ -9742,3 +9742,50 @@ dependency install, not a test. My change is ledger-only and numpy runs ignore
 the ledger entirely, so it is unrelated infra flake. Could not re-run it yet
 ("workflow run containing this job is already running"); retry once the run
 completes. torch group-3 (the shard that caught the timeout) still pending.
+
+### All 9 actionAngle entries measured — they are FOUR different problems
+
+| test | observed | bound | over |
+|------|---------:|------:|-----:|
+| `AdiabaticGrid_outsidegrid_c` | 0.0047 | 1e-8 | **4.7e5x** |
+| `Spherical_linear_angles` (x2) | 5.01e-06 | 1e-8 | **501x** |
+| `StaeckelGrid_basicAndConserved` | 4.835e-14 | 1e-16 | **484x** |
+| `Spherical_noninclined...` (x2) | 1.18e-06 | 1e-8 | **118x** |
+| `Vertical_Harmonic_...` (x2) | 2.765e-09 | 1e-10 | **27.6x** |
+| `Adiabatic_linear_angles_cylsep` | 4.359e-08 | 1e-8 | **4.36x** |
+
+Lumping these as "the tolerance batch" would have been wrong. They are four
+distinct situations:
+
+**(a) Real defects — do NOT loosen.**
+`AdiabaticGrid_outsidegrid_c` compares `0.0111` against `0.0064` — the values
+disagree in the *second significant digit*, 4.7e5x over bound. That is a wrong
+answer, not a precision issue. The 4 Spherical entries sit at ~1e-6 absolute
+with pairwise-identical deviations, which points at one shared defect in the
+torch angle path.
+
+**(b) An unreasonable bound.** `StaeckelGrid` asserts Jr of a circular orbit is
+`< 1e-16` and observes `4.835e-14`. 1e-16 is "exactly zero" for a quadrature
+result; ~5e-14 is ordinary accumulated round-off. Same shape as the
+`vmomentdensity` bound that needed 5.69e-17 relative — the bound is the bug.
+This one is not backend-specific in nature.
+
+**(c) Genuinely minor.** `Adiabatic_linear_angles_cylsep` at 4.36x is exactly
+the "minor traced-only loosening" Jo pre-approved.
+
+**(d) Borderline.** The 2 Vertical Harmonic entries at 27.6x. Clearing them
+means 1e-10 -> 1e-8, a 100x bound change for a 27.6x miss. I would not do that
+unilaterally under the "a really big difference is a red flag" rule.
+
+So the honest proposal to Jo is 1 loosening (c), 1 bound-correction (b), and
+5 entries reclassified as **defects to fix** (a) — not the "~9 tolerance
+entries" I had been carrying. Nothing here is ready to become a tolerance PR
+without his call on (d).
+
+### #1241
+
+All 6 torch orbit shards now PASS including group-3 — the restore fixed the
+real red. 151 pass / 1 fail / 2 pending; the only fail is macOS 3.14 step 16
+"Install torus code", an external C++ dependency install unrelated to a
+ledger-only change. GitHub still refuses the job re-run ("workflow run
+containing this job is already running").
