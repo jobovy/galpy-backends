@@ -14194,3 +14194,42 @@ including ordinary ones. To keep the numpy path byte-identical outside the
 pathological band, gate it on |z| being small relative to R (the two schemes
 agree at the crossover: both give -2.10276 at z=1e-4). Threshold choice is the
 one judgement call; will state it explicitly.
+
+### 2026-08-04 — #1245 reworked (`6d29843f`): zforce fixed properly, scope cut on evidence
+
+Jo approved the rework. Implemented, and the scope **shrank** twice on measured
+evidence rather than on judgement.
+
+**Fixed and verified.** `_zforce` now resolves the width-|z| peak by
+substituting `a = R + |z| t`, with `(a-R)^2+z^2 == z^2 (1+t^2)` formed
+analytically. `Fz/(-2 pi Sigma)` = 0.99999999 at 1e-8 and 0.99994 down to
+1e-30, against `+1.9e-8` (wrong sign) before. numpy byte-identical at 15 values
+of z from 2.0 to 5.1e-5 and at z = 0 — the substitution is gated on
+`|z| < 1e-4 * R`. The test now asserts `Fz -> -2 pi Sigma(R)`, sign, and oddness
+in z, replacing the `Fz/z`-constant assertion that passed on garbage.
+
+**Trap 1 — the blanket application was wrong, and the code disproved it.** I
+transformed all six integrands mechanically (each taking `d2`, routed through
+the helper). `Rforce` then returned `-inf`. The reason is structural: `zforce`
+carries a `-4z` prefactor that cancels the `1/|z|` the peak contributes, so its
+substituted integrand is finite. `Rforce` and the second derivatives have no
+such prefactor; their near region relies on an odd-part cancellation about
+a = R, which the substitution evaluates as a difference of huge numbers.
+Reverted to the zforce-only change rather than ship a transformation I had just
+falsified.
+
+**Trap 2 — z == 0 fell into the substitution branch** and divided by |z|,
+NaN-poisoning even `surfdens` (which the new test calls to build the expected
+limit, so every assertion went nan at once). Guarded back onto the original
+path: z == 0 is the genuinely singular case and the callers special-case it.
+
+**Honest residue.** `Rforce`, `R2deriv`, `z2deriv` and `Rzderiv` still have the
+same unresolved peak and are inaccurate — though the clamp keeps them non-nan —
+in that band. Two measured examples: `R2deriv(0.5, 1e-8)` is `-inf`, and
+`Rforce` is finite but unvalidated there. The test states this explicitly
+instead of implying coverage via an isfinite sweep. Per-method treatment is a
+real follow-up, not a mechanical repeat.
+
+Also worth noting for the record: the first commit attempt was **rejected by
+ruff-format** and HEAD did not move; re-ran the test after its reformat and
+committed again, verifying the SHA changed.
