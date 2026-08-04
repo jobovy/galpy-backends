@@ -14027,3 +14027,48 @@ Incidental but worth recording: that worktree has **no libgalpy**, so my earlier
 pure Python/scipy either way, and the fails-without / passes-with flip is
 unaffected. (Checked rather than assumed; a missing C extension is normally
 exactly what fakes a pass.)
+
+### 2026-08-04 — AnyAxisym `1-m`: mechanism identified, fix designed (NOT implemented — queue is 3 deep)
+
+Having confirmed #1245 does not clear the AnyAxisym jit entries, traced what does
+cause them. Backend path in `AnyAxisymmetricRazorThinDiskPotential.py`:
+
+    _ELLIP_M_CAP = 1.0 - 1e-15
+    m = xp.minimum(4.0 * a * R / aRz, _ELLIP_M_CAP * xp.ones_like(aRz))
+
+and the AGM kernel in `galpy/backend/special/_fallback/elliptic.py`:
+
+    b = xp.sqrt(1.0 - ms)          # K(m) = pi / (2 AGM(1, sqrt(1-m)))
+
+**Two compounding problems, both about the complement `1 - m`.** The true
+complement is exactly
+
+    1 - m = ((a - R)^2 + z^2) / ((a + R)^2 + z^2)
+
+which at `z = 0, a -> R` goes to 0 like `(a-R)^2`. But (i) the cap pins it at
+1e-15 no matter how small it really is, and (ii) even without the cap,
+`1.0 - m` in floating point cancels catastrophically once `m` is within an ulp
+or so of 1. `K` diverges logarithmically, `K ~ -0.5 ln((1-m)/16)`, so an error in
+the complement is an error in `K`.
+
+The failing test evaluates at **(R,Z) = (0.500, 0.000)** — z = 0, i.e. precisely
+where the integrand sweeps `a` through `R` and the complement passes through 0.
+Strong circumstantial support, but I have **not** yet proven this is the cause;
+that is the first step when implementing.
+
+**Design (backend-only, so numpy stays byte-identical):**
+
+1. add a complement-taking entry point to the backend special layer —
+   `ellipkm1(xp, p)` with `p = 1 - m` — reusing `_agm_KE` but taking
+   `b = sqrt(p)` directly instead of `sqrt(1 - m)`;
+2. in the AnyAxisym backend integrands, form `p = ((a-R)^2 + z^2) / aRz`
+   algebraically (exact, no subtraction) and call the complement form, dropping
+   `_ELLIP_M_CAP` entirely.
+
+Deliberately **not** touching the numpy branch: it uses `scipy.special.ellipk(m)`
+and improving it would change numpy values, which the mission forbids without
+sign-off. scipy's own `ellipkm1` exists if Jo ever wants the numpy side improved
+too — worth raising separately, since the same precision loss is present there.
+
+Not implemented now: three PRs are already queued behind #1251 and the standing
+instruction is one PR at a time.
