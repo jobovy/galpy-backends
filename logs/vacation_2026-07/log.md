@@ -14835,3 +14835,46 @@ tail contains no ledgered entries (all nine sit at idx <= 124). So:
     the authoritative source anyway.
   * Real coverage of the tail will come from CI when the branch runs there,
     which is the correct place to get it.
+
+### 2026-08-04 — the polish also lifts the ANGLE floor by ~3-4 orders (Vertical/HO)
+
+Chasing the last real torch AA entry (`Adiabatic_linear_angles_cylsep`, 4.49e-7
+vs 1e-8) I re-read #1251's own comment on `_BACKEND_GL_ORDER`:
+
+    "For ANGLES the floor is ~2e-6 ... because the angle integrand keeps the
+     sqrt turning-point behaviour on a partial interval. 3.3e-6 at n=50,
+     1.8e-6 at n=200, 3.5e-6 at n=400 -- it does NOT converge, and round-off in
+     the larger node sum eventually makes it worse."
+
+"Non-convergent, round-off-limited" is the signature of the xmax residual I just
+removed, and that measurement predates the polish. Tested it -- same HO probe,
+angles vs galpy's own analytic actionAngleHarmonic, torch, with and without:
+
+    n=50    baseline 1.888e-09    polished 2.416e-13    ~7800x
+    n=200   baseline 2.974e-08    polished 6.848e-12    ~4300x
+    n=400   baseline 1.181e-07    polished 3.620e-11    ~3300x
+
+So the polish buys 3-4 orders on ANGLES too, not just frequencies. The
+growth-with-n survives in both (genuine round-off in the bigger node sum), but
+the floor it grows from is ~4 orders lower.
+
+**Caveat, stated because it limits the claim:** this is the harmonic oscillator
+through actionAngleVertical. #1251's ~2e-6 number was measured on
+`test_actionAngleSpherical_linear_angles` -- a different potential and a
+different integrand, and the HO is exactly integrable so GL flatters it. I have
+NOT shown the general angle floor moved to 1e-13. What I have shown is that the
+xmax residual was a major contributor for this case, so the comment's
+attribution ("keeps the sqrt turning-point behaviour on a partial interval") is
+at best incomplete.
+
+Consequences:
+  * The polish PR gets a second, independent line of evidence: it fixes angles
+    as well as frequencies, measured against an analytic reference.
+  * `_BACKEND_GL_ORDER`'s comment carries pre-polish numbers and will be stale
+    once this lands. Re-measuring it on the Spherical case is the honest
+    follow-up, and it may reopen the "raising the order cannot help" conclusion.
+    NOT doing that speculatively now -- it is a separate change to a constant
+    that #1251 deliberately set, and it needs the Spherical measurement first.
+  * Does not by itself clear `Adiabatic_linear_angles_cylsep` (4.49e-7): that one
+    is ledgered for BOTH jax and torch, so it is backend-wide, and the polish is
+    torch-only. jax already had an exact xmax.
