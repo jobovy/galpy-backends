@@ -14640,3 +14640,23 @@ none was ever going to move with the Newton polish:
 So the polish's reach is exactly the turning-point root-find, and the residue
 splits cleanly into one real accuracy gap, one by-design gap, and one
 exact-zero assertion. Good news for the diagnosis: nothing here contradicts it.
+
+### 2026-08-04 — closing a verification gap on the ellipkm1 branch (9e628142)
+
+I had tested that branch with `test_potential -k AnyAxisym` and
+`test_backend_special`, but never the potential's own backend file. Ran it:
+
+    tests/test_backend_anyaxisymdisk.py   numpy 17 passed   jax 17 passed
+                                          torch still running
+
+**numpy byte-identity verified by inspection, not asserted.** The file carries
+both a scipy numpy path and a `_bspecial` backend path. All nine
+`special.ellipk/ellipe(faRoveraRz)` scipy call sites are untouched, and
+`git diff c34abfa3 HEAD` on that file shows only `_bspecial.*` lines changing.
+So the numpy path is bit-for-bit unchanged; the ellipkm1 switch is
+backend-only. (The main-branch #1245 change is a different matter -- that one
+DOES change numpy values, deliberately, and was flagged as such when committed.)
+
+CI: #1252 has gone from 0 -> 2 -> 7 concurrent jobs, all `run-notebooks` and
+friends so far; the 142 backend/test jobs are still queued. #1245 and #1253
+untouched at 126 and 124 queued.
