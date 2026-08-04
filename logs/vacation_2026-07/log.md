@@ -14660,3 +14660,8 @@ DOES change numpy values, deliberately, and was flagged as such when committed.)
 CI: #1252 has gone from 0 -> 2 -> 7 concurrent jobs, all `run-notebooks` and
 friends so far; the 142 backend/test jobs are still queued. #1245 and #1253
 untouched at 126 and 124 queued.
+
+Update: torch finished too -- `test_backend_anyaxisymdisk.py` is **17/17 on all
+three backends**. Combined with the 174-green `test_backend_special.py` and the
+byte-identical numpy path, branch `fix/anyaxisym-backend-ellipkm1` (9e628142) is
+fully verified locally and ready to open the moment #1252 clears.
