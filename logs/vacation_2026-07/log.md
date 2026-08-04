@@ -14665,3 +14665,44 @@ Update: torch finished too -- `test_backend_anyaxisymdisk.py` is **17/17 on all
 three backends**. Combined with the 174-green `test_backend_special.py` and the
 byte-identical numpy path, branch `fix/anyaxisym-backend-ellipkm1` (9e628142) is
 fully verified locally and ready to open the moment #1252 clears.
+
+### 2026-08-04 — CORRECTION: the polish flips 2, not 6. The other 4 were stale.
+
+Baseline diff done (pre-fix worktree at c34abfa3, identical command). Comparing
+the two runs position-by-position over the first 130 tests, **exactly two
+positions differ**:
+
+    idx  test                                              baseline  after
+      8  Vertical_Harmonic_actionsFreqs                       F        .
+      9  Vertical_Harmonic_actionsFreqsAngles                 F        .
+     30  Spherical_linear_angles                              .        .
+     31  Spherical_linear_angles_fixed_quad                   .        .
+     32  Spherical_noninclinedorbit_linear_angles             .        .
+     33  Spherical_almostnoninclinedorbit_linear_angles       .        .
+     61  Adiabatic_linear_angles_cylsep                       F        F
+     69  AdiabaticGrid_outsidegrid_c                          F        F
+    124  StaeckelGrid_basicAndConserved_actions               F        F
+
+**The four Spherical entries pass WITHOUT the fix.** They are stale ledger
+entries, not flips. My write-up last wake said the opposite, and drew a
+confident inference from it -- "the satisfying part is the four Spherical
+entries flipping ... the mechanism predicting results it was not fitted to".
+That inference was wrong, and it was wrong in the most seductive direction:
+it made the diagnosis look more powerful than it is. The only reason it did not
+survive is that I ran the baseline instead of booking the number.
+
+Corrected accounting:
+  * **2 entries fixed by the polish** (Vertical Harmonic actionsFreqs[Angles]).
+  * **4 entries stale** -- already passing, removable regardless of this branch.
+  * **3 entries genuinely remain** (Adiabatic accuracy, off-grid by-design,
+    StaeckelGrid exact-zero) -- unchanged, as characterised earlier.
+  * **0 regressions**: every other position is identical between the runs, so
+    the 26 non-ledgered failures are pre-existing (this worktree has no
+    libgalpy.so). Tail beyond idx 130 still finishing, but all nine ledgered
+    entries sit at idx <= 124 and are therefore settled.
+
+Net ledger effect is still -6, but from two causes, and only 2 are attributable
+to the fix. The stale 4 belong in a ledger-hygiene commit, NOT in the polish
+PR's description -- claiming them there would overstate what the change does.
+This is the third time this fortnight that [[verify-burndown-flips-stash-rerun]]
+has caught an over-count; it earns its keep.
