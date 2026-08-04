@@ -30,15 +30,21 @@ probably retirable. `test_king_sigmar`'s true cost is being measured now by
 calling the test function directly (conftest's slow-skip has no env override, so
 a pytest run in that worktree just skips it).
 
-**Rebase state (corrected 2026-08-04).** An earlier version of this file claimed
-all branches "need no rebase". That was wrong for `feat/undefer-sphericaldf-jax`:
-its merge-base was `730657c3`, two merged PRs behind, so `git diff --stat` against
-develop showed **five** files — `planarPotential.py`, `test_quantity.py` and `+8`
-xfail entries — i.e. merging it would have *reverted* #1249 and #1250. Rebased to
-`0b75c27c`; the diff is now `backend_slow_skip.txt` alone, 27 removed / 0 added.
-`feat/diskdf-unphysical-draw` was branched from `1adbe26e` this session and is
-current. **Run `git diff --stat <branch> origin/feat/backends-develop` before
-opening anything — a stale base is invisible in the branch's own log.**
+**Rebase state (2026-08-04).** Both #1251 and `feat/undefer-sphericaldf-jax`
+were on stale bases (`730657c3`, two merged PRs behind). **This does *not* mean a
+merge would revert those PRs** — an earlier version of this file said so and was
+wrong. A squash-merge applies the branch's own `merge-base..HEAD` diff; with
+disjoint files a stale base is harmless to merge.
+
+What it *does* break is **codecov**, which diffs against the stale base commit.
+On #1251 that produced a phantom `-0.14%` (`Lines +310`, `Misses +64`) for a
+17-insertion diff, and since `codecov/project` gates `all-clear`, only a rebase
+could clear it. Both branches are now rebased onto `1adbe26e` (#1251 →
+`98c2d5c7`, un-defer → `7c4c2e8d`); `feat/diskdf-unphysical-draw` was cut from
+`1adbe26e` and was already current.
+
+Judge merge-safety with `git diff $(git merge-base HEAD origin/develop) HEAD`;
+judge codecov with the base commit named in its own comment. Different questions.
 
 **Gate note earned on #1249:** a failed `all-clear` can be a stale poll rather
 than a real blocker. Its log listed all 151 dependencies as `success` and still
