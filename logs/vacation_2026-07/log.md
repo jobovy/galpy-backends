@@ -13720,3 +13720,48 @@ in-backend ODE, which is a Track-D/streamspray-shaped change, not a df fix.
 
 Useful secondary result: **EXIT=0** — all three formerly-ledgered tests pass under
 `--jit` as well as eager, so the guard holds under trace.
+
+### 2026-08-04 — jax `test_SpiralArmsPotential::test_Rzderiv`: an expired tolerance band + FD amplification, not a defect
+
+Characterised the single jax `test_SpiralArmsPotential` ledger entry. It is **not
+a backend defect**, and the evidence is unusually clean.
+
+The test checks an analytic second derivative against a *finite-difference*
+reference:
+
+    assert_allclose(pot.Rzderiv(R, z, phi, t),
+                    -deriv(lambda x: pot.Rforce(R, x, phi, t), z, dx=dx),
+                    rtol=rtol)      # dx = 1e-8
+
+Measured at the exact failing parameters (`amp=13, N=7, alpha=0.1, r_ref=1.123,
+phi_ref=0.3, Rs=0.777, H=0.5, Cs=[4.5], omega=-3.4`; `R,z,phi,t =
+0.777, 0.333, pi/3, 0`):
+
+    analytic Rzderiv   jax vs numpy   1.914e-13
+    Rforce             jax vs numpy   1.912e-13
+    FD reference       jax vs numpy   3.033e-06     <-- the side that moves
+    analytic-vs-FD     numpy 5.122e-07   jax 2.521e-06
+
+The quantity under test agrees to **1.9e-13**. The reference is the noisy side:
+`dx=1e-8` amplifies a last-bit `Rforce` difference by ~1/dx = 1e8, which is
+exactly the 1e-13 -> 1e-6 jump observed. Any backend with a different (equally
+valid) summation order in the multi-term spiral sum lands here.
+
+**Second, independent finding — the tolerance band has expired.** The test does
+
+    _NUMPY_1_23 = (version > parse("1.22")) * (version < parse("1.27"))
+    rtol = _NUMPY_1_23 * 3e-6 + (1 - _NUMPY_1_23) * 1e-6
+
+with the comment "For testing 1.23/1.24/1.25/1.26 precision issues". On **numpy
+2.4.3** the second factor is False, so `_NUMPY_1_23 = 0` and the **tight** 1e-6
+branch applies. jax's 2.52e-6 would **pass** under the 3e-6 band galpy itself
+applies for numpy 1.23-1.26.
+
+Worth flagging to Jo beyond the backend question: with the band expired, the
+**numpy** path passes at 5.12e-7 against 1e-6 — only ~2x margin on an FD
+reference with dx=1e-8. That is a latent upstream fragility for numpy 2.x, not
+something the backend work introduced.
+
+Disposition: goes to the "needs Jo" tolerance bucket with the actionAngle items.
+Unlike those, the honest fix here is arguably upstream — either extend the
+version band past 1.27 or raise `dx` so the reference is not amplification-bound.
