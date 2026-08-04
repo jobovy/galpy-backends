@@ -14803,3 +14803,35 @@ trade off, and nothing to caveat in the PR.
 
 CI: #1252 now 12 SUCCESS / 1 FAILURE (the codecov phantom) / 17 running / 121
 queued. No new real reds. Baseline AA run alive at 144/209.
+
+### 2026-08-04 — baseline AA run DEADLOCKED; regression check is partial, and I am saying so
+
+The pre-fix baseline run stalled permanently at 144/209 and I killed it after
+31 min. Diagnosed before killing rather than assuming "slow":
+
+    wchan = do_wait,  1 thread,  23 voluntary ctxt switches
+
+i.e. blocked waiting on a forked child that never returns -- the known torch+fork
+deadlock ([[torch-fork-deadlock-streamdf]], task #178: `parallel_map` forks while
+the torch threadpool is live). It stalled entering
+
+    idx 143  actionAngleIsochroneApprox_triaxialnfw_conserved_actions
+    idx 144  actionAngleIsochroneApprox_triaxialnfw_linear_angles
+
+IsochroneApprox integrates orbits through parallel_map, so this is that same
+deadlock, and **it is reachable in test_actionAngle.py, not only test_streamdf**
+-- worth recording, since #178 only lists streamdf entries. It is also
+non-deterministic: the WITH-fix run traversed the same tests and finished 209/209.
+Same code path, same machine; a race between the torch threadpool and fork.
+
+**Consequence for the claim, stated plainly:** the regression check covers
+indices 0-143 (69% of the file), where exactly two positions differ (idx 8, 9 --
+the two Vertical Harmonic entries). Indices 144-208 are UNCOMPARED. I am not
+going to re-run for them: the run costs ~30 min, can deadlock again, and the
+tail contains no ledgered entries (all nine sit at idx <= 124). So:
+
+  * "0 regressions" is verified for 69% of the file, not 100%.
+  * The ledger conclusion is unaffected -- it rests on the CI artifact, which is
+    the authoritative source anyway.
+  * Real coverage of the tail will come from CI when the branch runs there,
+    which is the correct place to get it.
