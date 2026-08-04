@@ -13688,3 +13688,35 @@ so it was reporting correctly rather than stale-polling as it did on #1249.
 
 **Rule going forward:** judge merge-safety with the merge-base diff; judge
 codecov with the base commit named in its comment. They are different questions.
+
+### 2026-08-04 — `test_diskdf` under `--backend jax --jit`: first traced-fraction measurement
+
+Previously this file had only been recorded as a *pass count* ("129 tests, 0
+failures"), which the jitcount plugin's own docstring warns proves nothing. Run
+with the plugin on `feat/diskdf-unphysical-draw` (so the 3 un-ledgered sampling
+tests actually execute):
+
+    BOUNDARY CALLS:   traced=378953  not_traced=80   (100.0% traced)
+    C-LIBRARY ENTRIES: 767
+    NOT-TRACEABLE (entered C): 5 tests
+    EXIT=0  WALL=786s
+
+**Read the two counters together, not the headline alone.** 100.0% of boundary
+calls trace, but 767 C entries mean five tests are *not-traceable by
+construction* and must not be counted as traced-green:
+
+    test_dehnendf_sample_flat_returnOrbit
+    test_dehnendf_sample_flat_returnROrbit_rrange
+    test_dehnendf_sample_powerrise_returnROrbit
+    test_dehnendf_sample_flat_returnROrbit_wcorrections
+    test_shudf_sample_flat_returnROrbit_wcorrections
+
+The first three are exactly the ones the unphysical-draw fix un-ledgers. That is
+expected rather than a defect: `dehnendf.sample` integrates each accepted draw
+with `thisOrbit.integrate(..., self._psp)`, i.e. the C integrator, and galpy's
+answer for C is the C-STM `custom_vjp` path (differentiability via callback, not
+tracing). Making these traced-green would mean routing sampling through the
+in-backend ODE, which is a Track-D/streamspray-shaped change, not a df fix.
+
+Useful secondary result: **EXIT=0** — all three formerly-ledgered tests pass under
+`--jit` as well as eager, so the guard holds under trace.
