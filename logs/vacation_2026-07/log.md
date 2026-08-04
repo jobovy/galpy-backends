@@ -14465,3 +14465,43 @@ brentq). That is a small change in one shared helper -- next wake.
 **Do not "fix" this by loosening the tolerance.** 1e-10 is met by numpy (2.9e-15)
 and jax (1.3e-13) with 3-5 orders of margin. Loosening would hide a real torch
 defect, and per Jo's stringency directive a big loosening is a red flag.
+
+### 2026-08-04 (later) — CORRECTION to the entry above, and the actual root cause
+
+**The mechanism I wrote yesterday was wrong.** I said torch's negative residual
+drove `rad` below zero so the AD guard `xp.where(rad > 0, rad, ones)` substituted
+1 and deleted part of the Omega integrand. Checked it instead of asserting it:
+
+    exact xmax  resid=+1.39e-17  min(rad)=+8.977859e-08  nodes with rad<=0: 0/50
+    torch xmax  resid=-3.87e-14  min(rad)=+8.977851e-08  nodes with rad<=0: 0/50
+
+**Zero GL nodes hit the clip.** The clipped region is |t| < 2e-7 and the smallest
+n=50 node sits at t ~ 2.5e-4, three orders outside it. The guard never fires.
+
+The real mechanism is plainer: the residual shifts `rad` by a constant 2*resid at
+*every* node, and `1/sqrt(rad)` amplifies that most where rad is smallest. Feeding
+each xmax into a clean numpy quadrature reproduces both numbers exactly
+(torch xmax -> 6.364e-10, exact xmax -> 1.279e-13), which pins xmax as the whole
+story. It also kills my proposed fix: returning a bracket *endpoint* would make
+the residual bigger, not smaller.
+
+**Actual root cause: torch skips the Newton polish on the plain forward path.**
+`brentq` dispatches to per-backend files. `_jax/optimize.py` always does the
+Newton reparameterisation `x* = x0 - f(x0)/f'(x0)`. `_torch/optimize.py` has an
+early return -- when no parameter requires grad, it returns the raw bisection
+root, to keep an autograd graph off the output so callers can `.numpy()` it.
+Sound reason, but it overlooked that the Newton step also improves the **value**:
+bisection stops at the final bracket half-width (~1e-14), and the plain forward
+path is exactly what the test suite exercises.
+
+**Fix (`fix/torch-brentq-newton-polish`):** take the Newton step in that branch
+too, computing df/dx under a local `torch.enable_grad()` and detaching, so the
+result is polished *and* graph-free. Measured on the harmonic oscillator:
+
+    xmax rel.err  2.771e-13 -> 0.000e+00   (residual -3.87e-14 -> +1.39e-17)
+    Omega rel.err 6.364e-10 -> 1.279e-13   (jax: 1.279e-13 -- identical)
+    J     rel.err 4.4e-16 (unchanged)      returns graph-free: yes
+
+torch now matches jax to the digit. Whether the ledger entries flip is measuring
+now -- this touches every backend brentq consumer, so the full torch
+test_actionAngle run is the real check, not the two harmonic tests.
