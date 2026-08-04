@@ -14150,3 +14150,47 @@ clamp — m > 1 genuinely does produce nan — **and** force the quadrature to
 subdivide where the integrand's mass is, e.g. explicit break points at
 `R +/- c*z`, mirroring the graded panels the backend path already uses. The test
 must assert `Fz -> -2 pi Sigma(R)`, not `Fz/z` constant.
+
+### 2026-08-04 — #1245 rework: fix direction VERIFIED numerically (Jo approved the rework)
+
+Two candidate fixes measured on the real integrand at R=0.5 (values below omit
+the `amp` factor -- compare across z, not to -2 pi Sigma directly).
+
+**(a) Break points at `R +- k|z|` — necessary but still not sufficient.**
+
+     z       current(points=[R])   with R+-k|z|
+    1e-6      +1.91e-06  WRONG      -2.10295  ok
+    1e-8      +1.91e-08  WRONG      -2.10295  ok
+    1e-12     +1.91e-12  WRONG      -2.09773  ok
+    1e-16     +1.91e-16  WRONG      -2.14190  ~2% off
+    1e-20     +1.91e-20  WRONG      +1.91e-20 WRONG (points collapse to {R})
+
+Below ~eps*R (~1e-16) you cannot place a break point within an ulp of R, so the
+break-point set degenerates back to `[R]`.
+
+**(b) Change of variables `a = R + |z| t` — correct at every scale.** The point
+is that `(a-R)^2 + z^2 == z^2 (1 + t^2)` is formed **analytically**, never by
+subtraction, so there is no cancellation however small z is; and `da = |z| dt`
+cancels the `-4z` prefactor, making the z->0 limit manifestly finite.
+
+     z          substitution     ratio to z=1e-4
+    1e-8        -2.1029522        1.0000910
+    1e-16       -2.1028183        1.0000274
+    1e-20       -2.1028183        1.0000274
+    1e-30       -2.1028183        1.0000274
+    1e-100      -2.1028183        1.0000274
+    4.94e-324   -inf              z*z underflows to 0
+
+One trap of my own on the way: I first derived the t-limits by round-tripping
+through `a` (`(lo-R)/az`), and `R +- 1e-26` collapses to `R`, so the near region
+got zero width and 1e-30 still failed. Taking the t-limits directly
+(`t in [-T, T]`, clipped only by `R/|z|`) fixes it — the substituted integrand
+never needs `a` to differ from `R` numerically, because the singular factor is
+carried exactly by `z^2(1+t^2)`.
+
+**Open design point for the implementation:** applying the substitution
+unconditionally would change quadrature — and therefore values — for *all* z,
+including ordinary ones. To keep the numpy path byte-identical outside the
+pathological band, gate it on |z| being small relative to R (the two schemes
+agree at the crossover: both give -2.10276 at z=1e-4). Threshold choice is the
+one judgement call; will state it explicitly.
