@@ -14103,3 +14103,50 @@ addresses exactly this. Still not implemented — queue is three deep.
 Note the reference used here, `scipy.special.ellipkm1`, is the same function that
 would fix the **numpy** path's identical precision loss. That remains out of
 scope without Jo's sign-off, since it would change numpy values.
+
+### 2026-08-04 — MY ERROR: #1245 re-drafted. I shipped a known-bad fix+test to main without reading the PR's own comments
+
+Jo asked whether the #1245 comment ("The clamp is necessary but not sufficient,
+and the regression test I wrote asserts the wrong physics") is now irrelevant.
+**It is not. It is entirely correct, and I acted against it.**
+
+I treated #1245's draft status as "parked pending Jo's tolerance call", cherry-
+picked it onto main, undrafted it and started full CI — **without reading the
+discussion on the PR**, where I had already documented (2026-08-03) that I had
+caught a real flaw and was reworking it. Re-drafted now, before anything merged.
+
+Re-verified the claim myself rather than trusting the old comment. At R=0.5,
+Sigma=0.29676545, so -2*pi*Sigma = -1.86463229:
+
+     |z|          Fz                  Fz/(-2 pi Sigma)   Fz/z
+    1.0e-05  -1.864615319820e+00       0.999991          -186461.5
+    3.0e-06  -1.864627198354e+00       0.999997          -621542.4
+    1.0e-06   1.697235994046e-06      -0.000001                1.697   <- garbage
+    1.0e-07  -1.864632119332e+00       1.000000        -18646321.2   <- correct
+    1.0e-08   1.696897011969e-08      -0.000000                1.697   <- garbage
+    1.0e-20   1.696897576253e-20      -0.000000                1.697   <- garbage
+
+For a razor-thin disk `Fz(z->0+) -> -2 pi Sigma(R)`, a **constant**. Below ~1e-6
+scipy's adaptive quad misses the width-`z` peak of `1/((a-R)^2+z^2)` and returns
+~0 (wrong sign, proportional to z). It is not even a clean cutoff — 1e-7 is
+correct while 1e-6 and 1e-8 are not, so the whole band is unreliable.
+
+**The test passes for the wrong reason.** It asserts `Fz/z` constant for
+z <= 1e-8; that holds at ~1.697 only because those points are garbage. Correct
+physics gives -1.8646/z, varying by orders of magnitude, and the test would fail.
+So the clamp converts a nan into a *silently wrong* number — arguably worse than
+the nan, since a nan at least announces itself.
+
+**Why my verification this session did not catch it.** I ran the control
+(fails without the clamp, passes with it) and treated the flip as sufficient. It
+is not: it only proves the clamp changes nan -> finite. A control distinguishes
+"the change does something" from "the change does nothing" — it says nothing
+about whether the resulting value is *right*. The stated directive is meaningful
+tests near the numerical limit, and "assert Fz/z is constant" is not that; it is
+an isfinite-class check wearing a ratio.
+
+**Correct fix direction** (from the original comment, still right): keep the
+clamp — m > 1 genuinely does produce nan — **and** force the quadrature to
+subdivide where the integrand's mass is, e.g. explicit break points at
+`R +/- c*z`, mirroring the graded panels the backend path already uses. The test
+must assert `Fz -> -2 pi Sigma(R)`, not `Fz/z` constant.
