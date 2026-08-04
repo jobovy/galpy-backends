@@ -14545,3 +14545,42 @@ the discriminating test above. Python caches modules at first import and the run
 had already executed 50+ turning-point tests by then, so it held the fixed
 version throughout -- but any entry that flips gets re-run individually before I
 touch the ledger.
+
+### 2026-08-04 — follow-up audit: is the polish defect systemic? No.
+
+The torch brentq bug was a *jax/torch structural asymmetry that changed values,
+not just gradients*. Checked whether any sibling has the same shape.
+
+Backend pairs with separate per-backend files: adiabatic_c, jacobian, optimize,
+orbit_ode, orbit_stm, staeckel_c. Grepped `_torch/` for the giveaway pattern --
+a grad-conditional branch (`requires_grad` / `is_grad_enabled` / `no_grad` /
+`detach`) that decides what gets RETURNED:
+
+    orbit_stm.py:20,22     detach().cpu().numpy()  -> feed the C bridge
+    adiabatic_c.py:17,45   detach().cpu().numpy()  -> feed the C bridge
+    staeckel_c.py:18,48,75,116  same
+
+All of those detach only to hand data to a C routine, then wrap the result back;
+none of them *return* a different value depending on whether grad is required.
+**`optimize.py` was the only one with a grad-conditional early return**, so the
+defect class is confined to what is now fixed. Bounded, not systemic.
+
+### Noted for Jo, deliberately NOT acted on: loose tolerances in backend tests
+
+The bug survived because `test_backend_root_value` used `rtol=1e-9` on a
+machine-precision quantity. Surveyed how common that shape is: **~300 sites of
+`rtol=1e-6..1e-9` across 49 `test_backend_*.py` files**, e.g.
+
+    test_backend_actionAngle.py    52      test_backend_streamTrack.py   26
+    test_backend_orbit_integrate.py 24     test_backend_interpolate.py   15
+    test_backend_quadrature.py     14      test_backend_special.py       13
+
+Most are legitimate -- quadrature-vs-adaptive, finite-difference references,
+sampling comparisons -- where 1e-6 is the honest floor. The ones that matter are
+backend-vs-numpy comparisons of quantities computed by the *same* algorithm,
+where a loose rtol hides a backend silently diverging. Separating those needs
+per-test judgement, and tightening ~300 assertions across 49 files is a
+test-policy change with real churn and flake risk, not a bugfix. Flagging it as
+a decision for Jo rather than doing it unilaterally on vacation. Cheap first
+step if he wants it: tighten only where numpy and backend run the same
+algorithm, one file per PR, starting with test_backend_optimize.py (done).
