@@ -14706,3 +14706,48 @@ to the fix. The stale 4 belong in a ledger-hygiene commit, NOT in the polish
 PR's description -- claiming them there would overstate what the change does.
 This is the third time this fortnight that [[verify-burndown-flips-stash-rerun]]
 has caught an over-count; it earns its keep.
+
+### 2026-08-04 — CORRECTION 2: the 4 Spherical entries are NOT stale. CI says they fail.
+
+Before proposing to un-ledger them I followed the ledger's own instruction --
+"Do NOT re-measure on a dev box ... a local py3.13 unsplit run disagreed on
+exactly one entry" -- and mined CI artifacts instead.
+
+Reference run **30940962984** (All-backend tests, completed/success, branch
+feat/hoist-gl-order = #1251, whose merge IS c34abfa3, the exact base of my
+branches). Downloaded `backend-junit-torch-test_actionAngle`. conftest applies
+`xfail(strict=False)`, so an XPASS lands in junit as a plain passed testcase and
+a real failure as `<skipped type="pytest.xfail">`. All nine ledgered entries:
+
+    xfail/skip   AdiabaticGrid_outsidegrid_c
+    xfail/skip   Adiabatic_linear_angles_cylsep
+    xfail/skip   Spherical_almostnoninclinedorbit_linear_angles
+    xfail/skip   Spherical_linear_angles
+    xfail/skip   Spherical_linear_angles_fixed_quad
+    xfail/skip   Spherical_noninclinedorbit_linear_angles
+    xfail/skip   StaeckelGrid_basicAndConserved_actions
+    xfail/skip   Vertical_Harmonic_actionsFreqs
+    xfail/skip   Vertical_Harmonic_actionsFreqsAngles
+
+    ledgered AND passed  =>  0.  NONE is stale.
+
+So the four Spherical entries **fail in CI (py3.14) while passing on this box
+(py3.13)**. That is the documented local-vs-CI blind spot, and it is wider than
+the ledger recorded: it says "exactly one entry", and here it is four.
+
+Corrected accounting, third revision:
+  * 2 entries flip **locally** with the polish (Vertical Harmonic x2).
+  * 4 Spherical entries: NOT stale, NOT flips -- a local/CI disagreement.
+    Do not touch the ledger for them.
+  * 3 entries genuinely remain, causes characterised earlier.
+  * 0 regressions.
+
+And the honest caveat on the 2: they are a *local* measurement too. Whether the
+polish flips them in CI is unknown until the branch runs there. I will not put
+a ledger delta in the PR description; the PR claims the defect and the fix, and
+the ledger edit waits for CI evidence.
+
+Chain of corrections on this one measurement: 6/9 -> "2 flips + 4 stale" ->
+"2 local flips, 4 not stale at all". Each step came from checking rather than
+believing the previous one. Worth remembering that the FIRST number was the
+most flattering and the least true.
