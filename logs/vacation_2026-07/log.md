@@ -14233,3 +14233,42 @@ real follow-up, not a mechanical repeat.
 Also worth noting for the record: the first commit attempt was **rejected by
 ruff-format** and HEAD did not move; re-ran the test after its reformat and
 committed again, verifying the SHA changed.
+
+### 2026-08-04 — DECISIONS FROM JO (4 answered)
+
+1. **#1245**: *extend first, then merge*. Do NOT land the zforce-only fix; cover
+   `Rforce`, `R2deriv`, `z2deriv`, `Rzderiv` too so main never carries a partial
+   fix. These need per-method analysis — the zforce substitution overflows on
+   them (no `-4z` prefactor to cancel the peak's `1/|z|`; they rely on an
+   odd-part cancellation about a = R).
+
+2. **actionAngle 10 entries**: *re-base the tests on a gold reference*. Stop
+   treating scipy's adaptive quad as truth; compare both paths to a
+   high-accuracy reference. The better test and the larger change — explicitly
+   chosen over a backend-specific loosened bound.
+
+3. **AnyAxisym `1-m` cancellation**: *implement backend-only AND fix numpy*,
+   with the **numpy fix on main** and the backend fix on feat/backends-develop.
+   Two PRs, two branches.
+
+4. **test_SpiralArmsPotential `_NUMPY_1_23`**: *extend the version band* so the
+   intended 3e-6 applies to modern numpy (currently the `< 1.27` factor expires
+   it and the tight 1e-6 applies on numpy 2.4).
+
+**Structural consequence.** (1) and the numpy half of (3) touch the *same file*
+(`AnyAxisymmetricRazorThinDiskPotential.py`) and are the same failure mode —
+both are about small `(a-R)^2 + z^2` near the plane: (1) is the quadrature not
+resolving the width-|z| peak, (3) is the elliptic complement losing precision.
+Folding them into one coherent "AnyAxisym near-plane accuracy" PR (#1245) avoids
+a same-file conflict and matches the stated preference for less-atomic PRs.
+Proceeding on that basis; trivially splittable if Jo prefers.
+
+Resulting work, by target branch:
+
+    main                      #1245 extended: peak resolution for all 5 methods
+                              + exact algebraic complement / scipy ellipkm1
+    main                      SpiralArms _NUMPY_1_23 band extension (small)
+    feat/backends-develop     AnyAxisym backend 1-m: complement-taking ellipkm1
+                              in the backend special layer, drop _ELLIP_M_CAP
+    feat/backends-develop     actionAngle gold-reference tolerance rework (10)
+    feat/backends-develop     queue: #1252 (open) -> diskdf -> interpSpherical
