@@ -14584,3 +14584,35 @@ test-policy change with real churn and flake risk, not a bugfix. Flagging it as
 a decision for Jo rather than doing it unilaterally on vacation. Cheap first
 step if he wants it: tighten only where numpy and backend run the same
 algorithm, one file per PR, starting with test_backend_optimize.py (done).
+
+### 2026-08-04 — torch polish: 6/9 AA entries flip, but the 26 others need a baseline
+
+Full torch test_actionAngle.py finished (209 tests, --runxfail). Ledgered:
+
+    pass  actionAngleSpherical_almostnoninclinedorbit_linear_angles
+    pass  actionAngleSpherical_linear_angles
+    pass  actionAngleSpherical_linear_angles_fixed_quad
+    pass  actionAngleSpherical_noninclinedorbit_linear_angles
+    pass  actionAngleVertical_Harmonic_actionsFreqs
+    pass  actionAngleVertical_Harmonic_actionsFreqsAngles
+    FAIL  actionAngleAdiabaticGrid_outsidegrid_c
+    FAIL  actionAngleAdiabatic_linear_angles_cylsep
+    FAIL  actionAngleStaeckelGrid_basicAndConserved_actions
+    => 6/9
+
+The four Spherical `linear_angles` entries flipping is the satisfying part: they
+were never diagnosed, and they share the turning-point root-find with Vertical,
+so the same polish fixes them. That is the mechanism predicting results it was
+not fitted to.
+
+**Not claiming 6/9 as a ledger delta yet.** The run also shows 26 NON-ledgered
+failures. This worktree has **no libgalpy.so** ([[worktree-missing-c-ext-fakes-passes]]),
+and 17 of the 26 end in `_c` -- but that leaves 9 that do not
+(kepler_actions, HarmonicInverse_orbit, IsochroneInverse_wrtIsochrone,
+Spherical_EccZmaxRperiRap_againstOrbit, nullpotential_error, ...). Those could be
+C-dependent internally, or they could be regressions from the polish. Guessing
+is exactly what burned me on the AnyAxisym clip claim earlier today.
+
+Running the identical suite on a pristine pre-fix worktree (`/var/tmp/aa-baseline`
+at c34abfa3, verified `enable_grad` count = 0) and diffing the failure sets. Only
+names that FAIL after and PASS before are regressions. Result next wake.
