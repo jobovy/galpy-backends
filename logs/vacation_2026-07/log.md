@@ -13916,3 +13916,27 @@ Limitation, stated so the negative result is not over-read: the audit only catch
 this *specific* asymmetry. A method where **both** branches use the attribute raw
 is invisible to it — that is only a bug when the attribute can be backend-typed
 while the numpy branch runs, which needs a different probe to establish.
+
+### 2026-08-04 — #1251 second red is a runner eviction, not a test failure
+
+A `build (ubuntu-latest, 3.10, test_orbit.py test_orbits.py …)` job went red on
+the post-rebase run. The log ends:
+
+    tests/test_orbit.py::test_lyapunov_spectrum_integrable PASSED
+    ##[error]The runner has received a shutdown signal...
+    tests/test_orbit.py::test_lyapunov_spectrum_henonheiles_chaotic
+    ##[error]The operation was canceled.
+
+Every test up to that point passed; no assertion failed. To rule out "the shard
+outgrew its budget", compare the same shard's duration:
+
+    failed job (98c2d5c7)   19:19:26 -> 19:55:32   = 36 min, runner shutdown
+    same shard, prior run   16:58:33 -> 17:57:56   = 59 min, SUCCESS
+
+It died at 36 min against a 59-min honest runtime, so it was **evicted**, not
+timed out. Re-runnable.
+
+Note this is the **push-event** run for the new SHA, not the PR-event run.
+Re-running its failed job is fine; *cancelling* a same-SHA push run is what
+blocks merge. As before, `gh run rerun --job` refuses while the parent run is
+still in progress, so the re-run waits for the run to finish.
