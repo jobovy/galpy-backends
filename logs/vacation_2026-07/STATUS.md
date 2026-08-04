@@ -30,9 +30,15 @@ probably retirable. `test_king_sigmar`'s true cost is being measured now by
 calling the test function directly (conftest's slow-skip has no env override, so
 a pytest run in that worktree just skips it).
 
-All branches are clean, disjoint in files, and need no rebase — verified against
-the **merge-base**, not `HEAD..develop`, which cannot distinguish "they changed
-it" from "I changed it".
+**Rebase state (corrected 2026-08-04).** An earlier version of this file claimed
+all branches "need no rebase". That was wrong for `feat/undefer-sphericaldf-jax`:
+its merge-base was `730657c3`, two merged PRs behind, so `git diff --stat` against
+develop showed **five** files — `planarPotential.py`, `test_quantity.py` and `+8`
+xfail entries — i.e. merging it would have *reverted* #1249 and #1250. Rebased to
+`0b75c27c`; the diff is now `backend_slow_skip.txt` alone, 27 removed / 0 added.
+`feat/diskdf-unphysical-draw` was branched from `1adbe26e` this session and is
+current. **Run `git diff --stat <branch> origin/feat/backends-develop` before
+opening anything — a stale base is invisible in the branch's own log.**
 
 **Gate note earned on #1249:** a failed `all-clear` can be a stale poll rather
 than a real blocker. Its log listed all 151 dependencies as `success` and still
