@@ -13578,3 +13578,40 @@ circular orbit rather than rejecting a draw outside the inversion's domain.
 Expected to be numpy-byte-identical, since numpy already skips exactly these
 draws and nothing between the two points consumes RNG — to be verified, not
 assumed.
+
+### 2026-08-04 — the CI/local scaling factor was INVERTED; un-defer decision revisited
+
+While deciding which spherical-DF slow-skips could be retired, I scaled local
+timings to CI using the wall times quoted in `backend_slow_skip.txt`'s own
+header ("complete shard wall 3111 s -> ~1450 s after skip") against my local
+1591 s, concluding **"CI is ~1.96x slower"**. That is backwards, and the header
+is stale: the same shard measures **426 s** on CI today, because Track F landed
+after that header was written.
+
+Real measurement, same code both sides (`test_dehnendf_sample_powerrise_returnROrbit`,
+unfixed, forced jax, quiet box):
+
+    local 200.1 s   vs   CI 141.5 s   ->   CI/local = 0.71   (CI is FASTER)
+
+The 72-core box has more cores but slower single-thread, and eager-jax tests are
+essentially single-threaded.
+
+Two things made this findable, both worth reusing:
+
+* **A ledgered xfail shows its real duration in the CI junit.** It appears as
+  `<skipped type="pytest.xfail">` but carries the elapsed time, so the actual CI
+  cost of a "failing" test is free to read from `backend-junit-<backend>-<shard>`.
+  A *slow-skipped* test shows `0.0 s` and needs a local run plus the ratio.
+* **Compare like with like.** My first pass compared CI's 141.5 s (unfixed, stops
+  at the first failing assert) against my 187.4 s (fixed, runs to completion) and
+  would have read the difference as machine speed. Re-running the *unfixed* test
+  locally is what made it apples-to-apples.
+
+Consequences:
+
+* **diskdf PR is safe to un-ledger all 3.** Their real CI costs are 41.7 s,
+  46.3 s and 141.5 s — all far under the 300 s cap, and the fix does not add
+  meaningful work (it drops one draw and lets `sample()` top up).
+* **The un-defer PR's justification for keeping `test_king_sigmar_directint` is
+  void.** 178.7 s local projects to ~127 s on CI, not ~350 s. Re-measuring
+  `test_king_sigmar` without the 300 s cap to get its true cost before deciding.
