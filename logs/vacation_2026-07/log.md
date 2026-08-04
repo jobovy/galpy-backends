@@ -14406,3 +14406,62 @@ Worth noting for whoever picks up the GL question: the substitution that fixed
 numpy (a = R + |z|t, mapping the peak to unit width) is exactly what a
 peak-resolving GL rule would need, and it is differentiable. That is the real
 route to those entries, not the special function.
+
+### 2026-08-04 — actionAngle ledger: the gold-reference plan is WRONG for these entries
+
+Jo's decision on the 10 actionAngle tolerance entries was "re-base tests on a
+gold reference". Started that, and the first measurement invalidated the premise.
+
+Took the two torch `actionAngleVertical_Harmonic_*` entries first, because a
+harmonic oscillator has exact closed-form J and Omega. Real failure (via
+`--runxfail` + junitxml -- stdout is truncated by the conftest force-exit):
+
+    Frequencies via actionAngleVertical vs actionAngleHarmonic
+    tolerance 1e-10, actual 2.76e-09 / 3.20e-09
+
+**That test already compares against a gold reference** -- actionAngleHarmonic
+IS the analytic solution. So there is nothing to re-base. Measured all three
+backends against the exact Omega = omega = 2.23, in float64 (conftest sets
+jax_enable_x64 / torch.set_default_dtype; a first probe without that was
+float32-contaminated and I discarded it):
+
+    numpy  J err 0.0e+00   Omega err 2.887e-15
+    jax    J err 6.7e-16   Omega err 1.275e-13
+    torch  J err 6.7e-16   Omega err 6.364e-10     <- ~5000x worse than jax
+
+Actions agree to machine precision everywhere. **Only torch's frequency is
+wrong, and it is genuinely wrong** -- not a too-tight tolerance.
+
+**Root cause (measured, not inferred).** Omega and J share one substitution
+`x = xmax - t^2`, differing only in how the radicand enters:
+
+    J:      sqrt(rad) * 2t * lim      rad clipped to 0
+    Omega:  2t / sqrt(rad) * lim      rad clipped to 1
+
+`rad = 2(E - Phi(xmax - t^2))` is a difference of nearly equal numbers near
+t=0. J *multiplies* by it and by 2t -> 0, damping the error. Omega *divides*
+by its square root, amplifying it. So Omega is acutely sensitive to how exactly
+xmax satisfies E == Phi(xmax). Measured the turning point directly:
+
+    exact  xmax = 0.16762485393514812
+    jax    rel.err 0.000e+00   residual E-Phi(xmax) = +1.388e-17
+    torch  rel.err 2.771e-13   residual E-Phi(xmax) = -3.872e-14   <- NEGATIVE
+
+torch's xmax **overshoots**, so rad goes negative just where Omega's integrand
+carries weight; the AD guard `xp.where(rad > 0, rad, ones)` then substitutes
+**1** for the true small radicand and `2t/sqrt(1) ~ 0` silently deletes part of
+the integral. The guard that stops a NaN is what turns a last-bit bracket error
+into a 6e-10 frequency error. jax's bracket happens to land on the +side, so it
+never trips.
+
+**Fix direction (not yet implemented):** `backend.optimize.bisect_root` returns
+the final bracket *midpoint*, which can land either side of the root. For any
+consumer that then takes sqrt(E - Phi(xmax)), landing on the minus side is
+structurally unsafe. Returning the bracket endpoint where f >= 0 instead makes
+`rad >= 0` true by construction, for every consumer, and removes the reliance on
+which side the midpoint happens to fall. numpy is unaffected (it uses scipy
+brentq). That is a small change in one shared helper -- next wake.
+
+**Do not "fix" this by loosening the tolerance.** 1e-10 is met by numpy (2.9e-15)
+and jax (1.3e-13) with 3-5 orders of margin. Loosening would hide a real torch
+defect, and per Jo's stringency directive a big loosening is a red flag.
