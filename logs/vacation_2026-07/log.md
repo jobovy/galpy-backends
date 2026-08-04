@@ -14751,3 +14751,33 @@ Chain of corrections on this one measurement: 6/9 -> "2 flips + 4 stale" ->
 "2 local flips, 4 not stale at all". Each step came from checking rather than
 believing the previous one. Worth remembering that the FIRST number was the
 most flattering and the least true.
+
+### 2026-08-04 — #1252 first red is codecov/project, and it is the known phantom
+
+#1252 reached 7 SUCCESS / 1 FAILURE / 16 running / 127 queued. The failure is
+`codecov/project`. Checked before reacting:
+
+  * **Base is NOT stale.** merge-base(develop, PR) = develop head = codecov's
+    reported BASE = c34abfa3. All three agree, so this is not the stale-base
+    variant.
+  * Codecov's own comment gives it away: **"HEAD has 20 uploads less than
+    BASE"** -- 21 uploads at BASE, **1** at HEAD. Coverage 86.11% -> 15.48%,
+    -70.64%.
+  * `codecov/patch` is SUCCESS: "All modified and coverable lines are covered".
+
+So codecov computed the project delta from 1/21 coverage jobs, because the other
+127 are still queued. [[codecov-stale-base-892-suppression]] already documents
+this amplifier and the disposition: *"Do not chase this; re-check once the run
+drains. A real project drop shows a similar hits count with a small delta, not a
+~40-point cliff."* A 70-point cliff on a PR that only DELETES slow-skip entries
+(strictly more tests run => coverage can only rise) is impossible as a genuine
+regression.
+
+Action: none. Do not re-run -- the jobs have not run yet. Re-check when the
+queue drains. If it fails to self-heal once all 21 uploads land, the memory
+records two proven routes (admin-merge on green real checks since patch is ✅,
+or the baseline-refresh cascade).
+
+Worth noting the process point: the reflex on a red is to fix something. Here
+the correct action was to read codecov's own upload counter, confirm the
+documented signature, and do nothing.
