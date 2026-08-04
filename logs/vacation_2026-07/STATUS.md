@@ -9,53 +9,31 @@
 
 | state | branch / PR | effect |
 |---|---|---|
-| **merged** | #1246, #1247, #1248 → `730657c3`, #1249 → `9695ae4a`, **#1250 → `1adbe26e`** | jit helper; scipy-1.18 spline pickling; planar adapters derive `_backend_compatible`; **−8 ledger entries (42 → 34)** |
-| **open** | **#1251** `feat/hoist-gl-order` (1 commit) | de-duplicates `_BACKEND_GL_ORDER`; corrects its documented floor |
-| ready, not opened | `feat/undefer-sphericaldf-jax` @ `bccb0e9f` (1 commit) | **slow-skip 230 → 204**; un-defers 26 of 28, measured (one more revision pending, see below) |
-| ready, not opened | `feat/diskdf-unphysical-draw` @ `9ad28e0c` (2 commits) | fixes a jax NaN-orbit defect; **ledger 34 → 31** |
+| **merged** | #1246, #1247, #1248 → `730657c3`, #1249 → `9695ae4a`, #1250 → `1adbe26e` | jit helper; scipy-1.18 spline pickling; planar adapters derive `_backend_compatible`; ledger 42 → 34 |
+| **open** | **#1251** `feat/hoist-gl-order` @ `98c2d5c7` | de-duplicates `_BACKEND_GL_ORDER`; corrects its documented floor |
+| ready | `feat/undefer-sphericaldf-jax` @ `7c4c2e8d` | **slow-skip 230 → 203** (27 of 28 un-deferred, measured) |
+| ready | `feat/diskdf-unphysical-draw` @ `4fff75ad` | jax NaN-orbit defect fixed; **ledger −4** |
+| ready | `feat/interpspherical-frozen-scalars` @ `bde9df0e` | torch numpy/Tensor collision fixed; **ledger −1** |
 
-**#1251 status:** 147 green, 3 in progress, 2 red — `codecov/project` (the usual
-partial-upload artifact) and the `test_orbit.py` shard, whose job log shows
-`DALServiceError` on `test_from_name_values`/`test_from_name_errors`: the same
-VizieR outage that hit #1250, and unreachable from the three `actionAngle` files
-this PR touches. Re-run is queued behind the parent run — `gh run rerun --job`
-refuses while the run is `in_progress`, which reads like a permissions error and
-is purely timing.
+All three ready branches are cut from `1adbe26e` (current develop) and verified
+with `git diff --stat` against it. Note `diskdf` and `interpspherical` both touch
+`tests/backend_xfail.txt`, so whichever merges second needs a trivial rebase —
+they are not file-disjoint.
 
-**Un-defer PR, still in revision.** The count went 28 → 26 on measurement
-(`test_king_sigmar` hits the 300 s cap; `test_king_sigmar_directint` was 178.7 s
-local). But the CI/local scaling I used to justify keeping the second was
-**inverted** — see log — so `_directint` projects to ~127 s on CI and is
-probably retirable. `test_king_sigmar`'s true cost is being measured now by
-calling the test function directly (conftest's slow-skip has no env override, so
-a pytest run in that worktree just skips it).
+**#1251 status:** 131 green, 18 running, 2 red:
 
-**Rebase state (2026-08-04).** Both #1251 and `feat/undefer-sphericaldf-jax`
-were on stale bases (`730657c3`, two merged PRs behind). **This does *not* mean a
-merge would revert those PRs** — an earlier version of this file said so and was
-wrong. A squash-merge applies the branch's own `merge-base..HEAD` diff; with
-disjoint files a stale base is harmless to merge.
-
-What it *does* break is **codecov**, which diffs against the stale base commit.
-On #1251 that produced a phantom `-0.14%` (`Lines +310`, `Misses +64`) for a
-17-insertion diff, and since `codecov/project` gates `all-clear`, only a rebase
-could clear it. Both branches are now rebased onto `1adbe26e` (#1251 →
-`98c2d5c7`, un-defer → `7c4c2e8d`); `feat/diskdf-unphysical-draw` was cut from
-`1adbe26e` and was already current.
-
-Judge merge-safety with `git diff $(git merge-base HEAD origin/develop) HEAD`;
-judge codecov with the base commit named in its own comment. Different questions.
-
-**Gate note earned on #1249:** a failed `all-clear` can be a stale poll rather
-than a real blocker. Its log listed all 151 dependencies as `success` and still
-reported `1 failing check run(s)` — it had evaluated while codecov was still red.
-Re-running *just the gate* took it to CLEAN. Read the gate's log before deciding
-whether to re-run or to hunt a failure.
+* `codecov/project` — partial-upload artifact, coverage climbing (74 → 86 %),
+  "N uploads less than BASE" shrinking 15 → 4. Base is now correct (`1adbe26`)
+  after the rebase; the earlier `-0.14 %` was a stale-base phantom.
+* `build (ubuntu-latest, 3.10, test_orbit.py …)` — **runner eviction, not a test
+  failure**: the log ends with "The runner has received a shutdown signal" after
+  36 min, against 59 min of honest runtime for the same shard on the prior run.
+  Re-runnable once the parent run finishes.
 
 ## Ledger
 
 ```
-156 → … → 48 → 45 → 44 → 42 → 34 → (31 when the diskdf PR lands)
+156 → … → 48 → 45 → 44 → 42 → 34 → (29 when the three ready PRs land)
 ```
 
 **34 on `feat/backends-develop`**, `jax 15 / jax-jit 3 / torch 15 / torch-jit 1`;
