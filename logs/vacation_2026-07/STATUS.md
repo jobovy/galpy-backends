@@ -11,15 +11,24 @@
 |---|---|---|
 | **merged** | #1246, #1247, #1248 → `730657c3`, #1249 → `9695ae4a`, **#1250 → `1adbe26e`** | jit helper; scipy-1.18 spline pickling; planar adapters derive `_backend_compatible`; **−8 ledger entries (42 → 34)** |
 | **open** | **#1251** `feat/hoist-gl-order` (1 commit) | de-duplicates `_BACKEND_GL_ORDER`; corrects its documented floor |
-| ready, not opened | `feat/undefer-sphericaldf-jax` @ `535d6659` (1 commit) | **slow-skip 230 → 202**; being *measured* locally rather than left to CI (below) |
+| ready, not opened | `feat/undefer-sphericaldf-jax` @ `bccb0e9f` (1 commit) | **slow-skip 230 → 204**; un-defers 26 of 28, measured (one more revision pending, see below) |
+| ready, not opened | `feat/diskdf-unphysical-draw` @ `9ad28e0c` (2 commits) | fixes a jax NaN-orbit defect; **ledger 34 → 31** |
 
-**#1251 status:** 133 green, 16 in progress, 2 red — `codecov/project` (the usual
+**#1251 status:** 147 green, 3 in progress, 2 red — `codecov/project` (the usual
 partial-upload artifact) and the `test_orbit.py` shard, whose job log shows
 `DALServiceError` on `test_from_name_values`/`test_from_name_errors`: the same
 VizieR outage that hit #1250, and unreachable from the three `actionAngle` files
 this PR touches. Re-run is queued behind the parent run — `gh run rerun --job`
 refuses while the run is `in_progress`, which reads like a permissions error and
 is purely timing.
+
+**Un-defer PR, still in revision.** The count went 28 → 26 on measurement
+(`test_king_sigmar` hits the 300 s cap; `test_king_sigmar_directint` was 178.7 s
+local). But the CI/local scaling I used to justify keeping the second was
+**inverted** — see log — so `_directint` projects to ~127 s on CI and is
+probably retirable. `test_king_sigmar`'s true cost is being measured now by
+calling the test function directly (conftest's slow-skip has no env override, so
+a pytest run in that worktree just skips it).
 
 All branches are clean, disjoint in files, and need no rebase — verified against
 the **merge-base**, not `HEAD..develop`, which cannot distinguish "they changed
@@ -34,11 +43,11 @@ whether to re-run or to hunt a failure.
 ## Ledger
 
 ```
-156 → … → 48 → 45 → 44 → 42 → 34
+156 → … → 48 → 45 → 44 → 42 → 34 → (31 when the diskdf PR lands)
 ```
 
-**34 today** on `feat/backends-develop`, `jax 15 / jax-jit 3 / torch 15 /
-torch-jit 1`. By file: `test_actionAngle` 12 (9 torch + 3 jax), `test_streamdf`
+**34 on `feat/backends-develop`**, `jax 15 / jax-jit 3 / torch 15 / torch-jit 1`;
+**31** once `feat/diskdf-unphysical-draw` lands. By file: `test_actionAngle` 12 (9 torch + 3 jax), `test_streamdf`
 3, `test_diskdf` 3, `test_orbit` 4, `test_potential` 3, `test_noninertial` 2,
 `test_interp_potential` 2, `test_sphericaldf` 2, `test_qdf` 2,
 `test_SpiralArmsPotential` 1.
