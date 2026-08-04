@@ -16,9 +16,11 @@
 | ready | `feat/interpspherical-frozen-scalars` @ `bde9df0e` | torch numpy/Tensor collision fixed; **ledger −1** |
 
 All three ready branches are cut from `1adbe26e` (current develop) and verified
-with `git diff --stat` against it. Note `diskdf` and `interpspherical` both touch
-`tests/backend_xfail.txt`, so whichever merges second needs a trivial rebase —
-they are not file-disjoint.
+with `git diff --stat` against it. `diskdf` and `interpspherical` both touch
+`tests/backend_xfail.txt`, but they edit different lines and
+`git merge-tree --merge-base` reports a **clean merge** — no rebase or conflict
+resolution needed when they land in sequence. (An earlier note here said the
+second would need a rebase; that was checked and is wrong.)
 
 **#1251 status:** 131 green, 18 running, 2 red:
 
