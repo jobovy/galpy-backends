@@ -14306,3 +14306,60 @@ Revised scope for the extension: **Rzderiv** (same fix as zforce) and
 **R2deriv/z2deriv** (overflow, needs its own analysis). `__call__` and `Rforce`
 are already correct and will be left alone -- with a test that says so, so the
 claim is checked rather than assumed.
+
+### 2026-08-04 — #1245 extension DONE (da398e0b): the clamp *created* the infinity
+
+Two defects, one file, both now fixed.
+
+**1. The clamp was the bug, not the cure.** `numpy.minimum(4aR/aRz, 1.0)` maps m
+to *exactly* 1.0 once rounding tips it, and `ellipk(1.0) = inf`. So the guard I
+had inherited from the original #1245 was manufacturing the +-inf that R2deriv
+and z2deriv returned at isolated z (1e-8, 1e-10).
+
+The complement is available with **no subtraction at all**:
+
+    1 - m = 1 - 4aR/((a+R)^2+z^2) = ((a-R)^2+z^2)/((a+R)^2+z^2) = d2/aRz
+
+which is the quantity the integrands already build. Switching all five K calls
+to `special.ellipkm1(d2/aRz)` makes R2deriv and z2deriv finite at every |z|
+with no substitution and no clamp. E is bounded (E(1)=1) so its clamp stays,
+now only guarding the >1 rounding artifact.
+
+**2. Rzderiv needed the peak resolved too**, like zforce -- same z prefactor,
+same 1/d2^2. Its coefficients are now written in `u = a-R`, expanded via sympy:
+
+    P(u,z) = 16R^3 u + 12R^2 u^2 - 4R^2 z^2 + 4R u z^2 + 4R u^3 + u^4 + 2u^2 z^2 + z^4
+    Q(u,z) = d2 * (2Ru + d2)
+
+P vanishes at (a=R, z=0) and Q factors through d2, so neither is formed by
+cancelling large terms. Verified against the analytic limit `-2 pi Sigma'(R)`
+(= 5.5939 at R=0.5, 0.6850 at R=1.2 for Sigma ~ exp(-3R)) -- clean O(z)
+convergence 1e-3 -> 1e-8, where before it was wrong below ~1e-5.
+
+**Accuracy floor, documented in the source:** Rzderiv is a 1/z-sized residual of
+1/z^2-sized pieces cancelling by oddness about a=R, so relative accuracy floors
+at ~eps/|z| (1.9e-8 at z=1e-8, 9.9e-6 at 1e-10, garbage at 1e-12). Cancelling
+analytically would need Sigma'(R), unavailable for a user-supplied callable.
+Not hidden: stated at the helper.
+
+**Scope correction:** `__call__` and `Rforce` were never broken. The `-inf` I
+reported for Rforce earlier came from *my* blanket substitution.
+
+**The test was passing for the wrong reason.** `test_2ndDeriv_potential` FD-checks
+`z2deriv = d zforce/dz` at Z=0. On main, `zforce(0.5, 1e-8)` returns +1.6969e-8
+-- which is *exactly* `-z2deriv(R,0) * z`, so the difference quotient reproduced
+z2deriv perfectly. The test was validating a broken zforce and agreeing with it.
+Once zforce is correct the FD spans a genuine discontinuity (Fz jumps
++2piSigma -> -2piSigma) and blows up to 1.86e8. Excluded AnyAxisym at z=0
+exactly as galpy already excludes `KuzminDiskPotential` there, for the same
+reason; the Rzderiv mixed check needed it too (FR has a |z| kink). The physics
+is still asserted, by the small-z limit test that checks Fz -> -2 pi Sigma.
+
+Full test_potential.py: 8 failures, identical to pristine origin/main (this
+worktree has no libgalpy.so). Pushed 6d29843f..da398e0b; #1245 still draft
+pending CI.
+
+**Noted, not done:** RingPotential divides by `1.0 - m` directly at four sites
+with the same parametrization. There m->1 only *at* the ring, a physical
+singularity rather than an artifact, so it is not the same bug -- but it is
+worth a look later. Not folded in: this is a bugfix, not a refactor.
