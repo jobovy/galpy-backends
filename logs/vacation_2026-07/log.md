@@ -14616,3 +14616,27 @@ is exactly what burned me on the AnyAxisym clip claim earlier today.
 Running the identical suite on a pristine pre-fix worktree (`/var/tmp/aa-baseline`
 at c34abfa3, verified `enable_grad` count = 0) and diffing the failure sets. Only
 names that FAIL after and PASS before are regressions. Result next wake.
+
+### 2026-08-04 — the 3 torch AA entries the polish does NOT fix: three different causes
+
+Pulled their real failures out of the same run. None is root-find precision, so
+none was ever going to move with the Newton polish:
+
+    Adiabatic_linear_angles_cylsep     4.49e-7 vs tol 1e-8  (~45x over)
+      Radial angle from a linear fit to the orbit. A genuine accuracy gap in the
+      Adiabatic ANGLE path, not the turning point -- own investigation.
+
+    AdiabaticGrid_outsidegrid_c        0.0047 (0.0111 vs 0.0064) vs tol 1e-8
+      Five orders over: not precision at all. This is evaluation OUTSIDE the
+      grid, i.e. the known off-grid fallback gap (task #103, "opt-in off-grid
+      fallback, default off for jax/torch"). BY DESIGN until that lands.
+
+    StaeckelGrid_basicAndConserved_actions   Jr=4.8354e-14 vs tol 1e-16
+      "Circular orbit does not have Jr=0". An ABSOLUTE 1e-16 bound, i.e. demand
+      exact zero. A grid interpolant cannot deliver that; numpy's scipy path
+      happens to. This one is arguably a tolerance question rather than a defect,
+      but it is NOT in the approved tolerance batch, so it stays ledgered.
+
+So the polish's reach is exactly the turning-point root-find, and the residue
+splits cleanly into one real accuracy gap, one by-design gap, and one
+exact-zero assertion. Good news for the diagnosis: nothing here contradicts it.
