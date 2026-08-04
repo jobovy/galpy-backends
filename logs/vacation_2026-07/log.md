@@ -13803,3 +13803,25 @@ had to strip as a red flag rather than a normalisation.
 Also characterised while here: `jax test_qdf::test_call_diffinoutputs` fails with
 "Test orbit in qdf that is supposed to be unbound is not" — the backend AA does
 not raise `UnboundError` where numpy does, matching the known by-design qdf pair.
+
+### 2026-08-04 — the 4 "stale" jit entries, observed directly: still failing
+
+Follow-up to the matcher bug. The CI artifacts carry no jit data, so I ran two of
+the four `-jit` entries locally under `--backend jax --jit --runxfail`:
+
+    FAIL  2.4s  test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+          "second Radial derivative ... fails at (R,Z) = (0.500,0.000)"
+    FAIL  0.6s  test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+          "Methods in AnyAxisymmetricRazorThinDiskPotential do not accept array inputs"
+
+Both are alive, and both match known, documented causes — the AnyAxisym
+cancellation defect, and the deliberate array opt-out that a named negative test
+guards. So the sweep's "5 stale" was wrong by exactly the 4 I rejected, and
+deleting them would have converted real traced failures into unexplained jit
+shard reds.
+
+Separate health check from the same sweep data: **0** ledgered entries are
+recorded as a hard `FAILED` on CI (as opposed to `xfail`). A timeout overrides
+xfail and records FAILED, so this confirms no ledgered test is currently timing
+out and reddening a shard — the ledger and slow-skip lists are correctly
+partitioned right now.
