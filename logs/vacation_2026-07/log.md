@@ -14002,3 +14002,28 @@ So the expected ledger effect of #1245 on the backend branches after rebase is
 **zero entries**, not one. Its value is the pre-existing numpy-path bug: an ODE
 solver drifting off the plane by roundoff lands in the 1e-30..1e-12 band and
 poisons the whole orbit.
+
+### 2026-08-04 — #1245 codecov "20% patch" checked directly: partial upload, not a real gap
+
+codecov on #1245 reported *"Patch coverage is 20.00000% with 4 lines in your
+changes missing coverage"* for
+`AnyAxisymmetricRazorThinDiskPotential.py`. Specific enough to be worth checking
+rather than waiting out, so I traced it locally with `trace.Trace` (pytest-cov
+dies here with "cannot load module more than once per process" on a numpy
+re-import; codecov's own line_coverage JSON is unreliable, hence the tracer):
+
+    clamp lines : [126, 155, 184, 221, 251]
+    covered     : [126, 155, 184, 221, 251]
+    NOT covered : []
+
+All five clamp sites are exercised by `test_anyaxisymrazorthin_smallz_no_nan`.
+The report also carries "different number of reports uploaded between BASE and
+HEAD" and "Report is 2 commits behind head", i.e. the usual partial-upload
+state — 36 of ~183 checks had finished when it was posted.
+
+Incidental but worth recording: that worktree has **no libgalpy**, so my earlier
+"passes on main" run took the Python path. It does not matter here —
+`AnyAxisymmetricRazorThinDiskPotential.hasC is False`, so the potential is
+pure Python/scipy either way, and the fails-without / passes-with flip is
+unaffected. (Checked rather than assumed; a missing C extension is normally
+exactly what fakes a pass.)
