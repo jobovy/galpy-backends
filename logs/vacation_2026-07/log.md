@@ -14272,3 +14272,37 @@ Resulting work, by target branch:
                               in the backend special layer, drop _ELLIP_M_CAP
     feat/backends-develop     actionAngle gold-reference tolerance rework (10)
     feat/backends-develop     queue: #1252 (open) -> diskdf -> interpSpherical
+
+### 2026-08-04 — #1245 extension: measured the other four methods; scope is 3, not 4, and two differ in kind
+
+Jo asked to extend #1245 to the remaining methods before merging. Measured each
+against its z=0 value (which is computed by a separate, working path) at R=0.5:
+
+    __call__   z=0 -1.75999307   small-z: converges       -> ALREADY FINE
+    Rforce     z=0 -1.99174221   small-z: converges       -> ALREADY FINE
+    R2deriv    z=0 -2.28658684   -inf at 1e-8 and 1e-10, fine at 1e-12/1e-20
+    z2deriv    z=0 -1.69689758   +inf at 1e-8, fine elsewhere
+    Rzderiv    z=0  0.0          -5.5925 @1e-4 (correct), -5.86e5 @1e-6, then ~13.8*z
+
+**`Rforce` is not broken.** The `-inf` I reported earlier came from *my* blanket
+substitution, not from the shipped code. Its error against the z=0 value falls
+2.8e-2 -> 2.8e-3 -> ... -> 2.2e-16, i.e. textbook `O(z)` convergence. Same for
+`__call__`. So two of the four need no change at all.
+
+**`Rzderiv`'s correct limit is checkable analytically**, which pins which values
+are the garbage: `Rzderiv = -dFz/dR` and `Fz -> -2 pi Sigma(R)`, so the limit is
+`-2 pi Sigma'(R) = 3 * (2 pi Sigma) = 5.59` for `Sigma ~ exp(-3R)`. The measured
+-5.5925 at z=1e-4 is therefore **right**, and -5.86e5 at 1e-6 plus the `~13.8*z`
+tail below it are wrong — the same peak-not-resolved pathology as zforce, which
+makes sense since it carries the same z prefactor and a 1/d2^2 factor.
+
+**`R2deriv`/`z2deriv` fail differently**: not a systematic wrong value but
+sporadic overflow to +-inf at isolated z (1e-8, 1e-10), with correct values
+either side. That is an overflow in the 1/d2^2 factor, not the quadrature
+stepping over the peak, so it likely wants a different remedy than the
+substitution.
+
+Revised scope for the extension: **Rzderiv** (same fix as zforce) and
+**R2deriv/z2deriv** (overflow, needs its own analysis). `__call__` and `Rforce`
+are already correct and will be left alone -- with a test that says so, so the
+claim is checked rather than assumed.
