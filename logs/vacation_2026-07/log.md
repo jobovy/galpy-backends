@@ -13825,3 +13825,38 @@ recorded as a hard `FAILED` on CI (as opposed to `xfail`). A timeout overrides
 xfail and records FAILED, so this confirms no ledgered test is currently timing
 out and reddening a shard — the ledger and slow-skip lists are correctly
 partitioned right now.
+
+### 2026-08-04 — torch `test_constantbeta_interpolatedpotentials_beta`: partially characterised, NOT root-caused
+
+Failure (forced torch, `--runxfail`, 11.9 s):
+
+    galpy/potential/interpSphericalPotential.py:105, in _revaluate
+        out[r >= self._rmax] = -self._total_mass / r[r >= self._rmax] + self._Phimax
+    TypeError: Concatenation operation is not implemented for NumPy arrays
+    ... with r = np.float64(inf)
+
+Line 105 is inside `if xp is numpy:`, so in that run `get_namespace(r)` returned
+**numpy** while the potential's own state is torch — the classic frozen-attr /
+input-namespace mismatch.
+
+**What I established:**
+
+* `_Phimax` and `_Phi0` *are* frozen as `torch.Tensor` at construction under
+  forced torch (`_total_mass` and `_rmax` stay `np.float64`). So a numpy branch
+  mixing them with numpy arrays would indeed produce this TypeError — numpy tries
+  the sequence-concat protocol on a Tensor operand.
+* Under plain numpy the numpy branch handles `np.float64(inf)` fine; only a bare
+  Python `float` breaks it ("'float' object is not subscriptable"), which is a
+  separate latent scalar-safety gap in that branch.
+
+**What I could NOT reproduce, and am not going to assert:** constructing the
+potential inside `backend.use("torch", force=True)` and calling
+`_revaluate(np.float64(inf))` **works** — `get_namespace` resolves the numpy
+scalar to `array_api_compat.torch`, so the *backend* branch runs and returns
+`tensor(-0.0091)`. My isolated repro therefore does not reproduce the failure,
+and I do not yet know what makes `get_namespace` return numpy in the real test.
+
+So: characterised (the mechanism class is clear) but **not root-caused** (the
+trigger is context-dependent). Next step is to instrument the actual test rather
+than a hand-built instance — another case where isolation is not a faithful
+context. Deliberately NOT starting a fix on a hypothesis I have not demonstrated.
