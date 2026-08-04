@@ -10001,3 +10001,3533 @@ Also worth recording: roughly half the 54 initially-flagged tests are
 LEGITIMATE — a `..._grad_degenerate` test asserting a gradient is finite at a
 degenerate point is checking exactly the right property (no NaN poisoning).
 A blanket conversion would have made the suite worse.
+
+## 2026-08-03 — the jit ledger is mostly ONE root cause, not six
+
+Went after the second parallel PR on the jit track. The 6 jit-blocking ledger
+entries looked scattered; they are not. **Four of the six are
+AnyAxisymmetricRazorThinDiskPotential, and all four share one root cause.**
+
+Measured the traced Poisson integrand against scipy at R=0.5:
+
+| \|z\| | rel. err |
+|------|----------|
+| 1e-1 … 2e-2 | ~1e-13 |
+| 1e-3 | 7e-2 |
+| 1e-5 | **2.7e4** |
+
+The fixed-order GL path cannot resolve the a=R principal value / small-|z| sheet.
+Consequences: `surfdens(forcepoisson=True)` under trace returns -4.2e-6 instead
+of 0.297; a circular orbit at z=0 comes out with ecc 5.4e-6 instead of 0
+(that is `test_eccentricity`, which I had not previously attributed here).
+
+**A dead end worth recording.** The obvious move is to set
+`_backend_accepts_arrays = True` (DoubleExpDisk sets it; AnyAxisym does not).
+I implemented that plus `node_axis` broadcasting across all six `_gl`
+integrands, verified the vectorised path bit-identical to a per-element GL loop
+and ~1e-13 vs scipy — and then **reverted the whole thing**. The opt-out is
+deliberate, and guarded by a negative test that names the class:
+
+> *"AnyAxisymmetricRazorThinDisk deliberately does NOT opt in. Its traced GL
+> integrand is exact to ~1e-12 at |z|=1e-2 but wrong by ~2e4x at |z|=1e-5 …
+> so accepting arrays there would return a silently wrong ~0 instead of raising."*
+
+My independent measurements reproduce that test's numbers exactly. Opting in
+would have deleted a guard to reintroduce the silent wrongness it prevents.
+
+Two process notes. The class comment already said *"GL cannot resolve the a=R
+principal value / small-z sheet structure … and cannot form the z=0
+Hadamard-type second-derivative"* — grepping the test file for the class name
+would have saved the entire investigation (third time this pattern has cost me
+a session). And one intermediate "pre-existing nan bug" I reported was an
+artifact of my own probe script not enabling x64; under the real CI config all
+six methods agree with scipy to ~1e-13. Corrected before it went anywhere.
+
+**Net:** no PR, but the jit ledger is now understood as ~one numerics task
+(z-aware panel split clustering nodes within a few |z| of a=R) plus the 2
+`test_interp_potential` entries — rather than six unrelated problems. Filed as a
+task with the measurements. That reframing is the deliverable.
+
+### 2026-08-03 (cont.) — prototyped the AnyAxisym quadrature fix; found where it breaks
+
+Followed up on the root cause with real numerics rather than more triage. Two
+things worth keeping.
+
+**1. Build a gold reference before scoring anything.** I spent a cycle chasing a
+stubborn "2.8e-6 plateau" that appeared at |z|=1e-6 under *every* configuration
+of my quadrature — insensitive to panel count, order, and subtraction. It was
+not my error. Against a 40-digit mpmath reference, **scipy** — the galpy numpy
+path — is the inaccurate one there:
+
+| \|z\| | scipy vs gold |
+|------|---------------|
+| 1e-2 … 1e-5 | 6e-16 … 3.7e-13 |
+| 1e-6 | **2.8e-6** |
+| 1e-8 | **2.8e-8** |
+| 0 | 6.8e-13 |
+
+(z=0 gold is reachable despite `mp.ellipk(1)=inf` by subtracting `C/(a-R)`,
+whose symmetric PV integral is exactly zero.) This is
+`match-numpy-quadrature-floor` in the wild: "match numpy" is the wrong target at
+extreme inputs.
+
+**2. Graded panels fix the first derivatives and break the second ones.**
+Geometrically graded panels closing onto a=R, scored against gold:
+
+| \|z\| | 1e-4 | 1e-5 | 1e-6 | z=0 |
+|------|------|------|------|-----|
+| current | 6.7e-6 | 3.5e-6 | 1.6e-5 | 1.9e-5 |
+| graded | 9.1e-15 | 4.5e-13 | **6.2e-12** | 4.9e-9 |
+
+At |z|=1e-6 that is ~450,000× better than scipy. So I implemented it in the
+shared `_bk_split_quad` and measured all six methods end-to-end — where it fell
+over:
+
+```
+_Rzderiv @ R=0.5, z=1e-5:   graded GL = -6.309    scipy = 1.715e-4
+```
+
+Raising the per-panel order 40→60 changed the z=1e-5 errors *not at all*, which
+rules out resolution. The second derivatives carry `1/((a-R)²+z²)²` — a peak of
+width z and height 1/z⁴ that must cancel as a **Hadamard finite part**. The old
+coarse panels missed the peak entirely; graded panels resolve it and pick up a
+10⁵× spurious term. Naive refinement makes hypersingular integrands strictly
+worse. Reverted.
+
+**Net:** the fix is real but must be per-integrand, not a blanket change to the
+shared helper — first derivatives are ready and validated, second derivatives
+need the finite part subtracted analytically first. Second revert of the day,
+both for good reasons: better to find this on a prototype than in CI. Task #187
+now carries the gold-reference recipe, the measured tables, and the exact
+failure mode.
+
+### 2026-08-03 (cont.) — task-list staleness sweep against the ledger
+
+Kept picking up stale tasks, so instead of discovering staleness one at a time I
+dumped the whole 44-entry ledger and cross-checked every ledger-based task at
+once. Worth doing periodically; the list rots faster than it looks.
+
+| task | claimed | actual |
+|------|---------|--------|
+| #178 parallel_map torch+fork | 3 torch entries | ✅ exactly 3 `test_streamdf` |
+| #186 interp_potential | 2 jax + 2 jax-jit | ✅ exactly that |
+| #158 jax-jit burndown | ~5 | ✅ exactly 5 |
+| #176 test-side as_numpy casts | 11 torch entries | ❌ **already landed** |
+| #177 qdf sampler + Orbits obs= | 8 + 2 | ❌ only 2 qdf entries exist |
+| #175 Staeckel angle sentinel | 2 entries | ❌ none remain |
+| #184 coords @backendNative | to do | ❌ **already done** |
+
+Closed five as stale/resolved (#175, #176, #177, #184, and earlier #181's
+reasoning corrected). #176 was the notable one: the `as_numpy` casts are already
+at every site — `test_dynamfric.py:411,443`, `test_FDMdynamfric.py:404,436`,
+`test_galpypaper.py:308` — and `test_noninertial.py` even has a
+`_writable_as_numpy` helper. I had been about to re-implement work that landed
+days ago.
+
+**A near-miss worth recording.** I nearly closed #125 ("28 entries") the same
+way, since only ~2 sphericaldf entries appear in the xfail ledger. It refers to
+a *different file*: `backend_slow_skip.txt`, where `grep -c sphericaldf` = 28,
+exactly as claimed. Checked before closing. A staleness sweep that only reads
+the xfail ledger will wrongly retire every slow-skip task.
+
+**Metric worth flagging to Jo:** `backend_slow_skip.txt` holds **230 entries
+(215 jax, 15 torch)** against an xfail ledger of 44. The slow-skip bucket — not
+the ledger — is the dominant remaining backlog for "all of galpy runs under
+backends", and it is overwhelmingly jax-eager *speed*, not correctness. Ledger
+size alone understates the remaining work by roughly 5×.
+
+**#1242 codecov.** Pulled the real numbers rather than assuming the usual
+phantom: `codecov/project 86.11% (-13.85%)` while `codecov/patch` reports
+"coverage not affected". A -13.85% project drop from a test-only PR is not a
+regression — it is incomplete uploads with 31 shards still running. Re-checking
+once CI settles rather than acting on it.
+
+### 2026-08-03 — #1242 MERGED (2e1336c9); interp_potential characterised
+
+**#1242 went green 152/152 and is squash-merged** into feat/backends-develop as
+`2e1336c9`. The `codecov/project -13.85%` I saw earlier resolved itself once the
+remaining shards uploaded — it was incomplete uploads, exactly as diagnosed, and
+acting on it would have been chasing a phantom.
+
+Pre-merge audit: test-only (3 files), so the if→xp.where array-input class is
+N/A and no source helpers moved. One real finding — the two adiabatic files now
+carry an identical 10-line jit-vs-eager block. Kept it: they are deliberate
+mirror files already sharing ~40 lines of `_fd_grad`/`_backend_grads`
+scaffolding by convention, `tests/` has no shared-helper module
+(`test_backend_util.py` *tests* galpy.backend), and inventing a new tests/
+convention mid-vacation is Jo's call. Filed as #188 with a concrete proposal —
+~10 `_jit` files would use it.
+
+**#186 characterised and closed: it was two unrelated causes, not one.**
+
+*(A) 2 jax-jit = tolerance, traced-only.* Measured:
+
+| test | max diff | bound | over |
+|------|----------|-------|------|
+| `..._use_c` | 5.596e-14 | 1e-14 | 5.6× |
+| `..._force_use_c` | 6.621e-13 | 1e-13 | 6.6× |
+
+The `use_c` max is invisible in the junitxml (numpy truncates the printed
+array); I surfaced it by temporarily putting `nanmax` in the assertion message
+and reverting. Cause: the test compares a `use_c=True` grid against a
+`use_c=False` grid, and under `--jit` the python side goes through traced jax
+where XLA fusion reassociates the sums differently from C. That is irreducible
+floating-point reassociation at 1e-14 on order-1 values — not a defect, and both
+pass eagerly. → tolerance batch #171, category B (traced-only), which Jo already
+approved provided bounds stay stringent. 5.6×/6.6× is minor.
+
+*(B) 2 jax eager = speed.* Both simply TIMEOUT at >600s. Nothing to fix in the
+interpolation code; they belong with the jax-eager speed work (#67/#79) and the
+230-entry slow-skip bucket, not a correctness PR.
+
+Ledger unchanged at 44 (this PR was test-strengthening, not burndown).
+
+### 2026-08-03 — PR #1243: traced-only bound for the interp_potential grid compare
+
+Turned the (A) half of the #186 characterisation into a PR. **Ledger 44 → 42,
+jax-jit 5 → 3.**
+
+The two `use_c=True` vs `use_c=False` grid comparisons now take a bound that
+widens only when `jit_mode()` is on (30×, ~5× headroom over measured); the
+eager/numpy bounds are byte-for-byte unchanged.
+
+Two things worth recording.
+
+**The ledger had already done this analysis, better than mine.** Its comment
+block reproduced my exact numbers (5.596e-14, 6.621e-13) *and* localised the
+cause further than I had: of MWPotential's three components only NFW moves, and
+its jax eager value is bit-identical to numpy while its jitted value differs,
+reproducibly — XLA compiles NFW's `log1p(r/a)/(r/a)` differently from how it
+evaluates it eagerly. I folded that into the test-file comment rather than
+losing it with the removed entries. Reading the ledger comments first (the
+`read-code-docs-before-classifying` lesson) would have saved me the independent
+re-derivation, though it did serve as a clean confirmation.
+
+**It also said "loosening one needs Jo's sign-off."** That comment predates the
+tolerance-batch approval of category B (traced-only, stringent). This is
+squarely that category at 5.6×/6.6×, so I landed it and said so explicitly in
+the PR — with the note that since the eager path is untouched it reverses
+trivially if Jo wants it the other way.
+
+Verification was the standard three-way: passes traced; **fails traced with the
+factor forced to 1.0** (so the widening is what carries it); numpy and jax-eager
+still pass on the untouched tight bound.
+
+One process note: I used `git stash` to check whether a ruff warning was
+pre-existing, which `git-stash-is-repo-wide-not-worktree` warns against. It
+happened to round-trip correctly — but the stash list turned out to already hold
+a WIP from `feat/native-grid-spline`, so a mis-ordered pop would have pulled
+another branch's work into this PR. Verified the file list and markers
+afterwards. Should have used a second worktree.
+
+### 2026-08-03 — AnyAxisym: the real defect is cancellation in `1-m`, not the quadrature
+
+Kept digging on #187 while #1243's CI queued, and the "z-aware quadrature"
+framing turned out to be wrong. The actual defect is a numerical one, upstream
+of any quadrature choice.
+
+`_bk_m_aRz` computes `m = 4aR/((a+R)²+z²)`. Near a=R that makes `1-m`
+catastrophically cancelling. Measured at R=0.5, z=0:
+
+| \|a−R\|/R | `1−m` computed | exact | cap fires? |
+|------|----------------|-------|-----------|
+| 1e-7 | 2.665e-15 | 2.500e-15 | no — already 6.6% wrong |
+| 1e-8 | **0.000e+00** | 2.500e-17 | **yes** |
+| 1e-10 | **0.000e+00** | 2.500e-21 | **yes** |
+
+Below 1e-8, `m` rounds to exactly 1.0 and the `_ELLIP_M_CAP = 1-1e-15` clamp
+fires — and the clamp's activation boundary *moves with R*, turning the
+quadrature error into a step function of R. That single fact explains three
+things I had been treating as separate puzzles:
+
+* **why z=0 fails.** `test_2ndDeriv` finite-differences Rforce with `dr=1e-8`,
+  and the error jitters at exactly that scale. The FD returns **+0.109** where
+  the true R2deriv is **−2.579** — the wrong sign.
+* **why deeper grading made it worse** (k=8 → 1.3e-5, k=10 → 4.3e-4, k=14 → nan):
+  more nodes land inside the clamped region.
+* **why analytic PV subtraction didn't help** (tested: +0.13, still fails). The
+  huge cancelling values were never the problem — I had the wrong culprit and
+  the experiment said so.
+
+**The fix**, and it lands in the right place: compute the complementary
+parameter cancellation-free, `1-m = ((a-R)²+z²)/((a+R)²+z²)`, and pass *that* to
+the elliptic integrals. galpy's fallback is AGM, which starts from
+`b0 = sqrt(1-m)`, so an `m1`-taking entry point is trivially exact. That is a
+general special-function capability → `galpy/backend/special`, not the potential
+file. `_ELLIP_M_CAP` then disappears entirely, since `m1 ≥ 0` by construction.
+
+**One more result worth keeping.** R2deriv via `jax.grad` of the graded Rforce —
+AD handles the moving panel limits exactly — is excellent and sidesteps the
+Hadamard finite part completely: 3.6e-16 at z=0.15, 4.5e-13 at 1e-3, 2.4e-7 at
+z=0. So the second derivatives should be *differentiated*, never integrated from
+their own hypersingular integrands (which gave 1e5× errors).
+
+Not claiming the four entries flip until measured — the m1 fix has to land
+first, then re-measure. But #187 is now a concrete numerical bug with a known
+remedy rather than an open-ended numerics project.
+
+### 2026-08-03 — the `1-m` fix works, and uncovers a second defect underneath
+
+Implemented the `m1` fix from the previous entry and measured it. The diagnosis
+was right, and the result is still not shippable — for a reason I had not
+credited.
+
+**Defect 1 confirmed and fixed.** Added `ellipkm1` to `galpy/backend/special`,
+mirroring scipy's own name (scipy has it; jax and torch don't, so both go in
+`_NATIVE_MISSING`). The AGM fallback starts from `b0 = sqrt(m1)` exactly;
+`_agm_core` was extracted so the existing m-entry point's arithmetic is
+untouched op-for-op. Verified against scipy on **both** jax and torch: matches
+to all printed digits from m1=5e-1 down to 1e-20, exactly where the old
+`ellipk(1-m1)` degrades (18.187 vs 18.198 at 2.5e-15) and then returns `inf`.
+
+With `_bk_m1_aRz` feeding it a closed-form `m1 = ((a-R)²+z²)/((a+R)²+z²)`, the
+z=0 jitter is **gone**: FD-of-Rforce at z=0 gives −2.5786 against a true
+−2.5788, where before it gave **+0.109 — the wrong sign**.
+
+**Defect 2, which the clamp was hiding.** Removing `_ELLIP_M_CAP` made small-z
+*worse*:
+
+| | z=1e-3 | z=1e-5 |
+|---|--------|--------|
+| R2deriv | 1.4e+0 (was ~1e-12) | 2.0e+4 |
+| z2deriv | 2.7e+0 | 2.7e+4 |
+| zforce | — | 9.4e-1 |
+
+The clamp had been load-bearing: truncating K bounded the peaked integrands.
+With `m1` exact, K is correctly large and the `1/((a-R)²+z²)²` integrands
+correctly blow up — and plain fixed-order GL sampling them returns nonsense. The
+clamp was masking the hypersingularity, not fixing it.
+
+So `m1` is necessary but **not sufficient**, and each piece is individually a
+regression. The three have to land together:
+
+1. `m1` / `ellipkm1` — done, patch saved to the scratchpad;
+2. graded panels for the peaked first-derivative integrands (validated vs gold:
+   9.1e-15 @1e-4, 6.2e-12 @1e-6, beating scipy's own 2.8e-6 there);
+3. second derivatives by **AD of the first derivatives**, never from their own
+   hypersingular integrands (3.6e-16 @0.15, 2.4e-7 @z=0 vs 1e5× errors when
+   integrated directly).
+
+Reverted rather than shipping a piece. Third revert in this area today, and each
+one came from measuring instead of assuming — the clamp in particular looked
+like dead defensive code and turned out to be holding up two of the six methods.
+
+### 2026-08-03 — #1243 MERGED; the loop had silently stopped
+
+**#1243 merged** into feat/backends-develop. Ledger **44 → 42**, jax-jit 5 → 3.
+CI finished 152/152 and `codecov/project` cleared itself once the last shards
+uploaded — the same incomplete-upload phantom #1242 showed, correctly diagnosed
+both times by reading `codecov/patch` ("coverage not affected") rather than
+pattern-matching.
+
+**Process failure worth recording:** Jo asked whether the loop was still on, and
+it was not — `CronList` returned *No scheduled jobs*. So for some stretch I was
+only running when pinged, which is exactly the "stalling" that was visible from
+the outside. Re-armed as job `c46cf2e8` (every 55 min, session-only, 7-day
+expiry). **Check `CronList` when a wake seems overdue rather than assuming the
+schedule is live** — the loop dying is silent and looks identical to being slow.
+
+### 2026-08-03 — AnyAxisym three-part fix: big numbers, zero entries cleared
+
+Assembled all three pieces on `feat/anyaxisym-m1-quadrature` (WIP `c83ee33d`).
+The accuracy gains are large and the ledger gains are, so far, nil — worth
+separating those two facts.
+
+**Against a verified-pristine baseline** (taken from `HEAD~1`, which `git diff`
+confirms is identical to `origin/feat/backends-develop`):
+
+| | R2deriv | z2deriv | Rzderiv |
+|---|---------|---------|---------|
+| z=1e-3 | 1.4e+00 → **2.9e-13** | 2.7e+00 → **2.7e-12** | 1.9e-02 → **1.8e-11** |
+| z=1e-5 | 2.0e+04 → **4.2e-09** | 2.7e+04 → **4.1e-08** | 1.5e+04 → 3.7e+04 |
+
+plus Rforce at z=0 going 1.9e-5 → **2.77e-9** against mpmath gold. Nine to
+twelve orders of magnitude on the second derivatives.
+
+Two things that measurement corrected:
+
+* **Rzderiv@1e-5 is not a regression.** I flagged it as possibly one and refused
+  to guess; the baseline says it was already 1.5e+04. It survives because
+  Rzderiv = d(Rforce)/dz is O(z) and tiny, while Rforce's own small-z error
+  differentiates into something much larger. Needs z-adaptive panels.
+* **These GL paths were never exercised eagerly.** `_bk_dispatch` sends concrete
+  scalars to scipy, so `_R2deriv_gl` only runs under a trace — which is exactly
+  why a 1.4e+00 relative error sat there unnoticed and ledgered.
+
+**But 0 of 4 ledger entries clear:**
+
+* `test_2ndDeriv` — still fails at z=0, though diff is 3.61 vs 4.8e+04 before.
+  R2deriv itself is now correct; what fails is Rforce's smoothness in R at the
+  1e-8 FD scale. Retry analytic PV subtraction — the earlier negative result
+  predates m1 and was confounded by the clamp.
+* `test_poisson_surfdens` — still the array-input `TypeError`. Needs the
+  deliberate opt-out reversed, which is only honest once the accuracy that
+  opt-out cites is actually fixed. It isn't yet (4.0e-6 at |z|=1e-5).
+* `test_eccentricity` — now **nan** under pytest `--jit`, but it does NOT
+  reproduce in a script replicating the same setup, times and integrator
+  (`e()=0.0`, passing), and a scan of all six methods over R∈[0.01,10] at z=0
+  and 1e-8 finds nothing non-finite. Unattributed, so I am treating it as a
+  possible regression until explained — and it has to be diagnosed *inside* the
+  pytest run, not from an isolated script.
+
+Not shipping. The honest summary is that the numerics got dramatically better
+and the tests still don't pass, which is a real distinction and not one to blur.
+
+### 2026-08-03 — the nan IS my regression; I nearly dismissed it on bad evidence
+
+Last entry I recorded the `test_eccentricity` nan as "unattributed" because it
+would not reproduce in a standalone script replicating the same potentials,
+times and integrator. **That reasoning was wrong.** Comparing like-for-like
+*under pytest*, which is the only context that counts:
+
+```
+baseline: 5.42463803e-06   (finite; exactly the ledger's recorded value)
+mine:     nan
+```
+
+Consistently. The standalone script is a different context and gives 0.0 or
+5.42e-06 regardless of version — so it was never evidence of anything. This is
+`handpicked-nodeid-batch-is-not-a-context` wearing a different hat: I built a
+"doesn't reproduce" conclusion on a harness I had constructed myself rather than
+the one CI runs. Had I acted on it, I would have shipped a nan-producing change.
+
+**Bisected one step.** Reverting *only*
+`AnyAxisymmetricRazorThinDiskPotential.py` while keeping the `backend/special`
+`ellipkm1` work restores the baseline 5.42e-06. So the cause is in the potential
+file; the special-function piece is clean.
+
+A useful constraint for the next step: instrumentation shows the orbit
+integration calls only `_Rforce_numpy` (58×, code I never touched), and the GL
+path runs **exactly once — inside `normalize()`**. So the prime suspect is what
+that single traced `_Rforce_gl` call does to `_amp` under the pytest harness. I
+measured `_amp` identical between versions (0.88668098) — but in a *script*, so
+by the lesson above that measurement has to be redone under pytest before it
+means anything.
+
+Remaining bisection, all under pytest: revert (a) the three AD second
+derivatives, (b) the graded panels, (c) the m1 wiring, one at a time.
+
+### 2026-08-03 — bisection lands on the graded panels; and a measurement trap explained
+
+**Result: the graded panels cause the nan.** Bisected under pytest (the only
+context that counts here):
+
+* revert the whole potential file, keep `backend/special` → baseline 5.42e-06 ✅
+* revert *only* `_bk_split_quad` (graded panels off, m1 + AD still on) → baseline
+  5.42e-06 ✅
+
+So `m1`/`ellipkm1` and the AD second derivatives are clean; the graded-panel
+quadrature is what produces nan. That also fits the call trace: the orbit
+integration only calls `_Rforce_numpy` (58×, untouched), and the GL path runs
+exactly once, inside `normalize()`.
+
+**And the confusion from the last two entries is fully explained.** The
+"it doesn't reproduce outside pytest" runs were never running my code.
+`python /path/to/script.py` puts the **script's** directory on `sys.path`, not
+the cwd — so every scratchpad-file probe imported the editable install, which
+resolves to **`/var/tmp/streamtorch/galpy`**, a different worktree. Proof:
+
+```
+cd /var/tmp/typeleaks && python /tmp/.../r0chk3.py                 -> VERSION: BASELINE
+cd /var/tmp/typeleaks && PYTHONPATH=/var/tmp/typeleaks python …    -> VERSION: GRADED(mine)
+python -c 'import galpy; print(galpy.__file__)'   (cwd=/tmp)       -> /var/tmp/streamtorch/galpy/__init__.py
+```
+
+That invalidates the `_amp` comparison, the side-by-side integration check and
+the "5.42e-06 twice" loop — all file-based. The heredoc measurements (accuracy
+tables, mpmath gold comparisons, the first loop that *did* show nan) and every
+pytest run used the correct galpy, so those conclusions stand.
+
+The tell was there and I explained it away: an A/B in which both arms printed
+*identical* numbers to 16 digits. Two versions of different code do not do that.
+I should have stopped at that and checked provenance instead of hypothesising
+about pycache and trace caches. Memory `galpy-editable-install-import-shadow`
+rewritten with the sys.path table and a mandatory provenance snippet.
+
+### 2026-08-03 — grading is load-bearing too, so it must be fixed not dropped
+
+Followed the bisection with the obvious engineering move: drop the culprit
+(graded panels), keep the two clean pieces (`m1` + AD second derivatives), and
+see what survives. Measured that variant against scipy (heredoc, provenance
+printed):
+
+| | evaluate | Rforce | zforce | R2deriv | z2deriv | Rzderiv |
+|---|---|---|---|---|---|---|
+| z=1e-3 | 5.3e-08 | 2.3e-07 | 2.3e-04 | **2.0e-06** | 2.7e+00 | 1.9e-02 |
+| z=1e-5 | 1.6e-05 | 3.5e-06 | 9.4e-01 | **4.7e-06** | 2.7e+04 | 1.5e+04 |
+
+Only **R2deriv** improves (1.4e+00 → 2.0e-06 at z=1e-3), because it is
+`-grad_R(Rforce)` and Rforce is decent. `z2deriv` and `Rzderiv` are unchanged
+from baseline, because they are `grad_z` of `zforce`/`Rforce` — and without
+grading `zforce` is itself 9.4e-01 wrong at z=1e-5 (it was **1.2e-12** with
+grading). Rforce at z=0 also falls back to 1.86e-05, i.e. no better than
+baseline.
+
+So the graded panels are load-bearing for four of the six methods. Dropping them
+is not an option; they have to be fixed. That is the third time in this potential
+that something which looked removable turned out to be doing real work (the
+`_ELLIP_M_CAP` clamp, the `git stash` A/B, now the grading).
+
+State: WIP `c83ee33d` restored intact on `feat/anyaxisym-m1-quadrature`; nothing
+pushed, no ledger edits. Next: find why 12 extra panels produce nan under a
+trace. Note the nan enters the *integrator state* (`_Rforce_numpy` gets fed
+R=nan; its first four calls return the correct -1.127810683), and `_amp` is
+finite and differs from baseline only at 8e-6 — so neither the potential's numpy
+path nor the amplitude explains it yet.
+
+### 2026-08-03 — the nan is a PRE-EXISTING numpy bug that my change merely steps on
+
+Chased the graded-panel nan to ground. It is not a backend bug at all.
+
+```
+_zforce_numpy(1.0, 0)        = 0.0     <- guarded, fine
+_zforce_numpy(1.0, 1e-30)    = nan
+_zforce_numpy(1.0, 2.26e-25) = nan
+_zforce_numpy(1.0, 1e-20)    = nan
+_zforce_numpy(1.0, 1e-16)    = nan
+_zforce_numpy(1.0, 1e-12)    = nan
+_zforce_numpy(1.0, 1e-8)     = -5.164079117306708e-09   <- fine
+```
+
+**Byte-identical on pristine `feat/backends-develop`.** There is a nan band at
+roughly 1e-30 ≤ |z| ≤ 1e-12 in the plain numpy/scipy path of
+`AnyAxisymmetricRazorThinDiskPotential`, and it very likely affects `main`.
+
+How it produces the `test_eccentricity` nan: an orbit started at z=0, vz=0 stays
+at z=0 analytically, but the ODE solver wanders to z ~ 1e-25 through roundoff.
+Whether it lands *inside* the band depends on the exact step sequence, which
+depends on `_amp` — and #187 shifts `_amp` by 8e-6. So the WIP does not cause
+the nan, it **exposes** it; the baseline is simply lucky.
+
+Getting here took three wrong turns, all of which the instrumentation eventually
+corrected: the guards (R=0 gives nan in *both* versions — ruled out), `_amp`
+(finite in both, 8e-6 apart — ruled out), and the potential's traced path
+(`jax.jit(_Rforce_gl)` at R=1 is correct). The find came from widening the
+instrumentation from `_Rforce_numpy` alone to all three numpy entry points and
+asking which returns a non-finite value *first* — index 57 of 116.
+
+Filed as #189, with the note that it belongs on **main**, not feat/backends, and
+that galpy's own suite never probes that |z| band, which is why it has sat there.
+Likely fix: extend the `z==0` special case to a small-|z| regime where the force
+is O(z), or make the numpy quadrature range-aware the way the traced path now is.
+
+This also reframes #187: the graded panels are not wrong, and the "regression"
+is a collision with a pre-existing landmine. Sequence is now #189 first, then
+re-test #187.
+
+### 2026-08-03 — PR #1245: the nan band, root-caused and fixed
+
+Root cause of #189, exactly as the structure suggested. The five numpy
+integrands hand `m = 4aR/((a+R)^2+z^2)` straight to scipy's `ellipe`/`ellipk`.
+That is ≤ 1 analytically, but for tiny |z| the z² is negligible against (a+R)²
+and rounding tips it over. Caught the actual call by spying on the elliptic
+functions during a failing evaluation:
+
+```
+z=1e-08 : 1431 calls, max m = 0.9999999999999998, 0 nan
+z=1e-25 : 2103 calls, max m = 1.0000000000000002, 2 nan
+          first nan-producing call: ('E', 1.0000000000000002, nan)
+```
+
+Fix is `numpy.minimum(..., 1.0)` on all five — the backend/GL path already had
+exactly this guard as `_ELLIP_M_CAP`; the numpy path never did. **Byte-identical
+away from the band** (verified on a 6×20 method/R/z grid), and inside the former
+band the values are now not merely finite but physically right: `Fz/z` constant
+to 1e-9 across 1e-30…1e-8, the O(z) limit.
+
+**PR #1245** into feat/backends-develop, flagged in both the commit and the PR
+body as a `main` bug to cherry-pick — it is not backend-related at all.
+
+Two process notes:
+
+* My first version of the regression test **failed with the fix applied**, and
+  the fix was right — I had included z=1e-6 in the linearity assertion, which is
+  past the O(z) regime (`Fz/z` ≈ -4e5 there). Fixed the test, not the code, and
+  scoped the assertion to |z| ≤ 1e-8 where the claim actually holds.
+* I lost the uncommitted fix once to a `git stash -- <file>` / `checkout` /
+  `stash drop` dance — the repo-wide-stash trap I already have a memory about.
+  The pre-existing `feat/native-grid-spline` stash survived (I checked before
+  re-applying), and re-applying was 5 mechanical lines. Still: no stash games in
+  a shared worktree.
+
+### 2026-08-03 — #187 clears its first ledger entry (gated on #1245)
+
+#1245's CI is all-queued, so I pre-verified what #187 buys once it lands:
+cherry-picked the nan fix onto `feat/anyaxisym-m1-quadrature` and re-ran the
+four AnyAxisym ledger entries under pytest.
+
+```
+test_orbit.py::test_eccentricity                PASS (38s)   <-- CLEARED
+test_2ndDeriv_potential[AnyAxisym]              FAIL
+test_poisson_surfdens_potential[AnyAxisym]      FAIL (array-input TypeError)
+```
+
+**And I ran the control**, which is the part that matters for attribution: with
+the #1245 nan fix *alone*, `test_eccentricity` still fails at the original
+5.42463803e-06. So #1245 is a prerequisite that unmasks the entry, and #187's
+quadrature work is what actually clears it — Rforce at z=0 goes 1.9e-5 → 2.77e-9
+against mpmath gold, and the eccentricity of a circular orbit follows.
+
+Worth stating plainly because the temptation was to credit the nan fix: it
+removes the nan, it does not make the orbit circular. Two separate defects
+stacked on the same test, and only running both arms separates them.
+
+Remaining on #187: rebase once #1245 merges (the cherry-pick drops out), then
+`test_2ndDeriv` (still fails at z=0, diff 3.61 vs 4.8e+04 before) and the two
+`poisson_surfdens` entries (need the deliberate array-input opt-out reversed,
+which is only honest once the accuracy that opt-out cites is fixed). If those
+drag, shipping the rebase + the one cleared entry is a legitimate smaller PR.
+
+### 2026-08-03 — #1245 back to DRAFT: my fix was wrong, and the bug has layers
+
+Caught this before merge, which is the good part; the rest is a correction.
+
+**The physics I got wrong.** Just off the plane a razor-thin disk has
+`Fz(z->0+) -> -2 pi Sigma(R)`, a **constant**. My regression test asserted
+`Fz/z` is constant — O(z) — and it passed *only because the values were
+garbage*. A correct implementation would have failed it. That is exactly the
+"green ≠ meaningful" failure mode, authored by me, in a test written to guard a
+fix.
+
+**The bug has at least three layers**, all measured:
+
+1. `m = 4aR/((a+R)^2+z^2)` rounds just above 1 for tiny |z| → scipy's
+   `ellipe`/`ellipk` return nan (the integrand asks for `1.0000000000000002`).
+2. Clamping to *exactly* 1.0 — my first fix — is wrong: `ellipk(1) = +inf`
+   (while `ellipe(1) = 1`), so the ellipk-using integrands trade the nan for an
+   inf and quad still returns nan. The backend's `_ELLIP_M_CAP = 1 - 1e-15`
+   exists for precisely this, and I should have copied it rather than inventing.
+3. Independently, below |z| ~ 1e-6 the a=R peak is too narrow for scipy's quad
+   to find and it silently returns ~0 **with the wrong sign** — erratically:
+   correct at 3e-6, garbage at 1e-6, garbage at 3e-7, correct again at 1e-7,
+   garbage at 1e-8.
+
+**What I tried and why each failed:** explicit break points at R±10z made
+quadpack fail on points ~1e-7 apart and *introduced* a nan in `evaluate` the
+baseline never had (removed); the analytic small-|z| branch
+`Fz = -2 pi Sigma(R) sign(z)` genuinely works — exact below the threshold,
+antisymmetric, continuous to ~1e-6 — but I set the threshold one decade too low,
+so the breakdown region still takes the broken branch.
+
+**Why I stopped rather than tune it again.** Raising the threshold to 1e-5 would
+probably go green. That would be a fourth guessed constant on a main-branch
+numerics path after three wrong attempts, trading a ~1e-5 discontinuity at the
+join for correctness below it. Threshold vs blend vs a proper series expansion is
+a design call for Jo, not something to settle by iterating until CI is green.
+
+PR #1245 is a draft with a comment stating the error plainly. WIP committed
+(1c3b8327) so nothing is lost. #187 stays blocked behind it.
+
+### 2026-08-03 — PR #1246: found completed work that had never been pushed
+
+With #1245 parked on a design decision and #187 behind it, I went looking for
+other actionable work rather than grinding on AnyAxisym — and found task #182's
+fix sitting finished and *unpushed* on `fix/scipy118-spline-pickle`.
+
+**The trap:** `git branch -r --contains` said `origin/fix/scipy118-spline-pickle`
+had the commit, and `git log origin/feat/backends-develop..<branch>` showed it 1
+commit ahead. Both were satisfied by a **stale remote-tracking ref** — plain
+`git fetch` does not prune, so a branch deleted (or never pushed) on GitHub still
+appears under `origin/`. GitHub answered the question definitively:
+`gh api repos/.../branches/<name>` → **404**. Pushed it, then the PR opened fine.
+Lesson: `git branch -r` is not evidence a branch exists on the remote; ask the
+API (or `git fetch --prune`).
+
+**The fix itself** (#1246): scipy 1.18 caches the array namespace — a *module* —
+on `PPoly`/`BPoly` as `_xp`, so anything holding one raises "cannot pickle
+'module' object". `MultipoleExpansionPotential` holds `BPoly` directly and
+`DiskMultipoleExpansionPotential` through its `_me` sub-potential, so one
+`__getstate__`/`__setstate__` covers both: drop the scipy object on the way out,
+rebuild through the public constructor on the way back. Stripping `_xp` alone
+does not work — scipy never recreates it and the restored spline then raises
+`AttributeError`. The test change *removes* an exclusion, restoring coverage.
+
+**Stated caveat rather than glossed:** local scipy is 1.17.1, so I cannot
+reproduce the 1.18 failure here. The 60 pickle tests passing locally shows no
+regression on 1.17 — not that 1.18 is fixed. CI decides that, and the PR says so.
+
+Also audited before opening (test-only-adjacent but still): no if→xp.where
+array-input class, no duplication, helpers module-local to the file that owns the
+splines. Flagged for cherry-pick to main.
+
+### 2026-08-03 — swept the unpushed local branches; two more tasks were stale
+
+After #1246 I checked whether other local branches held ready work, since that is
+how #1246 was found. Result: they held *superseded* work, not ready work.
+
+| branch | ahead of develop | on GitHub | verdict |
+|--------|------------------|-----------|---------|
+| `fix/scipy118-spline-pickle` | 1 | **no** | genuinely ready → **PR #1246** |
+| `fix/qdf-sampler-boundary` | 3 | no | superseded (landed as #1231) |
+| `fix/picklable-potentials` | 4 | no | superseded (landed as #1230) |
+
+"Ahead of develop" is a weak signal — a branch whose content was squash-merged
+still shows commits ahead, because the squash has a different SHA. The real check
+is whether the *content* is on develop:
+
+* `fix/qdf-sampler-boundary` — develop already carries both the sampler boundary
+  cast **and** the follow-up `fmin_powell` objective cast
+  (`quasiisothermaldf.py:2181-2190`), which I expected to be the one novel bit.
+  Nothing left. Closed #180.
+* `fix/picklable-potentials` — develop already has the pickle round-trip test and
+  the KuijkenDubinski `__getstate__`/`__setstate__`. Closed #179.
+
+Also corrected a count while checking: `grep -c qdf` on the ledger returns 6, but
+5 of those are comment lines; only **2** are entries (jax+torch
+`test_call_diffinoutputs`), already recorded as by-design. Grep counts on the
+ledger must exclude `^#` — the same trap as the earlier staleness sweep.
+
+Net: four tasks closed as stale across the last two sweeps (#175, #176, #177,
+#179, #180, #184), one real PR recovered (#1246). The task list rots faster than
+it looks, and the periodic sweep keeps paying for itself.
+
+### 2026-08-03 — #117: dropping the guard was half a fix; and freeing the CI queue
+
+**The forced-backend gate earned its keep.** Removing the Pdf.1 data-guards
+(`get_namespace(R) if is_backend_array(R) else numpy` → `get_namespace(R)`)
+passed numpy 134/134 and broke forced torch **125/134**, every one:
+
+```
+TypeError: exp(): argument 'input' (position 1) must be Tensor, not float
+```
+
+Under a forced backend `get_namespace` correctly returns torch, but `R` is still
+a plain Python float and `torch.exp` rejects it. **The data-guard was standing in
+for coercion** — removing it without adding coercion just relocates the
+breakage. Exactly the case `forced-backend-gate-before-push` exists for: numpy
+alone says nothing here.
+
+**The complete fix needs two pieces, and the first is inert without the second:**
+
+1. `@backend_input("R")` on each entry point (4 methods × 2 classes in
+   `surfaceSigmaProfile.py`, `sigmar`/`sigmalos` in `jeans.py`);
+2. `_backend_compatible = True` on the base class.
+
+I added (1), re-smoke-tested, and `R` was *still* a float inside the wrapper.
+Reading `_input.py` showed why: coercion is gated on `_backend_ready(args[0])`,
+an alias of `is_backend_compatible`. `sphericaldf` declares it (line 231);
+`surfaceSigmaProfile` never did. With both, forced torch takes a plain float and
+returns `tensor(0.0183)` against numpy's `0.01831563888873418`.
+
+Not assuming the rest: forced **jax** showed 5 `test_jeans` failures that are
+*numerical* ("Radial sigma ... incorrect for LogarithmicHalo"), not `TypeError`.
+Different cause, diagnosed separately before this ships. Also flagged that
+`jeans.sigmar`'s gate asks about the **potential** (args[0]), not the df — worth
+confirming that is intended for module-level functions.
+
+**Queue management.** #1246 had sat ~40 min fully queued while #1245 — a *draft*
+I am not merging, blocked on Jo's threshold call — was still burning runners from
+an hour earlier. Cancelled its 8 runs. The project is runner-constrained, so a
+parked draft holding capacity is pure waste; PR runs on a draft are safe to
+cancel (unlike same-SHA push runs, which block merge).
+
+### 2026-08-03 — #117 scoped down: jeans' guard was hiding an accuracy gap
+
+Diagnosed the 5 forced-jax `test_jeans` failures rather than assuming the
+coercion fixed them. **They were my regression** — baseline forced-jax
+`test_jeans` is 5 tests / **0 failed**, mine was 5/5 failed.
+
+Why: `jeans.sigmar`/`sigmalos` are a *dual path*, not a numpy island —
+`if xp is numpy:` → `scipy.integrate.quad` (byte-identical), else a backend
+quadrature. The old guard meant a plain Python float took the **scipy** branch
+even under a forced backend. Coercing `r` correctly routes it to the **backend**
+branch — which is the intent — and that exposed the backend Jeans quadrature as
+not accurate enough ("Radial sigma ... incorrect for LogarithmicHalo", numerical,
+not a TypeError).
+
+So the guard was doing two different jobs in two different files:
+
+* `surfaceSigmaProfile` — standing in for **coercion**. Fixed properly with
+  `@backend_input` + `_backend_compatible`; numpy 134/134, forced torch smoke
+  clean.
+* `jeans` — standing in for an **accuracy fallback**. Cannot be removed until the
+  backend quadrature is good enough. Guard restored; filed as **#190** with the
+  measurements.
+
+Scoped #117 to `surfaceSigmaProfile` only. Reverting the jeans half restored
+forced-jax `test_jeans` to 5/5 passing, confirming the split is exactly right.
+
+Two things worth carrying: (a) "remove the numpy island" is not one uniform
+refactor — each guard has to be read for *what it is standing in for*; (b) I only
+caught this because I ran the baseline arm instead of trusting that a failure in
+new code is a pre-existing failure.
+
+Also cancelled #1245's 8 CI runs — a draft I am not merging, parked on Jo's
+threshold call, was holding runners while #1246 sat fully queued for ~40 min.
+#1246 went from 0 to 11 checks in progress immediately after.
+
+### 2026-08-03 — inventoried every remaining data-guard, split by what it means
+
+With #117 and #190 having shown the same idiom means two different things, took a
+full inventory so the rest of the island work is not rediscovered one file at a
+time. Recorded on #150, which was previously a pending task with no detail.
+
+**(A) namespace guards** — `xp = get_namespace(x) if is_backend_array(x) else numpy`
+— **26 sites across 11 files**, the #117 pattern. Each is standing in for either
+coercion (fix: `@backend_input` + `_backend_compatible`) or an accuracy fallback
+(fix: improve the backend rule first — a numerics task). Biggest concentrations:
+`actionAngleStaeckelGrid.py` (5), `evolveddiskdf.py` (4, = task #143),
+`util/coords.py` (3), `verticalPotential.py` (3), `actionAngleStaeckel.py` (3).
+
+**(B) cast guards** — `x if is_backend_array(x) else numpy.<op>(x)` — 3 sites
+(`constantbetadf:656` ascontiguousarray, `diskdf:239` real,
+`backend/interpolate:811` asarray). These are **not** islands: they apply a
+numpy-only op to numpy input and leave backend arrays alone. Leave them. Worth
+separating explicitly, because a naive grep for `is_backend_array ... else numpy`
+lumps them in and would have inflated the roadmap by 3 files of non-work.
+
+Also carried the method into #150: numpy-only validation is silent on this class
+(134/134 vs 125/134), always run forced torch AND jax, and run the baseline arm
+before calling a new failure pre-existing.
+
+### 2026-08-03 — #117 is a migration, not a guard removal; my scope was wrong twice
+
+Forced-torch progression on `test_diskdf` + `test_jeans`:
+
+```
+guards simply dropped                    125 / 134 failed
++ @backend_input + _backend_compatible    52 / 134 failed
+numpy throughout                         134 / 134 PASS
+```
+
+52 is much better than 125, but the survivors are **two new causes**, not the
+original one:
+
+1. `TypeError: log(): argument 'input' must be Tensor, not float` — more
+   undecorated entry points. `exp` was simply the first one the tests reached;
+   this needs a systematic pass over the public surface, not another one-off.
+2. `IndexError: too many indices for array: array is 0-dimensional` — coercion
+   turns a scalar into a 0-d **array**, and the `diskdf` code downstream indexes
+   it. That is the numpy-scalar-vs-0-d-array distinction biting again.
+
+The second one is the structural finding: **the Pdf.1 leaf cannot be
+de-islanded independently of `diskdf`.** Either migrate diskdf's consumption
+sites to accept 0-d backend arrays (what the directive actually wants), or have
+the leaf exit-cast back to a scalar (smaller, but leaves the island half
+standing). That is a decision to make before writing more code, so I stopped
+rather than patching toward green.
+
+I have now mis-scoped this twice — first "drop 6 guards", then "add a decorator".
+Recording it plainly on #117 because the pattern is the interesting part: each
+fix revealed the next layer, and each layer was only visible under a forced
+backend.
+
+**Process slip:** one measurement was silently lost because I backgrounded it
+with a trailing `&` inside a foreground tool call — it died with the parent shell
+and wrote no junitxml, and I only noticed when the file was absent. Use the
+tool's `run_in_background`, never `&`.
+
+### 2026-08-03 — #117 paused with the baseline nailed down; STATUS.md refreshed
+
+Got the number I had been missing. Baseline forced-torch on `test_diskdf` +
+`test_jeans` is **0 failures** — now COMPLETE and confirmed (134 tests, 0 failed,
+exit 0), not extrapolated from the partial run —
+so the 47 remaining failures are entirely mine, not a pre-existing floor.
+Corroborated independently: `backend_xfail.txt` has no torch entries for these
+files, `backend_skip.txt` has none, and the slow-skips are jax-only — CI runs
+`test_diskdf` under torch and expects it green.
+
+Full progression:
+
+```
+baseline                                    0 failed
+guards simply dropped                     125 failed
++ @backend_input + _backend_compatible     52 failed
++ jeans guard restored (reduced scope)     47 failed
+numpy, throughout                           0 failed
+```
+
+Paused #117 rather than patch toward green. The 9 `IndexError`s are the
+structural blocker — coercion makes a scalar a 0-d **array** and `diskdf` indexes
+it — so the leaf cannot be de-islanded independently of its consumer. The choice
+is (a) migrate diskdf's consumption sites, which is what the directive wants and
+is much the larger job, or (b) exit-cast at the leaf, which is small but leaves
+the island half standing. That is a scoping decision, not more code.
+
+Also **rewrote STATUS.md**, which was two days stale and still reporting ledger
+101 against the current 42. Since Jo said he will ask for summaries rather than
+read the trace, a stale snapshot is worse than none. It now carries: the 42
+split, the point that `backend_slow_skip.txt` (230) is 5× the ledger and is the
+real remaining backlog, the two decisions waiting on him (#1245 threshold, #171
+tolerances), the two non-backend bugs to cherry-pick to main, and the method
+notes that actually earned their keep this week.
+
+### 2026-08-03 — a real jit-progress metric (#185), and the first number
+
+Built the traced-fraction metric while #1246 waited on the queue. It is a small
+pytest plugin that patches the two decision points in the `@backend_input`
+boundary and counts what actually happens:
+
+* `_backend_ready(args[0])` — the temporary opt-in gate; how many boundary calls
+  are turned away because the object is not migrated;
+* `traced_call(...)` — of the calls that get past the gate, how many actually
+  trace versus return `NOT_TRACED`.
+
+First measurement, `test_potential.py` under `--backend jax --jit`
+(AnyAxisym/Miyamoto/NFW subset):
+
+```
+boundary calls on a backend namespace : 18739
+  passed the _backend_ready gate      : 18715   (99.9%)
+  gated OUT (object not migrated)     :    24
+reached traced_call                   : 18715
+  actually TRACED                     : 18499   (98.8% of those)
+  returned NOT_TRACED                 :   216
+end-to-end traced fraction            : 98.7%
+```
+
+This is the metric the jit work has been missing. Pass counts do not measure it —
+a C-method test bypasses the trace entirely and still passes green, so "the jit
+shard is green" and "the code is being traced" are different claims. 98.7% for
+potentials is a genuinely good number and, importantly, it is now *measurable*
+rather than asserted.
+
+The plugin lives in the scratchpad, not the repo — it patches internals, so it is
+a measurement tool rather than something to ship. If it proves useful across
+several files it should be hardened into `tests/` behind a `--jit-metric` flag.
+
+`test_orbit.py` is the interesting contrast (memory says it is largely NOT
+traced) — that run exceeded the foreground window and is now in the background.
+
+### 2026-08-03 (later) — the orbit contrast, and what the metric does *not* say
+
+`test_orbit.py` under `--backend jax --jit` (subset: eccentricity /
+energy-jacobi / analytic-ecc):
+
+```
+boundary calls on a backend namespace : 356737
+  passed the _backend_ready gate      : 346866   (97.2%)
+  gated OUT (object not migrated)     :  9871
+  actually TRACED                     : 346242   (99.8% of those)
+end-to-end traced fraction            : 97.1%
+```
+
+Two honest caveats before anyone quotes this:
+
+1. **This is a `-k` filtered subset, not the file.** It is not comparable to a
+   whole-file number and should not be reported as "test_orbit is 97% traced".
+2. **The metric is weighted by call volume, not by code.** One orbit
+   integration makes hundreds of thousands of force calls, so this measures the
+   fraction of *runtime boundary crossings* that trace — not the fraction of
+   *code paths* that are jittable. A rarely-called but wholly untraceable
+   function barely moves it. Both quantities matter; this one is not the other.
+
+With that said, the interesting number is not the traced fraction — potentials
+and orbits are both ~98% there — it is the **gate**: 9871 calls turned away by
+`_backend_ready` on the orbit side versus **24** on the potential side. That
+ratio is the migration debt, stated quantitatively for the first time. The
+potential surface is essentially fully opted in; the orbit surface is not, and
+the gate is where that shows up.
+
+This also corrects a note I had been carrying that "test_orbit is not traced".
+At the boundary it largely is; what it is not is fully *migrated*. Different
+claim, different fix.
+
+### 2026-08-03 — #188 done locally: assert_jit_matches_eager (commit 7619287c)
+
+Every `test_backend_*` module had its own copy of the jit-vs-eager compare.
+Deduplicating it is the obvious half; the useful half is that the shared
+assertion can check something none of the copies did.
+
+A value comparison between jitted and eager output cannot see a trace that
+collapsed to a constant — it compares equal and passes. So the helper also
+inspects the jaxpr and requires the output to actually consume the traced
+arguments. **Mutation-verified**: a lambda returning a precomputed constant
+passes the old idiom and fails the new one. Without that check this PR would
+have been pure cosmetics.
+
+`tests/backend_jit_helpers.py`; 6 modules converted, 35 tests, green on numpy
+and under forced jax. Held local — #1246 is still the active PR and the runners
+are busy.
+
+### 2026-08-03 — conflict markers in the MAIN repo working tree (mine, now cleaned)
+
+`git grep` for the numpy-island survey turned up `<<<<<<< Updated upstream` in
+`actionAngleStaeckelGrid.py`. Two files were sitting in unresolved `UU` state on
+`feat/backends`:
+
+```
+UU galpy/actionAngle/actionAngleStaeckelGrid.py   (4 conflict regions)
+UU galpy/backend/interpolate.py                   (1 conflict region)
+```
+
+From the `git stash pop` of the foreign `feat/native-grid-spline` WIP earlier in
+this session -- the repo-wide-stash trap, again. The session-start `git status`
+snapshot was clean, so this was mine, and it had been sitting there unnoticed
+across many wakes. Nothing was lost: a conflicted pop does not drop the stash,
+and `stash@{0}` still holds the WIP.
+
+Backed both files up to the scratchpad, then `git checkout HEAD --` on the pair.
+The tree now matches the session-start snapshot exactly (`M galpy/util/coords.py`
+plus untracked), zero markers repo-wide, stash intact.
+
+Worth noting *why* it went unnoticed: I do all PR work in worktrees, so the main
+repo's tree is never exercised, and the editable install resolves elsewhere
+again. A broken main tree is invisible to every check I run. The `git grep`
+markers sweep is in memory as a pre-push step -- it deserves to be a periodic
+sweep of the *main* tree too, not just of the branch being pushed.
+
+### 2026-08-03 — #150: the 23 guards, classified
+
+Read each site (comment + immediate context; not full call-graphs). The
+"eliminate the islands" count is smaller than the raw grep suggests, because
+three different things share one idiom:
+
+**Not islands -- deliberate, keep (4).** `actionAngleIsochroneApprox:1229` is a
+documented dual path: scipy on numpy (byte-identical), vectorised
+bisection+Newton on backends. `evolveddiskdf:785/2861/3536` select the *op* for
+byte-identity -- `numpy.dot` on numpy because `numpy.matmul` differs by ~ULP on
+non-contiguous slices, `matmul` on backends because `torch.dot` is 1-D only.
+That op choice survives migration and should not be "fixed".
+
+**Accuracy fallback -- blocked on numerics (2).** `jeans:53/139`. Removing the
+guard costs 5 forced-jax failures; the backend quadrature is not yet good enough
+to replace scipy's. Tracked as #190.
+
+**Transitional coercion stand-ins -- the actual island list (9).**
+`surfaceSigmaProfile` x4 (#117), `verticalPotential:118/149`, and
+`evolveddiskdf:525/2861/3536`. Each is waiting on a *caller* being migrated, not
+on a numerics fix. `verticalPotential`'s own comment names the reason: "a
+numpy/scalar z (e.g. an un-migrated parent) -> numpy, so the broadcast matches
+what the parent will receive". Its two blocks are also byte-identical
+duplicates of each other -- one shared prologue when they are lifted.
+
+**Leaf math kernels -- need a per-caller decision (8).**
+`actionAngleStaeckel:1507/2355/2376`, `actionAngleStaeckelGrid` x5. Pure
+namespace selection over sinh/log/exp arithmetic, no alternate algorithm. These
+match the leaf-migration pattern: legitimate while a numpy caller still consumes
+them, removable once the callers coerce at the boundary.
+
+So the roadmap is: 4 stay, 2 are gated on #190, and **17 come out via caller
+migration** in two clusters (df/surfaceSigmaProfile+evolveddiskdf+verticalPotential,
+and the Staeckel leaf family). That is a materially different plan from "26
+islands to remove" -- and the leaf cluster is one PR, not eight.
+
+### 2026-08-03 — #1246 pre-merge audit: correct, but the bug is wider than the PR
+
+Audited the diff against the three things I check before merging.
+
+**if -> xp.where array-input class: no exposure.** The PR contains no backend or
+array code at all; `_pack_splines`/`_unpack_splines` dispatch on Python types
+(PPoly/BPoly/list/tuple).
+
+**Duplication: none, and I verified the claim rather than repeating it.**
+`DiskMultipoleExpansionPotential` holds a `_me` sub-potential
+(`DiskMultipoleExpansionPotential.py:116`) and defines no `__getstate__` of its
+own, so it inherits the fix through that attribute -- and the PR's new
+"DiskMultipole nonaxi" case exercises exactly that path.
+
+**Helper placement: right for the PR as scoped, wrong for the bug.** I went
+looking for other holders of scipy piecewise-polynomials and found two the
+"exactly 2 classes" note had missed. Measured in the scipy-1.18 venv:
+
+```
+PPoly  BPoly  CubicSpline   -> cannot pickle 'module' object
+InterpolatedUnivariateSpline -> fine
+```
+
+`CubicSpline` is a `PPoly` subclass, so the existing isinstance check would
+already catch it. The uncovered holders:
+
+* `SCFPotential._Acos_interp` / `._Asin_interp` (CubicSpline, SCFPotential.py:310)
+  -- **confirmed** end-to-end: a time-dependent SCF raises "cannot pickle
+  'module' object". It escapes the pickle test because that test enumerates
+  *default-constructible* potentials and a time-dependent SCF is not one.
+* `streamgapdf._kick_interpdOpar_poly` (PPoly, streamgapdf.py:792).
+
+So three modules need the same pack/unpack, which means `_pack_splines` belongs
+in a shared utility rather than in `MultipoleExpansionPotential.py`.
+
+**Decision: merge #1246 as-is anyway.** It is strictly an improvement, it makes
+nothing worse, and it is ~3h into a full CI matrix that is nearly green --
+re-scoping it now would restart the whole matrix on a runner-constrained
+project for no correctness gain. The helper is module-private, so hoisting it
+later is a pure refactor with no API impact. Follow-up PR: hoist the pair into a
+shared util, apply to SCF + streamgapdf, and test the time-dependent SCF (which
+needs a non-default-constructible case, so it cannot just be added to the
+existing enumeration).
+
+### 2026-08-04 — the scipy-1.18 pickle bug is LIVE in CI, not preventive
+
+Followed up the #1246 audit finding with the question that decides its urgency:
+is CI actually on the broken scipy?
+
+```
+build.yml: pip install --upgrade --upgrade-strategy eager numpy scipy ...   (no pin)
+completed job on #1246's head: numpy: 2.5.1 / scipy: 1.18.0
+```
+
+So yes. The two uncovered holders -- time-dependent `SCFPotential`
+(`_Acos_interp`/`_Asin_interp`) and `streamgapdf._kick_interpdOpar_poly` -- are
+broken on the exact stack CI runs today. They are green only because **nothing
+in the suite pickles them**: `grep pickle tests/test_scf.py
+tests/test_streamgapdf*.py` returns nothing.
+
+That is the same shape as the bug #1246 fixes, which was itself invisible until
+a test enumerated potentials and tried. Corrected the stale "exactly 2 classes"
+task (#182) -- it was 2 only within the scope of default-constructible
+potentials in one test. Real work is #191.
+
+Note on wake cadence: the loop has been firing every ~5 minutes rather than the
+55m cron, so consecutive "no change in CI" observations are expected and are not
+evidence of a stall. Confirmed by timestamping: 01:09:50Z -> 01:14:40Z between
+two wakes, against jobs that individually run 20-40 minutes.
+
+### 2026-08-04 — the orbit-side jit debt is THREE container classes (#185 complete)
+
+Extended the boundary metric to record *which* type `_backend_ready` turns away.
+On the same `test_orbit.py` subset, the 9,871 rejections rank:
+
+```
+  4,476  planarCompositePotential
+  3,814  planarPotentialFromRZPotential
+  1,005  CompositePotential
+    502  mockMovingObjectLongIntPotential     <- a TEST mock, not library code
+     48  planarPotentialFromFullPotential
+     26  mock/test/Null potentials
+```
+
+**94% is three classes**, and all three are *containers* -- they hold
+sub-potentials and delegate. Verified: none of
+`planarCompositePotential`, `planarPotentialFromRZPotential`,
+`CompositePotential`, `planarPotentialFromFullPotential` declares
+`_backend_compatible`. The leaf potentials they wrap are migrated; the wrapper
+is what the gate rejects.
+
+That reframes the remaining work. "9,871 un-migrated boundary calls" sounded
+like a broad sweep; it is four container declarations plus test scaffolding.
+~5% of the count is a test mock and should not be read as library debt at all.
+
+**Not proposing a flat flip.** The gate's removal was tried before and reverted
+with 4 measured breakages, and it survives as the temporary `_backend_ready`.
+The right shape is conditional -- a container is backend-compatible iff its
+members are -- evaluated at construction, which is also the only version that
+is *true*. A composite holding one un-migrated member must still be rejected.
+
+Metric caveats unchanged: this is a `-k` subset, and the counts are weighted by
+call volume, so they rank hot paths rather than code paths.
+
+### 2026-08-04 — #191: SCF fixed and control-verified; streamgapdf being measured
+
+Two commits on `feat/spline-pickle-util` (unpushed; #1246 is still the active PR):
+
+* `703443b3` `galpy/util/_pickle.py` + `SplinePickleMixin`, SCFPotential wired up
+* `33f2e5c8` the test
+
+**Testing changed the design twice.** #1246's helper cannot be hoisted verbatim:
+
+* it rebuilds via `type(obj)(c, x, ...)`, which **raises** on `CubicSpline`
+  ("`x` must be 1-dimensional") because that constructor takes samples, not
+  coefficients -- and `CubicSpline` is exactly the SCF case. Rebuilding at the
+  **base** class (`PPoly`/`BPoly`) reproduces the values bit-for-bit and pickles.
+  `PPoly.construct_fast` keeps the subclass but returns an object that is itself
+  *still* unpicklable, so it is not a way out.
+* free functions would have every holder copy the same `__getstate__`/
+  `__setstate__` pair. A mixin means holders declare `_PICKLE_SPLINE_ATTRS` and
+  nothing else -- and galpy already uses mixins
+  (`SphericalHarmonicPotentialMixin`), so it is not a new idiom.
+
+The test is control-verified **both ways**: against galpy without `_pickle.py`
+(existence asserted, not assumed) it fails with "cannot pickle 'module'
+object"; with the fix it passes. It compares with `assert_array_equal`, not a
+tolerance -- the coefficients round-trip exactly, so a looser check would not
+notice a rebuilt-but-subtly-different spline, which is precisely what the naive
+rebuild produces.
+
+**streamgapdf: measuring rather than guessing which attributes break.** The
+class has *two* code paths for `_kick_interpdOpar_poly`: the numpy/scipy one
+(streamgapdf.py:995) builds a real `PPoly` and is the default; the backend one
+(:1115) already builds a picklable `SimpleNamespace`. So the numpy path is the
+broken one. But it also holds a dozen `InterpolatedUnivariateSpline`s and a
+`.derivative(1)` of one, and I do not know offhand which of those survive 1.18 --
+so a background job builds the Sanders15 stream and scans every attribute
+individually instead of me declaring a guess in `_PICKLE_SPLINE_ATTRS`.
+
+### 2026-08-04 — correcting myself on #192: composites are fine, the ADAPTERS are the gap
+
+Last entry I wrote that the three container classes "do not declare
+`_backend_compatible`" and implied declaring it was the fix. Reading
+`galpy/backend/_compat.py` properly shows that inference was wrong:
+`is_backend_compatible` **already** recurses -- a list iff every member is, a
+composite through `obj._potlist`, a wrapper iff it and `obj._pot` are.
+
+So the 9,871 gated calls split into two groups that want opposite treatment:
+
+**Honest rejections (leave alone).** `planarCompositePotential` (4,476) and
+`CompositePotential` (1,005) both subclass `baseCompositePotential`, so the
+recursion already walks their members. They are rejected because a *member* is
+not migrated. That is the gate working. The fix is to migrate the member; making
+the container claim compatibility would be a lie and would hand backend arrays
+to an unmigrated leaf. Plus 528 calls from test mocks, which are not library debt
+at all.
+
+**The real gap: 3,862 calls in two adapters.**
+`planarPotentialFromRZPotential` (3,814) and `planarPotentialFromFullPotential`
+(48) are neither composites nor `WrapperPotential` subclasses, so the recursion
+falls through to the leaf branch and reads their own absent flag. They also
+store the wrapped potential as `self._Pot` -- *capital* P -- where the wrapper
+branch looks for `obj._pot`, so simply adding them to that isinstance tuple
+would not even work.
+
+The fix is already written two lines away in the same constructor:
+
+```python
+self.hasC = RZPot.hasC and _hasC_planar
+self.hasC_dxdv = RZPot.hasC_dxdv and _hasC_planar
+```
+
+An adapter derives its capability flags from what it wraps. Doing the same for
+`_backend_compatible` is no new mechanism, weakens no gate, and stays *true* --
+an adapter over an unmigrated potential still reports False.
+
+Worth noting how the wrong version would have looked: declaring the flag on the
+composites would have passed its tests (the members are usually migrated in the
+suite) while silently breaking exactly the case the gate exists for.
+
+### 2026-08-04 — #191 streamgapdf: measured, fixed, tested
+
+The attribute scan on a fully built Sanders15 stream returned **one** unpicklable
+attribute:
+
+```
+UNPICKLABLE  _kick_interpdOpar_poly    PPoly    cannot pickle 'module' object
+total unpicklable attrs: 1
+```
+
+Every `InterpolatedUnivariateSpline` and the `.derivative(1)` of one survive
+1.18. Worth having measured: I would have declared the dozen `_kick_interp*_raw`
+splines too, and been wrong. The backend kick path already stores a plain
+`SimpleNamespace` there, which packs through untouched, so one declaration
+covers both paths with no branching.
+
+Test added on the existing module-scoped fixture (so it costs ~nothing beyond
+the stream build) and passes under scipy 1.18. It compares `.c` and `.x` with
+`assert_array_equal` *and* re-evaluates through `_kick_interpdOpar`, because a
+restored-but-broken spline would sail through an attribute-only comparison.
+
+### 2026-08-04 — #1246 MERGED (daee368b); #1247 opened
+
+`potential: survive scipy 1.18's unpicklable spline objects` went in at 302
+checks green, zero failures, `MERGEABLE / CLEAN`. Squash-merged to
+`feat/backends-develop` as **daee368b**; branch and worktree removed.
+
+Final audit before merging (re-verified the head SHA and file list had not moved
+since the audit):
+
+* **array-input class** — no exposure. The PR contains no backend or array code;
+  `_pack_splines`/`_unpack_splines` dispatch on Python types.
+* **duplication** — none, checked rather than assumed.
+  `DiskMultipoleExpansionPotential` holds a `_me` sub-potential and defines no
+  hooks of its own, so it inherits the fix, and the PR's new "DiskMultipole
+  nonaxi" case exercises exactly that. Compared against the four existing
+  `__getstate__` implementations in the tree: all of them merely *delete*
+  unpicklable attributes, none pack splines, so nothing overlaps.
+* **helper placement** — module-local is right for this scope. The wider bug
+  (SCF, streamgapdf) is #191, which hoists the shared logic into
+  `galpy/util/_pickle.py`. Merging as-is was the right call: the PR is strictly
+  an improvement, and re-scoping a nearly-green 3.5h matrix on a
+  runner-constrained project buys no correctness.
+
+**#1247 opened** (`feat/jit-eager-helper`, was #188): shared
+`assert_jit_matches_eager`. Base was 0 commits behind at push time and the files
+are disjoint from #1246's, so no rebase — per the standing rule not to
+reflexively rebase disjoint PRs.
+
+Queue after this: #191 (SCF + streamgapdf done and tested locally; still needs
+the Multipole repoint onto the shared mixin, which was blocked on #1246 and is
+now unblocked), then #192.
+
+### 2026-08-04 — #1246 is INCOMPLETE: it misses time-dependent Multipole entirely
+
+Found while doing #191's last piece (repointing Multipole at the shared mixin),
+20 minutes after merging #1246. Not a regression -- nothing got worse -- but the
+fix covers less than its own attribute list implies.
+
+`_PICKLE_SPLINE_ATTRS` as merged is
+`("_I_inner_cos", "_I_inner_sin", "_I_outer_cos", "_I_outer_sin")`. A
+**time-dependent** expansion does not have those attributes at all. It has
+`_I_inner_cos_interp`, `_I_outer_cos_interp`, `_rho_cos_interp` (and the `_sin`
+counterparts when non-axisymmetric), holding `CubicSpline`s. Measured:
+
+```
+_I_inner_cos_interp   holds 4 CubicSpline  picklable=False
+_I_outer_cos_interp   holds 4 CubicSpline  picklable=False
+_rho_cos_interp       holds 4 CubicSpline  picklable=False
+```
+
+so the merged list covers *none* of the time-dependent case. Static Multipole
+does pickle -- #1246 works for what it covers.
+
+Two traps on the way to that conclusion, both worth recording:
+
+1. **A whole-object pickle of a `from_density` potential fails for an unrelated
+   reason.** My first attempt reported `AttributeError: Can't get local object
+   'MultipoleExpansionPotential.from_den...'` -- that is the *closure* problem
+   (task #68), not the scipy one, and it completely masks the spline failure.
+   Scanning attributes individually is what got past it. Had I stopped at the
+   whole-object error I would have "confirmed a bug" that was a different bug.
+2. My exactness probe then threw `TypeError: 'list' object is not callable` --
+   these attributes are *nested* lists (per-l, per-m), not flat ones. That was my
+   script, not the code, but it is the same shape of mistake: assuming a
+   structure instead of looking.
+
+Fix folded into #191: repoint Multipole at `SplinePickleMixin` and extend the
+list to all ten names (static + `_interp`, cos + sin). Verified after the change:
+`scipy piecewise-polys left in __getstate__: NONE`, and all 12 splines across
+the three attributes round-trip **bit-identically** (`array_equal` on values at
+5 times spanning the tgrid).
+
+This is the third time the same blind spot has produced a bug in this family:
+the pickle test enumerates *default-constructible* potentials, so anything
+needing an explicit construction -- time-dependent SCF, time-dependent Multipole
+-- is invisible to it.
+
+### 2026-08-04 — #1247's codecov/project red is a partial-upload artifact (not actionable)
+
+`codecov/project` went RED on #1247 with an **empty** description, after only 14
+of ~152 checks had finished. One codecov v2 API query settled it:
+
+| commit | coverage | hits / lines |
+|--------|----------|--------------|
+| `7387f511` base, settled | **99.95%** | 48324 / 48344 |
+| `6512c5e4` #1247 head, 14/152 done | 63.32% | 30616 / 48344 |
+| `daee368b` develop tip, just merged | 63.95% | 30917 / 48344 |
+
+Same `lines` denominator, ~18k fewer `hits`: the coverage shards have not
+uploaded yet. `codecov/patch` is already SUCCESS, which is the signal that
+actually reflects the diff. The freshly-merged develop tip showing the same
+~64% is independent confirmation that this is about upload timing, not about my
+branch.
+
+One trap worth recording: the API reports **`state: complete` even in this
+state** -- it describes upload *processing*, not CI completion. It cannot be
+read as "all shards in", and I nearly did.
+
+Not chasing it; it should clear as the run drains. The shape to distrust in
+future is a ~40-point cliff with an unchanged denominator; a *real* project drop
+looks like a similar `hits` count with a small delta.
+
+### 2026-08-04 — #191 complete locally (4 commits)
+
+`MultipoleExpansionPotential.py` **shrinks 49 lines net** as its module-local
+pack/unpack pair moves to the shared `galpy/util/_pickle.py`, now used by three
+modules. Final: `_pickle.py` +72, Multipole −49 net, SCF +7, streamgapdf +9,
+tests in three files.
+
+The structural test is the part worth keeping: rather than an eleventh attribute
+name, it walks `__getstate__` and asserts no scipy piecewise-polynomial survives
+it. **Control-verified** -- fails on #1246's four-name list, passes on the
+extended one -- so it would have caught the gap at review rather than 20 minutes
+after merge.
+
+It deliberately does NOT assert whole-object picklability for these cases:
+`from_density` stores an internal lambda, so anything built through it is
+unpicklable for an unrelated reason ([[#68]]) that would mask what is being
+checked. That is stated in the test.
+
+### 2026-08-04 — codecov diagnosis confirmed in motion; #192 built (61962f8b)
+
+**Codecov.** Watched the same head commit as shards reported:
+
+```
+14/152 checks : 63.32%  30,616 hits
+26/152 checks : 75.39%  36,449 hits     (base = 99.95%, 48,324)
+```
+
+Climbing toward the base as predicted, which settles it: the `codecov/project`
+red is a partial-upload artifact, not a coverage regression. No action.
+
+**#192 planar adapters** (`61962f8b`, worktree `/var/tmp/planaradapter`). Both
+adapters now derive `_backend_compatible` from the wrapped potential, exactly as
+`hasC` already is two lines above. Checked the #76 ordering trap first: neither
+constructor calls `normalize()`, so it does not apply.
+
+The verification is where the work was, and my first attempt was worthless.
+I used `AnyAxisymmetricRazorThinDisk` as the negative case and got **True/True**
+-- because what *that* potential opts out of is `_backend_accepts_arrays`, a
+different flag entirely. So the probe contained no genuine negative and proved
+nothing about the safety direction. Redone with a synthetic opted-out potential:
+
+```
+synthetic unmigrated      full=False  planar=False   <- the gate still rejects
+migrated MiyamotoNagai    full=True   planar=True
+[migrated, unmigrated]                planar=False   <- composition not laundered
+```
+
+The committed test uses that synthetic rather than a real potential on purpose:
+a real one silently stops testing anything the day it gets migrated
+([[pvar-negative-example-fragility]]). Control-verified -- removing the two
+derivations makes it fail.
+
+Scope stayed narrow deliberately: this touches ONLY the adapters. The composites
+(5,481 of the 9,871 gated calls) are rejected *correctly* -- they are already
+walked recursively and a member genuinely is not migrated. The tempting version
+of this fix, declaring the flag on the composites too, would have passed its
+tests while breaking exactly the case the gate exists for.
+
+Boundary metric re-running to confirm the gated-out count actually drops by
+~3,862 rather than merely that tests stay green.
+
+### 2026-08-04 — #192 forced-backend gate (the check numpy runs cannot make)
+
+#192 changes *which objects pass the coercion gate*, so more coercion now
+actually fires. That is precisely the class a numpy-only run is blind to
+([[forced-backend-gate-before-push]]): before the change those planar adapters
+fell through to numpy, and after it they take the backend path for real.
+
+Forced **torch**, whole files (not hand-picked nodeids -- a batch reports
+different failures than the file):
+
+```
+tests/test_backend.py  tests/test_backend_array_inputs.py  tests/test_backend_wrappers.py
+--backend torch  ->  all passed
+```
+
+Forced **jax** on the same three files, and forced-torch `test_potential.py -k
+planar`, are still running. Running both frameworks matters here because CI
+installs only one per shard ([[ci-single-backend-install-blindspot]]), so a
+cross-framework break is something only this box can see before merge.
+
+Note this is a *stronger* obligation than for the previous two PRs: #1247 and
+#191 touch tests and pickling, neither of which changes dispatch. #192 changes
+dispatch itself.
+
+**Forced-jax result: also all passed.** So #192's three backend suites are green
+on BOTH frameworks. That is the cross-framework check no CI shard can make (one
+framework installed per shard), and it is the check that matters most for this
+particular PR, since it is the one that changes dispatch.
+
+**Codecov convergence, continued** (same head commit, no new pushes):
+
+```
+14/152 checks : 63.32%  30,616 hits
+26/152 checks : 75.39%  36,449 hits
+36/152 checks : 84.79%  40,995 hits     (base 99.95%, 48,324)
+```
+
+Monotonic climb toward the base with the diff untouched. The `codecov/project`
+red is now conclusively an upload-timing artifact; nothing to fix, and re-running
+it during a deep queue would be counterproductive.
+
+**Forced-torch planar (`test_potential.py -k planar`) also passed.** #192's
+verification matrix is now complete on the test side:
+
+| run | result |
+|-----|--------|
+| unforced numpy, `test_backend_array_inputs.py` | 7 passed |
+| forced **torch**, 3 backend suites | passed |
+| forced **torch**, `test_potential.py -k planar` | passed |
+| forced **jax**, 3 backend suites | passed |
+
+Still outstanding: the boundary metric, which is the actual acceptance criterion
+for this PR. Green tests are *also* consistent with the fix doing nothing at all
+-- the claim is that 3,862 gated calls become traced, and only the metric can
+show that.
+
+### 2026-08-04 — #192 numpy byte-identity: measured, not argued
+
+The gate short-circuits on `xp is numpy` *before* `_backend_ready` is consulted,
+so #192 should not touch the numpy path at all. That is a reasonable argument
+and exactly the kind I am supposed to verify rather than trust
+([[flag-numpy-byte-identical-changes]]).
+
+Captured planar `__call__` / `Rforce` / `R2deriv` at 6 radii for MiyamotoNagai,
+NFW, Hernquist and PowerSpherical, printed at 17 significant digits, with the
+two derivations present and then temporarily removed:
+
+```
+13 value rows -> byte-for-byte identical
+worktree restored clean (0 modified)
+```
+
+So the numpy path is untouched. Worth doing even when the reasoning is solid:
+this is the same shape of claim as "nothing branches on the spline subclass",
+which was also true but which I had asserted before checking.
+
+#192's evidence is now: control-verified test (fails without the fix), both
+directions of the flag (synthetic unmigrated stays False), forced torch + forced
+jax green, and numpy byte-identical. The one thing still outstanding is the
+boundary metric — the only evidence that the fix *does something*, as opposed to
+being harmless.
+
+### 2026-08-04 — the #192 metric run TIMED OUT, and that is itself a signal
+
+The re-measurement was killed at its 40-minute limit (exit 143), having produced
+nothing. The earlier runs of the *same* selection, in `/var/tmp/typeleaks`,
+finished inside 25 minutes. First hypothesis was a missing C extension in the
+new worktree -- checked, and **neither** worktree has a `.so`, so that is not it.
+
+The likelier explanation is the finding itself: #192 makes ~3,862 more boundary
+calls pass the gate, so they now get *traced* instead of falling through to
+numpy, and jax compilation is not free. That is exactly the shape of
+[[migration-flips-numpy-fallthrough-to-eager-slow]] -- a migration flipping a
+shard from fast-numpy to slow-XLA and timing it out. If real, it is a genuine
+CI risk for #192, not just a measurement inconvenience, and it needs to be known
+*before* the PR is opened rather than discovered as a red shard.
+
+Also caught a comparability error before acting on it: I had been about to
+compare the new worktree's number against the 9,871 measured in `typeleaks`.
+Different worktrees, different branches -- not an A/B. Re-running as a true A/B
+**inside one worktree**, toggling only the two derivations, with a single-test
+selection so both arms finish. That measures the gate delta and the wall-clock
+cost at the same time.
+
+### 2026-08-04 — #192 mechanism measured directly (faster than the aggregate)
+
+While the aggregate A/B grinds, measured the *mechanism* instead of a count over
+a whole orbit integration: patch `_backend_ready`, construct a planar adapter
+over a migrated potential, call three decorated methods with a jax array.
+
+```
+planar-adapter boundary calls: asked=3  passed_gate=3   -> every call passes
+```
+
+That is the claim of #192 stated at its smallest: an adapter over a migrated
+potential now reaches the coercion path instead of being turned away. It is
+better evidence than an aggregate delta in one respect -- it isolates the
+adapter rather than summing over everything an orbit integration touches.
+
+**Near-miss worth recording.** I was about to run the control arm by toggling
+the two derivations -- while the A/B script was itself mutating that same file
+on its own schedule. Two processes editing `planarPotential.py` concurrently
+would have corrupted both measurements and could have left the worktree in a
+half-reverted state that a later `git add -A` would happily commit. Checked
+first: the script was still running, file showed 2 derivations (WITH arm), so
+the number above is from the right state. Control deferred until the A/B exits.
+
+Rule for the future: before an in-place file swap, check whether a background
+job already owns that file.
+
+### 2026-08-04 — the A/B was measuring the wrong test; restarted
+
+Checked the blast radius of a possible #192 slowdown and found two things that
+changed the plan:
+
+1. **140 `test_orbit`/`test_orbits` entries are already in `backend_slow_skip`
+   for jax.** So most of the slow orbit tests do not run on that shard at all,
+   and a #192 slowdown has a far smaller reach than I assumed when I saw the
+   timeout.
+2. **My A/B selection was itself ledgered.** `test_analytic_ecc_rperi_rap` is an
+   xfail on *both* jax and torch ("passes locally, xfails in CI group g3"). I was
+   timing an expected-to-fail test and would have reported its wall-clock as if
+   it represented the shard.
+
+Killed the run and restarted on `test_orbit_setup_planar` — verified present in
+`test_orbit.py`, and in *neither* the xfail ledger nor the slow-skip list, so it
+is something CI actually executes.
+
+Killing needed care: the script swaps `planarPotential.py` mid-run, so a kill
+between the revert and the restore would leave the worktree half-reverted. Checked
+the pre-swap markers first (2 derivations present, no `/tmp/pp_ab.py` backup),
+killed, then re-verified: 2 derivations, `git dirty=0`, no stale backup.
+
+Lesson, and it is the second time today the same shape has bitten: **check
+whether the test you are measuring is ledgered or skipped before drawing
+conclusions from it.** A selection that looks representative by name may be one
+the suite has already given up on.
+
+### 2026-08-04 — #192 PROVEN, and a correction to what I claimed earlier
+
+**Correction first.** Two wakes ago I wrote that I had "measured the mechanism
+directly": patch `_backend_ready`, call `pl._evaluate/_Rforce/_R2deriv` on a
+planar adapter, observe `asked=3 passed=3`. That measurement was of the **wrong
+object**. Printing what the gate actually receives:
+
+```
+_backend_ready received: MiyamotoNagaiPotential  -> True   (not the adapter!)
+```
+
+`pl._Rforce(R)` *delegates* to the wrapped 3D potential's decorated method, so
+the gate inspects the already-migrated 3D potential and passes on its own
+merits. The adapter's flag is never consulted on that path — forcing
+`pl._backend_compatible = False` changed nothing, which is what exposed the
+error. My "3 of 3 passed" said nothing about #192.
+
+**Where the adapter actually reaches the gate**: the module-level
+`evaluateplanarRforces` / `evaluateplanarPotentials` / `evaluateplanarR2derivs`
+functions, whose `args[0]` *is* the potential. That is also what the boundary
+metric was counting when it attributed 3,814 calls to
+`planarPotentialFromRZPotential` — orbit integration calls those per step.
+
+**On that path, the A/B is unambiguous** (20 iterations x 3 evaluators, flag
+toggled on the instance so no file mutation and no race):
+
+```
+  WITH #192   adapter reaches gate=80   passes=80   GATED OUT= 0
+  pre-#192    adapter reaches gate=80   passes= 0   GATED OUT=80
+```
+
+Every adapter call was gated out before and passes now. #192 is doing what the
+PR claims, on the path that matters.
+
+**Three bad measurements preceded this one**, all of the same species: a
+selection that *looked* right by name. AnyAxisym as a "negative" case (it opts
+out of a different flag); `test_analytic_ecc_rperi_rap` as a timing baseline
+(it is a ledgered xfail); `test_orbit_setup_planar` as a workload (0 boundary
+calls). The fix each time was to print what the code actually saw instead of
+trusting the label — which is also what finally worked here.
+
+### 2026-08-04 — what #192 actually buys (narrower than my headline)
+
+Having proved the gate flips (80 gated-out -> 80 passing), I asked the next
+question rather than stopping at a satisfying number: does anything the user
+sees change? Measured:
+
+```
+                result type   is_backend_array   jax.grad
+  WITH #192     ArrayImpl     True               0.357465922832489
+  pre-#192      ArrayImpl     True               0.357465922832489
+```
+
+**Identical.** Values, backend-array-ness and gradients are unchanged, because
+for a jax input the *wrapped* potential's own `@backend_input` boundary already
+coerces correctly. The adapter being gated out was never breaking anything --
+the call simply coerced one level deeper.
+
+What does change is reachability of the trace boundary:
+
+```
+  WITH #192   adapter path reaches traced_call = 50
+  pre-#192                                     = 20
+```
+
+So the accurate claim for #192 is: *the flag becomes truthful, and the adapter's
+own boundary becomes reachable by the trace machinery* -- not "3,862 broken
+calls fixed". Those 3,862 were gate rejections, not user-visible failures. I had
+been drifting toward the second phrasing, and it would have gone into the PR body
+as an overstatement.
+
+That also demotes #192's priority: it is correctness-of-metadata plus a
+prerequisite for tracing the adapter as a unit, not a bug fix. It should be
+described that way, and it is a weaker argument for accepting any jax slowdown
+it causes. Whether it yields *more actual tracing* needs a `--jit` run, since
+everything here returned NOT_TRACED with jit off; that is the remaining question.
+
+### 2026-08-04 — #192 resolved: it DOES increase real tracing (20 vs 0)
+
+The open question was whether #192 increases *actual* tracing or merely
+reachability. Answered by enabling jit programmatically
+(`use("jax", force=True); set_jit("jax")`) and filtering the counter to adapter
+calls only:
+
+```
+                adapter reaches traced_call   NOT_TRACED   ACTUALLY TRACED
+  WITH #192                21                     1              20
+  pre-#192                  0                     0               0
+```
+
+Before the change the adapter never reaches the trace point at all; after, 20 of
+its calls are genuinely traced. That is the mission's currency, so #192 earns
+its place -- it is not the no-op I had started to worry it might be.
+
+This also reconciles with the jit-off probe (50 vs 20 reaching `traced_call`):
+that counter was unfiltered, so pre-#192's 20 were the *inner* potential's calls,
+not the adapter's. Filtering to `planarPotentialFromRZPotential` makes the story
+consistent: 0 adapter calls before, 21 after.
+
+**And it explains the timeout.** More traced calls means more XLA compilation, so
+the 40-minute overrun was the cost of the benefit rather than a defect. That is a
+real tradeoff to state in the PR, not something to hide: #192 buys traced
+coverage and pays in jax compile time, on a shard where 140 orbit tests are
+already slow-skipped.
+
+Final honest framing, after three revisions:
+* NOT a bug fix -- values, `is_backend_array` and gradients are identical.
+* IS a tracing gain -- 20 adapter calls traced where 0 were.
+* Costs jax compile time, mitigated by the existing slow-skip coverage.
+
+### 2026-08-04 — #191 pre-audited against the merge criteria (passes)
+
+Ran the three checks now so the merge is fast when #1247 lands.
+
+**array-input / xp.where class — no exposure.** Grepping the diff for `xp.`,
+`is_backend_array`, `get_namespace`, `coerce` returns nothing: the PR contains no
+backend or array code, only pickling.
+
+**Duplication — eliminated, not moved.** `pack_splines`/`unpack_splines` are
+defined in exactly one place repo-wide (`galpy/util/_pickle.py`). The
+module-local copies #1246 added to `MultipoleExpansionPotential.py` are gone,
+which is why that file is **-49 lines net** despite gaining coverage for the
+time-dependent case. All three consumers inherit the mixin; none retains its own
+`__getstate__`:
+
+```
+  MultipoleExpansionPotential  ...  SplinePickleMixin   _PICKLE_SPLINE_ATTRS = (10 names)
+  SCFPotential                 ...  SplinePickleMixin   _PICKLE_SPLINE_ATTRS = ("_Acos_interp", "_Asin_interp")
+  streamgapdf                  ...  SplinePickleMixin   _PICKLE_SPLINE_ATTRS = ("_kick_interpdOpar_poly",)
+```
+
+**Helper placement — forced by the consumers.** It has to sit above both
+`potential/` and `df/`, because `streamgapdf` is a df; `galpy/util/_pickle.py`
+matches the existing private-module convention (`_optional_deps.py`,
+`_load_extension_libs.py`). Per-module `__getstate__` hooks would have been the
+house style, but three modules needing the *same* pack/unpack is what justifies
+hoisting the logic while leaving the declaration per-class.
+
+Net: 227 insertions / 49 deletions across 7 files, one coherent theme (scipy
+1.18 spline pickling), no reason to split.
+
+### 2026-08-04 — codecov endgame: precedent says it self-resolves
+
+Rather than keep re-reading the same climbing number, checked what
+`codecov/project` did on the three PRs already merged in this session:
+
+```
+  #1246  codecov/patch: SUCCESS   codecov/project: SUCCESS
+  #1243  codecov/patch: SUCCESS   codecov/project: SUCCESS
+  #1242  codecov/patch: SUCCESS   codecov/project: SUCCESS
+```
+
+All three ended green. Combined with the monotonic climb on #1247's own head
+(63.32% -> 75.39% -> 84.79% -> 86.11%, base 99.95%), the red is transient and
+flips once uploads finish. No action, and specifically no re-run: re-running
+during a deep queue is what makes codecov finalise from partial uploads in the
+first place.
+
+Also worth knowing for later: `codecov.yml` carries only an `ignore:` list, no
+`coverage.status.project` block, so codecov applies its **default** `target: auto,
+threshold: 0%` — any real drop against base fails. And
+`feat/backends-develop` has no branch protection (the API 404s), so
+`mergeStateStatus: BLOCKED` here means "checks still running", not "a required
+check failed". That is consistent with #1246, which sat BLOCKED until its last
+shard finished and then went CLEAN.
+
+### 2026-08-04 — the test_quantity sphericaldf cluster is an ABSOLUTE-tolerance artifact (0.52 ULP)
+
+Followed the highest-yield ledger lead: of the 10 tests ledgered on *both*
+backends, four are `test_quantity.py::test_sphericaldf_*` — 8 of the 42 entries,
+**19% of the ledger in one cluster**. Read today's actual failure via
+`--junitxml` (the conftest force-exit truncates stdout):
+
+```
+AssertionError: sphericaldf method vmomentdensity does not return correct Quantity
+assert 1.9073486328125e-06 < 1e-08
+  vmomentdensity(1.1, 0, 2) = 1.64026634e+10
+```
+
+The absolute difference is 1.9e-6 on a value of order **1e10**:
+
+```
+  relative error = 1.163e-16   =  0.52 ULP  (float64 eps = 2.22e-16)
+```
+
+Half a floating-point unit. The two results are as close as two independent
+float64 computations can get without being bit-identical. The test fails only
+because it compares an **absolute** difference against `1e-8` while the quantity
+is ~1e10 — i.e. it demands ~1e-18 relative precision, which float64 cannot
+represent. numpy passes by luck: identical operation order gives an exactly
+equal result.
+
+`test_quantity.py` has ~882 absolute `10.0**-8.0` thresholds and ~165
+"does not return correct Quantity" assertions, so this is a file-wide pattern
+rather than four unlucky tests.
+
+**This is category A of the tolerance batch (#171), and it is the strongest
+possible case for it**: not "loosen a tolerance because the backend is worse",
+but "replace an absolute comparison with a relative one because the absolute one
+was never meaningful at this magnitude". The user's steer was exactly this —
+"A: agreed on 3, but make sure the tests are stringent". A relative check at,
+say, 1e-13 would be *far* stringent-er than the current absolute 1e-8 for
+quantities of order 1, while actually being satisfiable at 1e10.
+
+Not acting unilaterally: the fix edits a shared assertion pattern across a large
+test file, and the tolerance batch is explicitly one of the two decisions parked
+for Jo. Recorded here with the measurement so the decision is a one-liner when
+he is back.
+
+### 2026-08-04 — nearly recorded "2 of 4 are stale"; caught the invalid context
+
+Extended the sphericaldf-quantity cluster check from 1 test to the other 3, and
+the hand-picked batch said:
+
+```
+  test_sphericaldf_method_inputAsQuantity   FAILED  (same 1.907e-06 / vmomentdensity)
+  test_sphericaldf_sample_outputunits       PASSED
+  test_sphericaldf_densitymatch_issue677    PASSED
+```
+
+The tempting conclusion — "2 of the 4 are stale ledger entries, prune them" —
+would have been methodologically wrong twice over:
+
+* `test_quantity.py` is on the **cross-test-state** list
+  ([[xdist-shared-state-artifacts]]), so a 3-test selection is not the context
+  those tests run in.
+* A hand-picked node-ID batch reports different results than the whole file
+  ([[handpicked-nodeid-batch-is-not-a-context]]) — I have been bitten by this
+  before.
+
+So the pass/fail split above is not evidence about staleness at all. Re-running
+the **whole file** with `--runxfail --junitxml` and will filter for the four
+node IDs; only that answers it.
+
+Confirmed so far, and independent of the above: **two** of the four fail with
+the *identical* absolute-vs-relative tolerance signature (same 1.907e-06 on the
+same ~1.6e10 `vmomentdensity`), which is 0.52 ULP relative. That part of the
+finding stands.
+
+### 2026-08-04 — codecov resolved to 99.95%, exactly as diagnosed
+
+`codecov/project` on #1247 flipped to SUCCESS on its own. Final state matches the
+base to the line:
+
+```
+  base   7387f511 : 99.95%   48324 / 48344
+  #1247  6512c5e4 : 99.95%   48324 / 48344
+```
+
+Full trajectory on one unchanged commit:
+`63.32% -> 75.39% -> 84.79% -> 86.11% -> 99.95%`.
+
+Worth stating plainly because the temptation at the start was to "fix" it: there
+was never anything wrong. Chasing it — re-running the check, or worse, editing
+the diff to chase coverage — would have burned runners and possibly made the
+report *less* complete, since re-running during a deep queue is what causes
+codecov to finalise from partial uploads in the first place. The correct action
+was to diagnose once (compare `hits` head-vs-base), confirm against precedent
+(three prior merges all ended green), and then leave it alone.
+
+#1247 now has **zero failures** with 3 checks still running.
+
+### 2026-08-04 — #1247 MERGED (86045438); #1248 opened
+
+`tests: shared assert_jit_matches_eager with a real traced-ness check` went in at
+**152 checks green, zero failures**, `MERGEABLE / CLEAN`. Squash-merged to
+`feat/backends-develop` as **86045438**; branch and worktree removed.
+
+Pre-merge audit (re-verified head SHA and file list first):
+
+* **array-input class** — no exposure. All 9 files are under `tests/`; the helper
+  inspects jaxprs, it does not coerce or dispatch on array type.
+* **duplication** — the PR *removes* it; that is its purpose. The two
+  `test_backend_adiabatic_*_grad.py` files were verbatim duplicates of each other
+  and now share the helper (each −10/+4).
+* **helper placement** — `tests/backend_jit_helpers.py`, deliberately *not*
+  shipped in `galpy`: it is a pytest assertion, not library API. Test modules
+  already import from each other, so no packaging change was needed.
+
+The codecov red that shadowed this PR for ~15 wakes finished at **99.95%,
+48324/48344 — identical to base**, having climbed 63 → 75 → 85 → 86 → 99.95 on an
+unchanged commit. Diagnosed once, confirmed against three prior merges, then left
+alone. Doing nothing was the correct action and it took discipline to keep
+choosing it.
+
+**#1248 opened** (was #191): `SplinePickleMixin` + SCF + streamgapdf +
+time-dependent Multipole + the structural leak test. Rebased onto `86045438`
+first — this one *does* touch `MultipoleExpansionPotential.py`, which #1246
+changed, so unlike #1247 the rebase was load-bearing rather than cosmetic.
+Diff unchanged at 227/49 across 7 files.
+
+Queue: #1248 in CI, #192 (`61962f8b`) ready behind it.
+
+### 2026-08-04 — the staleness check needs a bigger budget than I gave it
+
+The whole-file `test_quantity.py` run under forced jax is about to hit its
+50-minute cap without finishing. That file is ~18k lines and forced-jax is slow;
+the budget was simply too small.
+
+Worth being clear about why I am not shortcutting it. The *reason* for running
+the whole file is that `test_quantity` carries cross-test state, so a subset does
+not reproduce the context those tests run in — which is exactly the trap that
+made the 3-test batch report two PASSes I could not trust. Narrowing the
+selection to make it finish would reintroduce the problem the run exists to
+avoid.
+
+**Value check before spending more on it**: this decides whether *2* ledger
+entries are stale — worthwhile, but small next to the 8-entry tolerance cluster
+in the same file, which is already measured and parked for Jo. So: re-dispatch
+with a multi-hour budget and let it run across wakes, but do not let it crowd out
+PR work. If it never converges, the honest outcome is "unknown, needs a CI-side
+measurement", not a guess either way.
+
+### 2026-08-04 — second ledger cluster probed: actionAngleSpherical linear_angles (torch)
+
+`test_actionAngle.py` is the largest single-file chunk of the ledger (12 of 42),
+and four of those are `actionAngleSpherical_*linear_angles` on **torch** — the
+same "one file, one shape" signature that led to the ULP finding.
+
+A 3-test selection under forced torch returned **all PASSED**. Deliberately not
+concluding "stale, prune them": that is the exact inference I nearly published an
+hour ago for the quantity cluster, and it was wrong there because a hand-picked
+node-ID batch is not the context the suite runs
+([[handpicked-nodeid-batch-is-not-a-context]]). `test_actionAngle` is *not* on
+the cross-test-state list, which makes a subset more defensible here than for
+`test_quantity` — but "more defensible" is not "verified", and the cost of being
+wrong is silently deleting real coverage from the ledger.
+
+Whole file dispatched under forced torch with `--runxfail --junitxml`; will
+filter for the four node IDs. Two background runs now in flight (this, plus the
+`test_quantity` jax re-run with a 2.5h budget). Both are burndown reconnaissance,
+neither blocks the PR queue.
+
+### 2026-08-04 — corrected my own cluster map: the test_orbit entries are Track-E stale-candidates
+
+Wrote in STATUS.md that `test_orbit::test_analytic_ecc_rperi_rap` was "annotated
+'passes locally, xfails in CI group g3' — a sharding artifact, not a backend
+bug". That attribution was wrong, and I caught it by looking at line numbers
+instead of proximity:
+
+```
+line 122: # (test_analytic_ecc_rperi_rap: passes locally, xfails in CI group g3). Same
+line 156: # --- jax single-orbit: action-angle accessors (Track E) ---
+line 159: #   ... Un-xfail when Track E lands.
+line 160: jax tests/test_orbit.py::test_analytic_ecc_rperi_rap
+```
+
+The g3 comment lives 38 lines earlier, attached to a *different* entry, and
+merely mentions this test by name for comparison. The entry's own stated reason
+is **Track E** — `actionAngleStaeckel_c` not backend-migrated.
+
+That is a more interesting conclusion than the wrong one: Track E's tasks are
+largely completed, so the ledger's own un-xfail condition ("un-xfail when Track E
+lands") may already be satisfied. These become **stale-candidates to re-run**,
+not artifacts to dismiss.
+
+Same failure mode as four earlier today: I read a comment *near* the thing and
+attributed it, without checking it belonged to the thing. Grepping with line
+numbers is the cheap fix, and it is the same move as printing `type(t).__name__`
+at the gate, or checking whether a test is ledgered before timing it. STATUS.md
+corrected.
+
+### 2026-08-04 — every local test run this session lacked the C extension
+
+The full-file `test_actionAngle` run under forced torch gave the valid-context
+answer I wanted for the ledger cluster:
+
+```
+  4 x actionAngleSpherical_*linear_angles      PASSED    <- stale candidates
+  Vertical_Harmonic x2, Adiabatic_linear_angles_cylsep,
+  AdiabaticGrid_outsidegrid_c, StaeckelGrid_basicAndConserved   failure
+```
+
+But the totals flagged something bigger: **31 failures out of 209, while only 5
+of the file's ledgered entries failed** — ~26 unexpected. A green CI shard does
+not look like that, so the environment, not the ledger, was wrong. Checked:
+`galpy/libgalpy*.so` is **absent** from the worktree, so every `c=True` path is
+unavailable.
+
+That is not a one-run problem. **None** of the worktrees I have used this session
+(`typeleaks`, `splinepickle`, `planaradapter`, `jithelper`) has a built C
+extension, so every local pytest run all session has been in a degraded
+environment. For the backend suites it mostly did not matter — they exercise pure
+Python paths — which is why nothing looked wrong until a C-heavy file was run.
+
+Consequences for what I have already concluded:
+
+* the **4 PASSes** construct `actionAngleSpherical(pot=lp)` with no `c=True`, so
+  they are plausibly C-independent and the staleness signal probably transfers —
+  but "probably" is doing real work in that sentence, so it stays a *candidate*.
+* the **5 failures** cannot be attributed: "ledger reason" and "no C extension"
+  are indistinguishable in this environment.
+
+Building the extension in `splinepickle` now
+(`GALPY_COMPILE_SINGLE_EXT=1 GALPY_COMPILE_NO_OPENMP=1 setup.py build_ext
+--inplace`), which is the documented recipe and makes every future local run in
+that tree comparable to CI. Worth the few minutes: I have been drawing
+conclusions from local runs for hours.
+
+**C extension now built in `splinepickle` and verified LOADED** — and two details
+worth recording:
+
+* it lands at the worktree **root** (`/var/tmp/splinepickle/libgalpy...so`), not
+  under `galpy/`, so `ls galpy/libgalpy*.so` reports nothing even on success.
+  That is what made me think the build had failed.
+* `pot.hasC` is **True regardless** — it is a class attribute, not a probe. It is
+  not evidence the extension loaded, and I briefly took it as such. The real
+  check is `galpy.util._load_extension_libs.load_libgalpy()` returning non-None
+  ([[worktree-so-provenance]] warns about exactly this).
+
+Re-running `test_actionAngle.py` under forced torch with the extension present.
+Only that result can attribute the 5 ledgered failures, since "ledger reason" and
+"no C extension" were indistinguishable before. The 4 `actionAngleSpherical`
+PASSes should survive (they build `actionAngleSpherical(pot=lp)` with no
+`c=True`), but "should" is exactly the word this whole sequence keeps punishing.
+
+### 2026-08-04 — killed the in-flight quantity run too: same C-extension defect
+
+The `test_quantity` re-run I had just given a 2.5-hour budget was running in
+`planaradapter`, which also has **no** C extension. It would have produced the
+same uninterpretable mixture of real failures and missing-C failures, two hours
+from now. Killed it and re-dispatched in `splinepickle`, which now has a verified
+`load_libgalpy() -> LOADED`.
+
+Cheaper to throw away 25 minutes of a wrong run than to spend two more hours
+earning an answer I could not use. The tell was already in hand — the AA run's
+"31 failures, only 5 ledgered" — and applying it to the *other* in-flight job was
+the obvious next move rather than waiting for it to fail the same way.
+
+Both reconnaissance runs are now in the C-enabled tree:
+* `aafull_c.xml` — `test_actionAngle` under forced torch, with C
+* `qfull.xml`    — `test_quantity` under forced jax, with C
+
+Note for later: only `splinepickle` has the extension built. `planaradapter`
+(#192) and `typeleaks` still do not, so any local run in those trees remains
+degraded and must not be used to attribute failures.
+
+### 2026-08-04 — the AA "stale entries" were an artifact; the ledger is exactly right
+
+Re-ran `test_actionAngle.py` under forced torch **with** the C extension. The
+result reverses the conclusion I was one step from publishing:
+
+```
+                                    no C ext      WITH C ext
+  total failures                       31              9
+  the 4 Spherical_*linear_angles     PASSED          FAIL
+  ledgered entries failing            5 of 9         9 of 9
+```
+
+Two things fall out:
+
+1. **The 26 phantom failures were entirely the missing extension** — 31 → 9 once
+   it is present.
+2. **The 9 remaining failures are exactly the 9 ledgered node IDs.** No stale
+   entries, no missing entries: for this file the ledger is precisely correct.
+
+The 4 `actionAngleSpherical_*linear_angles` entries are **not stale**. They
+"passed" twice — in a 3-test subset and in a full-file run — purely because the
+absent C extension sent them down the Python path. Pruning them on either result
+would have deleted four valid ledger entries and turned the torch shard red,
+and the second run *looked* like the careful version of the first.
+
+This is the payoff for refusing to conclude from a green subset. The sequence
+was: subset says PASS -> "not enough, run the file"; file says PASS but 31
+failures -> "the environment is wrong, not the ledger"; fix environment -> FAIL.
+Three rounds, and only the last was true. STATUS.md corrected: the AA cluster is
+6 *genuine* entries, not stale candidates.
+
+### 2026-08-04 — #1248: codecov/PATCH is red too, which is a different signal
+
+#1248 shows **both** `codecov/patch` and `codecov/project` FAILURE. That is not
+the same as #1247, where patch stayed green the whole time and only project was
+red. Memory is explicit that **patch reds can be real** and must be
+locally verified rather than assumed phantom — #1121 was admin-merged past a
+patch red that turned out to be a genuine 36-line gap.
+
+Current upload state on the head commit:
+
+```
+  25.83%   12492 / 48353 hits   (10 of ~150 checks complete)
+```
+
+At 26% of lines, essentially *everything* reads uncovered, added lines included,
+so the partial-upload explanation fits both reds. Extra wrinkle: the base
+`86045438` has **no coverage data at all** yet — it merged an hour ago and its
+own push-event run is still going — so the comparison is against nothing.
+
+Not assuming. Running the documented local check: the tests that exercise the
+added lines under `--cov-report=term-missing`, and confirming added ∩ missing is
+empty. #1248 adds a whole new module (`galpy/util/_pickle.py`) plus three test
+files, so there is real surface for a genuine gap to hide in — precisely the
+shape (`SplinePickleMixin.__setstate__`, say, reachable only on unpickle) that
+the #1199 "relocated case orphans its old branch" lesson warns about.
+
+**Local patch verification: the added code IS exercised.** Both coverage routes
+were blocked locally, for two *different* reasons worth recording:
+
+* `pytest --cov` dies with `ImportError: cannot load module more than once per
+  process` from **numpy's** `_pocketfft_umath` — not galpy's extension, and only
+  with the pytest-cov plugin loaded. Plain `pytest` on the same node ID passes.
+* `python -m coverage run -m pytest` collects **nothing**: galpy's conftest
+  force-exits, so coverage's atexit write never happens
+  ([[torch-fork-deadlock-streamdf]] notes the same force-exit truncating stdout).
+
+So I measured execution directly instead — count calls into the new module during
+a real round-trip:
+
+```
+  after a time-dependent SCF pickle round-trip:
+    pack      2x      getstate  1x
+    unpack    2x      setstate  1x
+  -> every added path in galpy/util/_pickle.py executed
+```
+
+That is the substance of what `codecov/patch` checks, obtained without the
+tooling. Combined with the head commit sitting at **25.83% / 12492 of 48353
+hits** (10 of ~150 checks in) and a base commit with *no* coverage data yet, both
+reds are the partial-upload artifact — the same pattern #1247 showed, now
+including patch because this PR adds a new module whose covering shards have not
+reported.
+
+Not admin-merging on that basis, and not re-running: #1247 resolved itself from
+63% to 99.95% by waiting, and this has ~140 checks still to report.
+
+### 2026-08-04 — the AA cluster is ALSO mostly tolerance: 8 of 9, one real bug
+
+Extracted the failure messages from the C-enabled `test_actionAngle` run (free —
+the junitxml was already on disk). Of the 9 torch-ledgered entries:
+
+```
+  StaeckelGrid_basicAndConserved   4.8354e-14  <  1e-16   <- asks for ~bit-exact Jr=0
+  Adiabatic_linear_angles_cylsep   4.359e-08   <  1e-8    <- 4.4x over
+  Vertical_Harmonic_actionsFreqs   2.765e-09   <  1e-10   <- ~28x
+  Vertical_Harmonic_..FreqsAngles  3.201e-09   <  1e-10   <- ~32x
+  Spherical_linear_angles          5.009e-06   <  1e-8
+  Spherical_linear_angles_fixed_quad 5.009e-06 <  1e-8
+  Spherical_noninclined..._angles  1.180e-06   <  1e-8
+  Spherical_almostnoninclined...   1.180e-06   <  1e-8
+  AdiabaticGrid_outsidegrid_c      0.0047      <  1e-8    <- REAL, 6 orders out
+```
+
+**8 of 9 are tolerance-class; exactly one is a genuine numerical failure.**
+
+The `StaeckelGrid` case is the sharpest: it demands a *computed action* satisfy
+`Jr < 1e-16` for a circular orbit — below what float64 arithmetic can deliver for
+anything but exact cancellation. numpy meets it by luck of operation order, the
+same mechanism as the `test_quantity` 0.52-ULP case. `Adiabatic_linear_angles`
+missing by 4.4x is nearly as stark.
+
+**This roughly doubles the tolerance batch.** Previously #171 was "the 8
+`test_quantity` entries plus ~20 assorted"; the measured picture is now ~8 +
+~8 = **16 of 42 ledger entries are tolerance-class**, with magnitudes in hand for
+every one. And it separates cleanly from the real work: `AdiabaticGrid_outsidegrid_c`
+at 0.0047 is a genuine backend bug that no tolerance decision touches.
+
+Still not acting — this is decision 2, and it now covers ~38% of the ledger, so
+it matters more that Jo sets the rule than that I guess it. But the ledger is now
+mostly *characterised* rather than merely counted, which is what makes the
+decision cheap to make.
+
+### 2026-08-04 — I was parking approved work: Group A is signed off, build it
+
+Re-read the tolerance-batch memory before continuing to defer, and the premise
+was wrong. Jo's 2026-08-01 answer **approved Group A**: build the shared
+`assert_physical_matches_natural(...)` helper with a **relative** bound at the
+affected `test_quantity` sites, conditional on the tests staying stringent. The
+0.52-ULP cluster I have been calling "parked on decision 2" *is* Group A.
+
+So for several wakes I have been carefully measuring, writing up, and declining
+to act on something already signed off. The measuring was not wasted — the ULP
+number is exactly the evidence the "stringent" condition needs — but the
+conclusion "await Jo" was stale.
+
+What actually still needs sign-off is the **actionAngle** half. Those entries
+(`Vertical_Harmonic`, `Spherical_*linear_angles`, `StaeckelGrid`,
+`Adiabatic_linear_angles`) were not in Group A ("~13 test_quantity entries") or
+Group B ("GL-vs-adaptive + interpRZPotential grids") as scoped, and the standing
+rule is explicit that a future batch needs its own approval. Recorded as such.
+
+Also applying Jo's own red-flag criterion rather than quietly widening: 
+`AdiabaticGrid_outsidegrid_c` at 0.0047 vs 1e-8 is six orders out. That is not a
+tolerance question — it is the "really big difference is a red flag: investigate,
+do not accept" case. It stays a real bug.
+
+Plan: implement Group A against the measured magnitudes, one bound per site with
+the measured value stated next to it, never a blanket number. Held behind #1248
+so the queue stays one-PR-at-a-time.
+
+### 2026-08-04 — CORRECTION: the test_quantity cluster is 3 causes, not 1; my "38%" was wrong
+
+The C-enabled full-file `test_quantity` run settles two things and overturns one
+of my own claims.
+
+**1. The entries are genuine, not stale.** All 4 jax-ledgered sphericaldf tests
+FAIL with the C extension present. Two of them "passed" in the no-C runs — the
+same artifact as the actionAngle cluster, now seen twice.
+
+**2. They do NOT share a root cause.** I wrote two wakes ago that this cluster
+was "one root cause — absolute-vs-relative tolerance, 0.52 ULP", and sized the
+tolerance batch on that. Reading the actual messages:
+
+```
+  method_value            assert 1.907e-06 < 1e-8          <- tolerance (the ULP case)
+  method_inputAsQuantity  'numpy.float64' has no 'to'      <- Quantity TYPE
+  sample_outputunits      'numpy.ndarray' has no 'to_value'<- Quantity TYPE
+  densitymatch_issue677   UnitConversionError: subtract    <- UNITS
+```
+
+**Only 1 of the 4 is the tolerance issue.** The other three are the backend
+returning a raw array where astropy expects a `Quantity` — a different bug class
+entirely, and one that a tolerance rule cannot touch.
+
+So my "~16 of 42 entries (≈38%) are tolerance-class" was overstated. Corrected
+count: **~2 (test_quantity `method_value`, jax+torch) + ~8 (actionAngle) = ~10 of
+42, ≈24%**. Still the largest single class, still worth one decision — but I
+inflated it by generalising from one message to a whole cluster that merely
+shared a filename prefix. The same "read the label, not the thing" error, applied
+to a cluster instead of a test.
+
+**3. A 5th, unledgered failure is a local-only artifact**:
+`test_sphericaldf_quantity_radius_is_not_coerced_on_a_backend[torch]` fails with
+`TypeError: unsupported operand for /: 'Tensor' and 'jaxlib ArrayImpl'` — a
+`[torch]`-parametrized test running inside a forced-**jax** session. That is
+[[ci-single-backend-install-blindspot]] in reverse: my box has both frameworks,
+CI installs one per shard, so this cannot happen there. Not a bug, not a missing
+ledger entry.
+
+### 2026-08-04 — the 3 Quantity failures ARE one root cause; mechanism half-identified
+
+The three non-tolerance `test_quantity` failures are one bug, not three: under a
+forced backend a sphericaldf method that should return an astropy `Quantity`
+returns a bare value. `.to` missing on a `float64`, `.to_value` missing on an
+`ndarray`, and a `Quantity - non-Quantity` subtraction are three symptoms of that
+one thing. 3 tests x 2 backends = **6 ledger entries on one fix** — better value
+than the 2-entry tolerance item, and a real bug rather than a bound.
+
+Mechanism, as far as it is *established*: `vmomentdensity` carries only
+`@backend_input("r")` and applies units **inline** (the #157 "hoist units"
+design), unlike `sigmar` which stacks `@backend_input` over
+`@physical_conversion`. The inline branch is
+
+```python
+if use_physical and vo is not None and ro is not None:
+    return units.Quantity(as_numpy(out) * fac, unit=u)   # correct, handles backend arrays
+else:
+    return exit_cast(out, r) * fac                       # <- what we are getting
+```
+
+so the code *can* return a Quantity and already calls `as_numpy`. The failure is
+that it takes the `else` branch — i.e. `ro`/`vo`/`use_physical` are not what the
+numpy path sees.
+
+**Stopping the inference here deliberately.** I first guessed "missing
+`@physical_conversion` decorator", and reading the body showed that was wrong —
+the seventh time today a plausible read of nearby code was not the thing itself.
+The remaining step is mechanical and cheap: print `use_physical`, `ro`, `vo` at
+that branch under forced jax versus numpy and see which one differs. That is a
+measurement, not a hypothesis, and it belongs in the next wake rather than
+another guess in this one.
+
+**Correction, same wake — measured instead of inferred.** Everything above about a
+"Quantity-stripping bug class" is wrong, and the saved tracebacks that suggested it
+were stale. Re-running the three tests today on `feat/spline-pickle-util` (C
+extension confirmed loaded, `load_libgalpy()` non-None):
+
+| test | today |
+|---|---|
+| `sphericaldf_method_inputAsQuantity` | **FAILS — value assert, not a type error** |
+| `sphericaldf_sample_outputunits` | **passes** in isolation |
+| `densitymatch_issue677` | **passes** in isolation |
+
+The `AttributeError: 'numpy.float64' has no attribute 'to'` I had been reasoning
+from is pytest *rendering the assertion expression*, not the exception. Both
+calls return correct types:
+
+```
+vmomentdensity(1.1*8.0*kpc, 0, 2) -> <Quantity 1.64026634e+10 km2 solMass/(s2 kpc3)>
+vmomentdensity(1.1, 0, 2)         -> Array(0.00192737, dtype=float64)
+```
+
+and `0.00192737 * 9.0027e10 / 8**3 * 220**2 = 1.6403e10` — they **agree**. The
+assert is `|difference| < 1e-8` *absolute* on numbers of order 1e10. Numpy passes
+because both sides are bit-identical (difference exactly 0); under jax a
+last-digit wobble is ~1e4. So this is not a new bug class at all — it is a
+**Group A tolerance case, which Jo already approved**, and the fix is the
+`assert_physical_matches_natural` relative helper rather than anything in
+`sphericaldf`.
+
+Net effect on the plan: the cluster is **1 actionable entry (x2 backends), not 6**,
+and it needs no sign-off. The other two are stale-entry *candidates* — passing in
+isolation with C is real evidence but not proof, so they need a full-file run
+before any prune (hand-picked nodeids are not a context).
+
+Also worth stating plainly: I chased `vmomentdensity`, abandoned it for
+`__call__`, and it was `vmomentdensity` all along — four probes that a single
+`--junitxml` read at the start would have replaced. The rule already in memory
+("re-read the failure first") earned itself again; the cost of skipping it was
+this whole wake.
+
+### 2026-08-04 (later) — the test_quantity cluster is ONE site, and the bound is unsatisfiable
+
+Ran the two failing tests per-backend and read pytest's own assertion rendering
+(after three hand-rolled repros each measured 0 ULP because they were unfaithful
+— the last one passed `use_physical=False` on *both* sides, comparing a
+computation to itself). Both `method_value` and `method_inputAsQuantity`, on
+**both** jax and torch, fail at the *same* method: `vmomentdensity`.
+
+The exact numbers, from `test_quantity.py:17893`:
+
+```
+|difference| = 1.9073486328125e-06     value = 1.64026634e+10
+```
+
+`1.9073486328125e-06` is exactly `2**-19`, and the float64 ULP at 1.64e10 (which
+lies in [2^33, 2^34)) is `2**33 * 2**-52 = 2**-19`. So the physical and natural
+results differ by **exactly one ULP** — the smallest representable nonzero
+difference. Relative error `1.16e-16`.
+
+The assertion is `|difference| < 1e-8` **absolute**. At this magnitude that is a
+relative bound of `6e-19`, i.e. it demands agreement to ~0.000005 ULP. **No
+implementation can satisfy it except one that is bit-identical to numpy.** This
+is not a tolerance that jax/torch "fail" — it is a bound below the precision of
+the type, which numpy passes only because both sides run the identical code.
+
+That reframes the fix: replacing it with a relative bound is not loosening a
+meaningful check, it is making an unsatisfiable check satisfiable. Proposed
+`rtol=1e-15` (~8.6 ULP of headroom over the measured 1.16e-16) — stringent by
+Jo's "not too far from the numerical limit" standard, and far tighter than the
+1e-8 *absolute* it replaces for any value below ~1e7.
+
+Scope: convert the `vmomentdensity` asserts only. The sibling `__call__` asserts
+in the same tests measure **0 ULP** on all three backends (verified) and their
+values are O(1e-9), where a 1e-8 absolute bound is already effectively relative —
+converting those would tighten them and risk new reds for no burndown gain.
+
+**Group A implemented — `feat/quantity-relative-tolerance` @ 49675d19 (not yet opened).**
+13 `vmomentdensity` asserts in the two tests replaced by a shared
+`assert_physical_matches_natural(physical, natural, msg, rtol=1e-15)` at module
+level in `test_quantity.py` (single consumer — hoisting to a shared tests module
+would be speculative; `tests/backend_jit_helpers.py` is jit-specific and is the
+wrong home for a units check). 4 ledger entries dropped.
+
+Control run, the part that makes the flip real: with the change reverted,
+**2/2 fail on jax and 2/2 on torch**; with it, numpy/jax/torch all pass. Diff is
+confined to 3 hunks (helper + the two functions), library code untouched.
+
+Two process notes worth keeping. The first transform pass ran over the *whole
+file* instead of the two functions — 19 blocks converted, syntax broken — because
+I applied the regex to `src` rather than to the function spans. Reverted and
+redone with explicit spans; the block count then matched the hand count (13),
+which is the check that would have caught it either way. And `git stash` was
+avoided for the control run in favour of a file copy, since stash is repo-wide
+and could have restored another worktree's WIP.
+
+Remaining in this cluster: `densitymatch_issue677` and `sample_outputunits`
+(4 entries) — the full-file jax run is still going and will say whether they are
+genuinely stale.
+
+### 2026-08-04 — the 8 test_quantity entries are ONE bug, and isolation lied in both directions
+
+The full-file jax run finished: **5 failures / 244**, and it rewrites the whole
+picture.
+
+| test | isolation | full file |
+|---|---|---|
+| `method_value` | fails @17893 | fails @17893 |
+| `method_inputAsQuantity` | fails @**18044** | fails @**17999** |
+| `sample_outputunits` | **passes** | **fails** @18183 |
+| `densitymatch_issue677` | **passes** | **fails** @18257 |
+| `quantity_radius_is_not_coerced[torch]` | — | fails (cross-framework artifact, CI-impossible) |
+
+Two tests that passed in isolation fail in context, and a third fails at a
+*different line*. So the earlier "stale candidates" reading was wrong — and the
+rule that hand-picked nodeids are not a context earned itself twice in one run.
+
+**The mechanism is a cascade from a single failure.** `test_sphericaldf_method_value`
+does this:
+
+```
+17892:    galpy.util._optional_deps._APY_UNITS = False   # Hack
+17893:    assert ... vmomentdensity ...                  # <- fails on jax/torch
+17903:    galpy.util._optional_deps._APY_UNITS = True    # Hack (restore)
+```
+
+The failing assert sits **between** the disable and the restore. When it fails,
+the restore never runs and the units flag stays `False` **for the rest of the
+session**. Every later test that expects a `Quantity` then receives a bare value:
+
+* `.to` on a `numpy.float64` → AttributeError
+* `.to_value` on an `ndarray` → AttributeError
+* `Quantity - dimensionless` → UnitConversionError
+
+Those are exactly the three "Quantity-type bugs" I spent two wakes hypothesising
+about. They are **collateral**, not independent defects — and the saved
+tracebacks that started that hypothesis were real, just downstream of the actual
+cause. numpy never sees any of it because on numpy the assert passes and line
+17903 runs.
+
+So the entire 8-entry `test_quantity` block reduces to **one root cause**: the
+unsatisfiable absolute tolerance at 17893, already fixed in
+`feat/quantity-relative-tolerance`. If the verification runs confirm it, the
+remaining 4 entries come off too — 8 entries on one 13-line change.
+
+Worth noting the test would be more robust with the flag restored in a
+`finally:`/fixture so a failure cannot leak global state into unrelated tests.
+Not doing that in this PR (it is a separate concern touching test structure
+rather than the bound), but it is the reason one bad tolerance could red four
+tests.
+
+Process: the tolerance worktree had **no `libgalpy.so`**, caught before the run
+rather than after — built it first, so these numbers are attributable.
+
+**Stringency check on the new bound** (Jo's "pass not too far from the numerical
+limit"). Exercised `rtol=1e-15` directly against relative perturbations:
+
+| perturbation | verdict |
+|---|---|
+| 1.16e-16 (0.52 ULP) — the measured jax/torch difference | passes |
+| 1e-15 (4.5 ULP) | **caught** |
+| 1e-14 (45 ULP) | **caught** |
+| 1e-12 (4504 ULP) | **caught** |
+
+So it admits exactly the one-ULP round-off it is meant to admit and rejects
+anything from ~4.5 ULP up. The crossover where the new relative bound becomes
+*stricter* than the old absolute one is `1e-8 / 1e-15 = 1e7` — below that
+magnitude the test is now tighter than it was, and the `vmomentdensity` values in
+question are ~1.6e10, well above it.
+
+Ledger edit verified against `origin/feat/backends-develop`: exactly 4 removals,
+0 additions, no phantom entries.
+
+Verification runs still in flight (jax 29%, torch 59%, **0 failures so far** in
+both — the baseline's 5 failures all fell in the 59-88% band, so torch is only now
+entering the decisive stretch).
+
+### 2026-08-04 — torch verification CONFIRMS the cascade fix (4/4)
+
+Full-file `test_quantity.py` under forced torch on the fixed branch (C extension
+built first): **244 tests, 2 failures**, and all four target tests are recorded
+as genuine PASSes, not skips:
+
+```
+test_sphericaldf_method_value            PASSED (0.055s)
+test_sphericaldf_method_inputAsQuantity  PASSED (0.047s)
+test_sphericaldf_sample_outputunits      PASSED (0.051s)
+test_sphericaldf_densitymatch_issue677   PASSED (0.004s)
+```
+
+Baseline was 5 failures; the 2 that remain are both known non-regressions:
+
+1. `quantity_radius_is_not_coerced_on_a_backend[jax]` — a `[jax]`-parametrized
+   test in a forced-**torch** session. CI-impossible (one framework per shard).
+2. `test_streamgapdf_sample` — named *by the ledger's own header comment* as an
+   env-specific local false failure: "a local clean-CPU regen had env-specific
+   false failures, e.g. test_streamgapdf_sample, that CI passes". Checking the
+   comment before treating it as a regression saved chasing a phantom; the
+   docstring/comment really does say whether a failure was expected.
+
+So the 4 collateral entries fall out of one 13-line tolerance change, exactly as
+the `_APY_UNITS` cascade predicted. jax is still running (59%, 0 failures so far)
+— the ledger prune for the remaining entries waits on it rather than being
+inferred from torch.
+
+### 2026-08-04 — #1248 codecov/project: confirmed partial-upload, not a coverage loss
+
+Rather than keep asserting "it's the upload artifact" from memory, read the
+codecov comment. It states it outright:
+
+> **HEAD has 9 uploads less than BASE** — 18 vs 27
+> All modified and coverable lines are covered by tests
+
+The reported `-14.53%` (48324 -> 41311 hits) is 9 shards that have not uploaded
+yet, with 46 jobs still queued and 24 running. `codecov/patch` is already green.
+So: wait, do not re-run, do not ping. This matches the documented behaviour that
+`state: complete` is not an all-shards-in signal.
+
+**Queue is conflict-free.** Checked the file sets of the three PRs now stacked up:
+
+| PR | files |
+|---|---|
+| #1248 (active) | `_pickle.py`, Multipole, SCF, streamgapdf + their 3 test files |
+| #192 (ready) | `planarPotential.py`, `test_backend_array_inputs.py` |
+| tolerance (ready) | `test_quantity.py`, `backend_xfail.txt` |
+
+Fully disjoint, so no rebase is warranted — a stale base is harmless when the
+files do not overlap, and rebasing reflexively just burns CI on a
+runner-constrained project.
+
+jax verification still running (59%, 0 failures). Confirmed it is progressing
+rather than hung — the wrapper PID shows 0% CPU, but that is just `timeout`; the
+real work is in the child, and the log was written 30s before checking.
+
+### Ledger burndown snapshot (on the tolerance branch, 4 already dropped)
+
+**38 entries** — jax 17, torch 17, jax-jit 3, torch-jit 1. Once the remaining 4
+`test_quantity` entries come off (pending the jax run), **34**.
+
+| test file | entries |
+|---|---|
+| `test_actionAngle.py` | **12** |
+| `test_quantity.py` | 4 (about to be 0) |
+| `test_orbit.py` | 4 |
+| `test_streamdf.py` | 3 |
+| `test_potential.py` | 3 |
+| `test_diskdf.py` | 3 |
+| `test_sphericaldf.py` | 2 |
+| `test_qdf.py` | 2 |
+
+So after this PR the **single largest remaining cluster is `test_actionAngle` at
+12** — and ~8 of those are the tolerance batch that needs Jo's own sign-off (a new
+batch; the 2026-08-01 approval covered Group A/B, not this). That is the natural
+next thing to raise when he is reachable, and it is worth noting it is now a third
+of the whole ledger.
+
+Separately: `backend_slow_skip.txt` holds **230** entries — an order of magnitude
+larger than the xfail ledger, and mostly jax eager-XLA timeouts. Worth flagging
+that "ledger size" as a progress metric only tracks the xfail file; the slow-skip
+list is where the jax-speed debt actually sits, and it is not shrinking on its own.
+
+### 2026-08-04 — jax CONFIRMS too; tolerance branch complete (8 entries, one root cause)
+
+```
+jax:   244 tests, 1 failure  (was 5)   all 4 targets PASSED
+torch: 244 tests, 2 failures (was 5)   all 4 targets PASSED
+```
+
+The single jax residual is `quantity_radius_is_not_coerced_on_a_backend[torch]` —
+a `[torch]`-parametrized test in a forced-**jax** session, which cannot occur in
+CI where each shard installs one framework. torch's extra one is
+`test_streamgapdf_sample`, named in the ledger's own header as a local
+env-specific false failure that CI passes.
+
+`feat/quantity-relative-tolerance` is now 2 commits and **removes 8 ledger entries
+(8 removed / 0 added vs origin)** off a 13-line test change — the best
+entries-per-line of the vacation so far, and only because the four "separate"
+failures turned out to be one cascade.
+
+The general lesson, worth carrying: **a test that mutates global state and fails
+before restoring it converts one red into many.** The three downstream failures
+looked like three distinct Quantity-type bugs for two full wakes. Nothing about
+their tracebacks hinted at a shared cause; only running the whole file and
+noticing the line-number shift did. Where a suite has this pattern, the *first*
+failure in file order is the one to fix, and the rest should be re-measured
+before being characterised at all.
+
+### 2026-08-04 — #192 base check, and a diff direction that lies
+
+Before opening #192 I checked whether develop had moved under it. First attempt:
+
+```
+git diff --name-only HEAD..origin/feat/backends-develop
+  -> galpy/potential/planarPotential.py
+     tests/test_backend_array_inputs.py
+```
+
+which reads as "develop touched exactly my two files — must rebase". **That is
+wrong.** `HEAD..develop` is a symmetric file list: it includes *my own* changes
+seen from develop's side, so a branch's own files always appear. It cannot
+distinguish "they changed it" from "I changed it".
+
+The question only has meaning against the merge-base:
+
+```
+git diff --name-only $(git merge-base HEAD origin/...)..origin/feat/backends-develop
+  -> tests/backend_jit_helpers.py, tests/test_backend*.py  (9 files, none of mine)
+```
+
+No overlap, so the stale base is harmless and #192 needs no rebase — which is the
+outcome the "don't reflexively rebase disjoint PRs" rule predicts, but only the
+merge-base diff actually establishes it. Rebasing on the strength of the first
+command would have burned CI on a runner-constrained project for nothing.
+
+**codecov on #1248 is converging as predicted**: uploads 18/27 -> **23/27**, with
+21 jobs still queued. Not stuck, no intervention.
+
+Dispatched a jit-coverage run (`jitcount` plugin) on `test_sphericaldf.py` under
+`--backend jax --jit` to measure traced progress on the DF work — the counters are
+traced-vs-NOT_TRACED boundary calls plus C-library entries, since a `--jit` pass
+count on its own proves neither.
+
+### 2026-08-04 — hardening folded in (3rd commit), and a probe that lied first
+
+Wrapped the `_APY_UNITS` disable/restore in `try/finally` so a failure can never
+leak the flag again. Same file as the tolerance work, so it belongs on that
+branch rather than as a conflicting follow-up PR.
+
+**The first verification was wrong and nearly got recorded as a success.** I
+triggered the simulated failure on "physical value has no `.unit`", assuming that
+only happened inside the flag-off region. It does not — an earlier converted
+assert also passes a raw value, so the probe raised *before* line 17894, the flag
+was never set False, and **both** arms reported `True`. Read naively that says
+"hardening works"; it actually says "the probe never reached the code under
+test". A control that passes identically with and without the fix is not a
+control.
+
+Re-triggered on the flag state itself (`if not od._APY_UNITS`), which is exact:
+
+| | raised in flag-off region | flag after failure |
+|---|---|---|
+| with `try/finally` | yes | **True** (restored) |
+| without (HEAD) | yes | **False** (leaked) |
+
+`feat/quantity-relative-tolerance` is now 3 commits: relative bound, -8 ledger
+entries, unconditional restore. numpy/jax/torch all green.
+
+### 2026-08-04 — #1248 pre-merge audit (the three required dimensions)
+
+**1. `if` -> `xp.where` array-input class: clean.** Every added conditional
+branches on a *type or a name*, never on array data:
+`isinstance(obj, (PPoly, BPoly))`, `isinstance(obj, list)`, `if name in pdict`,
+`if name in self.__dict__`. Nothing here can break under a trace or with array
+inputs, because no array value ever reaches a truth test.
+
+**2. Duplication: eliminated, not moved.** `pack_splines` / `unpack_splines` /
+`SplinePickleMixin` are defined once in `galpy/util/_pickle.py`; the three
+consumers inherit. `MultipoleExpansionPotential` is **-49 lines net** because its
+hand-rolled `__getstate__`/`__setstate__` were deleted rather than relocated.
+
+**3. Placement: correct, and forced.** The consumers span `potential/`
+(Multipole, SCF) *and* `df/` (streamgapdf), so the helper cannot live in either
+family — `galpy/util/` is the only coherent home.
+
+**Known latent edge, deliberately NOT fixed:**
+`isinstance(obj, tuple) and len(obj) == 6 and obj[0] == _SPLINE_SURROGATE` would
+raise numpy's ambiguous-truth error if `obj[0]` were an array. It is unreachable:
+`unpack_splines` is only ever applied to attributes named in
+`_PICKLE_SPLINE_ATTRS`, which are splines by construction. Fixing it would
+restart ~150 checks on a runner-constrained project for a case that cannot
+occur. Recording it here instead so it is a known quantity rather than a
+surprise if those attr lists ever widen.
+
+Dispatched a full-file **numpy** `test_quantity.py` run on the tolerance branch —
+the branch edits an 18k-line file and ruff reformatted it, and so far numpy has
+only been checked on the 2 affected tests. Cheap insurance against a
+transform side-effect elsewhere in the file.
+
+### 2026-08-04 — jit-coverage measurement: test_sphericaldf under jax --jit
+
+```
+BOUNDARY CALLS: traced=152293  not_traced=375   (99.8% traced)
+C-LIBRARY ENTRIES: 0
+NOT-TRACEABLE (entered C): 0 tests
+```
+
+223 slots: **194 passed, 28 skipped (12.6%), 1 xpassed, 0 failed**.
+
+Read honestly, that headline needs its denominator attached: **99.8% of boundary
+calls are traced across the 87% of the suite that actually runs under jax.** The
+28 skips are the jax slow-skip entries — i.e. exactly the tests most likely to be
+slow or awkward under a trace — so they are excluded by construction, not because
+they pass. The percentage is real but it is not "the spherical DF suite is 99.8%
+jit-clean".
+
+What *is* unambiguously good: **0 C-library entries**, so nothing in this suite is
+not-traceable by construction. The whole DF path stays in Python/backend code and
+never drops into libgalpy, which is the precondition for GPU and for
+higher-order AD. The residual 375 untraced boundary calls (0.2%) are the real
+remaining gap and are worth a follow-up characterisation.
+
+Also surfaced: **1 XPASS** in this run — an xfail that now passes under
+`--backend jax --jit`. Possibly a stale jit-ledger entry (there are only 3
+`jax-jit` entries total). Noting it as a lead rather than chasing it now; it needs
+`--runxfail` and a full-file context to identify properly, and #1248 is the
+priority.
+
+Also: full-file **numpy** `test_quantity.py` on the tolerance branch = **244
+passed**, so the 18k-line edit plus ruff reformat introduced no numpy regression
+anywhere in the file, not just in the two tests I had checked.
+
+**The XPASS in the jit run is unexplained — recording it as open, not solved.**
+Chased it three ways and came up empty:
+
+* not a jit-ledger entry — the only `jax-jit` entries are 1 `test_orbit` and 2
+  `test_potential[AnyAxisym]`; none in `test_sphericaldf.py`
+* not a plain-`jax` entry leaking in — `conftest._run_backend` returns
+  `f"{name}-jit"` under `--jit`, so the `jax` list is not consulted at all
+* no in-file `xfail` marks — `grep xfail tests/test_sphericaldf.py` is empty
+
+And `--jit` was definitely active (traced=152293 boundary calls; the counter only
+moves under a trace). So one test is being marked xfail by a mechanism I have not
+found. Identifying it needs a targeted `-rX` rerun of that suite (~20 min), which
+is not worth pre-empting the #1248 merge for. Flagging it because an unexplained
+xfail marker is exactly the kind of thing that silently hides a real failure
+later.
+
+### 2026-08-04 — #1248 is green but BLOCKED on the gate; verified "slow" is not "hung"
+
+146 checks green, **zero reds** (codecov/project cleared on its own at 99.95%).
+`mergeStateStatus=BLOCKED` only because `all-clear` has not reported yet.
+
+Before assuming the remaining shards were stuck, measured rather than guessed:
+
+| | |
+|---|---|
+| completed orbit shards **in this same run** | 9-51 min (ubuntu 3.14 orbit+orbits: 31 min) |
+| still-running ubuntu 3.13 / 3.12 orbit+orbits | 52 min |
+| `timeout-minutes` in build.yml | **none** -> GitHub default 6h |
+| concurrent workflow runs right now | 3 |
+
+So they are long but inside the observed range, with runner contention the likely
+cause, and there is no configured limit they are about to trip. Re-running would
+restart from zero and burn runner time on a project that is runner-constrained —
+waiting is strictly better. Nothing to drive, nothing to ping about.
+
+## 2026-08-04 — #1248 MERGED (730657c3); #1249 opened; XPASS explained (I was wrong)
+
+`gh pr merge --squash` landed the scipy-1.18 pickle work on `feat/backends-develop`
+as **730657c3**, 152 checks green, zero reds. `codecov/project` cleared itself
+once all 27 shard uploads arrived, exactly as diagnosed — no re-runs, no ping.
+
+Immediately opened the next in the queue: **#1249** (planar adapters derive
+`_backend_compatible` from the potential they adapt).
+
+**Correction — the XPASS is intended behaviour, and my previous explanation was
+wrong.** Last wake I wrote that under `--jit` "the `jax` list is not consulted at
+all", inferring it from `_run_backend` returning `"jax-jit"`. The plugin named the
+culprit — `test_anisotropic_hernquist_negdf`, marker reason `backend-xfail-ledger`
+— which sent me to the loader I had never read:
+
+```python
+names = {backend_name}
+if backend_name.endswith("-jit"):
+    names.add(backend_name[: -len("-jit")])      # traced INHERITS eager
+```
+
+with a docstring spelling out the rationale: tracing cannot repair an eager
+failure (not a numerical gap, not a `_reject_backend` guard), so `<backend>-jit`
+means **"applies ONLY when traced"** and the eager list stays the single place a
+shared entry is written and pruned. It even says the rule lives in the loader
+rather than the callers "because it is a property of the backend name, not of
+which list is being read."
+
+So: an eager-jax entry, inherited under `--jit`, that passes when traced →
+non-strict XPASS. Nothing hidden, nothing stale, no follow-up needed. My stated
+worry that "an unexplained xfail marker could silently hide a real failure" was
+unfounded.
+
+The mistake was reading one function and generalising from its return value
+instead of following the call into the function that consumes it. The
+already-recorded rule — read the docs/comments before classifying — would have
+answered this in one step, since the answer was sitting in a docstring the whole
+time.
+
+### 2026-08-04 — actionAngle cluster triage; AdiabaticGrid_outsidegrid_c is BY DESIGN (correcting myself again)
+
+#1249 is queued (149 checks), so: local burndown triage on the biggest remaining
+cluster, `test_actionAngle` at 12 entries / 5 distinct groups.
+
+Started with `AdiabaticGrid_outsidegrid_c` (jax+torch) because I had it recorded
+as "a real bug per Jo's own red-flag criterion, not a tolerance candidate".
+Re-measured today:
+
+```
+grid   aA(3.0, ...)[0] = 0.01111777
+direct aAA(3.0,...)[0] = 0.0064088
+|diff| = 0.00470897   vs tolerance 1e-8      (~73% relative)
+```
+
+Far too large for tolerance — that part was right. But it is **not a bug
+either**, and the source says so in two places:
+
+> "interpolation grid only (no off-grid fallback): inputs must lie within the
+> grid, whereas the numpy path falls back to a per-point solve off-grid"
+> "Assumes on-grid inputs (the off-grid fallback to self._aA is numpy-only)"
+
+The test deliberately evaluates at `R=3.0`, *outside* the grid. numpy falls back
+to an exact per-point solve; the backend path returns the extrapolated grid
+value. The 73% gap is the documented consequence of a deliberate design choice,
+not a defect.
+
+**Consequences for the ledger and for what Jo is asked to approve:**
+
+* these 2 entries are **correct and should stay** — they are not stale, not
+  tolerance, not fixable by a bound
+* they must **not** go into the tolerance batch; putting them there would ask Jo
+  to approve loosening a bound that is doing its job
+* they clear only when task #103 (opt-in off-grid fallback for jax/torch) is
+  implemented — that is a *feature*, not burndown
+
+Third time this session that reading the docstring settled a classification I had
+already labelled from numbers alone (after `test_streamgapdf_sample` and the
+`-jit` ledger inheritance). Ratios rank candidates; they do not classify them.
+The docstring is the only thing that says whether a difference was intended.
+
+**actionAngle triage, interim (full-file torch run in flight).** Docstring
+evidence gathered so far, which splits the 12-entry cluster by *kind* rather than
+by magnitude:
+
+| group | entries | status |
+|---|---|---|
+| `AdiabaticGrid_outsidegrid_c` | 2 (jax+torch) | **BY DESIGN** — confirmed, no off-grid fallback |
+| `StaeckelGrid_basicAndConserved_actions` | 2 (jax+torch) | **likely by design** — `actionAngleStaeckelGrid.py:42` carries the *identical* "no off-grid fallback" sentence; needs the failure detail to confirm the test actually evaluates off-grid |
+| `Vertical_Harmonic_actionsFreqs{,Angles}` | 2 (torch) | probably a real gap — `_unbound_backend` explicitly *tries* to match numpy's 9999.99 sentinel ("match it for the vectorised path"), so a mismatch is a defect, not a decision |
+| `Spherical_*_linear_angles` | 4 (torch) | unknown |
+| `Adiabatic_linear_angles_cylsep` | 2 (jax+torch) | unknown |
+
+The useful distinction is that "by design" and "real gap" need opposite
+treatments: the first stays ledgered until a *feature* lands and must be kept out
+of the tolerance batch; the second is burndown I can do now. Sorting by failure
+magnitude would have mixed them together — the AdiabaticGrid one is the single
+largest discrepancy in the cluster and is also the one that must NOT be touched.
+
+**Triage refined.** `actionAngleSpherical.py` contains **no** numpy-only
+divergence note — every comment there is of the form "the numpy path is untouched
+(byte-identical)", i.e. the backend path is *meant* to agree. That puts the 4
+`Spherical_*_linear_angles` torch entries in the "real gap" column rather than
+"by design", and makes them the largest genuinely-fixable group in the cluster.
+(They are also the 4 that the missing-C-extension trap flips to false PASSes, so
+any future run attributing them must have `libgalpy.so` built.)
+
+Running total for the 12-entry actionAngle cluster:
+
+* **by design, keep ledgered** (blocked on feature #103): AdiabaticGrid 2, StaeckelGrid 2 (pending confirmation)
+* **real gap, fixable**: Spherical 4, Vertical_Harmonic 2
+* **unknown**: Adiabatic_linear_angles_cylsep 2
+
+So at most ~6 of the 12 are burndown, and the tolerance batch Jo is asked to sign
+off on is smaller than the raw cluster size suggests. The full-file torch run
+(9 failures = exactly the 9 torch entries, so the ledger is exactly right) will
+supply per-test detail.
+
+### 2026-08-04 — actionAngle torch full-file: 9 failures = 9 entries, and two of my guesses were wrong
+
+209 tests, **9 failures — exactly the 9 torch actionAngle ledger entries**, so the
+ledger is precisely right for this file (no stale entries, nothing unledgered).
+
+| group | measured vs bound | ratio | class |
+|---|---|---|---|
+| `Vertical_Harmonic_actionsFreqs{,Angles}` (2) | 2.76e-9 / 3.20e-9 vs **1e-10** | ~30x | tolerance |
+| `Spherical_linear_angles{,_fixed_quad}` (2) | 5.009e-6 vs 1e-8 | **500x** | **red flag — real accuracy gap** |
+| `Spherical_{,almost}noninclinedorbit_linear_angles` (2) | 1.180e-6 vs 1e-8 | **118x** | **red flag — real accuracy gap** |
+| `Adiabatic_linear_angles_cylsep` (1 torch) | 4.359e-8 vs 1e-8 | 4.4x | tolerance |
+| `AdiabaticGrid_outsidegrid_c` (1 torch) | 4.7e-3 vs 1e-8 | 5e5x | **by design** |
+| `StaeckelGrid_basicAndConserved_actions` (1 torch) | 4.835e-14 vs **1e-16** | 218x | cancellation |
+
+**Two corrections to my own earlier triage:**
+
+1. `StaeckelGrid_basicAndConserved_actions` is **not** the off-grid design case. I
+   guessed that from the identical "no off-grid fallback" docstring in
+   `actionAngleStaeckelGrid.py`. The actual failure is *"Circular orbit in the
+   MWPotential does not have Jr=0"* — `Jr = 4.8e-14` against a **1e-16** bound.
+   That is a cancellation/summation-order question for a quantity that should be
+   exactly zero, nothing to do with grid coverage. The shared docstring made a
+   plausible story; the failure text made the true one.
+
+2. `Vertical_Harmonic` is a **tolerance** case (~30x on a 1e-10 bound), not the
+   sentinel defect I inferred from `_unbound_backend`'s "match it for the
+   vectorised path" comment. Being near code that discusses a divergence is not
+   evidence of that divergence.
+
+**What this means for the batch Jo is asked to approve.** Applying his own
+"a really big difference is a red flag" rule to measured numbers rather than to
+my labels:
+
+* **tolerance batch (~5-6 entries)**: Vertical_Harmonic (2), Adiabatic_cylsep
+  (1 torch + 1 jax), StaeckelGrid (1 torch + 1 jax) — all 4x-218x on bounds that
+  are at or below float64 resolution for the quantity involved (1e-16 for a
+  cancellation-to-zero, 1e-10 for a frequency)
+* **NOT tolerance, needs a real fix (4 entries)**: the Spherical linear-angle
+  family at 118x-500x. These are the largest genuinely-fixable group and I should
+  work them rather than ask for a bound change.
+* **NOT tolerance, blocked on feature #103 (2 entries)**: AdiabaticGrid off-grid.
+
+So the honest ask is ~6 entries, not the ~8 I had been carrying, and 4 of the
+cluster are work for me rather than a decision for him.
+
+### 2026-08-04 — ROOT CAUSE for the 4 Spherical linear-angle entries: bisection step count
+
+Isolated the failure away from the test harness by computing the radial angles for
+**identical numpy inputs** under each backend (orbit integrated once with
+`dopr54_c`, so both paths see the same 1001 points):
+
+```
+numpy  max deviation from linear = 2.27e-09      (passes 1e-8)
+torch                            = 3.34e-06      (fails)
+max |torch - numpy| = 3.34e-06,  and ALL 1001 angles differ (not an outlier)
+```
+
+The magnitude is the tell. `2**-18 = 3.815e-06` versus the observed `3.34e-06` —
+the error sits exactly at an 18-halving bisection floor. And the backend root
+finder is precisely that:
+
+* `galpy/backend/optimize.py:178` `bisect_root(f, a, b, xp, *, xtol, maxiter)`,
+  docstring: *"Runs a FIXED schedule of `n_bisect_steps` halvings"* — static
+  schedule so it stays jit-traceable
+* step count is `n_bisect_steps(a, b, xtol, maxiter)`, derived from bracket width
+  and `xtol`
+* the numpy path instead uses a brentq-style solve with `maxiter=200`
+  (`actionAngleSpherical.py:895`), i.e. machine precision
+
+So the turning-point root is only located to ~4e-6 on the backend path, and the
+radial angle inherits that error wholesale. This is **not** a tolerance question
+and needs no sign-off from Jo: it is a resolution shortfall in a solver, with a
+cheap fix (a halving costs one function evaluation; ~52 reach float64
+resolution, and the schedule stays static so tracing is unaffected).
+
+**Next step**: find the `xtol` the Spherical angle path passes, tighten it, and
+verify (a) the deviation drops below 1e-8 on torch AND jax, (b) numpy stays
+byte-identical, (c) the cost in added halvings is small. That would clear **4 of
+the 12** actionAngle entries — the largest fixable group in the cluster.
+
+This also revises the tolerance ask downward again: of the original 12, ~6 are a
+genuine tolerance decision for Jo, 4 are this solver fix, and 2 are blocked on
+feature #103.
+
+### 2026-08-04 — RETRACTION: the Spherical angle error is NOT the bisection; it is the GL quadrature floor
+
+Last wake I logged a section headed "ROOT CAUSE ... bisection step count". **That
+was wrong**, and two measurements today refute it:
+
+1. **The root finder is exact.** rperi/rap, torch vs numpy, over all 1001 points:
+   `max|Δrperi| = 7.3e-13`, `max|Δrap| = 6.9e-13`. The turning points agree to
+   ~1e-12, so nothing about the bisection can produce a 3.3e-6 angle error.
+2. **The call site never sets a loose tolerance.** `actionAngleSpherical` calls
+   `_backend_brentq(f, ...)` with no `xtol`, i.e. scipy's default `2e-12`, plus a
+   Newton polish — consistent with the 7e-13 measured above.
+
+What I actually did last wake was notice `3.34e-6 ≈ 2**-18` and reason backwards
+to a solver that could produce it. That is numerology: a value near a power of
+two is not evidence for a halving schedule, and I never checked whether the
+solver was even on the path. `actionAngleSpherical.py` contains no `bisect_root`
+call at all — one grep would have killed the hypothesis before I wrote it up.
+
+**The real mechanism, and it is documented in the source:**
+
+```python
+# Gauss-Legendre order for the backend (jax/torch) action/freq/angle quadratures.
+# 50 matches scipy's adaptive quadrature to <1e-7 over the physical orbit range
+# ... an irreducible quadrature-method difference where higher order does not help.
+_BACKEND_GL_ORDER = 50
+```
+
+The backend uses fixed-order GL-50; numpy uses scipy's *adaptive* quad. The
+comment states the agreement floor is `<1e-7` and that **raising the order does
+not help** — so the proposed "tighten it" fix was not just aimed at the wrong
+component, it is explicitly documented as ineffective for the right one.
+
+The test bound is `1e-8`. Against a documented ~1e-7 method floor, **the test is
+structurally unattainable for any GL order** — the same shape as the
+`test_quantity` case: a bound below what the method can deliver.
+
+**Revised classification, and the ask goes UP not down.** I have twice reported a
+shrinking number for Jo; honesty requires reporting the increase:
+
+* the 4 Spherical linear-angle entries are a **quadrature-method floor**, i.e. a
+  tolerance/reference decision, **not** work I can silently fix
+* so the tolerance batch is **~10 entries**, not the ~6 I claimed last wake
+* the genuine options are (a) a backend-specific bound reflecting the GL-vs-
+  adaptive floor, or (b) re-basing the test on a gold reference instead of
+  treating scipy's adaptive quad as truth — (b) is the better test but a larger
+  change, and either way it is Jo's call
+
+Pattern worth keeping: I reached for a mechanism that *could* explain the number
+before checking which mechanisms were *present*. Both times this session that I
+did that (the vmomentdensity decorator, and now this) the answer was in a comment
+a few lines from code I had already opened.
+
+**The cluster partly unifies, and a duplication falls out of it.**
+
+Which actionAngle modules use the fixed-order GL quadrature at all:
+
+| module | GL references | `_BACKEND_GL_ORDER` |
+|---|---|---|
+| `actionAngleSpherical` | 4 | **defines `= 50` at line 33** |
+| `actionAngleVertical` | 4 | **defines `= 50` at line 22** |
+| `actionAngleAdiabatic` | 0 | — |
+| `actionAngleStaeckel` | 0 | — |
+
+So **6 of the 12 entries** (Spherical 4 + Vertical_Harmonic 2) sit on the *same*
+GL-vs-adaptive floor and are therefore **one decision**, not six. The Adiabatic
+and StaeckelGrid entries use no GL quadrature and are separate mechanisms —
+which also retro-justifies not lumping them into a single "tolerance batch".
+
+**Duplication found (actionable, independent of the tolerance question):** the
+same constant `_BACKEND_GL_ORDER = 50` is defined *twice*, in two potential-family
+modules, with the same value and the same rationale comment. That is precisely
+the "general-ish value living in specific files" pattern the audit directive
+targets: the quadrature order is a property of the backend quadrature, not of
+spherical or vertical action-angles. It belongs in the shared backend quadrature
+module, imported by both — so that changing it (which the tolerance decision may
+require) is one edit, not a hunt for copies.
+
+**One caveat on the documented floor.** The comment claims GL-50 matches scipy's
+adaptive quad to `<1e-7` "over the physical orbit range", but the measured
+*angle* discrepancy is `3.34e-6` — 30x larger — for an unremarkable orbit
+(`[1.1, 0.3, 1.2, 0.2, 0.5, 2.0]`). Either that orbit is nearer the pathological
+regime than the comment implies, or the floor for *angles* is worse than for
+actions (plausible: the angle integrand carries the same sqrt turning-point
+behaviour but is evaluated on a partial interval). Worth measuring before quoting
+`1e-7` to Jo as the number, since the decision depends on where the floor
+actually is.
+
+### 2026-08-04 — tested the "higher order does not help" claim instead of trusting it
+
+Swept `_BACKEND_GL_ORDER` on the failing Spherical angle case:
+
+| GL order | max deviation from linear |
+|---|---|
+| 50 (current) | 3.3407e-06 |
+| 100 | 2.1083e-06 |
+| 200 | 1.8452e-06 |
+| **400** | **3.5152e-06** — *worse* |
+
+The error does not converge with order: it plateaus around ~2e-6 and then
+degrades as round-off in the 400-node sum overtakes the quadrature gain. So the
+source comment's claim is **correct, and now verified rather than assumed** —
+raising the order is not a fix. (The integrand carries a sqrt turning-point
+singularity, for which plain Gauss-Legendre converges very slowly; that is
+exactly the regime where adding nodes buys nothing.)
+
+**But the documented number does not apply here.** The comment says the GL-50
+floor is `<1e-7`; that is the floor for *actions*. For *angles* the measured floor
+is ~2e-6 — about **20x worse** — and no order reaches the test's 1e-8 bound. Worth
+correcting in the comment, since anyone reading it would predict this test could
+be made to pass by raising the order.
+
+**Settled classification for the 4 Spherical entries**: an irreducible
+GL-vs-adaptive method floor at ~2e-6 for angles. Not a solver bug (turning points
+agree to 7e-13), not fixable by order (measured above). It is a genuine
+tolerance/reference decision for Jo, alongside the 2 Vertical_Harmonic entries
+that share the same GL-50 machinery — **6 entries, one decision**.
+
+The useful discipline here: the comment made a falsifiable claim, so I tested it.
+It survived — which is a better outcome than either trusting it blindly or (as I
+did last wake) inventing a competing mechanism without checking whether the
+documented one held.
+
+### 2026-08-04 — hoisted the duplicated GL order (branch feat/hoist-gl-order, not opened)
+
+`_BACKEND_GL_ORDER = 50` was defined in **two** actionAngle modules, the second
+with the comment "(matches actionAngleSpherical's choice)" — coupled by
+convention, not by code. Five AA modules use the backend quadrature helpers,
+three of them via the shared `n=50` default, so the value effectively had three
+homes.
+
+Moved it to `galpy/actionAngle/actionAngle.py`, which both modules already import
+from. **Deliberately not** `galpy/backend/quadrature.py`: the order is a property
+of the action-angle quadratures, and putting it in the generic backend module
+would invert the dependency — the audit rule is "hoist to where it belongs", not
+"hoist as far up as possible".
+
+Also corrected the rationale comment, which claimed a `<1e-7` floor. That figure
+is for *actions*; for *angles* it is ~2e-6, with the measured non-convergence
+(3.3e-6 / 2.1e-6 / 1.8e-6 / 3.5e-6 at n=50/100/200/400) written into the comment
+so the next reader does not repeat my mistake of assuming a higher order would
+close the gap.
+
+Pure relocation, numpy path untouched, 7 AA tests green.
+
+### 2026-08-04 — StaeckelGrid Jr=0: another sub-epsilon bound, triage complete
+
+```
+numpy  Jr = 0.000000e+00   Jz = 0.0     (bound 1e-16)
+torch  Jr = 3.215700e-12   Jz = 0.0
+float64 eps = 2.220e-16
+```
+
+The bound `< 1e-16` is **below machine epsilon**. numpy passes because its path
+returns an *exact* zero by construction — not because it computes something small
+— so the test effectively demands bit-exact zero. Any implementation that reaches
+Jr through quadrature and lands at 1e-12 fails, even though 1e-12 is an excellent
+Jr for a circular orbit in absolute terms.
+
+Same structural shape as the `test_quantity` case already fixed: a bound tighter
+than the representation allows, which only one specific implementation satisfies.
+
+(Note the magnitude is context-dependent: CI recorded 4.8e-14, this isolated run
+3.2e-12. Same class, different value — so quote the *class*, not the number.)
+
+**actionAngle cluster triage — COMPLETE (12 entries):**
+
+| kind | entries | disposition |
+|---|---|---|
+| GL-vs-adaptive quadrature floor (~2e-6 for angles) | 6 | Jo's decision; verified not fixable by order |
+| sub-epsilon bound, numpy returns exact 0 | 2 | Jo's decision; unsatisfiable as written |
+| off-grid, no backend fallback (documented) | 2 | blocked on feature #103, keep ledgered |
+| `Adiabatic_linear_angles_cylsep` (4.4x) | 2 | still uncharacterised |
+
+So **~8-10 entries hinge on Jo**, 2 are blocked on a feature, and — contrary to
+what I claimed two wakes ago — **none are a solver bug I can quietly fix**. Every
+"fixable gap" in this cluster dissolved on measurement into either a documented
+design choice or a bound below what the method/type can deliver.
+
+**Last group resolved: `Adiabatic_linear_angles_cylsep` is the SAME quadrature floor.**
+`actionAngleAdiabatic` imports `actionAngleSpherical`, but an import is not a
+mechanism — that inference is what I got wrong on StaeckelGrid. So I read the
+call instead:
+
+```python
+# actionAngleAdiabatic._actionsFreqsAngles_backend
+Jr, Lz, _, Or, Op, _, ar, aphi, _ = self._aAS._actionsFreqsAngles(...)
+```
+
+The radial angle `ar` *is* actionAngleSpherical's, computed by the same GL-50
+quadrature. The smaller magnitude (4.4e-8 vs 3.3e-6) is not a different cause —
+the floor is orbit-dependent, which the order sweep already showed.
+
+### actionAngle cluster — FINAL (12 entries, 3 dispositions)
+
+| disposition | entries | detail |
+|---|---|---|
+| **GL-vs-adaptive quadrature floor** | **8** | Spherical 4 (direct), Adiabatic 2 (delegates to Spherical), Vertical 2 (own GL-50). ONE decision, two code sites. Verified not fixable by raising the order. |
+| **sub-epsilon bound** | 2 | StaeckelGrid Jr=0: bound 1e-16 < eps; numpy returns exact 0 |
+| **documented design** | 2 | AdiabaticGrid off-grid; clears only with feature #103 |
+
+So the whole 12-entry cluster reduces to **2 decisions for Jo covering 10
+entries**, plus 2 blocked on a feature. Nothing here is a defect.
+
+Convenient tie-in: the `feat/hoist-gl-order` branch prepared this wake puts the
+constant that **8 of these 12** depend on in a single place — so if the decision
+is "raise or parameterise the order", it is now one edit rather than two files
+plus three implicit defaults.
+
+### 2026-08-04 — free staleness sweep from #1248's artifacts: ledger is NOT carrying dead weight
+
+Pulled the 29 `backend-junit-*` artifacts from the completed #1248 backend-tests
+run and intersected them with the ledger.
+
+| backend | ledger | matched in artifacts | PASSED (= stale) |
+|---|---|---|---|
+| torch | 19 | **19 / 19** | **0** |
+| jax | 19 | 10 / 19 | **0** |
+
+**torch is a complete sweep and finds nothing stale**; jax is partial (9 entries
+never appear in these artifacts — presumably slow-skipped, since conftest lets
+skip win over the xfail-ledger for the same nodeid). So there is no pruning
+opportunity here: burndown has to come from real fixes or decisions, not from
+deleting entries that already pass. That is consistent with the actionAngle
+measurement (9 torch failures = exactly 9 entries).
+
+**The first version of this sweep was silently broken, and validating it is the
+only reason I know.** junit has no `file` attribute, so the nodeid has to be
+rebuilt from `classname` — and `classname` is `tests.test_actionAngle`, i.e. the
+FIRST component is the *directory*. Taking `split(".")[0]` produced
+`tests/tests.py::test_...` for every single test, which matches no ledger entry,
+so the sweep reported a confident **"0 stale on both backends"** while comparing
+against nothing at all. Same shape as a green test that never executed the path
+it claims to cover: the reassuring number and the broken number are identical.
+Fixed by taking the first component that starts with `test_`.
+
+**Census headline worth keeping** (from `backend-status-report`):
+
+```
+jax:   3210 passed · 18 xfail · 334 deferred · 34 exempt
+torch: 3528 passed · 19 xfail ·  15 deferred · 34 exempt
+```
+
+The xfail ledger is 42 entries, but jax carries **334 deferred** tests against
+torch's 15 — a 22x asymmetry. The headline burndown metric everyone watches (the
+ledger) is the *small* number; the real remaining debt is jax eager-XLA speed,
+which is 8x larger than the entire ledger and does not shrink on its own.
+
+### 2026-08-04 — where the jax deferral debt actually sits (quantified)
+
+`backend_slow_skip.txt`: **215 jax entries vs 15 torch** (the census's 334 vs 15
+counts *instances* — one entry covers several parametrizations).
+
+| file | jax entries |
+|---|---|
+| `test_orbit.py` | **112** |
+| `test_sphericaldf.py` | 28 |
+| `test_noninertial.py` | 17 |
+| `test_potential.py` | 16 |
+| `test_orbits.py` | 15 |
+| everything else | 27 |
+
+**`test_orbit` + `test_orbits` = 127 of 215 (59%)** — orbit integration is the
+dominant deferral, by a wide margin, and the file states the cause: *"under
+forced-jax every scalar evaluation dispatches an XLA graph"*, with the fix being
+*"un-defer as Track D in-backend vectorization lands"*.
+
+**Sequencing consequence.** The visible burndown metric (xfail ledger, 42 entries
+and now verified to contain zero stale entries) is the *small* debt. The larger
+one is jax eager-per-step orbit integration, and it is concentrated: a single
+capability — routing orbit integration through the in-backend ODE path instead of
+per-step eager dispatch — would un-defer ~127 tests, i.e. **3x the entire xfail
+ledger**, and it is already the named plan rather than a new idea.
+
+That also explains why the ledger has stopped yielding: I have spent several
+wakes finding that its remaining entries are decisions or documented designs
+rather than defects. The ledger is close to done; the deferral list is where the
+remaining engineering is.
+
+**Correction to the previous entry: the orbit deferrals are NOT one capability.**
+Last wake I wrote that "a single capability — routing orbit integration through
+the in-backend ODE path — would un-defer ~127 tests". That grouped by *file*.
+Grouping by the file's own documented *causes* (230 entries total) gives:
+
+| entries | cause |
+|---|---|
+| **66** | jax orbit: heavy eager-jax >45s — per-CI-group session-cap fit |
+| 39 | jax single-orbit variational/dxdv/lyapunov (Track D) |
+| 28 | jax spherical-DF sampling/quadrature (Track F) |
+| 17 | jax NonInertialFrameForce (eager-XLA timeout) |
+| 13 | torch orbit dissipative/variational dxdv |
+| 12 | jax multi-orbit battery (Track D/E) |
+| 10 | big composite-MW / rotated-tilted-wrapper Poisson |
+| 10 | jax single-orbit misc slow (no-C-force pots, Python integrators) |
+| 25 | qdf 7, diskdf 6, dissipative/MovingObject 6, interpRZ 5, ... |
+
+The 127 "orbit" tests split across **at least four different unblocking tracks**,
+and the largest single block — 66 entries, 29% of the whole list — is not a
+missing capability at all: those tests *pass*, they are just >45 s and get
+skipped to fit the per-group session cap. That is a speed/budget problem (#67
+nightly-full vs per-push subset), not an ODE-routing problem.
+
+So the correct sequencing statement is narrower than what I wrote: no single
+change clears the deferral list, the biggest slice is CI-budget shaped, and
+Track D variational vectorization (39 + 12 = 51) is the largest genuine
+*capability* gap.
+
+I grouped by filename because that is what the ledger tooling reports, and the
+file had recorded its own reasons all along — one `grep '^# ---'` gave a truer
+decomposition than the counts I derived from paths.
+
+**Constraint check: the biggest deferral block is not budget-addressable by me.**
+The 66-entry "heavy eager-jax >45 s" block is a session-cap fit, so the obvious
+cheap fix is to change the CI split rather than the code. But the per-test
+`--timeout 300`, the `timeout-minutes: 180` shard cap and the pytest-split
+grouping are all in `.github/workflows/backend-tests.yml`, and I have no
+`workflow` scope — I can read those files but not change them.
+
+So for those 66 the only route open to me is making the tests genuinely faster.
+That reorders what is actually actionable during the vacation:
+
+| entries | track | actionable by me? |
+|---|---|---|
+| 51 | Track D variational/dxdv vectorization (39 single + 12 multi) | **yes** — real capability work |
+| 28 | Track F spherical-DF sampling/quadrature | **yes** — plan already recorded (#125) |
+| 17 | NonInertialFrameForce eager-XLA | **yes** — speed work |
+| 66 | heavy eager >45 s | only via speed; the budget route needs Jo |
+
+**Stopping the analysis here.** Four wakes of measurement have produced a
+complete and twice-corrected picture, and the marginal value of more triage is
+now low: the ledger is verified free of stale entries, its residue is decisions
+rather than defects, and the deferral list is decomposed by its own documented
+causes. The next wakes should land the queued PRs (#1249, tolerance, GL hoist)
+and then start Track F/D work, rather than continue mapping.
+
+### 2026-08-04 — measuring how far the deferred sphericaldf tests are above the cutoff
+
+The 28 jax `test_sphericaldf` deferrals were selected by "measured CI duration
+>= 90 s". Whether Track F vectorization actually un-defers them depends on how
+far above 90 s they sit — a test at 95 s needs a small win, one at 600 s needs a
+different approach. That is measurable, so I am measuring it rather than assuming.
+
+conftest applies the slow-skip in *all* modes (including regen), and there is no
+opt-out flag, so the only way to time them is to make the list temporarily
+invisible: `mv tests/backend_slow_skip.txt{,.bak}` (the loader returns an empty
+set when the path does not exist), run, then move it back. Running 4 of the 28
+under forced jax with `--durations`.
+
+**Two footguns hit while setting this up, both already in the notes:**
+
+1. `cd X && ... & echo; git status` — the `&` backgrounds the *whole* chain
+   including the `cd`, so the trailing `git status` reported the **main repo's**
+   working tree, not the worktree's. I briefly read main's long-standing
+   `M galpy/util/coords.py` as contamination of my branch. Re-ran with an
+   explicit `cd` in its own command.
+2. The bypass leaves `D tests/backend_slow_skip.txt` in the *tolerance* worktree
+   — a deleted tracked file on a branch that is queued for merge. The background
+   job restores it after the run (the `mv` follows the `timeout`, so it runs even
+   on timeout), but this is exactly the "experiment file-swap leaks into the next
+   commit" hazard. **Verify the file is back before any further commit there.**
+   In hindsight a throwaway worktree would have been the right place for this.
+
+**Timing run 1 gave no timings.** `--durations=10` prints in pytest's terminal
+summary, which this repo's conftest force-exit truncates — the same trap that
+already cost me a run earlier this session (read the junitxml, not stdout). All
+I learned was "4 passed". Re-dispatched with `--junitxml`, whose `time` attribute
+survives.
+
+The bypass/restore did work cleanly: file restored, worktree `git status` empty.
+
+### 2026-08-04 — some sphericaldf deferrals may already be un-deferrable (Track F landed)
+
+Timed 4 of the 28 jax `test_sphericaldf` deferrals with the slow-skip bypassed
+(junitxml this time, since `--durations` is eaten by the conftest force-exit):
+
+| test | duration |
+|---|---|
+| `eddington_powerspherical_divergent_auto_rmin` | **69.9 s** |
+| `eddington_differentpotentials_dMdE_integral` | 46.4 s |
+| `constantbeta_dehnencore_in_nfw_dens_massprofile` | 38.7 s |
+| `constantbeta_interpolatedpotentials_beta` | 38.2 s |
+
+All four are **under the 90 s cutoff they were selected at**, and none needs new
+work to get there — the Track F spherical-DF migration (vectorized sampling + GL
+quadrature) has landed since those measurements, which is exactly the event the
+slow-skip comment says should retire these lines ("delete these lines as it
+lands").
+
+**Do not act on this from local timings alone.** Two reasons: this box is a
+72-core dev machine and CI runners are slower, and the original selection was
+made on real CI runs (27500392935 / 27503988401). A test at 70 s here could still
+exceed 90 s there. Local timing is one hardware point, and the whole reason these
+entries exist is a *CI* budget.
+
+The right instrument already exists: the **regen run** (`workflow_dispatch` with
+`regen=true`) rewrites both lists from real CI outcomes, which is precisely how
+the harness is designed to surface burndown candidates in both directions.
+Dispatching that is an API call, not a workflow edit, so it is available to me.
+
+**Deliberately not dispatching yet**: #1249 still has 28 queued + 35 running jobs
+and the project is runner-constrained; a full-matrix regen now would compete with
+the PR I am trying to land. Queue it for after #1249 merges.
+
+**Correction: regen CANNOT retire slow-skip entries.** Last wake I wrote that the
+regen run "rewrites both lists from real CI outcomes" and queued it as the way to
+un-defer the sphericaldf tests. Checking before relying on it:
+
+* the dispatch input is described as *"Regenerate the backend xfail-ledger
+  (writes `backend_xfail_new.txt` as an artifact instead of xfailing)"* — the
+  **xfail ledger only**
+* conftest: *"Slow-skip applies in all modes (incl. regen) so the unrunnable
+  tests never consume their timeout"*
+
+So a regen run would skip exactly the tests I want re-timed. It would have cost a
+full-matrix run and told me nothing about the deferrals.
+
+**The mechanism that does work, and is open to me:** `backend_slow_skip.txt` is a
+*data file*, not a workflow. Deleting specific lines in a PR makes CI run those
+tests on real CI hardware under the real budget — CI itself becomes the judge.
+Green means the deferral was stale and is now retired; red (timeout) means the
+90 s cutoff still binds there and I revert those lines. That is the honest test
+of a *CI* budget question, which local timings on a 72-core box can only hint at.
+
+Plan for after #1249 merges: a small PR removing the 4 measured entries (69.9 /
+46.4 / 38.7 / 38.2 s locally), letting CI adjudicate. If they hold, extend to the
+rest of the 28.
+
+### 2026-08-04 — un-defer branch prepared: `feat/undefer-sphericaldf-jax` @ 535d6659
+
+Removes all **28** jax spherical-DF slow-skip entries and their now-orphaned
+section header (−38 lines). Not opened yet — held until the runners free up so it
+does not compete with #1249.
+
+**Why all 28 rather than the 4 I timed.** The section header records that skipping
+them took the shard wall from 3111 s to ~1450 s, i.e. the set costs ~1660 s
+against a **180-minute** cap. Restoring all of them therefore cannot blow the
+cap, and one CI run adjudicates every entry instead of spending two runs on a
+4-then-24 split — which matters on a runner-constrained project. If individual
+tests still exceed the 300 s per-test timeout they fail individually and those
+specific lines go back.
+
+**Why CI decides and I do not.** The four I measured run at 38–70 s, under the
+90 s cutoff — but on a 72-core dev box, while the original selection was made on
+CI runners. A local number cannot answer a CI-budget question; the PR is the
+experiment, and its commit message says so, so a red here reads as "the cutoff
+still binds for these" rather than as a regression.
+
+The warrant is the file's own instruction: *"the Track F spherical-DF backend
+migration (vectorized sampling + GL quadrature) makes them fast; delete these
+lines as it lands."* It landed.
+
+Queue: **#1249** (0 queued / 37 running) → tolerance (−8 ledger) → GL hoist →
+un-defer (−28 deferrals). That would take the ledger 42 → 34 and the slow-skip
+list 230 → 202.
+
+### 2026-08-04 — #1249 pre-merge audit (done ahead of green so the merge is immediate)
+
+**1. `if` → `xp.where` array-input class: clean.** The library diff adds *no
+conditionals at all* — one import and two assignments
+`self._backend_compatible = is_backend_compatible(RZPot/Pot)`. Nothing branches
+on an array value, so there is nothing that can misbehave under a trace.
+
+**2. Duplication: none in code** — it reuses the existing shared helper and adds
+no new def/class. **But the 6-line rationale comment is duplicated verbatim in
+both constructors**: 12 lines of comment for 2 lines of code, which runs against
+the recorded "keep backend comments terse — no multi-line essays" preference.
+
+*Not fixing it now, deliberately.* The PR is minutes from green after ~150 checks
+and several hours of runner time; pushing a comment trim would restart all of it
+on a runner-constrained project. That is plainly the wrong trade for prose.
+Recording it as a small debt to fold into the next PR that touches
+`planarPotential.py`. Flagging rather than quietly ignoring my own directive.
+
+**3. Placement: correct.** The assignment sits next to `hasC` in each
+constructor — the same capability-flag slot, derived the same way — and the
+helper it calls already lives in `galpy/backend/`.
+
+Coverage trajectory confirms the codecov read: 40.86 → 74.81 → 76.94 → **86.01 %**
+as shards upload, matching #1248's climb to 99.95 %.
+
+**#1249 tail: slow is normal, checked rather than assumed.** The two
+`build (ubuntu-latest, 3.14, tests/test_backend*.py, ...)` shards have been
+running ~80 and ~53 min, which looks alarming for a small suite. The same shard
+on #1248 took **92 min and passed** — so these are inside the normal envelope and
+there is nothing to re-run. (It is the coverage-instrumented shard; instrumentation
+is the cost.)
+
+Second time this pattern has paid off on this PR: comparing against the *same
+shard in a completed run* is the cheap way to distinguish "slow" from "hung", and
+it costs one API call versus a wasted re-run on a runner-constrained project.
+
+State: 146 green, 4 running (all-clear gate + 2 coverage shards + the jax
+qdf/noninertial shard), coverage 86.01 % and still climbing. Audit already done,
+merge is one command once the gate reports.
+
+## 2026-08-04 — #1249 MERGED (9695ae4a); #1250 opened (−8 ledger entries)
+
+**The last red was a gate race, not a failure.** After codecov/project finally
+went green, `all-clear` showed FAILURE. Its log listed **every one of the 151
+dependencies as "success"**, then `1 failing check run(s) and 0 failing commit
+statuses` — i.e. it had evaluated at 11:10:16 while codecov was still red and
+never re-polled. Re-running just the gate took the PR to **152 green / 0 reds /
+CLEAN**, and it merged as `9695ae4a`.
+
+Worth keeping: a failed `all-clear` looks identical whether it is a stale poll or
+a genuine blocker; only its log distinguishes them. Re-running blind would have
+been right here and wrong if something real were underneath — reading the log
+first costs one command.
+
+**Opened #1250** (`feat/quantity-relative-tolerance`, 3 commits): the
+unsatisfiable absolute bound, the `finally:` restore, and **−8 ledger entries**
+(42 → 34). Verified no conflict against the new develop head by diffing
+merge-base→develop (which touched 9 files, none of mine) rather than
+`HEAD..develop`.
+
+Queue behind it: GL hoist `f481063f`, un-defer `535d6659` (slow-skip 230 → 202).
+
+### 2026-08-04 — jit coverage: test_qdf is 0% traced-green despite 53/53 passing
+
+```
+BOUNDARY CALLS: traced=30156 not_traced=556  (98.2% traced)
+C-LIBRARY ENTRIES: 1290
+NOT-TRACEABLE (entered C): 53 tests
+slots: 56 -> 53 passed, 2 skipped, 1 xfailed, 0 failed
+```
+
+**All 53 passing tests enter C.** The not-traceable list is
+`meanvR/meanvT_{staeckel,adiabatic}_{gl,mc,...}` — the C action-angle routines.
+By the harness's own rule ("a test with c_entries > 0 is not-traceable by
+construction ... must NOT be counted as traced-green"), `test_qdf` is **0%
+traced-green**, even though it is 53/53 green under `--jit` and reports 98.2 %
+of boundary calls traced.
+
+This is the sharpest illustration yet of "jit coverage != pass counts": the
+traced 98.2 % is the *potential* evaluations; the *action* computation escapes to
+libgalpy underneath them. A pass count, or the traced-fraction alone, would have
+called this suite done.
+
+Contrast with `test_sphericaldf`, measured earlier: **0** C-library entries, 0
+not-traceable — genuinely traceable end to end. So the DF track is **not uniform**,
+and "Track F is landing" does not imply "the DF family is jittable".
+
+**Hypothesis to check before treating this as a capability gap:** Staeckel and
+Adiabatic *do* have backend paths (Track E migrated them), so this may be a
+*routing default* rather than a missing feature — `c=True` is the default when
+the C extension is present, so the qdf tests may simply be taking the C branch by
+default rather than lacking an alternative. If so, traced-green for qdf is a
+routing question (does the forced-backend path bypass `c=True`?), not a port.
+That distinction decides whether this is hours or weeks of work, so it should be
+measured, not assumed — the same mistake I made twice already this session by
+inferring mechanism from proximity.
+
+**Resolved same wake: qdf's 0 % traced-green is a TEST FIXTURE choice, not a
+capability gap.** I flagged the routing question as a hypothesis rather than
+asserting a port was missing; checking it took one grep:
+
+```python
+# tests/test_qdf.py, module level
+aAA = actionAngleAdiabatic(pot=MWPotential, c=True)
+aAS = actionAngleStaeckel(pot=MWPotential, c=True, delta=0.5)
+```
+
+Every qdf in the file is constructed with `aA=aAA` / `aA=aAS`; only two tests
+(1379, 1678) build `c=False` variants. So the 53 tests drop into libgalpy because
+**the fixtures explicitly request the C path**, and Track E already migrated
+Staeckel and Adiabatic to backend paths.
+
+That defuses the alarming framing: "0 % traced-green" reads like qdf cannot be
+jitted, when in fact this suite was never asking to be. The correct statement is
+that `test_qdf` **does not measure** qdf's traceability, because it pins `c=True`
+by construction.
+
+Consequence for the roadmap: qdf traced-green is not blocked on a port. It needs
+a decision about what the suite should exercise — the C path is what users get by
+default and is the fast path, so switching fixtures to `c=False` would test
+something different rather than something better. A separate `c=False` traced
+probe (a handful of tests, not a rewrite of the file) is the cheap way to measure
+qdf's actual traceability without weakening the existing coverage.
+
+Third time this session that a one-command check separated "missing capability"
+from "configured that way" — and the first time I checked *before* writing the
+conclusion up rather than after.
+
+**qdf CAN trace — measured, not inferred.** Ran the two `c=False` tests the file
+already contains, under `--backend jax --jit`:
+
+```
+BOUNDARY CALLS: traced=893 not_traced=34  (96.3 % traced)
+C-LIBRARY ENTRIES: 2          (vs 1290 for the c=True suite)
+NOT-TRACEABLE: 1 of 2 tests   (test_call_diffinoutputs)
+```
+
+`test_meanjz_noaac_issue300` is **fully clean — zero C entries**. The one that
+still enters C is `test_call_diffinoutputs`, which by its name compares outputs
+across configurations and so also touches the module-level `c=True` object; 2
+entries is consistent with that rather than with a backend gap.
+
+So the chain is now measured end to end: qdf's "0 % traced-green" was the
+fixtures selecting C, and when routed to the backend action-angle it traces.
+**No port is needed for qdf traceability** — Track E's Staeckel/Adiabatic backend
+paths already carry it.
+
+Honest residual: 96.3 %, not 100 %. There are still 34 untraced boundary calls on
+the backend path in this small sample, so "traceable" is not yet "fully traced".
+That is a much smaller question than a migration, and worth a look before anyone
+claims qdf traced-green.
+
+This is the shape I want for roadmap claims: a suite reporting 53/53 green and
+98.2 % traced was, by the harness's own definition, 0 % traced-green — and the
+fix turned out to be a fixture argument, established by running two tests that
+were already sitting in the file.
+
+### 2026-08-04 — #1250 red is the VizieR network flake, not the PR
+
+```
+FAILED tests/test_orbit.py::test_from_name_values  - pyvo.dal.exceptions.DALServiceError:
+                                                     Unable to access the capabilities endpoint
+FAILED tests/test_orbit.py::test_from_name_errors  - DALServiceError
+FAILED tests/test_orbits.py::test_from_name_values - DALServiceError
+```
+
+All three are `Orbit.from_name`, which queries SIMBAD/VizieR over the network.
+This PR touches only `test_quantity.py` and `backend_xfail.txt`, so it cannot
+reach these; the failure is an external-service outage. Documented flake class —
+**re-run, do not cancel and do not "fix"**.
+
+**Cannot re-run yet:** `gh run rerun --job` returns *"job cannot be rerun"* while
+the parent run is still in progress (107 checks queued). So the sequence is: let
+the run finish, then `gh run rerun <run_id> --failed`. Noting it because the
+obvious move (re-run the moment you diagnose the flake) is rejected, and it would
+be easy to read that rejection as a permissions problem rather than a timing one.
+
+Also of note: the log had to come from `gh api .../jobs/<id>/logs`; both
+`gh run view --log` and `--log-failed` returned nothing for this job.
+
+## 2026-08-04 — #1250 MERGED (1adbe26e): ledger 42 → 34. #1251 opened.
+
+`gh pr merge --squash` landed the tolerance work; **ledger verified at 34 on
+develop** (was 42). Five PRs merged this session: #1246, #1247, #1248
+(`730657c3`), #1249 (`9695ae4a`), #1250 (`1adbe26e`).
+
+**Two reds on the way, both correctly diagnosed rather than papered over:**
+
+1. **VizieR outage** — three `Orbit.from_name` tests failed with
+   `pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities
+   endpoint`. A PR touching only `test_quantity.py` and the ledger cannot reach
+   those. Re-ran; they passed. *Constraint worth remembering:* `gh run rerun
+   --job` refuses while the parent run is in progress, so the flake could not be
+   cleared until the whole run completed — the rejection reads like a permissions
+   error but is purely timing.
+2. **`all-clear` stale poll** — same as #1249. Its log listed every dependency as
+   `success` and still reported `1 failing check run(s)`; it had evaluated while
+   codecov was red. Re-running only the gate took it CLEAN. Reading the log first
+   is what distinguishes this from a real blocker, and it costs one command.
+
+**#1251 opened** (`feat/hoist-gl-order`): de-duplicates `_BACKEND_GL_ORDER` into
+`galpy/actionAngle/actionAngle.py` — deliberately *not* the generic backend
+quadrature module, since the order is an action-angle property and hoisting it
+there would invert the dependency. Also corrects the comment's `<1e-7` floor
+claim, which is true for actions but ~20x optimistic for angles, with the
+measured non-convergence (3.3 / 2.1 / 1.8 / **3.5** e-6 at n=50/100/200/400)
+written in so the next reader does not repeat the sweep.
+
+Remaining queue: `feat/undefer-sphericaldf-jax` @ 535d6659 (slow-skip 230 → 202).
+
+### 2026-08-04 — #1251 second red is the same VizieR outage; undefer measured properly
+
+`#1251` (`feat/hoist-gl-order`) picked up a second red beyond the codecov
+partial-upload artifact:
+
+    build (ubuntu-latest, 3.14, tests/test_orbit.py -k 'tes…)
+
+Read the job log rather than classifying from the shard name (`gh run view
+--log`/`--log-failed` return nothing for this job; `gh api
+repos/jobovy/galpy/actions/jobs/<id>/logs` works):
+
+    FAILED tests/test_orbit.py::test_from_name_values  - pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+    FAILED tests/test_orbit.py::test_from_name_errors  - pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+Same VizieR network outage that hit #1250. #1251 touches only
+`actionAngle.py` / `actionAngleSpherical.py` / `actionAngleVertical.py`, none of
+which `Orbit.from_name` can reach. Re-run is blocked until the parent run
+finishes — `gh run rerun --job` refuses while the run is in progress, which
+reads like a permissions error and is purely timing.
+
+**Un-defer PR measured instead of guessed.** `feat/undefer-sphericaldf-jax`
+was queued to "let CI adjudicate" whether Track F retired the 90 s cutoff for
+the 28 jax spherical-DF slow-skips; only 4 of the 28 had ever been timed. Two
+setup errors caught before they produced a fake answer:
+
+* `--no-slow-skip` does not exist. It was also unnecessary — the worktree's
+  HEAD *is* the commit that deletes those 28 lines, so they simply run.
+* the worktree had no C extension. `ls galpy/libgalpy*.so` said "missing", but
+  the build puts it at the **repo root**; the real check is
+  `from galpy.orbit.integrateFullOrbit import _ext_loaded`, which reports
+  `True`, plus `galpy.__file__` inside the worktree.
+
+Running the *whole file* rather than the 28 hand-picked nodeids: a hand-picked
+batch is not a faithful context, and the full file measures the shard wall,
+which is the actual CI-budget question. Serial (this file has cross-test
+state), `--timeout 300` to match CI's per-test cap, junitxml for per-test times.

@@ -1,210 +1,122 @@
-# Vacation status snapshot — 2026-08-01
+# Vacation status snapshot — 2026-08-04
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now" answer.
 `log.md` is the trace; read this first and go there only for the why.
 
 ---
 
-## Ledger (the burndown metric)
+## PR pipeline
 
-```
-156 -> 150 -> 130 -> 128 -> 122 -> 120 -> 109 -> 107 -> 101   merged
-(#1232/#1233/#1234 merged: a correctness fix and the two coords keystones.
-None carries ledger entries, so the count is unchanged at 101. **PR-B is the
-first ledger movement since #1231** -- it retires the 5 streamTrack entries.)
-```
-
-**101 on `feat/backends-develop`**, split `jax 43 / jax-jit 5 / torch 52 / torch-jit 1`.
-
-By file (post-#1231 numbers):
-
-```
-61  test_actionAngle.py     <- 48 are actionAngleVerticalInverse
-10  test_quantity.py        <- mostly the tolerance cluster
- 5  test_streamTrack.py   4  test_orbit.py   4  test_interp_potential.py
- 3 each: streamdf, sphericaldf, potential, diskdf
- 2  test_qdf.py   2  test_noninertial.py   1  test_SpiralArmsPotential.py
-```
-
-**Verified composition** (enumerated from the tree, not inferred by subtraction):
-
-| bucket | n | gate |
+| state | branch / PR | effect |
 |---|---|---|
-| `actionAngleVerticalInverse` | 48 | scope decision |
-| tolerance cluster | 21 | bounds decision |
-| RazorThin `-jit` poisson_surfdens | 2 | #181 decision |
-| qdf unbound pair | 2 | design-permanent (below) |
-| **workable now** | **28** | — |
+| **merged** | #1246, #1247, #1248 → `730657c3`, #1249 → `9695ae4a`, **#1250 → `1adbe26e`** | jit helper; scipy-1.18 spline pickling; planar adapters derive `_backend_compatible`; **−8 ledger entries (42 → 34)** |
+| **open** | **#1251** `feat/hoist-gl-order` (1 commit) | de-duplicates `_BACKEND_GL_ORDER`; corrects its documented floor |
+| ready, not opened | `feat/undefer-sphericaldf-jax` @ `535d6659` (1 commit) | **slow-skip 230 → 202**; being *measured* locally rather than left to CI (below) |
 
-So **73 of 101 are decisions or design-permanent, not work.** The 28 that are work:
+**#1251 status:** 133 green, 16 in progress, 2 red — `codecov/project` (the usual
+partial-upload artifact) and the `test_orbit.py` shard, whose job log shows
+`DALServiceError` on `test_from_name_values`/`test_from_name_errors`: the same
+VizieR outage that hit #1250, and unreachable from the three `actionAngle` files
+this PR touches. Re-run is queued behind the parent run — `gh run rerun --job`
+refuses while the run is `in_progress`, which reads like a permissions error and
+is purely timing.
 
-The qdf pair (`test_call_diffinoutputs`) expects `UnboundError` for an unbound
-orbit. Both raise sites in `actionAngleSpherical.py` fire from **failure modes of
-scipy's solver** — `except RuntimeError` out of `brentq`, and an `rtry > 100.0`
-escape. The backend path uses a fixed-iteration bisection, which cannot fail and
-has no escape, so it returns a finite answer instead of raising. Detecting
-unboundness on a backend needs a data-dependent branch, which is exactly what a
-trace cannot do. Not a bug to fix; the honest options are to accept no-raise on
-backends (current) or return a NaN sentinel. Reclassified out of "workable".
+All branches are clean, disjoint in files, and need no rebase — verified against
+the **merge-base**, not `HEAD..develop`, which cannot distinguish "they changed
+it" from "I changed it".
+
+**Gate note earned on #1249:** a failed `all-clear` can be a stale poll rather
+than a real blocker. Its log listed all 151 dependencies as `success` and still
+reported `1 failing check run(s)` — it had evaluated while codecov was still red.
+Re-running *just the gate* took it to CLEAN. Read the gate's log before deciding
+whether to re-run or to hunt a failure.
+
+## Ledger
 
 ```
- 5  streamTrack (torch)      cov_basis, cov_per_call_unit_overrides,
-                             out_of_range_returns_nan, plot_smoke,
-                             plot_spread_non_cartesian
- 4  interp_potential (jax)   force_c, secondderivs, +2 jax-jit use_c   -> #112
- 4  orbit                    analytic_ecc_rperi_rap x2, analytic_zmax,
-                             jax-jit eccentricity
- 3  diskdf (jax)             dehnendf_sample_* x3
- 3  streamdf (torch)         fardalwmwpot_trackaa, plotting,
-                             streamTrack_multi_parallel  (-> #178 fork deadlock)
- 3  sphericaldf              anisotropic_hernquist_negdf (jax),
-                             constantbeta_interpolatedpotentials x2 (torch)
- 2  actionAngle              AdiabaticGrid_outsidegrid_c (jax+torch) -> #103
- 2  qdf   call_diffinoutputs   NOT workable — design-permanent, see below
- 2  noninertial (jax)        arbitraryaxisrotation, _omegafunc      -> #61
- 1  potential (jax-jit)      2ndDeriv RazorThin
- 1  SpiralArms (jax)         test_Rzderiv
+156 → … → 48 → 45 → 44 → 42 → 34
 ```
 
-**The 8 torch stream entries are NOT one cluster** (measured 2026-07-31, not
-assumed): 4 are a deliberate `NotImplementedError` — backend `cov()` supports
-only `basis='galcenrect'`, the sky/cyl-frame Jacobian follow-up parked in #861;
-1 is a real numpy/Tensor boundary bug (`fromnumeric` `.max(out=, axis=)`); 3
-streamdf are mixed, one of them the `parallel_map` fork deadlock (#178).
-All 5 (not 4) are gated on it: the boundary-cast one hits the same guard four
-lines later. Sized by running the code, not grepping it: every one of the six
-`coords.*_jac` helpers is pure-numpy (~433 lines, 49 numpy refs, zero xp), and
-`_analytical_jacobian` adds 13 `float()` casts + 6 in-place row-scalings. Splits three ways
-(the middle step only became visible once I measured rather than read):
+**34 today** on `feat/backends-develop`, `jax 15 / jax-jit 3 / torch 15 /
+torch-jit 1`. By file: `test_actionAngle` 12 (9 torch + 3 jax), `test_streamdf`
+3, `test_diskdf` 3, `test_orbit` 4, `test_potential` 3, `test_noninertial` 2,
+`test_interp_potential` 2, `test_sphericaldf` 2, `test_qdf` 2,
+`test_SpiralArmsPotential` 1.
 
-* **#1233** — the 4 `*_jac` helpers that have no sky-frame dependency. In CI.
-* **PR-A2** — the sky-frame coords leaves (`lb_to_radec`, `custom_to_radec`,
-  `radec_to_custom`) plus the last 2 `*_jac` helpers. Scoped, not started.
-* **PR-B** — streamTrack sky-basis `cov()`, batched `xp.where`. Retires the 5
-  entries and makes sky-frame stream covariance differentiable, which Track G's
-  showpiece needs.
+**Verified to contain zero stale entries** (2026-08-04), by intersecting the
+ledger with the junit artifacts of #1248's completed backend run: torch **19/19
+matched, 0 passing**; jax 10/19 observable, 0 passing. So burndown must come from
+fixes or decisions — there is nothing left to prune. *(The first version of that
+sweep silently compared against nothing; see log. Validate the matcher.)*
 
----
+### What the remaining entries actually are
 
-## Traced (`--jit`) coverage — the mission's headline
+**`test_quantity` (8) — SOLVED, in the queued tolerance PR.** One root cause: an
+absolute `1e-8` bound on values of ~1.6e10 (= 6e-19 relative, ~5e-6 of one ULP);
+the measured difference is exactly 1 ULP. Three of the four tests were never
+independently broken — a failure between `_APY_UNITS = False` and its restore
+leaked the flag for the rest of the session.
 
-> ⚠ **These are pass counts, not jit coverage.** Measured 2026-08-01: C-method
-> tests **bypass the trace silently and still pass** — under forced torch +
-> `jit("torch")`, `method="dop853_c"` stores an `ndarray` bit-identical to the
-> pure-numpy C run. So `test_orbit.py` "581 / 0" means *581 ran with jit on and
-> none failed*, NOT *581 traced*. It is not uniformly hollow, though: counting
-> boundary calls on a 149-test slice of `test_potential.py` gives **63742 traced
-> / 169 not (99.7%)**. Tracing is real on pure-Python/backend paths and bypassed
-> where C methods are requested. A traced-fraction column + a `not-traceable`
-> category are pending (task #185).
+**`test_actionAngle` (12) — TRIAGED, none is a defect:**
 
-**Every number below is `--jit`, not eager.** The test *counts* are identical to
-eager (same test set, different mode), so counts alone cannot tell the two apart
-— the wall-clocks are the tell. `0 fail` is **with the ledger and slow-skips
-applied**; only `test_coords.py` is green with nothing suppressed. There is no
-eager counterpart to this table because the eager view *is* `backend_xfail.txt`.
-
-| file (all `--jit`) | jax | torch |
+| kind | n | disposition |
 |---|---|---|
-| `test_potential.py`   | 1326 / 0 (338s) | 1326 / 0 (1792s) |
-| `test_orbit.py`       | 581 / 3 | 581 / 0 |
-| `test_actionAngle.py` | 209 / 0 (166s) | 209 / 0 (168s) |
-| `test_sphericaldf.py` | 223 / 0 | 223 / 0 |
-| `test_diskdf.py`      | 129 / 0 (678s) | 129 / 0 (685s) |
-| `test_qdf.py`         | 0 fail | 56 / 0 (232s) |
-| `test_coords.py`      | 98 / 0 (17s) | 98 / 0 (7s) |
+| GL-vs-adaptive quadrature floor (~2e-6 for angles) | **8** | **Jo's decision.** Spherical 4 + Adiabatic 2 (delegates to Spherical) + Vertical 2. Verified *not* fixable by raising the order: n=50/100/200/400 → 3.3e-6 / 2.1e-6 / 1.8e-6 / **3.5e-6** (does not converge; round-off wins at 400). |
+| sub-epsilon bound | 2 | **Jo's decision.** StaeckelGrid Jr=0: bound `1e-16` < eps `2.22e-16`; numpy returns *exactly* 0.0, so only bit-exact zero passes. |
+| documented design | 2 | AdiabaticGrid off-grid: backend AA grids have no off-grid fallback (docstring says so). Clears only via feature #103. **Keep out of the tolerance batch.** |
 
-`test_coords.py` is new (measured 2026-08-01, post-#1233): **zero** ledger
-entries and **zero** skips on either backend — the only file in the matrix that
-is clean with nothing suppressed, and the fastest by an order of magnitude.
+## Waiting on Jo
 
-Every major suite runs traced on both backends with nothing failing, except
-`test_orbit` on jax: 2 are 1800s performance timeouts, 1 is a local-only signal
-artifact (CI-confirmed passing). Six `-jit` ledger entries still suppress the
-RazorThin pair and the interpRZ `use_c` pair.
+1. **GL quadrature floor** (8 entries): backend-specific bound at the measured
+   floor, *or* re-base the test on a gold reference instead of treating scipy's
+   adaptive quad as truth. The second is the better test, the larger change.
+2. **Sub-epsilon bounds** (2 entries): the `1e-16` Jr=0 style assertions.
+3. AnyAxisym small-|z| threshold (#189, pre-existing).
 
-Cost note: torch traced is at **parity** with jax except on `test_potential`
-(1792s vs 338s), where ~1300 small distinct traces make front-end compile cost
-dominate. Do not generalise the 5x to "torch tracing is slow".
+Group A/B tolerance approval (2026-08-01) covered `test_quantity`; these are a
+**new** batch. `actionAngleVerticalInverse` and `actionAngleTorus` remain
+permanently out of scope.
 
----
+## The bigger debt: deferrals, not the ledger
 
-## In flight
+`backend_slow_skip.txt` = **230 entries (jax 215 / torch 15)**; the census counts
+334 jax *instances*. Decomposed by the file's own documented causes:
 
-| item | state |
-|---|---|
-| **PR-B** streamTrack sky-basis `cov()` | next; retires 5 ledger entries |
+| n | cause | actionable by me? |
+|---|---|---|
+| **66** | jax orbit heavy eager >45 s — per-CI-group session-cap fit | **only via speed work** |
+| 39 | jax single-orbit variational/dxdv/lyapunov (Track D) | yes |
+| 28 | jax spherical-DF sampling/quadrature (Track F) | yes |
+| 17 | NonInertialFrameForce eager-XLA timeout | yes |
+| 13 | torch orbit dissipative/variational dxdv | yes |
+| 12 | jax multi-orbit battery (Track D/E) | yes |
+| 55 | composite-MW Poisson 10, misc single-orbit 10, qdf 7, diskdf 6, dissipative 6, interpRZ 5, streamdf 6, FDM 3, AA 2 | mixed |
 
-**#1234 note.** Making `lb_to_radec` framework-preserving changed `Orbit.ra()`
-/`.dec()`/`.ll()` from returning numpy-even-under-a-forced-backend to returning
-the backend's array. That is the mission's direction (differentiable sky
-coordinates on an Orbit), but it broke 9 `test_orbits.py` tests whose assertions
-were written against the old silent downgrade. Fixed with 100 assertion-level
-casts; `test_orbits.py` is 115/115 on torch. If you would rather this PR stayed
-coords-only, the lever is to not mark `lb_to_radec` backendNative — that reverts
-the accessor change and re-blocks the streamTrack sky-basis work.
-| **RazorThin array inputs** | branch uncommitted, blocked on a decision |
+**Do not read this as "one fix clears 127 orbit tests"** — that was an earlier
+error of mine from grouping by *filename*. The largest block (66) is a CI-budget
+fit whose knobs (`--timeout 300`, `timeout-minutes: 180`, pytest-split groups)
+live in `.github/workflows/backend-tests.yml`, which **I cannot edit — no
+`workflow` scope**. For those, faster code is my only route.
 
-**#1233** migrates 4 of the 6 `*_jac` helpers (rows stacked instead of assigned
-into `numpy.zeros`, `if` guards -> `xp.where` over safe denominators). Each is
-numpy byte-identical over hundreds of random states, exact on torch and jax x64,
-jit-traceable, with grad-vs-FD converging to ~1e-11. It moves the ledger by
-**zero** — it is a keystone, not a burndown.
+Largest genuine capability gap I *can* close: **Track D variational
+vectorization (39 + 12 = 51)**, then Track F spherical-DF (28).
 
-**PR-A2** is bigger than I first implied. The last two helpers depend on
-`lb_to_radec` / `custom_to_radec` / `radec_to_custom`, and measuring (not reading)
-showed backend type is stripped on every path for three independent reasons: the
-default branch delegates to **astropy**, the fallback uses `numpy.array`/`numpy.dot`,
-and `@scalarDecorator` re-wraps scalars as numpy. It is a coords-leaf wave.
-Consequence: the 5 streamTrack ledger entries stay blocked until it lands.
+## Jit progress
 
-## Waiting on you (roughly two thirds of the remaining ledger)
+`test_sphericaldf` under `--backend jax --jit`: **99.8 % of boundary calls traced**
+(152 293 traced / 375 not), **0 C-library entries** → nothing not-traceable by
+construction. Caveat: that is over the **87 %** of the suite that runs; the 28
+skips are the jax slow-skips, excluded by construction rather than passing.
 
-0. **`galcenrect_to_XYZ_jac` differentiates the wrong variant** (found 2026-08-01
-   while adding coverage; the helper had **no test at all**). It differentiates
-   `_extra_rot=False` while `galcenrect_to_XYZ` defaults to `_extra_rot=True`.
-   Exact correction, verified to ~1e-11 by an FD step-sweep:
-   `J_true = blockdiag(R.T, R.T) @ J`, `R = galcen_extra_rot`. **Impact measured
-   and negligible**: 2.1e-6 relative on a stream covariance, 1.4e-4 arcsec at
-   20 kpc. Pre-existing, not from the migration. Not fixed in #1233 because it
-   breaks byte-identity. Options: correct the Jacobian (my recommendation — a
-   helper should differentiate the function as callers actually call it), or make
-   callers pass `_extra_rot=False`.
+## Operating notes earned this fortnight
 
-1. **RazorThin traced `surfdens`** (#181). With the array-input flag on, traced
-   `surfdens` returns a meaningless ~0 instead of today's loud `TypeError`, because
-   a razor-thin disk's density is a delta function that fixed-order Gauss-Legendre
-   cannot see (measured: -4.16e-06 vs a true 0.2967679). Options: ship the flag,
-   keep the error, or **return NaN** mirroring your earlier `R2deriv` off-plane
-   call. Recommend NaN. My part is verified correct and value-neutral: all six GL
-   integrands vectorise bit-identically, eager and numpy unaffected.
-2. ~~**Tolerance batch** (#171, ~21 entries)~~ — **ANSWERED 2026-08-01.**
-   (A) shared `assert_physical_matches_natural` helper with a **relative** bound
-   (option 3), (B) **traced-only** loosening, numpy/eager untouched. Both
-   conditional on staying **stringent**: bounds set from the measured magnitude
-   with a small margin, never a blanket number — and *"a really big difference
-   is a red flag"*, i.e. investigate rather than absorb it into the tolerance.
-3. ~~**`actionAngleVerticalInverse` scope** (48 entries)~~ — **ANSWERED: stays
-   out of scope**, together with `actionAngleTorus` (reconfirmed 2026-08-01,
-   third time). Those entries are permanent; do not count them as remainder.
-
-## How to check a codecov red (I got this wrong for four PRs)
-
-The codecov v2 `report/?path=` endpoint returns a `line_coverage` array whose
-second element is **0 for every line**, including in a 100%-covered file. I was
-reading `l[1] == 0` as "missed" and intersecting with the PR's added lines. That
-enumerates every executable line and discriminates nothing. Used it on
-#1230/#1231/#1232/#1233 and described it as the method.
-
-Use instead: the **per-file `totals`** from the same call (`coverage / lines /
-hits / misses` are correct), or a local `trace.Trace` over the tests. The latter
-is what actually found a helper with no test at all.
-
-## Notable finding for when you're back
-
-**scipy 1.18 breaks pickling of `PPoly`/`BPoly`/`CubicSpline`** (they cache the
-array namespace — a *module* — as `_xp`). Radius measured, not inferred: exactly
-2 galpy classes (`MultipoleExpansionPotential`, `DiskMultipoleExpansionPotential`).
-interpRZ, interpSpherical, the AA grids, qdf/diskdf/sphericaldf and an integrated
-Orbit are all fine. Fix built and verified bit-identical on both scipy versions.
-Worth reporting upstream — a class that pickled for years no longer does.
+* codecov `project` red on a fresh PR is a **partial-upload artifact** — check
+  "HEAD has N uploads less than BASE" and wait; #1248 walked 40.86 → 85.43 →
+  99.95 % with no intervention. The note vanishing from the comment is *not* a
+  completion signal.
+* A worktree without `libgalpy.so` **flips ledgered tests to PASS**. Build it
+  before attributing any local result.
+* Hand-picked nodeids are not a context: two `test_quantity` tests passed in
+  isolation and failed in the full file.
+* Read the docstring before classifying a numeric difference. Three times this
+  session a "bug" turned out to be documented intended behaviour.
