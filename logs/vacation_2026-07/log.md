@@ -14781,3 +14781,25 @@ or the baseline-refresh cascade).
 Worth noting the process point: the reflex on a red is to fix something. Here
 the correct action was to read codecov's own upload counter, confirm the
 documented signature, and do nothing.
+
+### 2026-08-04 — perf check on the torch polish: no measurable cost
+
+A gap in my own verification: the polish adds one extra `f` evaluation plus one
+`torch.autograd.grad` to EVERY forward brentq, and turning points are called
+per-orbit in hot loops. If that cost real time it would matter -- there is a
+whole perf track on this project. Measured it, same machine, same script,
+2000-orbit batch, 5 reps after warm-up:
+
+    WITH polish (3da30bff)      20.0 ms per actionsFreqs(2000)
+    WITHOUT (baseline c34abfa3) 20.3 ms per actionsFreqs(2000)
+
+Within noise -- the polished build even measured marginally faster. Explanation:
+the bisection already spends ~50 `f` evaluations getting the bracket down, so
+one more `f` plus one grad is a few percent of the root-find, and the root-find
+is itself only a fraction of actionsFreqs (the order-50 GL quadrature dominates).
+
+So the fix buys ~3 orders of accuracy on Omega for no throughput. Nothing to
+trade off, and nothing to caveat in the PR.
+
+CI: #1252 now 12 SUCCESS / 1 FAILURE (the codecov phantom) / 17 running / 121
+queued. No new real reds. Baseline AA run alive at 144/209.
