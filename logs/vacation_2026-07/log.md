@@ -14505,3 +14505,43 @@ result is polished *and* graph-free. Measured on the harmonic oscillator:
 torch now matches jax to the digit. Whether the ledger entries flip is measuring
 now -- this touches every backend brentq consumer, so the full torch
 test_actionAngle run is the real check, not the two harmonic tests.
+
+### 2026-08-04 (later still) — torch Newton-polish fix committed (3da30bff)
+
+Branch `fix/torch-brentq-newton-polish` off feat/backends-develop. Committed,
+not pushed (#1252 still the active develop PR).
+
+Change: `_torch/optimize.brentq_backend` now takes the Newton step on the
+no-grad forward path too, computing df/dx under a local `torch.enable_grad()`
+and detaching, so the value is polished AND graph-free. Nine lines.
+
+**The test that should have caught this was too loose.**
+`test_backend_root_value` asserted `rtol=1e-9` on a quantity the polish puts at
+machine precision -- four orders of slack, so a backend silently returning the
+raw bisection root (~1e-14) passed it comfortably. Tightened to 1e-15 and added
+`test_backend_root_is_polished_not_bracket_limited`, which asserts the root is
+within a few ulp AND that |f(root)| is at machine level.
+
+Verified discriminating by reverting just the source file and re-running:
+
+    WITHOUT fix: 2 failed, 2 passed  ("torch root off by 1.357e-13")
+    WITH fix:    4 passed
+    jax passes either way -- it always polished.
+
+That is the check from [[verify-burndown-flips-stash-rerun]]: a test that does
+not fail without the fix proves nothing. Full tests/test_backend_optimize.py:
+26 passed.
+
+**Ledger impact NOT yet known.** The full torch test_actionAngle.py run (209
+tests, --runxfail so ledgered entries report their real result) is still going
+-- ~35% after several minutes. Deliberately not quoting a burndown number until
+it finishes: this touches every backend brentq consumer (Vertical, Spherical,
+Staeckel turning points, estimateBIsochrone), so the two harmonic tests are not
+evidence about the other seven entries, and I need the non-ledgered failures too
+to rule out a regression.
+
+One caveat to re-check when it lands: I briefly reverted optimize.py mid-run for
+the discriminating test above. Python caches modules at first import and the run
+had already executed 50+ turning-point tests by then, so it held the fixed
+version throughout -- but any entry that flips gets re-run individually before I
+touch the ledger.
