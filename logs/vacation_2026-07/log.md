@@ -13940,3 +13940,42 @@ Note this is the **push-event** run for the new SHA, not the PR-event run.
 Re-running its failed job is fine; *cancelling* a same-SHA push run is what
 blocks merge. As before, `gh run rerun --job` refuses while the parent run is
 still in progress, so the re-run waits for the run to finish.
+
+### 2026-08-04 — #1245 moved to main (Jo's call), and the two traps in doing it
+
+Jo asked why #1245 was still sitting there and to "just put out on main and we
+later rebase feat/backends and feat/backends-develop". Right call: the fix is a
+**pre-existing numpy bug**, nothing backend about it. `m = 4aR/((a+R)^2+z^2)` is
+<= 1 analytically but rounds just above 1 for tiny |z|, and scipy's ellipe/ellipk
+return nan there; the fix clamps with `numpy.minimum(..., 1.0)` at four integrand
+sites. It was only on `feat/backends-develop` because that is where I found it,
+and it was still a **draft** because it changes numpy-path values (nan -> finite)
+and I had parked it for Jo.
+
+**Trap 1 — a plain base change would have been wrong.** The branch sat on
+develop, so retargeting the PR base to main would have dragged the entire develop
+diff into it. Cherry-picked the single commit onto main and force-pushed instead.
+
+**Trap 2 — the cherry-pick tried to smuggle in a develop-only test.** The
+conflict hunk in `tests/test_potential.py` carried
+`test_pickling_potential_drops_units_wrapper` (from the scipy-1.18 spline
+pickling work), which depends on develop-only code and would have broken main.
+Resolved by taking main's file and appending *only*
+`test_anyaxisymrazorthin_smallz_no_nan`; verified the pickling test's occurrence
+count in the file is 0.
+
+Verified both directions on main, in separate worktrees (no stash, no
+`checkout <ref> -- <file>`):
+
+    with fix:            PASS
+    control, unfixed:    FAILS -- "zforce non-finite at small |z|:
+                         [1e-30 1e-25 1e-20 1e-16 1e-12]"
+
+i.e. exactly the documented band. The test is stringent rather than
+isfinite-only: it asserts Fz/z tends to a single constant below |z| ~ 1e-8, so a
+wrong-but-finite value still fails.
+
+#1245 is now base=main, undrafted, diff exactly the two intended files
+(20+/5-, 29+/0-), full CI running. One `all-clear` shows CANCELLED — superseded
+by a fresh run on the same SHA when the ready-for-review event fired, not a real
+failure.
