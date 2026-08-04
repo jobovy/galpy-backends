@@ -13889,3 +13889,30 @@ methods, not just the one the test happens to hit — `_revaluate`, `_rforce` an
 `_r2deriv` all use the frozen scalars raw in their numpy branch. `_rdens` uses a
 literal `0.0` outside rmax and needs nothing. These are scalars by construction,
 so `float()` is exact and cannot perturb the numpy path.
+
+### 2026-08-04 — interpSphericalPotential fix verified in-tree; audit says the pattern is NOT systemic
+
+`feat/interpspherical-frozen-scalars` @ `bde9df0e`: the fix plus its ledger
+removal. Verified in-tree under forced torch **with the C extension built**
+(29.1 s PASS) — without it a ledgered test can silently take the Python path.
+
+**Is the asymmetry systemic?** ~20 galpy modules use the `if xp is numpy:` dual
+path, so I scripted the exact signature rather than eyeballing them: an AST pass
+flagging any method where the numpy branch uses `self._x` **raw** while the
+backend branch of the same method wraps it in `float(...)`.
+
+* against the **fixed** tree: none
+* against the **unfixed** tree (the control): exactly the three methods I fixed,
+  with exactly the right attributes —
+  `_revaluate -> ['_Phi0','_Phimax','_total_mass']`, `_rforce -> ['_total_mass']`,
+  `_r2deriv -> ['_total_mass']`
+
+Running the control matters: a "none" from an audit that cannot see the bug it
+was written for is worthless, and that is the same trap as a control that passes
+with and without the fix. Since it demonstrably detects the bug, the empty result
+on the fixed tree is meaningful: **interpSphericalPotential was the only instance**.
+
+Limitation, stated so the negative result is not over-read: the audit only catches
+this *specific* asymmetry. A method where **both** branches use the attribute raw
+is invisible to it — that is only a bug when the attribute can be backend-typed
+while the numpy branch runs, which needs a different probe to establish.
