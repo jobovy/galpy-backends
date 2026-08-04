@@ -13765,3 +13765,41 @@ something the backend work introduced.
 Disposition: goes to the "needs Jo" tolerance bucket with the actionAngle items.
 Unlike those, the honest fix here is arguably upstream — either extend the
 version band past 1.27 or raise `dx` so the reference is not amplification-bound.
+
+### 2026-08-04 — full ledger staleness sweep: 1 stale, and a matcher bug that nearly reported 5
+
+Swept all **34** ledger entries against the **44** `backend-junit-*` artifacts of
+the latest completed `feat/backends-develop` run (30923735373):
+
+    confirmed still failing / xfail   28
+    STALE (passed on CI)               1
+    not observable in these artifacts  5
+
+The one real stale entry is
+`jax tests/test_sphericaldf.py::test_anisotropic_hernquist_negdf`: its `<testcase>`
+has no failure/error/skipped child at all (0.35 s), i.e. it passed in full-file CI
+context, and it also passes locally under forced jax in 5.1 s. Removed —
+ledger 34 -> 30 on the diskdf branch (3 diskdf + this one).
+
+**The sweep first said five, and four of those were an artifact of my matcher.**
+The other four were `-jit` entries:
+
+    jax-jit   test_orbit.py::test_eccentricity
+    jax-jit   test_potential.py::test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+    jax-jit   test_potential.py::test_poisson_surfdens_potential[AnyAxisym...]
+    torch-jit test_potential.py::test_poisson_surfdens_potential[AnyAxisym...]
+
+My matcher did `backend.replace("-jit","")` to line the ledger up with artifact
+names, which silently compared **traced-mode ledger entries against eager
+results**. That run publishes **zero** jit artifacts and runs **zero** jit jobs, so
+there was no traced evidence at all. An eager pass says nothing about a traced
+failure — and the AnyAxisym entries passing eagerly is precisely what a jit-only
+failure looks like (they are ledgered under `-jit` for that reason).
+
+Reusable rule: when cross-checking the ledger against artifacts, **assert the
+artifact set actually covers the mode you are matching**, and treat a suffix you
+had to strip as a red flag rather than a normalisation.
+
+Also characterised while here: `jax test_qdf::test_call_diffinoutputs` fails with
+"Test orbit in qdf that is supposed to be unbound is not" — the backend AA does
+not raise `UnboundError` where numpy does, matching the known by-design qdf pair.
