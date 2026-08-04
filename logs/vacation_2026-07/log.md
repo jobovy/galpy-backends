@@ -13979,3 +13979,26 @@ wrong-but-finite value still fails.
 (20+/5-, 29+/0-), full CI running. One `all-clear` shows CANCELLED — superseded
 by a fresh run on the same SHA when the ready-for-review event fired, not a real
 failure.
+
+### 2026-08-04 — CORRECTION: #1245 does NOT clear the AnyAxisym jit ledger entries
+
+I told Jo that once #1245 lands on main and the backend branches rebase, the
+`test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]` jit entry
+"should clear". **That is wrong**, and I checked it rather than leave it standing.
+
+Applied #1245's clamp (`numpy.minimum(4aR/aRz, 1.0)`, 5 sites on develop) to a
+throwaway develop worktree and ran both jax-jit AnyAxisym entries:
+
+    FAIL  test_2ndDeriv_potential[AnyAxisym]         -- same 2nd-radial-derivative assertion
+    FAIL  test_poisson_surfdens_potential[AnyAxisym] -- array-input opt-out
+
+Neither clears. The 2ndDeriv jit failure is the **separate `1 - m` catastrophic
+cancellation** defect, not the NaN band; two different bugs in the same
+integrand family, and only the NaN one is fixed by #1245. (The array-input
+opt-out I had already flagged as unaffected — that one is deliberate and guarded
+by a named negative test.)
+
+So the expected ledger effect of #1245 on the backend branches after rebase is
+**zero entries**, not one. Its value is the pre-existing numpy-path bug: an ODE
+solver drifting off the plane by roundoff lands in the 1e-30..1e-12 band and
+poisons the whole orbit.
