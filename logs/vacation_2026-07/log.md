@@ -14072,3 +14072,34 @@ too — worth raising separately, since the same precision loss is present there
 
 Not implemented now: three PRs are already queued behind #1251 and the standing
 instruction is one PR at a time.
+
+### 2026-08-04 — AnyAxisym `1-m`: hypothesis PROVEN (was flagged as unproven above)
+
+Quantified the complement error directly at the failing test's point
+(R = 0.5, z = 0), sweeping `a` toward `R`. `scipy.special.ellipkm1(p)` = K(1-p)
+serves as the accurate reference because it *takes the complement* rather than
+forming it by subtraction:
+
+     a-R     exact 1-m      float 1-m (capped)   K_ref      K_capped    rel.err
+    1e-3     9.980e-07      9.980e-07             8.29505    8.29505    1.9e-11
+    1e-5     9.9998e-11     9.9998e-11           12.89923   12.89923    9.0e-08
+    1e-6     9.99998e-13    1.00031e-12          15.20181   15.20165    1.0e-05
+    1e-7     9.999998e-15   9.76996e-15          17.50439   17.51603    6.6e-04
+    1e-8     1.000000e-16   9.99201e-16          19.80698   18.65608    5.8e-02
+    1e-9     9.999999e-19   9.99201e-16          22.10956   18.65608    1.6e-01
+
+Two effects, both visible: below ~1e-16 the subtraction `1.0 - m` cannot
+represent the complement at all, and `_ELLIP_M_CAP` pins it at ~1e-15 regardless
+of the true value. K is wrong by up to **16 %** at quadrature nodes near a = R.
+Since the GL rule samples a continuum of `a` around R, some nodes always land in
+the corrupted region — which is precisely what breaks an integral checked against
+a numerical derivative.
+
+So the earlier "strong circumstantial support, but not proven" is now settled:
+the mechanism is confirmed, and the designed fix (exact algebraic complement
+`p = ((a-R)^2 + z^2)/aRz` + a complement-taking `ellipkm1` on the AGM kernel)
+addresses exactly this. Still not implemented — queue is three deep.
+
+Note the reference used here, `scipy.special.ellipkm1`, is the same function that
+would fix the **numpy** path's identical precision loss. That remains out of
+scope without Jo's sign-off, since it would change numpy values.
