@@ -13615,3 +13615,38 @@ Consequences:
 * **The un-defer PR's justification for keeping `test_king_sigmar_directint` is
   void.** 178.7 s local projects to ~127 s on CI, not ~350 s. Re-measuring
   `test_king_sigmar` without the 300 s cap to get its true cost before deciding.
+
+### 2026-08-04 — un-defer finalized at 27; stale base caught by `git diff --stat`
+
+**The branch would have reverted two merged PRs.** `feat/undefer-sphericaldf-jax`
+was cut before #1249/#1250 landed, so its merge-base was `730657c3`. Its own log
+looked fine — one commit touching one file — but `git diff --stat` against
+develop showed **five**:
+
+    galpy/potential/planarPotential.py |  16 +--
+    tests/backend_slow_skip.txt        |  45 ++----
+    tests/backend_xfail.txt            |   8 ++
+    tests/test_backend_array_inputs.py |  41 ------
+    tests/test_quantity.py             | 278 +++++++++---------------
+
+The `+8` on the xfail ledger is #1250's burndown coming back. Rebased onto
+`1adbe26e`; the diff is now `backend_slow_skip.txt` alone, 27 removed / 0 added,
+and conftest confirms exactly one jax `test_sphericaldf` deferral survives
+(`test_king_sigmar`), 188 jax + 15 torch = 203 total. **A stale base is invisible
+in the branch's own history — always diff against the target.**
+
+**27, not 26.** `test_king_sigmar` measured **>690 s** when called directly (the
+slow-skip list has no bypass, so a pytest run in that worktree simply skips it and
+reports 0.0 s — which is how the first attempt at this measurement fooled me). At
+CI/local = 0.71 that is still ~490 s, well over the 300 s cap, so it stays.
+`test_king_sigmar_directint` at 178.7 s projects to ~127 s and is un-deferred; the
+earlier decision to keep it rested entirely on the inverted ratio.
+
+**Shard-duration reference (so a long job isn't mistaken for a hung one):** the
+`test_backend*.py` build shard legitimately takes **~91 min** — measured on
+develop run 30923735606 (15:34:51 → 17:06:13, success). #1251's copy at 77 min is
+in range, not stuck.
+
+**A limit of the junit artifacts:** a ledgered xfail records only
+`message="backend-xfail-ledger"` with no traceback, so artifacts give *durations*
+for free but never failure detail. Triage still needs a local run.
