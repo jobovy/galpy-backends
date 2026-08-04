@@ -13531,3 +13531,50 @@ Running the *whole file* rather than the 28 hand-picked nodeids: a hand-picked
 batch is not a faithful context, and the full file measures the shard wall,
 which is the actual CI-budget question. Serial (this file has cross-test
 state), `--timeout 300` to match CI's per-test cap, junitxml for per-test times.
+
+### 2026-08-04 — jax `test_diskdf` sampling: a real NaN defect, and three wrong guesses on the way
+
+The 3 jax `test_diskdf` ledger entries are **not** what the ledger says
+("physical output is a bare ndarray with no `.to()`"). Today's error is:
+
+    assert np.float64(nan) < 0.05
+      where nan = mean(rs)
+
+One sampled orbit has `R() == nan`. Getting to the cause took three corrections,
+each worth keeping:
+
+1. **"RNG-fragile statistical test."** Wrong. The tolerances *are* tight
+   (`std(rs)` to ±0.03 where 100 draws carry ~0.025 of sampling error), but the
+   failure is a NaN, not a shifted statistic.
+2. **"Last-ulp round-off at the circular-orbit limit."** Wrong, and measurably
+   so: the negative radicand is **-0.209**, and **numpy computes the identical
+   value** — the `RuntimeWarning: invalid value encountered in sqrt` fires on
+   the numpy path too. Nothing backend-specific about it.
+3. **"numpy never generates the bad draw."** Wrong — an artifact of *my probe*,
+   which recorded after calling the original function, so a raise skipped the
+   record. Moving the record before the call showed numpy generates it too.
+
+**Actual mechanism.** `diskdf._ELtowRRapRperi` computes
+`vR = sqrt(2(E - Psi(xE)) - L^2/xE^2)`. `Lz = sigma2(xE)*log(uniform)/Omega + Lc(E)`
+has an unbounded negative tail, so a rare draw lands where `L^2/xE^2` exceeds
+`2(E-Psi)` — here `L=-0.0527`, giving `1.21 > 1.00`. Then:
+
+* **numpy**: `sqrt` → NaN → scipy's root-finder inside `EccZmaxRperiRap` raises
+  `ValueError: The function value at x=... is NaN; solver cannot continue`, and
+  the sampler's `except ValueError: continue` **drops the draw**.
+* **jax**: the backend bisection has no NaN check, returns `nan`, and the draw
+  reaches the output as a NaN orbit.
+
+So the `# pragma: no cover` on that `except` — "Tests don't get here anymore,
+because of improvements in the rperi/rap calculation" — is **stale and
+load-bearing**: numpy takes that path today, and it is the only reason the numpy
+suite is green.
+
+**Fix** (`feat/diskdf-unphysical-draw`): hoist the radicand, and raise
+`ValueError` when it is negative, before `EccZmaxRperiRap` ever sees a NaN. Every
+backend then drops the same draws by the same rule. Raising is right and
+*clamping would be wrong* — clamping to zero would retain a bogus sample as a
+circular orbit rather than rejecting a draw outside the inversion's domain.
+Expected to be numpy-byte-identical, since numpy already skips exactly these
+draws and nothing between the two points consumes RNG — to be verified, not
+assumed.
