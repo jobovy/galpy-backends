@@ -13650,3 +13650,41 @@ in range, not stuck.
 **A limit of the junit artifacts:** a ledgered xfail records only
 `message="backend-xfail-ledger"` with no traceback, so artifacts give *durations*
 for free but never failure detail. Triage still needs a local run.
+
+### 2026-08-04 — CORRECTION: a stale base does not revert disjoint PRs (and what it *does* break)
+
+The entry above titled "**The branch would have reverted two merged PRs**" is
+**wrong** and should not be relied on. A squash-merge applies the branch's own
+`merge-base..HEAD` diff, not the tree difference against develop. With disjoint
+files a stale base reverts nothing.
+
+What misled me: `git diff <branch> origin/feat/backends-develop` shows changes
+*develop has that the branch lacks* as if the branch removed them. That is a view
+of divergence, not of what gets merged. The right question is
+`git diff $(git merge-base HEAD origin/develop) HEAD` — the branch's own diff.
+`no-merge-commits-rebase-only` and `dont-reflexively-rebase-disjoint-prs` already
+say this; I reasoned from the wrong diff instead.
+
+**What a stale base genuinely breaks: codecov.** #1251 turned out to have the
+same stale base (`730657c3`, two commits behind), and that *was* a real blocker:
+
+    Comparing base (730657c) to head (f481063).
+    Report is 2 commits behind head on feat/backends-develop.
+    Coverage 99.95% -> 99.82%  (-0.14%)   Lines +310   Misses +64
+
+A 17-insertion/12-deletion diff across three actionAngle files cannot add 310
+lines or 64 misses. codecov was diffing against a two-commit-old develop. Patch
+coverage itself was clean ("All modified and coverable lines are covered by
+tests"), so the failure was entirely the base. Since `codecov/project` gates
+`all-clear`, no amount of re-running would have cleared it — only a rebase.
+
+Rebased to `98c2d5c7`, force-pushed, and cancelled the obsolete prior-SHA run
+(prior-SHA cancels are safe; same-SHA push-event cancels block merge).
+
+Also resolved this round: the `test_backend*.py` shard I had been watching for
+~93 min **passed**. The three reds were the VizieR flake, `codecov/project`, and
+`all-clear` — and the gate's own log lists exactly those two upstream failures,
+so it was reporting correctly rather than stale-polling as it did on #1249.
+
+**Rule going forward:** judge merge-safety with the merge-base diff; judge
+codecov with the base commit named in its comment. They are different questions.
