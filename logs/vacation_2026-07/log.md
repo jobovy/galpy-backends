@@ -13860,3 +13860,32 @@ So: characterised (the mechanism class is clear) but **not root-caused** (the
 trigger is context-dependent). Next step is to instrument the actual test rather
 than a hand-built instance — another case where isolation is not a faithful
 context. Deliberately NOT starting a fix on a hypothesis I have not demonstrated.
+
+### 2026-08-04 — torch `interpSphericalPotential`: ROOT-CAUSED and fix verified
+
+Following the honest "characterised but not root-caused" note above: instrumenting
+the **real test** (rather than a hand-built instance) settled it. A probe recording
+`(type(r), get_namespace(r), type(self._Phimax))` at every `_revaluate` call:
+
+    5x  r=Tensor    get_namespace=array_api_compat.torch   _Phimax=Tensor   -> fine
+    1x  r=float64   get_namespace=numpy                    _Phimax=Tensor   -> the failure
+        example: ('float64', 'np.float64(inf)', 'numpy', 'Tensor')
+
+So exactly one call arrives **numpy-resolved** — `r = inf`, a scipy quadrature
+limit evaluated inside a numpy-forced region — while the potential's frozen
+`_Phimax`/`_Phi0` are still `torch.Tensor` from construction. The numpy branch then
+mixes numpy arrays with Tensors, and numpy falls back to the sequence-concat
+protocol: "Concatenation operation is not implemented for NumPy arrays".
+
+**The backend branch already defends against this and the numpy branch does not** —
+it writes `float(self._Phi0)`, `float(self._total_mass)`, `float(self._Phimax)`.
+That asymmetry is the whole bug.
+
+Verified by monkeypatching a `float()`-ed numpy branch over the real test, with no
+file edits: **PASS (28.3 s)** where it previously raised.
+
+Fix branch `feat/interpspherical-frozen-scalars` applies it to all three affected
+methods, not just the one the test happens to hit — `_revaluate`, `_rforce` and
+`_r2deriv` all use the frozen scalars raw in their numpy branch. `_rdens` uses a
+literal `0.0` outside rmax and needs nothing. These are scalars by construction,
+so `float()` is exact and cannot perturb the numpy path.
