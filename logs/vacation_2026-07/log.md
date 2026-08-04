@@ -14363,3 +14363,46 @@ pending CI.
 with the same parametrization. There m->1 only *at* the ring, a physical
 singularity rather than an artifact, so it is not the same bug -- but it is
 worth a look later. Not folded in: this is a bugfix, not a refactor.
+
+### 2026-08-04 — backend counterpart: ellipkm1 in galpy.backend.special (9e628142, held)
+
+Jo's answer on the 1-m question was "implement and fix numpy too, but numpy
+fix needs to go on main". Numpy went to main in #1245; this is the backend half,
+on `fix/anyaxisym-backend-ellipkm1` off feat/backends-develop. **Committed but
+NOT pushed** -- #1252 is the active develop PR and it is one at a time.
+
+The backend AGM fallback had the identical defect: `b0 = xp.sqrt(1.0 - ms)`
+forms the complement by subtraction, so K is unreachable near m=1. `_agm_KE`
+now takes an optional exact `m1`, and `ellipkm1` supplies it. Placement: the
+shared `galpy/backend/special/` module (fallback + router + __init__ export),
+NOT the potential -- it is a general special function, and `_NATIVE_MISSING`
+already has a capability test that will now police the new name too.
+
+Validated against `scipy.special.ellipkm1` to **2.2e-16 on numpy, jax and
+torch**, over m1 from 0.9 down to 1e-300. New tests in test_backend_special.py:
+value parity at rtol=1e-13, gradients against the closed form
+`dK/dm1 = -(E - m1 K)/(2 m m1)` at rtol=1e-11 on jax and torch. 13 elliptic
+tests pass; the full file is 174 green.
+
+**AnyAxisym's `_ELLIP_M_CAP = 1-1e-15` is now deleted, not relocated.** The cap
+was censoring the log singularity itself:
+
+    1-m=1e-16: true K=19.807, capped K=18.656   (6% low)
+    1-m=1e-18: true K=22.110, capped K=18.656   (16% low, saturated)
+
+`1-m = ((a-R)^2+z^2)/((a+R)^2+z^2)` is exact AND lies in [0,1] by construction,
+so `m = 1-m1` can never round above 1 -- there is nothing left for a clamp to
+guard.
+
+**MEASURED, NOT ASSUMED: this does NOT clear the AnyAxisym jit ledger entries.**
+Ran both jax-jit entries with the fix in place: `xx`, still xfail. The ledger
+comment was right that they are BY DESIGN -- the limit is fixed-order GL failing
+to resolve the a=R principal value, which is a different thing from K's
+accuracy near m=1. So **task #187's premise ("cancellation in 1-m is the real
+defect (4 jit entries)") is wrong**: fixing the cancellation is worth doing on
+its own merits, but the entries stay. Ledger unchanged at 34.
+
+Worth noting for whoever picks up the GL question: the substitution that fixed
+numpy (a = R + |z|t, mapping the peak to unit width) is exactly what a
+peak-resolving GL rule would need, and it is differentiable. That is the real
+route to those entries, not the special function.
