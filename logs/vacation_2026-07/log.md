@@ -15598,3 +15598,34 @@ Not manufacturing further work this wake. Preparation is genuinely complete and
 the only remaining input is CI time; inventing a fourth work stream now would add
 WIP the bottleneck cannot absorb, and I would rather report "waiting" honestly
 than pad the log.
+
+### 2026-08-05 03:21Z — #1252 FULLY GREEN (151/151) and pinged Jo. Blocker confirmed, not predicted.
+
+The trigger condition I had been waiting for is now observed, not inferred:
+
+    check-runs excluding all-clear : ALL completed successfully (151)
+    legacy statuses:
+       success  pre-commit.ci - pr
+       pending  docs/readthedocs.org:galpy   frozen at 2026-08-04T21:48:41Z
+
+So `all-clear` is waiting on RTD **alone**. No shard is outstanding, nothing has
+failed. That is the strongest form of the claim and the reason I held off
+escalating three times earlier — each time the picture would have been muddier
+and one of them (the 02:48 "deadline") was simply wrong.
+
+Pinged the phone: one line, one ask, plus the note that #1245/#1253 need nothing
+from him. Also posted a full explanation as a PR comment so the reasoning is
+where he will look, not only on his phone: the frozen status, the single
+Cancelled build, why re-running all-clear cannot work, why the ruleset leaves me
+no bypass, and the cost of the only self-service alternative.
+
+**This is the first phone ping of the vacation.** Jo's criterion was "a faulty
+check that doesn't clear" — an external service froze a status and there is no
+mechanism available to my token that resolves it. Everything else this session
+was handled without him, including two codecov phantoms that looked far more
+alarming than this and were correctly left alone.
+
+Now: keep watching. If he merges, execute the prepared sequence immediately
+(rebase both held branches for codecov -> open ellipkm1 9e628142 -> then the
+polish 3da30bff, bodies already drafted). If RTD somehow posts a state first,
+all-clear concludes on its own and no merge help is needed.
