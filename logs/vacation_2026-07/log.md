@@ -15075,3 +15075,19 @@ Recorded in [[local-env-is-one-version-point]]. Reinforces that the CI artifact
 is the only authority for torch ledger questions — which is how I caught the
 "4 stale entries" error earlier today, and it would have been a real mistake:
 I was one step from proposing their removal.
+
+### 2026-08-04 — PR bodies pre-drafted for both held branches
+
+Both written while the evidence is fresh rather than reconstructed later, and
+saved to the scratchpad (`pr_polish_body.md`, `pr_ellipkm1_body.md`).
+
+Both end with an explicit **"no ledger change"** section stating why:
+  * ellipkm1: measured, the two jax-jit AnyAxisym entries still xfail — they are
+    the GL principal-value limit, not K's accuracy.
+  * polish: the two Vertical Harmonic entries flip LOCALLY, but torch is not
+    installed on py3.14 here while CI runs torch on py3.14, so a local pass is
+    not evidence about CI. Ledger edit follows CI, separately.
+
+That is deliberate. It would be easy to write "-6 ledger entries" in a PR body
+and have it read as progress; three separate corrections today showed how
+fragile those counts are before CI confirms them.
