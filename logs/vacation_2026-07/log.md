@@ -15500,3 +15500,30 @@ null, I am push-only).
 Next: let #1252's last 10 shards land, then ping Jo — the PR fully tested, the
 gate unfixable from my side, and the alternative (new commit) costing ~150
 re-run jobs on a pool that is already the bottleneck.
+
+### 2026-08-05 02:45Z — verified: #1252 is the ONLY PR with a stuck RTD
+
+    #1253 RTD: SUCCESS
+    #1245 RTD: SUCCESS
+    #1252 RTD: PENDING   <- only build Cancelled, unmoved since 21:48:41
+
+That isolates it. The systemic all-clear-timeout affects all three, but it is
+*recoverable* for #1253 and #1245: once their shards land, re-running all-clear
+makes it re-poll, see every input settled, and conclude in ~a minute. Those two
+I can finish myself.
+
+**#1252 alone cannot be recovered by any action available to me.** Re-running
+all-clear re-polls the same stuck `pending` status and burns another 5 h before
+failing identically; a new commit fixes it but discards 141 passing jobs and
+re-queues ~150 on the pool that is already the bottleneck; the ruleset has no
+bypass and I am push-only.
+
+Also worth recording for the ping: I considered re-running all-clear *now* to
+buy a fresh 5 h window. It does start a fresh budget (concurrency
+cancel-in-progress replaces the old run), and the shards would land inside it —
+but RTD stays pending, so it just fails at ~07:45 instead of 02:48. Later, not
+better. Rejected.
+
+Deadline is 02:48:42, ~4 min out, 10 shards still outstanding. Waiting for the
+observed failure, then pinging with: #1252 fully tested but gate-stuck on a dead
+RTD build, needs an admin merge; #1253/#1245 need nothing from Jo.
