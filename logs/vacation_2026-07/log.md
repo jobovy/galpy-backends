@@ -15805,3 +15805,24 @@ is spent while it waits.
 Remaining: #1252 needs Jo's admin merge (151/151, dead RTD build). #1253 needs
 its re-run + 3 wheels, then it is green and audited. #1245 137 SUCCESS, 12 left,
 audited. Neither main-targeted PR will be merged by me — that is Jo's call.
+
+### 2026-08-05 04:21Z — the flake re-run PASSED; both main PRs near-green
+
+    #1253:  0 real failures,  RTD SUCCESS,  4 jobs left
+    #1245:  0 real failures,  RTD SUCCESS,  6 jobs left
+
+The symplectic bit-identity re-run passed, confirming the flake diagnosis
+(1 failure in ~4 weeks, 2.5 ulp, unrelated file, sibling job green). No code
+change was needed and none was made.
+
+One self-correction: my first failure query used `conclusion != SUCCESS`, which
+counted `SKIPPED` as failure and reported "#1253 FAIL: Deploy to AWS S3 / Deploy
+to PyPI". Those deploy jobs are *supposed* to skip on a PR. Re-queried with an
+explicit `FAILURE|CANCELLED|TIMED_OUT` match: **zero real failures on both**.
+Worth remembering — a naive "not success" filter manufactures alarming reds out
+of ordinary skips.
+
+Both main-targeted PRs are green-but-for-the-tail and audited. Neither will be
+merged by me. When they finish I report them ready alongside #1252 so Jo gets one
+batch: **#1252 needs an admin merge (dead RTD build), #1245 and #1253 need an
+ordinary merge.**
