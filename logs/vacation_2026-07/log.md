@@ -15466,3 +15466,37 @@ Sequence, unchanged in substance but now precise:
 Also noted, to avoid an own-goal: **do not push a new commit while shards are
 running** — a new SHA cancels the in-flight jobs and throws away the 141 that
 have already passed.
+
+### 2026-08-05 02:40Z — the blocker is bigger than RTD: all-clear's 5 h ceiling < actual CI wall time
+
+Got all-clear's real start times instead of inferring from the RTD timestamp:
+
+    #1252  8306fa94  started 21:48:42  -> deadline 02:48:42
+    #1253  cc0af3cc  started 22:00:09  -> deadline 03:00:09
+    #1245  da398e0b  QUEUED since 22:23 -- not even started
+
+#1252's shards have been running **4h52m with 10 still outstanding**. So
+`MAX_WAIT_SECONDS=18000` (5 h) is now *shorter than a full CI round* on this
+saturated pool, and all-clear times out on genuinely-pending shards — with or
+without RTD. #1253 hits the same wall at 03:00 with ~70 jobs left. The workflow
+comment even anticipates this ("during heavy development a full CI round can take
+3-4h"); we are past that.
+
+So there are **two** independent blockers, and I had only found one:
+
+  1. **Systemic**: all-clear's ceiling < CI wall time under saturation. Affects
+     every PR right now. Fixable by re-running all-clear *after* the shards
+     finish (it then sees them complete and concludes quickly) — or by raising
+     MAX_WAIT_SECONDS, which is a workflow edit I cannot make.
+  2. **#1252-specific**: RTD's status is stuck `pending` with its only build
+     Cancelled. This one survives a re-run — all-clear would wait another 5 h
+     and fail again.
+
+That distinction decides the remedy per PR: #1253 and #1245 should clear with a
+plain all-clear re-run once their shards land. **#1252 cannot**, no matter how
+many times it is re-run, and I have no bypass (ruleset `feat`, bypass_actors
+null, I am push-only).
+
+Next: let #1252's last 10 shards land, then ping Jo — the PR fully tested, the
+gate unfixable from my side, and the alternative (new commit) costing ~150
+re-run jobs on a pool that is already the bottleneck.
