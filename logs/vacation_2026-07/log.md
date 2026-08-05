@@ -15219,3 +15219,21 @@ writing them now rather than at merge time:
     with the NEP-29 reasoning that makes the tight branch dead code.
 
 CI: #1252 117 SUCCESS / 9 running / 24 queued; #1253 5 running; #1245 still queued.
+
+### 2026-08-04 — checked plan/track*.md too; no action needed, and why
+
+Having found the README table a week stale, I checked the other half of the
+landing checklist rather than assuming it was fine:
+
+    plan/trackE_actionangle.md   0 status markers  -- pure design/scope doc
+    plan/trackA_potentials.md    3 markers, but dated WORK NOTES
+                                 ("## 2026-06-15 — #39 PR1 ... DONE"), not a table
+    plan/track0_infra.md         last touched 2026-07-25
+
+These are design documents with occasional dated notes, not a per-PR ledger —
+that role belongs to the README table, which is now current. So nothing here is
+stale in a way that misleads, and I am not going to manufacture rows for them.
+
+Recording the negative result so the next pass does not re-litigate it: **README
+table = per-PR status; plan/track*.md = design intent.** Only the former needs
+touching per PR.
