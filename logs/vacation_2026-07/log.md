@@ -15264,3 +15264,29 @@ here every available action would have been wrong.
 
 Remaining gate on #1252 is simply the last 28 shards. Audit is already done and
 clean; merge sequence is ready.
+
+### 2026-08-04 — de-risked the post-merge steps; #1252 down to 27 jobs
+
+#1252: **124 SUCCESS, no failures**, 6 running + 21 queued. `pre-commit.ci`
+SUCCESS; `docs/readthedocs.org` PENDING (a build in flight — per
+[[rtd-duplicate-build-red]] a cancelled duplicate can post a red, diagnose via
+the RTD API, never retrigger). `mergeStateStatus=BLOCKED` is just the 27
+outstanding jobs, not a problem.
+
+Pre-checked the rebase step by listing files rather than assuming:
+
+    ellipkm1  backend/special/{__init__,_fallback/elliptic,_router}.py
+              potential/AnyAxisymmetricRazorThinDiskPotential.py
+              tests/test_backend_special.py
+    polish    backend/_torch/optimize.py
+              tests/test_backend_optimize.py
+    #1252     tests/backend_slow_skip.txt
+
+**Zero overlap with #1252**, so the post-merge rebase cannot conflict — it is
+purely a base-pointer move to give codecov a current base. The two held branches
+are also disjoint from each other, so their order is a policy choice (one PR at a
+time), not a technical constraint.
+
+Everything downstream of the merge is now de-risked: audit done, rebase proven
+trivial, both PR bodies drafted, both branches verified. The only thing left is
+the last 27 shards.
