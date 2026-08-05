@@ -15555,3 +15555,28 @@ Two things follow:
 Revised plan: keep watching. When the shards are all green and all-clear is
 waiting on RTD alone, ping Jo. If instead RTD somehow posts a final state, the
 whole thing resolves itself and no ping is needed.
+
+### 2026-08-05 02:55Z — accurate all-clear deadlines for all three PRs
+
+Applied the job-start correction across the board (run `createdAt` is useless
+under saturation; the script's clock starts when the job gets a runner):
+
+    PR      all-clear job started   deadline     outstanding
+    #1252   00:05:31Z               05:06:31Z    8 shards
+    #1253   01:59:04Z               07:00:04Z    ~70 jobs
+    #1245   02:45:31Z (just began)  07:46:31Z    126 jobs
+
+So nothing is close to timing out. #1252's 8 remaining shards have ~2h10m of
+budget — ample. #1253 and #1245 are tighter relative to their job counts, but
+their RTD statuses are SUCCESS, so even a timeout there is recoverable with a
+plain all-clear re-run once their shards land.
+
+Which leaves the situation clean and unhurried:
+  * #1252 will reach "everything green except the stuck RTD" well before 05:06.
+    That observation is the trigger for the ping — not the deadline itself.
+  * #1253/#1245 need nothing from Jo either way.
+
+Nothing to do but let the shards run. Deliberately not inventing work: the
+preparation is complete (audit done, rebase proven trivial, both held branches
+verified with bodies drafted), and starting a fourth work stream now would add
+WIP that the CI bottleneck cannot absorb.
