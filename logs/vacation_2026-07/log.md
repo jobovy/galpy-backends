@@ -15318,3 +15318,41 @@ while three PRs are queued and two are held.
 
 #1252: **127 SUCCESS, zero failures**, 8 running + 16 queued (24 left).
 #1253: 23 SUCCESS / 16 running. #1245 still fully queued.
+
+### 2026-08-05 02:01Z — REAL issue found: all-clear is on a countdown because RTD is stuck
+
+Chased the one check I had been treating as cosmetic. It is not.
+
+    docs/readthedocs.org:galpy   state=pending, updated 2026-08-04T21:48:41Z
+    RTD builds for this commit:  exactly ONE, id=33915761, state=Cancelled
+    -> the status has not moved in 4h12m and there is no build left to move it
+
+`all-clear` (read the workflow) polls BOTH check-runs and **legacy commit
+statuses**, counting `"state": "pending"`, and exits 1 once
+`MAX_WAIT_SECONDS=18000` (5 h) elapses. It started ~21:48. At 02:01 that is
+~252 of 300 minutes: **all-clear fails at ~02:48Z** unless RTD posts a final
+state, which it has no build left to do.
+
+Context that matters: #1251 merged at 21:47:56 and #1252's RTD build was created
+45 s later, then cancelled — consistent with RTD cancelling a superseded build,
+the [[rtd-duplicate-build-red]] pattern, except here the *survivor* is missing.
+
+**Plan, and why NOT the obvious alternatives:**
+  * NOT re-push. A new commit gets a fresh RTD build and a fresh 5 h budget, but
+    it also restarts ~130 backend shards that took 4+ hours on a saturated
+    runner pool. Trading a cosmetic red for another half-day is a bad deal.
+  * NOT re-run all-clear on its own: it would re-poll the same stuck status and
+    fail again for the same reason.
+  * **Merge on real-checks-green.** `feat/backends-develop` has no branch
+    protection (verified: API 404), so all-clear is informational here rather
+    than enforcing. #1252 currently has 131 SUCCESS and **zero failures**; the
+    only outstanding work is backend shards, which are the real signal. When
+    those finish green, squash-merge and record that all-clear's red (if it
+    lands) is the stuck-RTD timeout, not a test failure.
+
+This is the documented admin-merge disposition from
+[[codecov-project-blocks-via-all-clear]] applied to a different stuck input:
+patch/real checks green, aggregate gate blocked by an external service.
+
+Not pinging the phone: nothing here needs Jo, and there is a correct action
+available to me that does not involve overriding a genuine test signal.
