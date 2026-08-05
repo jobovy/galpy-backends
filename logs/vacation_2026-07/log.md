@@ -15785,3 +15785,23 @@ and #1245 has 12 jobs still queued behind.
 State: #1252 OPEN awaiting the admin merge (151/151, stuck RTD); #1253 139
 SUCCESS + the flake, 7 jobs left, audit clean; #1245 137 SUCCESS, zero failures,
 12 left, audit clean.
+
+### 2026-08-05 04:02Z — auto-rerun fired; #1253's flake cleared from the rollup
+
+The watcher caught the run completing at **04:01:50** and fired
+`gh run rerun --failed` immediately. #1253 is now **140 SUCCESS with zero
+failures**; the symplectic job is re-running (IN_PROGRESS) and three wheel jobs
+remain.
+
+Critically, **#1253's RTD status is SUCCESS**, so unlike #1252 its `all-clear`
+can actually conclude once the remaining jobs land. That confirms the per-PR
+split I predicted several wakes ago: only #1252 is gate-stuck.
+
+The watcher was worth arming — the gap between "run completes" and "rerun fires"
+was seconds, where polling by hand would have left the flake sitting red for
+however long until my next wake, and #1253's all-clear budget (deadline 07:00)
+is spent while it waits.
+
+Remaining: #1252 needs Jo's admin merge (151/151, dead RTD build). #1253 needs
+its re-run + 3 wheels, then it is green and audited. #1245 137 SUCCESS, 12 left,
+audited. Neither main-targeted PR will be merged by me — that is Jo's call.
