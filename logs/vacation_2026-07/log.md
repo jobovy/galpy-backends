@@ -14950,3 +14950,32 @@ So the polish's reach is exactly the four brentq consumers, and the remaining
 AA ledger entries are out of its scope for structural reasons rather than
 because the fix is incomplete. That is a cleaner story for the PR than "fixes 2
 of 9 and we are not sure about the rest".
+
+### 2026-08-04 — merge sequence planned for when #1252 goes green
+
+#1252 at 61 SUCCESS / 30 running / 59 queued; only red is the codecov phantom,
+which is converging on its own (1 upload -70.64% -> 7 uploads -16.71%).
+
+Order of operations when it clears, written down so the codecov trap does not
+bite the follow-ups:
+
+1. Audit #1252's diff before merging -- it only deletes slow-skip entries, so
+   the if->xp.where array-input class and helper-placement checks are vacuous
+   here, but confirm that by looking rather than assuming.
+2. Squash-merge into feat/backends-develop.
+3. **Rebase both held branches before opening them.** Neither touches
+   `tests/backend_slow_skip.txt`, so by [[dont-reflexively-rebase-disjoint-prs]]
+   a stale base is harmless for CORRECTNESS -- but codecov diffs against the
+   base commit, and a base that is one commit behind is exactly what produces
+   the phantom project drop. Rebasing is cheap here and removes a known
+   time-sink. This is the one case where the "do not reflexively rebase" rule
+   should be overridden, and the reason is codecov, not merge safety.
+4. Open `fix/anyaxisym-backend-ellipkm1` (9e628142) FIRST -- narrower blast
+   radius (special-fn module + one potential's backend path), fully verified:
+   174 special tests, 17/17 anyaxisymdisk on all three backends, numpy path
+   byte-identical by inspection.
+5. Then `fix/torch-brentq-newton-polish` (3da30bff). Its PR claims: the defect,
+   the fix, frequency accuracy 6.4e-10 -> 1.3e-13 vs an analytic reference,
+   angle accuracy 20-120x (Spherical) and 3-4 orders (HO), no measurable perf
+   cost, and a discriminating test. It does NOT claim a ledger delta -- that is
+   local-only evidence, and CI is the authority.
