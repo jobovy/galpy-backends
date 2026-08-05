@@ -15151,3 +15151,26 @@ more backend probing — and CI is the authority regardless.
 Stopping here rather than building libgalpy: the payoff is one ledger entry that
 is ledgered for both backends and would need Jo's call anyway if it turns out to
 be (a), and three PRs are queued ahead of it.
+
+### 2026-08-04 — #1252 pre-merge audit done in advance (clean)
+
+Did the mission's merge-time audit now rather than after it goes green, so the
+merge is not gated on it. Verified rather than assumed:
+
+  * **files touched: `tests/backend_slow_skip.txt` only. Zero `.py`.** So the
+    if->xp.where array-input class, duplication, and helper-placement checks are
+    genuinely *inapplicable* here — not skipped, not assumed.
+  * **exactly one jax sphericaldf entry remains**: `test_king_sigmar`, which is
+    the one the new comment describes. I flagged an apparent mismatch mid-audit
+    (the diff removes `test_king_sigmar_directint` while the comment names
+    `test_king_sigmar`); both existed, `_directint` was un-deferred and the other
+    kept. Consistent.
+  * **230 -> 203 slow-skip lines**, exactly the 27 the title claims. Counted on
+    the PR head vs c34abfa3, not taken from the description.
+
+So the only remaining gate is CI, and specifically the codecov phantom. #1252 is
+at 109 SUCCESS / 13 running / 28 queued; #1253 has finally started its first job.
+
+Merge sequence stands: squash-merge -> rebase both held branches (for codecov,
+not merge safety) -> open ellipkm1 (9e628142) -> then the polish (3da30bff).
+Both PR bodies are already drafted in the scratchpad.
