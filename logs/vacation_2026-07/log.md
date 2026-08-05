@@ -14878,3 +14878,41 @@ Consequences:
   * Does not by itself clear `Adiabatic_linear_angles_cylsep` (4.49e-7): that one
     is ledgered for BOTH jax and torch, so it is backend-wide, and the polish is
     torch-only. jax already had an exact xmax.
+
+### 2026-08-04 — Spherical angle follow-up: real gain, but NOT comparable to #1251's number
+
+Measured the Spherical case too, angles at fixed phase-space points against
+`actionAngleIsochrone` (analytic) in an IsochronePotential, torch, both worktrees:
+
+    n=50    baseline 7.254e-09    polished 1.409e-10    ~51x
+    n=200   baseline 1.147e-07    polished 5.340e-09    ~21x
+    n=400   baseline 4.818e-07    polished 4.108e-09    ~117x
+
+Real, but ~20-120x, not the 3-4 orders the HO showed. Fine -- the HO is exactly
+integrable, so GL flatters it; a genuine potential is the harder case.
+
+**The part I have to be careful about, and which walks back what I wrote last
+wake.** My BASELINE reads 7.3e-9 at n=50 where #1251 quotes 3.3e-6 -- three
+orders apart. That is not a contradiction, it means **I am not measuring their
+quantity**. #1251 measured `test_actionAngleSpherical_linear_angles`, which
+integrates an orbit and fits a LINEAR TREND to the angles, so it accumulates
+orbit-integration error on top of the AA error. I compare angles at fixed
+phase-space points against a closed-form reference. Different probe, different
+floor; mine is the cleaner AA-only quantity, theirs is the end-to-end one.
+
+So I should NOT have written last wake that "`_BACKEND_GL_ORDER`'s comment
+carries pre-polish numbers and will be stale". Its numbers are for a probe I
+have not run. What is now supported:
+
+  * the polish materially improves backend ANGLES -- 20-120x on Spherical,
+    3-4 orders on Vertical/HO, both against analytic references;
+  * therefore #1251's attribution of the angle floor *solely* to "sqrt
+    turning-point behaviour on a partial interval" is incomplete -- the xmax
+    residual was contributing;
+  * whether the *linear-trend* floor of ~2e-6 moves is UNMEASURED. Deciding
+    that needs their probe, not mine, and it is not a prerequisite for the
+    polish PR.
+
+Net: the polish PR can claim frequency AND angle improvements with analytic
+references behind both. It should NOT claim to have changed the documented GL
+floor, and I will not touch that constant or its comment.
