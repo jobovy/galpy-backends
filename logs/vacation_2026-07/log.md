@@ -15011,3 +15011,29 @@ reviewed it against a claim I had already shown to be wrong. New text states the
 clamp WAS the bug, gives the exact-complement identity, the analytic-limit
 verification table, the documented eps/|z| floor, why the old test passed for the
 wrong reason, and that numpy values change deliberately.
+
+### 2026-08-04 — swept all three open PR descriptions against their actual diffs
+
+Having found #1245 describing a diagnosis I had disproved, I checked the other
+two rather than assuming they were fine. Two of three were stale:
+
+* **#1245** (fixed earlier): title said "clamp the elliptic parameter"; the
+  clamp turned out to BE the bug. Rewritten.
+* **#1253** (fixed now): title "un-expire the ... tolerance band (numpy >= 1.27
+  fell off it)" and a body arguing "dropping the upper bound restores the
+  project's own existing choice" -- that was the ORIGINAL plan. Jo then said to
+  "get rid of the old numpy case entirely given that numpy versions are so much
+  further now", and the diff does exactly that: deletes `_NUMPY_VERSION`,
+  `_NUMPY_1_23` and the `packaging.version` import, leaving plain literals.
+  **This one was not a draft** -- it was open for review with a description of a
+  plan that is not what the patch does. New text explains why deleting beats
+  widening: `python_requires >= 3.10` implies numpy >= ~1.21, so the tight branch
+  was only ever reachable on numpy <= 1.22, long past NEP 29 -- widening would
+  have kept dead machinery alive to express a constant.
+* **#1252**: accurate. Title says "27 of the 28", the diff removes exactly 27
+  lines, and the body's measured timings match what I ran. No change.
+
+Worth generalising: when a PR's content changes after review feedback -- as both
+#1245 and #1253 did -- the description does not follow automatically, and a
+stale one is worse than none because it sends the reviewer looking for the wrong
+thing. Cheap to check, so check.
