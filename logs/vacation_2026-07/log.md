@@ -15716,3 +15716,22 @@ Flagging it because it will keep reddening unrelated PRs at random — it took o
 Status: #1252 OPEN awaiting the admin merge; #1253 129 SUCCESS + the one flake,
 17 jobs left; #1245 125 SUCCESS, zero failures, 24 left. Re-run of the flake is
 blocked until #1253's build run finishes.
+
+### 2026-08-05 03:40Z — flake frequency measured: 1 failure in ~4 weeks
+
+Checked whether the symplectic bit-identity test is already known-unstable:
+
+    in tests/backend_xfail.txt or backend_slow_skip.txt : NO
+    added 2026-07-09 by #1086 (my symplectic dxdv work)
+    failure hit leapfrog_c, first of SYMPLECTIC = [leapfrog_c, symplec4_c, symplec6_c]
+
+So it has passed cleanly for about four weeks and failed once. That is a rare
+flake, and it settles the earlier judgement call with evidence rather than
+instinct: **one occurrence in four weeks does not justify weakening an exactness
+assertion on `main`.** Re-run is the proportionate response; if it recurs, the
+few-ulp bound (with the compiled-arithmetic reasoning in a comment) becomes the
+right change and I would put it to Jo then.
+
+Status unchanged otherwise: #1252 OPEN awaiting the admin merge; #1253 130
+SUCCESS + the one flake (16 jobs left, rerun still blocked while the parent run
+is in progress); #1245 133 SUCCESS, zero failures, 16 left.
