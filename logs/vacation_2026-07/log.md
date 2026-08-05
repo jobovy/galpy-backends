@@ -15058,3 +15058,20 @@ in git history and the source comment. Memory is for what the repo will not
 record.
 
 CI: #1252 at 88 SUCCESS / 20 running / 42 queued, codecov phantom only.
+
+### 2026-08-04 — why the 4 Spherical entries diverged: torch is not installed on py3.14 here
+
+Tried to settle the local-vs-CI discrepancy by running the four Spherical
+entries under py3.14 locally. Cannot: **torch is installed only on py3.13 on
+this box.** Both py3.14 envs (`galpy-py314`, `gp314`, numpy 2.5.1) have no torch.
+CI runs torch on py3.14, so that configuration is unreproducible here.
+
+That is the mechanism behind the divergence, and it is worse than the ledger's
+own warning suggests ("disagreed on exactly one entry"): the disagreement is not
+version skew in a shared install, it is an absent dependency. Four entries, and
+no way to check them locally at all.
+
+Recorded in [[local-env-is-one-version-point]]. Reinforces that the CI artifact
+is the only authority for torch ledger questions — which is how I caught the
+"4 stale entries" error earlier today, and it would have been a real mistake:
+I was one step from proposing their removal.
