@@ -15378,3 +15378,38 @@ shards land first, all-clear waits on ALL pending inputs including RTD's stuck
 legacy status, so it will time out regardless of how the shards finish. The plan
 from the previous entry stands unchanged: when the shards are green, squash-merge
 on real-checks-green and record that all-clear's red is the stuck-RTD timeout.
+
+### 2026-08-05 02:26Z — CORRECTION: all-clear IS required (ruleset, not classic protection)
+
+I checked classic branch protection earlier, got API 404, and concluded
+"`all-clear` is informational here, so I can merge on real-checks-green". **That
+was wrong.** Classic protection and rulesets are different endpoints. Checking
+`repos/jobovy/galpy/rules/branches/feat%2Fbackends-develop`:
+
+    deletion
+    required_linear_history
+    required_status_checks  ->  all-clear
+    pull_request
+    non_fast_forward
+
+So `all-clear` is a REQUIRED status check on feat/backends-develop, enforced by
+the "feat" ruleset. I have `push` but not `admin`, so I cannot bypass it. The
+404 was me querying the wrong mechanism and reading absence of evidence as
+evidence of absence — the same mistake shape as the earlier "4 stale entries".
+
+**Consequence.** #1252 is at 140 SUCCESS / zero failures with 10 real shards
+left, but its gate will fail at ~02:48 because RTD's legacy status is stuck
+`pending` with its only build Cancelled. Re-running all-clear does not help: it
+re-polls the same stuck status and burns another 5 h before failing again.
+
+Options, none of them free:
+  1. **New commit** (re-push/amend) — gets a fresh RTD build and a fresh
+     all-clear budget, but restarts ~150 CI jobs that took 4+ h on a saturated
+     pool, and delays #1245/#1253 queued behind.
+  2. **Admin merge by Jo** — instant, but needs him.
+
+This is precisely the case Jo named when he said to ping for "a faulty check
+that doesn't clear". Not pinging yet: the 10 real shards are still running, so
+all-clear would fail on genuinely-pending inputs regardless right now. Sequence:
+let the shards finish -> confirm all-clear's failure is *only* the stuck RTD ->
+then ping with the two options rather than unilaterally burning 4 h of CI.
