@@ -15655,3 +15655,35 @@ That also revises what I told Jo in the ping ("#1245/#1253 are fine, I'll handle
 those"). Accurate as far as CI goes — I can clear their all-clear timeouts with
 a re-run — but they still need him to merge. I will say so plainly when I next
 report rather than let that stand.
+
+### 2026-08-05 03:31Z — #1253's red is a 2.5-ulp bit-identity flake, not a regression
+
+#1253's codecov phantom cleared on its own (**patch and project both SUCCESS**),
+exactly as #1252's did. But a real job failed:
+
+    FAILED tests/test_symplectic_dxdv.py::test_symplectic_dxdv_base_bit_identity
+      symplectic dxdv base orbit not bit-identical to plain integrate
+      for leapfrog_c: max|diff| = 5.55112e-16
+
+Dug the message out of the raw job log (`gh run view --log` returned nothing;
+`curl` on `actions/jobs/<id>/logs` with the gh token worked). Three reasons this
+is not #1253's doing:
+
+  * **5.55e-16 is ~2.5 x machine epsilon** on a *bit-identity* assertion — the
+    weakest possible kind of failure, a last-bits difference between two code
+    paths that are supposed to agree exactly.
+  * **#1253 changes only `tests/test_SpiralArmsPotential.py`.** It cannot reach
+    symplectic dxdv.
+  * A **sibling job with the same name prefix passed on the same commit**, and
+    #1245 (same base, `main`) has the equivalent job green.
+
+So: flake, and the mission's prescribed action is to re-run it. Tried
+`gh run rerun --job` and got `cannot be rerun` — GitHub refuses single-job
+re-runs while the parent run is still in progress (#1253 still has ~18 jobs
+going). Re-run when the run finishes.
+
+Recording the log-retrieval trick, since `gh run view --log`/`--log-failed`
+silently returned empty here:
+
+    curl -sL -H "Authorization: token $(gh auth token)" \
+      "https://api.github.com/repos/OWNER/REPO/actions/jobs/<job_id>/logs" | grep -a FAILED
