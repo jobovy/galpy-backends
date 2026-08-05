@@ -15356,3 +15356,25 @@ patch/real checks green, aggregate gate blocked by an external service.
 
 Not pinging the phone: nothing here needs Jo, and there is a correct action
 available to me that does not involve overriding a genuine test signal.
+
+### 2026-08-05 02:21Z — #1253's red is the same codecov phantom; #1252 down to 14 jobs
+
+**#1253 `codecov/project` FAILURE** — verified rather than pattern-matched:
+
+    HEAD has 11 uploads less than BASE
+    Coverage  99.93% -> 45.85%  (-54.09%)
+    codecov/patch: SUCCESS, "all modified and coverable lines are covered"
+
+Identical signature to #1252's, which went -70.64% -> SUCCESS on its own once the
+uploads landed. #1253 is at 63 of ~147 checks, so most coverage jobs have not run.
+No action; re-check when it drains. Diagnosed in one step this time because the
+shape is now documented — that is the payoff for having written it down.
+
+**#1252**: 137 SUCCESS, **zero failures**, 4 running + 10 queued (14 left).
+`all-clear` still IN_PROGRESS, RTD still `pending` and unmoved since 21:48:41.
+
+At 02:21 the all-clear deadline is ~02:48, i.e. ~27 min. Even if the last 14
+shards land first, all-clear waits on ALL pending inputs including RTD's stuck
+legacy status, so it will time out regardless of how the shards finish. The plan
+from the previous entry stands unchanged: when the shards are green, squash-merge
+on real-checks-green and record that all-clear's red is the stuck-RTD timeout.
