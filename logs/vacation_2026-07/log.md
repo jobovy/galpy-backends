@@ -15629,3 +15629,29 @@ Now: keep watching. If he merges, execute the prepared sequence immediately
 (rebase both held branches for codecov -> open ellipkm1 9e628142 -> then the
 polish 3da30bff, bodies already drafted). If RTD somehow posts a state first,
 all-clear concludes on its own and no merge help is needed.
+
+### 2026-08-05 03:26Z — authority boundary: I merge to develop, NOT to main
+
+#1252 still OPEN/BLOCKED (pinged 5 min ago; it is 03:26 and Jo is on vacation —
+no expectation of a fast reply, and none needed).
+
+#1253 is at **123 SUCCESS**, 23 jobs left, only red is the codecov phantom. It
+will likely go green on its own well inside its 07:00 deadline. Which forces a
+question I should answer *before* that happens rather than in the moment:
+
+**#1253 and #1245 target `main`. My merge authorization was for
+`feat/backends-develop`.** Jo's exact words were that he opens PRs against
+feat/backends-develop and I "squash-merge them myself"; for #1245 he said "can
+you just put it out on main and we later rebase feat/backends" — that is about
+where to TARGET the fix, not a grant to merge into the public release branch.
+
+So: **I will not merge #1253 or #1245 to main**, even when they are fully green.
+I will drive them to green, report that they are ready, and leave the merge to
+Jo. `main` also carries its own ruleset (`pull_request` + `required_status_checks`),
+but the reason is authorization, not mechanism — I should not merge to a
+project's release branch on an inference.
+
+That also revises what I told Jo in the ping ("#1245/#1253 are fine, I'll handle
+those"). Accurate as far as CI goes — I can clear their all-clear timeouts with
+a re-run — but they still need him to merge. I will say so plainly when I next
+report rather than let that stand.
