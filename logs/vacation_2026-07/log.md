@@ -15527,3 +15527,31 @@ better. Rejected.
 Deadline is 02:48:42, ~4 min out, 10 shards still outstanding. Waiting for the
 observed failure, then pinging with: #1252 fully tested but gate-stuck on a dead
 RTD build, needs an admin merge; #1253/#1245 need nothing from Jo.
+
+### 2026-08-05 02:52Z — CORRECTION: the all-clear deadline is 05:06, not 02:48
+
+I computed the deadline from the workflow RUN's `createdAt` (21:48:42). Wrong
+clock. The script's `deadline=$(date +%s)+MAX_WAIT_SECONDS` starts when the JOB
+gets a runner:
+
+    all-clear job for 8306fa94: started_at = 2026-08-05T00:05:31Z
+
+i.e. the job queued **2h17m** before running, because the pool is saturated —
+the same saturation that is the underlying problem. True deadline:
+00:05:31 + 60 s + 18000 s = **05:06:31Z**, over two hours later than I said.
+
+Two things follow:
+
+  * **I was one wake away from pinging Jo on a wrong timeline.** The blocker
+    analysis was right; the urgency was not. Under saturation, run-created and
+    job-started can differ by hours, so any deadline computed from `createdAt`
+    is meaningless. Worth remembering generally, not just here.
+  * **There is now real headroom.** 8 shards remain (3 running, 5 queued) with
+    ~2h15m of budget. They will very likely all land first, which gives exactly
+    the clean observation I wanted: every input settled EXCEPT the stuck RTD.
+    That is the strongest possible evidence for the ping, and it costs nothing
+    to wait for.
+
+Revised plan: keep watching. When the shards are all green and all-clear is
+waiting on RTD alone, ping Jo. If instead RTD somehow posts a final state, the
+whole thing resolves itself and no ping is needed.
