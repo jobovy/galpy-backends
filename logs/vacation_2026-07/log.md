@@ -15687,3 +15687,32 @@ silently returned empty here:
 
     curl -sL -H "Authorization: token $(gh auth token)" \
       "https://api.github.com/repos/OWNER/REPO/actions/jobs/<job_id>/logs" | grep -a FAILED
+
+### 2026-08-05 03:35Z — why the symplectic bit-identity test can flake (my test, my analysis)
+
+`test_symplectic_dxdv_base_bit_identity` came from my own symplectic-dxdv work.
+It asserts `numpy.array_equal(base_dxdv, base_plain)` — **exact** equality between
+the base orbit carried by `integrate_dxdv` and a plain `integrate` with the same
+method/dt/IC. Docstring rationale: the base is stepped through "the same
+drift/kick sequence", so the deviation machinery cannot perturb it.
+
+That argument is about the ALGORITHM. Bit-identity additionally requires the
+COMPILED ARITHMETIC to match, and it is two different loops: the dxdv path steps
+a wider contiguous state block (12/42 components vs 6). A C compiler is free to
+vectorise, block, and contract multiply-adds differently for the two, so exact
+equality is not guaranteed by the language — it holds on most builds and can miss
+by an ulp or two. 5.55e-16 = 2.5 eps is exactly that shape.
+
+**Not changing it.** Weakening an exactness assertion on `main` is a design call
+that is Jo's, not mine, and one observed flake is thin evidence — the invariant it
+protects (deviation machinery must not perturb the base) is real and worth
+asserting strictly if the platform allows. The proportionate response is: re-run
+the flake, record the analysis, and let him decide whether to keep exact equality
+or move to a stated few-ulp bound with the reason in a comment.
+
+Flagging it because it will keep reddening unrelated PRs at random — it took out
+#1253, which only edits a SpiralArms test file.
+
+Status: #1252 OPEN awaiting the admin merge; #1253 129 SUCCESS + the one flake,
+17 jobs left; #1245 125 SUCCESS, zero failures, 24 left. Re-run of the flake is
+blocked until #1253's build run finishes.
