@@ -15037,3 +15037,24 @@ Worth generalising: when a PR's content changes after review feedback -- as both
 #1245 and #1253 did -- the description does not follow automatically, and a
 stale one is worse than none because it sends the reviewer looking for the wrong
 thing. Cheap to check, so check.
+
+### 2026-08-04 — two durable lessons written to memory
+
+1. **Appended a worked example to `meaningful-tests-tight-tolerances`** rather
+   than creating a duplicate file — that memory already states the principle
+   ("what wrong implementation would still pass this?"), and the brentq case
+   answers it concretely: *a whole backend skipping its refinement step*.
+   `rtol=1e-9` on a machine-precision root let torch return the raw bisection
+   value indefinitely; the defect surfaced only against an ANALYTIC reference.
+
+2. **New memory `pr-description-drifts-after-rework`** — both stale descriptions
+   found today (#1245, #1253) were mine, and both drifted the same way: content
+   changed after feedback, title/body did not follow. #1253 was not even a draft.
+   Recorded as a systematic failure mode with the check (re-read title/body
+   against `gh pr diff` after any rework; non-drafts first).
+
+Deliberately did NOT write a memory for the torch brentq fix itself — that lands
+in git history and the source comment. Memory is for what the repo will not
+record.
+
+CI: #1252 at 88 SUCCESS / 20 running / 42 queued, codecov phantom only.
