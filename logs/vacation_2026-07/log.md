@@ -15305,3 +15305,16 @@ and will clear on its own. Nothing to arrange.
 
 #1252: **125 SUCCESS, zero failures**, 8 running + 18 queued. #1253 climbing
 (16 SUCCESS / 17 running). #1245 still fully queued behind them.
+
+### 2026-08-04 — looked at the kept slow-skip; no quick win, not starting a 4th stream
+
+Inspected `KingPotential`/`kingdf` for the one entry #1252 keeps
+(`test_king_sigmar`, 1028.6 s under jax). No Python-level loop to vectorize —
+the cost is the same scalar-dispatch-through-scipy-quadrature pattern that made
+the other 27 slow, and the remedy is the potential-evaluation vectorization the
+slow-skip comment already names. Nothing learned beyond confirming that scoping,
+so recording the null result and stopping rather than opening a fourth branch
+while three PRs are queued and two are held.
+
+#1252: **127 SUCCESS, zero failures**, 8 running + 16 queued (24 left).
+#1253: 23 SUCCESS / 16 running. #1245 still fully queued.
