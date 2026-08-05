@@ -14916,3 +14916,37 @@ have not run. What is now supported:
 Net: the polish PR can claim frequency AND angle improvements with analytic
 references behind both. It should NOT claim to have changed the documented GL
 floor, and I will not touch that constant or its comment.
+
+### 2026-08-04 — bounding where the polish can and cannot apply (negative result, useful)
+
+Hypothesis: `Adiabatic_linear_angles_cylsep` fails on BOTH jax and torch, so
+maybe it uses a root-find that bypasses brentq (memory notes Staeckel "calls
+bisect_root straight"). If so, the same polish would fix a backend-wide entry.
+
+Checked. The split is:
+
+    via brentq  (gets the Newton polish):  Spherical, Vertical,
+                                           IsochroneInverse, IsochroneApprox
+    direct bisect_root:                    actionAngleStaeckel (umin/umax/vmin,
+                                           xtol=1e-13, maxiter=200)
+    NO root-find at all:                   actionAngleAdiabatic
+
+Two conclusions, both negative for the hypothesis and worth recording:
+
+1. **Adiabatic does not root-find.** Its 4.49e-7 angle error is not a turning
+   point at all, so no amount of polishing touches it. Whatever that entry is,
+   it needs its own investigation; I have not done one and will not guess.
+
+2. **Staeckel already refines -- deliberately value-preserving.** After its
+   bisections it calls `_refine_tp`, commented "differentiable turning points
+   (value byte-identical; injects du/dtheta)". So it takes a Newton-like step
+   for the GRADIENT while keeping the bisection VALUE. That is the opposite
+   choice from brentq's, and it is intentional: the Staeckel actions are held
+   byte-identical to the C implementation ([[staeckel-action-quadrature-c-parity]]),
+   so changing the forward value would break that parity. **Not something to
+   "fix"** -- it is a constraint, not an oversight.
+
+So the polish's reach is exactly the four brentq consumers, and the remaining
+AA ledger entries are out of its scope for structural reasons rather than
+because the fix is incomplete. That is a cleaner story for the PR than "fixes 2
+of 9 and we are not sure about the rest".
