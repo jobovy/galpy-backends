@@ -15174,3 +15174,26 @@ at 109 SUCCESS / 13 running / 28 queued; #1253 has finally started its first job
 Merge sequence stands: squash-merge -> rebase both held branches (for codecov,
 not merge safety) -> open ellipkm1 (9e628142) -> then the polish (3da30bff).
 Both PR bodies are already drafted in the scratchpad.
+
+### 2026-08-04 — checked whether the codecov phantom can actually self-heal. It can.
+
+HEAD had settled at 86.11% (galpy's ordinary project coverage) while BASE read
+99.95%, and I started to suspect the BASE side was itself broken -- in which case
+waiting would never close the -13.84% and #1252 would need the admin-merge route.
+Queried the codecov API for the base commit instead of guessing:
+
+    c34abfa3: coverage 99.95%, lines 48354, hits 48334, state complete, ci_passed
+
+BASE is **not** anomalous: it is the complete **21-upload aggregate**, and the
+all-backend matrix (jax/torch shards) exercises a great deal of code the ordinary
+coverage job never touches — hence 99.95% rather than the ~86% a single job
+reports. HEAD is at 86.11% precisely because it has 17 of those 21 uploads.
+
+So the delta is still entirely "HEAD is missing 4 uploads", exactly as the first
+diagnosis said, and it closes on its own as the remaining jobs land. No
+admin-merge needed, nothing to do. Recording it because I was one step from
+concluding the opposite and reaching for an override that was not warranted.
+
+Trajectory for the record: 1 upload -70.64% / 7 -16.71% / 17 -13.84%.
+
+#1252: 112 SUCCESS / 13 running / 25 queued. #1253 now has 4 jobs running.
