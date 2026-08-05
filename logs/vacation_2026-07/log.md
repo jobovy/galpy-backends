@@ -15115,3 +15115,39 @@ numpy leg alone exceeds the 2-minute foreground cap).
 HEAD is now at 86.11%, which IS galpy's normal project coverage -- so the head
 side has essentially settled and the residual delta is the BASE side (reported
 99.95%) still reconciling. Nothing to act on; re-check when the run drains.
+
+### 2026-08-04 — Adiabatic cylsep: numpy fails too, so it is probably not a backend defect
+
+Ran `test_actionAngleAdiabatic_linear_angles_cylsep` under all three backends in
+the same worktree:
+
+    numpy  deviation 4.40053e-07
+    jax    deviation 4.42654e-07
+    torch  deviation 4.49316e-07     (tolerance 1e-8)
+
+**numpy fails at the same magnitude.** The ~2% spread between the three is
+noise on top of a shared ~4.4e-7 error. If this were a backend-migration defect,
+numpy would pass — it does not. That downgrades the entry from "backend accuracy
+gap needing a fix" to something else.
+
+**But the measurement is confounded, and I am not going to pretend otherwise.**
+The test builds `actionAngleAdiabatic(..., c=False)`, so the AA path is
+pure-Python and the C extension is irrelevant *there* — but
+`check_actionAngle_linear_angles` integrates an orbit first, and this worktree
+has no `libgalpy.so`, so that integration falls back to the Python integrator. A
+different trajectory gives different angles. So the shared 4.4e-7 could be
+
+  (a) a genuine shared limitation of the pure-Python Adiabatic angle path, or
+  (b) an artifact of the Python orbit integrator in this environment.
+
+I cannot separate those without building the C extension here, and I will not
+copy a `.so` in from another branch ([[worktree-so-provenance]]: that SIGABRTs).
+
+What is established: the entry is **very unlikely to be a backend-migration
+defect**, because numpy fails identically. What is not established: which of (a)
+or (b) it is. Next step for whoever picks it up is a C-enabled worktree, not
+more backend probing — and CI is the authority regardless.
+
+Stopping here rather than building libgalpy: the payoff is one ledger entry that
+is ledgered for both backends and would need Jo's call anyway if it turns out to
+be (a), and three PRs are queued ahead of it.
