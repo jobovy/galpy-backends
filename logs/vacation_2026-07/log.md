@@ -15197,3 +15197,25 @@ concluding the opposite and reaching for an override that was not warranted.
 Trajectory for the record: 1 upload -70.64% / 7 -16.71% / 17 -13.84%.
 
 #1252: 112 SUCCESS / 13 running / 25 queued. #1253 now has 4 jobs running.
+
+### 2026-08-04 — README PR table was stale; caught up 5 rows
+
+[[keep-galpy-jax-log-current]] says the README table is part of LANDING a PR,
+not an optional extra. Checked it: current only through **#1232 (2026-07-31)**.
+Everything from this vacation session was missing — including **two PRs that are
+already merged** (#1250 tolerance Group A, #1251 the shared `_BACKEND_GL_ORDER`
+= `c34abfa3`, which is the base of every branch I am working on).
+
+I had been diligently appending to `logs/` and treating that as "keeping the log
+current", while the artefact Jo actually reads at a glance had drifted a week
+behind. Added rows for all five (#1245, #1250, #1251, #1252, #1253) with the
+same content discipline as the log: what the defect was, what was measured, and
+what is deliberately NOT claimed.
+
+Two rows carry corrections rather than just descriptions, which is the point of
+writing them now rather than at merge time:
+  * #1245 notes the clamp diagnosis was **disproved** and the title/body rewritten;
+  * #1253 notes the version machinery was **deleted** per Jo rather than widened,
+    with the NEP-29 reasoning that makes the tight branch dead code.
+
+CI: #1252 117 SUCCESS / 9 running / 24 queued; #1253 5 running; #1245 still queued.
