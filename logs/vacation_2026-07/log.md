@@ -15735,3 +15735,37 @@ right change and I would put it to Jo then.
 Status unchanged otherwise: #1252 OPEN awaiting the admin merge; #1253 130
 SUCCESS + the one flake (16 jobs left, rerun still blocked while the parent run
 is in progress); #1245 133 SUCCESS, zero failures, 16 left.
+
+### 2026-08-05 03:54Z — audits done on both main-targeted PRs
+
+Ran the mission's audit criteria on #1245 and #1253 now, so that when they go
+green I can hand Jo *reviewed* PRs rather than merely passing ones.
+
+**#1245** (AnyAxisym small-|z|):
+  * files: `AnyAxisymmetricRazorThinDiskPotential.py` + `tests/test_potential.py`
+  * `if -> xp.where` array-input class: **0** — correct, this is a numpy-path fix
+    on `main` with no backend dispatch, so the class does not arise
+  * placement: one new helper, `_quad_apeak`, module-level, two call sites
+    (zforce, Rzderiv). Checked `galpy/util/` FIRST per the directive — there is a
+    `quadpack.py` but nothing offering peak-resolving quadrature, and `_quad_apeak`
+    is parameterised by this potential's own (R, z) geometry rather than general.
+    Module-level in the potential file is right; two call sites justify factoring.
+  * duplication: `_quad_apeak` appears nowhere else in the tree
+  * **the check that mattered**: the cumulative diff shows BOTH the old
+    `test_anyaxisymrazorthin_smallz_no_nan` (which asserted wrong physics) and the
+    new `_smallz_limit` as additions. Verified the final tree contains **only
+    `_smallz_limit`** — commit 1 added the bad test, commit 2 replaced it.
+
+**#1253** (SpiralArms tolerance):
+  * one file, 0 new helpers, 0 backend dispatch, net +7/-8
+  * **0 dangling references** to `_NUMPY_1_23` / `_NUMPY_VERSION` / `parse_version`
+    on the PR head; both tolerances are literals (`3e-7`, `3e-6`) as described
+
+Process note: my first leftover-reference check read the file from the **#1245**
+worktree and reported 6 hits, which would have read as a real defect. It was the
+pre-#1253 state — wrong branch. Checked `origin/fix/spiralarms-numpy-tolerance-band`
+directly and it is clean. Same class as [[galpy-editable-install-import-shadow]]:
+verify *which tree* you are reading before believing a grep.
+
+Status: #1252 OPEN awaiting the admin merge; #1253 136 SUCCESS + the flake, 10
+jobs left; #1245 136 SUCCESS, zero failures, 13 left.
