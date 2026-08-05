@@ -15091,3 +15091,27 @@ Both end with an explicit **"no ledger change"** section stating why:
 That is deliberate. It would be easy to write "-6 ledger entries" in a PR body
 and have it read as progress; three separate corrections today showed how
 fragile those counts are before CI confirms them.
+
+### 2026-08-04 — started on the one unexplained AA entry; codecov still converging
+
+`Adiabatic_linear_angles_cylsep` is the only remaining torch AA ledger entry
+that is a genuine accuracy gap (4.49e-7 vs 1e-8) rather than a by-design or
+exact-zero artifact. Established earlier that it is NOT a turning-point issue --
+`actionAngleAdiabatic` performs no root-find at all -- so the Newton polish was
+never going to touch it, and the cause is still unknown.
+
+First discriminating measurement running: the same test under numpy, jax and
+torch. It is ledgered for BOTH backends, so if numpy passes and both backends
+fail by the same amount, it is a backend-wide angle-quadrature gap; if the two
+backends differ, it is something per-backend. Running in the background (the
+numpy leg alone exceeds the 2-minute foreground cap).
+
+**codecov trajectory on #1252**, confirming the "do not chase" call with numbers:
+
+    1 upload    15.48%   -70.64%
+    7 uploads   83.25%   -16.71%
+    16 uploads  86.11%   -13.84%
+
+HEAD is now at 86.11%, which IS galpy's normal project coverage -- so the head
+side has essentially settled and the residual delta is the BASE side (reported
+99.95%) still reconciling. Nothing to act on; re-check when the run drains.
