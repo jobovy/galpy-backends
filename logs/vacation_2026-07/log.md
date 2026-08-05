@@ -15769,3 +15769,19 @@ verify *which tree* you are reading before believing a grep.
 
 Status: #1252 OPEN awaiting the admin merge; #1253 136 SUCCESS + the flake, 10
 jobs left; #1245 136 SUCCESS, zero failures, 13 left.
+
+### 2026-08-05 04:01Z — armed an auto-rerun for #1253's flake
+
+The build run holding the flaky job (30954663342) is down to **1 of 25 jobs**
+(py3.10 orbit shard). GitHub refuses `gh run rerun --job` while the parent run is
+in progress, so I armed a background watcher that polls that run and fires
+`gh run rerun --failed` the moment it completes. That removes the need for me to
+happen to be awake at the right poll.
+
+`--failed` rather than a full re-run: it re-runs only the one failed job, not the
+other 24 that already passed — important when the runner pool is the bottleneck
+and #1245 has 12 jobs still queued behind.
+
+State: #1252 OPEN awaiting the admin merge (151/151, stuck RTD); #1253 139
+SUCCESS + the flake, 7 jobs left, audit clean; #1245 137 SUCCESS, zero failures,
+12 left, audit clean.
