@@ -15237,3 +15237,30 @@ stale in a way that misleads, and I am not going to manufacture rows for them.
 Recording the negative result so the next pass does not re-litigate it: **README
 table = per-PR status; plan/track*.md = design intent.** Only the former needs
 touching per PR.
+
+### 2026-08-04 — codecov/project went GREEN on its own. Zero intervention.
+
+    codecov/patch    COMPLETED/SUCCESS
+    codecov/project  COMPLETED/SUCCESS
+
+#1252 now has **123 SUCCESS and no failures at all**; 28 jobs remain (7 running,
+21 queued), all backend torch/jax shards plus two build jobs.
+
+The full trajectory, for the next time this shape appears:
+
+    1 upload    15.48%   -70.64%   <- looked catastrophic
+    7 uploads   83.25%   -16.71%
+    17 uploads  86.11%   -13.84%   <- I nearly concluded BASE was broken here
+    21 uploads      —     SUCCESS
+
+Every step of the correct handling was *not acting*: not re-running (the jobs had
+not run yet, and a re-run would have discarded the ones that had), not
+admin-merging (the override was never needed), not "fixing" coverage. The two
+things that were worth doing were reading codecov's own upload counter and
+querying the API for the base commit — both cheap, both decisive.
+
+Worth keeping because the instinct on a red check is to change something, and
+here every available action would have been wrong.
+
+Remaining gate on #1252 is simply the last 28 shards. Audit is already done and
+clean; merge sequence is ready.
