@@ -14979,3 +14979,35 @@ bite the follow-ups:
    angle accuracy 20-120x (Spherical) and 3-4 orders (HO), no measurable perf
    cost, and a discriminating test. It does NOT claim a ledger delta -- that is
    local-only evidence, and CI is the authority.
+
+### 2026-08-04 — polish: all brentq consumers verified, 0 changed
+
+The polish changes forward values for EVERY backend brentq caller, so the last
+gap was the consumers outside actionAngle. Ran them:
+
+    tests/test_backend_potential_rootfind.py   torch 15/15   jax 15/15
+    IsochroneInverse / estimateB / estimateDelta (torch):
+        test_actionAngleIsochroneInverse_wrtIsochrone                 FAIL both
+        test_actionAngleIsochroneInverse_wrtIsochrone_noninclinedorbit FAIL both
+        changed by the polish: 0
+
+Both IsochroneInverse failures are **pre-existing** -- identical in the
+baseline worktree -- and they are the same two that showed up in the earlier
+full-file run's 26 non-ledgered failures, so the accounts agree.
+
+`fix/torch-brentq-newton-polish` (3da30bff) verification is now complete:
+  * defect established against an analytic reference (harmonic oscillator);
+  * discriminating unit test (fails without the fix, passes with, jax unaffected);
+  * frequency 6.4e-10 -> 1.3e-13, matching jax exactly;
+  * angles 20-120x (Spherical vs analytic isochrone), 3-4 orders (HO);
+  * no measurable perf cost (20.0 vs 20.3 ms / 2000 orbits);
+  * every brentq consumer exercised, 0 behaviour changes beyond the intended one;
+  * scope bounded structurally (Adiabatic has no root-find; Staeckel is
+    value-preserving by C-parity design).
+
+Also updated **#1245's title and body**, which still described the original
+(disproved) "clamp the elliptic parameter" diagnosis. Left alone, Jo would have
+reviewed it against a claim I had already shown to be wrong. New text states the
+clamp WAS the bug, gives the exact-complement identity, the analytic-limit
+verification table, the documented eps/|z| floor, why the old test passed for the
+wrong reason, and that numpy values change deliberately.
