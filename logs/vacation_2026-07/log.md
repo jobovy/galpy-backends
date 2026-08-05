@@ -15413,3 +15413,28 @@ that doesn't clear". Not pinging yet: the 10 real shards are still running, so
 all-clear would fail on genuinely-pending inputs regardless right now. Sequence:
 let the shards finish -> confirm all-clear's failure is *only* the stuck RTD ->
 then ping with the two options rather than unilaterally burning 4 h of CI.
+
+### 2026-08-05 02:31Z — waiting out the all-clear deadline before escalating
+
+#1252: **141 SUCCESS, zero failures**, 1 running + 9 queued. all-clear
+IN_PROGRESS, RTD still `pending` (unmoved since 21:48:41).
+
+Re-read the all-clear script to be sure RTD actually counts:
+
+    statuses=$(gh api ".../commits/$SHA/status" -q '.statuses[] | {context, state}')
+    pending_st=$(... | grep -c '"state": *"pending"')
+
+It does — RTD's legacy status is polled exactly like the rest, so all-clear
+cannot conclude while it sits pending. Confirmed, not assumed.
+
+Deliberately NOT acting yet. It is 02:31 and the deadline is ~02:48. Escalating
+on a prediction is worse than escalating on an observation, and 17 minutes is
+cheap. The distinction that matters when it fails: whether the log shows *only*
+RTD pending, or RTD plus genuinely-unfinished shards. Both block, but only the
+first is purely an external-service fault, and Jo deserves the accurate version.
+
+When it concludes I will read the run log, then choose between:
+  (a) new commit — fresh RTD + fresh budget, costs ~150 re-run jobs on a
+      saturated pool and delays #1245/#1253;
+  (b) ping Jo for an admin merge — instant, needs him, and is the case he
+      explicitly named ("a faulty check that doesn't clear").
