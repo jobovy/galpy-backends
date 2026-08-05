@@ -15290,3 +15290,18 @@ time), not a technical constraint.
 Everything downstream of the merge is now de-risked: audit done, rebase proven
 trivial, both PR bodies drafted, both branches verified. The only thing left is
 the last 27 shards.
+
+### 2026-08-04 — confirmed the merge itself will not surprise me
+
+Checked the merge path preemptively rather than discovering a wall at merge time:
+
+  * `feat/backends-develop` has **no branch protection** (API 404).
+  * My token: `push=true`, admin/maintain false — sufficient, and not needing more.
+  * **#1249, #1250, #1251 all merged into develop earlier today** with exactly
+    these permissions, so the mechanism is proven, not assumed.
+
+Therefore `mergeStateStatus=BLOCKED` on #1252 reflects only the incomplete checks
+and will clear on its own. Nothing to arrange.
+
+#1252: **125 SUCCESS, zero failures**, 8 running + 18 queued. #1253 climbing
+(16 SUCCESS / 17 running). #1245 still fully queued behind them.
