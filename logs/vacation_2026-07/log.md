@@ -15438,3 +15438,31 @@ When it concludes I will read the run log, then choose between:
       saturated pool and delays #1245/#1253;
   (b) ping Jo for an admin merge — instant, needs him, and is the case he
       explicitly named ("a faulty check that doesn't clear").
+
+### 2026-08-05 02:35Z — no bypass exists; but do NOT ping until the PR is actually fully tested
+
+Checked the ruleset for an escape hatch:
+
+    ruleset 17915683 "feat"   enforcement=active   bypass_actors=null
+    me = jobovy-agent, push only (no admin)
+
+So there is definitively **no self-service merge**: all-clear is required, I
+cannot bypass it, and it cannot pass while RTD's status is stuck `pending`.
+
+**But it would be wrong to ping Jo right now, and the reason matters.** #1252
+still has 10 shards outstanding (1 running, 9 queued). Asking him to admin-merge
+now means asking him to merge a PR whose tests have not all run. The blocker is
+real, but the PR is not yet in a state where merging is the correct action —
+those are two different things and it would be sloppy to conflate them.
+
+Sequence, unchanged in substance but now precise:
+  1. Let the remaining 10 shards finish. They complete regardless of all-clear
+     timing out; the timeout does not cancel them.
+  2. Confirm all 151 checks are green apart from all-clear.
+  3. THEN ping Jo: the PR is fully tested, the gate is stuck on a dead external
+     build, and the only fix in my reach costs ~150 re-run jobs on a saturated
+     pool plus a multi-hour delay to #1245/#1253.
+
+Also noted, to avoid an own-goal: **do not push a new commit while shards are
+running** — a new SHA cancels the in-flight jobs and throws away the 141 that
+have already passed.
