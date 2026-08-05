@@ -15580,3 +15580,21 @@ Nothing to do but let the shards run. Deliberately not inventing work: the
 preparation is complete (audit done, rebase proven trivial, both held branches
 verified with bodies drafted), and starting a fourth work stream now would add
 WIP that the CI bottleneck cannot absorb.
+
+### 2026-08-05 02:59Z — 7 shards left; recorded the deadline lesson in memory
+
+#1252: **144 SUCCESS, zero failures**, 6 running + 1 queued. Every remaining
+shard is now actually executing rather than queued, and the budget runs to
+05:06 — over two hours. Nothing to drive.
+
+Wrote `gha-job-start-not-run-created` to memory. It is exactly the shape of
+mistake that would recur: a workflow enforcing its own wall-clock budget starts
+counting when the JOB gets a runner, not when the run is created, and under
+saturation those differed by **2h17m** here. I computed from `createdAt`,
+concluded the gate would fail within minutes, and was one wake from escalating
+on a timeline that was two hours wrong. Correct query recorded alongside it.
+
+Not manufacturing further work this wake. Preparation is genuinely complete and
+the only remaining input is CI time; inventing a fourth work stream now would add
+WIP the bottleneck cannot absorb, and I would rather report "waiting" honestly
+than pad the log.
