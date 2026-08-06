@@ -15826,3 +15826,4837 @@ Both main-targeted PRs are green-but-for-the-tail and audited. Neither will be
 merged by me. When they finish I report them ready alongside #1252 so Jo gets one
 batch: **#1252 needs an admin merge (dead RTD build), #1245 and #1253 need an
 ordinary merge.**
+
+### 2026-08-05 05:0xZ — correction: the symplectic failure is NOT a flake
+
+My 04:21 entry above is wrong and I am leaving it in place with this correction
+underneath it. I read a transiently-clean rollup while the re-run was still in
+flight and called it a pass. The re-run had not finished; when it did, it
+**failed again with the identical value**:
+
+    att=1  job 92144773364   max|diff|=5.55112e-16  leapfrog_c
+    att=2  job 92203969233   max|diff|=5.55112e-16  leapfrog_c   <-- the re-run
+
+So the "1 failure in ~4 weeks, therefore a rare flake, therefore do not weaken
+an exactness assertion" reasoning I recorded does not hold. Two-for-two on the
+same SHA. `all-clear` then concluded FAILURE correctly ("1 failing check run"),
+not by timeout.
+
+What the evidence actually says. On the **identical SHA cc0af3cc** there are two
+`Linux/Mac build` runs, because the branch gets both a push-event and a
+PR-event run:
+
+    run 30954659897  (push event)   symplectic job  SUCCESS
+    run 30954663342  (PR event)     symplectic job  FAILURE, FAILURE
+
+Same tree, same workflow, opposite results. Supporting points: main's own Aug-4
+nightly passes this job; #1245 passes it twice; main has not moved since Aug 3
+(edea3253), so the PR-merge tree differs from main only by
+`tests/test_SpiralArmsPotential.py`, which the shard does not even collect.
+There is therefore **no code path by which #1253 can cause this**. (main's other
+recent red, the Jul-28 nightly, was `pyvo` network failure on `from_name` — not
+this test. So the "4 weeks clean" claim was itself built on a miscount.)
+
+Mechanism — NOT settled, and my first explanation was wrong. I initially wrote
+that this was GCC `-ffp-contract=fast` fusing `q + dt*p` into an FMA in one of
+the two steppers and not the other. Then I checked the two jobs' actual build
+logs and both are `-O0 -D USING_COVERAGE` (the coverage matrix entry), same
+numpy 2.5.1, same python3.14. At `-O0` there is no contraction and no
+reassociation, and galpy sets no `-march`/`-ffast-math` anywhere, so that
+explanation is dead. I am recording it as refuted rather than deleting it.
+
+What is structurally true: `integrateFullOrbit_dxdv` does not reuse the plain
+stepper. It dispatches to `leapfrog_dxdv` in `bovy_symplecticode.c`, a separate
+function that drifts with `leapfrog_leapq(ndim=6,...)` and kicks through
+`evalRectForce_dxdv`, where a plain run drifts with `leapfrog_leapq(dim=3,...)`
+and kicks through `evalRectForce`. Two independent implementations of the same
+arithmetic, with an in-code comment stating bit-identity was the design intent
+(the stepsize is deliberately estimated from the base block alone). The test
+also pins `dt=0.01` explicitly, so stepsize estimation is not even exercised.
+
+That leaves a real puzzle: identical source, identical flags, identical inputs,
+pure double arithmetic — which should be deterministic — yet the same SHA passes
+in one run and fails twice in another. The remaining candidate I have not ruled
+out is glibc `libm` IFUNC dispatch: `exp`/`pow`/`log` resolve to FMA/AVX2
+variants on capable CPUs and SSE2 variants otherwise, and those differ in the
+last ulp. That would make results runner-CPU-dependent. It only explains the
+observation if the two code paths reach libm with different arguments or via
+different entry points, which I have not yet verified. Flagging this as
+unresolved instead of asserting a mechanism I have not measured.
+
+Source-level check (done after the above): the base-acceleration block in
+`evalRectForce_dxdv` is token-for-token the same arithmetic as `evalRectForce` —
+same `R=sqrt(x*x+y*y)`, same `acos`, same `calcRforce`/`calcphitorque`/
+`calczforce` calls in the same order, same expressions; only the pointer
+addressing differs (`*a++=` vs `*(a+1)=`). The potential is MiyamotoNagai, which
+is time-independent, so the accumulated `to` in the dxdv stepper cannot matter
+either. So bit-identity is correct BY CONSTRUCTION, and the intermittent 1-ulp
+divergence is not explained by anything I can see in the source. I am leaving it
+explicitly unexplained rather than inventing a third mechanism.
+
+What IS established well enough to act on: the failure is not caused by #1253
+(the changed file is not collected in that shard), it is not new code, and the
+exactness assertion is empirically not robust across CI runners.
+
+Status: third sample re-run dispatched. #1253 will additionally need `all-clear`
+re-run once the build is green, since it has already concluded FAILURE.
+
+### 2026-08-05 05:2xZ — #1245 fully green; #1253 waiting on sample 3
+
+    #1245  all-clear SUCCESS, codecov patch+project SUCCESS, MERGEABLE
+           149/154 checks SUCCESS (the 5 others are the deploy jobs, which are
+           supposed to skip on a PR -- see the 04:21 self-correction)
+    #1253  build att=3 in progress; all-clear already concluded FAILURE, so it
+           will need an all-clear re-run once the build is green
+    #1252  0 real failures, 1 job still running, still needs Jo's admin merge
+
+So of the three, **#1245 is now genuinely done and ready for Jo's merge**. It is
+main-targeted, so I do not merge it.
+
+Local work done during the CI wait, so the wake was not spent idling: started
+the pre-push forced-backend gate (`--backend jax` then `torch`, on
+`test_backend_special.py` and the AnyAxisym tests) on the held ellipkm1 branch.
+Also confirmed both held branches are based on the CURRENT develop head
+(c34abfa3) and that #1252 touches only `tests/backend_slow_skip.txt` -- disjoint
+from both -- so neither owes a rebase. Note the worktree has no libgalpy .so, so
+this gate covers the backend/special paths only, which is what the change
+touches; it is not a C-comparison run.
+
+One real interaction to remember before opening the next PR: #1252 IS the
+slow-skip PR for the jax NonInertial timeouts. Opening a new develop PR before
+it lands means inheriting exactly the timeout flakes it fixes, on a
+runner-constrained project. That, not file conflicts, is the reason to wait.
+
+### 2026-08-05 04:4xZ — unstuck #1252 myself (cancelled RTD build)
+
+Correcting my own timestamps first: the two entries above are labelled 05:0x and
+05:2x but were actually written ~04:2x-04:4x. Wall clock, not content.
+
+Diagnosed the #1252 gate-stick properly via the RTD API instead of guessing:
+
+    build 33915761  commit 8306fa94  state=cancelled  finished=null  duration=null
+
+A cancelled RTD build never posts a final commit status, so
+`docs/readthedocs.org:galpy` was PENDING forever and the all-clear aggregate --
+which counts pending legacy statuses -- would have burned its full 5h and failed
+at 05:05:31Z. Re-running all-clear would have waited another 5h for a status
+that was never coming. Note this is NOT the duplicate-build case in my notes
+(two builds, the cancelled one posting a red): there is exactly one build for
+that SHA, and the same day's builds for #1245 (33916135) and #1253 (33915876)
+both finished successfully. One cancelled build, not a docs problem.
+
+Options were: trigger an RTD rebuild (needs Jo's RTD account -- unavailable),
+POST the commit status myself (I have the token scope, and I did not do it: the
+docs build was genuinely not verified, so publishing "success" would have been a
+false claim about CI), or a fresh SHA. Took the fresh SHA: empty commit
+d37654f5, which disappears on squash-merge. `git diff 8306fa94 d37654f5` is
+empty, so the tree that was 151/151 green is byte-for-byte what re-runs now.
+
+The stale all-clear was auto-cancelled by the workflow's concurrency group, so
+the re-run costs the matrix once, not twice. Full 151-job re-run is the price;
+there is no cheaper path, since reopening the PR triggers the same
+`pull_request` events.
+
+This supersedes the 03:21 phone ping's premise for #1252 -- it no longer needs
+an admin merge, just a green run. I left a comment on the PR saying so.
+
+Confirmed the unstick worked rather than assuming it: RTD build 33919255 for
+d37654f5 exists and is in state `building`. A real build, so a real final status
+is coming. #1252's fresh matrix is registering (99 checks and climbing).
+
+Forced-backend gate on the held ellipkm1 branch: **all four legs green.**
+
+    --backend jax    tests/test_backend_special.py      35 passed
+    --backend jax    test_potential -k anyaxis          10 passed, 1 skipped
+    --backend torch  tests/test_backend_special.py      35 passed
+    --backend torch  test_potential -k anyaxis          10 passed, 1 skipped
+
+That is the pre-push check my notes say I keep skipping, so it is now done ahead
+of time: numpy byte-identity and unforced runs would all have missed a
+forced-backend break, and there is none. The branch is push-ready the moment
+#1252 lands. Caveat recorded honestly: this worktree has no libgalpy .so, so
+these legs exercise the backend/special paths (which is what the change
+touches), not the C-comparison paths.
+
+### 2026-08-05 04:5xZ — torch-polish gate turned up 2 failures; A/B running
+
+Ran the same pre-push forced-backend gate on the SECOND held branch (torch
+brentq Newton-polish). Result is NOT clean and I am not going to write it up as
+if it were:
+
+    --backend torch  tests/test_backend_optimize.py      26 passed
+    --backend jax    tests/test_backend_optimize.py      26 passed
+    --backend torch  test_actionAngle -k vertical/spherical
+                     .....XX....F..XXXX.......F..ssss...   2 FAILED, 6 XPASS
+
+The 2 F's are unexplained so far. They could be pre-existing in that worktree
+rather than caused by the polish: /var/tmp/aa-torch-polish has NO libgalpy .so,
+and a missing C extension is exactly what flips ledgered tests to XPASS (the
+XXXXX run is the tell) and can change which paths the AA tests take.
+
+So I am doing the A/B my own notes demand -- a flip is only real if it fails
+WITHOUT the fix -- using two worktrees rather than a stash (repo-wide stash
+would corrupt the other branch):
+
+    A  /var/tmp/aa-torch-polish  3da30bff  (develop + polish)   -> 2 F
+    B  /var/tmp/aa-baseline      c34abfa3  (develop head, no polish, also no .so)
+
+Both runs dispatched. If B shows the same 2 F's, they are pre-existing and the
+polish is clean; if B is green, the polish regressed something and does not get
+pushed. Either way the answer comes from measurement, not from the fact that I
+already convinced myself this change was safe several wakes ago.
+
+Also in flight: jax `--jit` census on tests/test_potential.py (traced-progress
+measurement, running in /var/tmp/undefer which has a real .so), and #1253's
+att=3.
+
+### 2026-08-05 04:5xZ — att=3 PASSED; torch-polish A/B settled (2 real flips)
+
+**Symplectic, final tally on the identical tree cc0af3cc:**
+
+    run 30954659897 (push event)  symplectic job  SUCCESS
+    run 30954663342 att=1                         FAILURE  5.55112e-16
+    run 30954663342 att=2                         FAILURE  5.55112e-16
+    run 30954663342 att=3                         SUCCESS
+
+Two fails, two passes, same tree, same -O0 --coverage build. So it is genuinely
+non-deterministic, not a hard failure and not caused by #1253 -- which is what I
+said once I stopped guessing, and it is now backed by four samples instead of
+one. The mechanism is still unexplained: base bit-identity is correct by
+construction in the C, dt is pinned, MiyamotoNagai is time-independent, and -O0
+rules out contraction. The recommendation to Jo stands unchanged: exact
+`numpy.array_equal` is not robust here, a few-ulp bound would keep essentially
+all the power, and it is his call because it is a main-side test weakening.
+
+#1253 is now 146 SUCCESS / 0 real failures; its only red was the STALE all-clear
+that had concluded before att=3 passed. Re-ran all-clear (it is queued).
+
+**torch brentq polish: A/B settled, and it is better than I thought.**
+
+    differs (baseline -> polish):
+      xfail -> pass   test_actionAngleVertical_Harmonic_actionsFreqs
+      xfail -> pass   test_actionAngleVertical_Harmonic_actionsFreqsAngles
+    failing in BOTH (pre-existing, not mine):
+      test_actionAngleSpherical_EccZmaxRperiRap_againstOrbit
+      test_actionAngleStaeckel_wSpherical_conserved_actions_c
+
+Both flipped tests are ledgered under `torch` at backend_xfail.txt:140-141.
+What the A/B establishes is that THE POLISH IS THE CAUSE of the flip locally --
+fails without it, passes with it -- and that the 2 remaining failures are not
+its fault. Both are worth having.
+
+CORRECTION to what I wrote here minutes ago ("it has a delta of 2, and the PR
+body must say so"): that overclaims, and my own drafted PR body had already got
+this right before I talked myself out of it. Local torch runs on py3.13 on this
+box; CI runs torch on py3.14. A local pass is therefore NOT evidence that the
+CI ledger entry flips -- this is the exact trap recorded from the earlier
+"6/9 entries flip" miscount, where the CI config was locally unreproducible.
+So the PR body keeps its existing stance: no ledger edit claimed in the PR, the
+ledger edit follows CI evidence, separately. The A/B upgrades my confidence in
+the mechanism, not the ledger claim.
+
+The 2 pre-existing failures are identical in both arms so they are not the
+polish. Note one is `..._conserved_actions_c` -- a C-extension test, and neither
+scratch worktree has a libgalpy .so, which is exactly the missing-C-ext artifact
+my notes warn about. The A/B design is what made this safe to conclude: the
+artifact hits both arms equally, so only the DIFFERENCE is attributable.
+
+Method note worth keeping: both arms' stdout came back as 79-byte logs with the
+summary missing -- the conftest force-exit truncation. Test names were only
+recoverable from --junitxml. Reading the dots alone would have told me "2 F"
+and nothing about WHICH, and would have hidden the xfail->XPASS flips entirely,
+since x and X are one character apart.
+
+**AnyAxisym jit A/B: a clean NEGATIVE, recorded so it does not get overclaimed.**
+
+    A  /var/tmp/anyaxis-backend  9e628142 (ellipkm1)   ...xsx.....
+    B  /var/tmp/aa-baseline      c34abfa3 (develop)    ...xsx.....
+
+Byte-identical: 3 pass, xfail, skip, xfail, 5 pass in both. Fixing the 1-m
+cancellation alone does NOT flip the AnyAxisym jax-jit entries
+(test_2ndDeriv_potential, test_poisson_surfdens_potential). So the ellipkm1 PR
+must NOT claim a jit ledger delta.
+
+SECOND CORRECTION, same wake: I then read the full task record behind that
+standing note and my correction above was itself too strong. The note is the
+one-line summary of a THREE-PART fix on branch feat/anyaxisym-m1-quadrature:
+(1) m1/ellipkm1, (2) graded panels in _bk_split_quad, (3) second derivatives via
+autodiff_ops rather than their own hypersingular integrands. It records that
+piece (2) is the LOAD-BEARING one for accuracy -- without the panels zforce is
+9.4e-01 wrong at z=1e-5 vs 1.2e-12 with -- and it has an explicit control: with
+the #1245 nan fix ALONE, test_eccentricity still fails at the original
+5.42e-06. My A/B tested piece (1) IN ISOLATION, so "no flip" is precisely what
+that record predicts, not evidence against it.
+
+So the accurate statement is narrower than either of my earlier ones: **ellipkm1
+alone does not flip the AnyAxisym jit entries**, which is why the held ellipkm1
+PR must not claim a jit delta. It says nothing about whether the full three-part
+fix does -- and per the task's own measurements it partly does (test_eccentricity
+clears; test_2ndDeriv still fails at z=0 because Rforce is not smooth in R at the
+1e-8 FD scale; the two test_poisson_surfdens entries need _backend_accepts_arrays,
+which is a separate deliberate opt-out).
+
+For the record, the ledger's own comment says these are BY DESIGN:
+the backend path uses GL so gradients exist, and GL cannot resolve the a=R
+principal value or the z=0 Hadamard-type 2nd derivative; under a trace the input
+is a tracer, so the traced value is knowingly less accurate. That rationale is what the
+three-part branch is trying to invalidate, with 10+ orders of accuracy gain
+measured at z=1e-3. My one-line measurement does not settle that argument either
+way; it only bounds what the ellipkm1 PR may claim.
+
+### 2026-08-05 05:00Z — BOTH main-targeted PRs green
+
+    #1245  149 SUCCESS  0 fail  0 running  all-clear SUCCESS   READY
+    #1253  147 SUCCESS  0 fail  0 running  all-clear SUCCESS   READY
+    #1252   43 SUCCESS  55 running, only red = codecov/project
+
+#1253 went green once att=3 passed and I re-ran the stale all-clear. Neither
+#1245 nor #1253 will be merged by me: both target `main`, and my authorisation
+covers feat/backends-develop only. They wait for Jo's ordinary merge. I am NOT
+pinging again for these -- two PRs sitting in a review queue is not a blocker,
+and the 03:21 ping already told him they were coming.
+
+#1252's codecov/project red is the known upload-count phantom: 55 jobs are still
+uploading, and the previous two instances (-70.64% on #1252, -54.09% on #1253)
+both self-healed with no intervention. Not acting on it.
+
+### 2026-08-05 05:04Z — #1252 RTD resolved SUCCESS: the unstick is confirmed end-to-end
+
+    docs/readthedocs.org:galpy   PENDING (forever)  ->  SUCCESS
+
+The empty commit did exactly what it was meant to. The permanently-stuck status
+from the cancelled build 33915761 is gone, replaced by a real build result on
+d37654f5. #1252 is 52 SUCCESS / 46 running, and its only red is the known
+codecov/project upload-count phantom, which self-heals as uploads land.
+
+Worth stating plainly because it changes the standing story: **#1252 never
+needed Jo's admin merge.** The 03:21 ping was raised on the belief that the gate
+could not be cleared without bypass. It could -- the diagnosis just had to go
+one level deeper than "RTD is red, wait for it", which is what my own notes told
+me to do and which was wrong for this case.
+
+Memory updated accordingly: `rtd-duplicate-build-red` now distinguishes the two
+RTD failure modes (cancelled DUPLICATE, which self-heals and must NOT be
+retriggered, vs a LONE cancelled build, which is stuck forever and needs a fresh
+SHA). The old note said "never retrigger" unconditionally and would have kept
+future-me waiting on a status that was never coming. Also recorded
+`symplectic-bitidentity-intermittent` so the 5.55e-16 flake is never again
+attributed to whichever PR happens to be under it.
+
+Housekeeping while CI ran: compacted the memory index 20.6KB -> 15.8KB. That
+surfaced 9 memory files that were ALREADY missing from the index and therefore
+invisible -- including `no-force-push-open-prs`, `flake-watcher-churn` (don't
+run a polling auto-rerun loop; it cancels in-progress jobs), and
+`generic-helpers-go-in-backend`. Re-indexed the live ones, deleted the dated
+session/overnight files. Index now has 0 orphans.
+
+### 2026-08-05 05:10Z — burndown yardstick + ellipkm1 PR body finalised
+
+Ledger on feat/backends-develop, by backend:
+
+    torch      15
+    jax        15
+    jax-jit     3
+    torch-jit   1
+    TOTAL      34   (was 42 before #1250)
+
+Slow-skip list: develop 230 -> #1252 203, i.e. the -27 its title claims is real
+in the file, not just asserted in the description.
+
+Finalised the held ellipkm1 PR body. Two changes, both from measurement rather
+than editing for tone:
+
+1. Its "no ledger change" claim is now backed by the A/B (branch vs the develop
+   head it sits on, `--backend jax --jit -k AnyAxisym`, byte-identical
+   `...xsx.....`) instead of being asserted. Pleasingly, the draft had ALREADY
+   claimed no delta -- so today's A/B independently confirmed it. Worth noting
+   against my own habit of re-deriving things I had already established.
+2. Softened one sentence that read as if the GL `a=R` limitation were permanent.
+   Per task #187's measured table the graded-panel work takes the 2nd-derivative
+   error from ~1e+00 to ~1e-13 at z=1e-3, so it is a limit of the quadrature AS
+   IT STANDS, on a separate branch, not a law of nature. Added the forced-backend
+   gate table (35/35 special on both backends; 10 passed + 1 skipped AnyAxisym on
+   both) since that is the check my notes say I habitually skip.
+
+Pipeline state: #1245 and #1253 green and waiting on Jo; #1252 at 65/33 with only
+the codecov phantom; ellipkm1 verified and queued behind it; torch-polish A/B'd
+clean behind that. jax --jit census on test_potential.py at 46%.
+
+### 2026-08-05 05:14Z — #1252 pre-merge audit (it is mine to merge, so it gets one)
+
+Diff is one text file (36 - / 8 +), so the if->xp.where array-input class,
+duplication and helper-placement checks do not apply -- there is no code. The
+substantive question for an un-defer PR is different: **do the restored tests
+actually run and pass, or do they time out?** Answered from its own CI:
+
+    backend jax tests/test_sphericaldf.py    COMPLETED/SUCCESS    588 s
+
+That is the shard holding all 27 un-deferred tests, and it is green. Wall time
+in context, against the numbers in the comment block this PR deletes:
+
+    3111 s   full shard, before the skip and before Track F
+    1450 s   with the 27 skipped
+     588 s   NOW, with all 27 restored
+
+So un-deferring is currently *cheaper* than the old skipped state -- the Track F
+spherical-DF migration (vectorised sampling + GL quadrature) is what made that
+true, which is exactly the condition the comment said to delete these lines
+under. No test hit the 300 s per-test timeout. Re-measured rather than trusting
+the header numbers, per my own note that those go stale.
+
+Entry count verified independently of the line diff: 230 -> 203 = -27, matching
+the title. The 8 added lines replace the comment block rather than dropping it,
+so the one remaining entry keeps its rationale.
+
+Audit verdict: **merge when green.** Currently 79 SUCCESS / 19 running, only red
+is the codecov upload-count phantom.
+
+### 2026-08-05 05:19Z — jax --jit census on test_potential.py: 3 UNLEDGERED failures
+
+Interim, at 891 of ~1430 tests (62%), running in /var/tmp/undefer which has a
+real libgalpy .so so the census is valid (not the fake-PASS artifact):
+
+    passed   798
+    skipped   88
+    FAILED     3    <-- unledgered
+    xfail      2
+    xpass      0
+    errors     0
+
+The 2 xfails match the two ledgered `jax-jit` AnyAxisym entries that live in
+this file, which is the check that the ledger IS being applied in this run --
+without that, every ledgered entry would show as F and the count would be
+meaningless. So the 3 F's are genuinely NOT in the ledger: real traced gaps in
+test_potential.py that nobody has recorded.
+
+That is a useful finding on its own. The standing note says test_potential is
+"99.7% traced" and it is the file closest to traced-green, so unledgered
+failures there are exactly the residue worth chasing for
+[[Burn down the jax-jit ledger]]. Parser armed to name them from the junitxml
+on completion -- names are not recoverable from the progress dots, and the
+conftest force-exit truncates the stdout summary.
+
+Deliberately NOT drawing a conclusion about which potentials are involved until
+the names land. Three dots in a progress line is not a diagnosis.
+
+### 2026-08-05 05:28Z — codecov red on #1252 VERIFIED as the phantom (not assumed)
+
+Pulled the check-run output instead of pattern-matching it to the memory note:
+
+    codecov/patch    SUCCESS   "Coverage not affected when comparing c34abfa...d37654f"
+    codecov/project  FAILURE   "76.71% (-23.25%) compared to c34abfa"
+
+Three independent reasons this cannot be a real regression:
+  1. The PR changes ZERO code lines -- the diff is one skip-list text file.
+  2. Un-deferring 27 tests can only RAISE coverage, never drop it 23 points.
+  3. codecov/patch itself says coverage is not affected by the diff.
+
+So it is the upload-count phantom, with 13 jobs still uploading. The healing is
+directly observable across the two SHAs of this PR: -70.64% on 8306fa94 ->
+-23.25% now on d37654f5, converging as uploads land. Same story as the two
+earlier instances, both of which reached SUCCESS untouched.
+
+Worth the two API calls: "it matches the known phantom" and "I checked that it
+is the known phantom" are different claims, and codecov/project IS a merge gate
+here via all-clear, so getting it wrong would mean either a bogus merge or a
+pointless re-run.
+
+### 2026-08-05 05:38Z — numpy byte-identity for ellipkm1: MEASURED, not inspected
+
+The held ellipkm1 PR claimed numpy byte-identity "verified by inspection". Since
+byte-identical numpy is the project's hard constraint, inspection is the wrong
+evidence standard. Measured it instead: all 7 numpy-path AnyAxisym methods on a
+6x8 (R,z) grid, z spanning 0 / 1e-12 / 1e-8 / 1e-5 / 1e-3 / 0.01 / 0.1 / 0.5,
+run on the branch and on the develop head it sits on, compared as raw bytes.
+
+    __call__  10d1669d45c56260  ==  10d1669d45c56260
+    Rforce    3575964510cdb456  ==  3575964510cdb456
+    zforce    396ded9dea6289f5  ==  396ded9dea6289f5
+    R2deriv   b18ff940bd2a7849  ==  b18ff940bd2a7849
+    z2deriv   f7d77d8c550791d7  ==  f7d77d8c550791d7
+    Rzderiv   5fa02cc0111a54a9  ==  5fa02cc0111a54a9
+    dens      ee158de7055411da  ==  ee158de7055411da
+
+Then checked the check itself, because a hash match is trivially true if the
+arrays are mostly nan -- exactly the vacuous-green failure mode:
+
+    336 values, 319 finite, 294 DISTINCT, |v| in [0, 6.9e7]
+    0 finite mismatches, identical nan bit patterns
+
+Two deliberate choices: hashing raw bytes rather than `==` (nan != nan would let
+an elementwise check pass silently), and including z=0 and 1e-12 because those
+are precisely where this patch changes the backend path.
+
+PR body updated to carry the table. This is the standard the numpy constraint
+deserves and I should apply it by default to any PR touching a migrated
+potential, not only when I happen to think of it.
+
+### 2026-08-05 05:43Z — jit census COMPLETE: the residue is 4 pickling tests, 2 causes
+
+    tests/test_potential.py  --backend jax --jit
+    total 1385   passed 1261   FAILED 4   xfail 2   skipped 118
+
+Correction to my own interim numbers: it is 4 unledgered failures, not 3 -- the
+fourth landed in the final 7% after I reported "3". Also correcting a guess I
+made before reading anything: I speculated the cause was "jit-wrapped objects
+are unpicklable / the identity-keyed trace cache". That is WRONG. The errors say
+otherwise, and there are TWO distinct causes, not one:
+
+**(a) TracerArrayConversionError -- 3 tests.** Real traced-mode limitation:
+
+    test_pickling_potential_user_callables
+    test_pickling_potential_unitful_dens
+    test_pickling_potential_drops_units_wrapper
+      jax.errors.TracerArrayConversionError: __array__() was called on traced
+      array with shape float64[], while tracing the shim at
+      galpy/backend/_jit.py:148
+
+i.e. something in these paths demands a CONCRETE value while the input is a
+tracer. That is structural: you cannot materialise a tracer to numpy mid-trace.
+Candidate disposition is the `not-traceable` category rather than a defect.
+
+**(b) trace mode SWALLOWS an exception into a silent NaN -- 1 test.** I first
+wrote this up as "a latent test bug (nan == nan)". That is the proximate
+assertion failure but NOT the root cause, and the fuller version matters more.
+
+    test_pickling_potential[RazorThinExponentialDiskPotential]
+      AssertionError: Unpickled ... .dens(0.5, 0.125) differs from the original
+      assert Array(nan) == Array(nan)
+
+Measured, and it answers the question I had deferred. Off-plane `dens` for this
+potential does NOT return nan outside a trace -- it RAISES:
+
+    numpy       dens(0.5, 0.125)  -> PotentialError: '_R2deriv' not implemented
+    jax eager   dens(0.5, 0.125)  -> PotentialError: '_R2deriv' not implemented
+    jax --jit   dens(0.5, 0.125)  -> Array(nan)
+    (both,      dens(0.5, 0.0)    -> inf, correct: razor-thin, delta in-plane)
+
+And the test reads (test_potential.py:1189):
+
+    try:
+        expected = getattr(tp, method)(R, z)
+    except Exception:   # not supported by this potential/at this point
+        continue
+
+So eager SKIPS `dens` here by design. Under a trace no exception is raised, the
+skip never fires, and the comparison proceeds to `nan == nan` and fails.
+
+The root cause is therefore **trace mode turning an unsupported-operation error
+into a silent NaN**, not the test's equality idiom. That is the more serious
+finding: under jit, a razor-thin disk's off-plane `dens` quietly returns NaN
+instead of telling the caller it is unsupported. Very likely the data-dependent
+"not implemented" branch stops being reachable under tracing and both sides of
+a `where` get evaluated ([[xp-where-dead-branch-guards]]) -- but that is a
+hypothesis about the mechanism; I have measured the BEHAVIOUR, not yet the line
+that produces it.
+
+My first pass at this also used the wrong construction (`normalize=1.0`) and so
+did not reproduce the test at all -- it raised instead of returning nan. Reading
+the test was what made the difference ([[reread-failure-before-investigating]]).
+
+**THIRD PASS, and it overturns the second: the NaN is INTENDED.** I called it
+"trace mode swallowing an exception into a silent NaN ... the more serious
+finding". Wrong. I then read `RazorThinExponentialDiskPotential._R2deriv:239`:
+
+    if under_trace(z):
+        # Traced: the domain cannot be decided at trace time, so return
+        # NaN off-plane rather than refusing to trace at all. Asked via
+        # under_trace, not a concreteness probe: dynamo makes float(x)
+        # symbolic, so a probe answers "decidable" under torch.compile ...
+        return xp.where(inplane, val, xp.asarray(xp.nan))
+    if not allin:
+        raise AttributeError("'R2deriv' ... not implemented for z =/= 0")
+
+Explicit, commented, with the rationale AND a note on why `under_trace` rather
+than a concreteness probe. Off-plane NaN under a trace is the deliberate design:
+the domain is undecidable at trace time, and the alternative is refusing to
+trace at all. There is no defect in the potential.
+
+So the correct disposition is my FIRST one, which I talked myself out of: the
+failing item is **test-side**. Eager skips `dens` through
+`except AttributeError: continue`; under a trace nothing raises, so the test
+reaches `nan == nan` and fails. Fix is a nan-aware comparison (or skipping on
+NaN) in `test_pickling_potential`, not a change to traced behaviour.
+
+Three passes on one test, and the thing that settled it was reading the source
+comment -- which is exactly what [[read-code-docs-before-classifying]] tells me
+to do FIRST. I had the note and reached for behavioural probes instead. The
+ordering that would have worked: read the test, read the implementation, then
+measure. I did measure-guess-measure-read.
+
+
+Scope check before anyone panics: jit mode is dispatch-only
+(workflow_dispatch jit=true), so these 4 do NOT red any per-PR shard today.
+The value is knowing the residue precisely for the jax-jit burndown.
+
+Method note: the names and messages were only recoverable from --junitxml. The
+progress dots gave a count and nothing else, and the conftest force-exit
+truncates the stdout summary. Counting F's told me "3, probably interesting jit
+gaps"; the xml told me "4, of which 3 are one structural limit and 1 is a test
+bug". Those are different conclusions.
+
+### 2026-08-05 05:57Z — codecov phantom healing, quantitatively
+
+Tracked the same check across uploads rather than just asserting "it self-heals":
+
+    -70.64%   on the old SHA 8306fa94
+    -23.25%   on d37654f5, ~55 jobs still running
+    -13.84%   on d37654f5, 3 jobs still running
+
+Monotone convergence toward 0 as uploads land, with codecov/patch reporting
+"Coverage not affected" throughout. That is the upload-count phantom behaving
+exactly as diagnosed, now with a trend rather than a single reading.
+
+#1252 is 96 SUCCESS / 3 running. Squash-merge message prepared so landing it is
+one command: the title already states the delta, and the body carries the CI
+evidence (588 s shard, green) plus the 3111/1450/588 comparison and the
+independent 230 -> 203 entry count, with the co-author trailer.
+
+### 2026-08-05 06:21Z — #1253 MERGED by Jo; #1245 green but reports BLOCKED
+
+    #1253  MERGED 06:11:30Z -> main 80a10d66   (first main-targeted PR of this run to land)
+    #1245  OPEN, 149 SUCCESS / 0 fail / 0 running, all-clear SUCCESS
+    #1252  97 SUCCESS / 2 running, all-clear IN_PROGRESS, codecov phantom still red
+
+README PR table updated for #1253 (open -> merged, with the landing SHA), per the
+"update the README table as part of LANDING each PR" rule.
+
+Jo asked directly whether #1245 is good, so I re-verified rather than answering
+from my earlier reading. CI-wise it is unambiguously green: 149 SUCCESS, the 5
+non-SUCCESS are 3 deploy jobs that correctly skip on a PR plus RTD and
+pre-commit.ci as legacy SUCCESS statuses, and `all-clear` is SUCCESS **on the
+current head da398e0b from app 15368** -- byte-for-byte the same provenance as
+the #1253 that just merged.
+
+But GitHub reports `mergeStateStatus=BLOCKED` and I could not attribute it:
+
+    required_approving_review_count      0      (so not a missing review)
+    strict_required_status_checks_policy false  (so being 1 behind main is fine)
+    required checks                      all-clear only, and it is SUCCESS
+    classic branch protection            404 -- rulesets only, nothing hidden there
+
+Re-polled twice after waiting, in case #1253's merge had just invalidated the
+computation. Stayed BLOCKED. Reported it to Jo as unexplained rather than
+inventing a cause -- he merged #1253 under identical rules, so the button
+probably works for him; if it does not, that is repo config, not the PR.
+
+Noted for him at merge time: #1245 deliberately CHANGES numpy values (the agreed
+call), unlike the backend-only ellipkm1 work queued behind it. That distinction
+matters and is easy to lose between two PRs touching the same potential.
+
+### 2026-08-05 06:26Z — #1252's long pole measured: the test_backend shard is ~90 min
+
+    this run  (d37654f5)  started 04:59:41, still in "Test with pytest" at 87 min
+    prior run (8306fa94)  same shard: 89.8 min, SUCCESS
+
+So it is not hung -- it is just a ~90 minute shard, and it is the long pole for
+any feat/backends-develop PR. Checked before worrying, and worth knowing for
+planning: the queued ellipkm1 PR will also sit ~90 min on this shard, so
+"#1252 merges then ellipkm1 goes green" is a ~1.5 h round trip, not minutes.
+No timeout-minutes is configured for the job, so it runs on the 360 min default
+with plenty of headroom.
+
+#1252 now: 97 SUCCESS, 2 running (this shard + all-clear), only red is the
+codecov phantom which has been converging monotonically all night.
+
+### 2026-08-05 06:30Z — jit residue SETTLED: all 4 are test-side, none a galpy defect
+
+Chased the last open item -- what actually calls `__array__` in the 3
+TracerArrayConversionError tests -- by reading the fixtures instead of
+theorising about the shim. All three feed USER CALLABLES into potentials, and
+the module-level fixtures hardcode numpy:
+
+    def _pickletest_dens(R, z):
+        return 13.5 * numpy.exp(-3.0*R) * numpy.exp(-27.0*numpy.fabs(z))
+
+9 of the `_pickletest*` helpers call `numpy.` directly. Under a trace the
+potential hands them tracers, and `numpy.exp` on a tracer calls `__array__`.
+
+So the whole residue in test_potential.py is now characterised, and **none of it
+is a galpy defect**:
+
+    3 tests  numpy-hardcoded fixture callables -> not traceable
+    1 test   nan-unaware `==`, against a deliberate traced-domain NaN sentinel
+
+The 3 also surface something worth stating in the jit docs rather than the
+ledger: **a user-supplied numpy callable is not traceable.** galpy cannot trace
+through someone else's numpy function. That is a real limit of the feature, not
+a bug, and users will hit it. Options are to make the fixtures backend-agnostic
+so the traced path IS exercised, or to mark them not-traceable -- a test-side
+call either way.
+
+That closes the census cleanly: 1385 tests, 1261 pass, and the entire unledgered
+residue reduces to two small test-side items with known fixes. Good burndown
+intel for #158, and it needed no source change to galpy.
+
+### 2026-08-05 06:35Z — #1252: codecov phantom fully healed; all-clear raced it, re-run
+
+The phantom resolved exactly as the trend predicted, and the final number
+settles the diagnosis beyond doubt:
+
+    codecov/patch    SUCCESS  "Coverage not affected"
+    codecov/project  SUCCESS  99.95% (+0.00%)
+
++0.00% -- the diff never affected coverage at all, which is what patch said from
+the first reading. The full arc: -70.64% -> -23.25% -> -13.84% -> +0.00%.
+
+But `all-clear` had already concluded at 06:33:50 with "1 failing check run(s)"
+-- it evaluated while codecov/project was still red and lost the race by
+minutes. Everything else on the PR is SUCCESS (99 checks), 0 running.
+
+So this is a re-run, not a fix: nothing is wrong with the PR. Re-ran all-clear
+(run 30975949204) and armed a watcher on its conclusion. This is the ordering
+hazard worth remembering -- all-clear can be racing a self-healing check, and
+its FAILURE then reports a condition that has already gone away.
+
+### 2026-08-05 06:40Z — #1252 MERGED; #1254 (ellipkm1) opened
+
+    all-clear re-run: COMPLETED/SUCCESS   -> 100 checks SUCCESS, 0 fail, CLEAN
+    #1252 squash-merged into feat/backends-develop as 7b6f5ae4
+
+The re-run confirmed the read: nothing was wrong with the PR, all-clear had
+merely raced the codecov self-heal. Landed with the evidence in the commit body
+(588 s green shard, the 3111/1450/588 comparison, the independent 230 -> 203
+count) rather than just the title's claim.
+
+Then opened the next one immediately, per one-PR-at-a-time:
+
+    #1254  backend: exact-complement K via ellipkm1, and delete the AnyAxisym m-clamp
+           base feat/backends-develop, 5 files, +98 -27
+
+Pre-flight done BEFORE opening, not after:
+  - merge-tree against the NEW develop head 7b6f5ae4: **0 conflicts**. #1252
+    touched only tests/backend_slow_skip.txt, disjoint from all 5 files here,
+    so no rebase was owed ([[dont-reflexively-rebase-disjoint-prs]]).
+  - conflict-marker sweep with the DOCUMENTED regex: clean.
+  - forced-backend gate: 35/35 test_backend_special on jax and torch, plus
+    10 passed/1 skipped AnyAxisym on both.
+  - numpy byte-identity MEASURED, not inspected: 7 methods, 336 values,
+    294 distinct, sha-equal on both arms.
+  - ledger claim A/B'd: byte-identical `...xsx.....` on branch and base, so the
+    body claims NO jit delta and says so with the evidence.
+
+README PR table updated for both (1252 -> merged with SHA and the shard timing;
+new #1254 row noting it is backend-only, explicitly distinguished from #1245
+which deliberately changes numpy values).
+
+Queue now: #1254 in CI (~90 min on the test_backend shard, the long pole),
+torch-polish A/B'd and ready behind it, #1245 green and awaiting Jo on main.
+
+### 2026-08-05 06:46Z — testing option (i) for the jit pickling residue
+
+#1254 is in CI (149 running, ~90 min on the long pole), so this wake went to the
+next thing in the queue rather than polling.
+
+Task #193 left a genuine design choice for the 3 TracerArrayConversionError
+tests: (i) make the numpy-hardcoded fixture callables backend-agnostic so the
+traced path IS exercised, or (ii) mark them not-traceable. I said (i) looked
+better. Rather than argue it, I am MEASURING whether (i) actually works.
+
+Branched fix/jit-pickling-test-fixtures off the new develop head (7b6f5ae4) and
+converted the 7 fixtures the failing tests use:
+
+    numpy.exp/fabs/sign   ->   xp = get_namespace(...); xp.exp/abs/sign
+
+`get_namespace` was already imported in test_potential.py (line 18), so this is
+one line per fixture and no new dependency.
+
+Running both arms: numpy (must be UNCHANGED -- these fixtures feed eager tests
+too) and jax --jit on the 3 targets. If numpy shifts at all, (i) is dead
+regardless of whether the traced tests pass. Result next wake.
+
+Deliberately NOT committing to (i) as the answer yet -- proving it is feasible
+is not the same as deciding it is right. Keeping numpy-hardcoded fixtures has a
+real argument behind it: they represent what a user actually writes, and the
+traced failure is then a legitimate "not traceable" signal rather than a defect.
+
+
+### 2026-08-05 06:49Z — MEASURED option (i); it fixes 1 of 3, and corrects my "all test-side" claim
+
+Ran both arms of the fixture experiment. Results, and they split the residue
+differently than I logged an hour ago:
+
+    numpy          60 passed   (pickling tests unchanged -- (i) is safe there)
+    jax --jit      PASS  test_pickling_potential_user_callables      <-- FIXED
+                   FAIL  test_pickling_potential_unitful_dens
+                   FAIL  test_pickling_potential_drops_units_wrapper
+
+**(i) works, but only for the one test it applies to.** Converting the 7
+numpy-hardcoded fixtures (`numpy.exp/fabs/sign` -> `xp = get_namespace(...)`)
+makes `user_callables` pass traced, and leaves numpy untouched. That half of my
+diagnosis is now proven rather than argued.
+
+**CORRECTION to "all 4 are TEST-SIDE, none a galpy defect".** Wrong for the
+other 2. Their traceback goes into galpy, not the test:
+
+    galpy/potential/AnySphericalPotential.py:171  in _backend_dens
+    galpy/backend/_namespaces.py:204              TracerArrayConversionError
+
+and line 171 is deliberate, with the reasoning already in its docstring:
+
+    if is_backend_array(a) and self._dens_needs_numpy:
+        d = numpy.asarray(self._rawdens(as_numpy(a)))
+        return as_backend_constant(get_namespace(a), d, a)
+
+A units-based `dens` runs through astropy Quantity arithmetic, which strips a
+jax/torch node to numpy; such a density is *inherently non-differentiable*, so
+galpy evaluates it on the numpy node and anchors the result back. That is fine
+EAGER -- a concrete jax array converts -- and structurally impossible UNDER A
+TRACE, because `as_numpy(tracer)` is `numpy.asarray(tracer)`, the exact error.
+
+So the settled split is:
+
+    1  user_callables        TEST-SIDE, numpy-hardcoded fixtures    -> FIXED (measured)
+    2  unitful/drops_units   GALPY-SIDE but BY DESIGN               -> not-traceable
+    1  RazorThin pickling    TEST-SIDE, nan-unaware `==`            -> small fix
+
+Note what "by design" means here and does not mean: it is not a defect, but it
+IS a real limit worth stating in the jit docs -- **a units-based density cannot
+be traced**, because units force a numpy round-trip.
+
+Third correction in this investigation, and all three came from reading source
+instead of inferring from an exception. The pattern is consistent enough to name:
+an exception tells you WHERE, never WHETHER it was intended. The docstring does.
+
+### 2026-08-05 06:54Z — fixture branch now carries BOTH test-side fixes
+
+#1254's matrix is still queuing (0/149 after ~14 min, normal on a constrained
+runner pool), so this wake finished the local branch rather than polling.
+
+Added the second test-side fix to fix/jit-pickling-test-fixtures: a nan-aware
+comparison in test_pickling_potential. It KEEPS exact equality and adds only the
+carve-out that a NaN must compare equal to itself, with the reason in a comment
+(RazorThinExponentialDisk._R2deriv returns NaN off-domain under a trace by
+design, and `nan == nan` is False, so a plain `==` fails on values that agree).
+Deliberately not weakened to a tolerance -- "unpickling reproduces the object"
+still means identical floats.
+
+    numpy pickling suite: 60 passed, unchanged   <-- the bar that matters first
+    jax --jit run in flight
+
+Branch state (off develop 7b6f5ae4, NOT pushed): 21 insertions, 8 deletions in
+tests/test_potential.py -- 7 fixtures converted to the resolved namespace, plus
+the nan carve-out. Expected outcome: 2 of the 4 census failures fixed, the other
+2 (units -> as_numpy(tracer)) staying not-traceable by design, which is a ledger
+entry rather than a code change.
+
+Queue unchanged and deliberately serial: #1254 in CI, torch-polish A/B'd behind
+it, this one third.
+
+### 2026-08-05 06:59Z — fixture branch VERIFIED: 4 jit failures -> 2, numpy unchanged
+
+    numpy pickling suite     60 passed   (unchanged, both arms)
+    jax --jit, before        4 failures
+    jax --jit, after         2 failures
+
+and the 2 survivors are exactly the pair predicted to survive:
+
+    test_pickling_potential_unitful_dens
+    test_pickling_potential_drops_units_wrapper
+
+i.e. the units path, where AnySphericalPotential._backend_dens deliberately does
+`as_numpy()` on a non-differentiable Quantity-based density. Not test-side, not
+fixable here, and correctly left untouched.
+
+Committed as ebabf05a on fix/jit-pickling-test-fixtures (off develop 7b6f5ae4,
+NOT pushed -- one PR at a time, and #1254 is in flight). Pre-commit ran clean on
+the first attempt for once.
+
+What this branch will claim when it goes up, all measured rather than argued:
+  - 2 of the 4 unledgered jit failures in test_potential.py fixed
+  - numpy untouched (60 passed both before and after)
+  - the other 2 ledgered as not-traceable, with the docstring reason quoted
+  - no galpy source change at all
+
+That closes the loop opened by the census several wakes ago: a "4 mysterious jit
+failures" observation is now 2 fixed, 2 understood-and-documented, 0 defects.
+
+### 2026-08-05 07:21Z — #1245 MERGED too; three PRs landed; a future conflict to flag
+
+    #1253  MERGED -> main  80a10d66
+    #1245  MERGED -> main  cd81fbed   (06:40:36Z)
+    #1252  MERGED -> feat/backends-develop  7b6f5ae4
+    #1254  OPEN, 149 checks ALL QUEUED, 0 started after ~40 min
+
+So the `mergeStateStatus=BLOCKED` I could not attribute on #1245 was indeed not
+a real obstacle for Jo -- he merged it. Recording that outcome next to the
+puzzle, since I flagged it as unexplained: it did not block the actual merge.
+README updated (#1245 -> merged, with cd81fbed). Task #189 (the AnyAxisym
+_zforce_numpy nan band) closed -- that was this PR's content.
+
+#1254's queue is NOT stuck, it is contention. Repo-wide: 4 runs in progress, 17
+queued, and the in-progress ones are legitimate current work --
+
+    all-clear + notebooks   feat/backends-develop 7b6f5ae4  (post-#1252-merge CI)
+    Linux/Mac + Windows     main cd81fbed                   (post-#1245-merge CI)
+
+i.e. two merges I caused/awaited are consuming the pool ahead of #1254. Nothing
+stale to cancel; re-pushing would only re-queue the same work. Leaving it.
+
+**Flagging a conflict that is coming, before it bites.** #1245 (now on main)
+and #1254 (open on develop) BOTH edit
+galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py -- #1245 the
+numpy/scipy call sites, #1254 the `_bspecial` backend sites. Different call
+sites, same file, so the next feat/backends-develop <- main sync will very
+likely conflict textually there. That sync is also the prerequisite for task
+#187 step (a) (rebase feat/anyaxisym-m1-quadrature once #1245 landed), which is
+now unblocked. Worth doing deliberately rather than discovering mid-rebase.
+
+### 2026-08-05 07:26Z — measured the develop<-main sync; my conflict flag was WRONG
+
+#1254 is still fully queued (0 of 149 started, ~45 min) behind the two
+post-merge matrices, so I measured the sync I flagged last wake instead of
+polling. Read-only on purpose: rebasing develop NOW would move #1254's base and
+throw away its 149 queued jobs.
+
+    merge-base fe5eaa21
+    develop behind main by   9 commits
+    develop ahead by       272 commits
+    files main touched that develop ALSO touches: 7
+
+`git merge-tree --write-tree` against develop and main:
+
+    CONFLICT (content): tests/test_potential.py       <-- the ONLY one
+    Auto-merging galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py
+    Auto-merging .github/workflows/build.yml
+    Auto-merging .github/workflows/test-doc-notebooks.yml
+    Auto-merging galpy/orbit/Orbits.py
+    Auto-merging galpy/potential/TwoPowerSphericalPotential.py
+    Auto-merging tests/test_orbits.py
+
+**Correcting myself: the AnyAxisym potential file does NOT conflict.** Last wake
+I said #1245 and #1254 both editing it made a textual conflict "very likely".
+Git auto-merges it cleanly -- they touch genuinely different call sites (scipy
+vs `_bspecial`), far enough apart that no hunk overlaps. Flagging a risk is
+cheap; measuring it took two commands and it was not real.
+
+Also good, and worth knowing given I cannot push workflow changes: both
+`.github/workflows/*` files auto-merge, so the sync needs no workflow edit.
+
+The one conflict is trivial -- an ADJACENCY conflict, two tests added at the same
+place, 62 lines of 14181:
+
+    develop:  test_pickling_potential_drops_units_wrapper
+    main:     test_anyaxisymrazorthin_smallz_limit   (from #1245)
+
+Both pure additions. Resolution is "keep both".
+
+CAVEAT I am not glossing over: merge-tree measures the NET merge conflict. The
+project rule is rebase-only ([[no-merge-commits-rebase-only]]), and a rebase
+replays 272 develop commits onto main, so the same region can resurface
+commit-by-commit rather than once. The net content divergence being this small
+is encouraging, not a promise that the rebase is one-touch.
+
+Sequencing: do the sync AFTER #1254 lands, never before. It also unblocks task
+#187 step (a).
+
+### 2026-08-05 07:30Z — completed the pickling branch: 2 fixed + 2 ledgered
+
+#1254 still 0-of-149 started (~55 min) -- the pool is taken by develop's and
+main's post-merge matrices. Checked those are healthy rather than assuming:
+develop 7b6f5ae4 shows no failed jobs so far (notebooks already SUCCESS), so my
+#1252 merge did not break the branch everything bases on.
+
+Did NOT cancel them to free runners for #1254, though it was tempting. main's
+run verifies a merge that deliberately changes numpy values, and develop's is
+the base for every future PR -- both are signals worth more than my queue
+position.
+
+Finished the pickling branch so it is a complete unit rather than a half-fix:
+added the 2 not-traceable ledger entries with the reason recorded next to them,
+
+    jax-jit tests/test_potential.py::test_pickling_potential_unitful_dens
+    jax-jit tests/test_potential.py::test_pickling_potential_drops_units_wrapper
+
+prefaced by a comment stating WHY it is by construction and not a defect:
+AnySphericalPotential._backend_dens deliberately evaluates a units-based density
+on the numpy node (astropy Quantity arithmetic strips backend nodes, so it is
+inherently non-differentiable) and anchors the result back -- which routes
+through as_numpy(), i.e. numpy.asarray(), and a tracer cannot satisfy that.
+Eager is fine. Un-ledger only if units handling ever becomes backend-native.
+
+Verifying the entries actually BIND (a nodeid typo would silently leave them as
+failures rather than xfails) -- run in flight.
+
+Branch will therefore claim, all measured: 2 of 4 jit failures fixed, 2 ledgered
+with rationale, numpy untouched, zero galpy source changes.
+
+### 2026-08-05 07:34Z — ledger entries VERIFIED to bind; pickling branch complete
+
+    tests/test_potential.py --backend jax --jit -k pickling
+    before the branch:  4 failed
+    after:              total=60   FAILED=0   xfail=2
+
+The two xfails are the ledgered units entries, so they BIND -- worth checking
+rather than assuming, because a nodeid typo leaves an entry silently inert and
+the test just keeps failing. Committed as 7277765a on
+fix/jit-pickling-test-fixtures (2 commits now, still unpushed).
+
+Branch summary, every claim measured:
+    2 of the 4 unledgered jit failures FIXED (backend-agnostic fixtures)
+    2 ledgered as not-traceable, with the design reason inline
+    numpy pickling suite 60 passed, unchanged
+    zero galpy source changes
+
+That is the whole test_potential.py jit residue closed out: 1385 tests, and the
+traced run now has no unexplained failure left in that file.
+
+### 2026-08-05 07:35Z — dispatched a jit census on test_sphericaldf.py (new ground)
+
+#1254 has started moving (1 running, 148 queued) but is hours out. Per the
+mission's "dispatch a jit run to measure traced progress", picked a file whose
+TRACED status has never been measured: tests/test_sphericaldf.py. #1252 just
+un-deferred it for EAGER jax; whether it traces is a separate, unasked question.
+
+Running in /var/tmp/undefer (real .so, on the pickling branch, which only
+touches test_potential.py + the ledger, so it cannot skew a sphericaldf census).
+junitxml as always -- dots give a count, names come only from the xml.
+
+Also noted and deliberately NOT touched: `git stash list` shows stash@{0} from
+feat/native-grid-spline ("WIP: fully-native c=False grid ... STOP: interpRZ
+regression"). Stashes are repo-wide, not per-worktree
+([[git-stash-is-repo-wide-not-worktree]]), so popping it here would drag another
+branch's WIP into this tree. Left alone; recording it so a future wake does not
+"discover" it and try to be helpful.
+
+Queue: #1254 in CI, torch-polish ready, pickling branch (2 commits, verified)
+ready, sphericaldf census measuring.
+
+### 2026-08-05 07:40Z — free ledger-staleness sweep off develop's post-merge artifacts
+
+#1252's merge triggered a full All-backend run on develop, which means
+backend-junit-* artifacts exist at zero extra runner cost. Ran the sweep
+(ledger INTERSECT tests-that-passed):
+
+    coverage: 1527 jax + 1368 torch passing nodeids
+    stale candidates: 1
+
+    jax  tests/test_sphericaldf.py::test_anisotropic_hernquist_negdf
+
+The run was still queued (some shards unfinished), which is FINE in this
+direction: an entry that passed is stale regardless of what other shards do, so
+a partial sweep under-reports but never false-positives. Worth stating because
+the opposite direction -- concluding an entry is still needed -- would NOT be
+safe from a partial run.
+
+Verified before removing rather than trusting one CI observation: ran it locally
+under eager jax -> `X` (XPASS). CI's shard runs the whole file and mine was a
+single nodeid, so the in-context and isolated readings agree
+([[handpicked-nodeid-batch-is-not-a-context]] cuts both ways -- here they
+concur). Track F's spherical-DF migration is what fixed it; the entry outlived
+its cause.
+
+Committed as ae39c052. Folded onto the pickling branch rather than opening a
+fourth PR -- it already edits backend_xfail.txt, and grouped burndown PRs are
+allowed ([[pr-granularity-less-atomic]]). The PR title will need to say so
+rather than pretending it is only about pickling.
+
+Ledger: 34 -> 36 (+2 not-traceable) -> 35 (-1 stale).
+
+Meanwhile: #1254 accelerating (5 running, 144 queued), and the sphericaldf jit
+census is 73 tests in with ZERO failures so far -- an encouraging first look at
+a file whose traced status had never been measured.
+
+### 2026-08-05 07:50Z — test_sphericaldf.py is TRACED-GREEN (first measurement)
+
+    tests/test_sphericaldf.py --backend jax --jit
+    total=223   passed=222   FAILED=0   xfail=0   skipped=1
+
+The whole spherical-DF suite traces clean. This file's TRACED status had never
+been measured -- #1252 only un-deferred it for EAGER jax -- so this is new
+information, and it is the good kind: the DF layer needs nothing to be jittable.
+
+The single XPASS is a clean bonus confirmation. Exactly one jax entry existed
+for this file when the census started (the census reads the ledger at
+collection, and it began BEFORE my prune):
+
+    jax tests/test_sphericaldf.py::test_anisotropic_hernquist_negdf
+
+and the run showed exactly one X. So the entry I pruned an hour ago is now
+confirmed stale THREE independent ways:
+
+    1. CI artifacts, develop post-merge eager-jax shard  -> passed
+    2. local, isolated, eager jax                        -> X (XPASS)
+    3. local, full file, jax --jit                       -> X (XPASS)
+
+Isolated and in-context, eager and traced, local and CI. That is about as
+settled as a burndown flip gets, and it cost no extra runner time.
+
+Post-prune the file has ZERO ledger entries, eager or traced.
+
+Worth contrasting with test_potential.py, where the same exercise found 4
+unledgered failures. Two files, two very different answers -- which is exactly
+why the census is worth running per-file rather than assuming the answer
+generalises from whichever file was measured first.
+
+#1254: 10 running, 139 queued, 0 red so far.
+
+### 2026-08-05 07:54Z — #1254's first reds are both codecov, both early-upload
+
+    codecov/patch    FAILURE  "10.00% of diff hit (target 99.95%)"
+    codecov/project  FAILURE  "33.57% (-66.39%) compared to c34abfa"
+
+Different from #1252, where patch stayed green throughout -- so worth checking
+rather than pattern-matching. It is explicable: only 3 shards have finished,
+
+    test_actionAngle
+    test_quantity + test_coords
+    test_jeans + test_dynamfric + test_FDMdynamfric
+
+and NONE of them touches this diff. The shards that actually exercise
+galpy/backend/special/* and AnyAxisym -- test_backend_special.py and
+test_potential.py -- have not uploaded yet, so "10% of diff hit" is measuring an
+absence of data, not an absence of tests. #1254 ADDS tests for exactly those
+lines (35/35 passing locally on both backends), so patch should end high.
+
+Prediction, recorded now so it can be checked rather than rationalised later:
+both should converge to SUCCESS as the potential/backend shards upload, the same
+way #1252 went -70.64% -> -23.25% -> -13.84% -> +0.00%. If patch does NOT recover
+once test_backend_special has uploaded, that is a real signal and I will chase
+it rather than wait it out.
+
+12 running, 135 queued, no non-codecov reds.
+
+### 2026-08-05 07:59Z — hit the "cd does not survive &" footgun; caught by recounting
+
+Dispatched a jit census on tests/test_qdf.py, then printed its ledger baseline
+and got 17 entries (1 jax + 16 torch). That looked wrong against the per-backend
+totals I had just measured (torch=15 TOTAL), so I recounted instead of writing
+it up -- and the totals were right, the listing was wrong.
+
+Cause, and it is documented in my own notes
+([[cd-does-not-survive-ampersand]]):
+
+    cd /var/tmp/undefer && nohup pytest ... &     # & backgrounds the WHOLE chain
+    grep ... tests/backend_xfail.txt              # ran in the ORIGINAL cwd
+
+The `cd` executed inside the backgrounded subshell, so the grep read the MAIN
+repo's ledger on feat/backends (an older branch, 17 qdf entries) instead of this
+worktree's feat/backends-develop ledger (2 entries: 1 jax, 1 torch).
+
+CORRECT baseline for reading the census: exactly one jax entry,
+`jax tests/test_qdf.py::test_call_diffinoutputs`, which jax-jit inherits. So
+under --jit I expect at most 1 xfail; any other F is unledgered.
+
+The census itself is FINE -- the nohup ran inside the subshell, so pytest had the
+right cwd; only my reporting grep was wrong. Verified by reading /proc/<pid>/cwd
+rather than assuming.
+
+What saved this was the cross-check: two measurements of the same quantity
+disagreed (16 torch qdf entries vs 15 torch total), and that is only visible
+because I had counted the totals earlier. Worth keeping as a habit -- a listing
+that contradicts a total is a bug in one of them, and it is usually the newer,
+sloppier command.
+
+### 2026-08-05 08:21Z — codecov tracking the prediction; qdf census clean so far
+
+    codecov/project   -66.39%  ->  -40.14%      (21 shards uploaded)
+    codecov/patch     10% hit  ->  20% hit
+
+Both monotone toward green, and test_backend_special.py + the test_potential
+groups -- the shards that actually cover this diff -- have STILL not uploaded, so
+patch has most of its recovery ahead of it. The prediction I recorded at 07:54
+stands and remains falsifiable: if patch does not climb once those land, it is
+real and I chase it.
+
+#1254: 21 SUCCESS, 19 running, 109 queued, no non-codecov reds.
+
+qdf jit census at 56 tests: F=0, x=1, X=0. The single xfail is exactly the one
+inherited entry the CORRECT baseline predicted
+(jax tests/test_qdf.py::test_call_diffinoutputs). Reading it against the wrong
+baseline would have made 1 xfail look like 16 missing ones -- which is what the
+"cd does not survive &" slip nearly caused an hour ago, and why the recount
+mattered.
+
+### 2026-08-05 08:26Z — test_qdf.py ALSO traced-green; the DF layer jits clean
+
+    tests/test_qdf.py --backend jax --jit
+    total=56   passed=53   FAILED=0   xfail=1   skipped=2
+
+The 1 xfail is exactly the inherited `jax tests/test_qdf.py::test_call_diffinoutputs`
+entry -- matching the CORRECTED baseline, which is the payoff for recounting
+after the cd-and-& slip rather than reading the census against 17 phantom entries.
+
+Cumulative traced-status picture from this run's censuses:
+
+    test_potential.py    1385 tests   4 unledgered failures  -> 2 fixed, 2 by-design
+    test_sphericaldf.py   223 tests   0 failures
+    test_qdf.py            56 tests   0 failures
+
+So **the DF layer traces clean** -- both spherical and quasi-isothermal DFs need
+nothing to be jittable, which was genuinely unknown before tonight. The residue
+was concentrated entirely in test_potential.py, and even there it was 2 test-side
+issues plus 2 documented by-design limits, with zero galpy defects.
+
+Stating the limit of the claim: these are jax --jit only. torch --jit is a
+separate measurement and I have not made it for these files.
+
+#1254: 23 SUCCESS, 24 running, 102 queued; codecov still the only reds and still
+climbing.
+
+### 2026-08-05 08:30Z — torch --jit census dispatched; codecov prediction not yet testable
+
+Closing the limit I stated on the last two censuses (they were jax --jit only):
+dispatched tests/test_qdf.py under **--backend torch --jit**. Used
+`nohup bash -c "cd DIR && exec ..."` this time so the cd cannot escape into a
+subshell the way it did an hour ago.
+
+Verified the process rather than trusting the form -- and the first check was
+misleading in a new way: `pgrep -f` matched MY OWN checking shell (its command
+line contains the pattern), reporting cwd=/home/bovy/Repos/galpy. Enumerating
+ALL matches showed the real one:
+
+    pid 335436  cwd=/var/tmp/undefer  PYTHONPATH=/var/tmp/undefer  <- the pytest
+    pid 336579  cwd=/home/bovy/Repos/galpy                         <- my grep shell
+
+So the census IS in the right tree. Lesson worth keeping: a pgrep pattern
+specific enough to find your job is also specific enough to match the shell
+looking for it -- enumerate matches, do not take the first.
+
+Torch baseline for reading it: exactly 1 torch entry
+(`torch tests/test_qdf.py::test_call_diffinoutputs`), read from the worktree.
+
+codecov on #1254: project -40.14% -> -31.45%, patch STILL 20%. Not a
+falsification: checked, and the diff-covering shards have not uploaded --
+`tests/test_backend*.py` is QUEUED + IN_PROGRESS, and all 5
+`backend jax test_potential --splits` groups are QUEUED. The prediction only
+becomes testable once those land.
+
+#1254: 33 SUCCESS, 22 running, 94 queued.
+
+================================================================================
+## STATE OF PLAY — 2026-08-05 08:40Z  (read this block, not the trace above)
+================================================================================
+
+### Landed tonight
+    #1253  MERGED -> main                    80a10d66   SpiralArms numpy-version branch deleted
+    #1245  MERGED -> main                    cd81fbed   AnyAxisym small-|z| band (5 methods; numpy values CHANGE, agreed)
+    #1252  MERGED -> feat/backends-develop   7b6f5ae4   un-defer 27 jax spherical-DF slow-skips (230 -> 203)
+
+### In flight
+    #1254  OPEN, feat/backends-develop. backend ellipkm1 + delete the AnyAxisym m-clamp.
+           44/151 green, 0 non-codecov reds. Both codecov reds are the
+           partial-upload phantom (project climbing -66% -> -26%; patch pinned at
+           20% because the shards covering the diff have not uploaded).
+
+### Ready, unpushed, deliberately serial behind #1254
+    torch-polish   3da30bff   Newton-polish the brentq forward value.
+                              A/B'd: 2 torch xfail->pass CAUSED by it; 2 remaining
+                              failures pre-existing. Claims NO ledger delta (local
+                              torch is py3.13, CI is py3.14).
+    pickling+ledger  ae39c052 (3 commits) test_potential.py jit residue:
+                              2 fixed, 2 ledgered not-traceable, 1 stale entry pruned.
+                              Body drafted. numpy 60 passed, unchanged.
+
+### Measurements made tonight (all new information)
+    test_potential.py   --backend jax --jit   1385 tests, 4 unledgered -> 2 fixed, 2 by-design
+    test_sphericaldf.py --backend jax --jit    223 tests, 0 failures
+    test_qdf.py         --backend jax --jit     56 tests, 0 failures
+    test_qdf.py         --backend torch --jit  running
+  => the DF layer traces clean. Residue was confined to test_potential.py, and
+     none of it was a galpy defect.
+
+    ledger 34 -> 35   (+2 not-traceable units entries, -1 stale, triple-verified)
+    develop <- main sync: exactly ONE conflict (tests/test_potential.py, two tests
+     added at the same spot, "keep both"). Workflows auto-merge. Not yet done --
+     must wait until #1254 lands or it invalidates its CI.
+
+### Needs Jo (nothing is blocked on him right now)
+    1. Symplectic bit-identity is INTERMITTENT: 5.55112e-16 on identical trees
+       (2 fail / 2 pass on cc0af3cc). Mechanism unexplained; base bit-identity is
+       correct by construction in the C. Proposed fix is a few-ulp bound on main
+       -- a test-weakening, so it waits for sign-off.
+    2. Jit docs note: a units-based density cannot be traced (units force a numpy
+       round-trip). Not a bug; worth documenting.
+    3. Fixture design call: keep the pickling fixtures numpy-hardcoded (realistic
+       user code, traced failure = honest "not traceable" signal) or make them
+       backend-agnostic (traced path actually exercised). I did the latter and
+       MEASURED it works; the choice is still open.
+================================================================================
+
+### 2026-08-05 08:45Z — re-swept the ledger with 2x the artifacts: 0 further stale entries
+
+Develop's post-merge All-backend run had progressed from 19 to 43 uploaded
+artifacts, so I re-ran the staleness sweep on the bigger sample:
+
+    first sweep   19 artifacts   1527 jax + 1368 torch passing nodeids   1 stale
+    second sweep  43 artifacts   3155 jax + 3531 torch passing nodeids   0 stale
+
+Zero is the RIGHT answer, not a null result: the one entry the first sweep found
+is the one I already pruned (ae39c052), so the current ledger has nothing left
+that is observed passing. Roughly doubling the sample surfaced no additional
+stale entries.
+
+So the remaining 35 entries are accurate as far as ~6700 observed passing
+nodeids can show. The ledger is not carrying dead weight, which is worth knowing
+before spending effort on a "prune the ledger" pass -- there is nothing there to
+prune. Burndown effort belongs on FIXING entries, not on hygiene.
+
+Still true and worth restating: a sweep proves staleness, never necessity. An
+entry not seen passing might simply not have run in these shards.
+
+#1254: 50 SUCCESS, 29 running, 70 queued, same two codecov reds.
+torch --jit qdf census: 37 tests, 0 failures.
+
+### 2026-08-05 08:52Z — qdf traces clean on BOTH backends (caveat closed)
+
+    tests/test_qdf.py --backend jax   --jit   total=56  passed=53  FAILED=0  xfail=1  skipped=2
+    tests/test_qdf.py --backend torch --jit   total=56  passed=55  FAILED=0  xfail=1  skipped=0
+
+Zero failures on both, and in each case the single xfail is that backend's own
+expected ledger entry (`{jax,torch} tests/test_qdf.py::test_call_diffinoutputs`).
+The skip difference (2 vs 0) is jax-specific skips, not a torch gap.
+
+This closes the limit I attached to the earlier censuses -- I had said "jax --jit
+only; torch is a separate measurement I have not made". Now made, and it agrees.
+
+Traced-status summary for the night, with backends stated rather than implied:
+
+    test_potential.py    jax --jit    1385 tests   4 unledgered -> 2 fixed, 2 by-design
+    test_sphericaldf.py  jax --jit     223 tests   0 failures
+    test_qdf.py          jax --jit      56 tests   0 failures
+    test_qdf.py          torch --jit    56 tests   0 failures
+
+test_sphericaldf.py under torch --jit remains UNMEASURED -- worth doing, and I am
+not quietly generalising the qdf torch result to it.
+
+#1254: 55 SUCCESS, 29 running, 65 queued. Both test_backend*.py shards are now
+IN_PROGRESS (were QUEUED), so the codecov-patch prediction becomes testable as
+soon as they upload.
+
+### 2026-08-05 08:54Z — dispatched the last flagged census: sphericaldf under torch --jit
+
+Closing the gap I named rather than leaving it as a caveat. Baseline read from
+the WORKTREE (not the main repo — that mistake is now a habit-check):
+
+    torch tests/test_sphericaldf.py::test_constantbeta_interpolatedpotentials_beta
+
+exactly one torch entry, and zero jax entries since the prune. So under
+torch --jit: at most 1 xfail expected, any other F is unledgered.
+
+cwd verified by enumerating ALL pgrep matches, not the first:
+    pid 387416  cwd=/var/tmp/undefer      <- the pytest
+    pid 387380  cwd=/home/bovy/Repos/galpy <- my own checking shell
+
+#1254: 62 SUCCESS, 29 running, 58 queued. Both test_backend*.py shards still
+IN_PROGRESS -- these are the ~90 min ones, so the codecov-patch prediction is
+still pending its test.
+
+### 2026-08-05 09:00Z — REBASE probe reverses my "the AnyAxisym file does not conflict"
+
+I said at 07:26 that my earlier conflict flag was wrong, because
+`git merge-tree` auto-merged
+galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py cleanly. I attached the
+caveat that merge-tree measures the NET merge and a rebase replays commit-by-
+commit. That caveat was the load-bearing part: **I tested the actual rebase, and
+it DOES conflict in that file.**
+
+Probe (throwaway worktree + throwaway branch, develop never touched):
+
+    git worktree add --detach /var/tmp/synctest origin/feat/backends-develop
+    git checkout -b tmp/sync-probe
+    git rebase origin/main
+    -> CONFLICT: galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py
+       at cdb4c436 "AnyAxisym: backend-agnostic default surfdens (jit/trace-safe) (#1127)"
+       1 conflict region
+
+So the sequence of my three positions on this file:
+    1. "will very likely conflict"        -- flagged, unmeasured
+    2. "does NOT conflict" (merge-tree)   -- measured the WRONG operation
+    3. "DOES conflict on rebase"          -- measured the RIGHT one
+
+Position 2 was a real error of method, not just of luck: the project rule is
+rebase-only ([[no-merge-commits-rebase-only]]), so the merge conflict set was
+never the relevant question. I noticed the gap and wrote the caveat, then still
+reported the reassuring number as the headline. Measure the operation you are
+actually going to perform.
+
+Scale, so the sync is not over-feared either: 4 develop commits touch that file,
+and the conflict is ONE region at ONE of them. That is a small, tractable
+resolution -- just not the zero the merge-tree suggested.
+
+Cleanup verified rather than assumed: rebase aborted, worktree removed, branch
+deleted, `origin/feat/backends-develop` still 7b6f5ae4. A probe that leaves
+state behind is worse than no probe.
+
+### 2026-08-05 09:21Z — DF layer traced-green on BOTH backends; all flagged gaps closed
+
+    tests/test_sphericaldf.py --backend torch --jit
+    total=223   passed=222   FAILED=0   xfail=1   skipped=0
+
+The 1 xfail is the expected `torch ...::test_constantbeta_interpolatedpotentials_beta`.
+This was the last gap I had explicitly refused to generalise across, and it
+agrees with the jax result.
+
+FINAL traced-status table for the night — backend stated in every row, nothing
+inferred from a neighbouring cell:
+
+    test_potential.py     jax --jit    1385   4 unledgered -> 2 fixed, 2 by-design
+    test_sphericaldf.py   jax --jit     223   0 failures
+    test_sphericaldf.py   torch --jit   223   0 failures
+    test_qdf.py           jax --jit      56   0 failures
+    test_qdf.py           torch --jit    56   0 failures
+
+**The DF layer traces clean on jax AND torch.** 558 traced DF-test results, zero
+failures, and every xfail accounted for by a specific ledger entry. That was
+entirely unmeasured before tonight; #1252 had only established EAGER jax.
+
+The residue for the whole night's censuses is confined to test_potential.py, is
+4 tests, and contains zero galpy defects: 2 test-side (fixed, measured) and 2
+by-design units limits (ledgered with the reason).
+
+#1254: 104 SUCCESS, 30 running, 15 queued. project -23.94% -> -13.85%, patch
+still 20% because the test_backend*.py shards STILL have not uploaded.
+
+### 2026-08-05 09:26Z — #1254 nearly fully dispatched; patch prediction ~15 min out
+
+    #1254  111 SUCCESS, 33 running, only 5 queued, 0 non-codecov reds
+    test_backend*.py shards: 76.3 min and 44.4 min elapsed (~90 min typical)
+
+So the first of the two diff-covering shards is ~15 min from finishing. THAT is
+when the codecov/patch prediction (recorded 07:54, restated since) becomes
+testable for the first time. Until then "patch stuck at 20%" carries no
+information -- it is measuring an absence of uploads, and I have checked that
+directly each time rather than assuming it.
+
+Reminder of the commitment so it is not quietly dropped: if patch does NOT climb
+once test_backend*.py uploads, that is a REAL signal and I chase it rather than
+waiting it out. #1254 adds 35 tests that exercise exactly those lines and they
+pass locally on both backends, so a genuinely low patch number would mean the
+new tests are not reaching the new code in CI -- worth knowing.
+
+### 2026-08-05 09:30Z — torch-polish pre-flighted; all 151 of #1254 dispatched
+
+    #1254  126 SUCCESS, 23 running, 0 QUEUED, 0 non-codecov reds
+           both test_backend*.py shards still IN_PROGRESS -- the only gate left
+
+torch-polish pre-flight against the CURRENT develop head (7b6f5ae4, post-#1252):
+
+    files:  galpy/backend/_torch/optimize.py, tests/test_backend_optimize.py
+    merge-tree vs develop: CLEAN (rc=0)
+    overlap with #1254's 5 files: NONE
+
+So it goes up immediately after #1254 merges: no rebase, no conflict, and its
+A/B evidence is already in the body.
+
+Method note, applying the lesson from the rebase probe half an hour ago: here
+`merge-tree` IS the right instrument, because a PR landing on develop is
+literally a merge. For the develop<-main sync it was the WRONG instrument,
+because that operation is a rebase and replays commit-by-commit. Same command,
+opposite appropriateness -- the question is always "which operation will actually
+be performed", not "which command is convenient".
+
+### 2026-08-05 09:35Z — extending the DF traced picture to disk DFs
+
+#1254: 132 SUCCESS, 17 running, 0 queued. test_backend*.py shards at ~81 and
+~49 min; still the only gate, patch still uninformative until they upload.
+
+Dispatched tests/test_diskdf.py --backend jax --jit. Spherical DFs and qdf are
+measured (both backends, 0 failures); the DISK DFs (Pdf.3) are not, so the
+"DF layer traces clean" claim currently rests on two thirds of the DF families.
+Measuring the third rather than letting the phrase quietly cover it.
+
+Baseline read from the worktree -- 3 jax entries, all dehnendf sampling:
+
+    jax tests/test_diskdf.py::test_dehnendf_sample_flat_returnOrbit
+    jax tests/test_diskdf.py::test_dehnendf_sample_flat_returnROrbit_rrange
+    jax tests/test_diskdf.py::test_dehnendf_sample_powerrise_returnROrbit
+
+jax-jit inherits those, so: at most 3 xfails expected, any other F is
+unledgered. Note these are SAMPLING tests -- if they are the only ledgered ones
+here, the interesting question is whether anything ELSE in the file fails, since
+sampling has its own known backend gaps (task #130).
+
+cwd verified by enumerating pgrep matches: pid 480217 -> /var/tmp/undefer.
+
+### 2026-08-05 09:45Z — codecov prediction CONFIRMED; #1254 has zero reds
+
+The test_backend*.py shard completed (COMPLETED/SUCCESS) and codecov moved
+immediately, exactly as predicted at 07:54 and restated on every wake since:
+
+    codecov/patch    20.00%  ->  100.00% of diff hit   (target 99.95%)  PASS
+    codecov/project  -13.85% ->  99.95% (+0.00%)                        PASS
+
+    #1254: 142 SUCCESS, 0 FAIL, 9 running
+
+Full patch arc: 10% -> 20% -> (pinned) -> 100%. It sat at 20% for over an hour
+purely because the two shards covering the diff had not uploaded -- which I
+checked directly on every wake rather than asserting, and which is why the red
+was never escalated or "fixed". +0.00% on project confirms again that this diff
+does not move coverage; 100% patch confirms the 35 new tests DO reach the new
+lines in CI, not just locally.
+
+Worth stating plainly: the falsifiable version of the claim was "if patch does
+not climb once test_backend*.py uploads, that is REAL and I chase it". It
+climbed, on the first upload, to 100%. The prediction was cheap to make and made
+an hour of red completely uninteresting -- which is the point of writing it down
+in advance instead of reacting to each poll.
+
+diskdf jit census: 111 tests, F=0, x=3 -- and the 3 xfails are exactly the 3
+ledgered dehnendf sampling entries. So the disk DFs trace clean too, with no
+unledgered failures.
+
+### 2026-08-05 09:49Z — disk DFs traced-green: the DF layer is now measured COMPLETE
+
+    tests/test_diskdf.py --backend jax --jit
+    total=129   passed=121   FAILED=0   xfail=3   skipped=5
+
+The 3 xfails are exactly the 3 ledgered dehnendf sampling entries. Zero
+unledgered failures.
+
+COMPLETE DF TRACED PICTURE (every row measured tonight, none inferred):
+
+    family        file                  backend       tests  FAILED
+    spherical     test_sphericaldf.py   jax --jit      223     0
+    spherical     test_sphericaldf.py   torch --jit    223     0
+    quasi-iso     test_qdf.py           jax --jit       56     0
+    quasi-iso     test_qdf.py           torch --jit     56     0
+    disk          test_diskdf.py        jax --jit      129     0
+
+    687 traced DF test results, ZERO unledgered failures.
+
+So "the DF layer traces clean" is now a measured statement about all three
+families rather than an extrapolation from the first one I happened to run.
+Remaining honest gap: test_diskdf.py under torch --jit is not measured. I am
+naming it rather than rounding the table up.
+
+Contrast that with test_potential.py (1385 tests, 4 unledgered failures) --
+the potentials, not the DFs, were where the jit residue lived, and even there it
+was 2 test-side issues and 2 documented by-design limits.
+
+#1254: 145 SUCCESS, 0 FAIL, 6 running, all-clear IN_PROGRESS. BLOCKED is just
+all-clear not having concluded. Merge as soon as it does; audit already done.
+
+### 2026-08-05 09:59Z — closing the last named DF gap: diskdf under torch --jit
+
+#1254: 150 SUCCESS, 0 FAIL, 2 running (all-clear + one shard). Watcher armed,
+squash body staged with the measured evidence.
+
+Dispatched tests/test_diskdf.py --backend torch --jit -- the one row I named as
+missing when I wrote the "complete DF picture" table, rather than rounding it up.
+
+Baseline is worth stating because it changes how to read the result: **ZERO
+torch ledger entries for test_diskdf** (the 3 dehnendf sampling entries are
+jax-only). So under torch --jit the expectation is 0 xfails and 0 failures -- any
+F at all is unledgered, which makes this the strictest of the five DF censuses.
+
+cwd verified by enumeration: pid 533394 -> /var/tmp/undefer.
+
+### 2026-08-05 10:21Z — #1254 MERGED; #1255 (torch brentq polish) opened
+
+    #1254 squash-merged into feat/backends-develop as 7696c88e
+
+Pre-merge audit, run against the actual diff rather than from memory:
+
+  (1) if -> xp.where array-input class: two `if` hits, BOTH benign --
+      `m1 = 1.0 - m if m1 is None else ...` is a Python-argument check, and
+      `if backend == "jax"` is a string compare inside the TEST file. No
+      data-dependent branch on array values.
+  (2) duplication: 2 new defs, `ellipkm1_fallback` (_fallback/elliptic.py) and
+      `ellipkm1` (_router.py) -- the established fallback+router two-layer
+      pattern, not a copy. `_agm_KE` is EXTENDED (gains m1), not duplicated.
+  (3) helper placement: galpy/backend/special/*, the general special-function
+      home, NOT the potential that happened to need it.
+
+FINAL DF census, on the strictest baseline of the five:
+
+    tests/test_diskdf.py --backend torch --jit
+    total=129  passed=129  FAILED=0  xfail=0  skipped=0
+
+129/129 with ZERO ledger entries for that file -- no xfails to absorb anything,
+so any failure at all would have been unledgered. Complete DF table, no gaps
+left to name:
+
+    spherical  223  jax 0 fail   torch 0 fail
+    quasi-iso   56  jax 0 fail   torch 0 fail
+    disk       129  jax 0 fail   torch 0 fail
+    => 816 traced DF test results, zero unledgered failures, BOTH backends.
+
+Then opened the next PR, one at a time as instructed:
+
+    #1255  torch brentq: Newton-polish the forward value, not just the
+           differentiable one. 2 files, +/- small. Pre-push gate re-run against
+           the NEW develop head 7696c88e: merge-tree clean, conflict markers
+           clean, branch was unpushed until now.
+
+README updated for both (#1254 merged with SHA; new #1255 row carrying the
+measured numbers: xmax residual -3.87e-14 -> +1.39e-17, Omega error 6.364e-10 ->
+1.279e-13 matching jax, no measurable perf cost).
+
+Four PRs landed tonight: #1253 + #1245 -> main, #1252 + #1254 -> develop.
+
+================================================================================
+## STATE OF PLAY — 2026-08-05 10:30Z  (supersedes the 08:40Z block)
+================================================================================
+
+### Landed (4 PRs tonight)
+    #1253  -> main                    80a10d66  SpiralArms numpy-version branch deleted
+    #1245  -> main                    cd81fbed  AnyAxisym small-|z| band (numpy values CHANGE, agreed)
+    #1252  -> feat/backends-develop   7b6f5ae4  un-defer 27 jax spherical-DF slow-skips (230 -> 203)
+    #1254  -> feat/backends-develop   7696c88e  backend ellipkm1 + delete the AnyAxisym m-clamp
+
+### In flight
+    #1255  torch brentq Newton-polish. 149 checks queued (contending with
+           develop's own post-#1254 CI). Gate re-run against the NEW develop
+           head before pushing: merge-tree clean, markers clean.
+
+### Ready, unpushed
+    pickling+ledger  ae39c052 (3 commits) -- test_potential.py jit residue:
+      2 fixed (backend-agnostic fixtures + nan-aware compare), 2 ledgered
+      not-traceable with the design reason, 1 stale entry pruned. Body drafted.
+      numpy 60 passed unchanged; jit 4 failed -> 0 failed + 2 xfail.
+
+### Traced-status: the DF layer is DONE, measured on both backends
+    spherical  test_sphericaldf.py  223  jax 0 fail   torch 0 fail
+    quasi-iso  test_qdf.py           56  jax 0 fail   torch 0 fail
+    disk       test_diskdf.py       129  jax 0 fail   torch 0 fail   (0 ledger entries -> strictest)
+    => 816 traced DF results, ZERO unledgered failures.
+    potentials test_potential.py   1385  jax: 4 unledgered -> 2 fixed, 2 by-design
+
+    The jit residue was in the POTENTIALS, not the DFs -- the opposite of what
+    I would have guessed, and only visible because the census was run per-file.
+
+### Ledger: 35 entries, verified accurate
+    Two sweeps off develop's post-merge artifacts (19 then 43 artifacts;
+    1527/1368 then 3155/3531 passing nodeids). 1 stale found and pruned
+    (triple-verified), then 0 further. Nothing left to prune -- burndown effort
+    belongs on FIXING entries, not hygiene.
+
+### Next, in order
+    1. #1255 to green -> squash-merge (audit first)
+    2. push + open the pickling+ledger PR
+    3. develop <- main sync. Probed on a throwaway: REBASE conflicts in
+       AnyAxisymmetricRazorThinDiskPotential.py at cdb4c436, ONE region, and
+       merge-tree's "clean" was measuring the wrong operation. 4 develop commits
+       touch that file. Workflows auto-merge, so no workflow-scope problem.
+
+### Needs Jo (nothing blocked)
+    1. Symplectic bit-identity intermittent (5.55112e-16, 2 fail / 2 pass on one
+       tree). Fix = few-ulp bound on main; a test-weakening, so it waits.
+    2. Jit docs: a units-based density cannot be traced (units force numpy).
+    3. Fixture design call: numpy-hardcoded (realistic user code, honest
+       not-traceable signal) vs backend-agnostic (traced path exercised).
+       I implemented + MEASURED the latter; the choice is still open.
+================================================================================
+
+### 2026-08-05 10:35Z — extending the traced census to the ACTION-ANGLE layer
+
+#1255 still fully queued (149) behind 16 other repo runs, incl. develop's own
+post-#1254 CI. Nothing to drive.
+
+Dispatched tests/test_actionAngle.py --backend jax --jit. Rationale: potentials
+and DFs are now measured; the AA layer (Track E, a major subsystem) has never
+been measured traced. Same method that made the DF result trustworthy -- one
+file at a time, baseline stated first, names from junitxml.
+
+Baseline, read from the WORKTREE:
+
+    jax entries      3
+    jax-jit entries  0     (so jax-jit inherits exactly those 3)
+
+=> at most 3 xfails expected; anything else failing is unledgered.
+
+This is the biggest census yet and AA + jit compile is slow, so it will span
+several wakes. cwd verified by enumeration: pid 610582 -> /var/tmp/undefer.
+
+Prediction, recorded before the result so it cannot be retrofitted: I expect AA
+to be MESSIER than the DFs. It leans on root-finds, grid interpolation and the
+C-STM bridge, and the ledger already carries an actionAngle tolerance cluster
+that needs Jo (task #171). If it comes back clean I will have been wrong in the
+useful direction.
+
+### 2026-08-05 10:45Z — AA census 62% clean; my "messier" prediction looking wrong
+
+    tests/test_actionAngle.py --backend jax --jit
+    130 of 209 tests   F=0   x=3   s=3
+
+All 3 expected inherited xfails are now accounted for, and there are ZERO
+failures at 62%. So the prediction I recorded at 10:35 -- that AA would be
+messier than the DFs because of root-finds, grid interpolation and the C-STM
+bridge -- is tracking WRONG. Recording that now, while it is still an interim,
+rather than quietly dropping it if the run finishes clean.
+
+WATCH ITEM, from my own notes: a previous AA run deadlocked at 144/209 --
+torch+fork inside parallel_map via IsochroneApprox
+([[torch-fork-deadlock-streamdf]]). That was a TORCH run and this is jax, so it
+may not apply, but 144 is close. If this run stalls around there with no new
+dots, it is the known deadlock and NOT a failure -- kill it and report the
+partial rather than reading a hang as a result. Naming the tell in advance so I
+do not misdiagnose a stall at the moment it happens.
+
+#1255: still 149 queued, 0 started, 0 red. The runners are busy verifying the
+#1254 merge I just made (develop 7696c88e: notebooks x2 + all-clear
+in_progress), which is correct work, not a stall -- so nothing to cancel.
+
+### 2026-08-05 10:54Z — ACTION-ANGLE traces clean; my prediction was WRONG
+
+    tests/test_actionAngle.py --backend jax --jit
+    total=209   passed=179   FAILED=0   xfail=3   skipped=27
+
+**I predicted at 10:35 that AA would be "MESSIER than the DFs" -- root-finds,
+grid interpolation, the C-STM bridge, plus the actionAngle tolerance cluster in
+the ledger. That was wrong. Zero unledgered failures, and the 3 xfails are
+exactly the 3 inherited jax entries.** Recording it as a miss because I wrote
+the prediction down specifically so it could be checked, and a prediction you
+only report when it lands is worthless.
+
+It also passed the 144/209 mark without stalling, which retires the watch item:
+the parallel_map deadlock is TORCH-specific ([[torch-fork-deadlock-streamdf]]),
+not a property of the AA tests.
+
+The 27 skips needed checking before calling this "clean" -- 13% of the file is
+enough to hollow out a green. Breakdown:
+
+    24  backend-skip: "not backend-meaningful under jax-jit"     (by design)
+     3  backend-slow-skip: "unrunnable under jax-jit until the
+                            backend port is ..."                 (REAL gap)
+
+So the honest reading is 179 traced passes, 3 ledgered xfails, 24 deliberate
+not-meaningful skips, and a 3-test gap that is named and pending a port -- not
+"209 clean". The distinction matters: a skip is not a pass.
+
+TRACED-STATUS, whole session, subsystem by subsystem:
+
+    potentials  test_potential.py    1385  jax   4 unledgered -> 2 fixed, 2 by-design
+    DFs         3 files, both backends 816  0 unledgered failures
+    action-angle test_actionAngle.py  209  jax   0 unledgered failures
+
+Every subsystem measured is traced-clean except the potentials, and that residue
+was 4 tests with zero galpy defects. That is a materially different picture from
+where the night started, and none of it was known before tonight.
+
+#1255 has started moving: 2 in progress, 147 queued, 0 red.
+
+### 2026-08-05 10:59Z — #1255's two codecov reds: same phantom, diagnosed not assumed
+
+    codecov/patch    0.00% of diff hit    (target 99.95%)
+    codecov/project  40.19% (-59.77%)
+    test_backend*.py shards: QUEUED, QUEUED   <- the ONLY ones covering this diff
+    completed so far: 1 shard (test_quantity + test_coords), touches nothing here
+
+Applied the memory I rewrote an hour ago rather than pattern-matching: read the
+check-run output, identify whether the covering shard has uploaded. It has not,
+so "0.00% of diff hit" is measuring an absence of data. #1255's diff is
+galpy/backend/_torch/optimize.py, exercised by test_backend_optimize.py, which
+lives in the test_backend*.py shard -- queued.
+
+Same falsifiable prediction as #1254, which went 10% -> 20% -> 100% on the first
+covering upload: patch should climb to ~100 once test_backend*.py lands. If it
+does NOT, that is real and I chase it -- #1255 changes a function whose tests
+(26/26 on both backends locally) directly exercise it, so a genuinely low patch
+number would mean those tests are not reaching the changed lines in CI.
+
+This is the second instance tonight, which is what makes the memory update worth
+having had: the FIRST time it cost an hour of checking, the second cost two API
+calls and a known answer.
+
+#1255: 1 SUCCESS, 3 running, 145 queued, no non-codecov reds.
+
+### 2026-08-05 11:21Z — AA under torch --jit, deliberately excluding the deadlock class
+
+Completing the AA symmetry (jax measured, torch not). Baseline from the
+worktree: **9 torch entries**, 0 torch-jit -- so torch-jit inherits 9, and the
+expectation is at most 9 xfails.
+
+Designed AROUND a known hazard instead of walking into it. My notes record that
+a previous AA run under TORCH deadlocked at ~144/209 in parallel_map via
+IsochroneApprox ([[torch-fork-deadlock-streamdf]]) -- and the jax run earlier
+today sailed past 144, which confirmed the deadlock is torch-specific rather
+than positional. So running the full file under torch would very likely hang.
+
+Ran with `-k "not IsochroneApprox"`: 17 tests deselected, 192 measured.
+
+That is the honest trade and I am stating it rather than reporting "AA torch
+clean": the 17 IsochroneApprox tests are NOT measured under torch --jit, and
+they are exactly the ones most likely to be interesting, since they route
+through the orbit/C-STM bridge. A hung run yields nothing; a scoped run with a
+named exclusion yields 192 real results plus a precise statement of what is
+missing.
+
+(The deadlock itself is already tracked as task #178 -- 3 torch entries timing
+out at multi.py:143. This measurement does not fix it, it avoids it.)
+
+**Result (192 measured):**
+
+    total=192  passed=159  FAILED=0  xfail=9  skipped=24
+
+Zero unledgered failures, and the 9 xfails are exactly the 9 inherited torch
+ledger entries -- no more, no fewer.
+
+I checked the 24 skips before calling this clean, the same diligence the jax AA
+run needed (where 27 skips resolved into 24 by-design + a 3-test real gap). All
+24 carry one message:
+
+    backend-skip: not backend-meaningful under torch-jit (external-service/
+    network/flaky, or an out-of-scope family); see tests/backend_skip.txt
+
+and every one of the 24 node names begins `test_actionAngleVerticalInverse_*`.
+That is the family Jo put permanently out of scope, so all 24 are by-design and
+there is **no real gap hiding in the torch skips** -- unlike jax. A skip is not
+a pass, so this had to be looked at rather than assumed.
+
+**AA traced status, both backends, side by side:**
+
+| backend | measured | passed | FAILED | xfail | skipped | not measured |
+|---|---|---|---|---|---|---|
+| jax --jit | 209 | 179 | 0 | 3 | 27 (24 by-design + 3 real gap) | 0 |
+| torch --jit | 192 | 159 | 0 | 9 | 24 (all by-design) | 17 IsochroneApprox |
+
+Action-angle is traced-green on both backends. The whole DF+AA half of the
+library now has a measured traced status where a month ago none of it did.
+
+### 2026-08-05 11:50Z — the torch+fork deadlock, root-caused and fixed
+
+This is the hazard that cost me the 17 IsochroneApprox tests an hour ago. Rather
+than keep designing around it, I went after it. Task #178, 3 torch ledger
+entries.
+
+**Reproduced it directly instead of through a 10-minute test.** Two scripts: one
+that imports torch, warms the intra-op pool in the parent, then `parallel_map`s
+a *plain float* function -- that PASSES. One where the child also does torch
+work -- that HANGS. So the trigger is not "torch is imported", it is "the forked
+child enters a torch parallel region". `fork` gives the child pool state it
+cannot use and it wedges on first use; the parent then waits forever in
+`proc.join()`.
+
+**The fix keeps the parallelism.** `torch.set_num_threads(1)` in the child,
+before any torch work. I tested this *before* falling back to serializing,
+because serializing would have thrown away the whole point of forking. It also
+happens to be the right configuration: one process per core times 36 threads
+each was ncpus-fold oversubscription that nobody wanted.
+
+    without fix: children report [36, 36, 36, 36]
+    with fix:    children report [ 1,  1,  1,  1]
+
+**I nearly shipped a wrong gate.** My first cut keyed off
+`"torch" in sys.modules`. Checked it: `import galpy.backend` pulls in BOTH torch
+and jax, so that predicate is always True and would have told me nothing. The
+active-backend query is the real one -- though in the end the child-side cap
+does not need it at all.
+
+**jax deadlocks too -- and I did NOT fix it.** The same repro under jax hangs,
+with jax printing its own warning: *"os.fork() is incompatible with
+multithreaded code, and JAX is multithreaded, so this will likely lead to a
+deadlock."* So this was never a torch-only bug, and a torch-only patch shipped
+without saying so would have been misleading. But jax has no `set_num_threads`
+equivalent, the only fix available is to serialize -- and the one real galpy
+test that forks under an active jax backend (`actionAngleAdiabaticGrid`,
+`numcores=2`) passes today. Degrading a working path on synthetic evidence is
+the wrong trade, so jax stays as it is, documented in the commit message rather
+than silently ignored. streamdf already routes jax around fork via `lax.map`.
+
+**A workaround for this already existed in the tree.** `conftest.py:361`
+SIGKILLs leftover children "forked (galpy util.multi) while torch's native
+threads were live". The fix removes what that workaround was cleaning up after.
+
+**CI trap caught before pushing.** The new tests fork, and Python 3.12+ warns
+`DeprecationWarning: This process is multi-threaded, use of fork() may lead to
+deadlocks`. `build.yml:43` runs `tests/test_backend*.py` and `build.yml:359`
+adds `-W error::DeprecationWarning` -- so the new file would have gone red
+CI-only. Added a narrow `filterwarnings` for that one message (forking from a
+multi-threaded process is the thing under test) and re-ran locally under the
+actual CI flags. 3 passed.
+
+**Verified as a flip, not just as a pass.** `test_streamTrack_multi_parallel`
+hung until killed without the fix (15 wedged processes) and passes with it under
+`--runxfail`. The other two entries (`test_fardalwmwpot_trackaa`,
+`test_plotting`) pass with the fix; their negative control is still running,
+because "passes with the fix" is not evidence unless it also fails without it.
+
+Branch `fix/parallel-map-fork-safety`, commit `0e6a4f27`, held back until #1255
+lands (one PR at a time).
+
+### 2026-08-05 11:47Z — streams under jax --jit: 82 measured green, 46 skipped
+
+    tests: test_streamspraydf + test_streamgapdf + test_streamgapdf_impulse + test_streamTrack
+    total=128  passed=82  FAILED=0  xfail=0  skipped=46
+
+Zero failures -- but 46 of 128 is 36% of the file, so "streams traced-green"
+would be a hollow claim. All 46 carry `backend-slow-skip: unrunnable under
+jax-jit until the backend port is vectorized`, and 45 of them are
+`test_streamTrack.py` -- essentially that whole file is deferred, not measured.
+The honest statement is: **streamgapdf and streamspraydf trace clean;
+streamTrack is not yet measurable under a trace.**
+
+`test_streamdf.py` was deliberately not in this run (it is the slowest file and
+the one that deadlocks under torch).
+
+**Negative control landed (11:55Z): all 3 entries genuinely flip.** Same two
+tests, same command, only the galpy tree differs:
+
+    without fix: parent alive 5:18, 9 forked children wedged at 4:59, no output
+    with fix:    both tests complete in under 2 minutes
+
+So `test_fardalwmwpot_trackaa` and `test_plotting` were not already-passing
+stale entries -- they hang without this change. Task #178's three torch entries
+are all real and all fixed.
+
+I am not pruning them from the ledger on the strength of a `-k`-filtered run,
+though: a hand-picked nodeid batch is a different context from the shard, and
+un-ledgering something that then fails in full-file context turns the shard red.
+Running the WHOLE `test_streamdf.py` under torch now -- which is itself the
+interesting experiment, since that file is exactly the one that used to deadlock.
+
+**Full-file validation (12:02Z), and a false alarm I chased down.** Whole
+`tests/test_streamdf.py` under `--backend torch` with the fix:
+
+    total=80  passed=76  FAILED=4  (3 of the 76 are XPASS -- the ledger entries)
+
+The file now RUNS TO COMPLETION. It is the file that used to wedge.
+
+The 4 failures looked at first like the fix un-hiding failures the timeout had
+been masking -- which would have been a serious side effect worth blocking on.
+They are all `test_bovy14_useTM*`, failing with *"actionAngleTorus wraps the
+external Torus C++ library and is not jax/torch-backend compatible (and will not
+be)"*. Not in the ledger, not in the skip list, so I could not dismiss them.
+
+Checked CI instead of reasoning about it: `backend-tests.yml:160` deselects them
+outright -- *"useTM=True streamdf tests need actionAngleTorus (external C++
+Torus lib) -> out of scope for non-numpy backends"*. The CI shard collects
+**76** `test_streamdf` tests; I collected 80. 80 - 4 = 76. Exact. So the
+CI-equivalent selection is 76/76 green and nothing is un-hidden.
+
+That check was worth doing rather than waving at "Torus is out of scope": the
+count matching exactly is what turns an assumption into a fact.
+
+**Ledger 30 -> 27** (jax 15, torch 12), commit `b28b085b`. Verified against
+`origin/feat/backends-develop`, not the main repo's copy.
+
+Task #178 is closed: all 3 of its torch entries were one defect, and it is fixed
+rather than ledgered around.
+
+### 2026-08-05 12:12Z — the gap I flagged an hour ago is closed by my own fix
+
+With the fork deadlock fixed I re-ran `test_actionAngle.py` under
+`--backend torch --jit` with **no exclusion at all**:
+
+    total=209  passed=176  FAILED=0  xfail=9  skipped=24
+
+It runs to completion. The old run wedged at ~144/209 in `parallel_map`; this
+one walks straight through. All **17** previously-unmeasured tests now run and
+all 17 pass:
+
+    test_actionAngleIsochroneApprox_* (16)  +  test_MWPotential_warning_isochroneapprox
+
+(That 17th is why my earlier `-k 'not IsochroneApprox'` deselected 17 while only
+16 test names contain the capitalised string -- pytest's `-k` matches
+case-insensitively. Worth noting because I had written "17 IsochroneApprox
+tests" and the substring count says 16; the `-k` semantics reconcile them.)
+
+**The AA table is now symmetric and complete on both backends:**
+
+| backend | measured | passed | FAILED | xfail | skipped | not measured |
+|---|---|---|---|---|---|---|
+| jax --jit | 209 | 179 | 0 | 3 | 27 (24 by-design + 3 real gap) | 0 |
+| torch --jit | 209 | 176 | 0 | 9 | 24 (all by-design) | **0** |
+
+An hour ago the torch row read "192 measured, 17 not measured, and the 17 are
+exactly the ones most likely to be interesting". They were interesting -- they
+were being hidden by a real bug, not by an intractable one.
+
+**numpy-path gate (12:17Z).** `multi.py` is on the numpy path too, so the change
+needed checking there and not just under torch:
+
+    tests/test_streamdf.py  -k 'multi_parallel or trackaa or plotting'   5 passed
+    tests/test_actionAngle.py -k 'AdiabaticGrid or StaeckelGrid'        12 passed
+    tests/test_backend_multi.py                                          3 passed
+
+(First attempt at this was wrong and I caught it: I passed `-k` twice in one
+pytest invocation, so the second expression silently replaced the first and the
+streamdf tests were never run -- "12 passed, 280 deselected" was the tell. Split
+into separate invocations.)
+
+The change cannot move a numpy value in any case -- it only calls
+`torch.set_num_threads` -- but "cannot" is an argument, and the AdiabaticGrid /
+StaeckelGrid / streamdf numcores paths are the ones that actually fork.
+
+### 2026-08-05 12:39Z — #1255 has a REAL red, and it is not codecov
+
+While the codecov phantom healed on schedule (-30.41% -> -14.00%, monotone), a
+genuine failure surfaced on the torch `test_diskdf.py` shard:
+
+    Backend torch: 126 passed, 0 xfail, 0 deferred, 0 XPASS, 3 FAILED (NOT in ledger)
+
+    test_dehnendf_sample_flat_returnROrbit_rrange
+    test_dehnendf_sample_powerrise_returnROrbit
+    test_dehnendf_sample_flat_returnOrbit
+
+All three: `AssertionError: mean R of sampled points does not agree ...
+assert np.float64(nan) < 0.05`. **`numpy.mean` of the sampled radii is NaN** --
+the sampler is emitting NaN, not drifting.
+
+The mechanism is coherent and specific. #1255 makes torch's `brentq` take the
+Newton polish on the FORWARD (no-grad) path too:
+
+    with torch.enable_grad():
+        xr = x0.clone().requires_grad_(True)
+        (dfdx,) = torch.autograd.grad(f(xr), xr, ...)
+    return (x0 - fx0 / _nonzero(dfdx.detach(), xp)).detach()
+
+`_nonzero` guards a ZERO derivative, but not a **NaN** one -- and a NaN
+gradient from a well-behaved forward value is a failure class already in my
+notes: an unguarded `xp.where` dead branch NaN-poisons the gradient while the
+value is fine. Before #1255 this path never took a gradient, so the poison was
+invisible; now every forward brentq call takes one. dehnendf's inverse-CDF
+sampler is a brentq caller, which is why exactly the sampling tests broke.
+
+Baseline check: the same shard on the pre-#1255 tree is `total=129 FAILED=0`.
+So this is caused by the PR, not inherited.
+
+Reproducing locally on the #1255 branch before proposing a fix. First attempt
+was invalid and I caught it -- that worktree had **no `libgalpy.so`**, and a
+missing C extension flips ledgered tests to PASS, so the run would have proved
+nothing. Built it first.
+
+**Root cause, in six lines.** Rather than reason about dehnendf's sampler I
+reduced it:
+
+    def f(x):                      # UNGUARDED where dead branch
+        return torch.where(x < 1.0, x - 0.5, torch.sqrt(x - 1.0))
+
+    f(0.5)  = 0.0        <- value is fine
+    df/dx   = nan        <- gradient is poisoned
+    brentq  = nan        <- and the root is destroyed
+
+`_nonzero` exists precisely to keep `1/d` finite, and its docstring says so --
+but `xp.maximum(xp.abs(nan), tiny)` is `nan`, so it delivered that promise for a
+ZERO slope and not for a non-finite one. Fixing it is repairing an existing
+contract, not widening scope.
+
+**Two things I checked instead of assuming, and one of them changed the fix.**
+
+1. *Is jax affected too?* The jax half carried a **verbatim copy** of
+   `_nonzero`, so I expected yes. Measured on an unmodified tree: **no** -- jax
+   returns 0.5 on the same input. torch takes df/dx in reverse mode, where
+   `where`'s backward masks with zero and `0 * nan` is nan; jax uses `jax.jvp`
+   and forward mode just selects the live tangent. I had written "jax has the
+   same latent bug" into the docstring and corrected it. The guard is applied to
+   both anyway -- which reverse/forward mode a backend uses is not something a
+   root-finder's callers should have to know -- but the claim is now accurate.
+
+2. *Is the duplicate worth hoisting?* Yes: two verbatim copies of the same
+   eight-line guard. Moved to `galpy/backend/optimize.py` as `nonzero_slope`,
+   next to the `bisect_root` both halves already share, and both now import it.
+   That is the placement rule Jo asked me to apply -- shared helper in the
+   shared module, not one copy per backend.
+
+**Verified as a flip.** Whole `test_diskdf.py` under torch on the #1255 tree:
+3 FAILED before (the same three CI names), and the rerun with the fix is in
+flight. `tests/test_backend_optimize.py` 28 passed, including a new
+`test_backend_root_survives_nan_derivative` that asserts the PREMISE first
+(df/dx really is nan) so it cannot silently stop testing anything.
+
+One process note: I edited that worktree while a test run was live in it. It
+happened to be harmless -- the FFF was recorded before the edit, confirmed
+against the 12:48 poll -- but it is exactly how a "fixed" result gets attributed
+to the wrong tree, and I should have waited.
+
+**My first fix was wrong, and the measurement said so.** The `nonzero_slope`
+isfinite guard did NOT clear the three tests -- rerunning the whole file gave
+the identical three failures with identical messages. I had a clean six-line
+repro of *a* nan path and assumed it was *the* nan path. It wasn't.
+
+What actually happens: **`f(x0)` itself is non-finite**, not `df/dx`. Bisection
+only ever consumes SIGNS of `f`, so it still returns a perfectly good bracket
+root -- and then `x0 - f(x0)/f'(x0)` subtracts a nan and destroys it. dehnendf
+reaches this through `sqrt(2(E - Phi) - L^2/x^2)`, which goes imaginary for some
+draws (the `RuntimeWarning: invalid value encountered in sqrt` at
+`diskdf.py:1718` was sitting in the output the whole time). Before #1255 the
+forward path returned `x0` untouched, so the nan had nowhere to go.
+
+Fix: `newton_polish` takes the Newton step **only where it is finite**. A polish
+exists to improve on the bracket root; it must never do worse than it.
+
+    whole tests/test_diskdf.py, --backend torch
+    before:  3 FAILED
+    after:   129 total, 0 FAILED
+
+Two other things worth recording:
+
+* **[RETRACTED 16:14Z -- the standalone probe ran on NUMPY; see the
+  `use()`-is-a-context-manager entry below. The fix itself stands, validated by
+  real pytest runs.]** The standalone reproduction PASSED (`mean 0.5045`, 0 non-finite) while the
+  full file failed. Another instance of context mattering -- `test_diskdf` has
+  known cross-test state. If I had trusted the isolated run I would have called
+  this a CI flake and merged a regression.
+* The slope hardening is **kept but demoted**: it is a genuine hole in
+  `nonzero_slope`'s stated contract (`maximum(abs(nan), tiny)` is nan, so
+  "1/d stays finite" held for a zero slope and not a nan one), but the commit
+  message now says plainly that it is hardening and not the cure.
+
+Both helpers now live in `galpy/backend/optimize.py` next to the `bisect_root`
+the two halves already share; `nonzero_slope` had been duplicated verbatim in
+the jax and torch files.
+
+Pushed as `2705e9cd`; cancelled the two still-running workflows on the prior SHA
+(the project is runner-constrained).
+
+### 2026-08-05 13:16Z — state of play
+
+**#1255** — new SHA `2705e9cd` pushed with the safeguarded polish; a fresh CI
+matrix is running clean so far (40 in progress, 109 queued, zero reds). The
+codecov reds on the previous SHA were the partial-upload phantom and healed
+exactly as predicted: patch `0.00% → passing`, project `-30.41% → -0.18%`,
+monotone the whole way.
+
+**Ready and deliberately held** (one PR at a time, both fully local):
+
+| branch | commits | what |
+|---|---|---|
+| `fix/parallel-map-fork-safety` | 3 | child-side torch thread cap; ledger 30→27 eager, +3 torch-jit; `tests/test_backend_multi.py` |
+| `fix/jit-pickling-test-fixtures` | 3 | backend-agnostic pickling fixtures + nan-aware compare; ledger −1 stale, +2 jax-jit |
+
+Both have their PR bodies drafted. They go up in that order once #1255 lands.
+
+**Measured this cycle, all new:**
+
+| subsystem | backend | result |
+|---|---|---|
+| test_actionAngle.py | torch --jit | **209/209, 0 FAILED** (was 192 measured + 17 unmeasurable) |
+| test_streamdf.py | torch (eager) | 80 collected, 76/76 on the CI-equivalent selection |
+| test_streamgapdf/spraydf/Track | jax --jit | 128 total, 82 passed, 0 FAILED, 46 slow-skipped (45 are streamTrack) |
+| test_streamdf.py | torch --jit | runs, but 3 tests need CUDA/compile fork work — ledgered `torch-jit` |
+
+### 2026-08-05 13:41Z — the 45 deferred streamTrack tests RUN under a trace
+
+The biggest hole in the streams census was `test_streamTrack.py`: 45 of the 46
+slow-skips in my jax `--jit` run. The slow-skip comment says why, and what would
+lift it:
+
+> the per-track eager dispatch pushes test_streamTrack over the shard timeout
+> ... **Un-skip when the pipeline is jit-vectorized.**
+
+So I measured it rather than assuming. Temporarily lifted the entry, ran the
+whole file under `--backend jax --jit`, then restored the file (`git status`
+clean -- verified, it is measurement scaffolding, not a change):
+
+    total=45  passed=45  FAILED=0  xfail=0  skipped=0
+    ~22 min wall, 1214 s summed test time
+
+**All 45 pass, in 22 minutes.** The shard budget is 90 min (180 for a jit
+dispatch), and CI runs jax shards at ~0.71x local, so ~16 min projected. Nothing
+about this is over-budget under a trace.
+
+Why: tracing *is* the vectorization the comment was waiting for. XLA fuses the
+per-trackpoint eager dispatch that was the actual bottleneck.
+
+**This contradicts a stated design assumption, so I am flagging it rather than
+changing it.** `conftest._load_backend_nodeids` makes `"<b>-jit"` inherit the
+eager `"<b>"` entries, and argues for it explicitly:
+
+> Tracing does not repair an eager failure -- it cannot fix a numerical gap, a
+> `_reject_backend` guard, or an out-of-scope family -- **and it only makes a
+> slow test slower, since the trace has to compile first.**
+
+The last clause has a counterexample now: here tracing makes an unrunnable test
+runnable. The list format can express "traced only" (`jax-jit ...`) but not
+"eager only", so lifting this needs a semantics change to a loader all three
+lists share — a deliberate, argued design decision, and a materially different
+piece of work depending on which way Jo wants it. **For Jo, not for me to decide
+unilaterally.** Two options when he's back:
+
+1. add an eager-only form (e.g. `jax-eager <nodeid>`) and move this one entry to
+   it -- +45 traced tests, no change to the automatic matrix;
+2. leave it, and accept streamTrack as unmeasured under a trace.
+
+Either way the measurement now exists, which it did not this morning. Note this
+only affects `workflow_dispatch(jit=true)`; `jit` is not in the push/PR matrix,
+so nothing is red today.
+
+### 2026-08-05 13:57Z — three more files measured traced, all clean
+
+Picked files with **zero** ledger and zero slow-skip entries, i.e. ones nobody
+had ever run traced, so the result is genuinely new information rather than a
+re-confirmation:
+
+    test_evolveddiskdf.py   jax --jit   35 total  35 passed  0 FAILED  0 skipped
+    test_jeans.py           jax --jit    5 total   5 passed  0 FAILED  0 skipped
+    test_kuzminkutuzov.py   jax --jit   10 total  10 passed  0 FAILED  0 skipped
+
+50/50. No xfails, no skips -- nothing hollow in this green.
+
+**Traced (`--jit`) census as it now stands.** Everything below was measured by
+hand during this vacation; none of it existed before.
+
+| file | backend | measured | FAILED | notes |
+|---|---|---|---|---|
+| test_potential.py | jax | 1385 | 0 | 2 test-side fixed, 2 not-traceable by design |
+| test_actionAngle.py | jax | 209 | 0 | |
+| test_actionAngle.py | torch | 209 | 0 | **complete after the fork fix** |
+| test_sphericaldf.py | jax / torch | 223 / 223 | 0 / 0 | |
+| test_qdf.py | jax / torch | 56 / 56 | 0 / 0 | |
+| test_diskdf.py | jax / torch | 129 / 129 | 0 / 0 | |
+| test_evolveddiskdf.py | jax | 35 | 0 | new |
+| test_jeans.py | jax | 5 | 0 | new |
+| test_kuzminkutuzov.py | jax | 10 | 0 | new |
+| test_streamgapdf + spraydf + impulse | jax | 83 | 0 | |
+| test_streamTrack.py | jax | 45 | 0 | new; **currently slow-skipped**, see 13:41Z |
+| test_streamdf.py | torch | 80 | 4 | the 4 are CI-deselected Torus tests |
+
+The DF and action-angle halves of the library are traced-green on both backends.
+The open traced gaps are: streamTrack (deferred by an inheritance rule, not by a
+defect), streamdf under jax (genuinely slow, eager), and the orbit files (sampled
+only).
+
+### 2026-08-05 14:03Z — #1255's real red is confirmed fixed in CI
+
+    backend torch tests/test_diskdf.py   SUCCESS
+    backend jax  tests/test_diskdf.py    SUCCESS
+
+That was the shard reporting `3 FAILED (NOT in ledger)` on the previous SHA. The
+local 129/0 result now has CI agreement, which is the check that matters -- my
+standalone reproduction of the same sampler had *passed*, so local evidence
+alone was not trustworthy here.
+
+Remaining on #1255: 93 success, 40 in progress, 16 queued, and the two codecov
+checks still on their usual heal (project -14.01%, patch 11.76%, both climbing;
+the `tests/test_backend*.py` shard that covers the diff is still queued).
+
+Also pre-flighted the next PR while waiting. `fix/jit-pickling-test-fixtures`
+touches only `tests/test_potential.py` and `tests/backend_xfail.txt`; develop has
+since moved only `galpy/backend/special/*`,
+`galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py` and
+`tests/test_backend_special.py` — **disjoint**, so no rebase is needed (a stale
+base with no file overlap is harmless). Re-ran it under `--backend jax --jit`:
+60 tests, 0 FAILED, 2 xfail — exactly the two `jax-jit` not-traceable entries it
+adds, so the branch is still good and can go up unchanged the moment #1255 lands.
+
+### 2026-08-05 14:19Z — end of cycle
+
+**#1255**: 131 success, 18 in progress, 0 queued, and the ONLY reds are the two
+codecov checks still healing (project -13.93% and climbing; patch pinned at
+11.76% until the `tests/test_backend*.py` shard finishes and uploads — it is the
+one that covers the diff). Every functional shard that had anything to say has
+said it, including the two that mattered:
+
+    backend torch tests/test_diskdf.py   SUCCESS   (was 3 FAILED)
+    backend jax   tests/test_diskdf.py   SUCCESS
+
+Expect the same endgame as #1252 and the previous #1255 SHA: codecov goes green
+on its own, `all-clear` will most likely have RACED the heal and concluded
+failure, so it needs one re-run afterwards. That is the documented pattern, not
+a new problem.
+
+**Ready to go up, in order, once #1255 lands** — both fully verified locally, PR
+bodies drafted:
+
+1. `fix/parallel-map-fork-safety` (4 commits) — child thread cap, now hoisted to
+   `galpy.backend.restrict_to_single_thread`; ledger 30→27 eager, +3 torch-jit;
+   new `tests/test_backend_multi.py`.
+2. `fix/jit-pickling-test-fixtures` (3 commits) — backend-agnostic pickling
+   fixtures + nan-aware compare; base is disjoint from newer develop, so no
+   rebase; re-verified 60 tests / 0 FAILED / 2 xfail.
+
+**Open for Jo** (nothing blocking, no phone ping warranted):
+- the slow-skip inheritance counterexample (13:41Z) — 45 streamTrack tests run
+  clean in 22 min under a trace but are deferred by a rule whose stated
+  justification is that tracing only makes slow tests slower;
+- the symplectic bit-identity few-ulp bound on `main` (a test weakening);
+- the jit-docs note that a units-based density cannot be traced.
+
+### 2026-08-05 14:34Z — the same guard cures 3 PRE-EXISTING jax failures
+
+Reading the remaining ledger for burndown candidates, three entries jumped out:
+
+    jax tests/test_diskdf.py::test_dehnendf_sample_flat_returnOrbit
+    jax tests/test_diskdf.py::test_dehnendf_sample_flat_returnROrbit_rrange
+    jax tests/test_diskdf.py::test_dehnendf_sample_powerrise_returnROrbit
+
+**The same three tests #1255 broke on torch, already ledgered on jax.** And the
+reason is exactly the one I'd just written into the commit message: jax has
+*always* polished unconditionally, so it has always been subtracting the nan
+`f(x0)` that torch only started subtracting in this PR. The jax entries are what
+this bug looks like when it has been there all along; the torch failures are what
+it looks like when a change introduces it. One cause.
+
+A/B, whole file, `--backend jax --runxfail`, two worktrees (never a stash):
+
+    develop (no newton_polish):  129 total,  3 FAILED   <- exactly these three
+    #1255 + newton_polish:       129 total,  0 FAILED
+
+So #1255 nets **-3 on the jax ledger** on top of un-breaking torch. jax 15 -> 12.
+
+**Not pushed, deliberately.** #1255's matrix was at 142/149 with only the healing
+codecov pair outstanding; pushing a 3-line ledger change would have thrown that
+away and restarted 149 jobs on a runner-constrained project. Until it lands the
+entries merely XPASS, which the shard reports as `XPASS(fix-me)` and does NOT
+fail on. The commit is parked as a patch and will go into
+`fix/parallel-map-fork-safety` once that is rebased onto post-#1255 develop --
+applying it any earlier would turn the jax diskdf shard red, since the entries
+are still needed until #1255 merges. Tracked as task #195 so it cannot be lost.
+
+### 2026-08-05 15:14Z — #1255 down to one shard
+
+149/151 green. `codecov/patch` went **green** exactly as predicted once the
+`tests/test_backend*.py` shard started uploading. The single remaining red is
+`codecov/project` at 99.78% (-0.18%), and the ONE job still running is the other
+`tests/test_backend*.py` shard (started 14:04, ~70 min — it is the big
+coverage-enabled one). `codecov.yml` sets no thresholds, so codecov's default
+0%-tolerance applies and any residual drop shows red.
+
+Patch at 100% with project slightly down and an upload still outstanding is the
+[[codecov-stale-base-892-suppression]] signature, not a real drop: a
+pure-addition diff whose own lines are fully covered cannot lower coverage
+elsewhere. Waiting for the shard rather than acting on it.
+
+`all-clear` has been running since 13:24 and will almost certainly have to be
+re-run once codecov settles — it races the heal, which is documented behaviour.
+
+Meanwhile: A/B'd `test_orbit.py::test_analytic_ecc_rperi_rap` and
+`test_analytic_zmax` (ledgered on jax, and the first on torch too) against the
+polish guard, on the theory that rperi/rap also come from a root-find. Both runs
+are still going after ~25 min — `test_orbit.py` collection under a forced
+backend is slow, and with `-q` and only a few selected tests nothing flushes the
+output buffer, so an empty log here means "buffered", not "hung" (checked: both
+processes R, 107% CPU). Result next cycle.
+
+**15:25Z — the -0.18% diagnosis, checked instead of argued.** I had reasoned
+that a pure-addition diff with 100% patch coverage cannot lower coverage
+elsewhere. That is an argument, not evidence, so I asked codecov directly for
+the per-file report on the head SHA:
+
+    galpy/backend/optimize.py         coverage=100.0  misses=0
+    galpy/backend/_torch/optimize.py  coverage=100.0  misses=0
+    galpy/backend/_jax/optimize.py    coverage=100.0  misses=0
+
+Every file this PR touches is fully covered with zero misses. So the residual
+project drop is in files this PR does not touch -- i.e. files whose coverage
+comes from the `tests/test_backend*.py` shard that is still running and has not
+uploaded. That is the partial-upload phantom, now established from the data
+rather than inferred from the shape of the diff.
+
+If that shard lands and project STAYS red, the diagnosis is wrong and it becomes
+a real drop to chase. Recording the prediction so it can fail.
+
+### 2026-08-05 15:40Z — orbit ledger hypothesis: NOT supported
+
+I guessed the two `test_orbit.py` analytic entries
+(`test_analytic_ecc_rperi_rap`, ledgered on jax AND torch; `test_analytic_zmax`,
+jax) might be the same root-find nan as the diskdf three, since rperi/rap come
+from a root-find. The full-file A/B was still running after 52 minutes -- only
+**2 tests** collect, but each is a monolithic loop over many potentials, and
+under eager jax that is an hour-plus.
+
+So I probed the actual quantity instead of waiting on the harness. Analytic
+rperi / rap / zmax under forced jax, both trees:
+
+    LogarithmicHalo   0.9798164095961895  1.2581448917411306  0.11390708639206959
+    MiyamotoNagai     0.9798169129438903  1.1942076878487229  0.03264766359404856
+    NFW               0.9800347084407858  1.2246648473142168  0.11087594559264291
+
+**Bit-identical on both trees, all three potentials, all 16 digits.** The polish
+guard does not move these values at all, so it cannot be what those entries are
+waiting on. Hypothesis dropped, A/B killed rather than left grinding for another
+hour to confirm a negative I already had.
+
+Worth keeping the shape of this: the diskdf hit was real and worth chasing, and
+the natural next guess ("same mechanism, adjacent module") was wrong. A ten-line
+probe of the actual numbers settled in 40 seconds what the test harness was
+going to take an hour to say.
+
+### 2026-08-05 15:47Z — characterising `SpiralArms::test_Rzderiv` (1 jax entry)
+
+Not fixed, but pinned down well enough to be worth writing.
+
+The assertion compares analytic `Rzderiv` against a numerical derivative of
+`Rforce`. The failure:
+
+    ACTUAL  1.872087   (analytic)
+    DESIRED 1.872082   (finite-difference reference)
+    rel 2.52e-06, tolerance rtol=1e-06
+
+**Why the tolerance is 1e-6 and not 3e-6.** The test computes
+
+    _NUMPY_1_23 = (numpy > 1.22) * (numpy < 1.27)
+    rtol = _NUMPY_1_23 * 3e-6 + (1 - _NUMPY_1_23) * 1e-6
+
+That loose band was a numpy 1.23-1.26 allowance. On numpy 2.4 the second factor
+is False, so `_NUMPY_1_23 = 0` and the strict 1e-6 applies again. Nothing to do
+with backends.
+
+**[CORRECTED 15:55Z -- see below. The probe backing this paragraph was
+invalid: it never exercised the jax path.]** The failure is NOT a per-call
+numerical difference between backends. For a
+FRESH potential at the exact failing coordinates
+(`amp=13, N=7, alpha=0.1, r_ref=1.123, phi_ref=0.3, Rs=0.777, H=0.5, Cs=[4.5],
+omega=-3.4`, at `R,z,phi,t = 0.777, 0.333, pi/3, 0`), using the test's own
+`deriv` verbatim:
+
+    numpy  analytic=1.8720866326539984  ref=1.872087591489663  rel=5.12e-07  PASSES
+    jax    analytic=1.8720866326539984  ref=1.872087591489663  rel=5.12e-07  PASSES
+
+Bit-identical, and both comfortably inside 1e-6.
+
+So the value that actually appears in the test (`ref = 1.872082`) differs from a
+fresh evaluation (`1.8720876`) by ~6e-6. The test builds one `pot` and runs many
+assertions against it, so **this is state-dependent** -- the next thing to look
+at is SpiralArms force caching under a forced backend, i.e. the same family as
+the Ellipsoidal broadcast-cache bug (task #51) and the RotateTilt cache-t fix.
+
+Stopping here rather than chasing it further while #1255 is the active PR. The
+characterisation is the deliverable: it rules out "backend arithmetic differs"
+and "the tolerance is unfair", and points at one specific mechanism.
+
+### 2026-08-05 15:50Z — #1255 MERGED; #1256 opened
+
+**codecov healed exactly as predicted, and the prediction was falsifiable.**
+
+    codecov/patch:   100.00% of diff hit
+    codecov/project: 99.95% (-0.01%), "passed because coverage increased by 0%
+                     when compared to adjusted base"
+
+The -0.18% was the partial-upload phantom. I had written down that if the last
+`test_backend*` shard landed and project STAYED red, my diagnosis was wrong.
+It didn't.
+
+`all-clear` had concluded FAILURE at 15:43, minutes before codecov went green --
+the documented race. Re-ran it: SUCCESS. Final: **152/152**.
+
+**Audited then merged** (`18ddfd9b`). The three checks the mission names:
+
+| check | result |
+|---|---|
+| `if` -> `xp.where` array-input class | every `float()`/`if` in the diff is test-side, or branches on the backend NAME not on array data; library code adds 8 `xp.where` and zero value-branches |
+| duplication | `_nonzero` DELETED from both backend halves, one shared `nonzero_slope` added -- net -1 duplicate |
+| helper placement | `nonzero_slope` + `newton_polish` land in `galpy/backend/optimize.py`, beside the `bisect_root` both halves already import |
+
+**#1256 opened**: the fork-safety PR, rebased onto post-#1255 develop (file sets
+disjoint, clean rebase, conflict-marker sweep clean -- the two hits are the known
+RST-underline false positive in files I don't touch). The parked jax-diskdf
+prune rode along as planned, so the PR carries:
+
+    ledger  jax 15 -> 12, torch 15 -> 12, torch-jit 1 -> 4   (net -3)
+
+33 tests pass on the rebased tree under `-W error::DeprecationWarning`.
+
+Queue: #1256 -> then `fix/jit-pickling-test-fixtures`.
+
+### 2026-08-05 15:55Z — SpiralArms Rzderiv ROOT-CAUSED (and my earlier probe was invalid)
+
+**First, the correction.** At 15:47Z I concluded "numpy and jax are
+bit-identical, so this is not a per-call numerical difference". That conclusion
+came from a probe that **never ran the jax path**. I checked
+`is_backend_array(pot.Rforce(...))` under `use("jax", force=True)` with plain
+Python-float coords and got **False** -- galpy resolved the namespace from the
+DATA, the data was numpy, so I was comparing numpy against numpy and of course
+got bit-identical answers. My own note says exactly this:
+[[value-checks-cannot-see-numpy-fallback]] -- assert `is_backend_array` or take
+a grad, never compare values alone. I didn't, and it cost me two wrong
+hypotheses (cache state, then "not numerical at all").
+
+With the coords coerced to jax arrays -- which is what the harness's boundary
+does -- `is_backend_array` is True and the failure reproduces exactly:
+
+    analytic 1.8720866326543568
+    FD ref   1.8720819126988892
+    rel      2.5212e-06        (CI reported 2.52123341e-06)
+
+**Root cause.** `Rforce` differs numpy-vs-jax by ~1.9e-13 relative at the
+stencil points -- ordinary float64 reassociation in the spiral-arm sum, nothing
+wrong with it. The central difference divides by `2*dx = 2e-8`, so that 1.9e-13
+is amplified by 5e7 into 2.5e-6 **in the reference**. The analytic `Rzderiv`
+values agree between backends to ~2e-13. It is the test's reference that is
+fragile, not galpy's derivative.
+
+**`dx = 1e-8` is simply a bad choice.** Measured error of the FD reference
+against the analytic truth:
+
+    dx        rel err numpy    rel err jax
+    1e-08       5.122e-07        2.521e-06   <- round-off dominated, backends DISAGREE
+    1e-07       5.735e-08        5.705e-08
+    1e-06       3.262e-09        3.262e-09
+    1e-05       9.329e-10        9.359e-10   <- optimum
+    1e-04       3.066e-08        3.066e-08
+
+At 1e-8 the reference is only good to ~5e-7 **even on numpy** -- it passes there
+by luck. At 1e-6 it is ~150x more accurate and the two backends agree to three
+significant figures.
+
+**Verified fix, one line:** `dx = 1e-8 -> 1e-6` in `test_Rzderiv` makes the whole
+test pass under BOTH plain numpy and `--backend jax` at the strict `rtol=1e-6`.
+This **strengthens** the test (a much more accurate reference) rather than
+loosening a tolerance, so it is not a tolerance-policy change -- but it does
+touch a numpy-path test, so it gets flagged in its PR.
+
+Parked as `scratchpad/spiralarms_dx_fix.diff` (task #196), NOT committed into
+#1256's worktree -- that worktree has an open PR and the fix is unrelated to it.
+Worktree verified clean afterwards.
+
+Also worth recording: `_NUMPY_1_23 = (>1.22)*(<1.27)` is False on numpy 2.4, so
+the looser 3e-6 band that used to mask this is gone. That is why the entry
+exists now and not earlier.
+
+### 2026-08-05 16:11Z — torch side of the three new files: also 50/50
+
+    test_evolveddiskdf.py   torch --jit   35 total  35 passed  0 FAILED  0 skipped
+    test_jeans.py           torch --jit    5 total   5 passed  0 FAILED  0 skipped
+    test_kuzminkutuzov.py   torch --jit   10 total  10 passed  0 FAILED  0 skipped
+
+Identical to the jax numbers. These three files are now traced-green on BOTH
+backends, with no ledger entries, no slow-skips and no xfails on either -- 100
+measured results where there were zero this morning.
+
+**#1256 is runner-starved, not stuck.** Three full matrices are queued at once:
+#1256's `pull_request` run, #1256's `push` run (pushing the branch fires both),
+and `feat/backends-develop`'s own push run from the #1255 merge. Repo-wide only
+2 jobs are in progress. That is GitHub capacity, not a fixable condition, and I
+am NOT cancelling the push runs -- [[cancel-push-run-leaves-cosmetic-red]]
+records that cancelling a same-SHA push run blocks the merge. Waiting costs time
+and nothing else.
+
+### 2026-08-05 16:14Z — `galpy.backend.use()` is a CONTEXT MANAGER; a bare call does NOTHING
+
+Chasing why my SpiralArms probes disagreed with the harness, I found the reason,
+and it is worse than a one-off: **several of today's probes measured numpy while
+believing they measured jax/torch.**
+
+`galpy/backend/_resolver.py`:
+
+    @contextlib.contextmanager
+    def use(name, force=False):
+        ...
+        token = _BACKEND_CTX.set((name, force))
+        try:
+            yield ...
+
+Calling `use("jax", force=True)` as a **bare statement** builds a generator and
+throws it away. `_BACKEND_CTX.set` never runs. Proved directly:
+
+    after bare use('jax', force=True):   backend = numpy   is_backend_array = False
+    inside `with use('jax', force=True)`:                  is_backend_array = True
+
+**What this invalidates (retracted):**
+
+* the `hollow_scan` sweep that reported *every* potential returning a
+  non-backend array under a forced backend -- it was numpy throughout, and says
+  nothing about migration coverage;
+* the SpiralArms probes at 15:47Z that found numpy and jax "bit-identical", and
+  the follow-up that found no cache effect -- both were numpy vs numpy;
+* the dehnendf standalone reproduction (`mean 0.5045`, 0 non-finite) that I used
+  to argue "the standalone run passes while the full file fails -- context
+  matters". It passed because it ran on **numpy**. The real explanation is much
+  duller than cross-test state.
+
+**What still stands (and why):**
+
+* the `newton_polish` fix and its 129/0 result -- validated by real
+  `pytest --backend torch/jax` runs, not by probes;
+* the SpiralArms root cause and the `dx` sweep -- those passed **explicit
+  `jnp.asarray` coords**, so data-first dispatch put them on jax regardless of
+  the broken `use()`; the `is_backend_array=True` check in probe 5 confirms it,
+  and the `dx=1e-6` fix was verified by an actual `--backend jax` pytest run;
+* the harness itself is fine: instrumenting the real test showed **42/42
+  `Rforce` calls returning `jaxlib._jax.ArrayImpl`**. conftest uses
+  `with backend.use(...)` correctly.
+
+The lesson generalises past this bug: `is_backend_array` on the output is the
+only thing that proves a probe is on the backend. I have now been bitten twice in
+one day by trusting a value comparison, and the second time the setup itself was
+inert.
+
+**The corrected scan (replacing the retracted one).** Same question, asked
+properly with `with use("jax", force=True):` and an `is_backend_array` check on
+the result:
+
+    MiyamotoNagai, NFW, Hernquist, LogarithmicHalo, Plummer, Jaffe,
+    SpiralArms, Burkert, PowerSpherical, DoubleExponentialDisk,
+    KuzminKutuzovStaeckel, Isochrone, FlattenedPower,
+    RazorThinExponentialDisk                                    -> all True
+
+    NOT backend-native with float coords under forced jax: none
+
+So the forced-backend coercion works across the potential layer -- plain float
+coords do reach the backend path, and **there is no hollow green here**. The
+earlier "every potential falls back to numpy" reading was entirely an artefact
+of my broken `use()` call, and it is worth having the real answer on record
+rather than just striking the wrong one.
+
+**Re-verified the dx sweep properly (16:17Z).** The sweep behind the `dx=1e-6`
+recommendation had used the broken bare `use()` for its numpy column. That
+column *wanted* numpy, so it was accidentally right -- but a recommendation
+resting on an accident is not one I want to hand Jo. Redone with
+`with use(...)` on both columns plus assertions (`not is_backend_array` on the
+numpy column, `is_backend_array` on the jax column):
+
+    analytic truth = 1.8720866326539984
+          dx         numpy           jax
+       1e-08     5.122e-07     2.521e-06
+       1e-07     5.735e-08     5.705e-08
+       1e-06     3.262e-09     3.262e-09
+       1e-05     9.329e-10     9.359e-10
+       1e-04     3.066e-08     3.066e-08
+
+Identical to before, now on a sound footing. Task #196 stands as written.
+
+Note what survived and why: every conclusion I reached through the **pytest
+harness** (`--backend jax/torch`) was correct, and every conclusion I reached
+through an **ad-hoc probe with a bare `use()`** was wrong. The harness uses
+`with backend.use(...)`; I did not. When the two disagreed, the harness was
+right every time.
+
+**Audit: does galpy itself ever misuse `use()`? No.** The obvious follow-up to
+my own bug -- if a bare `use()` is a silent no-op, does the library or the docs
+do it anywhere? Swept `galpy/`, `tests/` and `doc/` for `use(` as a bare
+statement: **zero hits**. Every occurrence is `with use(...)`, and the one
+`return use("numpy", force=True)` (`constantbetadf._numpy_ctx`, line 74) is a
+context-manager FACTORY -- it returns either `use(...)` or
+`contextlib.nullcontext()`, and its only caller (line 337) does
+`with _numpy_ctx(...)`. Correct by construction.
+
+So the defect was entirely in my ad-hoc probes, not in galpy. Worth having
+checked rather than assumed: a silent no-op in library code would have been a
+real bug, and the cost of asking was one grep.
+
+### 2026-08-05 16:24Z — characterised the torch constantbetadf ledger entry
+
+`torch tests/test_sphericaldf.py::test_constantbeta_interpolatedpotentials_beta`
+is not a tolerance problem and not a df problem. It fails with
+
+    TypeError: Concatenation operation is not implemented for NumPy arrays
+    galpy/potential/interpSphericalPotential.py:105
+
+`interpSphericalPotential` built inside `with use("torch", force=True)` freezes
+its derived scalars **inconsistently**:
+
+    _Phi0        Tensor    backend_array=True
+    _Phimax      Tensor    backend_array=True     (contaminated by _Phi0)
+    _total_mass  float64   backend_array=False    (straight from the scipy spline)
+    _rmax        float64   backend_array=False
+
+Line 105 is on the `xp is numpy` branch:
+
+    out = numpy.empty_like(r)
+    out[mask] = -self._total_mass / r[mask] + self._Phimax
+
+-- a numpy expression plus a **Tensor**, assigned into a numpy array.
+
+Why constantbetadf gets there: it deliberately forces numpy under torch
+(`_numpy_ctx`, `constantbetadf.py:63-75`, because its fE setup is scipy
+quadrature), so `r` arrives as numpy -- while the interpolated potential was
+BUILT under torch. Numpy `r` + torch attributes.
+
+This is the frozen-attr-at-construction class my notes already name
+([[qdf-sampler-numpy-boundary]]: coerce the frozen attributes at construction,
+do not wrap the boundary). Fix direction is to make `_Phi0/_Phimax/_total_mass/
+_rmax/_rmin` consistently one namespace when the object is built. Task #197,
+after #1256 -- one PR at a time.
+
+Probe written the right way this time (`with use(...)`, `is_backend_array` on
+every attribute), which is exactly how the mixed state became visible; a value
+comparison would have shown nothing.
+
+**16:35Z — the interpSpherical fix is written and verified (parked).** One line
+plus an import:
+
+    self._Phi0 = as_numpy(Phi0) + self._pot_spline(self._rgrid[0])
+
+`Phi0` comes from `_evaluatePotentials(rforce, rgrid[0], 0.0)`, which returns a
+backend scalar when the object is built under a forced backend. It propagates
+into `_Phi0` and then `_Phimax`, while `_total_mass`/`_rmax` stay numpy (scipy
+spline outputs) -- the inconsistency. Freezing it numpy-side costs nothing here:
+every spline in this class is scipy, so parameter gradients were already
+unavailable, and the backend branch coerces with `xp.asarray` regardless.
+
+Verified:
+
+    torch  test_constantbeta_interpolatedpotentials_beta   FAIL -> PASS
+    attrs after torch construction: _Phi0/_Phimax/_total_mass/_rmax ALL numpy
+    numpy  test_potential.py -k interpSphericalPotential   20 passed, 2 skipped
+
+The numpy check matters: `as_numpy` on an already-numpy value is a no-op, so the
+numpy path is untouched -- but "cannot change" is an argument and 20 passing
+parametrized tests are evidence.
+
+Parked as `scratchpad/interp_phi0_fix.diff`, NOT committed -- #1256's worktree
+has an open PR and this is unrelated to it. Worktree verified clean afterwards.
+Task #197 now has a ready fix rather than just a diagnosis.
+
+**#1256 CI:** 3 success / 12 in progress / 135 queued, first codecov/project red
+at -47.57% with 3 shards uploaded -- the partial-upload phantom, same curve as
+the last two PRs. No action.
+
+**16:42Z — second numpy gate for the interpSpherical fix: 527 passed.**
+`test_backend_wrappers.py` + `test_dynamfric.py` (the two files that actually
+construct `interpSphericalPotential` outside the parametrized loop), numpy path,
+10.5 min: **527 passed**, zero failures.
+
+Timing note so this is not mistaken for a stale result: the run was dispatched
+16:29 and I reverted the fix out of the worktree at 16:35, but Python imports a
+module once -- `galpy.potential.interpSphericalPotential` was loaded at
+collection, seconds in, with the fix present. The run tested the fixed code.
+
+So the parked fix now has three independent gates:
+
+    torch  test_constantbeta_interpolatedpotentials_beta   FAIL -> PASS
+    numpy  test_potential.py -k interpSphericalPotential   20 passed, 2 skipped
+    numpy  test_backend_wrappers + test_dynamfric          527 passed
+
+Combined follow-up PR body drafted at `scratchpad/pr_potfixes_body.md`, pairing
+this with the SpiralArms `dx` fix: both are one-line potential-layer changes,
+each burning one ledger entry, in disjoint files. Grouped rather than split
+because [[pr-granularity-less-atomic]] -- two separate PRs here would be pure
+overhead. Ledger jax 12 -> 11, torch 12 -> 11.
+
+### 2026-08-05 16:49Z — #1256 codecov reds, and why patch is sensitive here
+
+Both reds are codecov and both are mid-heal (`project` -47.57% -> -39.71%).
+`patch` reads 80.00% against an 81.43% target, which is worth understanding
+rather than waiting out blindly:
+
+* `.coveragerc` sets `concurrency = multiprocessing` and `parallel = true`, so
+  **forked-child coverage IS captured** -- `restrict_to_single_thread` running
+  only inside `worker()` will be counted. That was my first worry and it is
+  unfounded.
+* `galpy/util/multi.py` is in the `.coveragerc` **omit** list. So the `multi.py`
+  half of this PR contributes *no* coverable lines, and the patch percentage is
+  carried almost entirely by the ~4 executable lines of
+  `restrict_to_single_thread` in `_namespaces.py`. With a denominator that
+  small, **one uncovered line is 20%** -- which is exactly the gap showing.
+
+The uncovered line is almost certainly `torch.set_num_threads(1)`, which only
+executes on a shard where torch is installed; the torch-enabled
+`tests/test_backend*.py` shard has not uploaded yet.
+
+Contingency if it does NOT heal: add a direct parent-process test that calls
+`restrict_to_single_thread()` and asserts `torch.get_num_threads() == 1`,
+restoring the previous count afterwards. Deliberately NOT writing that yet --
+[[codecov-project-blocks-via-all-clear]] case (b) is self-healing and I would be
+adding a test to chase a number rather than to test behaviour. Wait for the
+final figure first.
+
+### 2026-08-05 17:00Z — the 2 jax noninertial entries look mis-filed (not mis-fixed)
+
+Measured: `test_arbitraryaxisrotation` **PASSES** under `--backend jax`, taking
+~5.5 min (~330 s) for the single test. The `-k arbitraryaxisrotation` run so far
+is `...ss` -- 3 passed, 2 skipped (the 2 skips are siblings already on the
+slow-skip list).
+
+This matches the project's own written policy, which I found rather than
+invented. `backend_xfail.txt` lines 16-22:
+
+> EXCEPTION: 2 jax `test_arbitraryaxisrotation_{omegadot,omegafunc_nullpotential}`
+> that the regen run happened to pass are moved to `backend_slow_skip.txt`, NOT
+> pruned -- they are eager-XLA TIMEOUT-flaky (~250-500s under jax vs the 300s
+> per-test CI timeout; pass in a fast run, FAIL as a timeout under load). **A
+> timeout OVERRIDES xfail (records FAILED), so slow-skip -- not xfail -- is the
+> correct home.**
+
+and `backend_slow_skip.txt` 312-317 says the WHOLE func/vec-omega family is
+borderline at 250-500 s, surfacing "one test at a time on whichever runner is
+slowest".
+
+So three siblings were moved to slow-skip on exactly this reasoning, and
+`test_arbitraryaxisrotation` / `test_arbitraryaxisrotation_omegafunc` were left
+in the xfail ledger. My 330 s measurement puts the first of those squarely in
+the same class -- over the 300 s timeout, and passing when it gets to finish.
+
+**Recommendation (pending the junitxml for definitive per-test attribution):**
+move those 2 from `backend_xfail.txt` to `backend_slow_skip.txt`, alongside
+their siblings. That is bookkeeping accuracy, not a burn-down -- the ledger
+shrinks by 2 but the deferred-work count grows by 2, and the ledger stops
+claiming these are numerical failures when they are runtime ones.
+
+Not acting until the run finishes and names which tests passed. The first test
+alone took 5.5 min and the run is 20+ min in on test 6; this family is slow
+enough that measuring it properly is most of the cost.
+
+**17:05Z — SpiralArms `dx` fix: whole-file gate, both backends.** I had only run
+`test_Rzderiv` itself. The `dx` is method-local (line 1634, inside that method),
+so in principle nothing else moves -- but that is a line-number argument, so I
+ran the whole file:
+
+    test_SpiralArmsPotential.py  numpy           19 total, 19 passed, 0 FAILED
+    test_SpiralArmsPotential.py  jax --runxfail  19 total, 19 passed, 0 FAILED
+
+`--runxfail` on the jax side so the ledger entry cannot mask a regression.
+Worktree restored clean afterwards; the fix stays parked.
+
+Both halves of the combined potential-fixes PR are now gated on whole files
+rather than single tests:
+
+| fix | gates |
+|---|---|
+| interpSpherical `_Phi0` | torch target FAIL->PASS; attrs all-numpy; numpy 20 parametrized + **527** wrappers/dynamfric |
+| SpiralArms `dx` | numpy **19/19**, jax **19/19** (whole file, `--runxfail`) |
+
+### 2026-08-05 17:09Z — noninertial: CONFIRMED mis-filed, with durations
+
+The `-k arbitraryaxisrotation` run finished. `--backend jax --runxfail`, so
+nothing is masked:
+
+    PASS  581.6s  test_arbitraryaxisrotation                        <- LEDGERED
+    PASS  559.9s  test_arbitraryaxisrotation_omegafunc              <- LEDGERED
+    PASS  182.0s  test_python_vs_c_arbitraryaxisrotation_omegadot
+    PASS  159.1s  test_arbitraryaxisrotation_omegadot_nullpotential
+    PASS  140.1s  test_arbitraryaxisrotation_nullpotential
+    PASS  116.9s  test_python_vs_c_arbitraryaxisrotation
+    skip    0.0s  test_arbitraryaxisrotation_omegadot               <- slow-skip
+    skip    0.0s  test_arbitraryaxisrotation_omegafunc_nullpotential<- slow-skip
+    skip    0.0s  test_python_vs_c_arbitraryaxisrotation_funcomega  <- slow-skip
+
+**Both ledgered entries PASS, at 581.6 s and 559.9 s** -- roughly 2x the 300 s
+per-test CI timeout. They are not numerical failures; they are tests that never
+get to finish in CI, time out, get recorded FAILED, and have the xfail absorb it.
+
+The split is otherwise coherent and confirms the reading: every sibling that
+runs UNDER 300 s (117-182 s) is in neither list, and the ones at or over the
+limit are deferred. The two ledgered ones are the **most** extreme of the family
+-- slower than the three that were already moved to slow-skip on precisely this
+reasoning.
+
+Per the project's own policy (`backend_xfail.txt` 20-22, "A timeout OVERRIDES
+xfail (records FAILED), so slow-skip -- not xfail -- is the correct home"), these
+two belong in `backend_slow_skip.txt`.
+
+**This is bookkeeping accuracy, not burndown.** The xfail ledger drops 2 and the
+deferred list gains 2; total deferred work is unchanged. What it buys is that the
+ledger stops asserting these are numerical gaps when they are runtime ones --
+which matters because ledger size is the burndown metric, and 2 of its entries
+were measuring the wrong thing.
+
+### 2026-08-05 17:09Z — test_coords.py traced: 98/98
+
+    test_coords.py  jax --jit  total=98 passed=98 FAILED=0 xfail=0 skipped=0
+
+No ledger entries, no slow-skips, nothing masked -- a file nobody had run traced,
+clean on the first measurement.
+
+> **RETRACTED same day (see the boundary-count entry below).** This is a
+> jit-VACUOUS result and I should not have logged it as a traced datum.
+> `test_coords.py` executes **zero** `@backend_input` boundaries, so `--jit` never
+> engages tracing and the run is byte-for-byte the eager run. 98/98 is real
+> evidence of eager backend-agnosticism and NO evidence of traced coverage.
+
+### 2026-08-05 17:2xZ — #1256 poll + a falsifiable codecov prediction
+
+44 success / 26 in progress / 79 queued. Only reds are the 2 codecov contexts.
+
+    project  -47.57%  ->  -8.32%  ->  -6.38%   (79.72% vs base 18ddfd9)
+    patch    80.00% of diff hit (target 86.10%)
+
+`project` is healing monotonically as shards upload -- the known partial-upload
+phantom, same shape as #1255. **Prediction: it lands at ~0 and passes with no
+action.** If it stalls at a real negative once all 149 jobs are done, that is a
+genuine coverage drop and I fix it rather than re-running.
+
+`patch` at 80% needs its own answer and I am NOT assuming it is phantom. The diff
+touches `galpy/util/multi.py`, which is in `.coveragerc`'s **omit** list -- so its
+lines are absent from the report entirely and cannot be the miss. The candidate
+is `galpy/backend/_namespaces.py::restrict_to_single_thread`, whose torch branch
+only executes on shards that actually have torch installed (one framework per
+shard). **Prediction: patch rises as the torch shards upload.** If it is still
+short at completion I will name the exact uncovered lines from the codecov API
+rather than guessing.
+
+### 2026-08-05 — next PR staged locally: fix/potential-ledger-accuracy
+
+Worktree /var/tmp/potfix off develop 18ddfd9b, C extension built and functionally
+verified (dop853_c integrates). Carries three ledger-accuracy changes:
+
+  1. interpSphericalPotential: freeze `_Phi0` on the numpy side   (torch -1)
+  2. test_SpiralArmsPotential test_Rzderiv: dx 1e-8 -> 1e-6       (jax   -1)
+  3. noninertial: re-home 2 mis-filed timeout entries             (jax   -2, deferred +2)
+
+Ledger vs develop: jax xfail 15 -> 12, torch 15 -> 14; jax slow-skip 188 -> 190.
+Of the -4, **two are burndown and two are bookkeeping** -- stated that way in the
+ledger header so the number cannot be read as more progress than it is.
+
+Not pushed: one PR at a time. Both #1256 and this touch the ledger, so it rebases
+after #1256 merges.
+
+### 2026-08-05 — test_coords traced on BOTH backends, and a harness defect it exposed
+
+    test_coords.py  jax --jit    98 total, 98 passed, 0 FAILED, 0 xfail, 0 skipped
+    test_coords.py  torch --jit  98 total, 98 passed, 0 FAILED, 0 xfail, 0 skipped
+
+Clean on both. I went to check the traced FRACTION rather than the pass count
+(pass counts under `--jit` say nothing if the file never reaches a
+`@backend_input` boundary) -- and instead found why every backend run I have
+triaged this fortnight needed a junitxml.
+
+**`pytest --backend jax` prints no summary line at all.** Not a --jit thing:
+
+    --backend numpy      -> "7 passed, 91 deselected in 6.08s"
+    --backend jax        -> (nothing)
+    --backend torch      -> (nothing)
+
+Exit code 0, junit complete, just no counts. Cause: `conftest.py`'s
+`pytest_sessionfinish` force-exits in its hookwrapper post-yield. Its docstring
+says this happens "AFTER the junit XML and **the terminal summary** have been
+written" -- true for junit, false for the summary, which TerminalReporter emits
+after that hook unwinds. A/B settled it: neutralize `_backend_force_exit` and the
+line comes back verbatim.
+
+Fixed by deferring the exit to a `trylast` `pytest_unconfigure`. The 60 s daemon
+backstop still covers a hang inside the summary itself.
+
+Verified with an **atexit probe**, which is the discriminator that matters here --
+`os._exit` skips atexit, so if atexit runs, the force-exit silently stopped
+happening and I would have traded a truncated log for a hung CI job:
+
+    numpy  summary + ATEXIT_RAN  -> normal shutdown, force-exit correctly not armed
+    jax    summary + NO atexit   -> os._exit still fires
+    torch  summary + NO atexit   -> os._exit still fires
+
+Also checked `backend-tests.yml`: its census parses the junit XML, not stdout, so
+adding the line back cannot break a CI step.
+
+Riding in `fix/potential-ledger-accuracy` (4th disjoint file). Note the trace-
+fraction measurement I originally set out to make is still NOT done -- the
+instrumentation plugin is written but I stopped to chase this. Carrying it.
+
+### 2026-08-05 — boundary counts: "traced-green" needs a denominator
+
+Wrote a ~25-line pytest plugin that wraps `galpy.backend._input.traced_call` and
+tallies every `@backend_input` boundary call, splitting outer-trace / nested /
+eager. Ran it against the file I had just declared traced-clean:
+
+    test_coords.py  --backend jax        boundary=0  traced=0.0%   98 passed
+    test_coords.py  --backend jax --jit  boundary=0  traced=0.0%   98 passed
+
+    CONTROL, test_potential.py -k test_toVertical_toPlanar --jit:
+                                         boundary=302 outer=292 nested=10  traced=100.0%
+
+The control proves the counter works, so **boundary=0 for test_coords is real**:
+that file executes not one `@backend_input` boundary, so `--jit` is byte-for-byte
+the eager run. 98/98 traced was a free win in the arithmetic sense -- it moved no
+needle. Retraction annotated in place above.
+
+This is the [[jit-coverage-not-pass-counts]] trap, and I walked into it two hours
+after writing the memory. Pass counts are the wrong metric because a file with no
+boundaries scores 100%. **Any file added to the traced census from here needs its
+boundary count reported next to the pass count**; boundary=0 means "not applicable",
+not "green".
+
+Not a criticism of test_coords: coords helpers are `@backendNative` leaves, not
+coercion boundaries, so having none is correct by design. The defect is in how I
+was scoring, not in the code.
+
+Plugin parked at /var/tmp/jitcount.py. Candidate follow-up: fold it into the
+backend-tests census as a real column (task #185 delivered the pass-based version).
+
+### 2026-08-05 — fix/potential-ledger-accuracy committed (517834b1), not pushed
+
+Four disjoint files. Gates, whole files, `--runxfail` on the backend runs:
+
+    torch  test_sphericaldf.py                223 total, 223 passed, 0 FAILED, 0 xfail
+    jax    test_SpiralArmsPotential.py         19 total,  19 passed, 0 FAILED
+    numpy  test_SpiralArmsPotential.py         19 total,  19 passed, 0 FAILED
+    numpy  test_potential -k interpSpherical   22 total,  20 passed, 2 skipped
+    numpy  test_sphericaldf.py                 (still running)
+
+The 2 numpy skips are pre-existing capability skips ("no explicit _surfdens /
+missing derivs"), checked rather than assumed. Note G1 shows **0 xfail** under
+`--runxfail`, which is the real evidence the ledgered entry passes rather than
+being absorbed.
+
+Ledger jax 15 -> 12, torch 15 -> 14, jax slow-skip 188 -> 190. Two of the four are
+burndown, two are bookkeeping; the ledger header says so.
+
+Held back: one PR at a time. #1256 is at 59 success / 24 running / 66 queued with
+only the 2 codecov contexts red (project frozen at -6.38% for three polls now, no
+new uploads processed). Both branches touch the ledger, so this rebases after
+#1256 merges. PR body drafted at scratchpad/pr_potfixes_body.md.
+
+### 2026-08-05 — #1256: codecov/project healed exactly as predicted; patch diagnosed
+
+    project  -47.57%  ->  -8.32%  ->  -6.38%  ->  -5.43%  ->  86.10% (-0.01%) PASSED
+
+Passed on the adjusted base, same shape as #1255. The prediction recorded before
+it resolved was right, so no action was needed and none was taken.
+
+`patch` is still 80.00% vs target 86.10%, and it did NOT move while project moved
+a lot -- so I stopped calling it a phantom and looked. Countable diff lines are
+only in `galpy/backend/_namespaces.py` (17 added) and `galpy/backend/__init__.py`
+(2); `galpy/util/multi.py` is in `.coveragerc`'s **omit**, so its 5 lines are
+absent from the report entirely and cannot be the miss.
+
+The candidate is `restrict_to_single_thread`'s torch branch, which needs both
+torch installed AND a forked `parallel_map`. I nearly mis-ruled on this: my note
+[[backend-branches-need-test-backend-coverage]] says "backend-tests.yml uploads NO
+coverage" -- true, but that is a DIFFERENT workflow. `build.yml`'s shards run
+`--cov galpy` and upload, and install torch when `REQUIRES_TORCH`.
+
+So the decisive question was which shard, and it has a specific answer:
+
+    build (ubuntu-latest, 3.14, tests/test_backend*.py, ..., true, true)   QUEUED
+
+That is the **only** shard that runs the new `tests/test_backend_multi.py` and has
+torch -- and it has not started. Patch coverage is currently being computed
+without the shard that exercises the new code.
+
+**Sharpened prediction: patch rises when that one shard uploads.** If it completes
+and patch is still short, the miss is real and I will name the exact uncovered
+lines from the codecov file_report rather than reasoning about it.
+
+### 2026-08-05 — boundary audit of earlier "traced-green" claims
+
+    test_jeans.py  jax --jit   boundary=109288  outer=109269  nested=19  traced=100.0%   5 passed
+
+Genuinely traced -- that census stands. Sweep continues over test_kuzminkutuzov /
+test_evolveddiskdf / test_coords (the last as a known-zero control).
+
+### 2026-08-05 — folded the pickling PR into fix/potential-ledger-accuracy
+
+Both branches edit `tests/backend_xfail.txt`, so shipping them separately meant a
+guaranteed rebase and a second full CI cycle -- expensive with 61 jobs queued.
+They tell one story (make the burndown numbers and the CI logs truthful), so the
+3 pickling commits are cherry-picked onto the same branch. Auto-merged clean.
+
+Reviewed rather than trusted, since they were verified on a different tree:
+`nchecked > 0` IS asserted, so the NaN==NaN carve-out cannot let an all-skipped
+potential pass silently. Noted but deliberately NOT changed: `_pickletest_dens_tdep`
+and `_pickletest_dens_nonaxi` still call `numpy.sin`/`numpy.cos` while their six
+siblings were migrated to `get_namespace`. The measured result is FAILED=0 across
+all 60 pickling tests under `--jit`, so there is no failure motivating a change,
+and touching them without one is churn. Flagging it as a known inconsistency.
+
+Combined ledger vs develop: jax xfail 15 -> 11, torch 15 -> 14, jax-jit 3 -> 5
+(the 2 not-traceable units entries), jax slow-skip 188 -> 190.
+
+### 2026-08-05 — fix/potential-ledger-accuracy: all gates green, ready to push
+
+    torch      test_sphericaldf.py             223 total, 223 passed, 0 FAILED, 0 xfail
+    numpy      test_sphericaldf.py             223 total, 223 passed, 0 FAILED, 0 skipped
+    jax        test_SpiralArmsPotential.py      19 total,  19 passed, 0 FAILED
+    numpy      test_SpiralArmsPotential.py      19 total,  19 passed, 0 FAILED
+    numpy      test_potential -k interpSpherical 22 total, 20 passed, 2 skipped
+    jax --jit  test_potential -k pickling        60 total,  58 passed, 0 FAILED, 2 xfail
+    numpy      test_potential -k pickling        60 total,  60 passed, 0 FAILED
+
+The torch run's **0 xfail** under `--runxfail` is what shows the burned entry
+genuinely passes rather than being absorbed; the numpy `test_sphericaldf.py` run
+(20m39s, serial -- correct for a byte-identity gate) covers
+interpSphericalPotential's other consumer. The 2 numpy `interpSpherical` skips are
+pre-existing capability skips, read rather than assumed.
+
+The pickling re-verification on the FOLDED branch reproduces the original claim
+exactly (60 total / 0 FAILED / 2 xfail), so the cherry-picks are intact on the new
+base. Incidentally it also demonstrated the conftest fix in situ: that jax run
+printed its "58 passed, 2 xfailed" line, which before today it would not have.
+
+Branch is 4 commits, 6 files, +84/-18. Held until #1256 merges.
+
+### 2026-08-05 — boundary audit complete: 3 of 4 claims hold, 1 was hollow
+
+    file                  boundary   outer    nested   traced    tests
+    test_jeans            109288     109269      19    100.0%    5 passed
+    test_evolveddiskdf     16938      16923      15    100.0%   35 passed
+    test_kuzminkutuzov      8274       7608     666    100.0%   10 passed
+    test_coords                0          0       0      0.0%   98 passed   <- vacuous
+
+So the retraction was correctly scoped: only `test_coords` was hollow. The three
+df/AA files genuinely drive the traced path, at 100% of their boundary calls --
+`eager_off=0` everywhere, meaning no boundary call fell back to untraced. Those
+earlier censuses stand as written.
+
+Worth noting `test_kuzminkutuzov`'s 666 NESTED calls against 7608 outer: nested
+means a boundary reached while already inside a trace, which is the normal shape
+for a potential evaluated inside an action-angle solve. It is not double counting
+and it is not a defect -- just the only file in this set with deep call nesting.
+
+The lesson stands and is now quantified: a pass count cannot distinguish 109288
+traced boundary calls from zero. Both render as "98 passed".
+
+### 2026-08-05 — ledger arithmetic after both PRs, and what is actually left
+
+#1256's own ledger edit (read from its diff, not assumed):
+
+    -3  torch test_streamdf  (fork fix)      -3  jax test_diskdf (stale)
+    +3  torch-jit test_streamdf              <- the fork cure is EAGER-only;
+                                                torch.compile brings process/CUDA
+                                                state across the fork
+
+So #1256 lands jax 15->12, torch 15->12, torch-jit 1->4. Then
+fix/potential-ledger-accuracy on top: jax 12->8, torch 12->11, jax-jit 3->5.
+
+**~28 entries left**, and they are now clustered rather than scattered:
+
+    6  AA torch tolerance (Spherical linear_angles x4, Vertical Harmonic x2)  <- NEEDS JO
+    6  AA grid family, BOTH backends (AdiabaticGrid_outsidegrid_c,
+       Adiabatic_linear_angles_cylsep, StaeckelGrid_basicAndConserved_actions)
+    3  jax-jit AnyAxisym (2ndDeriv, poisson_surfdens; +1 torch-jit)  <- REDUCIBLE, see below
+    2  jax-jit units-based density                                <- by construction
+    3  torch-jit streamdf (fork under jit)                         <- by construction
+    3  orbit analytic ecc/rperi/rap/zmax
+    2  jax interp_potential
+    2  qdf test_call_diffinoutputs                                 <- by design
+    1  jax-jit test_orbit::test_eccentricity
+
+    by-design / by-construction / blocked-on-Jo : 13
+    genuinely reducible or still unclassified   : 15
+
+> **CORRECTED same day.** I first wrote this as "5 jit potential (AnyAxisym x3 +
+> units x2) <- by construction" and "12 of 28 ... remainder ~13" -- wrong on both
+> counts. The classification was wrong (measured below), and the arithmetic did not
+> even close: 28 - 12 is 16, not 13. Corrected split is 13 / 15.
+
+Dispatched a characterization of it the correct way: the WHOLE test_actionAngle.py
+under `--runxfail` on both backends, not the 6 hand-picked nodeids
+([[handpicked-nodeid-batch-is-not-a-context]] -- a nodeid batch is not the context
+CI runs, and AA in particular has cross-test grid state). Results next cycle.
+
+### 2026-08-05 — pre-flighted the post-#1256 rebase instead of discovering it at push
+
+Simulated the squash: applied #1256's full diff onto develop as one commit in a
+scratch worktree, then rebased fix/potential-ledger-accuracy onto it. Two
+conflicts in `tests/backend_xfail.txt`, both trivial and both worth knowing about
+in advance rather than at push time:
+
+1. **Adjacent deletions.** #1256 deletes 3 torch-streamdf lines; my commit deletes
+   `torch constantbeta` + 2 `jax noninertial` from the same neighbourhood.
+   Resolution: take BOTH deletions -- the region ends up empty. A careless
+   "take ours/theirs" here would silently resurrect three entries.
+2. **Both append a block at EOF** (#1256's torch-jit fork note, mine's units note).
+   Resolution: keep both; they are independent.
+
+Result verified rather than assumed -- no conflict markers anywhere in tests/ or
+galpy/, no duplicate nodeids, and the ledger lands on exactly the predicted
+
+    jax 8   torch 11   jax-jit 5   torch-jit 4   = 28 total
+
+git rerere recorded both resolutions, and rr-cache lives in the COMMON git dir, so
+the real rebase will replay them. I will still grep for markers afterwards
+([[grep-conflict-markers-after-rebase]]) -- an auto-replayed resolution is exactly
+the case where a silent wrong answer is most likely.
+
+### 2026-08-05 — AnyAxisym jit entries are a REAL tracing defect, not by-construction
+
+Checked whether tasks #181/#187 (both marked completed) had left stale entries.
+They had not -- the entries are correct -- but the classification I gave them last
+entry was wrong. Measured on the potfix tree, `--runxfail` so nothing is masked:
+
+    numpy       2 passed
+    jax EAGER   2 passed
+    jax --jit   2 FAILED
+
+Eager and numpy both pass; only the traced run fails. That makes it a
+**tracing-specific defect and therefore reducible**, squarely task #158's
+territory -- not something to file next to the units entries, which genuinely
+cannot be traced by construction.
+
+The failure, `test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]`
+at (R,z) = (0.500, 0.000):
+
+    FD derivative of Rforce  = -47962.35
+    analytic R2deriv         =     -2.286     rel. diff = 0.99995
+
+The FD *reference* is what blows up, by four orders of magnitude, and only under
+trace.
+
+> **RETRACTED 2026-08-05 (see the reproduction entry below). I HAD THE TWO VALUES
+> SWAPPED.** The assert renders as
+> `(tR2deriv - mRforcederivR)**2 / tR2deriv**2`, so the FIRST operand -47962.35 is
+> the ANALYTIC `R2deriv` and -2.286 is the FD. It is the **analytic second
+> derivative** that blows up under trace; the FD reference is fine. I propagated
+> the wrong reading into task #158 as a caution to "suspect Rforce under trace,
+> not R2deriv" — exactly backwards. That is consistent with the known cancellation in `1 - m`
+([[trackg-neural-aa-inverse]] neighbours: tasks #187/#189) rather than with a
+wrong analytic derivative -- but I have NOT proven that yet, and the honest
+statement today is "eager-vs-traced divergence in Rforce near z=0, cause not yet
+isolated". Note also z=0 is the razor-thin disk plane, where a |z| kink lives, so
+any fix has to be checked against [[nonsmooth-potential-grad-undefined]] before
+concluding the derivative is simply wrong.
+
+Not starting a fix: #1256 and fix/potential-ledger-accuracy are both ahead of it,
+and this needs the cancellation isolated first.
+
+### 2026-08-05 — closed a verification gap on the conftest change (xdist context)
+
+I had verified the force-exit move single-process only. Before trusting that, I
+checked whether CI runs under xdist -- because if it did, I would have verified
+the wrong context ([[verify-exact-ci-shard-context]]).
+
+It does not. `build.yml` runs plain `pytest ... $TEST_FILES` with no -n, and
+`backend-tests.yml` uses **pytest-split**, single process, with the reason stated
+in the workflow itself: "xdist can't pickle several mock/C-backed potentials".
+
+So the single-process verification IS the CI context, and conftest's
+`PYTEST_XDIST_WORKER` guard is defensive-only for local runs. The change is also
+strictly safer than what it replaces under xdist anyway: the old code force-exited
+at sessionfinish, the new one at unconfigure, which is strictly later.
+
+Nothing to change -- but the claim is now checked rather than assumed.
+
+### 2026-08-05 — codecov/patch: the 80.00% is exactly 4-of-5, and I can name the line
+
+Rather than wait and see, I counted. The library diff adds exactly FIVE coverable
+statements, all in `galpy/backend/_namespaces.py`:
+
+    1  def restrict_to_single_thread():        <- runs at import
+    2      import sys                          <- runs on every call
+    3      torch = sys.modules.get("torch")    <- runs on every call
+    4      if torch is not None:               <- runs on every call
+    5          torch.set_num_threads(1)        <- ONLY when torch is loaded
+
+`galpy/backend/__init__.py`'s 2 added lines are continuation lines of an existing
+import list and `__all__`, not new statements, so they are not in the denominator.
+`galpy/util/multi.py` is in `.coveragerc`'s omit. Tests are not counted.
+
+**4/5 = 80.00%** -- exactly the reported number. So the single missed line is
+statement 5, and it can only be reached on a shard that has torch installed AND
+forks a `parallel_map`. That is precisely
+`build (ubuntu-latest, 3.14, tests/test_backend*.py, ..., true, true)`, which runs
+the new `tests/test_backend_multi.py` and is the LAST job still going.
+
+**Falsifiable prediction: when that shard uploads, patch goes 80.00% -> 100% and
+the check passes.** If it completes and patch stays at 80.00%, then forked-child
+coverage is not actually being captured despite `.coveragerc`'s
+`concurrency = multiprocessing` / `parallel = true`, and THAT is the real bug to
+fix -- not the ledger, not the test. Recording the alternative now so I cannot
+rationalise afterwards.
+
+### 2026-08-05 — #1255 fixed 6 torch actionAngle entries. Found by accident.
+
+The whole-file AA characterization was aimed at the AA GRID family. It found
+something better. Cross-referencing the run against the ledger:
+
+    jax   : ledgered 3, FAILED 3   -> exact match, no stale, no regressions
+    torch : ledgered 9, FAILED 3   -> SIX ledgered entries PASS
+
+The six are exactly the ones parked as "actionAngle tolerance batch, needs Jo":
+
+    test_actionAngleSpherical_linear_angles
+    test_actionAngleSpherical_linear_angles_fixed_quad
+    test_actionAngleSpherical_noninclinedorbit_linear_angles
+    test_actionAngleSpherical_almostnoninclinedorbit_linear_angles
+    test_actionAngleVertical_Harmonic_actionsFreqs
+    test_actionAngleVertical_Harmonic_actionsFreqsAngles
+
+A local pass is one version point, and these are torch PRECISION entries -- the
+class most likely to be env-dependent -- so I did not stop there. Pulled the
+`backend-junit-torch-test_actionAngle` artifact from four CI runs and read the
+skip TYPE, not just presence:
+
+    run 31022290797   base 18ddfd9b = #1255 brentq Newton-polish   XPASS x6
+    run 30997129449   base 7696c88e = #1254                        xfail x6
+    run 30982182601   base 7b6f5ae4 = #1252                        xfail x6
+    run 30953851163   base c34abfa3                                xfail x6
+
+Three consecutive runs xfail, then XPASS on the first run after #1255 -- the
+brentq PR I drove to green and merged this morning. The mechanism is coherent:
+#1255 Newton-polishes brentq's returned root, and actionAngleSpherical /
+actionAngleVertical angle computations are root-find consumers, so a more accurate
+root closes a ~1e-7 gap.
+
+**These do not need a tolerance loosening. They need pruning.** That removes 6 of
+the entries in the batch I was going to have to ask Jo about.
+
+Not asserting causation on correlation alone -- a local A/B is running on a
+pre-#1255 tree (7696c88e, own C build). If they FAIL there and PASS on post-#1255,
+the claim is closed ([[verify-burndown-flips-stash-rerun]]).
+
+Note the first parse of this data was wrong: I classified any `<skipped>` as
+"skip" and got "0/6 pass" everywhere, which contradicted the run I had already
+read. Distinguishing `skip:pytest.xfail` from a plain skip is what made the
+boundary visible.
+
+### 2026-08-05 — A/B CLOSED: #1255 is the cause. Plus a parser bug that nearly reversed it.
+
+Local A/B on a pre-#1255 tree (7696c88e, its own C build):
+
+    pre-#1255  (7696c88e)  torch --runxfail   FAILED x6
+    post-#1255 (potfix)    torch --runxfail   passed x6
+    post-#1255 CI          run 31022290797    XPASS  x6
+
+Causation established, not inferred. **#1255 fixed these 6 torch actionAngle
+entries**, so they are a prune, not a tolerance loosening -- no sign-off needed.
+
+**I nearly recorded the opposite.** My first read of the A/B junitxml said all 6
+"passed", contradicting pytest's own `FFFFFF`. The parser was wrong:
+
+    ff = tc.find("failure") or tc.find("error")     # BUG
+
+A `<failure>` element has no CHILD elements, and Element truthiness is
+`len(self) > 0`, so it is falsy; the `or` falls through to None and every failure
+reads as a pass. Python only emits a DeprecationWarning.
+
+What saved it was that the parse disagreed with pytest's terminal output, and I
+trusted pytest. Re-parsed with `is not None` everywhere: the local A/B is FAILED x6
+(agreeing with the terminal), and -- importantly -- **the CI artifact table was
+unaffected and stands as written**, because the bug only lies on runs that actually
+contain failures. The same buggy script gave correct answers on the three passing
+artifacts. "It worked on the other files" is not evidence a parser is right.
+Written up as [[junitxml-find-truthiness-trap]].
+
+### 2026-08-05 — 6-entry prune committed (06ff9c91). Ledger now jax 11 / torch 8.
+
+Folded into fix/potential-ledger-accuracy with the full evidence in the ledger
+header, so a future reader can see WHY six entries vanished without a tolerance
+change. Branch is now 5 commits.
+
+Pre-rebase counts on this branch: jax 11, torch 8, jax-jit 5, torch-jit 1.
+After the #1256 rebase that becomes **jax 8, torch 5, jax-jit 5, torch-jit 4 = 22**
+(was 28 before this prune).
+
+The knock-on for Jo: the "actionAngle tolerance batch" I was going to have to ask
+about is 6 entries smaller, and I should re-derive what actually remains rather
+than quoting the old count of 10.
+
+#1256 at 136 success / 14 running, only codecov/patch red; the test_backend shard
+that decides it is still going.
+
+### 2026-08-05 — the "AA grid family" is THREE different problems, not one
+
+Read the failure text out of the junitxml I already had. The 6 entries (3 nodeids
+x 2 backends) decompose:
+
+**(a) StaeckelGrid_basicAndConserved_actions -- 2 entries, likely a CODE FIX.**
+
+    assert |JR(circular orbit)| < 1e-16
+    numpy  JR = 0.0            EXACTLY zero
+    jax    JR = 4.8356668e-14
+    torch  JR = 4.8354e-14     (the two backends agree with each other)
+
+1e-16 is below float64 eps (2.22e-16), so this looks like a defective assertion --
+but it is not, because numpy returns a hard 0.0. The check is a legitimate
+exactness test and the backends are what changed.
+
+numpy gets exact zero because `_evaluate` **snaps the energy to the grid
+boundary** (lines ~691-694):
+
+    indx = ((E - thisERa)/(thisERL - thisERa) < 0.0) * (... > -1e-2)
+    E[indx] = thisERa[indx]        # exact assignment
+
+A circular orbit sits exactly ON that boundary, so the difference becomes
+identically zero. `_evaluate_backend` has no `ERa`/`ERL` reference at all -- only
+a `jr = xp.where(jr < 0.0, 0.0, jr)` floor, which is a different thing.
+
+If that holds up, it is exactly the **if -> xp.where array-input class** the
+mission asks me to audit for: a masked in-place assignment on the numpy side with
+no backend equivalent. **A code fix, not a tolerance ask** -- so I am NOT putting
+these two in a tolerance batch. Flagged as a hypothesis (task #201); the backend
+evaluate may delegate to a helper that does the snap, and I have not read every
+callee yet.
+
+**(b) Adiabatic_linear_angles_cylsep -- 2 entries, genuine tolerance candidate.**
+
+    max deviation from linear trend in radial angles
+    jax 1.677e-07, torch 1.779e-07   vs   assert < 1e-7
+
+Off by ~1.7x, both backends alike. No exactness story here; this is a real
+tolerance question and would need Jo.
+
+**(c) AdiabaticGrid_outsidegrid_c -- 2 entries, REAL functional gap.**
+
+    |0.01111777 - 0.0064088| = 0.0047   vs   assert < 1e-8
+
+Not a tolerance -- a 74% discrepancy. This is the off-grid evaluation path; the
+backend does not do the fallback numpy/C does. Task #103 already owns it.
+
+So of the six: 2 are probably a missing xp.where, 2 are a tolerance ask, 2 are
+real feature work. Lumping them as "the AA grid family" would have produced one
+wrong request to Jo covering all three.
+
+### 2026-08-05 — REAL BUG: backend cubic map_coordinates is wrong at every grid BOUNDARY node
+
+Chasing the StaeckelGrid circular-orbit entry all the way down turned up something
+much bigger than the two ledger entries it started from.
+
+`galpy.backend`'s cubic `map_coordinates` matches scipy EXACTLY at interior grid
+nodes and is WRONG at every boundary node. Probed against
+`ndimage.map_coordinates(_jrFiltered, coords, order=3, prefilter=False)` on the
+20x25x25 grid, float64:
+
+    query                     scipy              backend            diff
+    interior (10,12,12)       -13.395343946464   -13.395343946464   0.000e+00
+    interior ( 5, 8,20)       -12.034811280094   -12.034811280095  -1.776e-15
+    edge  E=last (10,24,12)   -23.025850929940   -23.067311328752  -4.146e-02
+    edge psi=last(10,12,24)   -23.025850929940   -24.693716872864  -1.668e+00
+    corner       (10,24,24)   -23.025850929940   -23.025642506091  +2.084e-04
+    edge Lz=last (19,12,12)   -12.828831493235   -12.814132250434  +1.470e-02
+
+Index 24 is a VALID node on a 25-long axis, so interpolating there must return the
+stored value. scipy does. The backend does not. **-1.668 in a log-value is a
+factor of e^1.668 ~ 5.3x** in the interpolated quantity.
+
+This is a boundary-mode bug in the shared helper (galpy/backend/interpolate.py,
+task #97). It is not a tolerance question and not an actionAngle question -- every
+consumer of the backend cubic map_coordinates is degraded near grid edges, and so
+are gradients through those regions.
+
+Full chain for the test that exposed it:
+
+    coords = [3.76197752, 24.0, 24.0]     (last node in TWO of three axes)
+    log-value off by 5.38e-05 -> exp() -> 5.38e-15 -> x 8.985 -> 4.8357e-14
+    == exactly the 4.8356668e-14 in the failure message
+
+**Two of my own hypotheses were refuted on the way, both worth recording:**
+
+1. "The assertion `< 1e-16` is below float64 eps, so it is defective." No -- numpy
+   returns a hard 0.0, so it is a legitimate exactness check and the backends are
+   what changed.
+2. "The backend is missing numpy's E->thisERa snap, i.e. the if->xp.where
+   array-input class." No -- `_grid_common_backend` already has it as xp.where,
+   with a comment saying it mirrors the numpy writes. I had grepped only
+   `_evaluate_backend`; the snap lives in the shared helper it calls. **Grepping
+   one function is not reading the call chain.**
+
+Also caught and discarded a float32 measurement: the first probe ran without
+JAX_ENABLE_X64 (conftest sets it, a standalone script does not) and gave 5.6e-05
+"delta" that was really float32 noise. Same number to one digit as the real
+float64 answer, which is exactly how such a mistake survives.
+
+**Explicitly NOT proposing a tolerance loosening for these 2 entries** -- that
+would bury a 5x-scale boundary error. Not starting the fix either: #1256 and
+fix/potential-ledger-accuracy are ahead of it, and this deserves its own PR with a
+node-reproduction test over ALL boundary nodes, which is the check that was missing.
+
+### 2026-08-05 — root cause PROVEN: backend evaluates with mode='nearest', numpy with 'constant'
+
+Closed the diagnosis from the previous entry. Two independent proofs.
+
+**(1) The backend is a CORRECT 'nearest' implementation -- the mode is the only
+difference.** scipy called with `mode='nearest'` reproduces the backend to <1e-9 at
+every probe point, boundary cases included:
+
+    query                    scipy const     scipy nearest       backend   match?
+    interior (10,12,12)    -13.395343946   -13.395343946   -13.395343946   True
+    edge E=last (10,24,12) -23.025850930   -23.067311329   -23.067311329   True
+    edge psi=last(10,12,24)-23.025850930   -24.693716873   -24.693716873   True
+    corner      (10,24,24) -23.025850930   -23.025642506   -23.025642506   True
+    edge Lz=last(19,12,12) -12.828831493   -12.814132250   -12.814132250   True
+
+**(2) Node reproduction over ALL 20x25x25 nodes** against the raw
+`log(jr + 1e-10)` the grid encodes:
+
+    mode          max|err| interior   max|err| BOUNDARY
+    constant           2.132e-14           2.487e-14   OK
+    mirror             2.132e-14           2.487e-14   OK
+    nearest            2.132e-14           6.775e+00   <-- what the backend uses
+    reflect            2.132e-14           6.775e+00
+    grid-mirror        2.132e-14           6.775e+00
+
+**6.775 in a log-value is e^6.775 ~ 875x** in the interpolated quantity, at
+boundary nodes, on every backend grid consumer.
+
+Mechanism: grids are prefiltered with mode='mirror'; galpy's numpy path evaluates
+with scipy's DEFAULT mode='constant'; the backend hardcodes 'nearest' and raises
+for anything else. Interior points never reach a tap outside the array, so the
+modes agree there and every existing test passes.
+
+Fix: evaluate with **'mirror'** -- the pair to the mirror prefilter, so
+filter+evaluate reconstructs the data exactly. ('constant' also works here and is
+what numpy uses, but pairing evaluator to prefilter is the invariant worth
+encoding.)
+
+The comment in interpolate.py that produced the bug should go in the same PR:
+"callers are expected to clamp their coordinates in-range before calling, so the
+boundary mode is [unimportant]". Clamping COORDINATES in-range does not stop the
+cubic kernel's TAPS from reaching outside -- which is precisely what a boundary
+node does.
+
+**The missing test**, and the reason this survived: every existing check probes
+interior points. One assertion would have caught it --
+`map_coordinates(spline_filter(data), integer_node_coords) == data` over ALL nodes
+including boundaries. That goes in the fix PR.
+
+Still not starting the fix: #1256 and fix/potential-ledger-accuracy are ahead, and
+this wants its own PR. Recorded in full so it can be picked up cold.
+
+### 2026-08-05 — mirror-fold prototype WORKS (proving the fix before it becomes a PR)
+
+Patched the tap index in `galpy/backend/interpolate.py::map_coordinates` from the
+mode='nearest' clamp to a whole-sample mirror fold:
+
+    _n = shape[d] - 1
+    idx_d = xp.abs(idx_d)              # i<0   -> -i
+    idx_d = _n - xp.abs(idx_d - _n)    # i>n-1 -> 2(n-1)-i
+
+Immediately, against scipy's default-mode result:
+
+    query                     scipy(default)   backend(mirror)        diff
+    interior (10,12,12)        -13.395343946     -13.395343946     0.00e+00
+    edge E=last (10,24,12)     -23.025850930     -23.025850930     0.00e+00
+    edge psi=last(10,12,24)    -23.025850930     -23.025850930    -3.55e-15
+    corner       (10,24,24)    -23.025850930     -23.025850930     0.00e+00
+    edge Lz=last (19,12,12)    -12.828831493     -12.828831493    -1.78e-15
+    edge zero    ( 0, 0, 0)      0.000000000       0.000000000     4.37e-16
+
+Every boundary node now agrees to <= 3.6e-15, from errors up to 6.775.
+
+And the entry that surfaced it:
+
+    circular-orbit JR:  4.836e-14  ->  6.04e-24     (test asserts < 1e-16)
+
+So the fix burns the 2 StaeckelGrid entries outright, with no tolerance touched.
+
+Gate so far -- numpy WHOLE test_actionAngle.py: **209 passed**. That is the
+byte-identity check; the numpy path delegates to scipy entirely
+(`if not is_backend_array(coords): return _scipy_ndimage.map_coordinates(...)`),
+so it should be untouched, and it is. jax/torch legs still running.
+
+The prototype is UNCOMMITTED in /var/tmp/potfix with a backup at
+/var/tmp/interpolate.py.orig -- it must be reverted before that branch is pushed,
+since it belongs in its own PR, not in fix/potential-ledger-accuracy.
+
+### 2026-08-05 — fix spec complete, and the bug is broader than the backend path
+
+Wrote the missing test in `tests/test_backend_interpolate.py`'s own idiom (that
+file already exists and already enables jax x64 at import -- my first attempt was
+a new standalone file that silently ran in **float32** and "failed" at 2.5e-07,
+the same trap as before; placing it in the existing file is both the correct
+[[audit-placement-and-duplication]] answer and the fix for that).
+
+Result with the mirror prototype applied:
+
+    jax   PASS     torch PASS     numpy **FAIL**
+
+numpy failing is the finding. `galpy.backend.interpolate.map_coordinates` has
+`mode="nearest"` as its **default**, which also governs its numpy scipy
+passthrough -- my prototype only fixed the backend tap logic. Measured:
+
+    galpy wrapper (numpy path, mode='nearest')   max|err| = 1.731e+00
+    scipy DEFAULT mode (what AA grid calls)      max|err| = 2.220e-15
+    test's numpy failure: boundary 2.941, interior 1.332e-15
+
+`actionAngleStaeckelGrid`'s numpy path calls `ndimage.map_coordinates` DIRECTLY,
+bypassing the wrapper, which is why numpy AA results are correct today. Any
+consumer that goes THROUGH the wrapper on numpy gets the wrong boundary values.
+
+**So the fix is the wrapper's default `mode`, not just the backend branch** --
+change it to 'mirror' (pairing with the mode='mirror' prefilter), which fixes the
+numpy passthrough (forwarded to scipy) and the backend path together.
+
+**Contract invalidation to handle in the same PR** ([[audit-contract-invalidation]]):
+the existing tests pin scipy to the same wrong mode --
+
+    ref = sndi.map_coordinates(filt, _MCOORDS, order=3, prefilter=False, mode="nearest")
+
+so backend and reference agree by construction and the mismatch is undetectable.
+`_MCOORDS` are random points in [0, n-1], which DO land near boundaries, so the
+coverage was there; the pinned mode is what blinded it. Those refs must drop
+`mode="nearest"`.
+
+**Whole-file gate with the prototype:**
+
+    numpy test_actionAngle.py   209 passed                    (byte-identity)
+    jax   test_actionAngle.py   2 failed, 180 passed  (was 3 failed, 179 passed)
+    torch test_actionAngle.py   still running
+
+jax 3 -> 2 is exactly the prediction: the StaeckelGrid entry burns, and the two
+genuinely different modes (AdiabaticGrid off-grid fallback; the 1.7e-7
+linear-angles tolerance) survive, as characterised earlier.
+
+Prototype still applied in /var/tmp/potfix (torch leg is running against it);
+patch saved at scratchpad/mirror_mode_prototype.diff, test at
+scratchpad/test_interpolate_boundary_nodes.py. MUST be reverted before that branch
+is pushed -- it belongs in its own PR.
+
+### 2026-08-05 — A/B on the failure SETS, not just the counts
+
+"3 failed -> 2 failed" is only good news if the two are the same two. Diffed the
+sets rather than the totals:
+
+    jax BEFORE (3): AdiabaticGrid_outsidegrid_c
+                    Adiabatic_linear_angles_cylsep
+                    StaeckelGrid_basicAndConserved_actions
+    jax AFTER  (2): AdiabaticGrid_outsidegrid_c
+                    Adiabatic_linear_angles_cylsep
+
+    BURNED : StaeckelGrid_basicAndConserved_actions
+    NEW    : none
+
+Exactly one burned, nothing new, and the two survivors are precisely the modes
+characterised earlier as different problems (off-grid fallback; a 1.7e-7 vs 1e-7
+tolerance). The fix does what it claims and nothing else.
+
+### 2026-08-05 — CORRECTION: the fix burns ONE entry, not two. torch needs more.
+
+I wrote that the mirror fix "burns the 2 StaeckelGrid entries (jax + torch)". That
+is wrong for torch, and the set-diff is what caught it:
+
+    jax   3 failed -> 2 failed   BURNED StaeckelGrid_basicAndConserved_actions
+    torch 3 failed -> 3 failed   BURNED none
+
+Same code, different outcome, so I looked instead of assuming a flake. On torch the
+test now fails on a LATER assertion in the same test -- not JR:
+
+    assert numpy.fabs(aAA.JR(...)) < 1e-16      <- now PASSES on torch
+    assert numpy.fabs(aAA.Jz(...)) < 1e-16      <- now PASSES on torch
+    te, tzmax, _, _ = aAA.EccZmaxRperiRap(...)
+>   assert numpy.fabs(te) < 1e-16               <- FAILS, te = 1.5305e-10
+
+`te` is the ECCENTRICITY, off a different grid (`_eccFiltered`) via
+`_EccZmaxRperiRap_backend`. So the mirror fix did help torch -- it cleared the two
+action asserts -- but the test still fails downstream.
+
+Probed the ecc interpolant directly, and it is NOT an interpolant mismatch:
+
+    jax    eccMap: scipy=-22.963977465  backend=-22.963977465  diff=+3.55e-15
+    torch  eccMap: scipy=-22.963977465  backend=-22.963977465  diff=+3.55e-15
+
+Both backends now agree with scipy exactly and with each other. Two things that
+still need explaining, and I am NOT guessing at them:
+  - the ecc grid's value at that node is -22.9640, not the log(1e-10) = -23.0259 a
+    zero-eccentricity node would hold, so ecc ~ 6.4e-12 is what the grid CONTAINS;
+  - my probe gives 6.38e-12 while the test reports 1.5305e-10, so the test's call
+    path is not the one I probed (the test passes plain Python floats through the
+    coercion boundary; I passed explicit tensors).
+
+Honest status: the mirror fix is correct and necessary, verified to burn the JAX
+StaeckelGrid entry with zero new failures. The TORCH entry needs a separate look at
+the EccZmaxRperiRap path. Task #201 updated -- the "burns 2 entries" claim is
+retracted to "burns 1, improves the other".
+
+### 2026-08-05 19:08Z — my codecov/patch prediction did NOT come true. Reframing.
+
+Predicted: "when the test_backend shard uploads, patch goes 80.00% -> 100% and
+passes". The first shard completed 19:07:13Z; codecov re-evaluated 19:08:54Z:
+
+    before   patch 80.00% (target 86.10%)   project 86.10% (-0.01%)  PASS
+    after    patch 29.72% (target 99.95%)   project 99.90% (-0.06%)  FAIL
+
+Not what I predicted, and the shape changed too -- both contexts are now red.
+
+**The target moved, 86.10% -> 99.95%, and that is the tell.** Codecov's patch
+target tracks base project coverage. galpy's true coverage IS ~99.9%; 86.10% was
+never the real number, it was a PARTIAL-upload state that happened to compare
+favourably against an equally partial base. So the earlier "project 86.10% PASS"
+was not the healthy state I read it as -- it was two partial numbers agreeing.
+
+That also undercuts the arithmetic I was pleased with: "5 coverable statements,
+4 hit = exactly 80.00%". It fit the number, but the number was computed on a
+partial upload set, so the fit was coincidence, not confirmation. A tidy
+explanation that matches a number is not evidence the number means what I assumed.
+
+Still in flux -- the second test_backend shard (started 17:35:48Z) is at ~101 min,
+past its sibling's 94 min, and its upload has not landed. Not acting on percentages
+mid-flight. When everything is terminal I will ask the codecov API which FILES and
+LINES are actually missed, rather than reasoning backwards from a ratio.
+
+Note for the eventual diagnosis: the diff adds 65 lines of tests/test_backend_multi.py.
+Whether codecov counts test files at all decides whether 29.72% is alarming or
+arithmetic -- check that FIRST.
+
+### 2026-08-05 19:2xZ — codecov diagnosed and FIXED at the root (pushed to #1256)
+
+All 152 checks terminal: **149 success, 3 failures = codecov/patch, codecov/project,
+and all-clear (which only fails because codecov does). No test failures at all.**
+
+Read codecov's own per-file breakdown instead of reasoning from the ratio, and the
+answer was unambiguous: **all 26 missing lines are in tests/test_backend_multi.py
+(6/32 hit = 18.75%). ZERO in galpy library code.**
+
+That refuted my assumption that `--cov galpy` keeps tests/ out of the report.
+Queried codecov for the other backend test files -- none of them are in the report
+at all. Only mine. That asymmetry was the clue.
+
+**Mechanism, reproduced locally:**
+
+    pytest tests/test_backend_multi.py --cov galpy --cov-config .coveragerc
+      -> 195 files in the report, INCLUDING tests/test_backend_multi.py
+
+`--cov galpy` is a pytest-cov CLI flag; `.coveragerc` sets
+`concurrency = multiprocessing`, so a forked child starts its OWN coverage and does
+not inherit that CLI restriction. `parallel_map` forks; the child runs
+`_child_torch_threads` / `_child_torch_matmul`, which live in the TEST module; so
+the child records tests/. Only the 6 lines the child runs are hit, the other 26
+read as missed. This PR is simply the first to execute test-module code inside a
+forked child -- which is why no other test file has ever appeared.
+
+**Fix: `omit = tests/*` in .coveragerc**, so the child's data matches the parent's
+`--cov galpy` intent. Fixed in the coverage DATA rather than codecov.yml's ignore,
+so the two stay consistent -- the report never contains what we do not measure.
+
+A/B on the identical command:
+
+    before   195 files, tests/ present: ['tests/test_backend_multi.py']
+    after    194 files, tests/ present: NONE
+
+Exactly one file leaves, and it is the test module; no galpy file lost.
+
+Pushed as b2970e2b. Note this restarts ~152 checks including the ~94-min
+test_backend shard, so #1256 is another ~1.5-2h from a verdict.
+
+Closing the loop on my failed prediction: I predicted patch would go 80% -> 100%.
+It went to 29.72%. Both my prediction AND the "5 statements, 4 hit = 80%"
+arithmetic were computed on partial-upload numbers, and the real answer was in a
+different file entirely -- one I had explicitly ruled out. The lesson is the one I
+half-applied: ask the tool WHICH LINES, do not infer from a percentage.
+
+### 2026-08-05 — torch StaeckelGrid residual localised: it is SETUP, not evaluation
+
+Closed the open question from the previous entry. My standalone probe kept giving
+6.38e-12 for BOTH backends while pytest gave jax-pass / torch-1.53e-10. The
+difference was not the args -- it was WHERE the object is built. conftest's autouse
+fixture wraps the whole test, so pytest constructs `actionAngleStaeckelGrid` INSIDE
+`use(backend, force=True)`; my probe built it on numpy first and only called it
+under the forced backend.
+
+Measured both ways in /var/tmp/interpfix (mirror prototype applied):
+
+    A) grids built on NUMPY, called under forced backend
+         jax   te = 6.382772e-12
+         torch te = 6.382772e-12      <- IDENTICAL
+
+    B) grids BUILT under the forced backend  (what pytest does)
+         jax   te = 0.000000e+00      passes < 1e-16
+         torch te = 1.530511e-10      fails
+
+So the **evaluation** path is backend-agnostic -- A proves it, the two backends
+agree to the last bit. The divergence is entirely in **setup-time grid
+construction** under a forced backend, where jax and torch build different grids
+(and jax's is better than numpy's own: exactly 0 vs 6.38e-12).
+
+That means:
+  - the mirror/boundary-mode fix is correct and complete for what it addresses;
+  - the surviving torch entry is a SETUP-path issue, in the family already tracked
+    as [[backend-native-followups-roadmap]] (deferred setup-path migrations), NOT
+    an interpolation bug;
+  - "burns 1 entry, not 2" stands, and now with a reason rather than a shrug.
+
+Three probes were needed to get here and the first two were misleading because I
+changed the wrong variable each time (explicit tensors vs plain floats; then plain
+floats but still numpy-built). The variable that mattered was construction context.
+
+### 2026-08-05 — #1256 re-running on b2970e2b
+
+7 success / 40 running / 50 queued. The 2 reds are the partial-upload phantom
+again (project 48.61% with 7 of ~99 jobs reported) -- expected, ignored. Note
+patch reads "80.00% of diff hit (target 99.95%)": the TARGET is already the true
+99.95%, so this run's base is right from the start; only the head side is partial.
+
+The real verdict needs the ~94-min test_backend shard plus codecov's final pass,
+so ~2h out. Watching, not acting.
+
+### 2026-08-05 — PR #3 written in full: map_coordinates boundary mode
+
+Turned the prototype into a complete change on `fix/map-coordinates-boundary-mode`
+(/var/tmp/interpfix, own C build).
+
+  - default mode 'nearest' -> 'mirror', on `map_coordinates` AND `MapCoordinates`
+    (the prototype only fixed the backend tap logic; the DEFAULT also governs the
+    numpy scipy-passthrough, which is what the added test caught)
+  - backend tap index: mirror fold, with 'nearest' still selectable
+  - corrected the docstring rationale that produced the bug
+  - 4 existing reference sites un-pinned from `mode="nearest"`
+
+**Blast radius audited before committing.** Grepped every consumer: the only
+callers of the changed default are actionAngleStaeckelGrid's SIX MapCoordinates
+instances, all `_b`-suffixed and reached only from `_evaluate_backend` /
+`_EccZmaxRperiRap_backend`. That class's numpy path calls `ndimage.map_coordinates`
+directly, as do actionAngleVerticalInverse's four sites -- all untouched. So there
+is **no numpy production behaviour change**, which matters given the standing
+byte-identity rule.
+
+Gates so far: `tests/test_backend_interpolate.py` **161 passed** (numpy+jax+torch).
+
+**The new test is meaningful, verified by A/B rather than asserted:**
+
+    WITH the source fix     161 passed
+    WITHOUT it (tests kept) 3 failed -- numpy, jax AND torch
+
+Whole test_actionAngle.py gate dispatched on all three backends. Note this must be
+re-gated even though the prototype already was: the prototype did not change the
+default, so the numpy leg is genuinely new information.
+
+### 2026-08-05 — PR #3 committed (b3b2a36a), PR body drafted, two runs in flight
+
+`fix/map-coordinates-boundary-mode` @ b3b2a36a. The first commit attempt was
+silently rejected by the pre-commit hooks -- `git log` unchanged, status `MM`
+(staged AND further-unstaged, the hooks having reformatted after staging). Caught
+by checking the SHA moved, which is exactly why that check exists
+([[precommit-hooks-reject-first-commit]]). Re-committed; SHA now b3b2a36a, tree
+clean.
+
+PR body drafted at scratchpad/pr_boundary_mode_body.md. It states plainly that the
+PR burns the JAX entry only, and why the torch one is deliberately left: the torch
+residual is setup-path, not interpolation, with the A/B table showing the
+evaluation path is backend-agnostic to the last bit.
+
+In flight:
+  - PR-3 gate: whole test_actionAngle.py, numpy leg running (this is genuinely new
+    information vs the prototype gate -- the prototype never changed the DEFAULT,
+    so the numpy leg was not previously exercised)
+  - whole test_interp_potential.py under jax --runxfail, to characterise the 2
+    remaining jax entries there. My earlier attempt at this died to a harness
+    timeout; re-dispatched with a 5400 s budget and the WHOLE file rather than a
+    nodeid pair.
+
+#1256 on b2970e2b: 23 success, 74 running/queued, no non-codecov reds. Load 4.18
+on 72 cores -- nothing contending.
+
+### 2026-08-05 — PR #3 numpy byte-identity gate: 209 passed
+
+    numpy WHOLE test_actionAngle.py   209 passed  (8:06)
+
+This is the leg that actually mattered. The prototype gate had also shown 209, but
+the prototype never touched the DEFAULT mode -- only the backend tap logic -- so
+numpy went through the unchanged scipy passthrough and the result carried no
+information about the real change. With the default flipped to 'mirror', numpy
+still passes 209/209, which confirms the consumer audit: nothing in
+actionAngleStaeckelGrid's numpy path routes through the wrapper.
+
+jax leg running; torch after it.
+
+### 2026-08-05 — PR-2 rebase RE-verified against the current #1256
+
+The earlier pre-flight simulated the OLD #1256; it has since gained the
+`.coveragerc` commit, so that rehearsal was stale. Redid it against the current
+branch content.
+
+Two conflicts again, both replayed by rerere. **Verified rather than trusted** --
+an auto-replayed resolution is exactly where a silent wrong answer hides, and the
+first conflict is adjacent deletions where "take ours" would resurrect three
+entries. Checked each deletion is actually absent:
+
+    torch test_streamdf::test_fardalwmwpot_trackaa                   deleted OK
+    torch test_sphericaldf::test_constantbeta_interpolatedpotentials deleted OK
+    jax   test_noninertial::test_arbitraryaxisrotation               deleted OK
+
+Result: no conflict markers anywhere, no duplicate nodeids, `.coveragerc`'s
+`omit = tests/*` carried through, and the ledger lands on
+
+    jax 8   torch 5   jax-jit 5   torch-jit 4   = 22 total
+
+which is exactly the predicted post-both-PRs figure (28 -> 22). torch 5 rather
+than the 11 I projected before the 6-entry #1255 AA prune landed on the branch.
+
+### 2026-08-05 — PR-3 diff audit (the three mission criteria)
+
+Ran the required audit on the library diff BEFORE pushing, not after.
+
+**1. if -> xp.where array-input class: NOT APPLICABLE.** The diff does add an
+`if mode == "mirror": ... else: ...`, but `mode` is a **static string parameter**,
+not array data -- it resolves at trace time, and `@backend_input` passes control
+params as static. The fold itself is branch-free arithmetic on the index array:
+
+    hi = shape[d] - 1
+    idx_d = hi - xp.abs(hi - xp.abs(idx_d))
+
+i.e. it REPLACES a clamp with arithmetic; no branch on array VALUES is introduced.
+Worth being explicit since "a new `if` in a backend kernel" is exactly the shape
+the rule targets -- the distinguishing question is whether the predicate is data.
+
+**2. Duplication: none.** Grepped for an existing index-mirror/fold helper first
+([[audit-placement-and-duplication]]). The file's other `mirror` mentions are the
+cubic IIR PREFILTER's terminal initialisation -- a genuinely different computation
+(recursive filter boundary conditions), not an index fold. Nothing to reuse.
+
+**3. Helper placement: inline is right.** Three lines, one call site, inside the
+tap loop. Hoisting a single-use 3-liner into a helper would add indirection with no
+reuse. If a second consumer ever needs index mirroring, hoist then.
+
+### 2026-08-05 — PR-3 FULLY GATED on all three backends
+
+    numpy  209 total, 209 passed, FAILED=0                (byte-identity)
+    jax    209 total, 180 passed, FAILED=2,  skip=27
+    torch  209 total, 182 passed, FAILED=3,  skip=24
+
+    jax   FAIL: Adiabatic_linear_angles_cylsep, AdiabaticGrid_outsidegrid_c
+    torch FAIL: those 2 + StaeckelGrid_basicAndConserved_actions
+
+Exactly the predicted outcome: StaeckelGrid burns on jax, survives on torch (the
+setup-path residual, localised earlier), the two genuinely-different modes survive
+on both, and **no new failures on any backend**.
+
+Combined with tests/test_backend_interpolate.py 161 passed and the A/B (3 failures
+across numpy+jax+torch without the source fix), PR-3 is fully gated and audited.
+
+Note the jax leg printed NO summary line -- /var/tmp/interpfix is based on develop
+and so lacks PR-2's conftest force-exit fix. A live re-demonstration of that bug in
+a worktree that does not have the cure, and the reason I read junitxml here rather
+than the terminal.
+
+#1256 at 87 success / 10 running, no non-codecov reds.
+
+### 2026-08-05 20:30Z — #1256 at 93/97, and the patch prediction is back in play
+
+93 success, 4 non-terminal (test_backend shard, one orbit shard, one backend-jax
+job, all-clear). No non-codecov reds anywhere.
+
+    codecov/patch    80.00% of diff hit (target 99.95%)
+    codecov/project  86.10% (-13.86%)   <- partial again; true base is 99.95%
+
+**patch is back at exactly 80.00%, and that is now meaningful rather than
+coincidental.** With `omit = tests/*` in place, tests/test_backend_multi.py is out
+of the report entirely, so the diff denominator really is
+`galpy/backend/_namespaces.py`'s five statements -- which is the situation my FIRST
+analysis described, before the forked-child test-file leak buried it under 26
+phantom missing lines.
+
+So the original prediction is live again on its original reasoning: the one
+uncovered statement is `torch.set_num_threads(1)`, reachable only on a shard with
+torch that forks a parallel_map, i.e. the `tests/test_backend*.py` shard -- still
+running, at ~65 of its ~94 minutes.
+
+I was wrong last time to call that prediction simply "failed": the mechanism was
+right, but it was being measured through a broken denominator. Worth separating --
+a prediction can be correct about the cause and still be untestable until the
+instrument is fixed. It is testable now.
+
+If patch does NOT reach 100% once that shard uploads, the fallback stands: forked
+-child coverage is not being captured despite concurrency=multiprocessing, and that
+is the bug rather than anything in the ledger.
+
+### 2026-08-05 — closed a gap in PR-3: it burned an entry without pruning it
+
+Readiness-checking both queued PRs turned up that PR-3 touched only
+`galpy/backend/interpolate.py` and `tests/test_backend_interpolate.py` -- it FIXES
+the jax StaeckelGrid entry but never pruned it. That would have left the ledger
+overstating remaining work, which is precisely the accuracy problem I have been
+enforcing in PR-2. Added as b7fce9fc.
+
+The interesting part is what is NOT pruned. The jax and torch entries of this test
+are a matched pair, and only jax goes:
+
+    jax   burned  -- circular-orbit JR 4.836e-14 -> 6.04e-24 (assert < 1e-16)
+    torch stays   -- JR and Jz now pass, a later ECCENTRICITY assert fails 1.53e-10
+
+That asymmetry could easily look like an oversight later, so the reason is written
+into the ledger header, not just the commit: the torch residual is setup-time grid
+construction, not interpolation --
+
+    grids built on numpy, called under backend : jax 6.38e-12, torch 6.38e-12
+    grids BUILT under the forced backend       : jax 0.0,      torch 1.53e-10
+
+Both PRs are otherwise push-ready: clean trees, bodies drafted.
+  potfix   fix/potential-ledger-accuracy   5 commits
+  interpfix fix/map-coordinates-boundary-mode  2 commits
+
+#1256 at 93 success / 4 non-terminal; test_backend shard ~70 of ~94 min.
+
+### 2026-08-05 — the 2 jax interp_potential entries are mis-filed TIMEOUTS too
+
+The whole-file characterisation finished: **36 passed, 4 skipped, 0 FAILED** in
+56:35 under `--backend jax --runxfail`. Both ledgered entries pass -- but the
+noninertial lesson says do not call that "stale" without reading DURATIONS:
+
+    PASS 1311.1s test_interpolation_potential_force_c        <- LEDGERED, 4.4x timeout
+    PASS  989.8s test_interpolation_potential_secondderivs   <- LEDGERED, 3.3x timeout
+    PASS  203.7s test_interpolation_potential_force_c_vdiffgridsizes
+    PASS  144.9s test_interpolation_potential
+    PASS  138.9s test_interpolation_potential_force_diffinputs
+
+Same coherent split as noninertial: every sibling under the 300 s CI timeout is in
+neither list; both ledgered ones are 3-4x over. Mis-filed timeouts, not numerical
+gaps. Committed to PR-2 as d4efaf79.
+
+**Placement catch worth recording.** My first attempt appended a NEW block at the
+end of backend_slow_skip.txt. The file already has a "jax interpRZ timeouts /
+near-timeouts" block holding these tests' own siblings (_dens, _force, _c,
+_secondderivs_c) with the identical rationale and un-defer condition. Reverted and
+put them in the existing block instead -- [[audit-placement-and-duplication]]
+applies to ledger files, not just code.
+
+The nodeids are a trap: `_force_c` and `_secondderivs` are NOT the already-listed
+`_force` and `_secondderivs_c`. I checked they were distinct before moving.
+
+Side benefit worth naming: skipping rather than timing out returns ~38 min of jax
+shard time per run (1311 + 990 s), on a runner that has been the binding constraint
+all evening.
+
+This supersedes the earlier "characterise the 2 jax interp_potential entries" work,
+which never measured durations.
+
+PR-2 is now 6 commits. Ledger after it: jax 9, torch 8, jax-jit 5, torch-jit 1
+(pre-rebase; #1256 takes torch to 5 and torch-jit to 4).
+
+### 2026-08-05 20:52Z — #1256 at 96/98, shard ~6 min out
+
+96 success, 2 non-terminal: the test_backend shard (87.8 of ~94 min) and all-clear.
+"backend status report" completed, so backend-tests.yml's matrix is done. Still no
+non-codecov reds anywhere.
+
+    codecov/patch    80.00% of diff hit (target 99.95%)
+    codecov/project  86.10% (-13.86%)   <- partial; true base 99.95%
+
+PR-2 body updated with section 9 (the interp_potential re-home). Branch is 6
+commits:
+
+    d4efaf79 ledger: re-home 2 mis-filed interp_potential timeouts
+    06ff9c91 ledger: #1255 fixed 6 torch actionAngle entries
+    a6cabb72 ledger: prune one stale jax entry
+    2b48fc86 ledger: a units-based density is not traceable
+    73ffa983 tests: make the pickling tests traceable
+    517834b1 Ledger accuracy: two fixes, one re-home, unbreak backend logs
+
+Projected ledger once all three land: the two re-homes and the #1255 prune take
+PR-2's jax xfail 11 -> 9 before rebase; #1256 removes 3 more jax and 3 torch; PR-3
+prunes 1 jax. I will verify by rebase rather than trusting this arithmetic -- the
+last projection (torch 11) was already invalidated once by a prune landing in
+between.
+
+## 2026-08-05 21:03Z — #1256 MERGED (5e52497a). PR #1257 opened.
+
+Final state: **100 checks green, zero reds.**
+
+**The codecov prediction resolved exactly as first reasoned:**
+
+    patch    80.00% -> 100.00% of diff hit (target 99.95%)   PASS
+    project  86.10% ->  99.95% (+0.00%)                      PASS
+
+The single uncovered statement was `torch.set_num_threads(1)`, covered the moment
+the torch-bearing shard uploaded. That was the FIRST diagnosis; it only became
+testable after the .coveragerc fix removed the forked-child test-file leak that was
+inflating the denominator with 26 phantom missing lines. Worth keeping straight:
+the mechanism was right the whole time, the instrument was broken. `all-clear` was
+stale against pre-flip codecov and went green on re-run.
+
+Pre-merge audit passed all three criteria: the only `if` is a `sys.modules`
+presence check (not the array-input class); one new helper, no duplicate; and it
+lives in `galpy/backend/_namespaces.py` with the other sys.modules probes, exported
+from `galpy.backend`, rather than embedded in `galpy/util/multi.py`.
+
+**PR-2 rebased onto the merged develop and pushed: #1257.** rerere replayed both
+conflicts; I verified the adjacent-deletion one by name rather than trusting the
+replay -- all four checked deletions absent, no markers, no duplicates,
+`omit tests/*` carried through.
+
+    LEDGER 28 -> 20      jax 6   torch 5   jax-jit 5   torch-jit 4
+
+Six commits: two source/test fixes, three re-homes (2 noninertial + 2
+interp_potential timeouts), a stale prune, the #1255 six-entry AA burn, and the
+conftest fix that makes forced-backend CI logs print their summary again.
+
+Next: drive #1257 green, then PR-3 (fix/map-coordinates-boundary-mode, 2 commits,
+already gated on 3 backends).
+
+### 2026-08-05 21:0xZ — PR-3 rebased onto post-#1256 develop, gate re-verified
+
+`fix/map-coordinates-boundary-mode` rebased clean onto the merged develop -- no
+conflicts this time (PR-3 touches the ledger at a different line than #1256 did).
+2 commits: 8c2fbcef (the fix) + 53a8fa4f (the prune of the entry it burns).
+
+Verified rather than assumed after the rebase:
+  no conflict markers
+  jax StaeckelGrid entry   pruned ok
+  torch StaeckelGrid entry kept ok      <- the deliberate asymmetry survived
+  omit tests/* present (from #1256)     yes
+  fork-safety present (from #1256)      yes
+
+Re-ran the suite because a rebase pulls in code I did not gate against:
+`tests/test_backend_interpolate.py` **161 passed**. (#1256's changes are
+.coveragerc + backend fork-safety + ledger, none of which touch interpolate, but
+"should not interact" is a prediction, not a measurement.)
+
+PR-3 stays unpushed -- one PR at a time, #1257 is the active one (149 queued,
+nothing started).
+
+### 2026-08-05 — orbit-analytic entries: characterising in the CI SHARD context
+
+#1257 is queued behind a saturated runner (149 queued, nothing started), so back to
+ledger burndown. Three entries left in the orbit family:
+
+    jax   test_orbit.py::test_analytic_ecc_rperi_rap
+    jax   test_orbit.py::test_analytic_zmax
+    torch test_orbit.py::test_analytic_ecc_rperi_rap
+
+test_orbit.py is far too large to run whole under jax, and a hand-picked nodeid
+pair is not the context CI runs. CI splits it, so the honest reproduction is CI's
+own split. Found which groups hold the targets by collecting each:
+
+    group 1: 0    group 2: 0    group 3: 1    group 4: 1    group 5: 0
+
+They straddle groups 3 and 4, so both are needed. Dispatched with the exact shard
+invocation -- same file pair, same -k, `--splits 5 --group N`, the committed
+`--durations-path tests/.test_orbit_durations` -- plus `--runxfail`. Anything less
+would be a different partition and therefore a different test order and state
+([[verify-exact-ci-shard-context]], [[handpicked-nodeid-batch-is-not-a-context]]).
+
+Expect ~1-2 h; the point is a trustworthy answer, not a fast one. As with the
+noninertial and interp_potential cases I will read DURATIONS before classifying:
+pass-under-runxfail alone cannot distinguish "stale" from "times out in CI".
+
+### 2026-08-05 21:1xZ — #1257 queue analysis: nothing to reclaim, just wait
+
+149 queued, zero started after ~10 min. Checked what is actually holding the
+runners rather than assuming:
+
+    fix/potential-ledger-accuracy   pull_request x5  +  push x3   (same SHA)
+    feat/backends-develop           push x1  +  pull_request x3   (post-merge)
+
+All legitimate. build.yml fires on BOTH the PR event and the branch push, so every
+PR double-books the runner; and #1256's merge kicked off develop's own post-merge
+runs plus the long-lived develop->main PR runs.
+
+**Deliberately not cancelling anything.** Cancelling the same-SHA PUSH run leaves a
+required check red and BLOCKS the merge ([[cancel-push-run-leaves-cosmetic-red]]) --
+the cancel-stale rule is for a PRIOR commit's runs, and there are none here since
+#1257 has only ever had one SHA.
+
+The one lever I did have, I already pulled: the four timeout re-homes in #1257
+return ~38 min of jax shard time per run once merged.
+
+Orbit characterisation (jax groups 3+4, CI shard context) running.
+
+## 2026-08-05 — PACING CORRECTION (Jo): two PRs in parallel. PR #1258 opened.
+
+Jo reminded me I can run **two PRs at a time**. Checking the memory: that rule was
+**already recorded** (Jo, 2026-08-02, "things move quite slow... work on two PRs at
+the same time") at the BOTTOM of autonomous-vacation-mission.md, explicitly
+superseding the ONE-at-a-time line at the top. I hit the stale line first, stopped
+reading, and serialized all evening -- holding two gated, ready PRs behind a ~1.5 h
+shard. That is the actual cost of not reading a memory to the end.
+
+Fixed at the source: the superseded line now carries the correction IN PLACE, so
+the stale rule can no longer be read on its own, plus a note that the /loop
+prompt's "One PR at a time" is overridden by the memory.
+
+**Pushed PR #1258** (fix/map-coordinates-boundary-mode) immediately: the
+map_coordinates boundary-mode fix, 2 commits, already gated on all three backends
+(numpy 209/209 byte-identical, interpolate suite 161 passed, A/B verified).
+
+**File overlap, stated up front:** #1257 and #1258 share exactly one file,
+`tests/backend_xfail.txt`. The disjoint-files guidance in the memory exists to
+avoid exactly this. I pushed anyway because the overlap is one line (#1258 deletes
+the jax StaeckelGrid entry; #1257 does not touch that line) and I have resolved
+this file's conflicts several times tonight with rerere primed. Whichever merges
+first, the other gets a small rebase -- worth it versus another 1.5 h of idle
+serialization. If it turns messy the fallback is to drop #1258's prune commit and
+land it separately.
+
+Now: two PRs in flight, #1257 and #1258.
+
+### 2026-08-05 — AnyAxisym jit: two facts measured, and my probe does NOT reproduce the test
+
+Started task #158's AnyAxisym cluster while both PRs queue. Probe used
+`AnyAxisymmetricRazorThinDiskPotential()` -- the DEFAULT constructor, which is what
+the parametrized tests use via `tclass()`. (First attempt passed a numpy lambda for
+`surfdens` and died on TracerArrayConversionError -- my probe's bug, not the code's:
+a numpy closure cannot be traced. Same class as the pickling fixtures.)
+
+    R              numpy             jax eager         jax --jit        jit-eager
+    0.499999000   -2.246310722e+00  -2.246310722e+00  -2.246268876e+00  +4.18e-05
+    0.499999990   -2.246308169e+00  -2.246308169e+00  -2.246266323e+00  +4.18e-05
+    0.500000000   -2.246308143e+00  -2.246308143e+00  -2.246266298e+00  +4.18e-05
+    0.500000010   -2.246308117e+00  -2.246308117e+00  -2.246266272e+00  +4.18e-05
+    0.500001000   -2.246305564e+00  -2.246305564e+00  -2.246263719e+00  +4.18e-05
+
+**Fact 1: jax EAGER equals numpy to every printed digit.** So nothing is wrong with
+the backend port itself.
+
+**Fact 2: jit differs from eager by a CONSTANT +4.18e-05**, identical at all five R.
+Systematic, not noise. For a Gauss-Legendre quadrature a constant offset smells like
+the traced path taking a different node count or a different interval split -- worth
+checking `_bk_split_quad` / `fixed_quad` under trace.
+
+**My probe does NOT reproduce the test's failure, and I am not going to pretend it
+does.** A constant offset cancels in a finite difference: computing FD from my own
+numbers gives ~2.55 (jit) vs ~2.60 (eager), while the test reports FD = -47962
+against analytic -2.286. Those are different phenomena. So either the test's FD uses
+a different step/direction than my +-1e-8 in R, or the offset is not constant at the
+point/scale it probes.
+
+NEXT (do not skip): read `test_2ndDeriv_potential`'s actual difference construction
+before theorising further. The 4.18e-05 offset is a real second finding either way,
+but it is not yet shown to be the cause of the ledgered failure.
+
+### 2026-08-05 — AnyAxisym: the test's actual FD, and what magnitude the bug must have
+
+Read `test_2ndDeriv_potential` rather than theorising further:
+
+    dr = 10.0**-8.0
+    newR = Rs[ii] + dr
+    dr = newR - Rs[ii]                    # forced to a representable step
+    mRforcederivR = (Rforce(R, Z, phi=1.0) - Rforce(R+dr, Z, phi=1.0)) / dr
+    Rs = [0.5, 1.0, 2.0] ; Zs = [0.0, 0.125, -0.125, 0.25, -0.25]
+
+Two differences from my probe: it is **one-sided** with dr = 1e-8 (I used central
++-1e-8), and it passes **phi=1.0** (I omitted phi). For an axisymmetric potential
+phi is physically irrelevant, but it changes the argument set the @backend_input
+boundary traces, so it is not automatically irrelevant HERE.
+
+**Arithmetic that rules out my "constant offset" candidate.** FD = df/dr with
+dr = 1e-8, so an error eps in the numerator becomes 1e8*eps in the result. The
+reported FD is -47962 against a true -2.286, i.e. an error of ~4.8e4, which
+requires a spurious numerator error of ~4.8e-4. The jit-vs-eager offset I measured
+is 4.18e-05 and CONSTANT across five R values to ~10 printed digits -- a constant
+offset cancels in any difference, one-sided or central, and a 4.8e-4 variation
+between adjacent R would have been plainly visible in that table. So the constant
+offset is a real finding but **not** the cause.
+
+Remaining candidates, in the order I would test them:
+ 1. `phi=1.0` changes the traced signature/path (cheapest to check, and the one
+    real difference between my probe and the test).
+ 2. The offset is not constant at Z != 0, or at R = 1.0 / 2.0.
+ 3. Something in `evaluateR2derivs` (the analytic side) rather than Rforce.
+
+Recorded so this is a 10-minute pickup rather than a re-derivation. NOT claiming a
+root cause: I have two measured facts (eager == numpy exactly; jit offset constant
+at 4.18e-05) and a disproof of the obvious hypothesis, which is progress but not
+an answer.
+
+### 2026-08-05 — AnyAxisym REPRODUCED: it is the ANALYTIC R2deriv, and I had it backwards
+
+Replicated the test's exact FD (one-sided, dr forced representable, phi=1.0):
+
+    mode          FD(-dRforce/dR)   analytic R2deriv
+    numpy         -2.578629e+00     -2.578837e+00
+    jax eager     -2.578629e+00     -2.578837e+00
+    jax --jit     -2.578514e+00     -5.409201e+04     <-- ANALYTIC blows up
+
+**I had the two values swapped in every earlier note.** The assert renders as
+`(tR2deriv - mRforcederivR)**2 / tR2deriv**2`, so the FIRST operand in the CI
+message (-47962.35) is the ANALYTIC R2deriv and -2.286 is the FD. Under jit the FD
+is FINE -- it matches numpy to four digits. `R2deriv` is what explodes.
+
+That misreading was not inert: I wrote it into task #158 as a caution telling
+whoever picked this up to "suspect Rforce under trace, not R2deriv" -- pointing the
+next person at the wrong function. Both the task and the earlier log entry are now
+corrected in place.
+
+What actually let me catch it: replicating the test's construction EXACTLY instead
+of an approximation of it. My central-difference-without-phi probe produced numbers
+that looked plausible and matched nothing; the moment the probe became the test,
+the answer was unambiguous. The failure message had the information all along --
+I read it in the order I expected rather than the order the assert defines.
+
+Established now:
+  - jax EAGER == numpy exactly, for BOTH Rforce and R2deriv -> the port is sound
+  - jit Rforce carries only the constant +4.18e-05 offset, which cancels in a
+    difference and is arithmetically far too small to matter (needs ~4.8e-4)
+  - jit R2deriv is wrong by ~4 orders of magnitude
+
+Next: read `_R2deriv` / its GL variant and find the traced-path divergence. Worth
+checking whether one fix burns all three AnyAxisym jit entries -- poisson_surfdens
+also consumes second derivatives (2 jax-jit + 1 torch-jit).
+
+### 2026-08-05 — AnyAxisym root-caused: GL quadrature cannot resolve the a=R peak for small |z|
+
+Read `_bk_dispatch` and the framing changed. It routes CONCRETE input to scipy's
+`quad` and only tracers / `requires_grad` input to the in-backend Gauss-Legendre
+path. So "jax eager == numpy exactly" — which I logged yesterday as evidence that
+"the port is sound" — proved nothing at all: eager never executes the GL port.
+Textbook [[value-checks-cannot-see-numpy-fallback]]; I had the fallback in hand and
+still read agreement as correctness.
+
+Measured the GL path directly against scipy (bypassing dispatch), R=1:
+
+    z          scipy R2deriv     GL R2deriv       relerr
+    0.0        -1.644219e+00    -6.036136e+03    3.67e+03
+    1e-09      -1.644219e+00    -6.036136e+03    3.67e+03
+    1e-06      -1.644216e+00    -6.035349e+03    3.67e+03
+    1e-04      -1.643796e+00    -1.894428e+03    1.15e+03
+    1e-03      -1.639998e+00    -3.013943e+00    8.38e-01
+    3e-03      -1.631576e+00    -1.632521e+00    5.79e-04
+    1e-02      -1.602281e+00    -1.602281e+00    6.35e-10
+    3e-02      -1.520206e+00    -1.520206e+00    8.22e-14
+    1.25e-01   -1.165219e+00    -1.165219e+00    5.34e-15
+
+Not a z=0 special case: a clean convergence transition at z/R ~ 3e-3. The integrand
+has a peak of width ~z at a=R (denominator ((a-R)^2+z^2)^2). `_bk_split_quad` uses
+plain GL order 100 on [0,R]+[R,2R]; the extreme Legendre node sits ~1.2e-4*R from
+the panel edge, so once z drops below the node spacing the peak falls BETWEEN nodes
+and the rule integrates garbage. numpy is immune because `quad(..., points=[R])`
+subdivides adaptively. Same family as [[match-numpy-quadrature-floor]].
+
+`Rforce` shows the identical defect one order milder (1.86e-05 at z=0, R=0.5) —
+that IS the +4.18e-05 offset I chased yesterday, now explained rather than dismissed.
+
+**This is wider than the jit ledger.** `_bk_dispatch` takes the GL path when
+`requires_grad` is set too, so a torch/jax GRADIENT through R2deriv (or Rforce) at
+small |z| is computed from the same broken quadrature — wrong value and wrong
+gradient, in eager, with no jit involved. Not a test-harness artifact; a
+user-facing correctness bug on the differentiable path. Filing it as such.
+
+Two candidate fixes, in preference order:
+  (a) regroup the integrand so the E- and K-term 1/(a-R)^2 divergences cancel
+      analytically before evaluation — robust, kills it at every z including 0;
+  (b) add narrow panels of width ~z straddling a=R so the peak is resolved —
+      cheaper, traceable (panel EDGES may be traced; the panel COUNT stays static),
+      but degrades again at z=0 exactly where the cancellation is genuine.
+Prefer (a); measure (b) as the fallback. Gate any fix on the z-scan above, not on
+the test — the test only samples z=0 and |z|>=0.125 and would miss the whole
+transition region.
+
+### 2026-08-05 — and the z=0 case is a DIVERGENT integral, in the numpy path too
+
+Followed the quadrature finding down one more level, because fix (a) (analytic
+regrouping) is only well-posed if the integral converges. It does not.
+
+scipy, on galpy's OWN numpy path, at z=0:
+
+    z=0      R2deriv=-1.64421852e+00   1 warning: "The integral is probably
+                                       divergent, or slowly convergent."
+    z=1e-06  R2deriv=-1.64421553e+00   0 warnings
+    z=1e-03  R2deriv=-1.63999839e+00   0 warnings
+    z=0.125  R2deriv=-1.16521864e+00   0 warnings
+
+Probed the integrand directly at z=0 approaching a=R; f*(a-R)^2 is dead constant:
+
+    a-R      f(R+d)          f*d^2
+    1e-02    3.606596e+02    3.606596e-02
+    1e-03    3.720999e+04    3.720999e-02
+    1e-04    3.732724e+06    3.732724e-02
+    1e-05    3.733899e+08    3.733899e-02
+    1e-06    3.734017e+10    3.734017e-02
+
+So the integrand goes as C/(a-R)^2 with C = 3.73402e-2, and the E-term algebra
+predicts C = Sigma(R)/2 = 1.5*exp(-3)/2 = 0.0373400 -- exact match, so this is
+understood and not a numerical artifact. 1/(a-R)^2 is even, so the two sides do not
+cancel in principal value: the z=0 integral genuinely diverges.
+
+Consequences, which change the fix:
+
+1. **fix (a) is ill-posed as stated.** There is no finite integral to regroup toward
+   at z=0. What is finite and physically meaningful is the LIMIT z->0+, which the
+   table above pins at -1.644215 (and the test's own FD independently confirms, 4
+   digits, at R=0.5). So the target is the limit, not the z=0 integral.
+
+2. **fix (b) is the principled one after all**, for the whole ledger-relevant band
+   0 < |z|/R < 3e-3: resolve the peak with z-scaled panels straddling a=R and GL
+   converges, because for any z>0 the integral genuinely converges.
+
+3. **A pre-existing numpy-path finding for Jo.** galpy's numpy AnyAxisym `_R2deriv`
+   at exactly z=0 evaluates a divergent integral and returns an unconverged value
+   with an IntegrationWarning. It happens to land within 3e-6 of the true limit, but
+   nothing guarantees that. Same family as the `_zforce_numpy` NaN (task #189):
+   found while doing backend work, but it is the numpy path. NOT touching it --
+   byte-identity -- just recording it. It also means matching numpy bit-for-bit at
+   z=0 is not a sensible target for the backend; converging to the LIMIT is.
+
+Method note: the thing that broke this open was refusing to accept "eager matches
+numpy" as evidence. Dispatch reads concrete input -> scipy, tracer/requires_grad ->
+GL, so agreement in eager was structurally guaranteed and said nothing. Measuring
+the GL path DIRECTLY, bypassing dispatch, gave the answer in one run.
+
+### 2026-08-05 — CORRECTION on provenance, and the transformed_quad measurement
+
+**Provenance correction.** The z-scan in the two entries above was produced by a
+process that imported
+`/var/tmp/streamtorch/galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py`
+-- a STALE worktree that predates the `_bk_m1_aRz` fix (it still has `_bk_m_aRz`
+with `m = min(4aR/aRz, _ELLIP_M_CAP)` and `ellipk(m)`). I had checked
+`galpy.__file__`, which reported `/var/tmp/potfix`, and took that as sufficient. It
+is not: the package ROOT and a SUBMODULE resolved to different worktrees, so
+`galpy.__file__` was actively misleading. This is [[worktree-so-provenance]] biting
+in a new way, and it is the second time this week the fix is the same -- verify
+`inspect.getfile(<the class under test>)`, not `galpy.__file__`.
+
+I caught it only because a patch I applied produced byte-identical output.
+
+**The conclusions survive re-measurement.** Re-ran pinned to the real tree
+(`inspect.getfile` printed and checked, clean worktree at fa80b2f0): identical to
+3 sig-figs, 3.67e+03 at z=0, same transition at z/R ~ 3e-3, last 1-2 digits move at
+large z. So the quadrature diagnosis stands; only my route to it was sloppy. The
+C/(a-R)^2 divergence result was never at risk -- that probe used my own formula
+with scipy directly, no galpy import.
+
+**transformed_quad measured.** `galpy/backend/quadrature.py` already has
+`transformed_quad(..., interior_point=)`, whose docstring names "the disk a = R
+pattern" exactly; `_bk_split_quad` simply never used it, calling plain `fixed_quad`
+on [0,R] and [R,2R]. Swapping it in (n=100, interior_point=R):
+
+    z/R      baseline      transformed_quad
+    0        3.67e+03      4.78e+11   WORSE
+    1e-06    3.67e+03      3.08e+01   worse in kind
+    1e-04    1.15e+03      1.73e-05   fixed
+    1e-03    8.38e-01      1.21e-11   fixed
+    3e-03    5.79e-04      1.25e-13   fixed
+    >=1e-02  fine          fine
+
+Threshold moves ~30x (3e-3 -> 1e-4), but the small-z end gets WORSE, and that is
+not a tuning accident: the k=3 map clusters nodes toward a=R, and at z->0 that is a
+genuine 1/(a-R)^2 singularity, so clustering amplifies exactly what it is meant to
+resolve. Right instinct, wrong regime.
+
+**So this does not burn the ledger entries.** The test samples z=0 exactly, where
+the integral diverges and NO sampling scheme recovers the finite limit. Burning
+them requires handling z=0 with a separate regularised in-plane formula (evaluate
+the limit analytically), with a peak-resolving rule for 0 < |z| << R. Two pieces of
+real work, now well-scoped; recorded in task #202 rather than half-landed.
+
+### 2026-08-05 (cont) — dyadic grading solves the z>0 half; z=0 still needs analysis
+
+CI is dead repo-wide (GitHub Actions major outage; the status page says webhook
+triggers are throttled, which is exactly why #1258 has 0 runs and why close/reopen
+did not help). Only backend-tests.yml has workflow_dispatch and the all-clear gate
+needs build.yml, so a manual dispatch cannot produce a mergeable state -- not worth
+burning scarce runners mid-incident. Did local work instead.
+
+Three quadrature schemes measured against scipy on `_R2deriv_gl`, R=1, all on a
+clean worktree with `inspect.getfile` printed:
+
+    z/R      baseline    transformed_quad   narrow+cluster   dyadic graded
+    0        3.67e+03    4.78e+11           nan              2.56e+09
+    1e-06    3.67e+03    3.08e+01           1.90e+04         8.73e-07
+    1e-04    1.15e+03    1.73e-05           6.23e-02         2.00e-10
+    1e-03    8.38e-01    1.21e-11           1.70e-12         8.07e-13
+    3e-03    5.79e-04    1.25e-13           1.37e-13         1.80e-13
+    1e-02    6.35e-10    5.06e-14           1.94e-15         5.54e-15
+    >=3e-02  ~1e-14      ~1e-14             ~1e-14           ~1e-14
+
+Two negative results worth keeping, since both looked obviously right beforehand:
+  - ONE narrow panel of width ~c|z| straddling a=R is WORSE than plain clustering
+    (6.2e-02 vs 1.7e-05 at z=1e-4). Inside that panel the integrand still has
+    endpoint structure at a=R, which equal-spaced GL handles badly.
+  - Adding clustering INSIDE the narrow panel changed nothing at z<=1e-4 --
+    bit-identical output, which is the tell that the term I was tuning was not the
+    dominant one. It isn't: the residual comes from the OUTER panels, whose extreme
+    Legendre node sits ~1.2e-4*R from the peak no matter what happens inside.
+
+Dyadic grading (breakpoints R -/+ R*2^-k, k=1..K, K=24, n=20 per panel) fixes that
+directly: threshold moves 3e-3 -> below 1e-6, >1000x, and 1e-6 itself is limited by
+K (innermost width R*2^-24 ~ 6e-8), so deeper K buys more.
+
+Cost as prototyped is ~5x the evaluations (2*(K+1)*n = 1000 vs 200) because I wrote
+it as 50 separate `fixed_quad` calls. For the real thing, build the panel edges as
+ARRAYS and issue ONE `fixed_quad` -- it already broadcasts over the trailing node
+axis, so a (npanels,) pair of limits returns (npanels,) to sum. One call, static
+panel count, traceable.
+
+Caveat to carry into the PR: grading makes z=0 EXACTLY worse (3.67e+03 -> 2.56e+09)
+because it marches panels into a genuine singularity. Both numbers are meaningless
+-- the z=0 integral diverges -- and the ledger entry stays either way, but it should
+be stated rather than discovered. The analytic z=0 limit (piece 1 of task #202)
+supersedes whatever the sampler does there.
+
+So: piece 2 of #202 is SOLVED in design and measured; piece 1 (analytic in-plane
+limit) is still the thing that actually burns the ledger entries.
+
+### 2026-08-05 (cont) — Poisson identity validates the z=0 TARGET, but does not rescue the traced path
+
+Tried to sidestep the divergent z=0 a-integral via Poisson: off the plane rho=0, so
+Phi_RR = -Phi_R/R - Phi_zz, i.e. `R2deriv = Rforce/R - z2deriv`. On scipy values:
+
+    R      z       R2deriv(scipy)   Rforce/R - z2deriv    |diff|
+    0.50   0       -2.57883706e+00  -2.57883706e+00       2.59e-10
+    1.00   0       -1.64421852e+00  -1.64421852e+00       2.16e-12
+    2.00   0       -3.34103405e-01  -3.34103405e-01       1.55e-12
+    1.00   1e-06   -1.64421553e+00  -1.64417590e+00       3.96e-05
+
+**This partially retracts what I wrote earlier.** I said scipy's z=0 value "lands
+within 3e-6 of the true limit by adaptive luck". It is better than luck: three
+INDEPENDENT integrals satisfy Poisson to 1e-12 there, which is a real constraint an
+accidental value would not meet. So the z=0 target value is trustworthy even though
+the integral as written diverges and scipy warns. (The identity is worse at
+z=1e-6 -- 4e-5 -- because THOSE scipy evaluations are the hard near-singular ones;
+the z=0 evaluation is not the weak link.)
+
+**But the identity does not help the backend.** Measured the two right-hand-side
+pieces on the GL path at z=0:
+
+    R      Rforce GL relerr    z2deriv GL relerr
+    0.50   1.86e-05            2.83e+04
+    1.00   8.28e-06            1.17e+04
+    2.00   1.52e-06            8.28e+02
+
+`z2deriv_gl` is *worse* than `R2deriv_gl`, so substituting one broken quantity for
+another buys nothing. Useful reframing though: this is ONE defect in the shared
+a=R handling, hitting R2deriv, z2deriv and (mildly) Rforce alike -- so a single
+quadrature fix in `_bk_split_quad` should lift all three, and the dyadic grading
+above is the candidate. Worth re-running the z-scan for z2deriv before designing
+the PR, rather than assuming it transfers.
+
+### 2026-08-05 (cont) — graded quadrature: design settled and costed (patch saved)
+
+Threaded `z` into `_bk_split_quad` so ALL SIX derivatives get the dyadic grading,
+and checked the transfer instead of assuming it (R=1, relerr vs scipy):
+
+    z/R      R2deriv    z2deriv    Rforce     zforce
+    0        2.56e+09   8.16e+09   6.47e-09   0.00e+00
+    1e-06    8.73e-07   7.67e-05   1.25e-06   5.70e-12
+    1e-04    2.00e-10   6.39e-10   1.20e-13   5.52e-14
+    1e-03    8.02e-13   2.50e-12   1.70e-14   1.06e-15
+    1e-02    5.13e-15   8.07e-15   6.78e-15   7.14e-15
+    1.25e-01 4.95e-15   6.59e-14   7.43e-15   3.24e-15
+
+It transfers, and does MORE than expected: **Rforce is now right at z=0 too**
+(8.28e-06 -> 6.47e-09). Its a-integral converges at z=0; only the second
+derivatives diverge. That retires the +4.18e-05 offset outright.
+
+COST -- and this is why the implementation shape matters:
+
+                            eager      jit-compile   jit-run
+    baseline (n=100 x2)     644 ms     0.61 s        0.134 ms
+    graded, 50 separate     1778 ms    9.62 s        0.529 ms
+    graded, VECTORIZED      1131 ms    0.57 s        0.211 ms
+
+Written as a loop of 50 `fixed_quad` calls the jit graph blows up 16x in compile
+time -- unacceptable, and the same failure mode as the Staeckel bisection unroll.
+Built as ONE batched `fixed_quad` over a leading panel axis (2K+2 = 50 panels,
+n=20), compile is 0.57 s, marginally FASTER than baseline, for 1000 nodes vs 200.
+Net ~1.7x runtime for >1000x accuracy in the small-|z| band. Accuracy is identical
+between the two shapes, so this is pure implementation win.
+
+NEGATIVE RESULT: clamping the grading depth to the peak width (stop at ~4|z|,
+floor 1e-8 R), which I tried in order to avoid the z=0 regression, is WORSE
+everywhere -- 1e-2 goes 5.1e-15 -> 2.0e-10, 1e-4 goes 2.0e-10 -> 2.0e-08 -- because
+it replaces the graded core of the peak with one wide panel. And it does not fix
+z=0 anyway. Unclamped grading is the design.
+
+Patch saved: logs/vacation_2026-07/anyaxi_graded_quad.patch (95 lines, applies to
+fa80b2f0). Not opened as a PR yet: it makes z=0 R2deriv/z2deriv numerically worse
+(both values meaningless -- divergent integral) and burns no ledger entry on its
+own, so it belongs WITH piece 1 (the analytic in-plane limit) in one coherent PR.
+Remaining implementation note for that PR: with array-valued R the panel axis needs
+an explicit expand (R[..., None]) before broadcasting against (..., P, n).
+
+### 2026-08-05 (cont) — piece 1: the z=0 limit is recoverable from the backend side
+
+With grading making small-z evaluations trustworthy (~1e-12 at z=1e-3), Richardson
+extrapolation in |z| recovers the z=0 value. f(z) = f0 + c|z| + d z^2 near 0 (the
+razor-thin |z| kink), so 2f(h)-f(2h) kills the linear term and
+(8f(h)-6f(2h)+f(4h))/3 kills the quadratic too:
+
+    R     numpy(z=0)          extrapolated       relerr
+    0.50  -2.5788370621e+00   -2.5788371708e+00  4.2e-08
+    1.00  -1.6442185213e+00   -1.6442185814e+00  3.7e-08
+    2.00  -3.3410340515e-01   -3.3410340812e-01  8.9e-09
+
+THIRD independent confirmation that numpy's z=0 value is the true limit -- after
+the Poisson identity (2e-12) and the test's own finite difference. Three unrelated
+routes agreeing settles it; the IntegrationWarning is about the integral as
+WRITTEN, not about the number.
+
+1e-8 is ~1000x tighter than the FD reference the failing test compares against, so
+this accuracy is sufficient to burn the entries.
+
+Implementation options for piece 1, cost measured against the graded baseline
+(1 quadrature, jit-run 0.211 ms):
+  - Richardson: works TODAY, but needs 3 extra quadratures, and since |z|==0
+    cannot be branched on under trace it has to be an xp.where blend, so ~4x on
+    every call. Acceptable for jit (0.8 ms) but poor for the eager gradient path.
+  - Hadamard finite part: subtract the singular part -- whose coefficient is
+    analytically KNOWN, Sigma(R)*R/2 at z=0, verified to 6 digits earlier -- and
+    add back its closed-form finite part. ONE quadrature, uniform in z, no branch.
+    This is the right answer and what I will implement.
+
+Deliberately NOT rushing the finite-part algebra at the end of a long window; the
+premise is now proven and the design is unambiguous, so it can be written
+carefully next wake rather than half-done now.
+
+### 2026-08-06 — #1258: coverage commit pushed; CI still webhook-starved
+
+Actions is partially back (the delayed `push` event for the #1257 merge, fa80b2f0,
+finally fired at 22:37:43Z -- the backlog is draining). But `pull_request` events
+for #1258 are still not arriving:
+
+  - close/reopen: no runs (and the workflows do NOT restrict `types`, so
+    `reopened` should fire -- checked build.yml / all-clear.yml / build_windows.yml
+    / test-doc-notebooks.yml; only backend-tests.yml has a branch filter)
+  - a REAL push (synchronize) of c064bdb6: still 0 runs after ~4 min
+
+So this is the incident, not the PR. Nothing further to do but retry each wake.
+
+Used the required trigger commit for something real rather than an empty commit:
+`map_coordinates`' mode guard carried a `# pragma: no cover`, and this PR is what
+widened that guard from `mode != "nearest"` to `mode not in ("mirror","nearest")`.
+Hiding code the PR itself touches violates [[no-hiding-uncovered-code]], so it is
+now tested and the pragma is gone. The guard is reachable only with backend-array
+coords (numpy coords are a scipy passthrough that accepts every scipy mode), so
+the test is jax/torch only.
+
+Verified meaningful by A/B, not asserted:
+
+    with the guard        163 passed
+    guard accepts reflect   2 failed  (jax, torch)
+
+The two pre-existing `order != 3` pragmas are deliberately untouched -- this PR
+does not modify those lines, and widening scope to them would be unrelated churn.
+
+#1258 now: 2 source/test commits + ledger prune + this coverage commit, head
+c064bdb6, ledger 20 -> 19.
+
+### 2026-08-06 — CORRECTION: the divergence coefficient is Sigma(R)/2, not Sigma(R)*R/2
+
+I recorded the z=0 singular coefficient as `C = Sigma(R)*R/2`, verified "to 6
+digits". It was verified at ONE radius, R=1, where Sigma(R)/2 and Sigma(R)*R/2 are
+numerically identical. They are not the same function. Measured C = f*(a-R)^2 at
+five radii:
+
+    R      measured C          Sigma(R)/2      Sigma(R)*R/2
+    0.25   3.5427314326e-01    3.542749e-01    8.856873e-02
+    0.50   1.6734695071e-01    1.673476e-01    8.367381e-02
+    1.00   3.7340170595e-02    3.734030e-02    3.734030e-02
+    2.00   1.8590580901e-03    1.859064e-03    3.718128e-03
+    3.00   9.2557059944e-05    9.255735e-05    2.776721e-04
+
+**C = Sigma(R)/2**, R-independent prefactor. The algebra agrees: with
+P(a) = (a^2-3R^2) a Sigma(a) / (2 R^2 (a+R)), at a=R this is
+(-2R^2)(R)(Sigma)/(2R^2 * 2R) = -Sigma(R)/2, and the E-term contributes
+-P(R)/t^2 = +Sigma(R)/(2 t^2).
+
+Textbook single-point coincidence, and I had flagged R=1 as my only check without
+acting on it. Corrected in task #202 too.
+
+Structure for the finite-part implementation, now that the constant is right:
+
+    I(a) = A(a) - P(a) E(m)/t^2,     t = a-R
+    A(a) = a Sigma(a) K(m) / (2 R^2 (a+R))        <- log-singular, INTEGRABLE
+    P(a) = (a^2-3R^2) a Sigma(a) / (2 R^2 (a+R))  <- smooth
+
+E(m) = 1 + O(t^2 ln|t|) near m=1, so the t^2-ln correction does not touch either
+the leading coefficient or the first derivative: f(a) = -P(a)E(m) has f(R) =
+-P(R) = Sigma(R)/2 and f'(R) = -P'(R). Hadamard over a window [R-d, R+d]:
+
+    Pf int f/t^2 = int [f - f(R) - f'(R) t]/t^2 dt  -  2 f(R)/d
+
+with the bracket regular (-> f''/2) and the odd term vanishing. One quadrature,
+uniform in z, no branch -- but it introduces the window d as a tuning parameter
+and needs f'(R) (analytic or AD).
+
+DECISION for the PR: implement Hadamard, keep Richardson (verified 1e-8) as the
+cross-check in the test rather than in the code. Two independent routes to the
+same number is exactly the kind of gate this needs, given that the z=0 value comes
+from an integral scipy itself calls divergent.
+
+### 2026-08-06 — FOR JO: galpy's numpy AnyAxisym _R2deriv at z=0 is WRONG, by up to 6.5e-5
+
+The Hadamard prototype works (standalone numpy+scipy, `_hadamard.py`), and
+validating it turned up something bigger than the backend issue.
+
+    R      galpy numpy z=0     Hadamard            relerr vs galpy
+    0.25   -2.4095938246e-02   -2.4097520960e-02   6.57e-05
+    0.50   -2.5788370621e+00   -2.5788374350e+00   1.45e-07
+    1.00   -1.6442185213e+00   -1.6442185629e+00   2.53e-08
+    2.00   -3.3410340515e-01   -3.3410340618e-01   3.10e-09
+    3.00   -9.0445348682e-02   -9.0445348689e-02   7.59e-11
+
+I first read the R=0.25 gap as MY formula degrading at small R. It is not. Three
+independent routes to the z->0 limit agree with each other and disagree with
+galpy's z=0 evaluation:
+
+    R      galpy z=0          limit via SCIPY     Hadamard           had-vs-lim
+    0.25   -2.4095938246e-02  -2.4097500595e-02   -2.4097520960e-02  8.5e-07
+    0.50   -2.5788370621e+00  -2.5788374305e+00   -2.5788374350e+00  1.8e-09
+    1.00   -1.6442185213e+00  -1.6442185625e+00   -1.6442185629e+00  2.9e-10
+
+The middle column is the decisive one: it is Richardson in |z| using ONLY galpy's
+own `_R2deriv_numpy` at z != 0, where the integral converges and scipy issues no
+warning. No backend code, no graded quadrature, no finite-part algebra. galpy's own
+function extrapolated to the plane disagrees with galpy's own function IN the plane.
+
+It is not a tolerance problem: re-running the z=0 quad with limit=2000 and
+epsabs=epsrel=1e-14 moves the answer by 1e-13. scipy CONVERGES -- stably -- to the
+wrong number, because the z=0 integrand diverges as Sigma(R)/(2(a-R)^2) and what
+adaptive subdivision settles on is not the finite part.
+
+**This retracts my "Poisson validates the target value" claim.** The identity
+R2deriv = Rforce/R - z2deriv holds at z=0 to 2e-12 -- but R2deriv and z2deriv there
+are computed by the same machinery on the same singularity, so their errors are
+correlated and the identity can hold while both are off. Consistency is not
+accuracy; I over-read it. The three-route agreement above IS independent, because
+the routes share no quadrature.
+
+Error grows sharply as R shrinks (7.6e-11 at R=3 -> 6.6e-5 at R=0.25), i.e. exactly
+where razor-thin disk models are usually evaluated.
+
+STATUS: numpy path is byte-identity-frozen, so I am NOT touching it. Recorded for
+Jo. Same family as the `_zforce_numpy` nan (task #189): found while doing backend
+work, but it is a pre-existing numpy defect, and this one is a silent wrong ANSWER
+rather than a nan.
+
+Consequence for the backend: matching numpy at z=0 means matching a value wrong by
+up to 6.5e-5. The failing jit test compares backend analytic R2deriv against a
+backend FD of Rforce -- both on the backend -- so a correct backend is
+self-consistent and should PASS while being more accurate than numpy. Worth
+confirming that reading against the test before writing the PR.
+
+### 2026-08-06 — BLOCKING constraint found: grading breaks a finite difference in R
+
+Checked (rather than assumed) how the failing test actually compares. `tp` is ONE
+instance, so `tp.Rforce` and `evaluateR2derivs(tp, ...)` are both on the backend --
+the test is self-consistent, no numpy reference. Assert is
+`(tR2deriv-mRforcederivR)^2 / tR2deriv^2 < 10^-4.5`, i.e. |rel diff| < 5.62e-3, and
+Rs = [0.5, 1.0, 2.0]. So R=0.25 is never sampled and the numpy z=0 bug (#203,
+1.4e-7 at R=0.5) is far inside tolerance -- it does NOT explain the ledger entry.
+Good: two separate problems, correctly separated.
+
+Then the important negative result. The test's FD is
+(Rforce(R) - Rforce(R+dr))/dr with dr = 1e-8. With grading applied to Rforce:
+
+    R      z=0:  FD             analytic R2deriv    rel diff
+    0.50         -2.1085e+00    -2.5788e+00         1.82e-01   FAIL
+    1.00         -4.8111e+00    -1.6442e+00         1.93e+00   FAIL
+    2.00         -3.7165e-01    -3.3410e-01         1.12e-01   FAIL
+
+even though graded `Rforce` itself is accurate to 6.5e-09 at z=0. At z=0.125/0.25
+the FD is FINE (1e-8..8e-6, passes), so this is specific to z=0.
+
+CAUSE: the panel edges are R*frac, so shifting R by dr moves every edge. The
+innermost panel is R*2^-24 ~ 6e-8 -- COMPARABLE TO dr=1e-8. The FD step lands
+inside the finest panel, where the quadrature error is most sensitive, so the error
+does not cancel between the two evaluations. At z>=0.125 the integrand is smooth on
+the panel scale and the error varies smoothly in R, so it cancels as usual.
+
+**The binding constraint is SMOOTHNESS OF THE QUADRATURE ERROR IN R, not raw
+accuracy.** I had been optimising raw accuracy -- which is why the clamped variant
+looked like a pure loss earlier (2e-10 vs 5e-15) when it may in fact be the right
+trade. 2e-10 is 7 orders inside the 5.6e-3 the test needs; smoothness is not.
+
+Tried re-testing the clamp against the right metric and got a broken run: I dropped
+the `w <= 0.5R` cap, so at z=0.25, R=0.5 the width 4|z|=1.0 exceeds R, edges go
+negative and R2deriv returns -5.38 instead of -7.5e-3. My experiment's bug, not a
+property of the method -- and z=0 fails regardless, since w=4|z| is 0 there and the
+clamp does nothing.
+
+STATE: the piece-2 patch as saved is NOT landable. Grading must additionally bound
+the innermost panel width well above any plausible caller FD step (>> 1e-8 R), and
+z=0 must come from the Hadamard formula rather than from sampling. Next step is to
+measure FD smoothness as a function of grading depth K -- pick the largest K whose
+innermost panel still leaves an FD in R clean -- instead of maximising accuracy.
+That is a measurement I have not done yet, so no number is being claimed.
+
+### 2026-08-06 (cont) — the FD conflict is z=0 ONLY; design closes
+
+Swept grading depth K at z=0 (R=1), FD of Rforce with dr=1e-8 vs the true R2deriv:
+
+    K   innermost R*2^-K   FDrel(z=0)   R2deriv z=1e-4   z=1e-3
+    0        1.00e+00       4.09e-04 ok    1.52e+02       1.23e+02
+    8        3.91e-03       3.03e-04 ok    5.48e+00       1.17e-09
+    12       2.44e-04       9.29e-03 BAD   1.08e-10       8.65e-13
+    16       1.53e-05       3.39e-02 BAD   2.10e-10       8.04e-13
+    20       9.54e-07       8.27e-01 BAD   2.00e-10       8.02e-13
+    24       5.96e-08       1.93e+00 BAD   2.00e-10       8.02e-13
+
+No K satisfies both, and note K=12 already breaks the FD with an innermost panel
+24000x LARGER than dr -- so my "panel narrower than the FD step" explanation was
+wrong. Whatever the mechanism, at z=0 the quadrature error stops varying smoothly
+in R as soon as panels march into the singularity.
+
+But the missing measurement changes the conclusion. At NONZERO z, K=24 grading
+keeps the FD clean everywhere:
+
+    z        FD               R2deriv          rel diff
+    1e-04    -1.64381940e+00  -1.64379628e+00  1.41e-05  PASS
+    1e-03    -1.64000066e+00  -1.63999839e+00  1.38e-06  PASS
+    1e-02    -1.60228138e+00  -1.60228115e+00  1.47e-07  PASS
+    1.25e-01 -1.16521871e+00  -1.16521864e+00  5.44e-08  PASS
+    2.5e-01  -7.89331250e-01  -7.89331254e-01  6.15e-09  PASS
+
+So there is NO general tension -- I was one measurement away from wrongly
+concluding the approach was unlandable. The conflict is confined to z=0, which is
+exactly the point where the integral diverges and the value must come from Hadamard
+rather than from sampling anyway.
+
+DESIGN (closes):
+  - z > 0: grade to depth ~log2(R/|z|). R2deriv/z2deriv gain up to 1e3x accuracy
+    and the FD stays clean.
+  - z = 0: no grading (Rforce is fine ungraded -- FD 4.09e-04, passes), and
+    R2deriv/z2deriv come from the Hadamard finite part.
+Implementable branch-free: the innermost panel distance is
+`xp.where(z == 0, 0.5*R, c*|z|)` -- a traced select on a SCALAR, so it is one
+quadrature either way, no cost, no data-dependent control flow.
+
+Note for the PR: grading makes Rforce more accurate (6.5e-9 vs 8.3e-6) while
+making a FINITE DIFFERENCE of it worse at z=0. For a differentiable library the AD
+derivative is what matters and AD differentiates the quadrature exactly, so this is
+defensible -- but it must be stated explicitly in the PR, not discovered by a
+reviewer.
+
+### 2026-08-06 (cont) — piece 2 IMPLEMENTED and landable (patch updated)
+
+Built the z-aware graded split. dmin bounds how close panels may approach a=R:
+`xp.where(|z| > 0, min(4|z|, R/2), R/2)` -- a traced select on a SCALAR, so it is
+one quadrature either way, no branch, no extra cost. At z=0 that collapses the
+graded panels and leaves the coarse split; for z>0 it grades to ~4|z|.
+
+Got the panel ordering wrong first (reversed the left edges, which were already
+ascending, and failed to reverse the right ones) -- caught immediately because
+accuracy was worse than baseline EVERYWHERE, which is not what a tuning error
+looks like.
+
+Final, K=24 n=50, relerr vs scipy at R=1:
+
+    z/R      R2deriv    z2deriv    Rforce     zforce      baseline R2deriv
+    0        1.85e+03   5.90e+03   1.64e-05   0.00e+00    3.67e+03
+    1e-06    5.93e-07   7.76e-05   1.25e-06   6.01e-12    3.67e+03
+    1e-04    1.25e-10   4.00e-10   1.21e-13   1.12e-14    1.15e+03
+    1e-03    6.97e-13   2.33e-12   1.75e-14   3.07e-15    8.38e-01
+    1e-02    1.06e-13   3.51e-13   5.98e-15   5.74e-15    6.35e-10
+    1.25e-01 1.70e-14   1.23e-13   5.92e-15   1.95e-15    ~1e-14
+
+FD of Rforce (dr=1e-8) vs the TRUE R2deriv, the test's own check -- clean at every
+z now, including 0, which is what the unclamped version broke:
+
+    z=0:  R=0.50 1.34e-04   R=1.00 1.42e-05   R=2.00 7.70e-06   all PASS
+    z>0:  1.3e-05 (1e-4) ... 7.9e-09 (0.25)                     all PASS
+
+COST: eager 644 -> 1215 ms, jit-compile 0.61 -> 0.87 s, jit-run 0.134 -> 0.336 ms.
+~2x for 1e-13-level second derivatives where the old code was off by 1e3.
+
+Residual, stated rather than hidden: at z=0 `Rforce` is 1.6e-05 vs baseline 8.3e-06
+(2x worse), because the collapsed split gives 4 panels x 50 = 200 nodes where the
+baseline had 2 x 100 = 200 but placed differently. Two-fold on a quantity that is
+1e-5 accurate, against 1e3-fold gains elsewhere.
+
+NUMPY UNTOUCHED: `_bk_split_quad` is reached only from the `_gl` functions; every
+`_*_numpy` variant calls scipy's quad directly. Byte-identity is not at risk.
+
+STILL LEDGERED: z=0 R2deriv/z2deriv remain garbage (1.85e+03) -- they need the
+Hadamard finite part (piece 1). But the FD side is now healthy at z=0 and passes
+against the true value at 1.4e-05, so once the analytic z=0 returns Hadamard the
+test passes there too. Piece 2 is therefore landable ALONE as a correctness fix for
+the differentiable path at 0 < |z| << R, with no z=0 regression and no ledger
+change; piece 1 then burns the entries.
+
+### 2026-08-06 — PR #1259 opened: AnyAxisym graded quadrature (piece 2)
+
+Productionised the graded split on branch `fix/anyaxisym-graded-quadrature`
+(0b8c6a76), targeting feat/backends-develop. Two PRs in flight now: #1258
+(map_coordinates boundary mode) and #1259. Files are disjoint --
+galpy/backend/interpolate.py + tests/test_backend_interpolate.py vs
+galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py +
+tests/test_backend_anyaxisymdisk.py -- so no merge-order coupling this time.
+
+Tests went into the EXISTING tests/test_backend_anyaxisymdisk.py rather than a new
+file. Reading it first paid off twice: it already had `_surfdens`/`_POT`/`_scalar`
+helpers to reuse, and its `_ZS = [0.15, 0.3, 0.25, 0.4]` plus a traced 2nd-deriv
+test pinned at z=0.25 is precisely WHY this bug survived -- no backend test had
+ever entered 0 < |z| << R. That belongs in the PR description as the reason, and
+it is there.
+
+A/B: 20 passed with the fix, 8 failed without (small-z, both backends). The FD
+tests pass either way by design -- they are a REGRESSION GUARD against the
+unconditionally-graded version I nearly shipped, not a test of the fix, and the
+docstring says so rather than letting a reader assume otherwise.
+
+Gates, all 10 passed / 1 skipped, identical to numpy: test_potential.py -k
+AnyAxisym on numpy, --backend jax --runxfail, --backend torch --runxfail. Full
+test_backend_anyaxisymdisk.py 36 passed + 1 PRE-EXISTING failure
+(test_torch_compile_takes_the_backend_gl_path) which I A/B'd against the unpatched
+tree before attributing: identical failure, so not mine. It is the -W error
+deprecation trap -- a newer torch's `torch.jit.script_method` DeprecationWarning
+the test's filter list does not cover. Not ledgered and CI is green on it, so
+local-version-only; see [[local-env-is-one-version-point]].
+
+Built the C extension in the worktree first (BUILD EXIT=0) -- without it
+test_potential.py results would have been meaningless.
+
+Pre-commit rejected the first commit (ruff-format vs the stash); caught by the
+SHA-moved check, fixed by running ruff myself then re-add + re-commit, NOT amend.
+
+### 2026-08-06 — task #190's premise is WRONG: jeans GL is fine; the guard is the island
+
+Investigated #190 ("jeans backend quadrature too coarse to replace scipy, blocks
+the Pdf.1 guard removal") while both PRs sat runner-starved. The premise does not
+survive measurement.
+
+Backend GL vs scipy for `jeans.sigmar`, three potentials x five radii:
+
+    NFW        3.2e-12  6.0e-13  7.0e-12  1.2e-10  3.6e-10
+    Hernquist  6.7e-15  7.8e-15  1.1e-15  2.8e-13  1.3e-10
+    Plummer    3.4e-16  1.4e-15  3.8e-15  9.8e-11  3.3e-08
+
+Worst case 3.3e-08 (Plummer, r=10); most points 1e-12..1e-15. Not "too coarse".
+
+The REAL blocker is that the guard is written as a DATA test:
+
+    xp = get_namespace(r) if is_backend_array(r) else numpy
+
+`get_namespace` already honours a forced context ("forced default beats the data",
+verified at the primitive: under use('jax', force=True) it returns jax.numpy for a
+numpy input). The `is_backend_array(r)` test overrides that and pins numpy input to
+scipy -- which IS the numpy island, and is exactly the [[no-numpy-islands...]] /
+resolved-namespace-dispatch pattern already applied to action-angle in task #113.
+
+A/B, instrumented by SPYING ON THE BRANCH rather than reading the value -- the
+value alone cannot distinguish the paths here (they agree to 1.1e-15, and a
+@physical_conversion decorator returns a float either way, which is what fooled my
+first probe into reporting "island" for both arms):
+
+    guard removed, no context  -> backend-GL calls = 0, value 0.5893864984752515
+                                  (byte-identical to baseline)
+    guard removed, forced jax  -> backend-GL calls = 1, value 0.5893864984752522
+
+So deleting the two guards kills the island AND leaves the numpy path
+byte-identical. It is a two-line change, not a quadrature project.
+
+Gradient through r on the backend path already works: jax.grad matches a central
+FD to 1.11e-09.
+
+NOT opened as a PR -- #1258 and #1259 are already in flight and the rule is two at
+a time. jeans.py restored; recorded on #190 so the next slot can take it directly.
