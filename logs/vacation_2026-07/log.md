@@ -23294,3 +23294,37 @@ Dispatched the final gate on the POST-fix tree: the backend test file plus
 test_evolveddiskdf under numpy, torch and jax. The earlier cost run described
 the pre-fix tree, so it does not count as correctness evidence for e35b5541 and
 I am not quoting it as such.
+
+### 2026-08-07 — #143 self-audit against the three merge criteria: PASS
+
+Ran the same three checks on my OWN diff that I run before merging anyone
+else's, while the final gate goes. Combined diff (9ef805e8 + e35b5541):
+2 files, +207/-39.
+
+**(a) if -> xp.where array-input class: PASS.** Seven `if` statements added.
+Classified each rather than eyeballing the count:
+  * `if xp is numpy` / `if xp is not numpy` (x2) — NAMESPACE dispatch, not data.
+  * `if initvmoment == 0.0` — now reachable ONLY on the numpy branch; the
+    backend selects with xp.where. This was the jit blocker and is the one that
+    genuinely belonged to this class.
+  * `if isinstance(t, (list, numpy.ndarray))` (x2) — TYPE check on a control
+    parameter, and both are pre-existing logic that merely moved during the
+    extraction.
+  * `if nt == 1`, `if self._to == t` — both on concrete Python control values
+    (a list length; the DF's fixed reference time), never on traced coordinates.
+None branch on coordinate data. The one that did is fixed.
+
+**(b) duplication: PASS, and this was the whole design.** The new code REUSES
+`_df_at_velocities_backend` (both callers) and `_bquad.nested_quad`. No second
+batched-integrate block, which was the failure mode I was explicitly avoiding —
+a copy would have had to re-derive the non-linspace grid construction that
+exists solely because torch.linspace drops endpoint gradients.
+
+**(c) helper placement: PASS.** Three new defs: `_df_at_velocities_backend`
+(shared by both callers — the extraction), `_vmomentsurface_direct_backend`
+(saturated with this DF's geometry: disc centre from meanv/sigma, the
+vR**n vT**m moment weight), and a local `_integrand` closure. Nothing generic
+enough to belong in galpy.backend — the genuinely reusable piece
+(tensor-product GL) already lives there and is called, not reimplemented.
+
+So the PR is audit-clean before it is opened, not after.
