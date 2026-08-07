@@ -21103,3 +21103,41 @@ test_sphericaldf constantbeta 46 passed; numpy bit-identity 18/18.
 CI note: cancelled run 31129672998 -- a stale `All-backend tests` for #1258 on
 the PRIOR sha e5228120, queued 2h+ and holding a slot in a runner-constrained
 repo. #1259's runs are all on head, nothing stale there.
+
+### 2026-08-07 — jeans jit: the `--jit` suite run was NOT evidence
+
+Ran the jeans suites under `--backend jax --jit`: 90 passed, 1 skipped. Then
+checked what that actually proved, and the answer was: almost nothing.
+
+`jeans.sigmar` carries **no `@backend_input` decorator**, so it is not a trace
+boundary, and the harness only traces at boundaries. The calls that traced were
+the inner potential force evaluators; the quadrature wrapped around them ran
+eagerly. A green `--jit` run on a non-boundary function is not a jit claim.
+This is the pass-counts-vs-traced-boundaries distinction, hit from a new angle:
+previously the failure mode was counting passes instead of traced calls, here
+it was a whole function that is *never a trace site at all*.
+
+Traced it explicitly instead. It works: jit reproduces eager to 1e-13 for r from
+1e-3 to 5, and `jit(grad)` reproduces eager `grad`. Committed as tests
+(`f5ed74f4`) using the existing shared
+`backend_jit_helpers.assert_jit_matches_eager` -- which also asserts the jaxpr
+consumes its argument, so a trace that constant-folded `r` could not pass
+vacuously. That matters for this PR specifically because `scale=r` puts `r`
+inside the quadrature MAP, not just the integration limit.
+
+**A wrong reading I nearly recorded as a bug.** The first probe printed
+`sigmar = 38599.011585` identically at r=1e-3, 0.1 and 1.0 for `beta=0.5`. That
+is not a defect: I had paired a constant beta with the *other* case's rising
+`dens ~ x**0.1`, which makes the Jeans integrand `~x**0.1` and the integral
+divergent, so fixed-order GL returns a large number dominated by the far field
+and the lower limit barely matters. **Identical values across three decades of
+the lower limit is the tell for a divergent integral**, not for a broken code
+path -- a convergent `int_r^inf` must move when r moves by 1000x. Noted in the
+test so it is not re-derived.
+
+Also re-surveyed #188 and found its premise stale: `assert_jit_matches_eager`
+already exists with 8 adopters, and there are 2 `_jit` test files, not ~10. Of
+the 29 files that use `jax.jit` without it, most use jit as a TRACEABILITY probe
+(is the traced value finite / does this path trace at all), which is a different
+assertion -- converting those would weaken them. Only 3 genuine sites remain,
+and two of the candidate files are owned by open PRs, so it is deferred.
