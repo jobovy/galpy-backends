@@ -25279,3 +25279,23 @@ Verified: a jit run where an eager-jax-ledgered nodeid fails now reports
 The pattern is the one that keeps repeating today: the instrument was built for
 the general case and quietly did not fit the specific job. Checking it against
 the job — before trusting its output — is what caught both.
+
+### 2026-08-07 — settled the sequencing risk: the two prepared PRs merge cleanly
+
+I flagged earlier that the fork-fix and slow-skip branches both edit
+`tests/backend_slow_skip.txt`, so whichever lands second would need a rebase.
+Rather than assume git would cope, tested it in a throwaway worktree:
+
+    merge rc=0  -> merges cleanly
+    combined slow-skip entries: 109
+    combined ledger entries:     17
+
+Which is arithmetically right: 210 baseline, −3 cured by the fork fix, +2 its
+measured torch-jit deferrals, −100 the orbit un-defer = **109**; and 16 ledger
+entries +1 for the jax-jit gap = **17**.
+
+So no rebase is needed, and more usefully I now know the *combined* end state
+rather than each branch's separately. The merge test ran detached and was torn
+down, so neither branch was touched.
+
+Order stays: #1265 → fork fix → slow-skip → `workflow_dispatch(jit=true)`.
