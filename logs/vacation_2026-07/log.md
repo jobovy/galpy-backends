@@ -24827,3 +24827,25 @@ The three levers that actually apply:
 That is a materially different plan from "cache the coerced constants", which is
 what I would have written up an hour ago. Recorded on #79 so the next attempt
 does not start by chasing the hotspot that is not there.
+
+### 2026-08-07 — interp A/B, without-half in: 2 timeouts on the tip
+
+`tests/test_interp_potential.py --backend torch --jit`, library code = the tip
+(the jit-tests worktree, whose only commit touches `tests/`):
+
+    38 passed, 2 failed
+      300.0s  test_interpolation_potential_secondderivs   Timeout (>300.0s)
+      300.0s  test_interpolation_potential_force_c        Timeout (>300.0s)
+
+Both are `interpRZPotential` grid builds, and `interpRZPotential` is a
+`parallel_map` consumer — so the shape matches the fork deadlock. **But I am not
+calling it that yet.** `torch.compile` over that file could plausibly take
+>300 s on its own, and the two hypotheses predict different things for the
+with-fix arm: a deadlock ends the moment the fork stops (fast pass), genuine
+slowness does not (still ~300 s). That arm is running now and it is the whole
+point of the A/B.
+
+Worth noting either way: **neither nodeid is slow-skipped or ledgered for
+torch-jit.** So on the current tip these are latent reds that only nobody has
+tripped because the `--jit` dimension is not in `backend-tests`' matrix — the
+same blind spot that hid the #1259 regression.
