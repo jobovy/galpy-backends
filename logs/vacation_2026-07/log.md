@@ -23482,3 +23482,31 @@ README row added for #1261.
 
 Queue now: #1262 (121/153, 0 reds, audit PASS) and #1263 open; #143 fully gated
 and waiting for the next slot.
+
+### 2026-08-07 — sequencing lesson: opening PR N+1 can DELAY PR N's completion
+
+#1262 has been substantively green for ~an hour (150/154, 0 reds, every real
+shard passed). It cannot finish because:
+
+    all-clear                IN_PROGRESS, polling for the rest
+    backend status report    QUEUED, waiting for a runner
+    ...and that runner is behind #1263's ~137 remaining checks
+
+So a *summary* job on the older PR is starved by the newer PR's fan-out. Nothing
+is broken and all-clear's own timeout is 330 minutes, so there is no risk — it
+is purely slow.
+
+**The lesson is about sequencing, not about CI.** I opened #1263 the moment
+#1261 merged, because a slot was free and the loop says never idle. That is
+right in general, but with a saturated runner pool it can push the PR that is
+nearly done behind the one that just started. Earlier I recorded that two
+~150-check PRs "serialize"; the sharper statement is that they can *invert* —
+the new PR's checks get runners while the old PR's tail jobs wait.
+
+Better rule for this repo: when the older PR is within a handful of checks of
+green, let it finish before opening the next one. The slot is free either way;
+the cost is only a few minutes of my idleness against potentially an hour of the
+older PR's.
+
+Not reverting anything — #1263 is legitimate work and will run regardless. Noting
+it so the next slot-opening decision accounts for the tail.
