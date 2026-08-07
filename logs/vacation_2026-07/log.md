@@ -22290,3 +22290,27 @@ Surveyed the non-adopting test_backend_* files that mention jit:
 Not spinning up a worktree for this now — two PRs are already open (Jo's limit)
 and #117b is queued ahead of it. Recording the scope so it is a 20-minute job
 when a slot frees rather than a re-survey.
+
+### 2026-08-07 — correction: #1259's windows red is a DEAD RUNNER, not a timeout
+
+I read that job's exactly-60m02s wall clock as a job-level timeout. Wrong on
+both counts. build.yml sets no `timeout-minutes` at all (only all-clear.yml:330
+and backend-tests.yml:90 do), so the default is 360 minutes — 60 was never a
+limit there. And the check-run annotation says plainly:
+
+    "The hosted runner lost communication with the server."
+
+with step 15 "Test with pytest" still `in_progress`. That is a runner death,
+i.e. pure infrastructure. Re-running is still the right call, but for a
+different reason, and the distinction matters: a timeout would have meant the
+windows orbit shard is genuinely too slow and needs splitting, which is a code
+change. A dead runner means do nothing but re-run.
+
+I only caught this because I went to check whether #1260's py3.14 build (56 min
+in) was about to hit the same "limit" — and found there is no such limit. The
+wrong diagnosis was about to become a wrong prediction about a healthy job.
+Reading the annotation is cheap; inferring cause from a wall clock is not
+evidence. Same lesson as [[reread-failure-before-investigating]].
+
+Re-run still blocked: 403 "workflow run containing this job is already running"
+while #1259 has 24 jobs in flight. Retry when the run settles.
