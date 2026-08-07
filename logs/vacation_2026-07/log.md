@@ -23552,3 +23552,35 @@ Merged this stretch: #1260, #1259, #1261, #1262, #1263. Open: #1264 (direct
 path), whose local gate was 0 failures across 4 arms before it was opened.
 
 README row added for #1263.
+
+### 2026-08-07 — #1264 MERGED (sixth). And a self-inflicted commit-message bug.
+
+**#1264 merged** 17:26:29Z as 199ee10e, CLEAN at 152/154. That lands the
+evolveddiskdf direct-path work: differentiable AND jit-traceable, gate 0
+failures across all four arms, and the first backend coverage of grid=False.
+
+**Bug I introduced in my own tooling, caught by reading the result.** I passed
+the merge body as a DOUBLE-QUOTED shell string containing backticks, so bash
+command-substituted them and two inline code spans vanished from the commit
+message:
+
+    "Also made TRACEABLE: [`if initvmoment == 0.0` EATEN] is a tracer bool"
+    "dispatched on [`xp is not numpy` EATEN], which broke 7 forced-torch tests"
+
+(The shell even printed `xp: command not found` and a syntax error, which I
+noticed and chased rather than ignoring as noise.)
+
+Checked whether #1263 suffered the same and it did NOT — its message is intact.
+So this was specific to #1264's body, not a systematic corruption of everything
+I have merged.
+
+Did not amend: the commit is on the shared feat/backends-develop, and rewriting
+it would need a force-push to an integration branch. Posted the two missing
+fragments as a comment on #1264 instead — non-destructive, and the record is
+complete where a reader will look.
+
+**Rule going forward: pass commit/PR bodies via a heredoc or --body-file, never
+a double-quoted string.** I already draft PR bodies to files; the merge bodies
+were the gap.
+
+Merged this stretch: #1260, #1259, #1261, #1262, #1263, #1264 — six.
