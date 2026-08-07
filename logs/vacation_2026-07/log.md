@@ -24340,3 +24340,55 @@ Not opening a PR on the hypothesis. Next wake: implement, then gate on the
 continuity of traced Φ at z→0 as the acceptance test rather than on the pytest
 node going green — a scheme that merely moves the discontinuity somewhere the
 grid does not sample would pass the test and still be wrong.
+
+### 2026-08-07 — measured four dmin variants; the analytic cusp settles which is right
+
+Ran all four inside the `--jit` harness against BOTH criteria (A: continuity of
+Φ in z at the midplane; B: the R-direction FD that #1259's z==0 case was
+protecting):
+
+| dmin | A: FD as z→0 | B: R-FD rel err, z=0 | z=0.125 |
+|---|---|---|---|
+| **current** (`z==0 → R/2`) | −7.3e+03 → −71.6 → +1.13 (sign flips!) | 3.4e-09 | 8.2e-09 |
+| **nograde** (always `R/2`) | 1.2e-04 → 1.2e-02 → 1.008 | 3.4e-09 | 8.2e-09 |
+| **floor** (`min(max(4|z|, R·2⁻ᴷ), R/2)`) | **1.864 → 1.865 → 1.865** | 2.8e-06 | 6.2e-10 |
+| **always** (`min(4|z|, R/2)`) | same as floor | 2.8e-06 | 6.2e-10 |
+
+Only `floor`/`always` give a **constant** FD as z→0, which is what a razor-thin
+disk must do: Φ ≈ Φ(R,0) + c|z| with c = 2πGΣ(R).
+
+**Checked against the analytic value rather than against the other
+implementation** ([[mpmath-quadosc-final-arbiter]] — the lesson being not to let
+one candidate arbitrate another). Default surfdens is `1.5·exp(−3R)`, so
+
+    amp · 2π · Σ(0.5) = 0.8866725 · 2π · 0.3346952 = 1.8646299572
+
+| scheme | FD at z=1e-8 | rel err vs analytic |
+|---|---|---|
+| **floor** | 1.864 | **3.4e-04** (limited by my 4-digit print) |
+| current (traced) | −7.346e+03 | 3.9e+03 |
+| numpy / scipy `quad` | −3.933e-04 | **1.000** (i.e. returns ~0, misses the cusp entirely) |
+
+So `floor` is not merely "different" — it is **correct to ~1e-4**, and *both*
+the current traced scheme and the long-standing numpy/scipy path are wrong at
+the midplane. numpy misses the cusp completely.
+
+**★ This turns into a question for Jo, not a fix I should just make. ★**
+`test_forceAsDeriv_potential` asserts that when `zforce ≈ 0` the z-direction FD
+must also be ≈ 0. At a razor-thin midplane both halves are individually
+defensible and jointly contradictory:
+
+- `zforce(R, 0) = 0` is right — by symmetry, the two-sided derivative does not
+  exist and 0 is the symmetric value;
+- the one-sided FD is **−2πGΣ ≠ 0** — also right, and now measured.
+
+The test conflates them, and it has only ever passed because the quadratures
+were inaccurate there in a compensating way. Fixing the quadrature correctly
+makes the test fail. So the honest fix is *two* changes — quadrature to `floor`,
+**and** a z=0 exclusion for razor-thin disks in that test — and the second is a
+physics-test recalibration, which per standing policy needs sign-off rather than
+my unilateral edit.
+
+Not opening the PR tonight. Writing it up for Jo with the numbers above, and
+holding the quadrature change with it so they land together or not at all —
+landing the quadrature alone would turn a silent wrong answer into a red CI.
