@@ -25299,3 +25299,24 @@ rather than each branch's separately. The merge test ran detached and was torn
 down, so neither branch was touched.
 
 Order stays: #1265 → fork fix → slow-skip → `workflow_dispatch(jit=true)`.
+
+### 2026-08-07 — wave 4: test_sphericaldf.py traced, and a provenance line in the log
+
+    tests/test_sphericaldf.py --backend jax --jit
+    PROVENANCE: /var/tmp/dminfix/galpy/__init__.py
+
+The largest DF module (Track F Pdf.2 migrated sphericaldf plus 11 variants) and
+the last big one never run traced. With diskdf/evolveddiskdf already in flight
+this completes the DF picture.
+
+Note the first line of the output file: after this afternoon's import-shadow
+retraction I now have every dispatched run print `galpy.__file__` before it does
+anything, so the log carries the provenance next to the result instead of my
+assumption about which checkout ran. Cheap, and it is the one check that would
+have caught that mistake immediately.
+
+CI meanwhile: #1265 unchanged at 146 pass / 7 pending for the last two checks —
+five numpy orbit shards, two py3.14 `test_backend*` shards, and `all-clear`.
+codecov head is still 41666 hits (0.861 of base) because those very shards are
+the ones that would lift it, so its convergence and the PR's completion are the
+same event.
