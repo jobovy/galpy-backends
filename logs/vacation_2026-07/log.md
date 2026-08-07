@@ -21515,3 +21515,46 @@ Recording it half-solved rather than shipping the tidy-sounding scimath story:
 the mechanism I can defend is "`_real` lets complex Tensors through"; the
 mechanism I cannot yet defend is where the Tensor becomes complex. That second
 half is the actual work item for #117's diskdf consumer migration.
+
+### 2026-08-07 — ComplexDouble mechanism SOLVED (live repro)
+
+Instrumented `diskdf._real` and `dehnendf.eval` under forced torch with the
+surfaceSigmaProfile patch applied. Full chain, all measured:
+
+    meanvT          -> Tensor float64            (fine)
+    dfc(np.array([0.7,0,meanvT])) -> Tensor COMPLEX128
+    _real saw       -> ('Tensor', 'complex128')  -> passed through unchanged
+    eval saw        -> E=False L=False lsR=False lsR2=False, correct=False
+                       => the NUMPY branch ran
+
+So:
+
+1. `eval` dispatches on `if (is_backend_array(E) or is_backend_array(L)) and not
+   self._correct`. The caller passes a plain numpy array, so E and L are numpy
+   and the **numpy** branch runs — correctly, by that predicate.
+2. Inside that branch it calls `self.targetSurfacemass(xE, log=True)`, which goes
+   through surfaceSigmaProfile. With the patch that now returns a **Tensor**.
+3. `numpylog` (= `numpy.lib.scimath.log`) produces a numpy **complex** value, by
+   design — that is what line 28 documents and what `_real` exists to unwrap.
+4. numpy-complex + Tensor promotes to a **complex Tensor**.
+5. `_real` is `x if is_backend_array(x) else numpy.real(x)` — the Tensor takes
+   the pass-through arm, so the imaginary part survives.
+6. The test does `dfc(a) > dfc(b)` -> "gt_cpu" not implemented for ComplexDouble.
+
+**This is the general lesson, not a diskdf quirk:** the dispatch predicate asks
+about SOME of its inputs (E, L) while a DIFFERENT input (logSigmaR, from the
+migrated leaf) independently became a backend array. Migrating a leaf changes the
+dtype of arguments flowing into branches that never consulted it. So "which
+inputs does this branch predicate actually cover?" is a question every leaf
+migration has to ask of its consumers.
+
+Two candidate fixes for the follow-up, both needing measurement:
+  a) make `_real` namespace-aware (take the real part of backend arrays too) --
+     smallest, but leaves a numpy branch computing on Tensors;
+  b) widen the dispatch to include logSigmaR/logsigmaR2 so the backend eval runs
+     -- addresses the cause, and `_eval_backend` is already complex-free by
+     construction (it substitutes the signed algebraic factor for scimath log).
+(b) looks right; (a) alone would paper over it.
+
+Patch preserved as `logs/vacation_2026-07/ssp_backend_input.patch` (117 lines) and
+the jeansfix worktree restored clean so it matches #1260 exactly.
