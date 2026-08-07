@@ -23168,3 +23168,26 @@ So step 2 is not only a code change; it adds the FIRST backend coverage of
 `grid=False`. Worth stating plainly in the PR, because a reviewer seeing a new
 quadrature branch will reasonably ask what regression protection exists, and the
 honest answer is that the protection starts with this PR.
+
+### 2026-08-07 — #143 extraction FULLY VERIFIED (9ef805e8): 35/35/35, zero failures
+
+Counts parsed from the junitxml, not the terminal summary:
+
+    numpy   total=35  failures=0  skipped=0  passed=35   (307s)
+    torch   total=35  failures=0  skipped=0  passed=35   (327s)
+    jax     total=35  failures=0  skipped=0  passed=35   (357s)
+
+Identical to the pre-extraction baselines on all three backends, which is what a
+pure refactor must produce. The extraction is done and trustworthy; step 2 (the
+polar-node direct path) can now be built on top of a verified base rather than
+on top of an assumption.
+
+Committing before the gate finished turned out to matter: the result above
+attaches unambiguously to 9ef805e8, so when step 2 changes the same file there
+is no question about which tree the 35/35/35 describes.
+
+(Aside on timings: torch took 327s here vs the 528s I recorded as its baseline,
+and jax 357s vs 863s. That is machine load, not a speedup from the refactor —
+the earlier numbers were measured while the forced-torch test_diskdf gate was
+saturating cores. Not claiming a performance improvement; a refactor that only
+moves code between functions has no reason to produce one.)
