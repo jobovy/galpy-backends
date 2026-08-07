@@ -22195,3 +22195,36 @@ Caught only because I went looking for upkeep to do while CI crawled. The log
 here is append-only and easy to keep current; the README table is a structured
 artifact that needs an explicit edit, so it is the half of the rule that silently
 rots. Worth checking the table — not this log — whenever a PR lands.
+
+### 2026-08-07 — fix-D RESULT: 0 failures. #117b's torch side is DONE.
+
+    arm                                    failures / 129   time
+    baseline (data-guard)                        0          502s
+    fix-A (ssp leaf only)                       47         1203s
+    fix-C (2 of 24 consumer sites)              11         1021s
+    fix-D (ALL 30 sites via one _ssp)            0         1384s   TORCH_RC=0
+
+Counts from the junitxml after TORCH_RC landed, per the standing rule.
+
+So the island IS removable: surfaceSigmaProfile becomes genuinely backend-native
+and diskdf — not yet migrated — guards its own boundary through a single
+accessor, with ZERO forced-torch failures. The whole 47 -> 11 -> 0 arc was one
+question, "how many of the consumer boundaries did you actually cover?", answered
+2, then 30.
+
+**Correction to something I said earlier.** I wrote that #205 "removes 5 of the
+11" residual failures. That was true of fix-C's state, but with fix-D the guard
+keeps numpy flowing into the sampler path, so actionAngleSpherical never sees a
+scalar Tensor and those 5 pass without #205. #205 is still independently
+valuable — it fixes actionAngleSpherical for anyone calling it directly with
+scalar backend arrays, which is a real API defect — but it is NOT a prerequisite
+for #117b.
+
+**Open caveat, not a blocker: 1384s vs baseline 502s = 2.8x slower.** Same family
+as the fix-A/fix-C slowdowns, so it is the coercion cost in diskdf's hot loops,
+not something the extra 28 call sites introduced. It matters for the forced-torch
+shard budget and must be stated in the PR rather than buried — the honest framing
+is "the island is gone and correctness is exact, at a 2.8x cost on this suite,
+and vectorizing diskdf's velocity-grid loops is the follow-up that buys it back".
+
+numpy arm still running — byte-identity not yet confirmed, no claim on it.
