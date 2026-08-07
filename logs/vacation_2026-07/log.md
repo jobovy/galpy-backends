@@ -23146,3 +23146,25 @@ So step 2's tests are:
   1. direct-path VALUE, backend vs numpy, to quadrature tolerance;
   2. direct-path GRADIENT, backend autodiff vs backend FD, following the
      existing convention and its ~2e-4 floor.
+
+### 2026-08-07 — gate arm 2 green; and WHY #143's defect was invisible
+
+**torch RC=0, 35 passed (327s)** — second of three arms matches the baseline
+count. numpy and torch both behaviour-preserving under the extraction; jax still
+running, no claim.
+
+**Root cause of the blind spot, found by reading the test file.** Every single
+backend test in tests/test_backend_evolveddiskdf.py passes `grid=True` — all 12
+call sites, and every entry of the `_MOMENTS` table the parametrized tests drive.
+The direct (`grid=False`) path has **zero** backend coverage.
+
+That is why the non-differentiability sat there unnoticed and why the xfail
+ledger has no entry for it: nothing ever asked the direct path for a gradient
+under a backend. It is the same shape as
+[[value-checks-cannot-see-numpy-fallback]], one level up — not "the test was too
+weak" but "there was no test on that path at all".
+
+So step 2 is not only a code change; it adds the FIRST backend coverage of
+`grid=False`. Worth stating plainly in the PR, because a reviewer seeing a new
+quadrature branch will reasonably ask what regression protection exists, and the
+honest answer is that the protection starts with this PR.
