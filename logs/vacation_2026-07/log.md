@@ -22260,3 +22260,33 @@ wrong and would have sent me looking at the wrong end. patch stays 100% (11/0).
 05:56:22Z, no step marked failure = a 60-minute job timeout, not an assertion,
 and unrelated to its AnyAxisym diff. Targeted re-run rejected with 403 (the run
 still has jobs in flight); retry once it settles.
+
+### 2026-08-07 — #188 residual adoption: scoped, and one candidate REJECTED
+
+The helper `tests/backend_jit_helpers.py` and its 8 adopters live on
+feat/backends-develop (the main checkout is on feat/backends, which is why an
+earlier grep here found zero adopters — the checkout, not the work, was behind).
+
+Surveyed the non-adopting test_backend_* files that mention jit:
+
+* **tests/test_backend_streamspraydf.py (31 mentions) — NOT an adoption site.**
+  Its jit use is `_jit_grad_hconv`: an AD-gradient-vs-central-FD check swept
+  over h, asserting the best relative error converges. That is a different
+  contract from "jit reproduces the eager value"; forcing the helper in would
+  replace a gradient test with a value test and lose the h-convergence. Leave it.
+* **tests/test_backend_disk.py:565 `test_razorthin_public_methods_jit_traceable`
+  — a GENUINE site**, and unblocked (owned by neither #1259 nor #1260). It does
+  exactly `got = float(jitted(...))` vs `ref = float(call(...))` at rtol=1e-11.
+  Adopting it would ADD the jaxpr-dependence check it currently lacks, which is
+  the same blind spot as [[value-checks-cannot-see-numpy-fallback]]: a trace that
+  folds to a constant compares equal and passes vacuously.
+
+  **Known risk, to measure before adopting, not assume:** the helper asserts the
+  output actually depends on the traced arguments, and this test sweeps z=0
+  points where `zforce` may be identically zero by symmetry. That is the exact
+  case the helper's own docstring says to compare directly rather than weaken
+  the check for. So adoption here is per-point, not a blanket swap.
+
+Not spinning up a worktree for this now — two PRs are already open (Jo's limit)
+and #117b is queued ahead of it. Recording the scope so it is a 20-minute job
+when a slot frees rather than a re-survey.
