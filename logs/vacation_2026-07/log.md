@@ -21588,3 +21588,37 @@ should ALSO fix a good share of the TypeError/IndexError group, since those are
 the same "numpy branch computing on Tensors" family. What it will NOT fix is
 anything caused downstream of `eval` — those need the consumer work. Writing the
 prediction down first so the result can actually refute it.
+
+### 2026-08-07 — the same "predicate covers only some inputs" bug appears TWICE
+
+Reviewing my own fix-(b) prototype while it ran, and found I had repeated the bug
+I was fixing. `_eval_backend` opens with
+
+    xp = get_namespace(E, L)
+
+— the SAME partial coverage as the dispatch predicate I had just widened. So
+routing numpy-E/L + Tensor-logSigmaR into `_eval_backend` resolves the namespace
+from E and L alone.
+
+Under the FORCED-backend suite this is masked: `get_namespace(numpy_scalar)`
+returns the forced namespace (measured earlier — forced jax -> jax.numpy, forced
+torch -> array_api_compat.torch), so `xp` is torch anyway and the running
+measurement stays valid for the forced case. UNFORCED it would resolve to numpy
+and mix all over again — a user passing numpy E/L with a Tensor logSigmaR.
+
+So the complete fix needs BOTH:
+  * dispatch:  is_backend_array(E|L|logSigmaR|logsigmaR2)
+  * namespace: get_namespace(E, L, logSigmaR, logsigmaR2)
+
+Letting the current run finish rather than restarting — it answers the main
+question (does routing to `_eval_backend` clear the failures?) and 20 minutes to
+re-measure a detail I already know the answer to is not worth it. The refinement
+goes into the eventual PR.
+
+**Worth naming as a pattern, not an incident.** In one function this codebase
+asks "is this a backend array?" of a SUBSET of the values that flow into the
+branch — twice, independently. The forced-backend suite hides the second one
+because `get_namespace` falls through to context. So: when auditing a
+dual-path function, check every place it interrogates its inputs, not just the
+`if`. And remember a forced-backend green does not exercise the unforced mixed
+case at all.
