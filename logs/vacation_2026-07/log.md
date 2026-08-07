@@ -25460,3 +25460,23 @@ mine to fix.
 Either way these are **two more latent reds** that only stay invisible because
 `backend-tests`' normal runs carry no `--jit` dimension: neither nodeid is in the
 ledger, and the 5 skipped entries in this file are all `*_sample_*`.
+
+### 2026-08-07 — the last #1265 shard is slow, not hung (calibrated, not assumed)
+
+`build (ubuntu-latest, 3.14, tests/test_backend*.py)` has been in its
+"Test with pytest" step since **19:55:30** — ~90 minutes — and it is the only
+thing between #1265 and `all-clear`. That is exactly the shape that tempts a
+"probably stuck, re-run it" reflex.
+
+Checked instead. The **same job on the base branch**, most recent successful
+run:
+
+    success  start=17:58:14  end=19:34:37     = 96 minutes
+
+So ~90 minutes in is *inside* the normal envelope for that shard, and re-running
+would have thrown away 90 minutes of work to start a 96-minute job over. No
+action; it needs about six more minutes.
+
+Worth keeping as a habit: "how long does this job normally take" is one
+`gh run view` against the base branch, and it converts an impatient guess into a
+decision.
