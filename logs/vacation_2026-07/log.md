@@ -25672,3 +25672,26 @@ diskdf as not-migrated -- not the leaf dispatching on dtype. The real fix is
 migrating diskdf's quadrature itself; that is Pdf.3, not this.
 
 Whole-file `--backend=jax --jit` acceptance run launched.
+
+### 2026-08-07 — #1267 opened (second PR slot)
+
+#1266 sat at 149 pending with no reds, so the slow-skip un-defer took the second
+of the two allowed PR slots. Rebased onto `2f738d77` (#1265) — clean, disjoint
+blocks — and re-verified from the **committed** state rather than the worktree:
+
+    slow-skip: jax 92, torch 15, torch-jit 3   total 110, 0 malformed
+    loader   : jax 92 / torch 15 / torch-jit 18 (15 inherited + own 3)
+
+Two entries my checker flagged as malformed (`tests/test_streamdf.py`,
+`tests/test_streamTrack.py`) are **whole-file** skips with no `::` — a supported
+form, pre-existing, and untouched by this PR. My `'::' in nodeid` criterion was
+too strict; the file is fine.
+
+**Called out in the PR body rather than left to drift:** #1266 and #1267 both
+edit `tests/backend_slow_skip.txt`, so they are *not* file-disjoint. The 210→110
+figure is against today's base; if #1266 lands first it reads 209→109, and the
+combined result is 109 either way. Whichever merges second needs a rebase but no
+judgement call.
+
+Acceptance run for the #208 fix (`test_diskdf.py --backend=jax --jit`) still in
+flight — no counts until the junitxml lands.
