@@ -23115,3 +23115,34 @@ solver difference, as before).
 Dispatched the real gate: test_evolveddiskdf under numpy, torch and jax, whole
 file, --timeout=900, --junitxml each. Baselines to reproduce exactly: torch 35
 passed (528s), jax 35 passed (863s). No claim until the RCs land.
+
+### 2026-08-07 — extraction verified on numpy; acceptance criterion corrected
+
+**Gate, arm 1 of 3 (commit 9ef805e8): numpy RC=0, 35 passed (307s).** Matches
+the pre-extraction count exactly, so the refactor is behaviour-preserving on the
+byte-identity-critical path. torch and jax still running; no claim on those.
+
+Committed the extraction BEFORE the gate finished, deliberately: I was about to
+start step 2 in the same working tree, and a junitxml describing a tree I never
+commit is the same class of error as reading a partial run — a real result
+attached to the wrong thing.
+
+**Correction to my own acceptance criterion.** Two wakes ago I recorded that the
+direct-path test must reproduce `jax.grad == -1.90281496e-01`, a number I got
+from a central FD on the NUMPY path. Reading
+tests/test_backend_evolveddiskdf.py, the file already has the right pattern in
+`test_moment_grad_through_evolution_vs_fd`: it compares the backend gradient
+against an FD computed **on the backend itself** — integrator-consistent — with
+a stated ~2e-4 floor, precisely because backend and numpy use different solvers
+and different quadrature.
+
+Pinning the numpy-derived constant would have baked scipy's ADAPTIVE dblquad
+result into a test of a fixed-order GL path, so the tolerance would have had to
+absorb the quadrature difference as well as the solver difference — a loose test
+that passes for the wrong reason. The numpy number stays useful as a sanity
+ballpark for the VALUE; it is not the gradient assertion.
+
+So step 2's tests are:
+  1. direct-path VALUE, backend vs numpy, to quadrature tolerance;
+  2. direct-path GRADIENT, backend autodiff vs backend FD, following the
+     existing convention and its ~2e-4 floor.
