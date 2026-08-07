@@ -21181,3 +21181,19 @@ exactly for Plummer and MiyamotoNagai (1.336e-09, 2.350e-08, ...). That is not
 the patch failing to apply -- both quadratures are converged and what is left is
 the GOLD REFERENCE's own error, common to both columns. Checked against the
 cusped rows, where the same patch moves 7.7e-3 to 3.3e-9.
+
+### 2026-08-07 — #1259 notebook flake re-run
+
+`run-notebooks (3.14)` on #1259 went red. Read the log rather than assuming:
+
+    DALServiceError: Unable to access the capabilities endpoint at
+    - https://simbad.cds.unistra.fr/simbad/sim-tap/capabilities:
+      Connection failed
+
+`doc/source/tutorials/orbits/known_objects.ipynb`, which resolves objects via
+SIMBAD -- the known network flake. Re-ran that JOB only (`gh run rerun --job`),
+not the whole run, so the in-progress jobs beside it were not disturbed.
+Corroborating detail: the push-event `run-notebooks (3.14)` for the same commit
+had already PASSED, so the same notebook on the same code succeeded minutes
+earlier -- which is what a network flake looks like and what a real break does
+not.
