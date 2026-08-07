@@ -21727,3 +21727,47 @@ Done ahead of the queue so the merge is ready the moment it goes green.
 
 Diff is 40+/10- in the potential and 69+/0- in its test file. Ready to merge on
 green.
+
+### 2026-08-07 — fix-B FINAL: fixes NOTHING, and I had the disproof beforehand
+
+    baseline: 0 failures     fix-A: 47     fix-B: 47
+    fix-B fixes vs fix-A:  0
+    fix-B NEW   vs fix-A:  0      -> IDENTICAL failure set, all 7 ComplexDouble included
+    fix-B 1140s vs fix-A 1203s    -> NOT ~9x slower. Same as fix-A (~2.2x baseline).
+
+Both of my fix-B claims were wrong:
+
+* "~9x slower" — an early-run rate (16 items in 552s) that did not extrapolate;
+  the finished run is 0.113 items/s vs fix-A's 0.107. Startup dominated the
+  early sample.
+* "fixes the ComplexDouble group outright" (my recorded prediction) — it fixes
+  zero tests. Not fewer, not different: the SAME 47 nodeids.
+
+**And the disproof was already in my own measurement.** Two wakes ago I
+instrumented `eval` and printed:
+
+    eval saw: {'E': False, 'L': False, 'lsR': False, 'lsR2': False, ...}
+
+`logSigmaR`/`logsigmaR2` are ALSO not backend arrays at the call site. So
+widening the predicate to test them could never change the branch taken — the
+condition is False either way. I read that line, wrote "the dispatch predicate
+covers E/L but not logSigmaR" as the root cause, and did not notice that my own
+data said logSigmaR was False too. Then I spent ~40 minutes of measurement
+confirming a change that could not possibly do anything.
+
+**Corrected mechanism:** the complex Tensor is NOT introduced through eval's
+arguments. It is created INSIDE the numpy branch by
+`self.targetSurfacemass(xE, log=True)` — surfaceSigmaProfile, which the fix-A
+patch made return a Tensor — combining with `numpylog`'s numpy-complex value.
+The dispatch predicate is a red herring; the call site inside the branch is the
+target.
+
+So the option list for #117 collapses to: (b) is dead, and the live options are
+vectorizing diskdf's loops, coercing at the boundary, or a namespace-aware
+`_real`. The perf argument I built against (b) was also wrong, so (b) fails on
+"does nothing", not on cost.
+
+Running tally of retractions on this single investigation: 11 -> 38 -> 47
+failures; "0 failures" -> "5" -> "halves" -> identical; "9x slower" -> same
+speed. Every one came from reporting a partial or mis-read observation instead
+of the finished measurement.
