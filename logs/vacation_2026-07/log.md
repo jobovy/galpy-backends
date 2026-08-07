@@ -25320,3 +25320,26 @@ five numpy orbit shards, two py3.14 `test_backend*` shards, and `all-clear`.
 codecov head is still 41666 hits (0.861 of base) because those very shards are
 the ones that would lift it, so its convergence and the PR's completion are the
 same event.
+
+### 2026-08-07 — codecov cleared itself. Correcting what I said about it.
+
+    base 99.95%  hits=48394
+    head 99.95%  hits=48394      <- exactly equal
+    #1265: 150 pass, 0 fail, 4 pending
+
+The phantom resolved completely, and — **correcting myself** — it **re-posted its
+own check**. I said several times today that "when it settles, `all-clear` will
+need a re-run, the check does not re-post itself." That is what
+[[codecov-project-blocks-via-all-clear]] records from a previous incident, and it
+did not happen here: codecov updated the check on its own once the last coverage
+shard uploaded, and the red went away without intervention.
+
+So the memory is right that a re-run is *sometimes* needed and wrong as a
+universal. The reliable part is the diagnosis, not the remedy: head/base hits
+climbing from 0.30 → 0.861 → 1.000 with `lines` identical throughout was the
+signal, and it said "wait" every step of the way. Waiting was the correct action
+and no re-run was required.
+
+Four checks remain: two numpy orbit shards, one py3.14 `test_backend*`, and
+`all-clear`. The **backend matrix is green 45/45** and there are now **zero
+failures on the PR**.
