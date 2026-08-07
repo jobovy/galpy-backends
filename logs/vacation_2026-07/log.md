@@ -22181,3 +22181,17 @@ would have been a subtle, wide-blast-radius regression across every diskdf
 numpy call.
 
 fix-D still running; no claim until TORCH_RC.
+
+### 2026-08-07 — README table was missing #1258 (landing-update step skipped)
+
+The standing rule is: on LANDING each PR, update `plan/track*.md` + the README
+table + `logs/`. I logged #1258's merge in this file but never added its README
+row — the table had #1256 and #1257 and then jumped to nothing. Added it now
+(row 168), matching the existing 6-column format, with the 875x boundary-node
+number and the reason it survived (references pinned scipy to the wrong mode, so
+both sides agreed by construction).
+
+Caught only because I went looking for upkeep to do while CI crawled. The log
+here is append-only and easy to keep current; the README table is a structured
+artifact that needs an explicit edit, so it is the half of the rule that silently
+rots. Worth checking the table — not this log — whenever a PR lands.
