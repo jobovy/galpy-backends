@@ -22106,3 +22106,25 @@ no-op on the 1-d inputs every existing test uses.
 mechanism reproduced standalone, contract measured against numpy, fix verified
 bit-identical 0-d vs 1-d on both backends, test A/B'd, no regressions, numpy
 byte-identity intact.
+
+### 2026-08-07 — #1260: codecov/patch GREEN, project red is the stale-base phantom
+
+    PATCH galpy/backend/quadrature.py  hits=6 misses=0  100.0%
+    PATCH galpy/df/jeans.py            hits=5 misses=0  100.0%
+    PROJECT base 99.95% (misses 20) -> head 99.70% (misses 144)
+    base_commit = fa80b2f0   <-- the OLD base, pre-#1258 (now 4727b8c1)
+
+`codecov/patch` cleared on its own as uploads landed, and it is 100% on both
+changed files — every new line is covered.
+
+`codecov/project` is the known phantom, on BOTH counts: it is comparing against a
+stale base commit, and the head side is still mid-upload (34 checks pending), so
+144 misses is missing shard data, not a real 124-line regression from an 11-line
+diff. Deliberately NOT acting: no rebase, no chasing coverage. Wait for the
+remaining checks, then if project is still red, re-run all-clear (that is the
+documented recovery — project self-heals but all-clear latches the old result).
+
+This is the stale base I chose not to rebase away several wakes ago, on the
+grounds that the file sets are disjoint so there is no conflict or revert risk.
+That reasoning still holds — the cost is exactly this cosmetic phantom, which is
+cheaper than a reflexive rebase that discards a nearly-complete CI run.
