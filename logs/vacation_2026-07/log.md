@@ -20851,3 +20851,45 @@ misused in the repo; it is that I applied it to MY OWN probe by copying the styl
 of test_backend_jeans.py, which silently made the probe run on numpy while
 reporting backend()=='torch'. The lesson is about writing probes, not about the
 suite.
+
+### 2026-08-06 — RETRACTION: the jeans "pytest-only mystery" never existed (shadow galpy, 3rd time today)
+
+Root cause of the non-reproduction: every one of my "bare script" measurements ran
+
+    cd /var/tmp/jeansfix && python /tmp/jXXX.py
+
+which puts **/tmp** on sys.path, not the worktree, so `import galpy` resolved to the
+SHADOW checkout -- with the data-guard still in place. It therefore returned the
+NUMPY answer, 1.0755e-11, every single time. pytest (rootdir + conftest) used the
+real worktree and returned 1.0986e-02. There was no pytest-vs-script discrepancy.
+
+Re-measured with a heredoc, printing provenance and asserting the guard is gone:
+
+    MODULE UNDER TEST: /var/tmp/jeansfix/galpy/df/jeans.py
+    guard still present? False
+    forced torch, r=0.001: |err| = 1.0986e-02      <- matches pytest exactly
+
+WHAT THIS RETRACTS. I reported five "refuted hypotheses" (float32 downcast, torch
+default dtype, conftest's backend.jit wrap, potential constructed under force,
+test_jeans module scope) and a 2x2 factorial. **All of those were measured against
+the shadow**, so all four cells of the factorial read 1.0755e-11 for one trivial
+reason -- the code under test never changed. Those refutations are worthless and
+should not be relied on. I also wrote "the delta is somewhere in conftest's
+session-level setup" -- there is no such delta.
+
+WHAT STANDS:
+  - the r=0.001 backend error IS 1.0986e-02: a genuine numerical defect at the
+    smallest radius, surfaced by removing the island. Confirmed by pytest AND by a
+    provenance-checked heredoc.
+  - `backend_managed` opts a test out of the forced backend -- that was established
+    through pytest runs, not scripts.
+  - the marker audit (nothing silently opted out) -- also pytest/grep based.
+
+THIRD OCCURRENCE TODAY of the same trap: (1) the AnyAxisym z-scan against a stale
+worktree, (2) the jeans type-vs-path false pass, (3) this. My own note
+[[galpy-editable-install-import-shadow]] has a table whose ❌ row is literally
+`cd <wt> && python /tmp/…/probe.py`. Knowing the rule is not the same as applying
+it: the failure mode is that a one-off probe feels too small to deserve ceremony.
+Standing rule from now on: probes go through a heredoc (`python3 - <<'PY'`) and
+print `inspect.getfile()` of the module under test, with no exceptions for
+"quick" checks.
