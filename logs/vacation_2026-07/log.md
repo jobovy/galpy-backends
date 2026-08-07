@@ -22991,3 +22991,34 @@ has been `queued` for 64 minutes with all 149 checks unstarted while #1261 works
 through its 153 — the runner pool is the bottleneck, so they serialize. The
 "two PRs at a time" limit is therefore about review load, not wall-clock; a
 third PR (the slow-skip branch) would simply queue behind regardless.
+
+### 2026-08-07 — #143 defect REPRODUCED and quantified (with the gradient target)
+
+Confirmed `galpy.util.quadpack.dblquad` is genuinely scipy `quad` nested inside
+scipy `quad` (read the source — it is not a galpy-native routine), so the #143
+premise holds.
+
+Reproduction, forced jax, x64 on, direct path (`grid=False`):
+
+    value      Array(0.0668027, dtype=float64)      <- WORKS
+    jax.grad   ConcretizationTypeError: Abstract tracer value encountered
+               where concrete value is expected ... arose with the `float` function
+    FD d/dR on the numpy path (reference):  -1.90281496e-01
+
+That is the signature of a silent numpy island, and it is exactly the class
+[[value-checks-cannot-see-numpy-fallback]] warns about: the VALUE is correct, so
+any value-comparison test passes and sees nothing wrong; only taking a gradient
+exposes that the integral never touched the backend. scipy's `quad` calls
+`float()` on the tracer and dies.
+
+So #143's deliverable now has a concrete acceptance test: after adding the
+backend branch, `jax.grad(vmomentsurfacemass)(R)` at R=0.9 must reproduce
+**-1.90281496e-01**, not merely "be finite" ([[stringent-gradient-tests]]).
+
+**Two probe errors of my own, recorded so they do not become findings.**
+(1) My first run reported `dtype=float32` — that was `jax_enable_x64=False` in my
+probe environment, not a galpy defect. Set JAX_ENABLE_X64=1.
+(2) I expected the direct path to CRASH under a backend and it did not; the
+result even carries a backend dtype, because the final `* norm` multiplies the
+scipy float by a backend-array sigma. Had I stopped at "it works", I would have
+concluded #143 was stale — the opposite of the truth.
