@@ -22555,3 +22555,42 @@ rots — the log is append-only and stays current by construction, the table is
 not.
 
 Queue now: #1259 (150/154, 0 reds, audit PASS) -> #1261 -> #188 (ed82126d).
+
+### 2026-08-07 — #204 does NOT reproduce; it was already fixed by #161. Closing.
+
+#1260 merging freed galpy/backend/quadrature.py, so I picked up #204
+("evaluateSurfaceDensities backend path wrong at small R, 7.7e-3 at R=1e-3").
+Before designing a fix I tried to reproduce it. It is gone:
+
+    Potential.surfdens Poisson path, jax vs numpy, 3 potentials x 7 R at z=0.7
+        worst 1.15e-5, and that at R=8 (LARGE R), everything small-R ~1e-8
+    whole-line z=inf branch, 4 potentials x 5 R
+        worst 1.3e-7
+    AnyAxisym evaluateSurfaceDensities, 4 R x 3 z
+        worst 1.3e-7  (though this one proves little: AnyAxisym's surfdens is
+        the user-supplied ANALYTIC function, so no quadrature runs at all --
+        the z-independence of the output gives that away)
+
+Then the measurement that actually settles it, against a GOLD REFERENCE rather
+than against numpy ([[match-numpy-quadrature-floor]]): MiyamotoNagai has an
+analytic `_surfdens`, so compare BOTH quadrature paths to the truth.
+
+    R=1e-3, z=1.5:  analytic 5.519639e-01
+                    numpy Poisson  rel 6.0e-16   (adaptive quad, machine precision)
+                    jax   Poisson  rel 1.0e-08   (fixed GL n=50)
+
+    stress over 20 (R,z) combos incl. |z| up to 30: WORST 1.02e-06
+
+1e-8 at R=1e-3 versus the 7.7e-3 in the task note. Three orders of magnitude.
+
+**Cause: #161 already fixed it.** That task was "surfdens Poisson fallback:
+range-aware quadrature for traced-green", and the code comment now reads
+"Fixed-order GL over the whole [-z,z] needs an order that grows with the range
+(n=100 is only 3.7e-4 at |z|=10). Splitting at z=0 and clustering nodes toward
+the split ... does so RELATIVE to the range, so one node count holds at every
+|z|." That is exactly the same defect class as the jeans bug in #1260 — a fixed
+transition scale in a quadrature map — and it was fixed range-aware there first.
+
+Task #204 closed as already-fixed. Reproducing before designing saved building a
+fix for a bug that no longer exists; the "log substitution" I had designed for
+it would have been a change with no defect behind it.
