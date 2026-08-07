@@ -21875,3 +21875,49 @@ So #117's second half now has a concrete, bounded shape: land the consumer guard
 
 Numbers derived from /tmp/ssp_fixc.xml after TORCH_RC/NUMPY_RC appeared in the
 log — per [[never-report-partial-run-as-result]], written this same session.
+
+### 2026-08-07 — fix-C's residual explained: I guarded 2 of 24 consumer call sites
+
+Read the actual traceback for the 6-test oort/overflow cluster rather than
+theorising. It bottoms out in **scipy**:
+
+    galpy/df/diskdf.py:1232  oortA
+    galpy/df/diskdf.py:1173  _vmomentsurfacemass
+    scipy/integrate/_quadpack_py.py:626
+    RuntimeError: value cannot be converted to type double without overflow
+
+i.e. an integrand handed to `scipy.integrate.dblquad` is returning a Tensor.
+
+**Why fix-C missed it:** I guarded `targetSigma2` and `targetSurfacemass`. But
+surfaceSigmaProfile has FOUR decorated methods, and diskdf calls the two
+`*Derivative` ones DIRECTLY — 22 call sites — bypassing the two wrappers I
+patched:
+
+    grep -c '_surfaceSigmaProfile\.\(surfacemassDerivative\|sigma2Derivative\)'
+    -> 22   (lines 268/269, 348/349, 773/774, 793/794, 863/864, 961/962,
+             1108/1109, 2364/2366, 2736/2738, 2768/2770, 3391/3393)
+
+So my "consumer-boundary guard" covered 2 of 24 boundaries. The 47 -> 11
+improvement came from those two; the 11 that remain are the leak through the
+other 22.
+
+**Verified, not assumed.** Wrapping all four methods at the single construction
+site and calling the failing path:
+
+    oortA(0.9) -> float64 0.4667253190708868      (was: RuntimeError overflow)
+
+That is ONE test, so it confirms the MECHANISM for the oort cluster — not a count.
+The whole-file number needs a full run, and the 5-test `test_shudf_sample_*`
+0-d-indexing cluster is a separate issue that this probably does not touch.
+
+**Design consequence:** 22 inline call-site guards would be awful. The right
+shape is one namespace-matching wrapper applied where `_surfaceSigmaProfile` is
+stored (diskdf.py:106/117 and 2965), covering every consumer at once, with a
+comment that it is deleted when diskdf itself is migrated. Watch pickling —
+diskdf objects go through `save_pickles`, so a proxy object needs to survive
+that (a plain wrapper class with the profile as its only state should, but it
+must be tested, not assumed).
+
+Patches preserved: `ssp_backend_input.patch` (leaf) and
+`diskdf_consumer_guard.patch` (the 2-site version). Worktree restored clean so
+it matches #1260 exactly.

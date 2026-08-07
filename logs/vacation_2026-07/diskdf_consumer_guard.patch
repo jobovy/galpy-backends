@@ -1,0 +1,47 @@
+diff --git a/galpy/df/diskdf.py b/galpy/df/diskdf.py
+index 81a433b2..0dca7826 100644
+--- a/galpy/df/diskdf.py
++++ b/galpy/df/diskdf.py
+@@ -29,7 +29,7 @@ numpylog = numpy.lib.scimath.log  # somehow, this code produces log(negative), w
+ from scipy import integrate, interpolate, optimize, stats
+ 
+ from ..actionAngle import actionAngleAdiabatic
+-from ..backend import get_namespace, is_backend_array
++from ..backend import as_numpy, get_namespace, is_backend_array
+ from ..backend.quadrature import nested_quad
+ from ..orbit import Orbit
+ from ..potential import PowerSphericalPotential
+@@ -421,7 +421,15 @@ class diskdf(df):
+         -----
+         - 2010-03-28 - Written - Bovy (NYU)
+         """
+-        return self._surfaceSigmaProfile.sigma2(R, log=log)
++        out = self._surfaceSigmaProfile.sigma2(R, log=log)
++        # Match the OUTPUT namespace to the INPUT. surfaceSigmaProfile is now
++        # backend-native and its @backend_input boundary coerces R under a
++        # FORCED context, so a numpy caller would otherwise get a Tensor back --
++        # and diskdf's numpy branch then mixes it with numpylog's complex value
++        # into a complex Tensor that _real cannot unwrap. diskdf is not migrated
++        # yet, so the consumer guards itself here rather than the leaf staying
++        # numpy-pinned.
++        return out if is_backend_array(R) else as_numpy(out)
+ 
+     @potential_physical_input
+     @physical_conversion("surfacedensity", pop=True)
+@@ -446,7 +454,15 @@ class diskdf(df):
+         - 2010-03-28 - Written - Bovy (NYU)
+ 
+         """
+-        return self._surfaceSigmaProfile.surfacemass(R, log=log)
++        out = self._surfaceSigmaProfile.surfacemass(R, log=log)
++        # Match the OUTPUT namespace to the INPUT. surfaceSigmaProfile is now
++        # backend-native and its @backend_input boundary coerces R under a
++        # FORCED context, so a numpy caller would otherwise get a Tensor back --
++        # and diskdf's numpy branch then mixes it with numpylog's complex value
++        # into a complex Tensor that _real cannot unwrap. diskdf is not migrated
++        # yet, so the consumer guards itself here rather than the leaf staying
++        # numpy-pinned.
++        return out if is_backend_array(R) else as_numpy(out)
+ 
+     @physical_conversion("surfacedensitydistance", pop=True)
+     def targetSurfacemassLOS(self, d, l, log=False, deg=True):
