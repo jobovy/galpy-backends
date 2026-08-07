@@ -21998,3 +21998,33 @@ That is the whole 11. Neither cluster is mysterious any more, and one of them
 turns out to belong to a different track — which also means #117's second half is
 smaller than the "47 failures" headline suggested: 6 tests behind a mechanical
 consumer-guard extension, and 5 that leave with #205.
+
+### 2026-08-07 — #205 contract measured; the fix is smaller than I first wrote
+
+Before writing the atleast_1d fix, checked what the NUMPY path actually returns
+for scalar input — the contract the backend has to match:
+
+    numpy scalar-in (python floats) -> shapes [(1,), (1,), (1,)]
+    numpy 1-d in                    -> shapes [(1,), (1,), (1,)]
+    torch 1-d in                    -> shapes [(1,), (1,), (1,)]
+
+**scalar-in is ALREADY array-out on the numpy path.** So the fix needs no output
+reshaping at all — just `xp.atleast_1d` on the inputs. My original task note said
+"reshape the output back so scalar-in gives scalar-out", which would have BROKEN
+parity with numpy: it would have made the backend return a scalar where numpy
+returns shape (1,), and every downstream consumer indexing `[0]` would then fail.
+
+That is the second time this session that checking the numpy contract first
+changed the design (the other: `_real`'s "backend arrays are already real").
+Cheap check, and it turns a speculative two-part fix into a one-liner at two
+entry points.
+
+Precedent for the exact form is already in the tree —
+`actionAngleIsochroneInverse.py:151-153` does `xp.atleast_1d(...)` on its angles
+at the entry. So #205 is: mirror that in `_actionsFreqs_backend` /
+`_actionsFreqsAngles_backend` (or once in the shared `_setup_backend`), and check
+the sibling `_calc_*_backend` methods for the same `[:, None]` assumption.
+
+Not implementing: both PR slots are occupied and actionAngleSpherical.py lives in
+the worktree currently checked out to #1260's branch. #205 is now specified
+tightly enough to be a short PR when a slot frees.
