@@ -22961,3 +22961,33 @@ Branch `ledger/streamdf-jit-slowskip` is ready; opening it when a PR slot frees
 
 Also this wake: **#1261's codecov/patch cleared on its own** (38/153 now, only
 codecov/project outstanding) — the same partial-upload heal as #1259 and #1260.
+
+### 2026-08-07 — #143 design refinement: do NOT replace numpy's dblquad
+
+Caught a hole in yesterday's #143 design before writing any code. I had written
+"migrate the dblquad at :607 to nested_quad via a polar change of variables".
+Taken literally that would REPLACE scipy's adaptive dblquad on the NUMPY path
+with a fixed-order tensor-product GL rule — which changes numpy values and
+breaks the byte-identity constraint that governs this whole project.
+
+The correct shape is the dual path already used by jeans.py (and blessed in
+[[no-numpy-islands-eliminate-fast]]: a dual numpy/backend path is NOT an island):
+
+    xp = get_namespace(...)
+    if xp is numpy:
+        return dblquad(...)                      # UNCHANGED -> byte-identical
+    return nested_quad(xp, polar_integrand,      # backend-native + differentiable
+                       [[0, nsigma], [0, 2*pi]], ...)
+
+with the polar substitution
+    vT_n = meanvT/sigmaT1 + r cos(theta),  vR_n = meanvR/sigmaR1 + r sin(theta)
+    Jacobian r,  which maps the disc EXACTLY onto the rectangle.
+
+So the deliverable is "add a backend branch", not "swap the quadrature". Same
+end state for the two gates at :525 and :2908, without touching numpy output.
+
+Operational note: **two 150-check PRs do not give 2x throughput.** #1262's run
+has been `queued` for 64 minutes with all 149 checks unstarted while #1261 works
+through its 153 — the runner pool is the bottleneck, so they serialize. The
+"two PRs at a time" limit is therefore about review load, not wall-clock; a
+third PR (the slow-skip branch) would simply queue behind regardless.
