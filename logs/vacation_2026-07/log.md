@@ -22128,3 +22128,35 @@ This is the stale base I chose not to rebase away several wakes ago, on the
 grounds that the file sets are disjoint so there is no conflict or revert risk.
 That reasoning still holds — the cost is exactly this cosmetic phantom, which is
 cheaper than a reflexive rebase that discards a nearly-complete CI run.
+
+### 2026-08-07 — #117b implemented: ALL 30 consumer sites, one guarded accessor
+
+Own worktree `/var/tmp/ddfssp` (branch `fix/diskdf-ssp-boundary`, C extension
+built and confirmed loading). ssp leaf patch + a single guarded accessor:
+
+    def _ssp(self, name, R, **kwargs):
+        out = getattr(self._surfaceSigmaProfile, name)(R, **kwargs)
+        return out if is_backend_array(R) else as_numpy(out)
+
+and every numeric call routed through it: **30 -> 0** direct call sites
+(`surfacemass`, `sigma2`, `surfacemassDerivative`, `sigma2Derivative`), 34 `_ssp`
+calls now. fix-C had guarded only 2 of these, which is exactly why it left 11.
+
+My first regex caught only the `log=True`/`log=log` forms and left 10 sites with
+other signatures (`sigma2(xE)`, `sigma2(xE, log=False)`,
+`surfacemass(R, log=log) + numpylog(d)`). Counting before/after — not eyeballing
+the diff — is what surfaced that; the general form fixed it.
+
+**Explicitly NOT a proxy**, and the accessor comment records why: the profile is
+passed on to other df constructors and into ARS `hxparams`, and its
+`__class__.__name__` builds the dfcorrection save filename, so a wrapper would
+silently change that filename and regenerate corrections instead of loading them.
+
+Remaining `_surfaceSigmaProfile` references are exactly the legitimate ones:
+assignment (106/117/2962), passing-on (131/3160), hxparams
+(2156/2168/2607/2619), the accessor's own getattr, and the three metadata uses
+(formatStringParams / `__class__` / outputParams). The hxparams escapes hand the
+RAW profile to the ARS samplers — that is the territory #205 covers.
+
+fix-D running detached: whole-file torch + numpy arms, `--junitxml` both.
+Baselines to beat: fix-A 47 failures, fix-C 11. No claim until TORCH_RC lands.
