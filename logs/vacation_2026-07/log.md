@@ -23367,3 +23367,23 @@ known jax NonInertial timeout class ([[jax-noninertial-timeout-unledgered]];
 task #198 moved two siblings from xfail to slow-skip for the same reason).
 Targeted re-run returned 403 (the run still has 9 jobs in flight); retry when it
 drains.
+
+### 2026-08-07 — regression fix CONFIRMED on the arm that broke
+
+Re-gate on 00544f07, arm 1 of 4: **torch RC=0, 35 passed (327s)** — the exact arm
+that was 7-failed on e35b5541. So the `is_backend_array` gate is the right fix,
+demonstrated on the failing case rather than argued for.
+
+numpy/jax/backend-file arms still running; not quoting them until they land.
+
+**#1261 re-run remains blocked, and I checked WHY rather than retrying blindly.**
+The 403 is `the workflow run containing this job is already running`, and that
+run still has 5 jobs in flight (was 7). So it is queue state, not a permissions
+or configuration problem, and it clears on its own — no point hammering it. The
+PR itself is 143/153 with that single known jax NonInertial `Timeout (>300s)` as
+its only red.
+
+Worth recording the shape of this wake: the useful work was (a) confirming a fix
+on the specific arm it was meant to fix, and (b) establishing that a blocked
+retry is benign. Neither is a new result, but both are the difference between
+"waiting" and "waiting for a known reason".
