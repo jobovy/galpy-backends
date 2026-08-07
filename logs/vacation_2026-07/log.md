@@ -22460,3 +22460,43 @@ if->xp.where array-input class, duplication, helper placement). One recorded
 follow-up, NOT a blocker: `_bk_split_quad`'s dyadic panel builder should be
 hoisted to galpy.backend.quadrature when #204 becomes its second consumer --
 it must be hoisted, not copied.
+
+### 2026-08-07 — #1259 merge audit RE-RUN (pre-merge), verdict PASS
+
+Re-ran the three criteria against the live diff (2 files, +109/-10) so the merge
+is a formality once green, rather than auditing under time pressure.
+
+**(a) if -> xp.where array-input class: PASS.** No new scalar `if` on coord
+data. `_bk_split_quad` selects the R=0 and R=inf degenerate cases with
+`xp.where`, and — the part that matters — it evaluates each dead branch at a
+HARMLESS R (`xp.where(finite, R, ones_like(R))`, then `xp.where(positive, Rs,
+ones_like(Rs))`) precisely so a NaN cannot leak back through a gradient. That is
+[[xp-where-dead-branch-guards]] done correctly, not just formally.
+
+**(b) duplication: PASS, and I checked rather than assumed.** galpy.backend.
+quadrature already has `transformed_quad(..., interior_point=)` whose docstring
+literally names "the disk `a = R` pattern", so this was a real candidate for
+duplication. It is not one: `transformed_quad` splits into TWO panels and
+clusters nodes WITHIN each via the `X = xi**k` boundary-layer remap, whereas
+`_bk_split_quad` builds 2K+2 DYADIC panels whose widths halve toward a=R,
+clamped at `dmin ~ 4|z|`. Different mechanism, and the dyadic one exists because
+the within-panel clustering was not sufficient here.
+
+**(c) helper placement: PASS for now.** The method is saturated with this
+potential's physics — the a=R (m->1) singularity, the R=0 / R=inf limits, and
+the rule that grading is switched OFF at z=0 because marching panels inward
+makes a finite difference of the potential in R blow up. That does not belong in
+a generic utility. The genuinely general sub-piece is the dyadic panel builder
+(build graded panels around an interior point, issue them as ONE batched
+fixed_quad — as separate calls the jit graph is ~16x more expensive to compile).
+Standing follow-up unchanged: **hoist** that builder into
+galpy.backend.quadrature when #202/#204 becomes its second consumer. Hoist, do
+not copy.
+
+Observation worth carrying: if dyadic grading is strictly better for the a=R
+pattern that `transformed_quad`'s own docstring claims to serve, then
+`transformed_quad` should eventually gain a graded mode so future callers do not
+hand-roll one. Not a blocker for #1259.
+
+#1259 is 148/154 with **0 reds**; #1260 149/154 with only the project phantom
+and its py3.14 build outstanding.
