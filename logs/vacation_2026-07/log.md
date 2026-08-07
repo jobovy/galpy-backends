@@ -21659,3 +21659,22 @@ Letting the run finish for the failure count, but the perf number is already the
 deciding one. This is why the surfaceSigmaProfile change stayed out of #1260:
 each layer down has revealed a bigger problem than the last (11 -> 38 -> 47
 failures, then 2.4x -> 9x slowdown).
+
+### 2026-08-07 — CORRECTION: fix-B is not clean either (5 failures by item 47)
+
+Last wake I recorded "CORRECTNESS holds (0 failures through item 16)". That was
+a sample of 16 out of 129. At item 47 the count is **F=5, .=42**.
+
+For comparison at the same depth, fix-A had roughly 10 F by item 47. So fix-B
+roughly halves the failures — real improvement, not a fix. Combined with the ~9x
+slowdown, fix (b) is not viable as written on either axis.
+
+I made the same error as the `head -12` count: reported a partial observation as
+if it were the result. The difference is that this time it was visible within one
+wake. Waiting for the final junitxml before any further claim about how many it
+actually fixes.
+
+#1259 has now been fully queued for ~59 minutes (8 runs created 02:41, none
+started) while #1260 progresses. Plain FIFO behind a deep queue — #1260 was
+created 5 minutes earlier and feat/backends-develop's post-merge runs are ahead
+of both. Nothing stale to cancel; verified all runs are on current head SHAs.
