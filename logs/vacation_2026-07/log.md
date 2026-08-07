@@ -25366,3 +25366,39 @@ If it is #1261, that would be the **second** regression today found by a
 first-ever traced run of already-merged work, after #1259's. Two independent
 instances would make the `workflow_dispatch(jit=true)` run a standing
 requirement rather than a nice-to-have.
+
+### 2026-08-07 — test_sphericaldf.py traces 100% CLEAN
+
+    PROVENANCE: /var/tmp/dminfix/galpy/__init__.py
+    tests/test_sphericaldf.py --backend jax --jit
+    222 passed, 1 skipped, 0 FAILED        (746 s of in-test wall time)
+
+The largest DF module — Track F Pdf.2's `sphericaldf` plus its 11 variants —
+runs **completely green traced**, on its first ever `--jit` run. Its one ledger
+entry and one slow-skip entry both stayed correct (the skip is the slow-skip;
+the ledger entry did not fail because it is an eager-only gap).
+
+Slowest passing, all comfortably inside the 300 s cap:
+
+     74.7s  test_constantbetadf_against_hernquist
+     37.2s  test_eddington_differentpotentials_dMdE_integral
+     34.0s  test_eddington_differentpotentials_dens_directint
+     32.9s  test_constantbeta_interpolatedpotentials_beta
+
+Worth stating plainly because today has been mostly finding problems: **the
+spherical-DF migration is jit-complete.** 222 traced tests, no failures, no
+un-ledgered gaps. That is the standard the other modules are being measured
+against, and it shows the standard is reachable.
+
+Traced picture after wave 4:
+
+| file | backend | passed | failed | un-ledgered |
+|---|---|---|---|---|
+| `test_potential.py` | jax-jit | 1262 | 5 | 1 |
+| `test_potential.py` | torch-jit | 1282 | 1 | 1 |
+| `test_actionAngle.py` | jax-jit | 179 | 3 | 1 |
+| `test_actionAngle.py` | torch-jit | 182 | 3 | 0 |
+| `test_qdf`+`pv2qdf` | jax-jit | 58 | 1 | 0 |
+| **`test_sphericaldf.py`** | **jax-jit** | **222** | **0** | **0** |
+| `test_interp_potential.py` | torch-jit | 38 | 2 | 2 (now deferred) |
+| `test_diskdf.py` | jax-jit | — | 2+ | pending RC |
