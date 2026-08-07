@@ -25852,3 +25852,45 @@ with 143 and 214 threads and are thrashing against each other. Both alive at
 [[never-report-partial-run-as-result]]). Values are unaffected by thread count;
 only wall time is. Logs read 0 bytes purely because Python buffers stdout when
 not a tty, which is not evidence of a hang either.
+
+### 2026-08-07 — #208 byte-identity PROVEN across three code states
+
+120 values (dehnendf/shudf x beta in {0,0.2} x 5 radii x 6 moments), raw IEEE
+bits hashed:
+
+    WITH my fix        sha256 4175fc090f8f526e5d3090313a981c9c
+    WITHOUT my fix     sha256 4175fc090f8f526e5d3090313a981c9c
+    pre-#1261          sha256 4175fc090f8f526e5d3090313a981c9c
+
+Settles two claims at once: **my fix is bit-identical on the numpy path, and so
+was #1261.**
+
+**The trap I nearly walked into.** Three identical hashes is also the exact
+signature of [[galpy-editable-install-import-shadow]] -- one checkout compared
+with itself three times, which reads as a strong result and is actually the
+harness reporting that it ignored me. The distinguishing evidence is provenance,
+so I checked it before believing the number:
+
+    PROVENANCE: /var/tmp/slowprune/galpy/__init__.py     (unfixed tip)
+    PROVENANCE: /var/tmp/pre1261/galpy/__init__.py       (pre-#1261)
+    PROVENANCE: /var/tmp/evdirect/galpy/__init__.py      (with fix)
+
+    get_namespace(R) is numpy    evdirect 1 | slowprune 0
+    backend_input in profile     pre1261  0   (the island version)
+
+Three distinct paths, three distinct code states, identical bits. Worth naming
+the general shape: **"the arms agree" and "the arms were never separate" produce
+the same number, and only provenance tells them apart.** A null result needs its
+provenance checked *harder* than a positive one, because a broken harness
+defaults to null.
+
+**#208 is complete.** Full evidence:
+
+    traced jax          25.26 s -> 4.40 s
+    traced torch        42.79 s -> 4.09 s
+    test_diskdf --jit   124 passed / 5 skipped / 0 failed  (= pre-#1261 exactly)
+    test_diskdf numpy   129 passed / 0 failed
+    numpy bits          identical across all three states
+    regression guard    16 pass with fix / 8 fail without (4 jax + 4 torch)
+
+Committed `1509795d` on `feat/diskdf-ssp-traced-perf`. Waiting on a PR slot.
