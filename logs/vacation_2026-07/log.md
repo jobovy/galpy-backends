@@ -24959,3 +24959,20 @@ introduced by #1259, failing on **both** jit backends (#207).
 
     jax-jit    1262 passed / 118 skipped / 5 failed
     torch-jit  1282 passed / 102 skipped / 1 failed
+
+### 2026-08-07 — the wrapper-vs-worker trap, twice in one session
+
+Checked the with-fix interp arm and found the process at **0.0% CPU, 1 thread,
+`sigsuspend`** — which reads exactly like a deadlock. It is the `timeout`
+wrapper. The real pytest was its child at **92.6% CPU across 20 threads**,
+working normally.
+
+That is the second time today: the same thing happened with the torch burn
+(wrapper 0.0%, worker 476-668% across 296 threads). Both times I checked the
+child before saying anything, but the near-miss rate is the point — the cause is
+that `pgrep -f "pytest ..."` matches `timeout -s SIGKILL 1800 python3 -m pytest
+...` as well as the worker, and the wrapper is always the idle one.
+
+Added to [[never-report-partial-run-as-result]]: pick the worker by `threads > 5`
+or check `pgrep -P` before concluding anything from a CPU reading. A 0%-CPU
+process is not evidence of a hang until you know it is the process doing work.
