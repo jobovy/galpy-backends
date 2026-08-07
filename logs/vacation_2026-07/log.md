@@ -23191,3 +23191,40 @@ and jax 357s vs 863s. That is machine load, not a speedup from the refactor —
 the earlier numbers were measured while the forced-torch test_diskdf gate was
 saturating cores. Not claiming a performance improvement; a refactor that only
 moves code between functions has no reason to produce one.)
+
+### 2026-08-07 — #143 step 2 WORKS: the direct path is differentiable
+
+Added `_vmomentsurface_direct_backend` (polar GL over the disc via nested_quad,
+reusing the extracted `_df_at_velocities_backend`) plus the dispatch at the
+direct site. numpy keeps its adaptive dblquad untouched.
+
+    numpy direct (adaptive dblquad):  6.6802698135e-02
+    jax   direct (polar GL):          6.6802596615e-02   rel 1.52e-06
+    jax.grad d/dR:                   -1.90281325e-01     (was ConcretizationTypeError)
+    backend FD d/dR (consistent):    -1.90281325e-01     rel 1.32e-10
+
+**One real bug found by testing, which is why the probe existed.** My first
+version passed the polar nodes straight to `_df_at_velocities_backend` and got
+value 0.0 and grad nan. Cause: `_buildvgrid_backend` feeds that helper PHYSICAL
+velocities (meanv +- nsigma*sigma), whereas the direct integrand's vR/vT are
+NORMALISED (in units of sigma) — `_vmomentsurfaceIntegrand` multiplies by sigma
+when it builds the Orbit and I had not. Fixed by scaling at the call and
+commenting the convention at both ends, since the two callers now disagree about
+units and that is exactly the sort of thing that rots.
+
+**And this vindicates correcting the acceptance criterion.** The numpy-FD number
+I originally wanted to pin was -1.90281496e-01; the backend gives
+-1.90281325e-01. Those differ at ~9e-7 — the quadrature+solver gap. Asserting
+against the backend's own FD gives 1.3e-10 agreement, i.e. a test that is three
+orders of magnitude tighter AND measures the right thing.
+
+Added two tests to tests/test_backend_evolveddiskdf.py — the FIRST backend
+coverage of grid=False in that file: a value check vs numpy at quadrature
+tolerance (with an `is_backend_array` assertion so a silent numpy fallback fails
+the test), and the grad-vs-backend-FD check at the file's 2e-4 convention.
+
+COST, not yet measured: each direct evaluation integrates _DIRECT_GL_ORDER^2 =
+2500 orbits, and the grad test does several evaluations. The foreground run blew
+past 2 minutes, so I dispatched the whole file detached with --durations=6 to
+find out what this actually costs before deciding whether the default order or
+the test's nsigma needs trimming. No claim until it lands.
