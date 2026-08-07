@@ -22634,3 +22634,38 @@ So #203 stays open and stays FOR JO (it is a pre-existing numpy-path defect, so
 fixing it breaks byte-identity and is his call), but it now has an honest
 magnitude, a one-line reproduction against a closed form, and a much sharper
 statement of where the problem is.
+
+### 2026-08-07 — #1259 MERGED; #1262 opened; #117b gate 5/5
+
+**#1259 merged** (07:21:45Z) — CLEAN, 152/154, the two non-SUCCESS entries being
+RTD and pre-commit.ci (neither required). Its audit had already been re-run
+pre-merge and passed all three criteria, so the merge itself was a formality,
+which was the point of doing the audit while waiting.
+
+**#117b's forced-backend gate is COMPLETE, all five arms green**, counts from
+the junitxml in every case:
+
+    test_backend_surfacesigma  jax     12 passed        11s
+    test_backend_surfacesigma  torch   12 passed         8s
+    test_evolveddiskdf         jax     35 passed       863s
+    test_evolveddiskdf         torch   35 passed       528s
+    test_diskdf                jax    124 passed, 5 skipped, 0 failures   3369s
+
+Posted as a table on #1261. Together with the torch test_diskdf arm already in
+the PR description (129 passed, 0 failures), that is both backends across every
+touched suite.
+
+**Correction, and it is the same trap as always.** I killed the timeout wrapper
+last wake because I projected jaxdisk needed ~6200s against a 5400s limit. It
+actually took **3369s**. The rescue was unnecessary — the run would have
+finished comfortably. My projection came from an early rate (25 tests in 1201s
+-> 48 s/test), and test_diskdf's tests are nowhere near uniform, so the early
+ones were the slow ones. I have a memory saying never to report a partial run's
+COUNTS as the result; I then turned around and used a partial run's RATE to make
+a decision. Same error, different output field. No harm done here, but the
+lesson generalises: a partial run cannot support a claim OR a decision.
+
+**#1262 opened** for #188 (assert_jit_matches_eager adoption), rebased onto the
+post-#1259 tip, single file, no overlap. Two PRs open again: #1261 + #1262.
+
+README rows added for both #1259 and #1260.
