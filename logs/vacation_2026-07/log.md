@@ -25582,3 +25582,47 @@ Filed as a task and queued as the next code PR. Not jumping it ahead of #1266
 (open, in CI) or the slow-skip un-defer (committed, verified) — but it goes
 before any new measurement work, because leaving a self-inflicted 10x on the
 integration branch while running more sweeps would be the wrong order.
+
+### 2026-08-07 — #1261 regression DIAGNOSED (profiled, not guessed)
+
+First, a fast reproduction — 25 s instead of a 300 s test, both sides with
+provenance printed:
+
+    df.oortA(1.0)          pre-#1261      tip
+      eager numpy            2.49 s      3.17 s
+      TRACED (use+jit)       2.90 s     25.26 s      <- 8.7x
+
+Then the profile of the traced call on the tip:
+
+    133332  tottime 0.950  cumtime 36.644   galpy/df/diskdf.py:466(_ssp)
+    133332          1.153          33.657   galpy/backend/_input.py:153(wrapper)
+    133332          4.252           9.987   galpy/backend/_jit.py:181(traced_call)
+    1333320/133332  2.283           4.747   galpy/backend/_jit.py:104(_static_key)
+    133332          0.498          19.279   galpy/backend/_coerce.py:69(coerce_coords)
+
+**`_ssp` accounts for 36.6 s of the 45.9 s call, across 133,332 invocations.**
+
+**And my `getattr` suspicion was wrong.** The cost is not the indirection — it is
+that #1261 put `@backend_input("R")` on `expSurfaceSigmaProfile`'s methods (that
+is *how* it removed the numpy island), so under `--jit` **every one of those
+133k leaf calls becomes a traced boundary**: `_static_key` hashing (10 sub-calls
+each), `coerce_coords`, and a jax dispatch, per call.
+
+Fourth mechanism hypothesis I have formed today, and the fourth to be corrected
+by measuring it. The pattern is consistent enough to be worth naming: I am
+reliably good at finding *where* and reliably bad at guessing *why*.
+
+**The general lesson, which outlives this bug:** `@backend_input` is a
+*boundary* decorator. Putting it on a **hot leaf** that already-coerced code
+calls in a loop multiplies the boundary cost by the loop count. Removing a numpy
+island by decorating the leaf is correct for dispatch and can be catastrophic
+for traced performance. The leaf needs its coercion done once by its caller, not
+133k times by itself.
+
+Fix directions (to be measured, not assumed, when #208 comes up):
+  * mark the leaf `@backendNative` so it does not re-enter the boundary
+    ([[backendnative-must-be-innermost-decorator]]), or
+  * have `_ssp` call an undecorated inner implementation and keep the decorated
+    method as the public entry point.
+
+Either keeps #1261's island removal while paying the boundary once.
