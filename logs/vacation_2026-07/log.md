@@ -23022,3 +23022,43 @@ probe environment, not a galpy defect. Set JAX_ENABLE_X64=1.
 result even carries a backend dtype, because the final `* norm` multiplies the
 scipy float by a backend-array sigma. Had I stopped at "it works", I would have
 concluded #143 was stale — the opposite of the truth.
+
+### 2026-08-07 — #143 design changes again after reading _buildvgrid_backend: EXTRACT, don't add
+
+Read the merged `_buildvgrid_backend` (from #141) before writing the direct-path
+branch, per the standing "check existing utilities before creating new ones"
+directive. It already contains everything hard about evaluating this DF on the
+backend:
+
+  * differentiable velocity grids built as lo + (hi-lo)*frac, deliberately NOT
+    xp.linspace (torch drops the gradient w.r.t. tensor endpoints)
+  * flattened (N, 4) ICs with R carrying its gradient into every orbit
+  * ONE batched multi-orbit backward integrate via diffrax / torchdiffeq
+  * `_idf`, the backend-array-callable initial-DF evaluation
+  * scalar-t and t-list handling
+  * an explicit NotImplementedError for deriv= (use autodiff instead)
+
+So the honest design is **not** "add a backend branch at :607". It is:
+
+  1. EXTRACT that batched IC -> backward-integrate -> evaluate-DF core out of
+     `_buildvgrid_backend` into a shared private helper taking arbitrary (vR, vT)
+     POINTS rather than a rectangular grid;
+  2. `_buildvgrid_backend` keeps calling it with its meshgrid;
+  3. the direct path calls it with the POLAR GL nodes and contracts with the
+     nested_quad weights (Jacobian r).
+
+That is hoist-don't-copy. Writing a second batched-integrate block for the
+direct path would duplicate the subtlest code in this file — including the
+torch-linspace gradient trap, which a copy would very plausibly get wrong.
+
+**Rejected alternative:** under a backend, just route grid=False to the grid
+path. Much less code and it reuses tested machinery wholesale, but the direct
+path exists precisely because it is more accurate than a fixed grid; silently
+substituting a grid changes the accuracy contract of a public option. Not doing
+that.
+
+**Not implementing this wake.** It is a meaty change to recently-merged code,
+two PRs are open, the slow-skip branch is queued behind them, and PRs serialize
+on runners anyway (#1262 has been fully queued for 70+ minutes). The design and
+the acceptance number (jax.grad at R=0.9 must give -1.90281496e-01) are the
+deliverable for now; implementation starts when the queue drains.
