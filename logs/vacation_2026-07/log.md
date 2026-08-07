@@ -22733,3 +22733,49 @@ hang becomes a recorded failure and the run still finishes and writes its XML.
 Should have been doing this from the start on any run that might hang.
 
 No claim until RC lands.
+
+### 2026-08-07 — #202 REFUTED, and it surfaced a REAL pre-existing bug in a different potential
+
+Checked whether #1259 fixed #202 ("AnyAxisym GL quadrature unresolved at a=R for
+|z|/R < 3e-3 — wrong VALUES"). The investigation inverted twice, so the path
+matters as much as the answer.
+
+**Step 1 (wrong conclusion, nearly shipped).** Compared AnyAxisym against
+`RazorThinExponentialDiskPotential` (analytically the same object, closed-form
+Bessel). Errors up to **6.4e-3** at |z|/R=1e-3. That looks like #202 confirmed.
+
+**Step 2 (caught it).** The GOLD values wobbled non-monotonically as z/R fell:
+-1.381591, -1.395291, -1.390398, -1.393266. For a razor-thin disk Rforce should
+approach its in-plane value smoothly, so the reference itself was suspect.
+
+**Step 3 (discriminator).** Each code vs its OWN z=0 value. AnyAxisym:
+1.165e-1, 3.509e-2, 1.169e-2, 3.504e-3, 1.168e-3, 3.503e-4, 1.168e-4 — exactly
+proportional to z/R, i.e. the `c·|z|` behaviour a razor-thin disk must have.
+RazorThinExp tracked it to 1e-2 then broke down, floor ~3e-3, non-monotonic.
+
+**Step 4 (independent arbiter).** Hankel transform, computed directly:
+`F_R ∝ -∫ k Σ̃(k) J₁(kR) e^{-k|z|} dk` with `Σ̃ = hr²/(1+(k hr)²)^{3/2}`,
+integrated panel-by-panel between J₁ zeros. Ratio test (normalisation cancels):
+
+    z/R      Hankel(truth)   RazorThinExp    rel      AnyAxisym     rel
+    1e-02     0.988314174     0.988312497   1.70e-06   0.988313849  3.29e-07
+    1e-03     0.998832362     0.998097246   7.36e-04   0.998832127  2.36e-07
+    1e-04     0.999883260     0.997117426   2.77e-03   0.999883221  3.89e-08
+
+**Conclusions.**
+
+1. **#202 is REFUTED as written.** AnyAxisym is accurate to ~1e-7 at small
+   |z|/R and IMPROVES as z→0. Two independent methods agreeing to 1e-7 over five
+   decades in z is not coincidence. Closing it.
+2. **NEW, and this is the valuable part: `RazorThinExponentialDiskPotential.Rforce`
+   is wrong by up to 2.8e-3 at small |z|** — degrading as z→0, on the plain
+   NUMPY path, in a long-standing galpy potential. Nothing to do with backends.
+   Found only because I refused to trust a reference that behaved unphysically.
+
+Filing #2 for Jo alongside #203 (both pre-existing numpy-path defects, so fixing
+either breaks byte-identity and is his call). Not paging him: neither blocks my
+work, and he asked for the phone only in real emergencies.
+
+Method note worth keeping: "compare against the analytic implementation" is only
+as good as that implementation. When a reference disagrees, ask whether IT is
+converging sanely before believing it about someone else.
