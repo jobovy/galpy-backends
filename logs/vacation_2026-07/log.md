@@ -20970,3 +20970,59 @@ n=50 -> 100 applies to the jeans call only.
 
 That completes the shape of #190: dispatch fix (3 lines) + r-coercion (1 line) +
 scaled-map opt-in with n=100. All three measured; none of them a tolerance change.
+
+### 2026-08-06 (later) — #190 DONE: jeans island removed, all 5 defects FIXED (not ledgered)
+
+Committed `aeccc053` on `fix/jeans-resolved-namespace`. Held local: #1258 and
+#1259 are the two open PRs.
+
+Three source changes, all measured:
+
+1. **`scale=` on `fixed_quad_semiinfinite`** (the general fix). The map had a
+   hardcoded unit transition scale; `scale=L` gives `s = a - L + L/u**2` (and
+   `s = a + L*tan(pi/2 u)` for 'tan'). `sigmar` passes `scale=r`, `n=100`.
+2. **`intFactor` substitution** `y = exp(t)`, so callable-`beta` integrates a
+   bounded `beta(e^t)` over `[0, ln x]` instead of `beta(y)/y` over decades.
+   This was a SECOND defect, only visible once (1) was fixed.
+3. `r = xp.asarray(r)` coercion.
+
+test_jeans: jax 1P/4F -> 5P, torch same, numpy 5P throughout.
+
+**numpy bit-identity verified, not argued.** `scale=None` -> `L=1.0`, exact in
+IEEE754; compared `.view(int64)` against a reimplementation of the pre-change
+formula over 18 cases -> 18/18 identical. First attempt reported 13 diffs at
+1-2 ULP -- that was MY probe associating `(w*f)*jac` where the library does
+`w*(f*jac)`. Worth remembering: a 1-ULP "regression" is usually the probe.
+
+**A/B (the tests are real):** with `scale` deliberately ignored, 14 of the 17
+new quadrature tests fail and test_jeans reverts to 4 failed on jax. The 3 that
+still pass are the `eps=1` cases where `L=1` IS the right scale.
+
+Test placement: the `scale` mechanism is a `galpy.backend.quadrature` feature ->
+tested there (4 eps over six decades x both map kinds, array-scale broadcast,
+grad vs analytic `-f(a)`); the small-r claim is jeans-specific -> tested in
+`test_backend_jeans.py` against the CLOSED FORM, not against numpy.
+
+Ledger: zero test_jeans entries existed. The island wasn't masking ledgered
+failures, it was preventing them from ever being observed.
+
+**Spun out, NOT in this PR — `evaluateSurfaceDensities` is wrong at small R.**
+Probing `sigmalos` after the fix showed 3.6e-3 relative error at R=1e-3. It is
+not jeans: decomposed at fixed R,
+
+    R        surfdens rel   sigmar rel   sigmalos rel
+    0.001      7.7e-03       7.8e-16       3.6e-03
+    0.010      1.9e-05       2.2e-16       8.7e-06
+    1.000      2.5e-08       5.6e-16       4.2e-08
+
+`sigmar` is exact; `sigmalos` inherits exactly half the surfdens error (it goes
+as 1/sqrt(Sigma)). The defect is in the potential's surface-density backend
+path. Pre-existing on backend-array input -- the island only masked it for
+numpy-typed input under a forced backend. Filed as its own task; likely related
+to the range-aware Poisson fallback (#161).
+
+Caught only because I probed `sigmalos` after the tests were green. A first
+attempt to "fix" it by passing `scale=R` made it slightly WORSE (3.593e-03 ->
+3.844e-03) and was insensitive to n=50/100/200 -- identical to four digits
+across a 4x node change, which is the tell that the error is not in that
+quadrature at all.
