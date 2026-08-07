@@ -25894,3 +25894,19 @@ defaults to null.
     regression guard    16 pass with fix / 8 fail without (4 jax + 4 torch)
 
 Committed `1509795d` on `feat/diskdf-ssp-traced-perf`. Waiting on a PR slot.
+
+### 2026-08-07 — codecov phantom confirmed healing; closing the last #208 gap
+
+    #1266 codecov head hits   23911 -> 26803   (49.38% -> 55.36%)
+                      lines   48414 -> 48414   (unchanged, both sides)
+
+Exactly the partial-upload signature, now visibly resolving as jobs finish. No
+action; it clears itself.
+
+**Gap in my own evidence, found by re-reading it rather than by a failure:** I
+verified the whole file under `--backend=jax --jit`, but the regression was
+*worse* on torch (42.79 s vs jax's 25.26 s) and I only ever measured torch with
+a single-call probe. Verifying the easy backend and asserting the hard one from
+a microbenchmark is not the same claim. Launched
+`test_diskdf.py --backend=torch --jit` whole-file with the fix present
+(confirmed by grep before launch, not assumed).
