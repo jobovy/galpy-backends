@@ -24555,3 +24555,61 @@ far is "children leak, runs still complete" — not "runs hang". Widening scope 
 an unmeasured hypothesis is the exact habit I have been correcting all session.
 Recording it as a lead: if eager-jax `multi=` ever does hang, this is the first
 place to look, and the fix is the same one-line predicate with `"off"` relaxed.
+
+### 2026-08-07 — checking whether the fork fix is worth more than three tests
+
+`galpy/potential/interpRZPotential.py` is a `parallel_map` consumer, so its grid
+build should hit the same compiled-kernel-across-fork deadlock under
+`--backend torch --jit` as streamdf did. If it does, the fix cures more than the
+three streamdf tests it was scoped to.
+
+Dispatched the A/B: `tests/test_interp_potential.py` under torch-jit, without
+the fix (`/var/tmp/jitdep` — its only commit touches `tests/`, so its library
+code IS the tip) and with it (`/var/tmp/forkfix`). Same command both sides,
+1800 s wrapper, `--timeout=300`.
+
+Predicting nothing. If it hangs without and passes with, that is extra value to
+state on the PR; if it passes both ways, the grid build must not fork under
+these parameters and the PR's scope stays exactly as measured. Either answer is
+worth having before the PR opens.
+
+Meanwhile the PR stays held: #1265's heavy suites are **still queued** after an
+hour (only `all-clear` is in_progress; 13 queued repo-wide). The 14 green checks
+are the quick jobs.
+
+### 2026-08-07 — the CI queue was blocked by my OWN stale runs, and I freed it
+
+Stopped guessing why #1265 had not started and listed what actually holds the
+runners. Every queued run in the repo is mine:
+
+    feat/jit-dependence-tests   8 queued  (each workflow TWICE: push + pull_request)
+    feat/backends-develop       3 queued "All-backend tests"
+
+and three of those were for **superseded commits**:
+
+    31195396689  pull_request  ac0c270a  15:59  All-backend tests   (#1263, merged)
+    31195394300  push          ac0c270a  15:59  All-backend tests   (#1263, merged)
+    31183400141  pull_request  900000e2  13:36  All-backend tests   (#1262, merged)
+
+The branch is at `199ee10e`, two merges past both. Those runs have been queued
+1.5-3.5 hours to compute answers about commits nothing points at any more, while
+the PR that needs runners sat behind them. Cancelled all three.
+
+Checked the one rule that matters here first
+([[cancel-push-run-leaves-cosmetic-red]]): cancelling a **same-SHA** push run
+blocks the merge. These are not same-SHA — they are older SHAs whose PRs are
+already merged — so the script re-reads each run's `headSha` and skips anything
+matching the tip rather than trusting the list I had just printed.
+
+Also visible in that listing, and worth naming: `feat/jit-dependence-tests` runs
+**every workflow twice**, once on `push` and once on `pull_request`. That is the
+build.yml duplicate I have hit before. It doubles the load a PR imposes, and I
+must NOT cancel the push half for the live SHA — that is precisely the case that
+blocks the merge.
+
+### 2026-08-07 — retightened the #1265 CI monitor
+
+The first monitor reported every check transition, so it would have woken me
+~140 times to say "one more check passed". Replaced with one that only fires
+when the **set of red checks changes** or the run **completes**. Same
+information, roughly two notifications instead of a hundred and forty.
