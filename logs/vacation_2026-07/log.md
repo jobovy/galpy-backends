@@ -25910,3 +25910,27 @@ a single-call probe. Verifying the easy backend and asserting the hard one from
 a microbenchmark is not the same claim. Launched
 `test_diskdf.py --backend=torch --jit` whole-file with the fix present
 (confirmed by grep before launch, not assumed).
+
+### 2026-08-07 — testing whether #208 un-defers the 5 diskdf sampling slow-skips
+
+Six jax slow-skip entries name `test_diskdf.py`. Five are sampling
+(`*_sample_*_returnROrbit` etc.), and their comment blames a different
+mechanism than the one I fixed:
+
+    "diskdf samples ~300 orbits per call with no vectorization"
+
+That is orbit integration, not the `_ssp` scalar round trip, so my fix probably
+does not move them. But those five are also exactly the 5 skips in my jax
+`--jit` run, and "probably" is not a measurement -- so: lifted them and launched
+the whole file under eager jax (whole file, not a hand-picked batch, per
+[[handpicked-nodeid-batch-is-not-a-context]]).
+
+**Caveat on this run, recorded before the result so it cannot be rationalised
+afterwards:** I edited the slow-skip file, launched, and restored it in the next
+step *without confirming pytest had finished collection*. If the restore raced
+collection, the run silently re-applies the skips and reports them as skipped
+rather than measured. So the result is only usable if those five appear in the
+junitxml as **run**, not skipped. If they come back skipped, the run is void and
+gets redone with the restore gated on the "collected N items" line.
+
+Both this and the torch `--jit` gate are still in flight.
