@@ -22527,3 +22527,31 @@ means nothing. The real result is /tmp/gate_jaxdisk.xml, parsed with
 
 Four arms are genuinely green and unaffected: jaxsurf 12, torchsurf 12,
 jaxevol 35, torchevol 35, all RC=0.
+
+### 2026-08-07 — #1260 MERGED (d8960062); #1261 opened for #117b
+
+#1260 went CLEAN and I merged it. Final state: all required checks SUCCESS,
+codecov patch 100% (11/0) and project SUCCESS with head misses back to 20 ==
+base — the phantom resolved on its own exactly as the cross-PR evidence
+predicted. (The two non-SUCCESS entries were RTD and pre-commit.ci, neither
+required; GitHub reported CLEAN.)
+
+Merge audit, all three criteria PASS:
+* **if -> xp.where**: no new scalar `if` on coord data anywhere in galpy/.
+* **helper placement**: the single `+def` in the diff is the SIGNATURE change to
+  `fixed_quad_semiinfinite` (adding `scale=`), not a new function. The generic
+  quadrature machinery stayed in galpy.backend.quadrature.
+* **duplication**: jeans.py REUSES that shared helper at all 3 call sites, and
+  `scale=` was added to the shared helper rather than to a jeans-local copy —
+  the direction Jo's directive asks for.
+
+Then, with a slot free: rebased fix/diskdf-ssp-boundary onto the new tip
+(clean, 1 commit, no file overlap with #1260's quadrature/jeans), swept the full
+tree for conflict markers (none), pushed, and opened **#1261** for #117b with
+the measured 47 -> 11 -> 0 table and the 2.8x cost stated up front.
+
+README table updated for #1260 (row 169). That step is the one that silently
+rots — the log is append-only and stays current by construction, the table is
+not.
+
+Queue now: #1259 (150/154, 0 reds, audit PASS) -> #1261 -> #188 (ed82126d).
