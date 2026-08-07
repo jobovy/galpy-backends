@@ -22594,3 +22594,43 @@ transition scale in a quadrature map — and it was fixed range-aware there firs
 Task #204 closed as already-fixed. Reproducing before designing saved building a
 fix for a bug that no longer exists; the "log substitution" I had designed for
 it would have been a change with no defect behind it.
+
+### 2026-08-07 — #203 (FOR JO) re-measured: REAL, but 20x smaller than recorded
+
+After #204 turned out stale I checked the other long-standing claim, since #203
+is on the short list of things I intend to put in front of Jo and it should not
+be a vague number when it gets there.
+
+First attempt used a central FD of Rforce as the reference. That gave ~3e-6 at
+small R but was NOT trustworthy: an FD of the potential's own force is limited by
+that potential's quadrature floor, and the best-h wandered erratically
+(1e-7, 1e-4, 1e-6, 1e-4...), which is the signature of a noise-limited reference
+rather than a converged one. [[match-numpy-quadrature-floor]] says use a GOLD
+reference at extremes, so I did.
+
+`AnyAxisymmetricRazorThinDiskPotential(surfdens=exp(-R/hr))` is analytically the
+SAME object as `RazorThinExponentialDiskPotential(hr)`, which has closed-form
+Bessel derivatives. Comparing against it:
+
+    R        rel err R2deriv     rel err Rforce
+    0.01        2.59e-06            1.19e-11
+    0.05        3.29e-06            1.29e-11
+    0.10        2.99e-06            7.95e-12
+    0.30        1.60e-06            1.55e-12
+    0.50        1.09e-07            8.31e-13
+    1.00        1.94e-08            7.24e-13
+    2.00        1.98e-09            4.69e-13
+
+Two things fall out, and the second is the useful one:
+
+1. **The magnitude is 3.3e-6, not 6.5e-5.** The task note overstated it ~20x.
+2. **Rforce is essentially EXACT (1e-11..1e-13) while R2deriv is 3e-6 off.**
+   That localizes the defect precisely: it is not the potential's quadrature
+   being generally weak at small R — the first derivative from the same
+   machinery is at machine-ish precision. It is specific to the SECOND
+   derivative at z=0.
+
+So #203 stays open and stays FOR JO (it is a pre-existing numpy-path defect, so
+fixing it breaks byte-identity and is his call), but it now has an honest
+magnitude, a one-line reproduction against a closed form, and a much sharper
+statement of where the problem is.
