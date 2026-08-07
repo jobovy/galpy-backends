@@ -23268,3 +23268,29 @@ last wake was launched BEFORE this edit, so it exercises the pre-fix tree. Its
 COST numbers stay representative (the fix changes one comparison, not the 2500
 orbit integrations), but its pass/fail does not describe the current tree. Will
 re-run correctness after committing rather than quote it.
+
+### 2026-08-07 — #143 step 2 COMMITTED (e35b5541); cost concern was unfounded
+
+**Cost measured, and I was wrong to worry.** The new direct grad test runs
+50.2s (torch) / 49.8s (jax) against 48.6-50.2s for the four EXISTING grid grad
+tests. Whole file 40 passed in 529s, RC=0. So no trimming of _DIRECT_GL_ORDER or
+of the tests' nsigma is warranted — good thing I measured instead of pre-emptively
+lowering the order, which would have weakened the quadrature for no reason.
+
+(Worth noting the times are near-identical even though the grid tests use only
+_GP=9 -> 81 orbits while the direct path does 50^2 = 2500. So wall-clock here is
+dominated by per-call backend overhead, not by orbit count — which is also why
+batching them into ONE multi-orbit integrate was the right structure.)
+
+Added a third test locking in jit-vs-eager, then committed as **e35b5541**.
+
+**Pre-commit rejected the first attempt** — ruff-format reformatted and returned
+non-zero, so nothing was committed. Caught it by checking that HEAD had NOT
+moved ([[precommit-hooks-reject-first-commit]]); re-ran and confirmed
+e35b5541 with `git diff --stat HEAD~1 HEAD` showing both files. Without that
+check I would have gone on believing step 2 was committed when it was not.
+
+Dispatched the final gate on the POST-fix tree: the backend test file plus
+test_evolveddiskdf under numpy, torch and jax. The earlier cost run described
+the pre-fix tree, so it does not count as correctness evidence for e35b5541 and
+I am not quoting it as such.
