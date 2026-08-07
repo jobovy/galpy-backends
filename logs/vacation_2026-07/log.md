@@ -24997,3 +24997,32 @@ on the reading. No claim until the RC lands.
 Note on the counting: `--timeout-method=signal` means a "passed" that took
 longer than the cap is possible (measured today at 620 s), so the report treats
 time and outcome as separate facts.
+
+### 2026-08-07 — interp A/B: the with-fix arm has ALSO hit a Timeout
+
+Interim, and labelled as such — the RC is not in yet, so no counts. But the
+with-fix arm's output now contains a `Timeout` marker of its own:
+
+    without fix : ...+Timeout+... F   (2 timeouts, 38 passed, RC=1)
+    with fix    : ...+Timeout+... F   (at least 1 timeout so far)
+
+If that holds when the RC lands, the answer is **no**: the fork fix does not
+cure `test_interp_potential.py`, and those timeouts are genuine
+`torch.compile` slowness rather than the deadlock. Which is exactly why the A/B
+was worth running — the process shape (a `parallel_map` consumer timing out
+under torch-jit) *looked* like the deadlock, and I declined to say so when I had
+only the without-half.
+
+Consequences either way:
+
+* **The fork-fix PR's scope stays as measured** — 3 streamdf tests. I will not
+  claim interpRZPotential on it. Good thing the PR body was written from the
+  A/B rather than from the resemblance.
+* **`test_interpolation_potential_secondderivs` and
+  `test_interpolation_potential_force_c` are latent reds under torch-jit** and
+  are in neither the ledger nor the slow-skip list. Nothing trips them today
+  only because `backend-tests`' normal runs have no `--jit` dimension — the
+  third distinct thing that blind spot has hidden today, after the #1259
+  regression and the stale torch-jit ledger entry. That is now the strongest
+  argument for the `workflow_dispatch(jit=true)` run, which I have queued behind
+  #1265.
