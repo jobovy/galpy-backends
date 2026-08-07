@@ -25109,3 +25109,25 @@ and leaves two identical-looking timeouts unmentioned.
 Parser re-verified after the edit (torch 15, torch-jit 17, 0 malformed), because
 the added lines carry trailing `#` annotations and that is the failure mode that
 would silently empty the list.
+
+### 2026-08-07 — jit wave 2 dispatched: the follow-up and new ground
+
+CPU is free (every earlier measurement has landed) and each first-ever traced run
+today has turned something up, so two more, chosen for what they can settle
+rather than for coverage:
+
+**(a) `test_actionAngle.py --backend torch --jit` — a direct follow-up.** The jax
+arm found `actionAngleStaeckelGrid_basicAndConserved_actions` failing traced
+while eager jax passes it, and that nodeid is ledgered for **torch** only. Under
+torch-jit it IS covered (torch-jit inherits torch's eager entries), so this arm
+answers the different question: does the *rest* of the file trace as cleanly on
+torch as the 179/209 it managed on jax?
+
+**(b) `test_qdf.py` + `test_pv2qdf.py --backend jax --jit` — new ground.** Never
+measured traced. It is the CI shard's own grouping, and it contains the qdf
+ledger pair (`test_call_diffinoutputs`) that #175 classified as by-design — so
+the run also puts a number on that classification, the way the actionAngle run
+did for the two tolerance entries.
+
+Both whole-file, regen mode, `--timeout=300 --timeout-method=signal`, junitxml.
+No claims until the RCs land.
