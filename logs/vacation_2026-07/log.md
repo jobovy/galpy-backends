@@ -25828,3 +25828,27 @@ diff is test-files only), so nothing needs mutating to get a clean A/B.
 
 Related to [[git-stash-is-repo-wide-not-worktree]]: the fix for "I need two
 states of the same file" is always another worktree, never an in-place toggle.
+
+### 2026-08-07 — residual traced gap is NOT the numpy pin (measured, question closed)
+
+The fix leaves traced `oortA` at 4.40 s against pre-#1261's 2.90 s. The obvious
+suspect was the third branch's `use("numpy", force=True)`, entered once per
+call, 133k times -- and the obvious "improvement" would be hoisting it up into
+diskdf's methods. Measured it instead:
+
+    133,332 nested use(numpy) enters: 0.29 s  (2.19 us each)
+
+**0.29 s of a 1.5 s gap.** Hoisting buys at most a fifth of the residual and
+costs real structural complexity across ~30 call sites, so it is not worth
+doing. Closing the question with a number rather than leaving a vague "could
+optimise later" note, since the number is what makes it decidable.
+
+The win that matters is unchanged: 300 s timeout -> 43.9 s / 37.4 s.
+
+**Bit-exact arms:** still running, and slower than they should be -- I set
+`OMP_NUM_THREADS=4` on the with-fix arm but not on these two, so they came up
+with 143 and 214 threads and are thrashing against each other. Both alive at
+~110% CPU (checked children, not the `timeout` wrapper -- see
+[[never-report-partial-run-as-result]]). Values are unaffected by thread count;
+only wall time is. Logs read 0 bytes purely because Python buffers stdout when
+not a tty, which is not evidence of a hang either.
