@@ -21702,3 +21702,28 @@ complete and it alone rules the approach out as written.
 
 CI unchanged: #1259 fully queued (~60 min, plain FIFO), #1260 at 12/153 with its
 codecov pair red at 137 checks still uploading — not yet meaningful.
+
+### 2026-08-07 — #1259 pre-merge audit: PASS (with one deferred hoist)
+
+Done ahead of the queue so the merge is ready the moment it goes green.
+
+1. **if -> xp.where array-input class: PASS.** `git diff origin/feat/backends-develop...HEAD -- galpy/`
+   shows ZERO new `+ ... if ...` lines in the source. The one data-dependent
+   choice (`dmin`) is an `xp.where`. And the only `if` the PR ever added
+   (`if z is None`) was deleted in commit 2 as unreachable.
+2. **Duplication: PASS.** Grepped for an existing dyadic/graded panel scheme
+   elsewhere in galpy — none. Nothing is being reimplemented.
+3. **Helper placement: acceptable, with a follow-up.** `_bk_split_quad` is a
+   method on the potential class: 6 callers, all in that file, and its signature
+   (`integrand, R, xp, dev, z`) is coupled to this potential's integrand shape.
+   Single-use, so local is right — hoisting a one-consumer helper is its own
+   smell.
+
+   BUT the TECHNIQUE is general, and I have already picked it as a candidate
+   design for #204 (surfdens small-R). **When that second consumer lands, the
+   dyadic panel builder moves to `galpy.backend.quadrature` — it must not be
+   copied.** Recording it here so the second use triggers the hoist rather than
+   a duplicate.
+
+Diff is 40+/10- in the potential and 69+/0- in its test file. Ready to merge on
+green.
