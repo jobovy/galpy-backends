@@ -23085,3 +23085,33 @@ the assertion demonstrably CAN fail (a deliberately constant lambda is rejected)
 So #1262 is ready to merge the moment its checks land. It is currently starved,
 not stalled: all 149 checks still QUEUED after ~75 minutes while #1261 works
 through its 153 — the runner pool serializes them.
+
+### 2026-08-07 — #143 step 1 IMPLEMENTED: the extraction (behaviour-preserving)
+
+Stopped deferring and built the first increment on branch
+`feat/evolveddiskdf-direct-backend` (worktree /var/tmp/evdirect, off the
+post-#1259 tip). This commit is the EXTRACTION ONLY — no new behaviour — so that
+if anything moves in the suites, it is unambiguously the refactor and not a new
+quadrature.
+
+Pulled `_buildvgrid_backend`'s batched core into
+`_df_at_velocities_backend(self, R, phi, t, vRf, vTf, xp)`, which takes arbitrary
+velocity POINTS and returns flat DF values ((N,) for scalar t, (N, nt) for a
+t-list). `_buildvgrid_backend` now just builds its meshgrid, calls it, and
+reshapes. +47/-37 in one file.
+
+Care taken on two details that a careless move would have silently changed:
+* the scalar-t branch has an `xp.where(Ro <= 0.0, eps, ...)` guard that the
+  t-list branch does NOT have. Preserved exactly, and commented so the asymmetry
+  reads as deliberate rather than as an oversight to "tidy up" later.
+* `_nan0` is applied AFTER that where in the original; kept in that order.
+Also removed the now-dead `from .diskdf import vRvTRToEL` left behind in
+`_buildvgrid_backend` (its only consumer moved into the helper); a function-local
+import, so pycln would not have caught it.
+
+Smoke check: grid path still agrees numpy vs jax to 5.87e-12 (the C-vs-diffrax
+solver difference, as before).
+
+Dispatched the real gate: test_evolveddiskdf under numpy, torch and jax, whole
+file, --timeout=900, --junitxml each. Baselines to reproduce exactly: torch 35
+passed (528s), jax 35 passed (863s). No claim until the RCs land.
