@@ -24880,3 +24880,42 @@ NOT apply — that is about disjoint *files*).
 
 Three PRs of work are now ready and CI can absorb roughly one an hour, so the
 constraint is the runners, not the work. Order: #1265 (open) → fork fix → this.
+
+### 2026-08-07 — burn COMPLETE, both arms. torch-jit test_potential is one failure from green.
+
+    jax-jit    1262 passed / 118 skipped /  5 failed
+    torch-jit  1282 passed / 102 skipped /  1 failed
+
+The single torch-jit failure is `test_forceAsDeriv_potential[AnyAxisym...]` —
+**the same un-ledgered #1259 regression**, so it is not a jax quirk: the traced
+quadrature is wrong on both backends. That strengthens #207.
+
+Per-nodeid, torch-jit:
+
+    failed    0.4s  test_forceAsDeriv_potential[AnyAxisym]        <- #1259 regression
+    passed    0.3s  test_2ndDeriv_potential[AnyAxisym]            <- fails under jax-jit; correctly ledgered jax-jit ONLY
+    passed   34.7s  test_poisson_surfdens_potential[AnyAxisym]    <- LEDGERED torch-jit, and it PASSES
+
+The ledger has exactly one `torch-jit` entry and that is it. So on this evidence
+the whole torch-jit ledger section is stale.
+
+**Not pruning it yet, and the reason is worth writing down.** The ledger header
+says *"Do NOT re-measure on a dev box"* — but it also says the `-jit` entries
+"will show up as unobserved: this workflow has no --jit dimension, so they are
+unmeasured rather than stale." Both are true, and together they mean CI as
+normally run can **never** settle a `-jit` entry; a local run is the only
+instrument that exists. The asymmetry decides it: under `xfail(strict=False)` a
+stale entry that now passes is **non-blocking**, while removing an entry that
+still fails is a **red on the integration branch**. Cosmetic cost vs real cost,
+so it waits for better evidence.
+
+**Better evidence is available and I had not noticed:** `backend-tests.yml`'s
+`workflow_dispatch` has a **`jit` input** (`JIT_FLAG: ... == 'true' && '--jit'`).
+So the full traced suite CAN be run in CI — py3.14, real split groups, all 44
+shards — which is the authoritative instrument for every `-jit` entry, and would
+have caught the #1259 regression.
+
+**Deferring that dispatch until #1265 clears.** It is 44 shards, and the queue is
+currently the binding constraint on landing three ready PRs; adding it now would
+slow the thing I most need. Queued as the next CI action once the pipeline
+drains.
