@@ -25934,3 +25934,38 @@ junitxml as **run**, not skipped. If they come back skipped, the run is void and
 gets redone with the restore gated on the "collected N items" line.
 
 Both this and the torch `--jit` gate are still in flight.
+
+### 2026-08-07 — torch --jit gate PASSED; the un-defer probe was void, as flagged
+
+**#208 evidence is now complete on both backends:**
+
+    test_diskdf.py --backend=torch --jit   129 passed / 0 skipped / 0 failed  (762.3s)
+      test_dehnendf_cold_flat_oortA        45.9s
+      test_dehnendf_cold_powerrise_oortA   40.2s
+
+    test_diskdf.py --backend=jax   --jit   124 passed / 5 skipped / 0 failed  (909.9s)
+
+Torch has no diskdf slow-skips, hence 129 vs 124+5. The backend that regressed
+worst (42.79 s -> 4.09 s) is green whole-file.
+
+**The un-defer probe came back void, exactly the way I said it would.** It
+reported 5 skipped, which is the signature of the restore racing collection --
+the skips were re-applied and those five were never measured:
+
+    test_dehnendf_sample_flat_returnROrbit
+    test_shudf_sample_flat_returnROrbit
+    test_shudf_sample_flat_returnROrbit_rrange
+    test_shudf_sample_powerrise_returnROrbit
+    test_shudf_sample_flat_returnOrbit
+
+Writing the caveat down *before* the result is what made this cheap. The run
+produced a perfectly plausible "124 passed, 5 skipped" -- identical to the
+earlier legitimate jax run -- and with no pre-registered check I would very
+likely have read it as confirmation and moved on.
+
+Relaunched with the mistake designed out rather than timed better: the lifted
+file now stays lifted for the whole run and is restored **after** it finishes.
+`evdirect` is a scratch worktree and nothing is ever committed from it, so
+there is no reason to have been racing in the first place. The general rule --
+**do not schedule a cleanup that has to land inside a window you cannot
+observe.**
