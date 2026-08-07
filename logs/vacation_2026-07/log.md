@@ -24527,3 +24527,31 @@ CPU for 28 minutes and was about to write it up as a second fork deadlock. That
 CPU across 296 threads**. Checked the child before claiming anything. Same shape
 as reading a partial run — I nearly reported the wrong process's number as the
 result.
+
+### 2026-08-07 — lead: EAGER jax leaks deadlocked forked children too
+
+While checking on group 3 I found three of its forked children in the same state
+as the torch-jit deadlock — two samples 20 s apart, unchanged:
+
+    pid=3724647  cpu=0.0  etime=03:17  wchan=futex_wait_queue  state=S
+    pid=3724658  cpu=0.0  etime=03:17  wchan=futex_wait_queue  state=S
+    pid=3724662  cpu=0.0  etime=03:17  wchan=futex_wait_queue  state=S
+
+This run is `--backend=jax` with **no** `--jit`, so my fork fix's
+`jit_mode() != "off"` guard does not cover it.
+
+The difference from the torch-jit case: the **parent is at 85.8% CPU**, not
+parked in `join()`. So these are *leaked* children rather than a hang — the
+parent moved on, and conftest's force-exit mitigation SIGKILLs leftovers at
+session end, which is presumably why this has never shown up as a failure.
+
+Consistent with what `restrict_to_single_thread`'s docstring already says: jax
+has no thread-cap knob and "the only cure available there is not forking at
+all". So the same root cause is live on the eager jax path, just not fatal.
+
+**Not expanding the fork-fix PR on this.** Extending the guard to eager jax
+would cost every eager-jax `multi=` user their parallelism, and the evidence so
+far is "children leak, runs still complete" — not "runs hang". Widening scope on
+an unmeasured hypothesis is the exact habit I have been correcting all session.
+Recording it as a lead: if eager-jax `multi=` ever does hang, this is the first
+place to look, and the fix is the same one-line predicate with `"off"` relaxed.
