@@ -24050,3 +24050,293 @@ If the artifacts confirm all three are tolerance-class, that is a **new toleranc
 batch and needs Jo** — the standing approval covers Groups A/B on `test_quantity`
 only, and the actionAngle residual is explicitly flagged as needing sign-off
 (task #171). I will characterize and propose, not loosen.
+
+### 2026-08-07 — the AnyAxisym burn settles it: my prediction was WRONG
+
+The jax-jit arm of `test_potential.py` finished (RC=1, whole file, regen mode so
+the ledgered nodeids actually execute): **1262 passed, 118 skipped, 5 failed.**
+
+All four ledgered jax-jit `test_potential` entries **still fail**:
+
+    2.3s  test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]      CONFIRMED
+    0.8s  test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPot...]  CONFIRMED
+    0.5s  test_pickling_potential_drops_units_wrapper                          CONFIRMED
+    0.0s  test_pickling_potential_unitful_dens                                 CONFIRMED
+
+So the prediction I made several wakes ago — "these burn when #1259 merges" —
+is **refuted**, not confirmed. #1259 merged; they are exactly where they were.
+This is why I ran it instead of pruning them.
+
+**And the run turned up a fifth failure that is not in the ledger at all:**
+
+    5.0s  test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+
+`git log -S` on the ledger shows that nodeid has **never** been ledgered, so at
+the last regen it passed. Reproduced in isolation on the tip, and the contrast
+is sharp:
+
+    --backend jax --jit   FAILED  (13.0 s)
+    --backend jax          passed  (8.1 s)
+
+Traced-only. The assertion:
+
+    (R,Z) = (0.500, 0.000);  diff = 7.346e+03,  rel. diff = inf
+
+z = **0.000** exactly — the plane of a razor-thin disk, where Φ ~ Φ₀ + c·|z| has
+a genuine kink and a one-sided finite difference is mathematically undefined
+([[nonsmooth-potential-grad-undefined]]). The test guards this with
+`if tzforce**2 < 10**ttol`, so what plausibly differs between eager and traced is
+the *guard*, not the physics: eager `zforce` at z=0 may be NaN (making the guard
+False and the assertion never evaluated — a vacuous pass, cf.
+[[assertion-comparison-outside-reducer]]), while traced returns a clean 0.0 and
+the FD actually gets compared. That would make the **traced path the more
+honest one** and the eager pass the artifact.
+
+That is a hypothesis, not a finding. Building a pre-#1259 worktree
+(`d8960062`) to A/B the same nodeid on both sides and settle whether #1259
+introduced this or merely stopped hiding it.
+
+### 2026-08-07 — A/B: #1259 DID introduce the un-ledgered jax-jit failure
+
+Same nodeid, same command, same env, two commits:
+
+| commit | `--backend jax --jit` |
+|---|---|
+| `d8960062` (parent of #1259) | **passed** (10.3 s) |
+| `199ee10e` (tip, post-#1259) | **FAILED** (13.0 s) |
+
+and on the tip, eager `--backend jax` **passes** (8.1 s). So this is a
+traced-only regression that **#1259 introduced** into `feat/backends-develop`.
+It escaped because the jit dimension is not in `backend-tests`' matrix — the
+suite that would have caught it only runs on `workflow_dispatch`.
+
+Two things follow for the plan. The AnyAxisym jit work is not finished: I
+predicted #1259 would burn three ledger entries, it burned none, and it added a
+fourth failure. And the `-jit` blind spot is now a demonstrated cost, not a
+theoretical one.
+
+**My first explanation was wrong, and I checked it rather than writing it up.**
+I hypothesised that eager `zforce(R, 0)` returns NaN (so the test's
+`if tzforce**2 < 10**ttol` guard is False and the assertion never runs — a
+vacuous pass) while traced returns a clean 0.0 and activates it. Probed it:
+
+    numpy / jax / jax-jit  zforce(0.5, 0.0) = 0.0   on BOTH commits
+    FD (Phi(0)-Phi(dz))/dz = -4.4e-4 (numpy) / -1.6e-4 (jit), identical on both
+
+No NaN, no difference between commits, and nothing like the 7.3e+03 in the
+failure message. The reason is that I probed the **default**
+`AnyAxisymmetricRazorThinDiskPotential()`, while `test_potential.py` builds its
+own differently-parameterized instance — so the probe measured the wrong object
+and settles nothing. Exactly the same mistake shape as
+[[mpmath-quadosc-final-arbiter]]: I compared against something that looked like
+the thing under test and was not.
+
+Mechanism therefore **unknown**. Next step is to build the instance the test
+actually builds and re-probe. Not filing a cause until then.
+
+### 2026-08-07 — the regression does NOT reproduce outside pytest, and that is the finding
+
+Rebuilt the probe to compute *exactly* what `test_forceAsDeriv_potential` does —
+same default constructor (`tp = tclass()`, confirmed at test_potential.py:1453),
+**including the `tp.normalize(1.0)` my first probe omitted**, same `dz=1e-8`,
+same guard, same `ttol=-4.9`, same (R,Z)=(0.5, 0.0) (and `Zs[0]` really is
+exactly 0.0 — the `:.3f` formatting was not hiding a tiny nonzero z):
+
+    amp after normalize(1.0) = 0.8866736367602572     (identical on both commits)
+
+    pre-#1259 (d8960062)          tip (199ee10e)
+    numpy   FD=-3.933298e-04 PASS  numpy   FD=-3.933298e-04 PASS
+    jax     FD=-3.933298e-04 PASS  jax     FD=-3.933298e-04 PASS
+    jaxjit  FD=-1.401101e-04 PASS  jaxjit  FD=-1.401101e-04 PASS
+
+**Byte-for-byte identical on both commits, and passing everywhere.** Yet the
+same nodeid under pytest fails on the tip with FD = 7.346e+03 and passes on the
+parent.
+
+So the failure is **not a property of the potential**. The difference between my
+script and the test is the harness: `--jit` wraps *every* galpy entry point in
+`jax.jit` at the `@backend_input` boundary, whereas I hand-jitted only the
+`tp(...)` call. `normalize()` and `evaluatezforces` run traced in the test and
+eager in my probe.
+
+That points squarely at [[jit-trace-mode]], whose whole content is: *trace
+caches go stale on `normalize()`*. The test constructs and **then** normalizes;
+if a trace is cached against the pre-normalize amp (or reused across instances),
+the FD comes back with the wrong scale — which is exactly the shape of a
+7.3e+03 where 1.4e-4 belongs.
+
+**What is established:** #1259 flipped this nodeid from pass to fail under
+`--backend jax --jit` (A/B, same command, same env, one nodeid each side).
+**What is not:** the mechanism. It is now clear it lives in the harness-level
+tracing interaction, not in AnyAxisym's quadrature — which is a materially
+different (and more worrying) place to look than where I started.
+
+Correction to my previous entry: I wrote that the probe "measured the wrong
+object". It did not — `tclass()` is the default constructor. What it actually
+missed was `normalize(1.0)` and, more importantly, that jitting one call is not
+the same as running the suite traced.
+
+### 2026-08-07 — fork-fix gate complete, effectively green
+
+    RC_numpy=1     4 failed, 147 passed  (795.8 s)
+    RC_torchjit=1  4 failed,  76 passed  (394.6 s)
+    RC_torch=1     4 failed,  76 passed  (334.6 s)
+
+The same four tests fail in every arm, and they are the `useTM` ones:
+
+    NotImplementedError: actionAngleTorus wraps the external Torus C++ library
+    and is not jax/torch-backend compatible (and will not be); use it under numpy.
+
+The Torus C++ lib is not built in this worktree and CI deselects exactly these
+(`-k 'not useTM'`). **Eager torch still passes in 334.6 s**, i.e. it kept its
+fork-parallelism — the path the fix deliberately leaves alone. And in FULL-FILE
+torch-jit context (not the hand-picked trio — [[handpicked-nodeid-batch-is-not-a-context]])
+the three formerly-hanging tests pass: 7.0 s / 2.5 s / 46.8 s.
+
+### 2026-08-07 — holding the fork-fix PR: the runners are saturated
+
+The fork fix is committed and locally gated, so it is ready to open. Not opening
+it yet:
+
+    #1265's own workflows, all QUEUED since 18:03 (30+ min, not started):
+      Test documentation notebooks / All-backend tests / Linux/Mac build
+      / all-clear / Windows build
+    repo-wide in_progress+queued runs: 18
+    #1265 checks: 3 pass, 148 pending
+
+Opening PR N+1 into a saturated queue is the runner-inversion I have hit before:
+the second PR's ~150 checks compete with the first PR's, and what starves is
+precisely the summary jobs (`all-clear`, `backend status report`) that gate the
+merge. Two PRs at a time is the budget, not a target — and nothing is lost by
+waiting, since the branch is committed and its gate has already run locally.
+
+Opening it once #1265's suites are actually executing rather than queued.
+
+### 2026-08-07 — fork-fix numpy arm, clean: RC=0
+
+    147 passed, 4 deselected, 803.9 s
+
+With `-k 'not useTM'` (what CI does) the numpy arm is green. So all three arms
+of the fork-fix gate are green and the earlier `RC_numpy=1` was entirely the
+missing Torus C++ lib. The `parallel_map` change does not touch the numpy path,
+and now that is measured rather than argued.
+
+### 2026-08-07 — #1265 codecov/project red is the partial-upload phantom
+
+A red appeared while 147 checks are still pending. Checked the numbers via the
+codecov v2 pulls API instead of reacting to the badge
+([[codecov-project-blocks-via-all-clear]], [[codecov-stale-base-892-suppression]]):
+
+    base_totals  coverage=86.06  hits=41666  misses= 6748  lines=48414
+    head_totals  coverage=25.84  hits=12511  misses=35903  lines=48414
+    patch        hits=0  misses=0
+    ci_passed    True
+
+The head has ~30% of the base's hits because **most shards have not uploaded
+yet** — 147 checks are still pending, so codecov is scoring a partial upload.
+The tell that it is an artifact and not a real drop: `lines=48414` is **identical**
+on both sides. This PR is tests-only; it adds and removes no library lines, so a
+genuine 60-point project drop is not a thing that could have happened.
+
+Doing nothing. It self-heals as the remaining shards upload, and then `all-clear`
+needs a re-run (the check does not re-post on its own). Re-checking once the
+suite has actually run rather than treating a mid-upload number as a result
+([[never-report-partial-run-as-result]] applies to codecov exactly as it does to
+pytest).
+
+### 2026-08-07 — REPRODUCED minimally: #1259's quadrature is z-DISCONTINUOUS under tracing
+
+The trigger was the pytest harness, so I put the probe *inside* pytest (a
+throwaway `tests/test_zzprobe_tmp.py`, deleted after) and ran it under the same
+two commands. Six lines, and they say everything:
+
+    --backend jax --jit
+      AMP           = Array(0.88668817)
+      Phi(0.5, 0)   = -1.7599484491950728
+      Phi(0.5, 1e-8)= -1.7600219091821239
+      numerator     =  7.345998705110546e-05      -> FD = 7346
+
+    --backend jax (eager)
+      AMP           = Array(0.88667364)
+      Phi(0.5, 0)   = -1.7599930722150277
+      Phi(0.5, 1e-8)= -1.7599930722110944
+      numerator     = -3.9332981316420046e-12     -> FD = -0.00039
+
+**Traced, Φ jumps by 7.3e-5 between z = 0 and z = 1e-8. Eagerly the same two
+points differ by 4e-12.** The potential is *discontinuous in z at the midplane*
+under tracing. That is not a test-tolerance issue — a discontinuous Φ breaks any
+traced orbit integration that crosses the disc plane, and the FD test is simply
+the first thing to notice.
+
+Secondary observation, same run: `normalize(1.0)` lands on a different amp
+traced vs eager (0.88668817 vs 0.88667364, rel 1.6e-5), because it solves
+against the potential's own force and the traced quadrature answers slightly
+differently. That is a symptom of the same cause, not an independent bug.
+
+**Cause (located, not yet fixed):** #1259 replaced AnyAxisym's quadrature with a
+graded dyadic panel scheme for the a=R singularity. The panel structure it picks
+at exactly z=0 differs from the one at z=1e-8, and eagerly a `z == 0` test
+resolves one way while under a trace it resolves the other (the
+[[xp-where-dead-branch-guards]] / traced-comparison family). Eager takes the
+consistent branch; traced does not.
+
+This is a **defect in merged code on feat/backends-develop**, found only because
+the burn ran the traced suite — `backend-tests` has no `--jit` dimension, so
+nothing in normal CI would have caught it.
+
+Route taken through this, for the record, because three hypotheses died on the
+way: (1) "eager zforce is NaN so the guard is vacuous" — refuted, zforce is 0.0
+everywhere; (2) "my probe used the wrong object" — wrong, `tclass()` is the
+default constructor, what I had missed was `normalize(1.0)`; (3) "trace caches
+go stale on normalize()" — refuted, reordering normalize vs the first traced
+call changes nothing. The thing that finally worked was running the probe
+*inside pytest under the harness*, which is where the difference lives.
+
+Next: read #1259's panel-selection code for the z=0 branch and make it
+trace-consistent. Not opening a PR on a hypothesis — the fix has to make the
+traced Φ continuous at z→0, and that is the acceptance test.
+
+### 2026-08-07 — cause found in #1259's own code, and its commit message predicted it
+
+`_bk_split_quad` (AnyAxisymmetricRazorThinDiskPotential.py, added by #1259):
+
+```python
+dmin = xp.where(
+    xp.abs(z) * ones > 0.0,
+    xp.minimum(4.0 * xp.abs(z) * ones, half),   # z != 0 : panels march to ~4|z|
+    half,                                        # z == 0 : grading OFF
+)
+dk = [xp.maximum(Rp * (2.0**-k), dmin) for k in range(1, K + 1)]
+```
+
+At **z = 0**, `dmin = R/2`, so every `dk` clamps to `R/2`: the whole panel list
+collapses and only four panels of width R/2 survive. At **z = 1e-8**,
+`dmin = 4e-8` and the panels march all the way in to |a−R| ~ 4e-8 — ~50 graded
+panels resolving the peak.
+
+**Two different quadrature schemes on either side of z = 0.** They disagree by
+7.3e-5, and that is exactly the discontinuity measured. Eager never sees it
+because the concrete path is scipy's adaptive `quad`; only the traced path runs
+this scheme, which is why `backend-tests` (no `--jit` dimension) is blind to it.
+
+The commit message of #1259 says, in as many words:
+
+> At z=0 the integral is singular there and marching panels in makes a finite
+> difference of this potential **in R** blow up, so grading is switched off; for
+> z>0 the peak is genuinely resolvable and the FD stays clean.
+
+So the z=0 special case was added to keep the **R**-derivative check clean, and
+it broke the **z**-derivative check. One FD traded for the other, and only the
+R one was measured at the time.
+
+**Fix criterion (both halves, or it is the same mistake again):** the traced
+potential must be continuous as z→0 *and* the R-FD must stay clean. A `dmin`
+that varies continuously with |z| down to a floor (e.g. `max(4|z|, R·2**-K)`)
+removes the scheme switch, but it re-enters the regime the original comment was
+avoiding — so it needs measuring at both z=0 and z≠0, on `test_forceAsDeriv`
+*and* `test_2ndDeriv`, before it is worth proposing.
+
+Not opening a PR on the hypothesis. Next wake: implement, then gate on the
+continuity of traced Φ at z→0 as the acceptance test rather than on the pytest
+node going green — a scheme that merely moves the discontinuity somewhere the
+grid does not sample would pass the test and still be wrong.
