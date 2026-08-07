@@ -24392,3 +24392,34 @@ my unilateral edit.
 Not opening the PR tonight. Writing it up for Jo with the numbers above, and
 holding the quadrature change with it so they land together or not at all —
 landing the quadrature alone would turn a silent wrong answer into a red CI.
+
+### 2026-08-07 — orbit slow-skip sweep, 4 of 5 groups: 62 of 67 now runnable
+
+    lifted nodeids covered so far : 67 of 127
+    NOW RUNNABLE                  : 62
+    STILL NOT RUNNABLE            :  5   (all five hit exactly 300.0 s -- timeouts, not failures)
+
+    test_orbits.py::test_ChandrasekharDynamicalFrictionForce_constLambda
+    test_orbit.py::test_integrate_negative_time
+    test_orbit.py::test_integrate_backwards
+    test_orbit.py::test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_norot_offset]
+    test_orbit.py::test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tiltedTriaxialNFW]
+
+A ~93% staleness rate in the sample. The bulk are `test_dxdv_3d_c_vs_python[...]`
+and the multi-orbit `test_orbits.py` accessors — exactly the code the batched
+in-backend integrator and C-STM work touched, which is why they went stale.
+
+**Margin policy for the un-defer PR, decided now rather than at write-up time.**
+Two entries pass at **290.2 s** and **288.6 s** against a **300 s** cap. Nominally
+that clears, and both directions of correction help — CI runs these at ~0.71x
+local ([[ci-faster-than-devbox-for-jax-shards]]) and my local numbers are
+inflated by five concurrent split-groups plus the burn. But a test that tips
+over the cap records **FAILED**, not skipped ([[timeout-overrides-xfail-move-to-slowskip]]),
+so "probably fine" is the wrong bar for something whose failure mode is a red CI
+on the integration branch.
+
+So: un-defer only entries measured **under 240 s** (80% of cap), and leave the
+240-300 s band deferred with the measured time written into the file, so the
+next person sees a number rather than an assumption. That keeps ~3 of the 62.
+
+Group 3 (the remaining 60 nodeids) still running; no total until it lands.
