@@ -24632,3 +24632,35 @@ each after checking, not from memory:
 That last one is the useful correction: #193 previously said "2 test-side (1
 FIXED+measured) + 2 not-traceable by design", which was a sample-based guess.
 The measured answer is five, and the fifth is a regression nobody had seen.
+
+### 2026-08-07 — the slow-skip tail has a narrow cause: two wrapper potentials
+
+Mined the timings I already had (no new runs) for the biggest family in the
+sweep, `test_dxdv_3d_c_vs_python`, 44 variants measured under eager jax:
+
+    WRAPPER   n=11  median= 53.2s  max=300.0s  total=1517s
+    bare      n=33  median= 31.5s  max=201.6s  total=1652s
+
+Wrapper median is only **1.7x** bare — so "wrappers are slow" is not the story.
+The story is the tail, and it is two specific wrappers:
+
+    300.0s  RotateAndTiltWrapperPotential_tiltedTriaxialNFW   (over cap)
+    300.0s  RotateAndTiltWrapperPotential_norot_offset        (over cap)
+    290.2s  RotateAndTiltWrapperPotential_offset              (margin band)
+    288.6s  OblateStaeckelWrapperPotential                    (margin band)
+    135.0s  CorotatingRotationWrapperPotential
+     53.2s  GaussianAmplitudeWrapperPotential                 <- the median
+
+The top four are **~5.5x the wrapper median** and are *exactly* the four entries
+this sweep could not un-defer. 11 wrappers consume as much wall-clock as 33 bare
+potentials, almost all of it in those four.
+
+That sharpens task #79 from "trim per-force-call overhead under backends"
+(a general push) into something narrow and checkable: **make
+RotateAndTiltWrapperPotential and OblateStaeckelWrapperPotential's force call
+cheaper under eager jax, and all four stragglers drop under the cap** — the
+whole remaining tail of this sweep, for one targeted fix.
+
+Stated as a timing fact, not a diagnosis: I have not shown *why* they are slow
+(candidates: the coordinate rotation doing many small ops per call, or the
+wrapper's 2nd-derivative path). That is the next measurement, not a conclusion.
