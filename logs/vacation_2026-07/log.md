@@ -25231,3 +25231,20 @@ found a regression introduced by a PR that had merged green.
 
 Whole-file, regen mode, `--timeout=300 --timeout-method=signal`, junitxml.
 No claim until the RCs land.
+
+### 2026-08-07 — #1265: the all-backend matrix is GREEN, 45/45
+
+    backend shards : 45 total -> 45 pass, 0 fail, 0 pending
+    other checks   : 109 -> 98 pass, 1 fail (codecov phantom), 10 pending
+
+The dimension that actually matters for a backend-branch PR has completed
+cleanly: **every one of the 45 jax/torch shards passed.** The 10 still pending
+are plain-numpy `build` shards (test_orbit across 3.10-3.14, mac/windows, plus
+the two `test_backend*` py3.14 shards) and `all-clear`.
+
+Which is the expected shape for a tests-only PR that tightens assertions: if the
+new `assert_jit_matches_eager` calls or the FD comparisons were mis-tuned, the
+backend shards are exactly where it would have shown, and they did not.
+
+Remaining before it can merge: the numpy tail, and the codecov check — which
+needs an `all-clear` re-run once uploads settle, since it does not re-post.
