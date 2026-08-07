@@ -20934,3 +20934,39 @@ verified: it clears the torch TypeError) + EITHER a small-r quadrature improveme
 OR ledgering the 5. Given #202 established a graded/peak-resolving technique that
 works, the quadrature route is plausible -- but it is a separate measured piece of
 work, not a tweak.
+
+### 2026-08-06 — jeans small-r: root-caused and a measured fix (piece c of #190)
+
+Read `fixed_quad_semiinfinite`. The 'recip' map is
+
+    s = a - 1 + 1/u**2 ,  u in (0,1] ,  ds = 2/u**3 du
+
+Note the HARDCODED 1: the map's transition scale is fixed at unity no matter how
+small the lower limit `a` is. Near u=1, ds/du ~ 2, so node spacing in s near the
+lower limit is O(1/n^2) ABSOLUTE -- it cannot resolve integrand structure on scale
+`a` once a << 1. That is exactly the observed divergence below r ~ 0.05.
+
+A scale-invariant map fixes it:  s = a/u**2 , ds = 2a/u**3 du
+(u=1 -> s=a, u->0 -> s->inf; node distribution in s now scales WITH a).
+
+Measured, |sigmar - analytic|, torch, provenance-checked heredoc:
+
+    r        current map    scaled n=50   scaled n=100   scaled n=200
+    0.0010     1.099e-02     1.234e-06      8.824e-12      1.075e-11
+    0.0025     9.075e-04     8.021e-08      2.841e-12      1.937e-12
+    0.0100     8.881e-07     2.627e-10      1.483e-13      1.450e-13
+    1.0000     2.609e-15     2.609e-15      3.886e-16      6.717e-15
+
+The map alone buys ~4 orders at r=0.001 but still misses the 1e-10 tolerance.
+**Scaled map + n=100 gives 8.8e-12 -- inside tolerance and equal to numpy's own
+1.075e-11.** Past n=100 it saturates at ~1.07e-11, which is the analytic-formula
+float64 floor, not quadrature error: the backend has reached numpy's accuracy, so
+there is nothing left to win.
+
+CAVEAT for the PR: `fixed_quad_semiinfinite` is shared (AnyAxisym tail, sphericaldf,
+...). Do NOT silently change the default map. Add `kind='recip_scaled'` (or a
+`scale=` argument) and opt jeans in, then measure the other callers are untouched.
+n=50 -> 100 applies to the jeans call only.
+
+That completes the shape of #190: dispatch fix (3 lines) + r-coercion (1 line) +
+scaled-map opt-in with n=100. All three measured; none of them a tolerance change.
