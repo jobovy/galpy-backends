@@ -21270,3 +21270,38 @@ but the recorded baseline for dropping this guard naively was forced torch
 `codecov/patch` remains, and the whole-file report shows 3 misses / 220
 statements in AnyAxisymmetricRazorThinDiskPotential.py. Not acting on that
 while 26 checks are still uploading -- mid-upload codecov numbers are not real.
+
+### 2026-08-07 — gate WAS restarting; forced-torch diskdf is RED; #1258 audited
+
+**The PID check settled it.** Recorded PID 3248558; next wake showed 3268744 —
+the gate really was being killed and re-spawned each wake, which is why its
+`etime` kept reading ~8 min and why it never reported. Relaunched under
+`setsid nohup` writing straight to a file (no `tail` in the pipeline).
+
+Before dying, the re-spawned run did get the torch arm out, and it is RED:
+
+    11 FAILED  TypeError: log() / IndexError: too many indices /
+               TypeError: ufunc 'fabs' not supported
+
+Exactly the numpy-callers-receiving-backend-arrays class the 2026-08-03 note
+warned about for this guard (baseline then: forced torch 125/134).
+
+**NOT yet attributed.** These may be pre-existing on this branch rather than
+caused by the surfaceSigmaProfile change — running the baseline arm before
+concluding, per the standing rule. The detached A/B runs BASELINE (data-guard
+restored) then FIX, whole file both times, `--junitxml` each, so the comparison
+is per-nodeid and not eyeballed. Commit stays held either way.
+
+**#1258 pre-merge audit — clean on all three criteria:**
+- `if -> xp.where` array-input class: the new `if mode == "mirror"` branches on a
+  STATIC Python string (a control parameter), resolved at trace time. Not the
+  array-data class.
+- duplication: the mirror fold `hi - abs(hi - abs(i))` is written once;
+  `MapCoordinates` delegates to `map_coordinates`.
+- helper placement: `galpy/backend/interpolate.py`, the general interpolation
+  module — not embedded in an actionAngle consumer.
+- also verified commit 3/3 REMOVES the `# pragma: no cover` on the mode guard
+  and covers it for real; the branch head has no pragma.
+
+#1258 is 149/153, 0 fail, waiting only on `all-clear` and the last backend jax
+shard. Merge as soon as it is fully green.
