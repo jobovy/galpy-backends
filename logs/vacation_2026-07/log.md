@@ -25176,3 +25176,25 @@ module and it is otherwise clean.**
 | `test_interp_potential.py` | torch-jit | 38 | 2 | **2** (now deferred, measured) |
 
 Every one of those files had **never** been run traced before today.
+
+### 2026-08-07 — the jax-jit ledger gap, closed on the slow-skip branch
+
+`24bd6055` on `feat/orbit-slow-skip-undefer`: one entry added to
+`backend_xfail.txt` covering `actionAngleStaeckelGrid_basicAndConserved_actions`
+under **jax-jit**, with the numbers from both traced arms in the comment.
+
+Reasoning for adding rather than leaving it: the asymmetry is real (jax=0,
+torch=1 in the ledger; `-jit` inherits only the same backend's eager entries),
+and the risk is asymmetric too. Under `xfail(strict=False)` an entry that turns
+out to pass is a **non-blocking** xpass; an uncovered failure is a **red**. So
+the cheap direction is to cover it and let a future regen prune it.
+
+Folded onto the slow-skip branch rather than opening a fourth PR: both commits
+are "make the deferral lists describe what was measured", and the files are
+disjoint (`backend_xfail.txt` vs `backend_slow_skip.txt`).
+
+    branch now: tests/backend_slow_skip.txt  -114/+14
+                tests/backend_xfail.txt      +14
+
+PR body updated to match, so the description does not drift from the diff
+([[pr-description-drifts-after-rework]]).
