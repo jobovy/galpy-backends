@@ -25626,3 +25626,49 @@ Fix directions (to be measured, not assumed, when #208 comes up):
     method as the public entry point.
 
 Either keeps #1261's island removal while paying the boundary once.
+
+### 2026-08-07 — #208 fixed, after two more wrong mechanisms
+
+The `getattr`-indirection story from the profile was still not the mechanism.
+Instrumenting the accessor settled it:
+
+    _ssp branch counts: {'backend_array': 0, 'plain': 133332}
+    R types seen      : {'float': 24, 'float64': 133308}
+
+**Not one of the 133k calls passes a backend array.** `oortA` runs scipy's
+adaptive quadrature, which calls the integrand with plain scalars. Under a
+FORCED backend a plain `numpy.float64` still resolves to that backend --
+
+    plain ctx      : numpy
+    forced jax ctx : jax.numpy        <- this is the whole regression
+    nested numpy   : numpy
+
+-- so #1261's decoration put the entire scipy-quad scalar path onto jax: coerce
+a scalar in, evaluate, convert back out, 133,332 times. Values were right the
+whole way; it was 133k scalar round-trips.
+
+My first fix bypassed the boundary when `is_backend_array(R)` -- **dead code, it
+never fired once**, and measured 25.12 s against a 25.26 s baseline. Second
+attempt pinned numpy unconditionally: fixed traced, but taxed the numpy path 35%
+(3.05 -> 4.11 s), which is not shippable.
+
+**v2, three cases, measured (min of 3 reps):**
+
+|                          | numpy oortA | traced oortA |
+|--------------------------|-------------|--------------|
+| pre-#1261                | 2.72 s      | 2.90 s       |
+| tip (#1261 as merged)    | 3.05 s      | 25.26 s      |
+| **tip + v2**             | **2.82 s**  | **4.40 s**   |
+
+numpy back to pre-#1261 within noise, traced recovers 5.7x, value identical
+(`0.4997934813`) on every arm. The `__wrapped__` skip on the plain-numpy branch
+is what buys back #1261's own 12% -- at this call count even a no-op decorator
+wrapper is worth measuring.
+
+**Note for the numpy-island directive:** the third branch pins numpy, but the
+leaf is untouched and stays island-free. It is the *consumer* choosing numpy for
+its own numpy-only quadrature -- `_ssp`'s existing comment already documents
+diskdf as not-migrated -- not the leaf dispatching on dtype. The real fix is
+migrating diskdf's quadrature itself; that is Pdf.3, not this.
+
+Whole-file `--backend=jax --jit` acceptance run launched.
