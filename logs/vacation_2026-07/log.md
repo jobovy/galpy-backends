@@ -21558,3 +21558,33 @@ Two candidate fixes for the follow-up, both needing measurement:
 
 Patch preserved as `logs/vacation_2026-07/ssp_backend_input.patch` (117 lines) and
 the jeansfix worktree restored clean so it matches #1260 exactly.
+
+### 2026-08-07 — prototyping fix (b) for #117: widen the eval dispatch
+
+Both PR slots are occupied, so this is a MEASUREMENT, not a PR. `diskdf.py` is
+owned by neither open PR, so it is safe to try in the jeansfix worktree as
+uncommitted changes.
+
+Applied the saved surfaceSigmaProfile patch + widened both `eval` dispatch
+predicates (dehnendf at 1968, shudf at 2450) from
+
+    if (is_backend_array(E) or is_backend_array(L)) and not self._correct:
+
+to also test `logSigmaR` and `logsigmaR2`. Rationale is the measured mechanism:
+those two come from the migrated leaf and can independently be backend arrays;
+staying on the numpy branch then lets scimath's complex log promote against them
+into a complex backend array that `_real` cannot unwrap.
+
+Running detached under setsid, whole file, `--junitxml`, BOTH arms:
+  * forced torch  -- does it beat 47 failures? (baseline 129 passed / 0 failed)
+  * plain numpy   -- does the widened predicate leave the numpy path alone?
+    (it should: on the numpy path logSigmaR is never a backend array, so the new
+    disjuncts are all False and the branch choice is unchanged — but that is a
+    claim to verify, not assume, since this is a byte-identity-critical path)
+
+Prediction on record before the result: this should fix the 7 ComplexDouble
+failures outright, because `_eval_backend` is complex-free by construction. It
+should ALSO fix a good share of the TypeError/IndexError group, since those are
+the same "numpy branch computing on Tensors" family. What it will NOT fix is
+anything caused downstream of `eval` — those need the consumer work. Writing the
+prediction down first so the result can actually refute it.
