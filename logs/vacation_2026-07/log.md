@@ -24849,3 +24849,34 @@ Worth noting either way: **neither nodeid is slow-skipped or ledgered for
 torch-jit.** So on the current tip these are latent reds that only nobody has
 tripped because the `--jit` dimension is not in `backend-tests`' matrix — the
 same blind spot that hid the #1259 regression.
+
+### 2026-08-07 — slow-skip un-defer committed locally (f39b8136), held for a PR slot
+
+Branch `feat/orbit-slow-skip-undefer` (worktree /var/tmp/slowprune), one file:
+
+    tests/backend_slow_skip.txt | 14 insertions(+), 114 deletions(-)
+
+**Checked the thing that would have silently broken it.** My generated entries
+carry trailing `# 269s -- ...` annotations, so before committing I read
+`_load_backend_nodeids` rather than assuming: it does
+`raw.split("#", 1)[0].strip()` and its docstring already says *"Lines may carry
+trailing '# ...' comments"*. Then parsed the rewritten file back with that exact
+function:
+
+    jax        92 nodeids, 0 malformed
+    torch      15 nodeids, 0 malformed
+    torch-jit  18 nodeids, 0 malformed   (15 inherited from torch + its own 3)
+
+If the parser had used a plain `split(None, 1)` the annotations would have been
+swallowed into the nodeid and every entry in the file would have silently
+stopped matching — a 110-entry skip list that skips nothing.
+
+**Sequencing note.** This and the fork-fix branch both edit
+`tests/backend_slow_skip.txt` — the fork fix removes 3 torch-jit streamdf lines,
+this removes 100 jax orbit lines. Disjoint hunks, so git will very likely merge
+them, but they are in the same file, so whichever lands second gets rebased and
+re-verified rather than trusted ([[dont-reflexively-rebase-disjoint-prs]] does
+NOT apply — that is about disjoint *files*).
+
+Three PRs of work are now ready and CI can absorb roughly one an hour, so the
+constraint is the runners, not the work. Order: #1265 (open) → fork fix → this.
