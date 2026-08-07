@@ -20780,3 +20780,46 @@ NOT root-caused. Recording the localisation rather than guessing a third time:
 one grid point, r=0.001, 1.1e-2 absolute, pytest-only, source matches numpy
 bit-for-bit outside pytest. Next step is to diff the conftest-managed environment,
 not to keep adjusting the source.
+
+### 2026-08-06 (cont) — jeans r=0.001: one real finding, root cause still open
+
+Chased the r=0.001 residual. Reproduced it minimally, refuted five hypotheses, and
+found one thing that matters independently.
+
+**THE FINDING: `backend_managed` opts a test OUT of the forced backend.** From
+conftest's autouse `_galpy_force_backend`:
+
+    if backend_name == "numpy" or request.node.get_closest_marker("backend_managed"):
+        yield; return
+
+So a file carrying `pytestmark = pytest.mark.backend_managed` is NOT force-run --
+it manages backends itself. tests/test_backend_jeans.py has that marker;
+tests/test_jeans.py does not.
+
+That invalidated my own probe. I wrote a probe file, gave it the marker (copying
+the style of test_backend_jeans.py), ran it under `--backend torch`, saw
+|err| = 1.0755e-11 and concluded "passes inside pytest, so the harness is not the
+trigger". It never ran on torch. The identical probe WITHOUT the marker:
+
+    marker present : backend='torch' reported, |err| = 1.0755e-11   (actually numpy)
+    marker absent  : backend='torch',          |err| = 1.0986e-02   (the real value)
+
+Same trap as always -- I checked what the harness *said* rather than what it *ran*.
+Worth remembering that `backend()` still reports 'torch' in the marked case, so
+even the backend-name check does not catch it.
+
+REFUTED, each measured:
+  1. float32 downcast in my `xp.asarray(r)`   -- asarray keeps float64
+  2. torch default dtype                       -- 1.0755e-11 under BOTH defaults
+  3. conftest's extra `backend.jit(...)` wrap  -- same value with and without
+  4. potential CONSTRUCTED under forced torch  -- same value either way
+  5. test_jeans.py module scope                -- it is just two imports
+
+STILL OPEN: a bare script doing `use("torch", force=True)` gives 1.0755e-11, while
+any unmarked test under `--backend torch` gives 1.0986e-02. The delta is somewhere
+in conftest's session-level setup that I have not finished isolating. NOT root
+caused; recording the boundary rather than a sixth guess.
+
+Practical consequence for #190 regardless: the 5 test_jeans failures are REAL
+backend errors at the smallest radius, they were hidden by the island, and the
+jeans PR must address or ledger them.
