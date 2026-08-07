@@ -21482,3 +21482,36 @@ that needs a perf check before landing.
 
 #117's second half is re-scoped to a diskdf consumer migration. Failing nodeids
 are preserved in /tmp/ssp_fix.xml.
+
+### 2026-08-07 — ComplexDouble sub-bug: first hypothesis REFUTED
+
+Chased the 7 `"gt_cpu" not implemented for 'ComplexDouble'` failures. Established:
+
+* The failing assertion is `dfc(numpy.array([0.7,0,meanvt])) > dfc(...)` in
+  `test_dehnendf_call_sanity` — so under the fix `dehnendf.__call__` **returns a
+  complex TORCH tensor**, and the comparison is what raises.
+* `diskdf._real` is `x if is_backend_array(x) else numpy.real(x)`, commented
+  "backend arrays are already real". A complex Tensor therefore passes through
+  UNSTRIPPED. That comment's assumption is what breaks.
+* The design context is real and documented: line 28 keeps
+  `numpylog = numpy.lib.scimath.log` deliberately (log(neg) -> log|neg| + i*pi),
+  and the backend eval paths (lines 2030, 2483) avoid complex entirely by
+  substituting a signed algebraic factor. So `_real`'s assumption is TRUE as long
+  as the backend eval actually runs.
+
+**My hypothesised mechanism was wrong and the probe caught it.** I assumed
+`scimath.log(Tensor)` yields a complex Tensor. Measured:
+
+    numpy.lib.scimath.log(torch.tensor([-0.5, 0.5]))
+      -> numpy.ndarray complex128     (NOT a Tensor)
+      -> is_backend_array = False     (so _real DOES strip it correctly)
+
+So that route is innocent. The complex Tensor is produced somewhere further
+along and still needs a live reproduction to pin down — most likely a numpy
+complex array being coerced back to a Tensor downstream of `_real`, or a torch
+op producing complex from a negative input.
+
+Recording it half-solved rather than shipping the tidy-sounding scimath story:
+the mechanism I can defend is "`_real` lets complex Tensors through"; the
+mechanism I cannot yet defend is where the Tensor becomes complex. That second
+half is the actual work item for #117's diskdf consumer migration.
