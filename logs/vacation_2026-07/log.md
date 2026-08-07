@@ -23533,3 +23533,22 @@ README row added for #1262.
 
 Merged so far this stretch: #1260, #1259, #1261, #1262. Open: #1263 (ledger
 slow-skip) and #1264 (direct path).
+
+### 2026-08-07 — #1263 MERGED (fifth); #1264's GSL red was infra, cleared on re-run
+
+**#1263 merged** 15:59:47Z, CLEAN at 152/154. Ledger-only — 2 files, and I
+checked `git diff --name-only -- galpy/` was EMPTY rather than assuming it, so
+the three audit criteria are genuinely N/A rather than waved through.
+
+**#1264's windows red was NOT code.** The failed step was `Install GSL` — a
+dependency install, which cannot be affected by a change to evolveddiskdf.py and
+its test. Re-ran it once its build run drained (the 403 cleared exactly as it
+has every other time) and it passed. Only the codecov phantom remains.
+
+Both of this wake's reds turned out to be infrastructure, and in both cases the
+diagnosis came from reading the failing STEP rather than the job name.
+
+Merged this stretch: #1260, #1259, #1261, #1262, #1263. Open: #1264 (direct
+path), whose local gate was 0 failures across 4 arms before it was opened.
+
+README row added for #1263.
