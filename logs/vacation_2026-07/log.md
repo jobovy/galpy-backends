@@ -22818,3 +22818,47 @@ quadrature, or mpmath at extended precision).
 Two near-misses in two wakes from trusting a reference. The habit that caught
 both: check whether the REFERENCE behaves sanely before believing it about the
 code under test.
+
+### 2026-08-07 — BOTH settled with mpmath: two real, opposite-direction numpy bugs
+
+Built the arbiter I said #203 needed: mpmath `quadosc` at 25-30 digits on the
+Hankel integrals. It settles both open questions definitively.
+
+**#203 — RESOLVED, and the ORIGINAL attribution was right after all.**
+RATIO R2deriv/Rforce at z=0, vs mpmath dps=30:
+
+    R      mpmath truth      AnyAxisym rel   RazorThinExp rel
+    0.05   -10.7995150733       3.294e-6         3.513e-16
+    0.30     0.676983627745     1.605e-6         1.315e-16
+    1.00     1.6054007858       1.935e-8         3.866e-15
+
+RazorThinExp's IN-PLANE R2deriv is exact to machine precision, so it WAS a valid
+gold reference for this particular quantity. **AnyAxisym._R2deriv at z=0 is the
+wrong one**, by up to 3.3e-6 at small R. My re-framing to "unresolved" last wake
+was the right call on the evidence I had; it is now resolved, in favour of the
+original claim, with the magnitude corrected from 6.5e-5 to 3.3e-6.
+
+**#206 — CONFIRMED, and stronger than I could show before.**
+RATIO Rforce(R,z)/Rforce(R,0) at R=1, vs mpmath dps=25:
+
+    z/R     mpmath truth        AnyAxisym rel   RazorThinExp rel
+    1e-02   0.98831384860796      7.26e-13        1.367e-6
+    1e-03   0.99883212707027      7.34e-13        0.0007357
+    1e-04   0.99988322129345      8.29e-13        0.002766
+
+AnyAxisym is exact to ~7e-13 — the ~1e-7 residual in my earlier scipy-Hankel
+version was MY integral's error, not the code's. RazorThinExp degrades to 2.8e-3.
+
+**These are consistent, not contradictory.** RazorThinExp is exact in-plane and
+broken off-plane; AnyAxisym is exact off-plane and slightly wrong in the
+in-plane second derivative. Different code paths in each.
+
+Net for Jo: two independent pre-existing NUMPY defects, each confirmed against a
+machine-precision arbiter, neither blocking anything:
+  #203  AnyAxisym._R2deriv at z=0,        up to 3.3e-6 at small R
+  #206  RazorThinExp Rforce off-plane,    up to 2.8e-3 as |z|->0
+
+Technique worth reusing: for Hankel-type oscillatory integrals,
+`mpmath.quadosc(f, [0, inf], omega=R)` at dps=25-30 is a genuine arbiter. My
+hand-rolled scipy panels between J1 zeros were good to 1e-7 for the force and
+only 1e-4 for the curvature — enough to mislead, not enough to settle.
