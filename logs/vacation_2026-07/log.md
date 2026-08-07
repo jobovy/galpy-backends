@@ -20893,3 +20893,44 @@ it: the failure mode is that a one-off probe feels too small to deserve ceremony
 Standing rule from now on: probes go through a heredoc (`python3 - <<'PY'`) and
 print `inspect.getfile()` of the module under test, with no exceptions for
 "quick" checks.
+
+### 2026-08-06 — jeans, re-measured with correct provenance: GL fails as r -> 0
+
+Redid the scan with a heredoc, printing `inspect.getfile()` and asserting the guard
+is gone. This SUPERSEDES the earlier scan, which ran through the shadow and
+therefore claimed torch and numpy were bit-identical to 5.55e-17.
+
+    r         |numpy-ana|   |torch-ana|    |torch-numpy|
+    0.0010    1.075e-11     1.099e-02      1.099e-02
+    0.0025    1.941e-12     9.075e-04      9.075e-04
+    0.0050    5.347e-13     5.223e-05      5.223e-05
+    0.0100    1.477e-13     8.881e-07      8.881e-07
+    0.0500    7.105e-15     8.660e-15      1.554e-15
+    0.1000    1.998e-15     1.099e-14      1.299e-14
+    1.0000    3.331e-16     2.609e-15      2.942e-15
+    5.0000    4.582e-11     1.443e-15      4.582e-11
+
+Clean convergence failure of the backend quadrature BELOW r ~ 0.05, worsening
+roughly an order of magnitude per halving of r: 8.9e-7 (0.01) -> 5.2e-5 (0.005)
+-> 9.1e-4 (0.0025) -> 1.1e-2 (0.001). Above r ~ 0.05 it is at machine precision.
+
+`sigmar` integrates from r to infinity via `fixed_quad_semiinfinite`, so as the
+lower limit shrinks the mapped integrand's dynamic range grows and a fixed-order
+rule stops resolving it -- exactly the same class as the AnyAxisym a=R work, and
+the same reason numpy is immune (scipy's quad is adaptive).
+
+Nice detail the other way: at r=5.0 the BACKEND is more accurate than numpy
+(1.4e-15 vs 4.6e-11 against the analytic). scipy is not uniformly better; it is
+better where adaptivity matters and worse in the tail.
+
+CONSEQUENCE for #190: the earlier framing ("accuracy is not the blocker, it is
+just a data-guard") was right about the DISPATCH but wrong to imply the backend
+quadrature is uniformly fine -- that conclusion rested on the shadow scan. It is
+fine for r >~ 0.05 and fails below. test_jeans sweeps rs = linspace(0.001, 5.0, 101),
+so it hits the bad region on its first point.
+
+So the jeans PR is: dispatch fix (3 lines) + r-coercion (1 line, already done and
+verified: it clears the torch TypeError) + EITHER a small-r quadrature improvement
+OR ledgering the 5. Given #202 established a graded/peak-resolving technique that
+works, the quadrature route is plausible -- but it is a separate measured piece of
+work, not a tweak.
