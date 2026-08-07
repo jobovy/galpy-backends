@@ -25131,3 +25131,48 @@ did for the two tolerance entries.
 
 Both whole-file, regen mode, `--timeout=300 --timeout-method=signal`, junitxml.
 No claims until the RCs land.
+
+### 2026-08-07 — jit wave 2 in: both answer cleanly, and the ledger gap is confirmed
+
+**(a) `test_actionAngle.py --backend torch --jit`: 182 passed / 24 skipped / 3 failed.**
+The same three nodeids as the jax arm, all three ledgered for torch (so torch-jit
+inherits all three): **zero un-ledgered failures.** Same quantities, torch's
+numbers:
+
+    linear_angles_cylsep         dev 1.77912e-07  vs 1e-7    (jax: 2.34757e-07)
+    StaeckelGrid_basicAndConserved  e = 1.5305e-10 vs 1e-16  (jax: 9.363e-12)
+    AdiabaticGrid_outsidegrid_c  off-grid 0.0047  vs 1e-8    (jax: 0.00470897)
+
+The off-grid number is **identical to jax's 4.7e-3** — as it should be, since
+that is the documented grid-only design gap and not a numerical one. The two
+tolerance quantities differ between backends by ~1.3x and ~16x, which is what
+independent floating-point paths do.
+
+**The ledger gap is now confirmed by coverage, not inference:**
+
+    linear_angles_cylsep            jax=1 torch=1
+    StaeckelGrid_basicAndConserved  jax=0 torch=1   <-- fails under jax-jit, ledgered torch ONLY
+    AdiabaticGrid_outsidegrid_c     jax=1 torch=1
+    qdf test_call_diffinoutputs     jax=1 torch=1
+
+So the asymmetry is real and one-sided: torch-jit is fully covered, jax-jit is
+missing exactly one entry.
+
+**(b) `test_qdf.py` + `test_pv2qdf.py --backend jax --jit`: 58 passed / 7 skipped /
+1 failed** — and the one failure is the ledgered `test_call_diffinoutputs`
+("Test orbit in qdf that is supposed to be unbound is not"), i.e. exactly the
+by-design unbound-sentinel case #175 classified. **First traced run of the qdf
+module and it is otherwise clean.**
+
+## Traced state of galpy, as measured today (from zero)
+
+| file | backend | passed | failed | of which un-ledgered |
+|---|---|---|---|---|
+| `test_potential.py` | jax-jit | 1262 | 5 | **1** (#1259 regression) |
+| `test_potential.py` | torch-jit | 1282 | 1 | **1** (same regression) |
+| `test_actionAngle.py` | jax-jit | 179 | 3 | **1** (ledger gap above) |
+| `test_actionAngle.py` | torch-jit | 182 | 3 | 0 |
+| `test_qdf`+`test_pv2qdf` | jax-jit | 58 | 1 | 0 |
+| `test_interp_potential.py` | torch-jit | 38 | 2 | **2** (now deferred, measured) |
+
+Every one of those files had **never** been run traced before today.
