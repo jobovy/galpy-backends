@@ -25026,3 +25026,34 @@ Consequences either way:
   regression and the stale torch-jit ledger entry. That is now the strongest
   argument for the `workflow_dispatch(jit=true)` run, which I have queued behind
   #1265.
+
+### 2026-08-07 — interp A/B FINAL: identical. The fork fix does not touch this.
+
+    WITHOUT fix : 2 failed, 38 passed, 1530.20 s
+    WITH fix    : 2 failed, 38 passed, 1548.70 s
+
+Same nodeids, same 300.0 s timeouts, ~1% difference in wall time:
+
+    test_interpolation_potential_force_c         300.0s  Timeout
+    test_interpolation_potential_secondderivs    300.0s  Timeout
+
+**A clean negative, and the point of running it.** `interpRZPotential` is a
+`parallel_map` consumer timing out under torch-jit, which *looked* exactly like
+the deadlock the fix cures — and it is not. These two are genuine
+`torch.compile` slowness. The fork-fix PR's scope stays where the measurement
+put it: **three streamdf tests, nothing more.** I never wrote interpRZPotential
+into that PR body, which is the whole reason for A/B-ing a resemblance rather
+than shipping it.
+
+Also worth retiring: the mid-run `waiter.acquire(True, timeout)` frame I saw and
+flagged as *possibly* the deadlock signature is nothing of the kind — it appears
+identically in both arms, so it is just pytest-timeout dumping a parked thread.
+Third time today that a fragment read mid-run looked like a finding; third time
+waiting for the RC settled it the other way.
+
+**What the run did establish:** both nodeids are **latent reds under torch-jit**,
+in neither the ledger nor the slow-skip list, hidden only by `backend-tests`
+having no `--jit` dimension in its normal runs. Two independent 300 s
+measurements, so they belong in the torch-jit slow-skip list with the number
+recorded — a deferral I would rather make now, before the
+`workflow_dispatch(jit=true)` run turns them into a surprise red.
