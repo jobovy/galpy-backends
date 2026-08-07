@@ -24664,3 +24664,47 @@ whole remaining tail of this sweep, for one targeted fix.
 Stated as a timing fact, not a diagnosis: I have not shown *why* they are slow
 (candidates: the coordinate rotation doing many small ops per call, or the
 wrapper's 2nd-derivative path). That is the next measurement, not a conclusion.
+
+### 2026-08-07 — ★ METHOD FAILURE: my standalone probes imported the WRONG galpy ★
+
+A cProfile listing showed frames from `/var/tmp/streamtorch/galpy/...` — a
+worktree I had not touched all session. Checked the invocation pattern directly:
+
+    cwd=/var/tmp/dminfix,  python3 /tmp/prov_check.py
+        sys.path[0] = /tmp
+        galpy       = /var/tmp/streamtorch/galpy/__init__.py     <-- NOT dminfix
+    cwd=/var/tmp/pre1259   -> same
+    cwd=/var/tmp/evdirect  -> same
+
+`python3 <path>` sets `sys.path[0]` to the **script's** directory, not the cwd,
+so galpy resolved through the editable install to a third checkout every time.
+Exactly [[galpy-editable-install-import-shadow]], and I walked straight into it.
+
+**What this invalidates.** Every probe I ran as `cd <worktree> && python3
+/tmp/foo.py`: `zprobe.py` / `zprobe2.py` / `zprobe3.py` / `zprobe4.py`,
+`ev_flip_probe.py`, `jitdep_probe.py`, `anysph_probe.py`, `wrapperprof*.py`.
+Any of those used as a **commit A/B compared one checkout with itself** — which
+is precisely why they came back "byte-for-byte identical on both commits". That
+identity was an artifact of the harness, not a fact about the code, and I
+reported it as a finding.
+
+**What survives, and why.** Everything run as `python3 -m pytest` *from inside*
+a worktree: `-m` puts the cwd on `sys.path[0]`, so those imported the right
+galpy. That covers the load-bearing results —
+
+* the #1259 A/B (pre-#1259 passes / tip fails) — pytest, valid;
+* the in-pytest probe showing jit 7.346e+03 vs eager −3.9e-04 — pytest, valid;
+* the four-variant `dmin` sweep and the analytic-cusp comparison — pytest, valid;
+* the R2deriv retraction — pytest, valid;
+* every gate, the burn, and the orbslow sweep — pytest, valid.
+
+So #207's substance stands; what falls is one intermediate step I used to argue
+it. **#1265 is unaffected**: its tolerances may have been *chosen* from a
+mis-rooted probe, but they are *validated* by the tests actually passing in the
+right checkout (48 passed in-worktree, then 205 passed on each of three arms).
+
+**Practice change, effective now.** Any probe that compares checkouts must
+print `galpy.__file__` as its first line and I must read it, or be run as
+`python3 -m` / with `PYTHONPATH=<worktree>`. A probe that cannot say which code
+it measured is not evidence. Adding this to the memory rather than trusting
+myself to remember it.
