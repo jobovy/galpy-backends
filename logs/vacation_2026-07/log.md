@@ -21305,3 +21305,22 @@ is per-nodeid and not eyeballed. Commit stays held either way.
 
 #1258 is 149/153, 0 fail, waiting only on `all-clear` and the last backend jax
 shard. Merge as soon as it is fully green.
+
+### 2026-08-07 — landing plan for the free slot
+
+jeans branch state, checked against a fresh fetch: 2 commits, **0 behind**
+`origin/feat/backends-develop`, 4 files (`backend/quadrature.py`, `df/jeans.py`,
+and their two test files), all disjoint from #1258 (`backend/interpolate.py`) and
+#1259 (`AnyAxisymmetricRazorThinDiskPotential.py`). No rebase needed.
+
+**Decision: if the surfaceSigmaProfile A/B comes back unfavourable, the jeans PR
+opens WITHOUT it.** The two are the same task (#117) but not the same risk: the
+jeans half is finished and fully gated, the surfaceSigmaProfile half is under
+investigation for an 11-test forced-torch regression. Grouping related fixes is
+the granularity policy, not a reason to let an unresolved change hold a finished
+one hostage. surfaceSigmaProfile is deliberately still UNCOMMITTED, so the branch
+already has the right shape for that split — nothing to undo either way.
+
+#1258 waiting on `all-clear` + the last backend jax shard (qdf / pv2qdf /
+streamgapdf_impulse / noninertial), 25 min into a 90 min timeout; jax-eager on
+that shard is known-slow, so not yet a concern. 0 failures across the other 149.
