@@ -22500,3 +22500,30 @@ hand-roll one. Not a blocker for #1259.
 
 #1259 is 148/154 with **0 reds**; #1260 149/154 with only the project phantom
 and its py3.14 build outstanding.
+
+### 2026-08-07 — jaxdisk gate arm was going to time out; rescued mid-flight
+
+Checked whether the last gate arm (forced-jax test_diskdf) could finish inside
+the `timeout 5400` I gave it:
+
+    25 of 129 tests in 1201s -> ~48 s/test -> projected ~6200s (103 min)
+    net of startup, still ~5700s. Timeout 5400s. It would have been killed.
+
+`--junitxml` is written at session END, so a timeout kill means TOTAL LOSS of
+the measurement, not a partial one. torch did the same 129 in 1384s, so jax
+eager is ~4.5x slower here — consistent with the eager-jax slowness this project
+keeps hitting, and worth remembering when sizing future forced-jax runs.
+
+Rescue without losing the 20 minutes already spent: killed **only** the
+`timeout` wrapper (pid 3333184), leaving the pytest child (3333185) orphaned to
+init and still running at 101% CPU. jaxdisk is the LAST arm in the gate script,
+so nothing else was waiting on that slot.
+
+**CAVEAT TO MYSELF, because this will otherwise mislead me later:** the gate
+script will now append a BOGUS `RC_jaxdisk=` line (the killed wrapper's exit
+status, ~137), and `GATE_DONE` will print while the run is still going. That RC
+means nothing. The real result is /tmp/gate_jaxdisk.xml, parsed with
+`find('failure') is not None`. Do NOT read the RC line for this arm.
+
+Four arms are genuinely green and unaffected: jaxsurf 12, torchsurf 12,
+jaxevol 35, torchevol 35, all RC=0.
