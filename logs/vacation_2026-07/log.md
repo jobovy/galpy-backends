@@ -21445,3 +21445,40 @@ This does not change any decision — the change was already held out of #1260 a
 the baseline was already known clean — but it does change the SIZE of the
 follow-up. #117's second half is not "one file, a few tests"; it is a diskdf
 consumer migration.
+
+### 2026-08-07 — surfaceSigmaProfile A/B FINAL: 47 failures, and a distinct sub-bug
+
+    BASELINE (data-guard):   129 passed,  0 failed,  502s (8:22)
+    FIX (decorator + flag):   82 passed, 47 failed, 1203s (20:02)
+
+Per-nodeid diff of the junitxml pair (`is not None`, not truthiness): baseline 0
+failures, fix 47, **all 47 new**. Breakdown:
+
+    23  TypeError            log()/fabs() handed a Tensor
+     9  IndexError           "too many indices: array is 0-dimensional"
+     7  NotImplementedError  "gt_cpu" not implemented for 'ComplexDouble'
+     4  RuntimeError
+     3  AttributeError
+     1  AssertionError
+
+Final count history for this one change: **11 -> 38 -> 47**. The 11 was `head -12`
+truncating pytest's summary; the 38 was a mid-run sample I read off the progress
+line. Only the junitxml number is real.
+
+**The ComplexDouble group is a separate sub-bug, and it is the interesting one.**
+`diskdf.py:239` reads
+
+    return x if is_backend_array(x) else numpy.real(x)
+
+so a Tensor SKIPS the `numpy.real()` entirely and complex intermediates then hit
+a torch comparison. That is not a dtype-coercion problem — the consumer migration
+has to decide what `real()` means on the backend, not just pass tensors through.
+Note this is the SAME guard idiom again, in its third distinct role: here it is
+standing in for a numpy-only `real()` projection.
+
+Second signal: 2.4x slower. Coercing R to a Tensor on every surfacemass/sigma2
+call adds per-call torch overhead in a hot loop; even with the type errors fixed
+that needs a perf check before landing.
+
+#117's second half is re-scoped to a diskdf consumer migration. Failing nodeids
+are preserved in /tmp/ssp_fix.xml.
