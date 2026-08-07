@@ -26107,3 +26107,32 @@ Attribution arm running in `evdirect` with the fix reverted; it stays reverted
 until the run finishes (restore AFTER, never inside an unobservable window). The
 fix is committed on `feat/diskdf-ssp-traced-perf` and copied to /tmp/keep_fix.py,
 so nothing is at risk.
+
+### 2026-08-07 — the C-ext trap generalises: it fakes SPEEDUPS, not just passes
+
+Folded into [[worktree-missing-c-ext-fakes-passes]], because the instance I hit
+is a different failure mode than the one recorded there. The memory covered
+"missing .so flips ledgered tests to PASS". What nearly happened today is:
+
+    evdirect   C-ext loaded: True     (fix present)
+    slowprune  C-ext loaded: False    (unfixed tip -- the tempting arm)
+
+Running the without-fix arm in `slowprune` would have made orbit sampling fall
+back to Python, come back far slower, and "prove" my diskdf fix responsible for
+a speedup it has nothing to do with.
+
+The asymmetry is worth naming: a missing `.so` makes **correctness** results
+optimistic (tests pass) *and* **attribution** results self-serving (your change
+looks load-bearing). Both errors point the same direction -- toward believing
+your own work mattered. That is precisely the direction I am least likely to
+question, which is why the environment check has to be mechanical rather than
+motivated.
+
+Added the rule: print `_ext_loaded` in every arm, exactly like provenance. An
+A/B across worktrees is an A/B across *environments* until proven otherwise.
+
+And the useful converse, which I got for free: two arms differing in C-ext
+availability that produce **identical** numbers is positive evidence the code
+under test never touches C. The #208 byte hashes matched across a C-ext-True and
+a C-ext-False checkout -- that is how I know those moment quadratures are pure
+scipy.
