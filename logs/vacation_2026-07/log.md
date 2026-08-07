@@ -25539,3 +25539,46 @@ Queue now: **#1266 open**, slow-skip un-defer (`feat/orbit-slow-skip-undefer`,
 2 commits, verified to merge cleanly) next, then `workflow_dispatch(jit=true)`.
 
 Seven merged today: #1260, #1259, #1261, #1262, #1263, #1264, **#1265**.
+
+### 2026-08-07 — ★ the diskdf timeouts are MINE. #1261 caused a >10x traced slowdown. ★
+
+A/B, whole file both sides, provenance printed both sides:
+
+    PRE-#1261 (9bd39007)   124 passed, 5 skipped, 0 failed
+        test_dehnendf_cold_flat_oortA         passed    29.3s
+        test_dehnendf_cold_powerrise_oortA    passed    23.6s
+
+    TIP (199ee10e)         122 passed, 5 skipped, 2 FAILED
+        test_dehnendf_cold_flat_oortA         FAILED   300.0s (timeout)
+        test_dehnendf_cold_powerrise_oortA    FAILED   300.0s (timeout)
+
+**~25 s → >300 s. At least a 10x traced slowdown, introduced by #1261 — my own
+merge from this morning.**
+
+No hedging on this one: I wrote the `_ssp` accessor that routes all 30 diskdf
+call sites through
+
+    def _ssp(self, name, R, **kwargs):
+        out = getattr(self._surfaceSigmaProfile, name)(R, **kwargs)
+        return out if is_backend_array(R) else as_numpy(out)
+
+and under `--jit` that indirection is the obvious suspect: a `getattr`-dispatched
+call inside a traced region is a plausible way to defeat trace caching and force
+recompilation per call. **Suspect, not diagnosis** — the next step is to profile
+it, not to assume.
+
+Two things worth saying plainly:
+
+1. **This is exactly what the traced sweep was for.** #1261 merged green,
+   because `backend-tests`' normal runs carry no `--jit` dimension. Eager jax
+   still passes these tests, so nothing in CI could have seen it. The sweep I
+   ran out of "never idle" caught a regression in my own work within twelve
+   hours of merging it.
+2. **It is a *speed* regression, not a wrong answer.** diskdf computes correctly
+   traced — 122 of 124 pass. That bounds the severity, and it means the fix is
+   an optimisation rather than a correctness repair.
+
+Filed as a task and queued as the next code PR. Not jumping it ahead of #1266
+(open, in CI) or the slow-skip un-defer (committed, verified) — but it goes
+before any new measurement work, because leaving a self-inflicted 10x on the
+integration branch while running more sweeps would be the wrong order.
