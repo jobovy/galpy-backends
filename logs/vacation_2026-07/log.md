@@ -22089,3 +22089,20 @@ slot is now:
 Worth noting how this one arrived: it started as "5 mystery failures inside a df
 migration", and only became a 9-line actionAngle fix because I read the traceback
 instead of assuming the failures belonged to the thing I was working on.
+
+### 2026-08-07 — #205 gating complete
+
+    numpy test_actionAngle Spherical subset    20 passed   (byte-identity)
+    tests/test_backend_actionAngle.py         322 passed   (NO regressions)
+    new 0-d test (2 methods x jax/torch)        4 passed
+    A/B: same test, source fix reverted         4 FAILED
+
+The 322-run was launched BEFORE the new test was added, so that is the
+pre-existing suite count and it is unchanged — the atleast_1d lift does not
+perturb any existing behaviour, which is what you would expect given it is a
+no-op on the 1-d inputs every existing test uses.
+
+#205 is complete and waiting on a slot. Nothing about it is speculative any more:
+mechanism reproduced standalone, contract measured against numpy, fix verified
+bit-identical 0-d vs 1-d on both backends, test A/B'd, no regressions, numpy
+byte-identity intact.
