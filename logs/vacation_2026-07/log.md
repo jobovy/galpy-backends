@@ -25992,3 +25992,24 @@ only red the still-healing codecov phantom; #1267 at 147 pending / 4 pass.
 
 Un-defer probe re-running with the race designed out; no claim until the 5
 target nodeids show as measured rather than skipped.
+
+### 2026-08-07 — codecov phantom: diagnosis confirmed by the trend
+
+    head hits   23911 -> 26803 -> 37412     (49.38% -> 55.36% -> 77.27%)
+    lines       48414 -> 48414 -> 48414     (identical to base throughout)
+
+Three samples climbing monotonically toward base with `lines` pinned is the
+partial-upload signature and nothing else -- a real coverage drop does not heal.
+`codecov/patch` has been SUCCESS the whole time. No action; it clears itself.
+
+Worth keeping the discriminator explicit, because "codecov/project is red" reads
+as a merge blocker and the reflex is to go find code to fix:
+
+    REAL drop     `lines` differs, or head hits stall below base
+    PHANTOM       `lines` identical both sides + head hits climbing + patch green
+
+Also corrected task #178's state: it was marked completed while its own subject
+said "reopened", which is the worst of both. The eager-torch half was fixed
+earlier; the traced half is #1266, **open and in CI** -- so the task is
+in_progress until that merges, with the full A/B and the explicitly-not-covered
+interpRZ result recorded on it.
