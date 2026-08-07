@@ -22929,3 +22929,35 @@ inner limits: no new API surface, and it uses the helper that already exists
 Not starting it this wake — two PRs are open (#1261, #1262), the slow-skip
 branch is held pending its junitxml, and a 2-D quadrature swap in a DF is not
 something to rush into a queue that deep.
+
+### 2026-08-07 — slow-skip verification DONE: all THREE entries hang. Committed 13b2f0c2.
+
+Counts from the junitxml, not the terminal:
+
+    80 tests: 73 passed, 1 skipped, 6 failed   (2138s)
+      skipped  test_streamTrack_multi_parallel      <- my move worked
+      TIMEOUT  test_plotting                (>900s)
+      TIMEOUT  test_fardalwmwpot_trackaa    (>900s)
+      failed   test_bovy14_useTM x4  NotImplementedError: actionAngleTorus wraps
+               the external Torus C++ lib -- out of scope by design, surfaced
+               only because regen mode disables their own ledger entries
+
+So **all three** torch-jit streamdf ledger entries hang, not one. Holding the
+branch to find that out was right: shipping the single-entry move would have
+relocated the wall from test #13 to test #70 and looked like a fix.
+
+My provisional dot-count identification of `test_plotting` last wake was
+correct — confirmed against the junitxml rather than left as inference.
+
+Extended the branch to move all three and committed (13b2f0c2). The commit is
+explicit that the CAUSES are not known to be identical: multi_parallel is a
+directly-observed parallel_map fork deadlock (12 children in futex_wait, parent
+in do_wait, no CPU in the tree), while the other two block in `waiter.acquire`
+and may be a different lock. What they share is the property the ledger cares
+about — they hang rather than fail.
+
+Branch `ledger/streamdf-jit-slowskip` is ready; opening it when a PR slot frees
+(#1261 and #1262 both open, Jo's limit is two).
+
+Also this wake: **#1261's codecov/patch cleared on its own** (38/153 now, only
+codecov/project outstanding) — the same partial-upload heal as #1259 and #1260.
