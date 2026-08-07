@@ -26013,3 +26013,23 @@ said "reopened", which is the worst of both. The eager-torch half was fixed
 earlier; the traced half is #1266, **open and in CI** -- so the task is
 in_progress until that merges, with the full A/B and the explicitly-not-covered
 interpRZ result recorded on it.
+
+### 2026-08-07 — #1267 also red on codecov/project; also a phantom
+
+    #1266  base lines 48414 hits 48394 | head lines 48414 hits 37412  (77.27%)
+    #1267  base lines 48414 hits 48394 | head lines 48414 hits 12511  (25.84%)
+
+Both have `lines` identical on both sides -> uploads pending, not a drop. #1267
+is simply earlier in its run (9 jobs green vs #1266's 78).
+
+**#1267 has a stronger argument available than the discriminator**, and it is
+worth writing down because it is structural rather than statistical: its diff
+touches `tests/backend_slow_skip.txt` and `tests/backend_xfail.txt` and **no
+library file at all**. A PR that changes zero lines of `galpy/` cannot change
+`galpy/`'s coverage. So for that PR, any project-coverage red is a reporting
+artefact by construction, and no amount of waiting-and-checking is needed to
+know it.
+
+Generalises: before reaching for the empirical discriminator, ask whether the
+diff could even produce the failure being reported. Ruling something out from
+the shape of the change is cheaper and stronger than ruling it out from a trend.
