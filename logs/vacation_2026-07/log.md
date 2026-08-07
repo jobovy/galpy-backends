@@ -21061,3 +21061,45 @@ means the patch is not on the path being measured -- and it pointed straight at
 `symmetric_quad`, which resolves the name inside `galpy.backend.quadrature`,
 not in the jeans module. Same family as the import-shadow trap: patch the name
 the CALLEE resolves, not the one that reads naturally.
+
+### 2026-08-06 (later still) — #204 fix attempt REFUTED and reverted
+
+I moved to fold #204 into the jeans PR (same root cause, overlapping files, and
+the granularity policy says group related fixes). Wired `scale=` through
+`symmetric_quad` and passed `scale=R` from `Potential.surfdens()`. Then measured
+it properly -- four potentials, five radii, against a tight scipy reference
+(`epsabs=1e-14`) rather than against the default numpy call:
+
+    potential        R       baseline    scale=R
+    Hernquist      0.001    7.732e-03   3.347e-09   better
+    NFW            0.001    6.189e-03   9.552e-10   better
+    Plummer        0.001    1.336e-09   4.964e-06   WORSE  3700x
+    MiyamotoNagai  8.000    2.350e-08   4.015e-03   WORSE  170000x
+
+**Reverted.** The line-of-sight structure scale is R only for a CUSPED profile
+at small R. Plummer is cored (scale b=0.5), so `scale=R=1e-3` packs half the
+nodes into z<3e-3 where nothing happens; MiyamotoNagai at R=8 has scale height
+b=0.05 << R, so `scale=R=8` is far too coarse. R does not determine the vertical
+scale.
+
+I also dropped the `scale=` parameter I had added to `symmetric_quad` -- with
+no caller it is dead code, and it should arrive with the design that actually
+works.
+
+**This is the same mistake as the earlier `C = Sigma(R)*R/2` one**: I verified a
+promising formula at a single point (Hernquist), got a 2.3e6x improvement, and
+was ready to ship it. One extra potential would have caught it; four did. The
+tell in hindsight is that I could state WHY it helps cusps but had never asked
+what it does to a core.
+
+jeans (#190) is unaffected and stays as committed -- there `scale=r` is correct
+because `sigmar`'s integrand genuinely varies on scale r (it is an integral from
+r outward, not across a profile of independent scale). Branch is fully gated:
+test_jeans 5/5 on numpy+jax+torch; 102 passed across
+test_backend_{jeans,quadrature,anyaxisymdisk}; test_potential
+Ferrers/AnySpherical/AnyAxisym 33 passed under BOTH jax and torch;
+test_sphericaldf constantbeta 46 passed; numpy bit-identity 18/18.
+
+CI note: cancelled run 31129672998 -- a stale `All-backend tests` for #1258 on
+the PRIOR sha e5228120, queued 2h+ and holding a slot in a runner-constrained
+repo. #1259's runs are all on head, nothing stale there.
