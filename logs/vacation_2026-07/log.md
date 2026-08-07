@@ -25695,3 +25695,44 @@ judgement call.
 
 Acceptance run for the #208 fix (`test_diskdf.py --backend=jax --jit`) still in
 flight — no counts until the junitxml lands.
+
+### 2026-08-07 — #208 acceptance PASSED; fix committed on a branch
+
+Whole-file gate, the context that was failing:
+
+    tests/test_diskdf.py --backend=jax --jit   124 passed, 5 skipped, 0 failed (909.9s)
+      test_dehnendf_cold_flat_oortA        43.9s   (was 300.0s TIMEOUT-FAILED)
+      test_dehnendf_cold_powerrise_oortA   37.4s   (was 300.0s TIMEOUT-FAILED)
+
+124/5/0 matches pre-#1261 exactly. (`pgrep` still matched the `timeout` wrapper
+after the run had finished -- the log's final summary and the junitxml are what
+I counted from. That trap has now cost me enough attempts to be reflex.)
+
+**The first version of the regression guard was weak and I nearly shipped it.**
+It asserted on `_ssp`'s return value, but `_ssp` casts back with `as_numpy` on
+both sides of the fix, so the 133k round trip is invisible in the result except
+as float noise -- which jax happens to show and torch does not. It "flipped"
+(4 fail without the fix) entirely by accident of jax's rounding, and would have
+missed the identical regression under torch.
+
+Rewrote it to watch `coerce_coords` itself. Now it flips symmetrically:
+
+    WITH the fix     16 passed
+    WITHOUT the fix   8 failed  (4 jax + 4 torch)
+
+Lesson, and it is the same one as [[value-checks-cannot-see-numpy-fallback]]
+pointed at from the other direction: **when the code under test normalises its
+output, the output cannot witness the bug.** Instrument the step you are
+actually claiming does not happen.
+
+Committed as `1509795d` on `feat/diskdf-ssp-traced-perf`, off the current base.
+Not pushed -- #1266 and #1267 hold both PR slots. Queued third.
+
+**#1266's codecov/project red is the partial-upload phantom, not a real drop:**
+
+    base   coverage=99.95  lines=48414  hits=48394
+    head   coverage=49.38  lines=48414  hits=23911     <- same `lines`, half the hits
+    patch  SUCCESS
+
+Identical `lines` on both sides with head hits at ~half is uploads still
+arriving (144 jobs pending). Self-heals; no action.
