@@ -21830,3 +21830,48 @@ nothing, but it closes that question).
 Standing rule for this log: never infer "a job is running" from a bare `pgrep`
 that could match the shell issuing it — name the child process and check its
 CPU/etime.
+
+### 2026-08-07 — fix-C RESULT (from junitxml, run complete): 47 -> 11
+
+    arm                              failures   passed   time
+    baseline (data-guard)                 0       129     502s
+    fix-A (ssp patch only)               47        82    1203s
+    fix-C (ssp + consumer guard)         11       118    1021s   (~2x baseline)
+    fix-C NUMPY arm                       0       129     414s   <- numpy path untouched
+
+    fix-C FIXES 39 of fix-A's 47 ; introduces 3 new ; ComplexDouble 7 -> 0
+
+Option (b) — `targetSigma2`/`targetSurfacemass` match their OUTPUT namespace to
+their INPUT, so diskdf's numpy branch never receives a Tensor:
+
+    out = self._surfaceSigmaProfile.<...>(R, log=log)
+    return out if is_backend_array(R) else as_numpy(out)
+
+This is the guard MOVED from the leaf to the consumer, which is what
+`leaf-migration-data-guard` prescribes. surfaceSigmaProfile is now genuinely
+backend-native (the island that #117 exists to remove is gone) and diskdf, which
+is not migrated, protects its own boundary.
+
+**The residual collapses from a 6-error-type spread into TWO clean clusters:**
+
+    6  RuntimeError: value cannot be converted to type double without overflow
+       test_dehnendf_cold_{flat,powerfall,powerrise}_oort{A,B}
+    5  IndexError: too many indices for tensor of dimension 0
+       test_shudf_sample_*
+
+The 3 "new" failures are the SAME error as 3 carried over, so it is really one
+6-test oort cluster: the guard changed which values flow and pulled 3 more
+cold-DF cases into the same overflow. Not a new failure mode.
+
+Both clusters are plausibly tractable and unrelated to each other:
+  * oort/overflow — cold DFs have sigma -> 0; something is being converted to a
+    python double that no longer fits. Likely a `float()` on a Tensor holding an
+    extreme value, or a dtype demotion introduced by `as_numpy`.
+  * shudf sampling — 0-d tensor indexing, the same family as the qdf sampler
+    boundary work (#130/#177).
+
+So #117's second half now has a concrete, bounded shape: land the consumer guard
+(47 -> 11, numpy untouched) and chase two clusters, instead of "migrate diskdf".
+
+Numbers derived from /tmp/ssp_fixc.xml after TORCH_RC/NUMPY_RC appeared in the
+log — per [[never-report-partial-run-as-result]], written this same session.
