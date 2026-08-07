@@ -25198,3 +25198,36 @@ disjoint (`backend_xfail.txt` vs `backend_slow_skip.txt`).
 
 PR body updated to match, so the description does not drift from the diff
 ([[pr-description-drifts-after-rework]]).
+
+### 2026-08-07 — codecov: the BASE moved, and it is still the same story
+
+Worth recording because the numbers themselves shifted under me:
+
+    earlier   base 86.06% / 41666 hits      head  25.84% -> 71.95%
+    now       base 99.95% / 48394 hits      head  86.06% / 41666 hits
+
+What I was reading as "base" an hour ago (86.06 / 41666) is now the **head**.
+codecov re-resolved the comparison base once that side finished uploading, so
+the base climbed to 99.95% and the head is following the same curve one step
+behind. head/base hits = 0.861 and rising.
+
+The invariant that makes this diagnosable has held throughout: **lines = 48414
+on both sides**, and `patch: hits=0 misses=0`. A tests-only PR adds no library
+lines, so a real project drop is not a thing that could have happened here. Once
+the last coverage-producing shards land, `all-clear` needs a re-run — the check
+does not re-post itself.
+
+### 2026-08-07 — jit wave 3: the disk-DF modules, traced for the first time
+
+    tests/test_diskdf.py          --backend jax --jit
+    tests/test_evolveddiskdf.py   --backend jax --jit
+
+Chosen deliberately: **both were touched by work that merged today** — #1261
+(surfaceSigmaProfile consumer boundary) and #1264 (evolveddiskdf differentiable
+direct path) — and neither has ever been run traced. So this is a traced check
+on my own merges as much as a coverage sweep, which is the check I would want
+someone to run on me given that today's first traced run of `test_potential.py`
+found a regression introduced by a PR that had merged green.
+
+Whole-file, regen mode, `--timeout=300 --timeout-method=signal`, junitxml.
+No claim until the RCs land.
