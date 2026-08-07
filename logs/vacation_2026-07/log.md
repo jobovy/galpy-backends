@@ -26160,3 +26160,24 @@ were already migrated.
 Attribution arm still running (it has to burn two 300 s oortA timeouts without
 the fix before it reaches the sampling tests). No claim on the 5 un-defers until
 it lands.
+
+### 2026-08-07 — bounded task hygiene
+
+Closed **#133** ("after Pdf.2 merges, start the next DF migration"), verified via
+its own named successors rather than by impression: #136 (qdf / Pdf.4) and #138
+(diskdf+evolveddiskdf / Pdf.3) are both complete, Track F has since moved to
+streams, and the diskdf line has gone far enough to find and fix a regression in
+its own merged code (#208). The coordination task has no remaining content.
+
+**Deliberately did NOT mass-close the other stale-looking in_progress entries**
+(#12, #39, #71, #74, #91, #92, #134). I cannot verify those from the task list
+the way I could verify #133, and a wrongly-closed task is worse than a stale one:
+a stale task is visibly stale, a closed one is invisible. Tidiness is not worth
+losing a thread Jo may care about.
+
+Same reasoning as the #158 correction earlier, from the opposite side: there I
+closed a task because I had measured the ledger and knew it was stale; here I am
+leaving tasks open because I have not.
+
+Attribution arm still burning the two 300 s oortA timeouts it must pay without
+the fix -- ~600 s of its wall time before it even reaches the sampling tests.
