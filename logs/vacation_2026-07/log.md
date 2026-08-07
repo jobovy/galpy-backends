@@ -26136,3 +26136,27 @@ availability that produce **identical** numbers is positive evidence the code
 under test never touches C. The #208 byte hashes matched across a C-ext-True and
 a C-ext-False checkout -- that is how I know those moment quadratures are pure
 scipy.
+
+### 2026-08-07 — ledger comment refresh drafted (staged, not applied)
+
+Wrote the replacement for the stale jax-jit header block to
+`/tmp/ledger_comment_refresh.md`, to go into the **next** ledger PR once #1267
+merges -- #1267 holds `tests/backend_xfail.txt` right now and a concurrent edit
+to the same file buys a conflict for nothing.
+
+The new block states the thing the old one obscured: **7 entries remain and none
+is an unmigrated potential.** Grouped by *why* rather than by test file, since
+"why" is what a future reader needs to decide whether an entry can go:
+
+    AnyAxisymmetricRazorThinDisk   4   by design (GL vs scipy; z=0 Hadamard)
+    units-based density            2   not traceable by construction (Quantity -> numpy)
+    actionAngleStaeckelGrid        1   tolerance (computed e vs an absolute 1e-16)
+
+The old block counted 28 failures across categories that no longer exist. A
+comment that describes a state three weeks gone is worse than no comment: it
+reads as current, and it is what sent task #158 chasing "~5 potentials" that
+were already migrated.
+
+Attribution arm still running (it has to burn two 300 s oortA timeouts without
+the fix before it reaches the sampling tests). No claim on the 5 un-defers until
+it lands.
