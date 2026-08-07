@@ -21394,3 +21394,23 @@ Note on reading the codecov API: its per-line `coverage` field is inverted from
 the obvious reading — covered lines came back as `0` and the single miss as `1`.
 Cross-checked against the file's `hits=17/misses=1` totals before believing it,
 which is the only reason the right line was identified.
+
+### 2026-08-07 — #1260 base check + memory corrected
+
+#1260 is 1 commit behind its base (the #1258 merge) but the file sets are
+DISJOINT — base-ahead touches `backend/interpolate.py` + its test +
+`backend_xfail.txt`, the PR touches `backend/quadrature.py` + `df/jeans.py` +
+their two tests. Zero overlap, so no conflict and no revert risk. **Not
+rebasing**: a stale base is harmless without file overlap, and reflexively
+rebasing is what causes the merged-PR-revert trap. GitHub confirms MERGEABLE.
+If codecov shows a phantom project drop from the stale base it self-heals.
+
+**Corrected `no-numpy-islands-eliminate-fast.md`.** It carried the
+surfaceSigmaProfile recipe (`@backend_input("R")` + `_backend_compatible`) as
+though it were the fix. Applying it exactly as written regresses 11 forced-torch
+tests, because it makes the leaf backend-native while its consumers are still
+numpy — the very condition the OTHER memory says the guard exists for. Added the
+measurement and the resolution (order: migrate consumers first), and marked the
+jeans half RESOLVED with the scale= fix. Two notes describing one file from
+opposite ends, with no cross-reference, is how I ended up applying a recipe whose
+own precondition was documented elsewhere.
