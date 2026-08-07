@@ -24613,3 +24613,22 @@ The first monitor reported every check transition, so it would have woken me
 ~140 times to say "one more check passed". Replaced with one that only fires
 when the **set of red checks changes** or the run **completes**. Same
 information, roughly two notifications instead of a hundred and forty.
+
+### 2026-08-07 — task-list hygiene, verified not assumed
+
+The task list had drifted enough to be misleading, so I closed three entries —
+each after checking, not from memory:
+
+* **#153** streamgapdf migration — `gh pr view` confirms **#1172 and #1173 both
+  MERGED**.
+* **#159** the jit-mode PR stack — all four confirmed MERGED (#1197, #1201,
+  #1200, #1202). My own memory note claiming "#1200/#1202 REBASED BUT UNPUSHED
+  in /var/tmp worktrees" is **stale** and would have had me redo landed work.
+* **#193** jit residue in test_potential.py — superseded by today's burn, which
+  measured the whole file instead of sampling it. Rewrote the description with
+  the definitive breakdown (1262 passed / 118 skipped / **5 failed**: four
+  ledgered-and-confirmed, one un-ledgered regression = #207).
+
+That last one is the useful correction: #193 previously said "2 test-side (1
+FIXED+measured) + 2 not-traceable by design", which was a sample-based guess.
+The measured answer is five, and the fifth is a regression nobody had seen.
