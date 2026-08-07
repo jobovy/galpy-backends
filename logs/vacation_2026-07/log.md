@@ -24449,3 +24449,42 @@ stale in `ledger_sweep.py`. Dry run over the four finished groups:
 Default is a dry run; `--out` is opt-in, so the file is only rewritten once the
 numbers have been looked at. Re-running with `--out` when group 3 lands produces
 the PR's diff directly.
+
+### 2026-08-07 — CORRECTION: the continuous dmin is NOT the fix. It breaks R2deriv.
+
+I tried the candidate for real (scratch worktree at the tip, `dmin = min(max(4|z|,
+R·2⁻ᴷ), R/2)`) and ran the three AnyAxisym `test_potential` nodeids under
+`--backend jax --jit`. Two results, and the second retracts my last entry.
+
+**Confirmed:** `test_forceAsDeriv` now reports
+
+    diff = 1.863754e+00      (analytic cusp 1.8646299572, rel 4.7e-04)
+
+instead of 7.346e+03. The quadrature value is right — the test still fails only
+because its expectation is wrong at a razor-thin midplane, as described.
+
+**Retracted:** `test_2ndDeriv` at the same point gets *much worse*, not better:
+
+    baseline (tip)      R2deriv = -2.42e+04   vs FD = -2.29
+    continuous dmin     R2deriv = -2.03e+11   vs FD = -3.38e+02
+
+A factor ~8e6 worse. That is precisely the regime #1259's own comment warned
+about — "marching panels in makes a finite difference of this potential blow
+up" — because the R2deriv integrand carries `((a−R)²+z²)²` in the denominator,
+i.e. **1/(a−R)⁴ at z=0**, and a floor of `R·2⁻²⁴ ≈ 3e-8` marches panels far
+inside where that is integrable.
+
+**Why I got this wrong:** my four-variant sweep measured criterion A (Φ
+continuity) and criterion B (the *first*-derivative R-FD) and declared `floor`
+correct. It never measured the **second** derivative, which is the quantity that
+actually blows up. I checked the two criteria I had named and then generalised
+past them — the same shape as trusting one arbiter for a quantity it was never
+validated on ([[mpmath-quadosc-final-arbiter]]), one level up.
+
+**Actual state:** the fix is harder than I said. It needs a dmin that is
+continuous in z *and* keeps panels far enough from a=R for a 1/(a−R)⁴ integrand
+— so plausibly a per-integrand floor (Φ and the forces can take a much finer
+floor than R2deriv/z2deriv/Rzderiv can), or a different treatment of the
+singularity altogether. Task #207 updated; the acceptance battery is now
+**three** criteria, not two, and any future candidate gets measured on all of
+Φ, the forces, AND the second derivatives before I call it anything.
