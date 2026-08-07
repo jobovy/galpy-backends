@@ -22028,3 +22028,33 @@ the sibling `_calc_*_backend` methods for the same `[:, None]` assumption.
 Not implementing: both PR slots are occupied and actionAngleSpherical.py lives in
 the worktree currently checked out to #1260's branch. #205 is now specified
 tightly enough to be a short PR when a slot frees.
+
+### 2026-08-07 — #205 IMPLEMENTED and verified (dedicated worktree)
+
+Both PR slots are occupied, so this is prepared-not-opened. Created a CLEAN
+worktree `/var/tmp/aa0d` on a new branch off `origin/feat/backends-develop`
+rather than touching the jeansfix tree that #1260 is checked out in — the
+stacked-branch leak is exactly the mistake to avoid here. C extension built in
+place and confirmed loading (`load_libgalpy()[0] is not None`), so suite results
+are not fake passes.
+
+Fix, 9 lines: `xp.atleast_1d` on the coords in `_setup_backend` (shared by all
+callers, incl. actionAngleAdiabatic) plus the two backend entry points
+`_actionsFreqs_backend` / `_actionsFreqsAngles_backend`, which use the raw
+coords for their own local terms (`vtheta`, `phi`).
+
+Verified against the RIGHT properties, not just "stops raising":
+
+    numpy ref shapes: [(1,), (1,), (1,)]
+    jax    0-d shapes=[(1,), (1,), (1,)]  |0d-numpy|=1.084e-09  |0d-1d|=0.000e+00
+    torch  0-d shapes=[(1,), (1,), (1,)]  |0d-numpy|=5.278e-08  |0d-1d|=0.000e+00
+
+* shape now matches numpy's contract (1,)
+* **0-d is BIT-IDENTICAL to 1-d** on both backends — that is the property the fix
+  is actually about
+* the ~1e-9/5e-8 numpy gap is the pre-existing fixed-order-GL vs adaptive-quad
+  difference, NOT something this change introduces: `atleast_1d` is a no-op on
+  1-d input, so the 1-d result path is untouched by construction
+
+Suites running (numpy test_actionAngle Spherical subset for byte-identity, plus
+test_backend_actionAngle). No claim about them until they report.
