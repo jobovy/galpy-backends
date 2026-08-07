@@ -25736,3 +25736,29 @@ Not pushed -- #1266 and #1267 hold both PR slots. Queued third.
 
 Identical `lines` on both sides with head hits at ~half is uploads still
 arriving (144 jobs pending). Self-heals; no action.
+
+### 2026-08-07 — the #1261 regression was WORSE on torch, and only the rewritten guard sees it
+
+I had measured the regression on jax only. Measured torch, same probe, both arms
+with provenance printed:
+
+    torch TRACED oortA(1.0)    without fix   42.79 s
+                               with fix       4.09 s      <- 10.5x
+
+    (jax, for comparison:      25.26 s -> 4.40 s          <- 5.7x)
+
+**Torch was hit harder than jax, and torch is exactly the backend my first
+regression guard could not see.** That guard asserted on `_ssp`'s return value,
+which `as_numpy` normalises on both sides of the fix; it only "caught" jax
+because jax's round trip perturbs the last bits and torch's does not. Had I
+shipped it, the guard would have been green on the worse of the two cases.
+
+So the rewrite to watch `coerce_coords` was not tidiness -- it was the
+difference between a test that covers the bug and one that covers half of it,
+on the wrong half. Filing the general form under
+[[value-checks-cannot-see-numpy-fallback]]: **a normalised output cannot witness
+what happened upstream of the normalisation.**
+
+Values identical on every arm (`0.4997934813`).
+
+numpy byte-identity gate (`test_diskdf.py`, plain numpy, serial) still running.
