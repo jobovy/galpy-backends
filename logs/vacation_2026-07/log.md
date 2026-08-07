@@ -26064,3 +26064,46 @@ AnyAxisym, ~9 one-offs") against 6 actual entries. The comment outlived the
 entries it describes. Folding the refresh into the next ledger PR rather than
 editing `backend_xfail.txt` now, because #1267 is currently touching that file
 and a second concurrent edit to it buys a conflict for no reason.
+
+### 2026-08-07 — un-defer probe VALID; 5 diskdf sampling entries are stale
+
+Re-run with the race designed out. Validity check first, as pre-registered:
+**0 of 5 skipped**, so the run actually measured them.
+
+    129 passed / 0 failed / 0 skipped   (1295.5s)
+      178.6s  test_dehnendf_sample_flat_returnROrbit
+       64.2s  test_shudf_sample_flat_returnROrbit_rrange
+       60.4s  test_shudf_sample_powerrise_returnROrbit
+       57.3s  test_shudf_sample_flat_returnOrbit
+       30.6s  test_shudf_sample_flat_returnROrbit
+
+All five clear the 240 s margin rule (80% of the 300 s cap), the slowest at 60%
+of it. On CI these should be faster still ([[ci-faster-than-devbox-for-jax-shards]],
+CI/local ~0.71 -> ~127 s for the worst).
+
+**But "they are fast" is not "my fix made them fast", and the difference decides
+which PR they belong in.** My own earlier reasoning said these are orbit-
+integration bound, not `_ssp`-bound. Claiming them in the #208 PR without an A/B
+would be taking credit for someone else's work -- possibly the batched in-backend
+integrator, or the C-STM routing. Running the without-fix arm to attribute it.
+
+**A trap caught before it produced a false answer.** My first instinct was to run
+that arm in `slowprune`, which is already the unfixed tip. Checked first:
+
+    evdirect   C-ext loaded: True
+    slowprune  C-ext loaded: False
+
+Sampling integrates orbits, so without the C extension it would fall back to
+Python, look dramatically slower, and **falsely credit my fix**. Exactly what
+[[worktree-missing-c-ext-fakes-passes]] warns about, and it would have produced
+a confident, wrong, self-flattering result.
+
+It also retro-validates the byte-identity finding: those three hashes matched
+across a C-ext-True checkout (`evdirect`) and a C-ext-False one (`slowprune`),
+which is direct evidence the diskdf moment quadratures never touch the C
+extension -- so that comparison was unaffected by the difference.
+
+Attribution arm running in `evdirect` with the fix reverted; it stays reverted
+until the run finishes (restore AFTER, never inside an unobservable window). The
+fix is committed on `feat/diskdf-ssp-traced-perf` and copied to /tmp/keep_fix.py,
+so nothing is at risk.
