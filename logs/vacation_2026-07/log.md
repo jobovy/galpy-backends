@@ -21324,3 +21324,39 @@ already has the right shape for that split — nothing to undo either way.
 #1258 waiting on `all-clear` + the last backend jax shard (qdf / pv2qdf /
 streamgapdf_impulse / noninertial), 25 min into a 90 min timeout; jax-eager on
 that shard is known-slow, so not yet a concern. 0 failures across the other 149.
+
+### 2026-08-07 — the baseline arm was clean: surfaceSigmaProfile IS the regression
+
+    BASELINE (data-guard) forced torch:  129 passed, 0 failed   RC=0
+    FIX (decorator + flag) forced torch: 11 FAILED
+
+So the 11 are **caused by the change**, not pre-existing. Running the baseline
+arm was the whole ballgame here — I had the failing arm in hand two wakes ago
+and it would have been easy to either ship it as "pre-existing" or to start
+debugging galpy instead of my own patch.
+
+Signature: `TypeError: log()`, `IndexError: too many indices`,
+`TypeError: ufunc 'fabs' not supported` — the numpy-callers-receiving-backend-
+arrays class. diskdf's still-numpy parents (`_vmomentsurfacemass` and friends)
+now get Tensors back from `surfacemass`/`sigma2` and do `numpy.fabs()` /
+fancy-indexing on them.
+
+**The recorded recipe is incomplete, and that is the durable lesson.**
+`no-numpy-islands-eliminate-fast.md` prescribes `@backend_input("R")` +
+`_backend_compatible = True` for this file. That IS necessary — it genuinely
+kills the island (forced backend + numpy input: float64 -> Tensor, and the 8 new
+tests A/B correctly). It is not SUFFICIENT: it makes the leaf backend-native
+while its CONSUMERS are still numpy-only, which is precisely the condition
+`leaf-migration-data-guard.md` says the guard exists for. The two memories
+describe the same file from opposite ends, and the resolution is ORDER: migrate
+the consumers first, then drop the guard.
+
+Re-scoping #117's second half from "remove the guard" to "migrate the diskdf
+consumers, then remove the guard".
+
+**jeans PR ships alone**, as planned last wake. Its branch is 2 commits, 0
+behind base, files disjoint from both open PRs, and surfaceSigmaProfile was
+deliberately never committed — so the split costs nothing.
+
+#1258 still 149/153, 0 fail, waiting on `all-clear` + the jax qdf/noninertial
+shard.
