@@ -21962,3 +21962,39 @@ Recording this INSTEAD of implementing, because a 22-site refactor plus sampling
 helpers is a PR-sized change and both slots are occupied. The value this wake is
 that the next attempt starts from a design that survives contact with the code,
 rather than the one I would have written.
+
+### 2026-08-07 — #117's second cluster is NOT a df bug (actionAngleSpherical, filed as #205)
+
+Read the traceback for the 5 `test_shudf_sample_*` failures instead of assuming
+they were more surfaceSigmaProfile fallout:
+
+    diskdf.sample -> _ELtowRRapRperi -> actionAngle.actionsFreqs
+      -> actionAngleSpherical._actionsFreqs_backend -> _calc_jr_backend
+      -> backend/quadrature.fixed_quad
+      IndexError: too many indices for tensor of dimension 0
+
+Different subsystem entirely. `_calc_jr_backend` builds its integrand assuming
+1-D inputs (`rperi[:, None]`, `E[:, None]`, `L[:, None]`), which raises on a 0-d
+tensor.
+
+**Reproduced standalone, no df involved:**
+
+    actionsFreqs(torch.tensor(v) ...)      -> IndexError
+    actionsFreqs(torch.tensor([v]) ...)    -> OK, Jr = 0.0115033
+
+So it is a PRE-EXISTING actionAngleSpherical backend defect that the ssp
+migration merely routes scalar Tensors into. Same array-safety class as #169
+(AnyAxisym/DoubleExpDisk broadcast). Filed as **#205**, and it does not depend on
+the df work — it can land on its own.
+
+**#117's residual is now fully attributed:**
+
+    6  oort/overflow  -> the 22 unguarded *Derivative consumer sites (mechanism
+                        verified: wrapping all four methods makes oortA(0.9)
+                        return 0.4667253 instead of raising)
+    5  shudf sample   -> actionAngleSpherical 0-d input, i.e. #205, NOT this task
+
+That is the whole 11. Neither cluster is mysterious any more, and one of them
+turns out to belong to a different track — which also means #117's second half is
+smaller than the "47 failures" headline suggested: 6 tests behind a mechanical
+consumer-guard extension, and 5 that leave with #205.
