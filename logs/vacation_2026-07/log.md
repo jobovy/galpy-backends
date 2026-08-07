@@ -22399,3 +22399,36 @@ across independent inputs is the signature of an artifact.
 
 Gate for #117b now 4/5: jaxsurf 12, torchsurf 12, jaxevol 35, torchevol 35, all
 RC=0. jaxdisk (forced jax test_diskdf, the long pole) still running.
+
+### 2026-08-07 — #143 re-scoped: it is NOT a guard-lift, it is a scipy migration
+
+Picked up #143 ("lift evolveddiskdf transitional data-guard -> resolved
+namespace") as unblocked local work, since its file is owned by neither open PR
+and I had just gated it on both backends. Read all five guard sites before
+touching anything, per the #117 lesson that this identical idiom stands in for
+different things at different sites. They are not five instances of one thing:
+
+* **evolveddiskdf.py:525** (grid velocity bounds) and **:2908** (`_buildvgrid`
+  dispatch) are the two REAL transitional gates. Both deliberately gate on
+  `is_backend_array(R)` rather than on a forced backend.
+* **:785** (vertexdev arctan combiner), **:2861** and **:3536** (the two
+  matrix-vector grid reductions) are **not islands at all**. They follow the
+  data: numpy reduction for a numpy grid, backend for a backend grid, and each
+  is correct either way. The dot-vs-matmul split in two of them is a
+  byte-identity requirement (`numpy.dot` differs from `numpy.matmul` by ~ULP on
+  non-contiguous slices, and `torch.dot` is 1-D only). Removing those would
+  break byte-identity for zero gain.
+
+The gate at :525 is load-bearing, and the code says why: the direct-integration
+path is still **scipy.integrate.quad** at lines 3140, 3164, 3214 and 3239.
+Flipping a numpy R to the backend under a forced backend would hand Tensors to
+scipy quad — the exact failure mode that produced #117b's 47-failure leaf-only
+arm. Same ordering constraint, second file.
+
+**So #143 as written is mis-scoped.** It is not a guard removal; it is "migrate
+evolveddiskdf's direct-integration path off scipy.integrate.quad", after which
+the two gates fall out for free. That is a real piece of work, not a follow-up
+tidy, and it is the honest prerequisite. Re-scoped the task rather than starting
+a large migration mid-wait with two PRs already open.
+
+No code changed. The deliverable here is the classification.
