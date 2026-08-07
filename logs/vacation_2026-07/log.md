@@ -24423,3 +24423,29 @@ So: un-defer only entries measured **under 240 s** (80% of cap), and leave the
 next person sees a number rather than an assumption. That keeps ~3 of the 62.
 
 Group 3 (the remaining 60 nodeids) still running; no total until it lands.
+
+### 2026-08-07 — tooling: slow_skip_prune.py, so the un-defer is generated not hand-edited
+
+Wrote `appendices/slow_skip_prune.py` (sibling of `ledger_sweep.py`) rather than
+hand-editing 127 lines. It reads the measurement's junitxml and rewrites the
+slow-skip file, with the two rules that this exercise keeps proving are needed:
+
+* **Margin.** Only un-defer what measured below `--keep-frac` (0.8) of the cap.
+  Entries in the 240-300 s band stay, with their measured time appended as a
+  comment.
+* **Never silently.** Entries that are still too slow keep their nodeid *and*
+  gain the measured seconds, and a comment block whose entries all leave is
+  dropped with it rather than left dangling over nothing.
+
+It also keeps a distinct **NOT OBSERVED** bucket — an entry no shard covered is
+not evidence of anything, exactly as `-jit` entries are UNOBSERVED rather than
+stale in `ledger_sweep.py`. Dry run over the four finished groups:
+
+    UN-DEFERRED (< 240s) : 59
+    KEPT, margin band     :  3   (290.2 / 288.6 / 269.3 s)
+    KEPT, still too slow  :  5   (all exactly 300.0 s, i.e. timeouts)
+    KEPT, NOT OBSERVED    : 60   (group 3 still running)
+
+Default is a dry run; `--out` is opt-in, so the file is only rewritten once the
+numbers have been looked at. Re-running with `--out` when group 3 lands produces
+the PR's diff directly.
