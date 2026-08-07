@@ -20738,3 +20738,45 @@ Process note: two A/B attempts were killed by the 2-minute foreground timeout
 mid-cycle, once leaving the fix stashed and once leaving the ORIGINAL source in the
 worktree. Fixed by running the A/B as a detached `nohup` script that restores the
 file as its last step and prints a RESTORED_FIX sentinel I can check.
+
+### 2026-08-06 (cont) — jeans: TypeError fixed, residual localised to ONE grid point, NOT root-caused
+
+Progress on the 5 suppressed failures, and an honest stop.
+
+FIXED: the torch `TypeError: exp(): argument 'input' must be Tensor, not float`
+at jeans.py:84. With the guard gone, `xp` is torch but `r` is still a numpy
+scalar, so `quad(...)` returns a plain float that `xp.exp` rejects. Added
+`r = xp.asarray(r)` at the top of the backend branch --
+[[coerce-under-forced-not-dataguard]]. TypeError gone.
+
+RESIDUAL, localised: the remaining assertion failures are ONE grid point. Reading
+the actual error array instead of the summary:
+
+    [1.09858457e-02, 1.99840144e-15, 1.12132525e-14, 9.54791801e-15, ...]
+
+Only element 0 is bad. rs = linspace(0.001, 5.0, 101), so that is r = 0.001, the
+smallest radius; the other 100 points are at 1e-15. Tolerance is 1e-10 ABSOLUTE.
+
+But OUTSIDE pytest I cannot reproduce it. Same potential, same dens/beta, same
+forced torch, r=0.001:
+
+    |torch - analytic| = 1.0755e-11   -> PASSES
+
+Full 101-point scan outside pytest: numpy max 4.58e-11, torch max identical,
+|torch - numpy| max 5.55e-17 (bit-identical).
+
+Two hypotheses tested and REFUTED:
+  - float32 downcast in my `xp.asarray(r)`: `asarray(numpy.float64(0.001))`
+    returns torch.float64, no downcast.
+  - torch default dtype: 1.0755e-11 under BOTH float32 and float64 defaults.
+
+So the discrepancy is induced by the pytest harness, not by the source change in
+isolation -- and it is not test ordering either, since `-k sigmar_wlog_linbeta`
+selects a single test and still fails. The remaining suspect is what conftest
+installs under `--backend torch` (the coercion boundary), which I have not yet
+diffed.
+
+NOT root-caused. Recording the localisation rather than guessing a third time:
+one grid point, r=0.001, 1.1e-2 absolute, pytest-only, source matches numpy
+bit-for-bit outside pytest. Next step is to diff the conftest-managed environment,
+not to keep adjusting the source.
