@@ -21245,3 +21245,28 @@ That shrinks the island backlog a lot: `coords` is deliberate (removing it cost
 Gate still running: forced-torch `test_diskdf` (numpy arm 129 passed, 7 min).
 Not committing surfaceSigmaProfile until it clears — the recorded baseline for
 dropping this guard naively was forced torch 125/134.
+
+### 2026-08-07 — gate-process uncertainty (flagged, not concluded)
+
+The forced-torch `test_diskdf` gate for the surfaceSigmaProfile change keeps
+reading ~8 min elapsed each time I check it, across several wakes. It IS
+computing (103% CPU, R state, 858 MB RSS), so it is not hung -- but a process
+launched wakes ago should show a much larger `etime`. Two possibilities: it is
+being killed and re-spawned each wake (so it never finishes), or I misread an
+earlier check.
+
+Discriminating check recorded rather than guessed: **PID 3248558**. If the next
+wake shows a different PID, it is restarting, and the fix is to relaunch under
+`setsid`/`nohup` writing to a file so wake handling cannot disturb it (and NOT
+piped through `tail`, which buffers until exit -- that bit me earlier on the
+jit census).
+
+Holding the surfaceSigmaProfile commit until this gate reports either way. The
+numpy arm is done (129 passed) and the new forced-backend tests A/B correctly,
+but the recorded baseline for dropping this guard naively was forced torch
+125/134, so the torch arm is the one that matters.
+
+#1259 codecov: `codecov/project` self-healed as uploads landed; only
+`codecov/patch` remains, and the whole-file report shows 3 misses / 220
+statements in AnyAxisymmetricRazorThinDiskPotential.py. Not acting on that
+while 26 checks are still uploading -- mid-upload codecov numbers are not real.
