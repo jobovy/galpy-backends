@@ -23415,3 +23415,30 @@ explanation for something that looked like a stall (the first was #1262 sitting
 at 0/151 for over an hour). Worth holding onto: with two ~150-check PRs open,
 the pool is the binding constraint, and "PR A's flake re-run waits on PR B's
 queue" is a normal state rather than a fault.
+
+### 2026-08-07 — #143 FULLY GATED (00544f07): 0 failures across all four arms
+
+Counts from the junitxml, all four arms of the re-gate on the post-fix tree:
+
+    test_evolveddiskdf   numpy    35 passed, 0 failed
+    test_evolveddiskdf   torch    35 passed, 0 failed   <- was 7 FAILED pre-fix
+    test_evolveddiskdf   jax      35 passed, 0 failed
+    test_backend_evolveddiskdf    41 passed, 0 failed   (38 pre-existing + 3 new)
+    -------------------------------------------------
+    TOTAL FAILURES: 0
+
+The torch arm is the one my `xp is not numpy` gate broke; it is now clean, so the
+`is_backend_array` fix is confirmed on exactly the case that exposed it rather
+than argued for in the abstract.
+
+#143 is therefore complete locally: two commits (9ef805e8 extraction +
+e35b5541 direct backend branch) plus 00544f07 (the gate fix), self-audit PASS on
+all three merge criteria, PR body drafted, branch base current. It opens as soon
+as a PR slot frees.
+
+**#1261's flaky-shard re-run finally went through.** The chain I traced last wake
+resolved exactly as expected: the queued `backend status report` job got a
+runner, the run completed, and the targeted re-run was accepted (empty `{}`).
+#1261's check count reset to 106/109 while the re-run repopulates. No code
+change was needed anywhere — the red was the known jax NonInertial
+`Timeout (>300s)`.
