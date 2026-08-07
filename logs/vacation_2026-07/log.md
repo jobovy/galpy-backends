@@ -21771,3 +21771,37 @@ Running tally of retractions on this single investigation: 11 -> 38 -> 47
 failures; "0 failures" -> "5" -> "halves" -> identical; "9x slower" -> same
 speed. Every one came from reporting a partial or mis-read observation instead
 of the finished measurement.
+
+### 2026-08-07 — option (b) survives a 3-way falsification test
+
+With fix-B refuted, the corrected mechanism points at the CALL SITE inside the
+numpy branch, not the dispatch. Option (b): make `targetSigma2` /
+`targetSurfacemass` match their OUTPUT namespace to their INPUT —
+
+    out = self._surfaceSigmaProfile.<...>(R, log=log)
+    return out if is_backend_array(R) else as_numpy(out)
+
+Structurally this MOVES the guard from the leaf to the consumer, which is what
+`leaf-migration-data-guard` actually prescribes: surfaceSigmaProfile becomes
+genuinely backend-native (island gone, which was the point of #117), and
+diskdf — not yet migrated — protects itself explicitly at its own boundary.
+
+Falsification run on one test from each of the three biggest error classes:
+
+    test_dehnendf_call_sanity   (NotImplementedError ComplexDouble)
+    test_surfacemass            (IndexError, 0-d array)
+    test_call_diffinputs        (TypeError, ufunc 'fabs')
+    -> 3 passed
+
+**That is a failed falsification, NOT a result.** Three passing says nothing
+about 47; fix-B looked clean for 16 items and ended up fixing exactly zero. Full
+whole-file A/B (torch + numpy arms, --junitxml) queued behind the currently
+running numpy arm. No claim about option (b) until TORCH_RC is in the log.
+
+Method note: my patch script's `assert count == 1` fired and stopped a bad edit
+— the target string is also a SUBSTRING of two other lines
+(`... surfacemass(R, log=log) + numpylog(d)`), so a naive replace would have
+silently corrupted `targetSurfacemassLOS`. Redone line-anchored with an
+assertion on the stripped line content. The single-test run I did before
+noticing showed a FAILURE, which I nearly read as "option (b) doesn't work" —
+it was just the unpatched file.
