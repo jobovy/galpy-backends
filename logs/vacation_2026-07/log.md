@@ -25429,3 +25429,34 @@ So the audit the loop asks for is satisfied on all three counts, and satisfied
 by inspection of the actual diff. #1265 stands at 152 pass / 0 fail / 2 pending
 (one py3.14 `test_backend*` shard, then `all-clear`). Merging as soon as those
 two are green.
+
+### 2026-08-07 — the diskdf traced failures are TIMEOUTS, not wrong answers
+
+    tests/test_diskdf.py --backend jax --jit
+    122 passed, 5 skipped, 2 failed
+
+    300.0s  test_dehnendf_cold_powerrise_oortA   Timeout (>300.0s)
+    300.0s  test_dehnendf_cold_flat_oortA        Timeout (>300.0s)
+
+Both are Oort-A tests — DF derivatives, which under `--jit` means a lot of
+compilation. So the answer to "did #1261 break diskdf traced?" is at least
+narrowed: **nothing computes the wrong value**; two tests do not fit the cap.
+
+That is a materially calmer finding than the FF looked, and it is worth saying
+so rather than letting the earlier "second regression?" framing stand. But it is
+not yet settled either way — a *speed* regression is still a regression, and
+#1261 did route 30 diskdf call sites through the new `_ssp` accessor.
+
+So the A/B runs, on the whole file, on the pre-#1261 base (`9bd39007`, the
+worktree I pre-built for exactly this):
+
+    PROVENANCE printed first, as every run does now.
+
+If both time out there too, they are pre-existing and belong in the torch-jit /
+jax-jit slow-skip list with their measured number — the same treatment the two
+interpRZPotential tests got. If they pass there, #1261 slowed them and that is
+mine to fix.
+
+Either way these are **two more latent reds** that only stay invisible because
+`backend-tests`' normal runs carry no `--jit` dimension: neither nodeid is in the
+ledger, and the 5 skipped entries in this file are all `*_sample_*`.
