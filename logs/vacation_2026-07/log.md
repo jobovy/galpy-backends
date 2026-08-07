@@ -21805,3 +21805,28 @@ silently corrupted `targetSurfacemassLOS`. Redone line-anchored with an
 assertion on the stripped line content. The single-test run I did before
 noticing showed a FAILURE, which I nearly read as "option (b) doesn't work" —
 it was just the unpatched file.
+
+### 2026-08-07 — lost a wake to a pgrep self-match; fix-C now genuinely running
+
+Last wake I guarded the fix-C launch with
+
+    pgrep -f "pytest tests/test_diskdf" >/dev/null && echo "(prior run still going)" || launch
+
+It printed "(prior run still going)" and skipped the launch. **There was no such
+run** — fix-B had finished (DONE 03:51:23, NUMPY_RC=0). The only match was the
+Bash tool's own wrapper process, whose command line contains the pattern I was
+grepping for. So the guard blocked on itself and a whole cycle produced nothing.
+
+Same family as the import-shadow trap: the probe measured the prober. Fix is the
+same discipline — confirm POSITIVELY, and exclude the wrapper:
+
+    pgrep -fa "python -m pytest <...>" | grep -v "bash -c source"
+
+fix-C is now verified running: script PID 3291935, pytest child 3291937, items
+appearing in the log. Also confirmed from the completed fix-B: **NUMPY_RC=0**, so
+the widened dispatch did not disturb the numpy path (moot, since fix-B fixes
+nothing, but it closes that question).
+
+Standing rule for this log: never infer "a job is running" from a bare `pgrep`
+that could match the shell issuing it — name the child process and check its
+CPU/etime.
