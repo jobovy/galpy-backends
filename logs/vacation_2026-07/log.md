@@ -21026,3 +21026,38 @@ attempt to "fix" it by passing `scale=R` made it slightly WORSE (3.593e-03 ->
 3.844e-03) and was insensitive to n=50/100/200 -- identical to four digits
 across a 4x node change, which is the tell that the error is not in that
 quadrature at all.
+
+### 2026-08-06 — #204 root-caused: same fixed-unit-scale bug, one layer up
+
+The `sigmalos` residual is `Potential.surfdens()`'s `z is None` branch:
+
+    _bquad.symmetric_quad(xp, integrand, numpy.inf, n=50)
+
+whose infinite branch is two bare `fixed_quad_semiinfinite` calls with **no
+scale**. Integrand is `rho(sqrt(R**2+z**2))` -- a cusp of width ~R that the
+fixed unit-scale map cannot resolve. Same root cause as #190, one layer up.
+
+Threading `scale=R` through (measured, patching `symmetric_quad`):
+
+    R        current      scale=R
+    0.001    7.732e-03    3.347e-09
+    0.010    1.947e-05    9.699e-09
+    0.100    1.312e-08    1.312e-08
+    1.000    2.483e-08    2.483e-08
+
+2.3e6x better at R=1e-3, no harm above. **The ~1.3e-8 floor is scipy's, not
+ours**: it is identical for n=50 and n=100, and `integrate.quad`'s default
+`epsabs` is 1.49e-8. The scaled backend is more accurate than the numpy
+reference it is measured against -- so the eventual test must use the closed
+form, exactly as the jeans test does.
+
+Not implemented yet: it touches `galpy/backend/quadrature.py`, which the queued
+jeans branch owns. Stacks after it.
+
+Method note: my first attempt to characterise this monkeypatched
+`jeans.fixed_quad_semiinfinite` and saw n=50/100/200 give byte-identical
+answers. I read that correctly this time -- a 4x node change that moves nothing
+means the patch is not on the path being measured -- and it pointed straight at
+`symmetric_quad`, which resolves the name inside `galpy.backend.quadrature`,
+not in the jeans module. Same family as the import-shadow trap: patch the name
+the CALLEE resolves, not the one that reads naturally.
