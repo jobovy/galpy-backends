@@ -22228,3 +22228,35 @@ is "the island is gone and correctness is exact, at a 2.8x cost on this suite,
 and vectorizing diskdf's velocity-grid loops is the follow-up that buys it back".
 
 numpy arm still running — byte-identity not yet confirmed, no claim on it.
+
+### 2026-08-07 — #117b committed (83e46fa6); #1260 codecov re-diagnosed
+
+fix-D committed on fix/diskdf-ssp-boundary. numpy arm also finished:
+129 passed, and I checked the thing 129-passed cannot see — whether coercing R
+changes the numpy RETURN TYPE. A/B against the unmodified tree, 16 cases
+(4 methods x log={False,True} x scalar/array), compared as .view(int64):
+**bit-identical AND type-identical**, scalar-in still gives float64. (My first
+probe had a stray `break` that silently skipped every log=True case; the
+log=True branch returns `-R/h` with no ufunc, so it was exactly the branch most
+likely to leak a 0-d array. Caught it by re-reading the probe, not the output.)
+
+diskdf.py is the ONLY consumer of surfaceSigmaProfile in the tree (checked by
+grep across galpy/, excluding the re-exports in df/__init__.py), so the `_ssp`
+boundary is complete and cannot be bypassed by a future call site.
+
+Gate dispatched: test_backend_surfacesigma + test_evolveddiskdf + test_diskdf
+under forced jax AND torch. First two arms in: jaxsurf 12 passed,
+torchsurf 12 passed.
+
+**Correction on #1260's codecov/project.** I have been calling it a stale-base
+phantom for several wakes. It is not. `fa80b2f0` IS the true merge-base
+(`git merge-base` confirms, and feat/backends-develop is only 1 commit ahead).
+The drop is entirely on the HEAD side: base misses=20 vs head misses=144, same
+base, with 7 shards still to upload. So it is a partial-upload phantom, and the
+remedy is the same — wait for the uploads — but the reasoning I had recorded was
+wrong and would have sent me looking at the wrong end. patch stays 100% (11/0).
+
+#1259 picked up a windows test_orbit red: started 04:56:20Z, completed
+05:56:22Z, no step marked failure = a 60-minute job timeout, not an assertion,
+and unrelated to its AnyAxisym diff. Targeted re-run rejected with 403 (the run
+still has jobs in flight); retry once it settles.
