@@ -25057,3 +25057,37 @@ having no `--jit` dimension in its normal runs. Two independent 300 s
 measurements, so they belong in the torch-jit slow-skip list with the number
 recorded — a deferral I would rather make now, before the
 `workflow_dispatch(jit=true)` run turns them into a surprise red.
+
+### 2026-08-07 — first-ever traced run of test_actionAngle.py: 179/209, and 3 failures with numbers
+
+    tests/test_actionAngle.py --backend jax --jit
+    179 passed, 27 skipped, 3 failed
+
+**The reading-based classification I made earlier was right, and now it has
+numbers instead of adjectives:**
+
+| test | measured | bar | verdict |
+|---|---|---|---|
+| `actionAngleAdiabatic_linear_angles_cylsep` | dev from linear trend **2.34757e-07** | `1e-7` | **tolerance** — off by 2.35x |
+| `actionAngleStaeckelGrid_basicAndConserved_actions` | circular-orbit **e = 9.363e-12** | `1e-16` | **tolerance** — the bar asks a computed eccentricity to be zero to 1e-16 |
+| `actionAngleAdiabaticGrid_outsidegrid_c` | off-grid Jr err **4.7e-3** | `1e-8` | **by design** — the backend path is grid-only (docstring), and the test evaluates at R=3.0 against an Rmax=2.0 grid |
+
+So of the file's three traced failures, **two are tolerance and one is the
+documented off-grid gap**. Nothing here is a correctness defect.
+
+**And a ledger gap.** `actionAngleStaeckelGrid_basicAndConserved_actions` is
+ledgered for **torch only**. Since `-jit` inherits the *same* backend's eager
+entries, `jax-jit` does not cover it — so under jax-jit this is an **un-ledgered
+failure**, the second traced-only gap found today after the #1259 regression. It
+is not a jax-eager failure (CI's eager jax matrix has no entry for it), so
+tracing genuinely changes the arithmetic here: eager jax lands under 1e-16,
+traced jax lands at 9.4e-12. Fusion/reassociation, which is exactly what tracing
+is allowed to do.
+
+**This is the evidence for the tolerance batch that needs Jo** (#171). Two
+entries, both with the measured number and the bar, plus a third that is a
+design gap and should stay ledgered with that reason. I am not touching any
+tolerance without sign-off; this is the proposal, measured.
+
+Headline worth keeping: **test_actionAngle.py is 179/209 under jax --jit on its
+first traced run** — the AA migration traces far better than anyone had checked.
