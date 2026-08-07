@@ -24976,3 +24976,24 @@ that `pgrep -f "pytest ..."` matches `timeout -s SIGKILL 1800 python3 -m pytest
 Added to [[never-report-partial-run-as-result]]: pick the worker by `threads > 5`
 or check `pgrep -P` before concluding anything from a CPU reading. A 0%-CPU
 process is not evidence of a hang until you know it is the process doing work.
+
+### 2026-08-07 — dispatched traced-progress measurement on test_actionAngle.py
+
+CPU freed up (burn done, orbit sweep done), and the loop's own "never idle" list
+names *dispatch a jit run to measure traced progress*. `test_actionAngle.py` has
+**never been run under `--jit`** — and running `test_potential.py` traced for the
+first time today is exactly what surfaced the #1259 regression, so the expected
+value here is not zero.
+
+    tests/test_actionAngle.py --backend jax --jit
+      whole file (not a nodeid batch), GALPY_BACKEND_XFAIL_REGEN=1 so ledgered
+      entries actually execute, --timeout=300 --timeout-method=signal, junitxml
+
+Two of the file's ledger entries are the ones I flagged as tolerance-shaped from
+reading (`actionAngleAdiabatic_linear_angles_cylsep`,
+`actionAngleStaeckelGrid_basicAndConserved_actions`), so this also puts numbers
+on the reading. No claim until the RC lands.
+
+Note on the counting: `--timeout-method=signal` means a "passed" that took
+longer than the cap is possible (measured today at 620 s), so the report treats
+time and outcome as separate facts.
