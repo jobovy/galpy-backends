@@ -22314,3 +22314,32 @@ evidence. Same lesson as [[reread-failure-before-investigating]].
 
 Re-run still blocked: 403 "workflow run containing this job is already running"
 while #1259 has 24 jobs in flight. Retry when the run settles.
+
+### 2026-08-07 — #188 adopted (ed82126d), and my predicted risk was WRONG
+
+Last entry I flagged that adopting `assert_jit_matches_eager` in
+test_backend_disk.py's RazorThin jit test might trip the helper's
+dependence assertion at the z=0 points, where zforce is zero by symmetry, and
+said to measure rather than assume. Measured: **0 of 24 (3 methods x 8 points)
+trip it.**
+
+The reason is worth keeping. `zforce` at z=0 returns exactly 0.0 and still
+reports `depends=True`, because the check is STRUCTURAL — does the jaxpr
+consume its invars — not numerical. I had conflated "the output value is zero"
+with "the output does not depend on the inputs". Those are different
+properties, and only the second one is what the helper guards against.
+
+Adopted with `ref=float(call(R0, z0))`, which keeps the plain-float eager call
+as the reference while the jitted side gets traced arrays. That float-vs-array
+cross was the original test's point; letting the helper compute its own
+reference from the same traced args would have silently narrowed the test to
+array-vs-array while looking like a pure refactor.
+
+Verified the new assertion has teeth rather than being decorative: a
+deliberately constant lambda is rejected with "jit trace ignores its
+arguments". A check that cannot fail is not worth adding.
+
+tests/test_backend_disk.py 240 passed, 4 skipped. Worktree /var/tmp/jitadopt,
+branch test/jit-helper-adoption, C ext built there (not inherited).
+
+Queue is now: #1260 -> merge, #1259 -> merge, then #117b (83e46fa6), then this.
