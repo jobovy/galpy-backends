@@ -24919,3 +24919,43 @@ have caught the #1259 regression.
 currently the binding constraint on landing three ready PRs; adding it now would
 slow the thing I most need. Queued as the next CI action once the pipeline
 drains.
+
+### 2026-08-07 — codecov phantom confirmed self-healing (by trend, not argument)
+
+    first look   head hits 12511 / base 41666 = 0.30   coverage 25.84%
+    now          head hits 34837 / base 41666 = 0.836  coverage 71.95%
+    base                                               coverage 86.06%
+    lines: 48414 on BOTH sides throughout
+
+Climbing toward the base as shards upload, exactly as the partial-upload
+diagnosis predicted, with `lines` identical on both sides the whole time (a
+tests-only PR adds no library lines). When it settles, `all-clear` will need a
+re-run — the check does not re-post itself.
+
+---
+
+## Ledger + slow-skip: where today's measurements leave things
+
+**Ledger (`backend_xfail.txt`), 16 entries at the start of the day:**
+
+| entries | status after today |
+|---|---|
+| 2 | `actionAngleAdiabaticGrid_outsidegrid_c` (jax+torch) — **by design**, both grid classes' docstrings say the backend path is grid-only with no off-grid fallback, and the test evaluates at R=3.0 against an Rmax=2.0 grid. Tracked by #103. |
+| 2 | `qdf::test_call_diffinoutputs` (jax+torch) — **by design** (#175). |
+| 2 | `actionAngleAdiabatic_linear_angles_cylsep` (jax+torch) — read, not run: `check_actionAngle_linear_angles` at 1e-8/1e-7.5/1e-7 on a `gamma=0.0` separable wrapper. **Tolerance-shaped → needs Jo.** |
+| 1 | `actionAngleStaeckelGrid_basicAndConserved_actions` (torch) — ON-grid, asserts `\|Jr\| < 1e-16` for a circular orbit. **Tolerance-shaped → needs Jo.** |
+| 3 | `test_analytic_ecc_rperi_rap` ×2, `test_analytic_zmax` — measured as **timeouts (>600 s)**, not correctness failures, so mis-filed; but the ledger header records that this exact nodeid "passes locally, xfails in CI group g3", so the reclassification is **held** pending CI artifacts. |
+| 4 | jax-jit `test_potential` (2 AnyAxisym + 2 pickling) — **CONFIRMED still failing** by the burn. My "these burn when #1259 merges" prediction: refuted. |
+| 1 | torch-jit `test_poisson_surfdens[AnyAxisym]` — **measured PASSING (34.7 s)**, i.e. stale; prune held because only a local run can see `-jit`, and a wrong prune is a red. |
+| 1 | jax-jit `test_orbit::test_eccentricity` — unmeasured. |
+
+Plus **one un-ledgered regression found**: `test_forceAsDeriv_potential[AnyAxisym]`,
+introduced by #1259, failing on **both** jit backends (#207).
+
+**Slow-skip (`backend_slow_skip.txt`): 210 → 110 measured**, PR committed locally.
+88% of the measured orbit entries were stale.
+
+**Traced state of `test_potential.py`**, whole file, regen mode:
+
+    jax-jit    1262 passed / 118 skipped / 5 failed
+    torch-jit  1282 passed / 102 skipped / 1 failed
