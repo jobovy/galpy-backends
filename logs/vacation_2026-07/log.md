@@ -24708,3 +24708,44 @@ print `galpy.__file__` as its first line and I must read it, or be run as
 `python3 -m` / with `PYTHONPATH=<worktree>`. A probe that cannot say which code
 it measured is not evidence. Adding this to the memory rather than trusting
 myself to remember it.
+
+### 2026-08-07 — orbit slow-skip sweep COMPLETE: 210 -> 110, and a bug in my own tool
+
+All five groups finished. Of the 127 lifted `jax tests/test_orbit(s).py` entries,
+114 were covered by the run and 104 passed. But **104 is not the answer**, and the
+reason is a bug I found in my own tooling before it reached a PR.
+
+The report listed, under *"NOW RUNNABLE (passed inside the 300 s cap)"*:
+
+    620.3s  tests/test_orbit.py::test_lyapunov_spectrum_henonheiles_chaotic
+
+620 s cannot be "inside the 300 s cap". **`passed` does not imply "within the
+cap"**: `--timeout-method=signal` fires only when Python bytecode resumes, so a
+test that spends its time inside a long C call overruns the timeout and still
+reports passed. Both my scripts classified purely on outcome, so that entry was
+about to be un-deferred — and would have blown the shard budget in CI.
+
+Fixed `slow_skip_prune.py` to give it its own bucket, and re-ran:
+
+    UN-DEFERRED (< 240 s)                 : 100
+    KEPT, passed but OVERRAN the cap      :   1   <- the new bucket
+    KEPT, margin band (240-300 s)         :   3
+    KEPT, still too slow (all exactly 300):  10
+    KEPT, not observed by any shard       :  13
+
+    slow-skip 210 -> 110  (jax 192->92, torch 15, torch-jit 3)   [verified: 210-100=110]
+
+Every retained entry now carries its measured time in the file, e.g.
+
+    jax ...::test_SOS_3D  # 269s -- inside the cap, but within 20% of it
+    jax ...[RotateAndTiltWrapperPotential_offset]  # 290s -- inside the cap, but within 20% of it
+    jax ...[RotateAndTiltWrapperPotential_norot_offset]  # 300s (failed)
+
+so the next reader sees numbers, not assumptions.
+
+**Rate of staleness: 100 of 114 measured entries (88%) were no longer slow** —
+the batched in-backend integrator and C-STM work had made them fast and nothing
+had gone back to check.
+
+This is queued as the next PR, behind the fork fix; I am not opening a third
+while #1265's suites are still working through the runners.

@@ -93,7 +93,7 @@ def main(argv=None):
         parts = line.split(None, 1)
         return len(parts) == 2 and parts[0] == args.key and want.search(parts[1])
 
-    dropped, kept_slow, kept_margin, kept_unseen = [], [], [], []
+    dropped, kept_slow, kept_margin, kept_over, kept_unseen = [], [], [], [], []
     out, i = [], 0
     while i < len(lines):
         if not lines[i].startswith("#"):
@@ -117,7 +117,16 @@ def main(argv=None):
                 new_entries.append(e)
                 continue
             res, secs = seen[nid]
-            if res == "passed" and secs < keep_above:
+            if res == "passed" and secs >= args.cap:
+                # "passed" does NOT imply "within the cap": --timeout-method=signal
+                # cannot interrupt a long call into C, so a test can overrun the
+                # timeout and still report passed. Measured: one entry at 620.3 s
+                # under a 300 s cap. These must stay deferred.
+                kept_over.append((secs, nid))
+                new_entries.append(f"{e}  # {secs:.0f}s -- OVERRAN the {args.cap:.0f}s cap "
+                                   f"but reported passed (signal timeout cannot "
+                                   f"interrupt C)")
+            elif res == "passed" and secs < keep_above:
                 dropped.append((secs, nid))
             elif res == "passed":
                 kept_margin.append((secs, nid))
@@ -139,6 +148,9 @@ def main(argv=None):
         print(f"    {s:7.1f}s  {n}")
     if len(dropped) > 10:
         print(f"    ... and {len(dropped) - 10} more")
+    print(f"\nKEPT, PASSED BUT OVERRAN the {args.cap:g}s cap: {len(kept_over)}")
+    for s, n in sorted(kept_over, reverse=True):
+        print(f"    {s:7.1f}s  {n}")
     print(f"\nKEPT, margin band ({keep_above:g}-{args.cap:g}s): {len(kept_margin)}")
     for s, n in sorted(kept_margin, reverse=True):
         print(f"    {s:7.1f}s  {n}")
