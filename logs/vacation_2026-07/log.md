@@ -21197,3 +21197,51 @@ Corroborating detail: the push-event `run-notebooks (3.14)` for the same commit
 had already PASSED, so the same notebook on the same code succeeded minutes
 earlier -- which is what a network flake looks like and what a real break does
 not.
+
+### 2026-08-07 — #117 surfaceSigmaProfile, and a rule for the guard idiom
+
+Picked up #117 (remove the Pdf.1 leaf data-guards). The 2026-08-03 measurement
+had split it in two: **jeans** blocked on #190's accuracy problem, and
+**surfaceSigmaProfile** with a known recipe. #190 is now fixed on the jeans
+branch, so both halves are unblocked. Disjoint files under one task -> folding
+surfaceSigmaProfile into the jeans PR rather than opening a fourth branch.
+
+The recorded recipe was exact and saved a wrong turn: `@backend_input("R")`
+**plus** `_backend_compatible = True` — the decorator is INERT without the flag,
+because `_input.py` gates coercion on `_backend_ready(self)`. Flag goes on
+`expSurfaceSigmaProfile`, not the base: a user subclass of
+`surfaceSigmaProfile` may still be numpy-only.
+
+A/B, forced backend + numpy-typed input, `is_backend_array(result)`:
+
+    OLD (data-guard):  float64  / float64    <- computed on numpy inside a backend run
+    NEW (decorator):   ArrayImpl/ Tensor
+
+so a type assertion genuinely discriminates here — unlike jeans, where an
+exit-cast made the same assertion pass for the wrong reason. Checked that
+before writing the test, and the 8 new forced-backend tests all fail against
+the old source.
+
+**The bigger result: the guard idiom is NOT uniformly an island.** I nearly
+treated all ~25 remaining sites as the same bug. Measured instead:
+
+    verticalPotential.__call__        BACKEND / BACKEND
+    IsothermalDiskPotential.__call__  BACKEND / BACKEND
+    FerrersPotential.Rforce           BACKEND / BACKEND
+    SoftenedNeedleBar.Rforce          BACKEND / BACKEND
+    AnyAxisymRazorThin.Rforce         BACKEND / BACKEND
+
+All inert, because the public entry point already carries a coercing
+`@backend_input` boundary, so by the time the guard runs the data IS a backend
+array. Rule, now in #150:
+
+> the guard is an island only at an ENTRY POINT with no coercing decorator;
+> downstream of a coercing boundary it is redundant, not wrong.
+
+That shrinks the island backlog a lot: `coords` is deliberate (removing it cost
+6 hard-red failures in #1191), the potential/actionAngle guards are inert, and
+`evolveddiskdf` (#143) is the main one genuinely left.
+
+Gate still running: forced-torch `test_diskdf` (numpy arm 129 passed, 7 min).
+Not committing surfaceSigmaProfile until it clears — the recorded baseline for
+dropping this guard naively was forced torch 125/134.
