@@ -23442,3 +23442,20 @@ runner, the run completed, and the targeted re-run was accepted (empty `{}`).
 #1261's check count reset to 106/109 while the re-run repopulates. No code
 change was needed anywhere — the red was the known jax NonInertial
 `Timeout (>300s)`.
+
+### 2026-08-07 — #1261: flaky shard re-run PASSED; all-clear re-run requested
+
+The jax shard `test_qdf/test_pv2qdf/test_streamgapdf_impulse/test_noninertial`
+came back **COMPLETED/SUCCESS** on re-run, confirming the earlier red was the
+known jax NonInertial `Timeout (>300s)` flake and not a defect — no code change
+was made or needed.
+
+That left `all-clear` as the sole red, LATCHED from when the shard was failing,
+with 0 checks pending. That is exactly the state where re-running it is correct
+([[all-clear-queued-rerun-and-ledger-rebase]] warns only against re-running a
+QUEUED all-clear; this one was COMPLETED/FAILURE). Requested; accepted.
+
+Sequencing note worth keeping: I deliberately did NOT re-run all-clear while the
+shard was still IN_PROGRESS over the previous two wakes. Doing so would have
+re-evaluated against an unfinished check and simply re-latched, costing another
+full cycle. Waiting for `pend=0` first is the cheap discipline.
