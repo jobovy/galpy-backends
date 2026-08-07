@@ -25402,3 +25402,30 @@ Traced picture after wave 4:
 | **`test_sphericaldf.py`** | **jax-jit** | **222** | **0** | **0** |
 | `test_interp_potential.py` | torch-jit | 38 | 2 | 2 (now deferred) |
 | `test_diskdf.py` | jax-jit | — | 2+ | pending RC |
+
+### 2026-08-07 — #1265 pre-merge audit, run against the diff not from memory
+
+    tests/test_backend_anyspherical.py          45 +++--
+    tests/test_backend_interprz.py              45 +++--
+    tests/test_backend_potential_convenience.py 26 ++--
+    tests/test_backend_random.py                 8 +-
+    4 files changed, 89 insertions(+), 35 deletions(-)
+
+**(a) if→xp.where array-input class** — `git diff --name-only | grep -v '^tests/'`
+returns **nothing**. No library file is touched, so the class cannot arise. This
+is the one criterion worth checking mechanically rather than recalling, because
+"it's tests-only" is exactly the kind of thing that quietly stops being true.
+
+**(b) duplication** — no `def assert_jit_matches_eager` or
+`def jit_output_depends_on_inputs` anywhere in the `+` lines; **4 import sites
+added** against the existing `tests/backend_jit_helpers.py`. The PR *removes*
+duplication (four hand-rolled jit-vs-eager comparisons collapse onto the shared
+helper) rather than adding any.
+
+**(c) helper placement** — `--name-status | grep '^A'` returns nothing: **no new
+files**. Nothing to misplace.
+
+So the audit the loop asks for is satisfied on all three counts, and satisfied
+by inspection of the actual diff. #1265 stands at 152 pass / 0 fail / 2 pending
+(one py3.14 `test_backend*` shard, then `all-clear`). Merging as soon as those
+two are green.
