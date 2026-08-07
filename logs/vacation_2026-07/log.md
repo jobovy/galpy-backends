@@ -21360,3 +21360,37 @@ deliberately never committed — so the split costs nothing.
 
 #1258 still 149/153, 0 fail, waiting on `all-clear` + the jax qdf/noninertial
 shard.
+
+### 2026-08-07 — #1258 MERGED; #1260 opened; #1259's real red fixed
+
+**#1258 merged** as `4727b8c1` on feat/backends-develop (map_coordinates
+boundary mode, 875x error at grid-boundary nodes). mergeStateStatus was CLEAN;
+the two non-SUCCESS contexts were RTD and pre-commit.ci reporting `null`, neither
+blocking. Audit done the wake before: control-string branch (not the array-input
+class), no duplication, correct helper placement, pragma genuinely removed.
+`--delete-branch` errored only because a worktree holds the branch; the merge
+landed.
+
+**#1260 opened** — the jeans PR, shipping alone as planned. surfaceSigmaProfile
+was never committed, so the split cost nothing.
+
+**#1259's codecov/patch was REAL, and it had a real cause.** all-clear failed
+purely because it aggregates codecov/patch; codecov/project passed. Asked
+codecov WHICH LINE instead of inferring from 94.44%:
+
+    hits=17 misses=1  ->  the miss is `if z is None:` in _bk_split_quad
+
+That branch is **dead code of my own making** — all six call sites pass `z`
+explicitly. The `z=None` default and its ungraded two-panel body are how the
+helper looked BEFORE the grading was added in this same PR; nothing reaches them.
+
+Deleted rather than covered or pragma'd: adding a test for an unreachable branch
+would mean inventing a caller that does not exist, and a pragma would hide new
+code. `z` is now a required parameter so it cannot silently come back.
+`test_backend_anyaxisymdisk.py` 37 passed. Pushed as a NEW commit (ee721aa2),
+not an amend+force.
+
+Note on reading the codecov API: its per-line `coverage` field is inverted from
+the obvious reading — covered lines came back as `0` and the single miss as `1`.
+Cross-checked against the file's `hits=17/misses=1` totals before believing it,
+which is the only reason the right line was identified.
