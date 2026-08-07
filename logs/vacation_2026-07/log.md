@@ -22862,3 +22862,31 @@ Technique worth reusing: for Hankel-type oscillatory integrals,
 `mpmath.quadosc(f, [0, inf], omega=R)` at dps=25-30 is a genuine arbiter. My
 hand-rolled scipy panels between J1 zeros were good to 1e-7 for the force and
 only 1e-4 for the curvature — enough to mislead, not enough to settle.
+
+### 2026-08-07 — the --timeout paid for itself immediately: a SECOND hang
+
+The slow-skip verification hit `--timeout=900` and the log shows the timeout
+traceback ending in `waiter.acquire(True, timeout)`, an `F`, and then the run
+CONTINUING. That is precisely why I added the per-test timeout this round: the
+previous attempt hung with no timeout, produced no junitxml, and told me nothing.
+This one records the hang and keeps going.
+
+Provisional identification (dot-counting against collection order, to be
+confirmed from the junitxml — this is inference, not the result): 12 dots + `s`
++ 56 dots = 69 items, so the timeout hit item **70 = `test_plotting`**. That is
+ALSO one of the three torch-jit streamdf ledger entries.
+
+So the picture is bigger than one entry: at least TWO of the three hang, and the
+third (`test_fardalwmwpot_trackaa`, item 74) is still ahead in this run.
+
+**Consequence for the pending ledger PR:** moving only
+`test_streamTrack_multi_parallel` to slow-skip would just relocate the wall. The
+move needs to cover every entry that HANGS rather than fails. Holding the branch
+until the junitxml says exactly which ones did.
+
+Also worth noting the causes may differ: `multi_parallel` was a clean
+parallel_map fork deadlock (12 children in futex_wait). `test_plotting` blocking
+in `waiter.acquire` could be a matplotlib/backend lock instead. Same symptom,
+possibly different mechanism — will not conflate them in the PR text.
+
+No count claims until RC. The run is still going.
