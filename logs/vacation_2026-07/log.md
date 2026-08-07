@@ -23510,3 +23510,26 @@ older PR's.
 
 Not reverting anything — #1263 is legitimate work and will run regardless. Noting
 it so the next slot-opening decision accounts for the tail.
+
+### 2026-08-07 — #1262 MERGED (fourth); #1264 opened for the evolveddiskdf direct path
+
+**#1262 merged** 13:35:52Z, CLEAN at 152/154. Test-only: adopts
+`assert_jit_matches_eager` for the RazorThin jit test, which ADDS the
+jaxpr-dependence check the hand-rolled comparison could not see, while keeping
+the plain-float-vs-traced-array cross via `ref=`.
+
+The tail contention I logged earlier resolved on its own exactly as predicted:
+once #1263's fan-out freed a runner, `backend status report` ran, `all-clear`
+completed, and #1262 went CLEAN. No intervention was needed or attempted.
+
+**#1264 opened** for #143 (evolveddiskdf direct path). Rebased onto the
+post-#1262 tip — 3 commits replayed clean, no conflict markers. The PR body
+carries the full gate table (numpy/torch/jax 35 each + backend file 41, zero
+failures) and the measured value/grad/jit numbers, plus the regression I
+introduced and fixed, and the note that this adds the FIRST backend coverage of
+`grid=False`.
+
+README row added for #1262.
+
+Merged so far this stretch: #1260, #1259, #1261, #1262. Open: #1263 (ledger
+slow-skip) and #1264 (direct path).
