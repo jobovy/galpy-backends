@@ -20660,3 +20660,43 @@ FD to 1.11e-09.
 
 NOT opened as a PR -- #1258 and #1259 are already in flight and the rule is two at
 a time. jeans.py restored; recorded on #190 so the next slot can take it directly.
+
+### 2026-08-06 — jeans fix prepared (branch, unpushed) + I caught my own test passing for the wrong reason
+
+Branch `fix/jeans-resolved-namespace` off fa80b2f0 in /var/tmp/jeansfix. NOT pushed:
+#1258 and #1259 are open and the rule is two at a time. Ready to go when a slot
+frees.
+
+Source: 3 lines. Drop the two data-guards and the now-unused import:
+
+    xp = get_namespace(r) if is_backend_array(r) else numpy   ->  get_namespace(r)
+    xp = get_namespace(R) if is_backend_array(R) else numpy   ->  get_namespace(R)
+
+**The part worth remembering: my first version of the test passed for the wrong
+reason on torch.** I asserted on the RETURN TYPE (`is_backend_array(result)`).
+A/B said 2 failed without the fix -- jax only. torch "passed" unfixed. Instrumented
+the guard to see why:
+
+    forced jax  : guard saw r as float64 -> result float64, backend_array=False
+    forced torch: guard saw r as float64 -> result Tensor,  backend_array=True
+
+BOTH take the scipy path; under forced torch the scipy result is converted to a
+Tensor DOWNSTREAM, so a type check is satisfied while the whole computation ran on
+scipy. I had written "assert on the PATH, not the value" into task #190's
+description and then did the opposite an hour later.
+
+Rewrote to spy on `jeans.fixed_quad_semiinfinite` via monkeypatch and assert the
+backend quadrature actually ran. A/B then:
+
+    type assertion  -> 2 failed unfixed  (jax only; torch FALSE PASS)
+    path assertion  -> 4 failed unfixed  (jax AND torch, sigmar AND sigmalos)
+    with the fix    -> 14 passed (whole file)
+    numpy gate      -> tests/test_jeans.py 5 passed (byte-identity intact)
+
+The second test asserts the converse -- with no forced backend, ZERO backend-quad
+calls -- so the pair pins both directions of the contract.
+
+Also: I used `git stash` for the A/B and a 2-min timeout killed the command
+mid-cycle, leaving the fix stashed. [[git-stash-is-repo-wide-not-worktree]] says to
+use two worktrees or file copies for A/B, never stash; there was even an unrelated
+stash@{1} from another branch sitting under mine. Redid it with cp and it was fine.
