@@ -24488,3 +24488,42 @@ floor than R2deriv/z2deriv/Rzderiv can), or a different treatment of the
 singularity altogether. Task #207 updated; the acceptance battery is now
 **three** criteria, not two, and any future candidate gets measured on all of
 Φ, the forces, AND the second derivatives before I call it anything.
+
+### 2026-08-07 — reframing #207: the traced path is approximate BY DESIGN
+
+Re-read the class-level comment above `_bk_split_quad` — pre-existing, not from
+#1259 — and it changes what "fixing" this means:
+
+> A PLAIN concrete backend scalar instead reuses scipy's accurate adaptive quad
+> (byte-consistent with the numpy path; **GL cannot resolve the a=R principal
+> value / small-z sheet structure that the derivative tests FD-probe at z~1e-8,
+> and cannot form the z=0 Hadamard-type second-derivative**)
+
+So the design already records that fixed-order Gauss-Legendre *cannot* do what
+these tests probe, and routes concrete values to scipy for exactly that reason.
+Under `--jit` everything is traced, so everything takes the GL path — which is
+why these entries are ledgered at all.
+
+That splits #207 cleanly into two questions that were tangled together:
+
+1. **A real defect, worth fixing regardless:** #1259 made the traced Φ
+   *discontinuous* at z=0 (two schemes either side). Continuity is not an
+   accuracy question — an orbit crossing the plane sees a 7.3e-5 step — and it
+   should hold whatever the absolute accuracy is.
+2. **Probably not fixable with fixed-order GL:** matching the analytic cusp
+   *and* the Hadamard-type second derivative at z=0. The docstring says as much.
+   My continuous-`dmin` attempt bought (1)'s cusp at the cost of R2deriv, which
+   is what "cannot form the z=0 Hadamard-type second-derivative" predicts.
+
+So the realistic target is: restore continuity, keep R2deriv no worse than
+baseline, and leave the entries ledgered with the *reason* recorded — rather
+than chasing an accuracy the traced scheme was never designed to reach. Noted on
+#207; still Jo's call, but the question is now narrower and honest about what is
+achievable.
+
+**Also, a near-miss worth recording:** I saw the torch burn's process at 0.0%
+CPU for 28 minutes and was about to write it up as a second fork deadlock. That
+0.0% was the `timeout` *wrapper*; the real pytest child was running at **668%
+CPU across 296 threads**. Checked the child before claiming anything. Same shape
+as reading a partial run — I nearly reported the wrong process's number as the
+result.
