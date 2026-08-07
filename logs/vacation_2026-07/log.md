@@ -22706,3 +22706,30 @@ different files and this is a ledger change.
 
 Killed the hung run (it could not produce a junitxml either way; the 90-minute
 timeout would have killed it mid-hang with no output).
+
+### 2026-08-07 — slow-skip move prepared + the OTHER two entries are still unknown
+
+Prepared the ledger move on branch `ledger/streamdf-jit-slowskip` (worktree
+/var/tmp/slowskip, off the post-#1259 tip): moved
+`torch-jit tests/test_streamdf.py::test_streamTrack_multi_parallel` out of
+tests/backend_xfail.txt and into tests/backend_slow_skip.txt, with a comment
+recording the measured deadlock. Note this is the FIRST torch-jit entry in the
+slow-skip file (it had 207 entries, none torch-jit).
+
+**What I do NOT yet know, and am not going to assume.** My hung run stopped at
+the 13th test, so it never reached the other two torch-jit streamdf entries,
+`test_fardalwmwpot_trackaa` and `test_plotting`. They may hang the same way, in
+which case moving one entry only relocates the wall. So the verification is not
+"does the move look right" but "does the whole file now COMPLETE".
+
+Dispatched exactly that: test_streamdf.py under `--backend torch --jit` with
+GALPY_BACKEND_XFAIL_REGEN=1 (conftest applies slow-skip in regen mode too, so
+the moved entry is skipped while the other two still RUN and reveal themselves).
+
+Added **`--timeout=900` per test** this time. That is the fix for the failure
+mode that cost me the previous run: a hang with no per-test timeout produces NO
+junitxml at all, so the measurement is a total loss. With a per-test timeout a
+hang becomes a recorded failure and the run still finishes and writes its XML.
+Should have been doing this from the start on any run that might hang.
+
+No claim until RC lands.
