@@ -25480,3 +25480,41 @@ action; it needs about six more minutes.
 Worth keeping as a habit: "how long does this job normally take" is one
 `gh run view` against the base branch, and it converts an impatient guess into a
 decision.
+
+### 2026-08-07 — test_evolveddiskdf.py traces CLEAN: 35/35
+
+    tests/test_evolveddiskdf.py --backend jax --jit
+    35 passed, 0 failed        RC=0
+
+This one matters personally: **#1264 was my merge this morning** (the
+differentiable, jit-traceable grid-free direct velocity-moment path), and this is
+the first time that file has ever run traced. It is clean.
+
+So of the two merges I made today, the traced check now says:
+
+    #1264  evolveddiskdf   35 passed, 0 failed          <- clean
+    #1261  diskdf         122 passed, 2 TIMEOUTS         <- A/B in flight
+
+and the diskdf pair are Oort-A **timeouts**, not wrong values. Whether they are
+mine is still open; the pre-#1261 arm is running.
+
+Worth noting what the evolveddiskdf result implies about the earlier decision.
+This morning I measured that flipping evolveddiskdf's two `is_backend_array`
+gates would cost **28.5x** and declined it (task #143). That decision left the
+grid path on numpy under a forced backend — and this run confirms the direct
+path I *did* build is traced-clean end to end. The declined work and the
+delivered work were the right way round.
+
+### running tally of "first traced run" outcomes today
+
+    test_potential.py      jax-jit    1 un-ledgered failure  (#1259 regression)
+    test_potential.py      torch-jit  1 un-ledgered failure  (same)
+    test_actionAngle.py    jax-jit    1 un-ledgered gap      (ledger asymmetry, fixed)
+    test_actionAngle.py    torch-jit  0
+    test_qdf+pv2qdf        jax-jit    0
+    test_sphericaldf.py    jax-jit    0                      (222 passed)
+    test_evolveddiskdf.py  jax-jit    0                      (35 passed)
+    test_interp_potential  torch-jit  2 latent reds          (deferred, measured)
+    test_diskdf.py         jax-jit    2 timeouts             (A/B in flight)
+
+Six of nine clean or explained; three surfaced things nothing else would have.
