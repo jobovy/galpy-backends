@@ -21622,3 +21622,40 @@ because `get_namespace` falls through to context. So: when auditing a
 dual-path function, check every place it interrogates its inputs, not just the
 `if`. And remember a forced-backend green does not exercise the unforced mixed
 case at all.
+
+### 2026-08-07 — fix (b) is CORRECT-ish but ~9x SLOWER; prediction half-confirmed
+
+Measured throughput, test_diskdf under forced torch:
+
+    arm                              items/s   vs baseline
+    baseline (data-guard)             0.257      1x      129 items / 502s
+    fix-A (ssp patch only)            0.107      2.4x     129 items / 1203s
+    fix-B (ssp + widened dispatch)    0.029      ~9x      16 items / 552s so far
+
+**The prediction was right about correctness and blind to cost.** I predicted
+fix-B would clear the ComplexDouble group and much of the TypeError/IndexError
+group. So far: 16 items, 0 failures, where fix-A had already failed by item 26.
+That part is holding. What I did not predict at all is that it is ~9x slower
+than baseline and ~3.7x slower than fix-A — at this rate the file takes ~75
+minutes instead of 8.
+
+The mechanism is the one already in the notes as
+"migration flips numpy fall-through to eager-slow": widening the dispatch routes
+MORE calls into `_eval_backend`, which does torch ops on SCALARS inside diskdf's
+velocity-integration loops. Per-call torch dispatch overhead dominates the
+arithmetic completely.
+
+So fix (b) trades 47 failures for a runtime that would blow the CI shard budget.
+Not viable as written. That does not make the diagnosis wrong — the dispatch
+predicate genuinely is too narrow — it means the FIX has to avoid per-scalar
+backend calls in the hot loop. Options to weigh next:
+  * vectorize diskdf's velocity-grid loops so the backend sees arrays, not
+    scalars (the real fix, and independently valuable);
+  * keep the numpy branch for scalar work and coerce only at the boundary;
+  * make `_real` namespace-aware (fix (a)) as a narrow correctness patch with no
+    routing change, accepting it leaves a numpy branch computing on Tensors.
+
+Letting the run finish for the failure count, but the perf number is already the
+deciding one. This is why the surfaceSigmaProfile change stayed out of #1260:
+each layer down has revealed a bigger problem than the last (11 -> 38 -> 47
+failures, then 2.4x -> 9x slowdown).
