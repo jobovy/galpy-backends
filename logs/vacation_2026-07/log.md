@@ -22343,3 +22343,30 @@ tests/test_backend_disk.py 240 passed, 4 skipped. Worktree /var/tmp/jitadopt,
 branch test/jit-helper-adoption, C ext built there (not inherited).
 
 Queue is now: #1260 -> merge, #1259 -> merge, then #117b (83e46fa6), then this.
+
+### 2026-08-07 — ledger staleness sweep: 0 stale, and the ledger is down to 19
+
+Swept the 19 live entries in tests/backend_xfail.txt against a green
+feat/backends-develop backend-tests run (31141732289, 44 junit artifacts,
+7398 outcomes, 0 failures).
+
+    10 eager entries (jax / torch)  -> all recorded skip type="pytest.xfail"
+     9 jit entries (jax-jit/torch-jit) -> not covered by this run's shards
+    STALE (ledgered but passed): 0
+
+Method note, because I briefly talked myself out of a correct result: the
+entries are `xfail(strict=False)` MARKS, not imperative `pytest.xfail()` calls,
+so the test does run; `<skipped type="pytest.xfail">` is how pytest records a
+test that ran and failed as expected, while an xpass would appear as `passed`.
+So the sweep can see staleness, and 0 is a real answer rather than a
+methodological blind spot. (I had reasoned my way to "this method cannot work
+here" from the word `skipped` alone before re-checking what the mark does.)
+
+So there is no free burndown left in the ledger: at 19 entries, every remaining
+one is a real defect needing a real fix. 4 of the 9 jit entries are the
+AnyAxisym ones #1259 addresses, so they burn when it merges.
+
+Dispatched a jit staleness check for the 3 torch-jit streamdf entries:
+test_streamdf.py under `--backend torch --jit` with GALPY_BACKEND_XFAIL_REGEN=1
+so the ledgered nodeids actually execute. Whole file, --junitxml; no claim
+until RC lands.
