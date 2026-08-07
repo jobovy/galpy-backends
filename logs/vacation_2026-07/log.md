@@ -24749,3 +24749,46 @@ had gone back to check.
 
 This is queued as the next PR, behind the fork fix; I am not opening a third
 while #1265's suites are still working through the runners.
+
+### 2026-08-07 — re-measured with verified provenance: the overhead result REPRODUCES
+
+Discharging the commitment from the provenance retraction. Same measurement,
+run as `PYTHONPATH=<worktree> python3 ...` with the probe printing its source
+first:
+
+    PROVENANCE: /var/tmp/dminfix/galpy/__init__.py       <- the worktree, verified
+    C ext: True
+
+    size   numpy ms     jax ms   jax/np  jax us/elem
+       1      0.027      5.101    186.5      5100.89
+      10      0.065      4.948     76.6       494.80
+     100      0.050      5.281    105.8        52.81
+    1000      0.106      5.787     54.7         5.79
+   10000      0.660     15.182     23.0         1.52
+
+**~5 ms flat per `evaluateRforces` call, independent of N up to 1000.** The
+earlier mis-rooted run said ~4.7 ms; the properly-rooted one says ~5.1 ms. Same
+conclusion, now sourced.
+
+This is **fixed per-call framework overhead**, not arithmetic: decorators,
+dispatch, coercion, namespace resolution. Only at N=10000 does real compute
+start to show (µs/elem finally falls to 1.5).
+
+**So the wrapper "sharpening" I did two turns ago was the wrong reading.**
+`RotateAndTiltWrapperPotential` is not pathological — it issues ~3.6x more force
+calls per test, and at ~5 ms of overhead each that is enough to hit the cap
+first. Fixing the wrapper would barely move it. The original #79 framing —
+per-call overhead — was right all along, and the number is far worse than the
+"~2x" in its title: **186x on a scalar call.**
+
+Arithmetic that makes it concrete: `test_dxdv_3d_c_vs_python` at 290 s is
+~58,000 scalar force calls, essentially all of it overhead. Two possible fixes,
+and the measurement says which:
+
+1. cut the ~5 ms fixed cost (helps everything, including the 10 entries this
+   sweep could not un-defer), or
+2. make callers pass arrays — at N=1000 the per-element cost is already 1000x
+   better.
+
+#79 updated with the verified table. Not acting on it tonight: it is a real
+optimisation project, not a wake-sized task, and two PRs are already in flight.
