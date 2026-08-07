@@ -20700,3 +20700,41 @@ Also: I used `git stash` for the A/B and a 2-min timeout killed the command
 mid-cycle, leaving the fix stashed. [[git-stash-is-repo-wide-not-worktree]] says to
 use two worktrees or file copies for A/B, never stash; there was even an unrelated
 stash@{1} from another branch sitting under mine. Redid it with cp and it was fine.
+
+### 2026-08-06 — the jeans guard is hiding 5 real backend defects; #190 is NOT a 2-line PR
+
+Ran the forced-backend gate on the prepared branch before pushing, and it changed
+the verdict. A/B on tests/test_jeans.py, --runxfail:
+
+    guard PRESENT (baseline)   jax  5 passed        torch  5 passed
+    guard REMOVED (my fix)     jax  5 failed        torch  5 failed
+
+Failures include `test_sigmar_wlog_linbeta`, `test_sigmalos_wlog_zerobeta`, and on
+torch a hard `TypeError: exp(): argument ...` -- i.e. the callable-beta path
+(`intFactor = lambda x: xp.exp(2.0 * quad(lambda y: beta(y)/y, 1.0, x))`) is not
+actually backend-clean. There are NO test_jeans entries in either ledger, so those
+5 have always "passed" under the forced-backend shards purely because the data
+guard routed them to scipy.
+
+**So the island was not merely inelegant -- it was SUPPRESSING five real backend
+defects.** That is the hollow-green failure mode at module scale: a whole file
+green under `--backend jax/torch` while none of it ran on the backend.
+
+This corrects what I wrote earlier today ("a two-line change, not a quadrature
+project"). The dispatch fix IS two lines, but it cannot land alone: removing the
+guard turns 5 silent passes into 5 honest failures. The PR must either fix the
+callable-beta path (preferred -- the torch TypeError looks like a genuine bug, not
+a tolerance) or ledger the 5 with the reason. Ledgering 5 entries in exchange for
+killing an island is a defensible trade under the no-islands directive, but it has
+to be stated in the PR, not discovered by CI.
+
+Good outcome for the gate discipline: [[forced-backend-gate-before-push]] earned
+its keep. The branch tests all passed on the DEFAULT backend (14 passed) and the
+numpy gate passed (5 passed); only the forced-backend run exposed this.
+
+Branch left prepared and UNPUSHED at /var/tmp/jeansfix. #190 updated.
+
+Process note: two A/B attempts were killed by the 2-minute foreground timeout
+mid-cycle, once leaving the fix stashed and once leaving the ORIGINAL source in the
+worktree. Fixed by running the A/B as a detached `nohup` script that restores the
+file as its last step and prints a RESTORED_FIX sentinel I can check.
