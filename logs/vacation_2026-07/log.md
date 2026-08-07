@@ -22160,3 +22160,24 @@ RAW profile to the ARS samplers — that is the territory #205 covers.
 
 fix-D running detached: whole-file torch + numpy arms, `--junitxml` both.
 Baselines to beat: fix-A 47 failures, fix-C 11. No claim until TORCH_RC lands.
+
+### 2026-08-07 — checked `_ssp` is a true no-op on the numpy path
+
+Two of the four profile methods return a PLAIN PYTHON FLOAT for `log=True`
+(`surfacemassDerivative` -> -1/params[0], `sigma2Derivative` -> -2/params[1] —
+they are R-independent, which the surfacesigma test file already documents as
+`_SSP_R_INDEP`). My `_ssp` accessor now routes those through `as_numpy`, so the
+question is whether that changes their type or shape and breaks byte-identity.
+
+    float     -> float     shape=()   identical=True
+    float64   -> float64   shape=()   identical=True
+    ndarray   -> ndarray   shape=(1,) identical=True
+
+`as_numpy` is a pass-through for non-backend values — it returns the IDENTICAL
+object, not a converted copy. So `_ssp` is a genuine no-op on the numpy path and
+cannot perturb byte-identity. Checked before the numpy arm reports rather than
+waiting to be surprised by it; if it had converted floats to 0-d arrays that
+would have been a subtle, wide-blast-radius regression across every diskdf
+numpy call.
+
+fix-D still running; no claim until TORCH_RC.
