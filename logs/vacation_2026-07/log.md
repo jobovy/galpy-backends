@@ -21141,3 +21141,43 @@ the 29 files that use `jax.jit` without it, most use jit as a TRACEABILITY probe
 (is the traced value finite / does this path trace at all), which is a different
 assertion -- converting those would weaken them. Only 3 genuine sites remain,
 and two of the candidate files are owned by open PRs, so it is deferred.
+
+### 2026-08-07 — #204: a design that survives all four potentials
+
+The refutation said what a fix must do: resolve structure at BOTH the R scale
+and the profile's own scale, without knowing the latter. A log substitution does
+exactly that -- `int_0^inf f(z) dz = int f(e^t) e^t dt` turns structure at ANY
+scale `s` into O(1) width at `t = ln s`, so one GL rule covers every decade.
+
+Measured over 4 potentials x 5 radii (worst-case relative error vs a tight
+scipy reference):
+
+    variant                 worst      integrand evals
+    baseline (n=50)         7.732e-03   50
+    fixed  T=40, n=300      converged   300
+    R-centred W=30, n=200   9.267e-08   200
+    R-centred W=25, n=150   4.763e-07   150
+    R-centred W=20, n=100   8.151e-06   100
+
+Centring the window on ln(R) is clearly more node-efficient -- W=30/n=200 beats
+the fixed T=35/n=200 by 15x.
+
+**But I am recommending the FIXED window anyway.** Centring puts R in the
+integration BOUNDS, so `dSigma/dR` picks up Leibniz boundary terms
+`f(z_hi) dz_hi/dR` that the true integral has no trace of. They are ~1e-8 here,
+which is invisible in a value test and would sail through the obvious
+gradient-vs-FD check at loose tolerance -- and this is a differentiable-by-design
+library, where a spurious gradient term is worse than a spurious value error.
+The fixed window has no such term. If 300 nodes proves too expensive, the
+centred variant has to be justified by checking its GRADIENT, not its value.
+
+Not implemented: three branches are already in flight (#1258, #1259, jeans) and
+this is a change to a shared helper on a path DF sampling uses, so it needs its
+own gating and a wall-clock/compile measurement first. Full design + numbers are
+in task #204.
+
+Note the "converged" entry: fixed T=40/n=300 reproduces the BASELINE's residual
+exactly for Plummer and MiyamotoNagai (1.336e-09, 2.350e-08, ...). That is not
+the patch failing to apply -- both quadratures are converged and what is left is
+the GOLD REFERENCE's own error, common to both columns. Checked against the
+cusped rows, where the same patch moves 7.7e-3 to 3.3e-9.
