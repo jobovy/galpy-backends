@@ -23328,3 +23328,42 @@ enough to belong in galpy.backend — the genuinely reusable piece
 (tensor-product GL) already lives there and is called, not reimplemented.
 
 So the PR is audit-clean before it is opened, not after.
+
+### 2026-08-07 — MY regression in #143, caught by the full gate; plus #1261's red triaged
+
+**I broke torch and the gate caught it.** Final gate on e35b5541:
+backend-test-file 41 passed, numpy 35/35, jax 35/35 — but **torch 7 failed / 28
+passed**. All seven identical:
+
+    TypeError: where() received an invalid combination of arguments
+               - got (numpy.bool, float, numpy.float64)
+
+Cause: I dispatched the new direct branch on `xp is not numpy`. Under a FORCED
+backend with a plain-float R, `get_namespace` returns torch while the DATA are
+still Python/numpy scalars, so `torch.where` got floats. numpy and jax never
+complained — numpy.where and jnp.where accept scalars; only torch's stricter
+`where` surfaced it. A jax-only gate would have shipped this.
+
+**The fix was not to coerce.** The sibling grid path (`_buildvgrid`, from #141)
+deliberately gates on `is_backend_array(R)` rather than on a forced namespace,
+so that a forced backend with numpy data keeps the fast existing path instead of
+being flipped onto orbit integration. I had introduced an inconsistency between
+two sibling paths in the same method. Now both gate the same way, commit
+**00544f07**, and verified in BOTH directions:
+
+    plain-float R under forced torch -> adaptive scipy path, the 7 tests pass
+    backend-array R                  -> new path unchanged:
+        value 6.6802596615e-02, jax.grad -1.90281325e-01, jax.jit == eager
+
+Full 4-arm gate re-dispatched on 00544f07; the e35b5541 numbers are superseded
+and I am not carrying them forward as if they described the current tree.
+
+**#1261 triage.** Its codecov cleared; the remaining red is the jax shard
+`test_qdf/test_pv2qdf/test_streamgapdf_impulse/test_noninertial`. Pulled the
+shard's junit artifact rather than guessing: exactly ONE failure,
+`test_python_vs_c_linacc_changingacc_xyz_accellsrframe_...`, and it is
+`Failed: Timeout (>300.0s) from pytest-timeout` — not an assertion. That is the
+known jax NonInertial timeout class ([[jax-noninertial-timeout-unledgered]];
+task #198 moved two siblings from xfail to slow-skip for the same reason).
+Targeted re-run returned 403 (the run still has 9 jobs in flight); retry when it
+drains.
