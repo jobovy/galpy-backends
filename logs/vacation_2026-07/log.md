@@ -23228,3 +23228,43 @@ COST, not yet measured: each direct evaluation integrates _DIRECT_GL_ORDER^2 =
 past 2 minutes, so I dispatched the whole file detached with --durations=6 to
 find out what this actually costs before deciding whether the default order or
 the test's nsigma needs trimming. No claim until it lands.
+
+### 2026-08-07 — direct path is now JIT-TRACEABLE too, not just differentiable
+
+Scoped my own step-2 claim honestly instead of stopping at "grad works", and the
+check paid: `jax.jit` on the direct path raised TracerBoolConversionError.
+Traceback pinned it to evolveddiskdf.py:606,
+
+    if initvmoment == 0.0:
+        initvmoment = 1.0
+
+a Python bool on what is a tracer under a backend.
+
+**The fix had to be backend-only, and that is the interesting part.** The naive
+repair is `xp.where(initvmoment == 0.0, 1.0, initvmoment)` in place. But this
+line sits BEFORE the numpy/backend split, and numpy.where returns a 0-d ARRAY —
+which would propagate through `norm` and change `vmomentsurfacemass`'s public
+numpy return type from float to a 0-d array. Value-identical, type-visible, and
+exactly the kind of silent contract change [[flag-numpy-byte-identical-changes]]
+exists for. So numpy keeps its `if`, and only the backend branch selects:
+
+    if xp is numpy:
+        if initvmoment == 0.0: initvmoment = 1.0
+    else:
+        initvmoment = xp.where(initvmoment == 0.0, 1.0, initvmoment)
+
+Result:
+
+    numpy still returns  float64 = 6.6802698135e-02   (type AND value preserved)
+    jax.jit(direct)   -> 6.6802596615e-02   rel 1.52e-06 vs numpy, == eager
+
+So the direct moment path is now differentiable AND traceable, where before it
+was neither. That is a better outcome than the task scoped, and it came from
+asking "is the claim actually 'jittable' or only 'differentiable'?" rather than
+declaring victory on the gradient.
+
+**Attribution caveat, recorded rather than glossed:** the test run I dispatched
+last wake was launched BEFORE this edit, so it exercises the pre-fix tree. Its
+COST numbers stay representative (the fix changes one comparison, not the 2500
+orbit integrations), but its pass/fail does not describe the current tree. Will
+re-run correctness after committing rather than quote it.
