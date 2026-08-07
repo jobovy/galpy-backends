@@ -23584,3 +23584,29 @@ a double-quoted string.** I already draft PR bodies to files; the merge bodies
 were the gap.
 
 Merged this stretch: #1260, #1259, #1261, #1262, #1263, #1264 — six.
+
+### 2026-08-07 — queue clear after 6 merges; next: does #1259 burn its ledger entries?
+
+No PRs open. Rather than pick the next task from the plan, read the CURRENT
+ledger on the merged tip (199ee10e): **16 live entries** — 5 torch, 5 jax,
+5 jax-jit, 1 torch-jit. Down from 19 (the 3 torch-jit streamdf entries moved to
+slow-skip in #1263).
+
+Three of the remaining entries are the AnyAxisym jit ones:
+
+    torch-jit  test_potential.py::test_poisson_surfdens_potential[AnyAxisym...]
+    jax-jit    test_potential.py::test_2ndDeriv_potential[AnyAxisym...]
+    jax-jit    test_potential.py::test_poisson_surfdens_potential[AnyAxisym...]
+
+I predicted several wakes ago that these would "burn when #1259 merges". #1259
+HAS merged and they are still in the ledger — so the prediction is untested, not
+confirmed. Dispatched the test that settles it: whole test_potential.py under
+`--backend jax --jit` and `--backend torch --jit`, with
+GALPY_BACKEND_XFAIL_REGEN=1 so the ledgered nodeids actually execute, --timeout=900
+per test, --junitxml both.
+
+Whole file, not a hand-picked nodeid batch ([[handpicked-nodeid-batch-is-not-a-context]]).
+It is a long run; no claim until the RCs land.
+
+The other 2 jax-jit test_potential entries are the pickling pair, unrelated to
+#1259 — they should still fail, and if they do NOT that is its own finding.
