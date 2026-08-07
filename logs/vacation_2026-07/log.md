@@ -21414,3 +21414,34 @@ measurement and the resolution (order: migrate consumers first), and marked the
 jeans half RESOLVED with the scale= fix. Two notes describing one file from
 opposite ends, with no cross-reference, is how I ended up applying a recipe whose
 own precondition was documented elsewhere.
+
+### 2026-08-07 — CORRECTION: the surfaceSigmaProfile regression is ~38 tests, not 11
+
+I have been reporting "11 forced-torch failures" for several wakes. **That number
+was wrong.** It came from the original gate command ending in
+
+    ... | grep -E "passed|failed|FAILED" | head -12
+
+which truncated pytest's end-of-run summary at 12 lines. I then carried the
+number forward into the task, the log and three summaries without ever
+re-deriving it from the run.
+
+Counting progress characters from the clean detached A/B instead:
+
+    BASELINE (data-guard):   129 passed, 0 failed          502s
+    FIX (decorator + flag):  38 F / 73 . out of 111 run     16:47 at 55%
+
+So roughly a THIRD of test_diskdf, not 11 tests — and the fix arm is also >2x
+slower than the entire baseline arm, which is a second signal: coercing R to a
+Tensor on every surfacemass/sigma2 call adds per-call torch overhead in a hot
+loop. Even with the type errors fixed, that needs a look.
+
+Lesson, and it is the same family as the junitxml `find()` trap: **never read a
+failure count through `head`/`tail`.** pytest prints its summary last, so any
+truncation silently under-reports. Derive counts from the junitxml or from the
+progress line, not from a filtered tail.
+
+This does not change any decision — the change was already held out of #1260 and
+the baseline was already known clean — but it does change the SIZE of the
+follow-up. #117's second half is not "one file, a few tests"; it is a diskdf
+consumer migration.
