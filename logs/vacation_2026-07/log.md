@@ -25969,3 +25969,26 @@ file now stays lifted for the whole run and is restored **after** it finishes.
 there is no reason to have been racing in the first place. The general rule --
 **do not schedule a cleanup that has to land inside a window you cannot
 observe.**
+
+### 2026-08-07 — #208 PR body written and staged
+
+Both slots are still held (#1266, #1267), so #208 cannot open yet. Wrote its PR
+description now, while the measurements are fresh, at `/tmp/pr_ssp_body.md` --
+the alternative is writing it later from memory, which is how
+[[pr-description-drifts-after-rework]] happens.
+
+It leads with the fact that this is **my own regression**, and that CI could not
+have caught it (`backend-tests` has no `--jit` dimension, eager jax passes),
+rather than presenting the fix on its own. It carries every number: the 133k
+branch census, the three-backend speed table, both whole-file traced gates, the
+three-way bit hash with its provenance caveat, the value-guard-vs-path-guard A/B
+(4 vs 8 failures, with torch the worse case the value guard missed), and two
+explicit non-goals -- the 1.5 s residual (measured: the numpy pin is only 0.29 s
+of it, so hoisting is not worth it) and the class sweep (five sites, no second
+instance, sphericaldf not exercised so it bounds rather than proves).
+
+Nothing to drive on CI: #1266 is at 88 pending / 64 pass and moving well, its
+only red the still-healing codecov phantom; #1267 at 147 pending / 4 pass.
+
+Un-defer probe re-running with the race designed out; no claim until the 5
+target nodeids show as measured rather than skipped.
