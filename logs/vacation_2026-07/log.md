@@ -25343,3 +25343,26 @@ and no re-run was required.
 Four checks remain: two numpy orbit shards, one py3.14 `test_backend*`, and
 `all-clear`. The **backend matrix is green 45/45** and there are now **zero
 failures on the PR**.
+
+### 2026-08-07 — pre-building the A/B base for the diskdf traced failures
+
+`test_diskdf.py` under jax-jit is now showing **FF** and still running. The file
+has **no ledger entries**, and its 5 slow-skip entries are all `*_sample_*` (and
+slow-skip applies in regen mode too), so whatever these are, they are
+un-ledgered and un-skipped.
+
+`diskdf.py` was changed today by **#1261** — the `_ssp` accessor and the
+surfaceSigmaProfile consumer boundary — which makes it the obvious first suspect
+for traced failures in its own test file. So I have pre-built a worktree at
+#1261's parent (`9bd39007`) while waiting, because the C-extension build is the
+slow part of an A/B and the run has not finished yet.
+
+Deliberately a bet, and cheap either way: if the failures do trace to #1261 the
+A/B is ready the moment the RC lands; if they are pre-existing, I have spent a
+few minutes of idle CPU. What I am *not* doing is guessing the answer — the
+worktree is set up, not consulted.
+
+If it is #1261, that would be the **second** regression today found by a
+first-ever traced run of already-merged work, after #1259's. Two independent
+instances would make the `workflow_dispatch(jit=true)` run a standing
+requirement rather than a nice-to-have.
