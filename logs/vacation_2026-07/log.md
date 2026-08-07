@@ -20823,3 +20823,31 @@ caused; recording the boundary rather than a sixth guess.
 Practical consequence for #190 regardless: the 5 test_jeans failures are REAL
 backend errors at the smallest radius, they were hidden by the island, and the
 jeans PR must address or ledger them.
+
+### 2026-08-06 (cont) — audit: is anything else silently opted out of the forced backend? NO
+
+Today's `backend_managed` discovery raised an obvious follow-up: if that marker
+opts a test out of the forced backend, is anything opted out that should not be?
+Audited all of tests/.
+
+    80 files reference backend_managed
+      77  tests/test_backend_*.py, module-wide `pytestmark`  -- BY DESIGN: these
+          parametrize backends internally, so forcing would be redundant/wrong
+       1  tests/conftest.py            -- defines the marker
+       1  tests/test_backend.py        -- a backend file, module-wide
+       1  tests/test_actionAngle.py    -- the only non-backend file, and it uses
+          the marker on exactly ONE test (line 2332), with the reason inline:
+          "numpy-only: the Single (scipy.quad) is not backend-capable"
+
+    test_backend_*.py files WITHOUT the marker: test_backend_ledger.py and
+    test_backend_status_report.py -- meta/reporting tests, force-run harmlessly.
+
+CLEAN: nothing is silently escaping the forced backend. Recording the negative
+result so it does not get re-investigated -- the marker is used deliberately and
+documented at its one non-obvious site.
+
+This does NOT weaken today's finding. The trap was never that the marker is
+misused in the repo; it is that I applied it to MY OWN probe by copying the style
+of test_backend_jeans.py, which silently made the probe run on numpy while
+reporting backend()=='torch'. The lesson is about writing probes, not about the
+suite.
