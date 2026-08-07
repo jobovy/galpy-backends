@@ -25091,3 +25091,21 @@ tolerance without sign-off; this is the proposal, measured.
 
 Headline worth keeping: **test_actionAngle.py is 179/209 under jax --jit on its
 first traced run** — the AA migration traces far better than anyone had checked.
+
+### 2026-08-07 — folded the A/B's negative result into the fork-fix PR
+
+Second commit on `feat/no-fork-under-trace` (`e9de6c33`): the two
+`test_interp_potential.py` torch-jit tests go **onto** the slow-skip list with
+their measured 300 s, and the PR body now states plainly what the fix does not
+cover.
+
+    net effect of that PR on the list:  -3 cured, +2 measured-too-slow, 210 -> 209
+
+I like this shape better than the original: a PR that says "I checked whether my
+fix also explained these, it didn't, here is the evidence and here is the honest
+deferral" is more useful to a reviewer than one that quietly fixes three tests
+and leaves two identical-looking timeouts unmentioned.
+
+Parser re-verified after the edit (torch 15, torch-jit 17, 0 malformed), because
+the added lines carry trailing `#` annotations and that is the failure mode that
+would silently empty the list.
