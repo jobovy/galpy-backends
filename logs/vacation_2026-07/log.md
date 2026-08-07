@@ -25801,3 +25801,30 @@ proof of absence.
 
 Also confirms the fix from the other direction: `diskdf.oortA` now does **zero**
 backend coercions and runs at 1.1x numpy under a forced backend.
+
+### 2026-08-07 — #208 numpy gate passed; bit-exact check in flight
+
+    tests/test_diskdf.py  (plain numpy, serial)   129 passed, 0 failed, 0 skipped   380.1s
+
+That is the tolerance gate, not the byte-identity one, and the fix **does** touch
+the numpy path (it now calls the undecorated function rather than the decorated
+one). So rather than infer bit-identity from a green suite, I am comparing raw
+IEEE bits: 120 values across dehnendf/shudf x beta in {0, 0.2} x 5 radii x 6
+moments, hashed.
+
+    WITH the fix     sha256 4175fc090f8f526e5d3090313a981c9c
+    WITHOUT the fix  (running)
+    pre-#1261        (running)
+
+**Process note, and it cost me something:** the first attempt ran both arms in
+one foreground command that reverted `diskdf.py`, ran, and restored it. The
+shell's 2-minute cap killed it mid-run, so the restore never executed and the
+worktree was left **reverted** -- the fix silently gone. I caught it on the next
+check and restored from the copy, but a revert-run-restore triple in a single
+timeout-able command is a trap: if it dies in the middle, it dies in the state
+you least want. The arms are now separate worktrees in the background, with no
+in-place edit at all -- `/var/tmp/slowprune` is already the unfixed tip (its
+diff is test-files only), so nothing needs mutating to get a clean A/B.
+
+Related to [[git-stash-is-repo-wide-not-worktree]]: the fix for "I need two
+states of the same file" is always another worktree, never an in-place toggle.
