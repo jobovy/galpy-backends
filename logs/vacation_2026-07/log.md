@@ -21921,3 +21921,44 @@ must be tested, not assumed).
 Patches preserved: `ssp_backend_input.patch` (leaf) and
 `diskdf_consumer_guard.patch` (the 2-site version). Worktree restored clean so
 it matches #1260 exactly.
+
+### 2026-08-07 — the proxy design I proposed last wake is WRONG (two hazards)
+
+Last wake I concluded "the right shape is one namespace-matching wrapper applied
+where `_surfaceSigmaProfile` is stored". Enumerated the actual uses before
+building it, and that design is unsafe:
+
+    20  .sigma / .surfacemass / .surfacemassDerivative / .sigma2Derivative   <- the numeric API
+     1  .outputParams
+     1  .formatStringParams
+     1  .__class__                                                          <- HAZARD
+
+**Hazard 1 — `__class__` builds a filename.** diskdf.py:3016:
+
+    "dfcorrection_" + self._dftype.__name__ + "_"
+        + self._surfaceSigmaProfile.__class__.__name__ + "_"
+        + sspString % self._surfaceSigmaProfile.outputParams() + ...
+
+A proxy reports the WRAPPER's class name, so the dfcorrection save file gets a
+different name. Nothing raises — corrections are silently regenerated under a new
+filename instead of being loaded. A cache that silently misses is worse than a
+crash.
+
+**Hazard 2 — the object ESCAPES.** It is passed on at 131, 3147, 3151
+(`surfaceSigmaProfile=self._surfaceSigmaProfile` into other df constructors) and
+at 2137/2149/2592/2604 (`hxparams=(self._surfaceSigmaProfile, ...)` into ARS
+sampling helpers, e.g. `_ars_hx`). So consumers exist OUTSIDE diskdf's own
+methods — which also means guarding only diskdf's call sites is incomplete, the
+sampling helpers are a separate boundary. That is very likely the second residual
+cluster (`test_shudf_sample_*`, 0-d tensor indexing).
+
+**Revised plan for #117's second half:** explicit guarded accessors on diskdf for
+the four numeric methods + replace the 22 direct call sites, rather than a proxy.
+Uglier, but it cannot break `__class__` or pickling, and it makes each guarded
+boundary greppable. The escape sites need separate handling and should be treated
+as their own sub-task.
+
+Recording this INSTEAD of implementing, because a 22-site refactor plus sampling
+helpers is a PR-sized change and both slots are occupied. The value this wake is
+that the next attempt starts from a design that survives contact with the code,
+rather than the one I would have written.
