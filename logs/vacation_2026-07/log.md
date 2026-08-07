@@ -23062,3 +23062,26 @@ two PRs are open, the slow-skip branch is queued behind them, and PRs serialize
 on runners anyway (#1262 has been fully queued for 70+ minutes). The design and
 the acceptance number (jax.grad at R=0.9 must give -1.90281496e-01) are the
 deliverable for now; implementation starts when the queue drains.
+
+### 2026-08-07 — #1262 pre-merge audit, verdict PASS
+
+Audited while waiting, same as I did for #1259, so the merge is a formality
+rather than a check done under time pressure. Diff is 1 file, +11/-6.
+
+* **(a) if -> xp.where array-input class: N/A, and verified so.** `git diff
+  --name-only -- galpy/` is EMPTY — this is test-only, so there is no source
+  path that could acquire a scalar branch. Checked rather than asserted.
+* **(b) duplication: this PR REDUCES it, which is the point.** The diff removes
+  a hand-rolled `jax.jit(call)` + `numpy.testing.assert_allclose` pair and
+  replaces it with the shared `assert_jit_matches_eager`. Net: one fewer
+  private copy of the idiom that `tests/backend_jit_helpers.py` exists to own.
+* **(c) helper placement: nothing new defined.** `git diff | grep '^\+\s*def '`
+  is empty — it adopts the existing helper rather than adding another.
+
+Plus what the PR description already records and I measured before adopting:
+0 of 24 (3 methods x 8 points) trip the helper's jaxpr-dependence assertion, and
+the assertion demonstrably CAN fail (a deliberately constant lambda is rejected).
+
+So #1262 is ready to merge the moment its checks land. It is currently starved,
+not stalled: all 149 checks still QUEUED after ~75 minutes while #1261 works
+through its 153 — the runner pool serializes them.
