@@ -24792,3 +24792,38 @@ and the measurement says which:
 
 #79 updated with the verified table. Not acting on it tonight: it is a real
 optimisation project, not a wake-sized task, and two PRs are already in flight.
+
+### 2026-08-07 — where the 5 ms goes: jax's own dispatch, not a cacheable galpy constant
+
+Profiled one `evaluateRforces` with verified provenance
+(`PROVENANCE: /var/tmp/dminfix/galpy/__init__.py`):
+
+    77103 function calls in 0.185 s for 20 calls  =>  ~3855 Python calls per force call
+
+Self-time is spread thinly across **jax internals** — `ufunc_api`,
+`dispatch.apply_primitive`, `array_constructors.asarray`,
+`pjit._sharding_constraint`, `core.bind`, `lax._convert_element_type`. The only
+galpy frames with meaningful self-time are `EllipsoidalPotential._Rforce` and
+`_forceInt_all`, at 0.004 s each out of 0.185 s.
+
+**My own prior hypothesis is refuted.** The earlier (mis-rooted) profile pointed
+at `as_backend_constant` re-coercing GL nodes on every call — ~42% of cumtime —
+and I flagged it as "plausible and cacheable". In the correct checkout,
+`jnp.asarray` is still ~50% of cumulative time (220 calls, 11 per force call),
+but `print_callers` shows **no galpy frame calls it**: it is jax's own per-op
+input normalisation, invoked from inside `jnp.sqrt` and friends. There is no
+cacheable galpy constant to hoist.
+
+So the honest characterisation of #79: the ~5 ms is **jax's per-primitive Python
+dispatch cost multiplied by the number of ops galpy issues** (~3855 Python calls
+per force evaluation). No single hotspot, so no micro-optimisation will do it.
+The three levers that actually apply:
+
+1. **fewer ops** — fuse/vectorize galpy's own arithmetic in the hot force paths;
+2. **jit** — eliminates per-op dispatch entirely, which is precisely what
+   `--jit` mode already does (and why the traced shards are worth having);
+3. **bigger arrays** — per-element cost is already ~1000x better at N=1000.
+
+That is a materially different plan from "cache the coerced constants", which is
+what I would have written up an hour ago. Recorded on #79 so the next attempt
+does not start by chasing the hotspot that is not there.
