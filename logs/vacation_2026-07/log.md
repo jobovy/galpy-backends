@@ -22779,3 +22779,42 @@ work, and he asked for the phone only in real emergencies.
 Method note worth keeping: "compare against the analytic implementation" is only
 as good as that implementation. When a reference disagrees, ask whether IT is
 converging sanely before believing it about someone else.
+
+### 2026-08-07 — #203 re-framed: a DISAGREEMENT, not an established AnyAxisym defect
+
+Having just proved RazorThinExponentialDiskPotential unreliable off-plane
+(#206), I went back to #203 — because #203's evidence used that SAME potential as
+its gold reference. If the reference is suspect, so is the attribution.
+
+Tried to arbitrate with the independent Hankel transform, extended to the second
+derivative: R2deriv = -dF_R/dR ∝ ∫ k² Σ̃(k) J₁'(kR) dk, J₁'(x)=J₀(x)-J₁(x)/x.
+Ratio R2deriv/Rforce at z=0 so normalisation cancels:
+
+    R      Hankel        AnyAxisym    rel        RazorThinExp   rel
+    0.05  -10.79938478  -10.79955065  1.54e-05  -10.79951507   1.21e-05
+    0.30    0.67706634    0.67698254  1.24e-04    0.67698363   1.22e-04
+    1.00    1.60562673    1.60540075  1.41e-04    1.60540079   1.41e-04
+    2.00    1.10694199    1.10604644  8.09e-04    1.10604644   8.09e-04
+
+**Inconclusive, and I am not going to pretend otherwise.** Both galpy codes
+agree with EACH OTHER and both drift from my Hankel by 1e-4..8e-4, with the gap
+GROWING with R. That is the signature of MY integral being the weak one for the
+second derivative — the k² weight decays more slowly and J₁' oscillates faster,
+so panels between J₁ zeros converge poorly. The arbiter that settled #202 at
+1e-7 for the force is only good to ~1e-4 for the curvature.
+
+What the numbers DO show: the two galpy implementations differ from each other
+by 3.3e-6 at R=0.05, 1.6e-6 at R=0.3, and are identical to ~1e-8 for R>=1 —
+exactly the #203 signature.
+
+**So #203 is re-framed, not resolved.** It is a DISAGREEMENT between two
+implementations at small R, magnitude ~3e-6. My earlier note asserted AnyAxisym
+was the wrong one; nothing I have measured justifies that attribution, and given
+#206 it could as easily be RazorThinExp's R2deriv. Fixed the task title and body
+to say "disagree" rather than "AnyAxisym is wrong", and recorded that settling it
+needs a better second-derivative reference than my Hankel panels (higher-order
+quadrature, or mpmath at extended precision).
+
+Two near-misses in two wakes from trusting a reference. The habit that caught
+both: check whether the REFERENCE behaves sanely before believing it about the
+code under test.
