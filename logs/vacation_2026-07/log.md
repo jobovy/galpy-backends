@@ -23610,3 +23610,443 @@ It is a long run; no claim until the RCs land.
 
 The other 2 jax-jit test_potential entries are the pickling pair, unrelated to
 #1259 — they should still fail, and if they do NOT that is its own finding.
+
+### 2026-08-07 — task #143 residual: MEASURED, and deliberately declined
+
+While the AnyAxisym burn runs, took the other open item on evolveddiskdf: the
+two remaining `is_backend_array` gates (`vmomentsurfacemass` :530, `_buildvgrid`
+:2989). The standing directive is "eliminate numpy islands, don't quarantine",
+and these gates mean that under `--backend torch`, all 35 tests in
+`test_evolveddiskdf.py` run on numpy — the hollow-green shape.
+
+Before writing the lift, measured what the lift would cost. Same grid
+(31x31, `integrate_method="rk6_c"`), numpy R vs torch R:
+
+| path | time | value |
+|---|---|---|
+| numpy grid (C integrator) | **0.83 s** | 0.06728807704722149 |
+| torch grid (torchdiffeq) | **23.62 s** | 0.06728613644265534 |
+
+**28.5x slower**, and the values differ by 2.9e-5 — the diffrax/torchdiffeq
+tolerance floor against `rk6_c`, not a defect, but enough that the existing
+value assertions would all need retuning.
+
+So a blanket coercion flip turns a ~60 s file into a ~30 min one and forces a
+tolerance rewrite across 35 tests. That is exactly
+[[migration-flips-numpy-fallthrough-to-eager-slow]]. **Declining it**, and
+recording why rather than leaving #143 as an open TODO that reads like unfinished
+work:
+
+- the backend path is not uncovered — `test_backend_evolveddiskdf.py` has **41**
+  tests driving it with genuine backend arrays, including the grid-free direct
+  path added in #1264;
+- so these two gates are dual-path dispatch on the data, not a coverage hole.
+  Per [[no-numpy-islands-eliminate-fast]] a numpy/backend dual path is not an
+  island; the island is a *forced* backend being silently downgraded where the
+  backend has no other coverage. That is not the case here.
+
+The other four `is_backend_array` sites in the file (:866 vertexdev, :2942 grid
+reduction, :3627 hierarchical-grid `__call__`) are reductions of
+already-computed moments — a numpy grid legitimately yields numpy. Read each;
+none is a gate.
+
+Net: #143's residual is closed as "measured, declined, justified" rather than
+carried. The comments in the source say TRANSITIONAL; that is still the right
+word if the ODE cost ever comes down, but it is not today's work.
+
+### 2026-08-07 — turning to the slow-skip list: it is 12x the ledger
+
+With the queue clear I looked at where the coverage actually is missing, and the
+ledger is no longer the interesting number:
+
+| list | entries |
+|---|---|
+| `backend_xfail.txt` (ledger) | **16** |
+| `backend_slow_skip.txt` | **210** (192 jax, 15 torch, 3 torch-jit) |
+
+And the slow-skip list is dominated by one file:
+
+    112  jax   tests/test_orbit.py
+     19  jax   tests/test_noninertial.py
+     16  jax   tests/test_potential.py
+     15  jax   tests/test_orbits.py
+     13  torch tests/test_orbit.py
+
+**112 jax test_orbit entries = 55% of the entire list.** These are tests that
+never execute under a backend at all — a bigger hole than the 16 ledgered
+failures, and it is task #110.
+
+#1252 showed the way: 27 of the jax spherical-DF slow-skips had simply gone
+stale as Track F vectorized their code paths, and re-measuring un-deferred all
+27. The orbit entries have had the whole in-backend-ODE + C-STM + accessor wave
+land underneath them since they were written.
+
+So: **measuring, not assuming.** Dispatched all 5 pytest-split groups
+concurrently in a fresh worktree (`/var/tmp/orbslow`, C ext built and import
+provenance verified — [[worktree-missing-c-ext-fakes-passes]],
+[[galpy-editable-install-import-shadow]]), mirroring the CI shard command
+character-for-character (backend-tests.yml:341-345) with three deliberate
+differences, all recorded in the script header:
+
+- the 127 `jax tests/test_orbit(s).py::` lines are stripped from the slow-skip
+  list (that is the measurement);
+- `--session-timeout` raised so a group is not cut off mid-measurement;
+- groups run concurrently, `OMP_NUM_THREADS=4` so five jax processes do not
+  fight over 72 cores (and 4 threads is closer to a CI runner anyway).
+
+The **xfail ledger stays active** — no `GALPY_BACKEND_XFAIL_REGEN`. That way a
+ledgered failure stays an xfail and the only pass/fail signal in the junitxml is
+the lifted slow-skips. `--timeout=300` is the gate that matters: a test that
+completes inside it is runnable in CI.
+
+Counts will come from the junitxml with `find("failure") is not None`, never
+from the terminal tail ([[junitxml-find-truthiness-trap]],
+[[never-report-partial-run-as-result]]).
+
+Also in flight: the AnyAxisym `--jit` burn, and a torch-jit streamdf fork-deadlock
+repro. On that last one — the first two repro attempts returned **RC=0, "1
+skipped"**, and RC=0 there meant nothing: the test was being skipped by the
+slow-skip list. I had assumed `GALPY_BACKEND_XFAIL_REGEN=1` lifts slow-skips;
+reading conftest.py:284-302 instead of my memory of it, the docstring says the
+opposite — slow-skip applies in **both** modes, and the "NOT applied in
+regenerate mode" sentence refers to the xfail ledger. Third attempt strips the
+line from the list directly.
+
+### 2026-08-07 — the torch-jit fork deadlock is real, and localized
+
+Third repro attempt (slow-skip line stripped from the list, not relying on
+regen mode) **reproduced it**. RC=1, pytest-timeout at 420 s, and the stack
+names the exact chain:
+
+    tests/test_streamdf.py:519   test_streamTrack_multi_parallel
+    galpy/df/streamdf.py:315     __init__
+    galpy/df/streamdf.py:1325    _determine_stream_track
+    galpy/util/multi.py:255      parallel_map
+    galpy/util/multi.py:149      run_tasks
+    multiprocessing/process.py:149  join
+    multiprocessing/popen_fork.py:28  os.waitpid   <-- blocked forever
+
+So the parent forks and a child never exits. `restrict_to_single_thread()` runs
+first thing in the child (multi.py:95) and caps `torch.set_num_threads(1)` —
+which is why **eager** torch is fine — but that knob does not touch what
+`--jit` adds. `--jit` on torch means `torch.compile` (galpy/backend/_jit.py:178),
+and Dynamo/Inductor keeps a parallel compile-worker pool. Forking a process
+that holds that pool is the classic way to inherit unusable pool state.
+
+**Hypothesis under test right now:** it is inductor's compile-worker pool, not
+the intra-op thread pool. A/B running with `TORCHINDUCTOR_COMPILE_THREADS=1`,
+everything else identical. If that arm passes, the fix is a two-line extension
+of the existing `restrict_to_single_thread` helper in `galpy/backend/` — same
+function, same rationale, no new helper and nothing new to place
+([[generic-helpers-go-in-backend]]).
+
+Not claiming the cause until the A/B lands.
+
+### 2026-08-07 — PR ready: jit tests that assert a value instead of `isfinite`
+
+Committed `d0b9f28d` on `feat/jit-dependence-tests` (worktree /var/tmp/jitdep,
+C ext copied from an identical checkout and verified by a real C integrate).
+
+Found by scanning every `test_backend_*.py` for `jax.jit(` uses that are NOT
+gradient tests: 22 candidates in 18 files, of which three asserted **only**
+`numpy.isfinite` on the traced result. That is the shape the user has
+repeatedly called out — a constant-folded trace is finite too, so those
+assertions could only ever catch "jax.jit raised", never "jax.jit computed the
+wrong thing".
+
+Measured the achievable agreement first, then wrote tolerances just above it:
+
+| check | measured | tolerance written |
+|---|---|---|
+| interpRZ 2D jit-vs-numpy | 3.8e-16 | rtol 1e-14 |
+| interpRZ 1D jit-vs-numpy | 2.1e-16 | rtol 1e-14 |
+| AnySpherical Rforce jit-vs-numpy | 8.9e-16 | rtol 1e-14 |
+| interpRZ jacfwd-vs-FD (h=1e-5) | 3.1e-10 | rtol 2e-9 |
+| AnySpherical jacfwd-vs-FD (h=1e-5) | 7.0e-11 | rtol 1e-8 |
+
+Both `jax.jacfwd(...) is finite` assertions become central-FD comparisons. And
+because interpRZPotential's map is elementwise in R, its Jacobian is now also
+asserted **exactly diagonal** — measured off-diagonal is identically 0.0, so
+that one costs no tolerance at all.
+
+Three further sites already compared values and only gain the
+depends-on-its-inputs check: the two traced `surfdens` tests (where a
+structural `z=None` still has to produce an R-dependent trace — precisely
+where constant-folding would hide) and the jax RNG-reparameterization test.
+
+Tests only, no library code, so numpy byte-identity is not in question.
+Forced-backend gate (numpy/torch/jax) running before push per
+[[forced-backend-gate-before-push]].
+
+### 2026-08-07 — orbit slow-skip measurement: group 1 in, 5/5 runnable
+
+Group 1 of 5 finished clean (RC=0, 106 tests, all passed). Of the 127 lifted
+nodeids, 5 landed in that group and **all 5 now pass**, the slowest at 93.6 s
+against a 300 s cap:
+
+    93.6s  test_energy_conservation_linear[mockRotatedAndTiltedMWP14WrapperPotential-...]
+    75.9s  test_energy_conservation_linear[nestedListPotential-...]
+    30.0s  test_energy_conservation_linear[BurkertPotentialNoC-...]
+    25.5s  test_energy_conservation_linear[RazorThinExponentialDiskPotential-...]
+    14.2s  test_energy_conservation_linear[FerrersPotential-...]
+
+That is a complete group, so it is a real result — but it covers 5 of 127.
+122 are still in groups 2-5 and I am claiming nothing about them yet.
+
+### 2026-08-07 — inductor-compile-pool hypothesis REFUTED
+
+`TORCHINDUCTOR_COMPILE_THREADS=1`, everything else identical: **RC=1, same
+timeout, same `os.waitpid` stack**. So the deadlock is not inductor's parallel
+compile-worker pool. Glad I A/B'd it rather than writing the two-line "fix" the
+theory implied — it would have landed, looked plausible, and changed nothing.
+
+What I could establish without ptrace (py-spy is blocked, `ptrace_scope=1`):
+each of the four forked children is **single-threaded** and parked in
+`futex_wait_queue`. A one-thread process waiting on a futex is waiting for a
+lock whose owner does not exist — the lock was held by a *parent* thread that
+`fork` did not copy. That is the shape of the bug regardless of which pool owns
+the lock.
+
+To name it, made the child self-report instead: a pytest plugin
+(`/tmp/diagplug/forkdiag.py`, not in the repo) wraps `galpy.util.multi.worker`
+so each child arms `faulthandler.dump_traceback_later(45, exit=True)` into its
+own file. `parallel_map` builds `ctx.Process(target=worker, ...)` by
+module-global lookup at call time, so rebinding the attribute is enough — no
+source edit, no worktree churn. Running now.
+
+### 2026-08-07 — fork deadlock ROOT CAUSE (the child self-dump worked)
+
+The children reported their own stacks. Every one is parked here:
+
+    /tmp/torchinductor_galpy_.../cefasp53....py:114 in call     <-- generated kernel
+    torch/_inductor/output_code.py:725 __call__
+    torch/_functorch/_aot_autograd/... (runtime wrappers)
+    torch/_dynamo/eval_frame.py:1298 _fn
+    galpy/potential/IsochronePotential.py:62 _evaluate
+    galpy/backend/_jit.py:172 call                              <-- torch.compile shim
+    galpy/actionAngle/actionAngleIsochroneApprox.py:1063 _actionsFreqsAngles_backend
+    galpy/df/streamdf.py:4901 _determine_stream_track_single
+
+So the child is not stuck *compiling* — it is stuck **executing an inductor
+kernel the parent already compiled**. The child inherits the compiled code and
+the CPU thread pool it runs on, enters the parallel region, and the pool is
+dead. That is why:
+
+- **eager torch works** — eager ops honour the child's
+  `torch.set_num_threads(1)` and take the serial path;
+- **`TORCHINDUCTOR_COMPILE_THREADS=1` changed nothing** — that governs
+  *compile* parallelism, not the generated kernel's *runtime* parallelism;
+- **`restrict_to_single_thread()` cannot fix it** — the parallelism is baked
+  into the kernel at compile time, before the fork.
+
+**A compiled kernel is not fork-safe.** So the fix is not another knob, it is
+not forking: in `parallel_map`, when `jit_mode() != "off"`, fall back to
+`list(map(...))`.
+
+That slots in beside the precedent already in the function — Windows, where
+forking also does not work, returns `list(map(function, sequence))` three lines
+above. Same shape, same place, no new helper. `jit_mode()` is imported inside
+the function, matching how `restrict_to_single_thread` is already imported
+there and keeping `galpy.util.multi` importable without `galpy.backend`.
+
+numpy is byte-identical **by construction**: `jit_mode()` is `"off"` unless
+somebody entered `backend.jit(...)`, so the numpy path never reaches the new
+branch. Eager torch is likewise untouched and keeps its parallelism.
+
+Honest limitation to state on the PR: under a trace, `multi=` becomes serial,
+so the test no longer exercises fork-parallelism there. It currently does not
+exercise anything — it hangs — so this is strictly more coverage, but the
+tradeoff should be visible rather than implied.
+
+Branch `feat/no-fork-under-trace` (worktree /var/tmp/forkfix). Verifying it
+flips all three previously-hanging tests before committing
+([[verify-burndown-flips-stash-rerun]] — the "without the fix" half is already
+established three times over: RC=1, same `os.waitpid` stack).
+
+### 2026-08-07 — PR #1265 opened (jit-dependence tests)
+
+Forced-backend gate green on all three arms before push, per
+[[forced-backend-gate-before-push]]:
+
+    numpy  205 passed, 1 skipped, 111.9s
+    torch  205 passed, 1 skipped, 110.9s
+    jax    205 passed, 1 skipped, 108.5s
+
+https://github.com/jobovy/galpy/pull/1265
+
+### 2026-08-07 — 4 of the 16 ledger entries are documented design, not defects
+
+Read the code instead of re-measuring ([[read-code-docs-before-classifying]]).
+`actionAngleAdiabaticGrid` and `actionAngleStaeckelGrid` carry the identical
+class docstring:
+
+> jax/torch input is supported and differentiable, but evaluates the
+> interpolation grid only (no off-grid fallback): inputs must lie within the
+> grid, whereas the numpy path falls back to a per-point solve off-grid.
+
+And `test_actionAngleAdiabaticGrid_outsidegrid_c` evaluates at `R=3.0` against
+a grid built with `Rmax=2.0` — i.e. it tests exactly the fallback the backend
+deliberately does not implement. So that pair (jax + torch) is a **known design
+gap tracked by task #103**, not an unknown failure. With the qdf
+`test_call_diffinoutputs` pair (by design, task #175), 4 of 16 are accounted
+for on paper.
+
+Still genuinely unknown: the two `test_actionAngleAdiabatic_linear_angles_cylsep`,
+the torch `test_actionAngleStaeckelGrid_basicAndConserved_actions` (that one is
+ON-grid and asserts `|Jr| < 1e-16` for a circular orbit — smells like a
+tolerance entry, which needs Jo), and the orbit ones being measured now.
+
+### 2026-08-07 — correction to the slow-skip count above
+
+I wrote **207 (192 jax, 15 torch)**. The real figure on the pristine tip is
+**210 (192 jax, 15 torch, 3 torch-jit)**; the table above is corrected. I had
+counted in `/var/tmp/evdirect` at a moment when the fork-deadlock repro script
+had *temporarily deleted* the three `torch-jit` lines from that worktree, so
+they were invisible to the count. Same shape as reading a partial pytest run:
+I sampled a file that was mid-edit. Counts now come from
+`git show origin/feat/backends-develop:<path>`, never from a worktree another
+job is writing to.
+
+The proportions and the conclusion are unaffected: jax `test_orbit.py` is still
+112 entries, still the majority of the list.
+
+### 2026-08-07 — fork fix VERIFIED: three hangs become three passes
+
+A/B complete, both halves ([[verify-burndown-flips-stash-rerun]]):
+
+| | result |
+|---|---|
+| **without** the fix (3 independent runs) | RC=1, pytest-timeout, parent parked in `os.waitpid` |
+| **with** the fix | `test_streamTrack_multi_parallel` **27.7 s** PASSED, `test_plotting` **14.0 s** PASSED, `test_fardalwmwpot_trackaa` **45.4 s** PASSED |
+
+A test that hung for 420 s now finishes in 27.7 s. Also checked the two paths
+return the same thing directly: forking path and serial path both equal the
+plain `map` result, and `jit_mode()` is `"off"` outside the context — which is
+what makes the numpy path byte-identical *by construction* rather than by
+measurement.
+
+Committed `8b84a009` on `feat/no-fork-under-trace`: 19 lines added to
+`galpy/util/multi.py`, 10 removed from `backend_slow_skip.txt`. Slow-skip
+**210 → 207**. Gate running on numpy / torch-jit / eager-torch (eager torch
+must KEEP forking — that path is deliberately untouched).
+
+### 2026-08-07 — the 2 jax orbit-analytic ledger entries are TIMEOUTS, not failures
+
+The characterization run finished its jax arm (RC=1, 1212 s):
+
+    FAILED tests/test_orbit.py::test_analytic_ecc_rperi_rap - Timeout (>600.0s)
+    FAILED tests/test_orbit.py::test_analytic_zmax          - Timeout (>600.0s)
+
+Neither is a correctness gap. Both are simply too slow — 600 s each and still
+unfinished, against a 300 s CI cap. That makes them **mis-filed**: they belong
+in `backend_slow_skip.txt`, not the xfail ledger, exactly like the noninertial
+pair in task #198 and for the reason in
+[[timeout-overrides-xfail-move-to-slowskip]] — a ledgered xfail still RUNS, so
+it burns the shard budget and lands as a timeout rather than the expected
+failure.
+
+Holding the reclassification until the torch arm finishes, so the torch
+counterpart (`torch ... test_analytic_ecc_rperi_rap`) is handled in the same
+move rather than in two goes.
+
+### 2026-08-07 — HOLD the orbit-analytic reclassification: the ledger contradicts my measurement
+
+I was about to move three entries from the xfail ledger to slow-skip on the
+strength of my own timeouts:
+
+    jax   test_orbit.py::test_analytic_ecc_rperi_rap   >600 s
+    jax   test_orbit.py::test_analytic_zmax            >600 s
+    torch test_orbit.py::test_analytic_ecc_rperi_rap   >600 s
+
+Then read the ledger's own header prose before editing it
+([[read-code-docs-before-classifying]]) and found this, written by an earlier
+regen:
+
+> Do NOT re-measure on a dev box instead. The backend matrix is python 3.14 and
+> shards test_orbit into 5 pytest-split groups; a local py3.13 unsplit run of
+> the same files disagreed on exactly one entry
+> (**test_analytic_ecc_rperi_rap: passes locally**, xfails in CI group g3).
+
+It **passes locally** under normal conditions. My run took its 600 s on a box
+carrying five concurrent jax split-groups plus the AnyAxisym jit burn plus two
+gates. So my "timeout" may be pure contention, and the reclassification would
+have been wrong — a ledger edit justified by a number that measured my machine's
+load rather than the test.
+
+**Held.** Re-measuring the three cleanly once the box is quiet, unsplit AND in
+the CI split-group context ([[verify-exact-ci-shard-context]],
+[[regen-py-version-blind-spot]]). Not folding anything into the fork PR on this
+basis.
+
+Separately noted while reading: the `torch test_analytic_ecc_rperi_rap` entry
+sits under a *streamspraydf integrate=True* comment block that has nothing to do
+with it, and the jax pair sits under a "not yet backend-migrated (Track E)"
+comment — Track E has since landed. Both comments are stale regardless of where
+the entries end up; worth fixing when the measurement settles.
+
+### 2026-08-07 — fork-fix gate: numpy arm red, and it is the environment
+
+`RC_numpy=1` — 4 failed, 147 passed. All four are `useTM`:
+
+    RuntimeError: actionAngleTorus instances cannot be used, because the
+    actionAngleTorus_c extension failed to load
+
+The external Torus C++ library is not built in this worktree, and the backend CI
+shard deselects exactly these (`-k 'not useTM'`, backend-tests.yml:162). Not my
+change. Re-running the arm with the same deselection so the signal is clean
+rather than asserting "environment" and moving on.
+
+### 2026-08-07 — orbit slow-skip measurement: 19 of 20 runnable so far
+
+Groups 1 and 5 complete (2 of 5). Of the 127 lifted nodeids, 20 fall in those
+groups:
+
+    NOW RUNNABLE  19    slowest 269.3 s (test_SOS_3D), then 158.0 / 156.8 / 118.4
+    STILL SLOW     1    test_ChandrasekharDynamicalFrictionForce_constLambda (hit 300.0 s)
+
+The four slowest passing ones are all `test_orbits.py` (multi-orbit) — exactly
+the code the batched in-backend integrator work touched, which is why they went
+stale. 107 entries are still in groups 2-4; no total claimed until those land.
+
+### 2026-08-07 — correction to my own plan: re-measure from CI artifacts, not this box
+
+Having held the orbit-analytic reclassification, I said I would re-measure
+locally once the machine was quiet. Reading further into the ledger header, that
+is the wrong instrument — the file already prescribes the right one:
+
+> Download a completed run's artifacts and take (ledgered AND passed), where
+> passed = a `<testcase>` with no skipped/failure/error child. That covers all 44
+> shards at once.
+>
+> **Do NOT re-measure on a dev box instead.** The backend matrix is python 3.14
+> and shards test_orbit into 5 pytest-split groups; a local py3.13 unsplit run of
+> the same files disagreed on exactly one entry ...
+
+So the settlement comes from a completed `backend-tests` run's
+`backend-junit-<backend>-<files>` artifacts — python 3.14, in the real split
+groups, all 44 shards at once. PR #1265 is running that suite right now against
+the same base, so its artifacts answer the question for free. Waiting for them
+rather than spending an hour re-running the wrong thing
+([[regen-py-version-blind-spot]], [[verify-exact-ci-shard-context]]).
+
+### 2026-08-07 — the last two uncharacterized actionAngle ledger entries, read not run
+
+`test_actionAngleAdiabatic_linear_angles_cylsep` (jax + torch) has no per-entry
+comment in the ledger, so I read the test:
+
+    pot = CylindricallySeparablePotentialWrapper(MWPotential2014, Rp=1.1)
+    aAA = actionAngleAdiabatic(pot=pot, c=False, gamma=0.0)
+    check_actionAngle_linear_angles(..., -8.0, -8.0, -7.5, ..., -7.0, ntimes=1001)
+
+Pure-Python Adiabatic, `gamma=0.0` (so the γ·Jz→Lz coupling of
+[[adiabatic-c-actions-gamma-coupling]] is absent — the clean separable case),
+and log10 tolerances of **1e-8 / 1e-7.5 / 1e-7** on angle linearity with fine
+de-periodization. That is a tolerance-shaped bar, not a correctness-shaped one.
+
+Same reading for the torch `test_actionAngleStaeckelGrid_basicAndConserved_actions`:
+it is ON-grid and asserts `|Jr| < 1e-16` for a circular orbit.
+
+If the artifacts confirm all three are tolerance-class, that is a **new tolerance
+batch and needs Jo** — the standing approval covers Groups A/B on `test_quantity`
+only, and the actionAngle residual is explicitly flagged as needing sign-off
+(task #171). I will characterize and propose, not loosen.
