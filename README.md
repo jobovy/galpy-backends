@@ -182,6 +182,35 @@ the ledger (commit message: torch 1684→1485, jax 335→292); subsequent tail m
 and the central-coercion fixes brought it to the current baseline. Open-PR triage
 adds are branch-local until merge (#974 ≈ +16, #975 ≈ +50).
 
+## Traced (`--jit`) state, measured 2026-08-07
+
+The `--jit` dimension is **not in `backend-tests`' normal matrix** — it only runs
+via `workflow_dispatch(jit=true)` — so until this sweep, no module had ever been
+run traced outside ad-hoc probes. Whole-file runs, regen mode (so ledgered
+nodeids execute), `--timeout=300`:
+
+| file | backend | passed | failed | un-ledgered |
+|---|---|---|---|---|
+| `test_potential.py` | jax-jit | 1262 | 5 | **1** — #1259 traced regression |
+| `test_potential.py` | torch-jit | 1282 | 1 | **1** — same regression |
+| `test_actionAngle.py` | jax-jit | 179 | 3 | **1** — ledger asymmetry (fixed) |
+| `test_actionAngle.py` | torch-jit | 182 | 3 | 0 |
+| `test_qdf` + `test_pv2qdf` | jax-jit | 58 | 1 | 0 |
+| `test_sphericaldf.py` | jax-jit | **222** | **0** | 0 |
+| `test_evolveddiskdf.py` | jax-jit | **35** | **0** | 0 |
+| `test_diskdf.py` | jax-jit | 122 | 2 | 2 — Oort-A **timeouts**, not wrong values |
+| `test_interp_potential.py` | torch-jit | 38 | 2 | 2 — `torch.compile` cost, now deferred |
+
+**The spherical-DF and evolveddiskdf migrations are jit-complete.** The
+`test_potential` entry is a genuine regression introduced by a PR that merged
+green (see `logs/vacation_2026-07/log.md`, and the task ledger's #207): a
+z-discontinuity in `AnyAxisymmetricRazorThinDiskPotential`'s traced quadrature,
+7.3e-5 between z=0 and z=1e-8 where eager gives 4e-12.
+
+Five distinct problems today were visible only under `--jit`. That is the case
+for making `workflow_dispatch(jit=true)` a standing pre-merge run rather than an
+occasional one.
+
 ## Backend support snapshot (this env)
 - jax 0.9.2 ✅ · torch 2.12 (CPU) ✅ · array-api-compat 1.14 ✅
 - `array_api_compat.array_namespace`: numpy → (normalized to plain numpy), jax → `jax.numpy`, torch → `array_api_compat.torch`.
