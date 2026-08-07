@@ -26033,3 +26033,34 @@ know it.
 Generalises: before reaching for the empirical discriminator, ask whether the
 diff could even produce the failure being reported. Ruling something out from
 the shape of the change is cheaper and stronger than ruling it out from a trend.
+
+### 2026-08-07 — traced-green is DONE as far as I can take it
+
+Read the whole xfail ledger rather than trusting the roadmap entry. It is now
+**17 entries**: jax 5, jax-jit 6, torch 5, torch-jit 1. All 7 traced entries,
+characterised from their own comment blocks:
+
+| entry | why |
+|---|---|
+| `test_orbit.py::test_eccentricity` | AnyAxisym via an orbit: traced GL forces ~1e-6 -> circular orbit e=5.4e-6 vs a 1e-8 bar |
+| `test_2ndDeriv_potential[AnyAxisym]` | **by design** -- GL cannot form the z=0 Hadamard 2nd derivative |
+| `test_poisson_surfdens_potential[AnyAxisym]` (jax-jit + torch-jit) | same by-design GL limit |
+| `test_pickling_potential_unitful_dens` | **not traceable by construction** -- Quantity arithmetic strips a tracer to numpy |
+| `test_pickling_potential_drops_units_wrapper` | same |
+| `test_actionAngleStaeckelGrid_...` | tolerance: computed eccentricity asked to vanish to 1e-16 |
+
+**Zero are an unmigrated potential.** Every one is either not-traceable by
+construction or a tolerance/design decision that needs Jo. So the standing task
+"#158: burn down the jax-jit ledger -- fix the ~5 potentials that block
+traced-green" was stale in a way that mattered: it implied a queue of migration
+work that does not exist. Closed it with the real state.
+
+That is the headline for the traced track: **traced-green is achieved as far as
+code changes can take it.** What is left is maintainer decisions, not migration.
+
+**Doc drift found and deliberately NOT fixed yet:** the big jax-jit comment block
+still describes 2026-07-27 ("28 of ~1300 tests fail... ~15 poisson_surfdens, ~4
+AnyAxisym, ~9 one-offs") against 6 actual entries. The comment outlived the
+entries it describes. Folding the refresh into the next ledger PR rather than
+editing `backend_xfail.txt` now, because #1267 is currently touching that file
+and a second concurrent edit to it buys a conflict for no reason.
