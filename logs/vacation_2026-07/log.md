@@ -25248,3 +25248,34 @@ backend shards are exactly where it would have shown, and they did not.
 
 Remaining before it can merge: the numpy tail, and the codecov check — which
 needs an `all-clear` re-run once uploads settle, since it does not re-post.
+
+### 2026-08-07 — found two bugs in my own sweep tool, before running the thing it is for
+
+I am about to dispatch `workflow_dispatch(jit=true)` — the authoritative run for
+every `-jit` ledger entry — and `ledger_sweep.py` is how I would read it. Checked
+the tool against that specific job first, and it was wrong twice.
+
+**1. The artifact name does not say "jit".** backend-tests.yml uploads
+`backend-junit-${{ matrix.BACKEND }}-${{ SHARD_ID }}`, and `BACKEND` is `jax` or
+`torch` regardless of `JIT_FLAG`. So a traced run is **indistinguishable from an
+eager one by filename**, and the sweep would have compared traced outcomes
+against the EAGER ledger keys — reporting every eager entry the traced run
+happened to pass as STALE. Confidently, and wrongly. Added an explicit `--jit`
+flag that re-keys `jax`→`jax-jit`; demonstrated on a fixture, where the buggy
+path claims `1 STALE` and the fixed path correctly says the eager entries were
+simply not measured.
+
+**2. It did not implement conftest's inheritance rule, and the fix is asymmetric.**
+`_load_backend_nodeids` makes `<b>-jit` inherit `<b>`'s eager entries, so a
+traced failure already covered by an eager entry is not a gap. But staleness
+does **not** inherit: an eager entry describes eager behaviour, so a traced PASS
+must never mark it stale. Coverage uses the union; pruning uses only the literal
+`<b>-jit` entries. Getting that backwards would have pruned the *eager* ledger
+from a traced run — the worst possible outcome of this whole exercise.
+
+Verified: a jit run where an eager-jax-ledgered nodeid fails now reports
+**CONFIRMED (inherited)** rather than an un-ledgered gap.
+
+The pattern is the one that keeps repeating today: the instrument was built for
+the general case and quietly did not fit the specific job. Checking it against
+the job — before trusting its output — is what caught both.

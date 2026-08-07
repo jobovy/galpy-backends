@@ -128,8 +128,17 @@ def backend_of(path):
     return None
 
 
-def collect(root):
-    """{backend: {nodeid: outcome}} over every junit xml under ``root``."""
+def collect(root, jit=False):
+    """{backend: {nodeid: outcome}} over every junit xml under ``root``.
+
+    ``jit=True`` re-keys an observed ``jax``/``torch`` to ``jax-jit``/``torch-jit``.
+    This is NOT cosmetic: `backend-tests.yml` names its artifact
+    ``backend-junit-${{ matrix.BACKEND }}-${{ SHARD_ID }}`` with **no jit
+    marker**, so a `workflow_dispatch(jit=true)` run is indistinguishable from an
+    eager one by filename. Without this flag the traced outcomes get compared
+    against the EAGER ledger keys, and every eager entry the traced run happens
+    to pass is reported STALE -- confidently, and wrongly.
+    """
     seen = collections.defaultdict(dict)
     n_files = 0
     for dirpath, _dirs, files in os.walk(root):
@@ -147,8 +156,9 @@ def collect(root):
                 tree = ET.parse(path)
             except ET.ParseError:  # truncated upload
                 continue
+            key = f"{backend}-jit" if jit and not backend.endswith("-jit") else backend
             for tc in tree.getroot().iter("testcase"):
-                seen[backend][nodeid(tc)] = outcome(tc)
+                seen[key][nodeid(tc)] = outcome(tc)
     return seen, n_files
 
 
@@ -160,6 +170,9 @@ def main(argv=None):
                     help="git ref to read the ledger from (default: %(default)s)")
     ap.add_argument("--ledger", help="read a file instead of the ref (discouraged)")
     ap.add_argument("--dir", help="use already-downloaded artifacts instead")
+    ap.add_argument("--jit", action="store_true",
+                    help="the run was workflow_dispatch(jit=true); re-key jax/torch "
+                         "to jax-jit/torch-jit (the artifact NAME does not say)")
     args = ap.parse_args(argv)
 
     if not args.run_id and not args.dir:
@@ -175,18 +188,31 @@ def main(argv=None):
     if root is None:
         tmp = tempfile.mkdtemp(prefix="ledger_sweep_")
         root = download(args.run_id, args.repo, tmp)
-    seen, n_files = collect(root)
-    print(f"parsed {n_files} junit files; backends observed: {sorted(seen)}\n")
+    seen, n_files = collect(root, jit=args.jit)
+    print(f"parsed {n_files} junit files; backends observed: {sorted(seen)}"
+          + ("   [--jit: re-keyed to <backend>-jit]" if args.jit else "") + "\n")
 
     grand = collections.Counter()
     for key in sorted(ledger):
         obs = seen.get(key, {})
+        # conftest's `_load_backend_nodeids` makes "<b>-jit" INHERIT "<b>"'s eager
+        # entries, so a traced failure already covered by an eager entry is not a
+        # gap. Mirror that here for coverage. But staleness is NOT symmetric: an
+        # eager entry describes eager behaviour, so a traced PASS must never mark
+        # it stale -- only literal "<b>-jit" entries can be pruned on traced
+        # evidence. Getting this backwards would prune the eager ledger from a
+        # traced run.
+        base = key[: -len("-jit")] if key.endswith("-jit") else None
+        inherited = ledger.get(base, set()) if base else set()
         stale, confirmed, unobserved = [], [], []
-        for nid in sorted(ledger[key]):
+        for nid in sorted(ledger[key] | inherited):
+            own = nid in ledger[key]
             if nid not in obs:
-                unobserved.append(nid)
+                if own:
+                    unobserved.append(nid)
             elif obs[nid] == "passed":
-                stale.append(nid)
+                if own:
+                    stale.append(nid)
             else:
                 confirmed.append((nid, obs[nid]))
         grand["stale"] += len(stale)
