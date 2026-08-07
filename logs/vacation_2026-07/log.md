@@ -22669,3 +22669,40 @@ lesson generalises: a partial run cannot support a claim OR a decision.
 post-#1259 tip, single file, no overlap. Two PRs open again: #1261 + #1262.
 
 README rows added for both #1259 and #1260.
+
+### 2026-08-07 — torch --jit streamdf DEADLOCKS in parallel_map (not stale, and worse than "fails")
+
+The jit staleness run I dispatched to test the 3 torch-jit streamdf ledger
+entries never produced a junitxml, because it hung. Diagnosing it produced a
+better result than the count would have:
+
+    parent  pid 3332537   State S,  wchan = do_wait,  55 threads
+    children 12 x python3, ALL 0.0% CPU, ALL wchan = futex_wait_queue
+    no output for 64 minutes; nobody in the tree burning CPU
+
+Twelve forked children all parked on a futex while the parent waits on them is a
+**deadlock**, not slowness — I checked for a running descendant precisely to rule
+the slow-child reading out.
+
+Collection order pins it exactly: 12 dots means it died on the 13th test, which
+is **`tests/test_streamdf.py::test_streamTrack_multi_parallel`** — one of the
+three torch-jit entries already in the ledger.
+
+**So: those entries are NOT stale.** And the failure mode is worse than the
+ledger implies. `[[torch-fork-deadlock-streamdf]]` records that the torch+fork
+deadlock in `parallel_map` was FIXED by capping the forked child to 1 torch
+thread. That fix evidently does **not** cover the `--jit` path. Refining that
+memory rather than leaving it as "fixed".
+
+**Actionable consequence.** An xfail-ledger entry still RUNS the test (it is
+`xfail(strict=False)`, not a skip). A test that HANGS cannot usefully be
+xfailed — it burns the shard's whole budget and lands as a timeout rather than
+as the expected failure. That is exactly
+[[timeout-overrides-xfail-move-to-slowskip]]. So
+`test_streamTrack_multi_parallel` (torch-jit) belongs in
+tests/backend_slow_skip.txt, not tests/backend_xfail.txt. Filing that rather
+than doing it inside an unrelated PR, since both open PRs (#1261, #1262) own
+different files and this is a ledger change.
+
+Killed the hung run (it could not produce a junitxml either way; the 90-minute
+timeout would have killed it mid-hang with no output).
