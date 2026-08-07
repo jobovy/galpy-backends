@@ -22890,3 +22890,42 @@ in `waiter.acquire` could be a matplotlib/backend lock instead. Same symptom,
 possibly different mechanism — will not conflate them in the PR text.
 
 No count claims until RC. The run is still going.
+
+### 2026-08-07 — #143 scoped properly (and my previous scoping was wrong)
+
+Read the actual code rather than trusting my own earlier note. Two corrections:
+
+**1. The blocker is NOT the four `integrate.quad` sites.** I had recorded
+evolveddiskdf.py:3140/3164/3214/3239 as the thing to migrate. Those are the
+LINE-OF-SIGHT marginalization integrands (`_marginalizeVperpIntegrandSinAlpha*`)
+— finite range [-nsigma, +nsigma], smooth, 1-D. Easy, and a separate surface.
+
+**2. The real blocker is `dblquad` at evolveddiskdf.py:607**, in the direct
+branch of `vmomentsurfacemass` (reached after the grid branches return). That is
+the path the :525 gate protects, and it is a **2-D adaptive integral over a
+DISC**: outer limits meanvT/sigmaT1 ± nsigma, inner limits
+meanvR/sigmaR1 ± sqrt(nsigma^2 - (x - meanvT/sigmaT1)^2).
+
+`galpy.backend.quadrature.nested_quad` is a tensor product over a
+HYPER-RECTANGLE, so it does not fit a disc with x-dependent inner limits as-is.
+
+**Design that does fit, with no new helper.** Change variables to polar about
+the disc centre:
+
+    vT_n = meanvT/sigmaT1 + r cos(theta)
+    vR_n = meanvR/sigmaR1 + r sin(theta)
+    r in [0, nsigma], theta in [0, 2*pi],  Jacobian r
+
+The disc becomes EXACTLY a rectangle in (r, theta), so `nested_quad` applies
+directly, and the integrand — a Gaussian-ish DF ratio centred on that point — is
+smooth in polar coordinates. This also avoids the sqrt-shaped inner limits,
+which are exactly the kind of endpoint singularity that hurts a fixed-order rule.
+
+That turns #143 from "migrate off scipy" into a specific, checkable change.
+Preferring the change of variables over extending `nested_quad` with variable
+inner limits: no new API surface, and it uses the helper that already exists
+([[audit-placement-and-duplication]]).
+
+Not starting it this wake — two PRs are open (#1261, #1262), the slow-skip
+branch is held pending its junitxml, and a 2-D quadrature swap in a DF is not
+something to rush into a queue that deep.
