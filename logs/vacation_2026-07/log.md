@@ -21678,3 +21678,27 @@ actually fixes.
 started) while #1260 progresses. Plain FIFO behind a deep queue — #1260 was
 created 5 minutes earlier and feat/backends-develop's post-merge runs are ahead
 of both. Nothing stale to cancel; verified all runs are on current head SHAs.
+
+### 2026-08-07 — withholding judgement on fix-B until it finishes
+
+At item 84: **F=25, .=59**. At comparable depth fix-A had ~22-25 F. So the
+"roughly halves the failures" claim I made at item 47 is ALSO wrong — the early
+advantage evaporated as the run went on.
+
+That is three successive claims about this one measurement made from partial
+data and then retracted:
+
+    "11 failures"          <- head -12 truncated the summary        -> actually 47
+    "0 failures, correct"  <- 16-item sample                        -> 5 by item 47
+    "roughly halves"       <- 47-item sample                        -> ~equal by item 84
+
+The pattern is mine, not the tool's: a partial observation is available
+immediately, the final number costs 20-75 minutes, and I keep spending the
+former as though it were the latter. **No further characterisation of fix-B
+until FIXB_RC is in the log and the junitxml is parseable.** The honest current
+statement is: fix-B changes the failure set, direction and magnitude unknown,
+and is ~9x slower — the perf number is the one measurement that is already
+complete and it alone rules the approach out as written.
+
+CI unchanged: #1259 fully queued (~60 min, plain FIFO), #1260 at 12/153 with its
+codecov pair red at 137 checks still uploading — not yet meaningful.
