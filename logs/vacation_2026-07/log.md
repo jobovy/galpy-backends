@@ -22058,3 +22058,34 @@ Verified against the RIGHT properties, not just "stops raising":
 
 Suites running (numpy test_actionAngle Spherical subset for byte-identity, plus
 test_backend_actionAngle). No claim about them until they report.
+
+### 2026-08-07 — #205 COMMITTED (held local; third branch, two slots)
+
+`6855ed9c` on `fix/aaspherical-0d`, in its own clean worktree `/var/tmp/aa0d`
+(C extension built + confirmed loading, so the gates are real).
+
+Gates:
+
+    numpy test_actionAngle Spherical subset   20 passed   (byte-identity)
+    new 0-d test, jax + torch, both methods    4 passed
+    A/B without the source fix                 4 FAILED   <- the test is meaningful
+
+The test asserts three things, not "it stops raising":
+  (a) 0-d input yields numpy's SHAPE (1,), so squeezing is caught;
+  (b) 0-d equals 1-d EXACTLY (`assert_array_equal`) -- same code path, only the
+      entry shape differs, so any drift is a real defect;
+  (c) both track numpy at 1e-6/1e-7, the pre-existing GL-vs-adaptive floor.
+
+Held local, not opened: #1259 and #1260 are the two open PRs. Queue for a free
+slot is now:
+
+    1. #205  actionAngleSpherical 0-d      -- DONE, committed, gated
+    2. #117b surfaceSigmaProfile + diskdf  -- specified (24 consumer boundaries,
+             explicit accessors NOT a proxy); 6-test oort cluster is what remains
+             once #205 removes the 5 shudf ones
+    3. #204  surfdens log substitution     -- designed + measured, needs
+             quadrature.py which #1260 owns
+
+Worth noting how this one arrived: it started as "5 mystery failures inside a df
+migration", and only became a 9-line actionAngle fix because I read the traceback
+instead of assuming the failures belonged to the thing I was working on.
