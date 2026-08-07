@@ -23387,3 +23387,31 @@ Worth recording the shape of this wake: the useful work was (a) confirming a fix
 on the specific arm it was meant to fix, and (b) establishing that a blocked
 retry is benign. Neither is a new result, but both are the difference between
 "waiting" and "waiting for a known reason".
+
+### 2026-08-07 — #143 re-gate 3/4 green; and the #1261 re-run blocking chain, identified
+
+**Re-gate on 00544f07: torch RC=0 35 passed, numpy RC=0 35 passed, jax RC=0 35
+passed.** The torch arm is the one that was 7-failed on e35b5541, so the
+`is_backend_array` gate is confirmed on the exact case it was meant to fix, on
+all three backends. Backend-test-file arm still running; holding the complete
+result rather than posting a partial one.
+
+**Why #1261's targeted re-run keeps returning 403 — traced, not guessed.** The
+chain is:
+
+    re-run of the failed jax shard
+      blocked by: "the workflow run containing this job is already running"
+      that run's last incomplete job = `backend status report`
+      which has been QUEUED (not running) since 10:39:56
+      because the runner pool is saturated by #1262's ~108 pending checks
+
+So it is not hung and not misconfigured: a summary job is waiting for a runner
+behind the other PR's checks. It clears on its own; hammering the endpoint would
+be churn. Checked the workflow's own timeout too — backend-tests.yml sets
+timeout-minutes: 90, which the queued job has not started counting against.
+
+This is the second time this stretch that runner saturation has been the real
+explanation for something that looked like a stall (the first was #1262 sitting
+at 0/151 for over an hour). Worth holding onto: with two ~150-check PRs open,
+the pool is the binding constraint, and "PR A's flake re-run waits on PR B's
+queue" is a normal state rather than a fault.
