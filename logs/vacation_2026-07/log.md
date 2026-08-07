@@ -25762,3 +25762,42 @@ what happened upstream of the normalisation.**
 Values identical on every arm (`0.4997934813`).
 
 numpy byte-identity gate (`test_diskdf.py`, plain numpy, serial) still running.
+
+### 2026-08-07 — is the #1261 class anywhere else? Swept; no.
+
+The regression shape is general enough to be worth hunting: an **unmigrated
+consumer** driving a **`@backend_input`-decorated leaf** with plain scalars
+inside a scipy-quad loop. Static pass — files with both a decorated leaf and
+scipy quadrature — gives four candidates:
+
+    galpy/df/diskdf.py           <- the one already fixed
+    galpy/df/sphericaldf.py
+    galpy/potential/Potential.py
+    galpy/potential/planarPotential.py
+
+Then measured rather than read, counting `coerce_coords` entries with a
+non-numpy xp during each call under a forced backend:
+
+    case                             t_numpy  t_jaxfrc   coerce@backend
+    Potential.mass(nfw)               0.000s    0.514s                2
+    Potential.rtide(mp)               0.001s    0.557s               36
+    Potential.surfdens(mp)            0.002s    1.335s                4
+    Potential.vesc(lp)                0.000s    0.003s               10
+    diskdf.oortA  (WITH the fix)      3.188s    3.496s                0
+
+**No second instance.** The class signature is a coercion count in the *tens of
+thousands* (diskdf was 133,332); these are 2-36. The wall-clock ratios look
+alarming but are not this bug -- t_numpy is sub-millisecond and the jax arm is
+dominated by first-call trace/compile, i.e. the already-tracked flat per-call
+overhead (#79). I am explicitly *not* reporting "12000x" as a regression.
+
+`Potential.py` turns out to already carry a guard for exactly this ("True only
+when scipy.integrate.quad CANNOT be used: we are inside a trace"), which is
+consistent with finding nothing there.
+
+**Coverage limit, stated:** five call sites, and sphericaldf's quadratures were
+not exercised. This bounds the blast radius on what it sampled; it is not a
+proof of absence.
+
+Also confirms the fix from the other direction: `diskdf.oortA` now does **zero**
+backend coercions and runs at 1.1x numpy under a forced backend.
