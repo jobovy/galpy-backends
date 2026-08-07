@@ -23459,3 +23459,26 @@ Sequencing note worth keeping: I deliberately did NOT re-run all-clear while the
 shard was still IN_PROGRESS over the previous two wakes. Doing so would have
 re-evaluated against an unfinished check and simply re-latched, costing another
 full cycle. Waiting for `pend=0` first is the cheap discipline.
+
+### 2026-08-07 — #1261 MERGED (third merge); #1263 opened for the slow-skip ledger
+
+**#1261 merged** 11:31:10Z, CLEAN at 152/154 (the two non-SUCCESS being RTD and
+pre-commit.ci, neither required). That lands the surfaceSigmaProfile numpy-island
+removal: the measured 47 -> 11 -> 0 arc, numpy bit- and type-identical, and the
+2.8x forced-torch cost stated in the merge commit rather than buried.
+
+Its last red was never a defect: the jax NonInertial `Timeout (>300s)` flake
+cleared on re-run, then the latched `all-clear` cleared on its own re-run once
+`pend=0`.
+
+**#1263 opened** for the slow-skip ledger move (3 torch-jit streamdf entries that
+HANG). Rebased onto the post-#1261 tip first — clean, and the full-tree conflict
+marker sweep was empty. The PR text is explicit that the three do NOT share a
+proven cause (one is a directly-observed parallel_map fork deadlock, two block in
+`waiter.acquire`), only the property the ledger cares about: they hang rather
+than fail.
+
+README row added for #1261.
+
+Queue now: #1262 (121/153, 0 reds, audit PASS) and #1263 open; #143 fully gated
+and waiting for the next slot.
