@@ -22370,3 +22370,32 @@ Dispatched a jit staleness check for the 3 torch-jit streamdf entries:
 test_streamdf.py under `--backend torch --jit` with GALPY_BACKEND_XFAIL_REGEN=1
 so the ledgered nodeids actually execute. Whole file, --junitxml; no claim
 until RC lands.
+
+### 2026-08-07 — codecov/project phantom CONFIRMED by a cross-PR comparison
+
+I had been asserting "phantom, it self-heals" from the shape of the numbers.
+Here is the actual falsifiable evidence, which I should have gone for several
+wakes ago:
+
+    PR     base_commit   head        base misses   head misses   patch
+    #1259  fa80b2f0      ee721aa2         20           144       100% (16/0)
+    #1260  fa80b2f0      f5ed74f4         20           144       100% (11/0)
+
+**Both PRs report head misses = 144.** Different heads, different diffs (one is
+AnyAxisym quadrature, the other jeans + quadrature). Two independent PRs cannot
+each add exactly 124 misses to the same base. The 144 is a property of the
+shared, still-incomplete upload set at this moment, not of either changeset.
+
+Corroborating mechanism, observed live this wake: #1259's `codecov/patch` went
+FAILURE -> SUCCESS on its own as more shards uploaded. Same check, same PR, no
+code change. That is the upload-completeness effect doing exactly what I claimed
+project would do.
+
+So the remedy stands (wait for uploads; re-run all-clear only if it latched),
+but now it rests on evidence instead of on my prior. Worth remembering as a
+general move: when a CI signal looks like an artifact, find a SECOND independent
+subject that should differ and check whether it differs. Identical numbers
+across independent inputs is the signature of an artifact.
+
+Gate for #117b now 4/5: jaxsurf 12, torchsurf 12, jaxevol 35, torchevol 35, all
+RC=0. jaxdisk (forced jax test_diskdf, the long pole) still running.
