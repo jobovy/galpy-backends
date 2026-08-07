@@ -25518,3 +25518,24 @@ delivered work were the right way round.
     test_diskdf.py         jax-jit    2 timeouts             (A/B in flight)
 
 Six of nine clean or explained; three surfaced things nothing else would have.
+
+### 2026-08-07 — ★ #1265 MERGED (2f738d77). #1266 opened. ★
+
+    #1265  154/154 green, 0 failures, mergeStateStatus=CLEAN
+           -> squash-merged into feat/backends-develop as 2f738d77
+
+The audit was run against the diff before merging, not recalled: no library file
+touched (so the if→xp.where class cannot arise), no helper defined or copied (4
+import sites onto the existing `tests/backend_jit_helpers.py`, and four
+hand-rolled comparisons collapse onto it), no new files. All 45 jax/torch
+backend shards green — the dimension that would have caught a mis-tuned
+tolerance, and the tolerances here were all measured rather than guessed.
+
+**#1266 opened**: `parallel_map: do not fork while galpy is running traced`.
+Two commits — the fix, plus the honest deferral of the two interpRZPotential
+tests the A/B proved it does *not* cure.
+
+Queue now: **#1266 open**, slow-skip un-defer (`feat/orbit-slow-skip-undefer`,
+2 commits, verified to merge cleanly) next, then `workflow_dispatch(jit=true)`.
+
+Seven merged today: #1260, #1259, #1261, #1262, #1263, #1264, **#1265**.
