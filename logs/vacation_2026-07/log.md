@@ -22432,3 +22432,31 @@ tidy, and it is the honest prerequisite. Re-scoped the task rather than starting
 a large migration mid-wait with two PRs already open.
 
 No code changed. The deliverable here is the classification.
+
+### 2026-08-07 — codecov phantom RESOLVED on #1259, exactly as predicted
+
+    #1259 codecov      before        after
+      patch            FAILURE   ->  SUCCESS  (healed earlier this wake)
+      project          FAILURE   ->  SUCCESS
+      head misses         144    ->  20   (== base)
+      head coverage      99.7    ->  99.95 (== base)
+
+No code change, no re-run of the codecov checks — purely the remaining shards
+finishing their uploads. Both the diagnosis (partial-upload artifact, NOT a real
+coverage drop and NOT a stale base) and the predicted remedy (wait) are now
+confirmed end-to-end on a real PR. The cross-PR identical-144 evidence from the
+previous wake was the right call.
+
+#1260 should follow the same path once its py3.14 backend build uploads; that is
+still the one outstanding coverage uploader on it.
+
+**#1259's windows rerun went through.** The 403 ("workflow run containing this
+job is already running") cleared once its build.yml run drained, the POST was
+accepted, and the job is IN_PROGRESS. #1259 is now **fail=0**, 146/154, 6
+pending — the first time either PR has had no reds at all.
+
+Merge path for #1259 once green: audit already PASSED in an earlier wake (the
+if->xp.where array-input class, duplication, helper placement). One recorded
+follow-up, NOT a blocker: `_bk_split_quad`'s dyadic panel builder should be
+hoisted to galpy.backend.quadrature when #204 becomes its second consumer --
+it must be hoisted, not copied.
