@@ -28041,3 +28041,32 @@ This is why the one-line PR was worth holding: same CI cost, six entries instead
 of one, and the two files that would have been guessed at are now measured.
 
     #1269  150 pass / 3 pending (2x py3.14 + all-clear), phantom only
+
+### 2026-08-08 — #1269 MERGED (104); #1270 opened (-> 98)
+
+The `codecov/project` red **self-healed with no intervention**, exactly as the
+stale-base diagnosis predicted — 154 pass / 0 pending / 0 fail, `CLEAN`. Worth
+noting because the alternative (rebasing to "fix" it) would have needed a
+force-push on an open PR and been pure damage.
+
+Audit before merge:
+
+    if -> xp.where array-input   N/A: no source files in the diff
+    duplication                  N/A
+    helper placement             N/A
+    diff                         tests/backend_slow_skip.txt only, +14/-11
+
+Checked the entry delta rather than trusting the +14/-11 line count: the 14
+additions are **all comments**, so the real change is **-5 entries**. 109 -> 104
+on develop, confirming the projection I had computed from the patch earlier.
+
+Merged as `ffde6f86`. Then rebuilt the held branch **deterministically from the
+new develop** rather than rebasing across the same file — assert the 6 target
+lines are present, remove exactly 6, assert the count. No conflict resolution to
+get wrong, and no force-push.
+
+**#1270 open: 104 -> 98**, carrying the 6 measured entries plus the explicit
+statement that the 6 `test_interp_potential.py` entries were measured and stay
+deferred (all timeout at exactly 300.0s).
+
+Slow-skip arc today: **210 -> 109 -> 104 -> 98 pending**.
