@@ -28621,3 +28621,44 @@ on the first opportunity instead of being noticed several wakes later.
     #1271  149 pending, no reds
     #209   all 3 gates green, held
     #210   scoped, queued
+
+### 2026-08-08 — #1271 gains a real regression guard (verified by A/B, not by construction)
+
+The gap #1268 taught me: a boundary regression is **invisible to the test
+suite** — values stay right, only time changes. #1271 removed 5 decorated
+forwards but nothing in galpy would have caught someone reinstating them; the
+census that found it lives in the *other* repo. Closed that.
+
+Added to the existing `tests/test_backend_planarpotential.py` (not a new file —
+the module already has a home). It calls each forward with inputs that are
+**already backend arrays** and counts non-numpy `coerce_coords` calls; a correct
+forward reaches the undecorated inner and crosses **zero** times.
+
+**With a negative control.** `_R2deriv` is deliberately unmigrated (no
+`_evaluateR2derivs` exists), so it must still cross:
+
+    5 migrated forwards   == 0 crossings
+    _R2deriv (control)     > 0 crossings
+
+Without that control a spy that quietly stopped working would make every
+assertion pass vacuously — which is precisely the failure I made twice earlier
+today with `ok &= ...` over an empty loop.
+
+**Then A/B'd it rather than trusting it.** Copied the guard onto develop, where
+the fix does not exist:
+
+    with the fix    2 passed
+    on develop      2 failed   (assert 4 == 0)
+
+A regression test that has never been observed to fail is a hope, not a test
+([[verify-burndown-flips-stash-rerun]]).
+
+`ruff-format` rejected the first commit attempt — **third pre-commit rejection
+today**, caught the same way each time by printing the SHA. Had I not, I would
+have "pushed" a commit that did not exist; the push even reported success,
+because the branch was already up to date.
+
+Pushed as `e6d07fd5` to #1271.
+
+    #1270  88 pending / 64 pass, phantom only
+    #1271  now 2 commits, CI restarts
