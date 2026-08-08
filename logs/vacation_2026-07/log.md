@@ -29390,16 +29390,35 @@ re-measure costs nothing extra. Recorded on the task.
 
 ## SESSION SUMMARY — 2026-08-08
 
-**Shipped: 6 PRs merged.**
+**Shipped: 7 PRs merged.**
 
     #1266  parallel_map: do not fork while traced
     #1267  slow-skip 209 -> 109  (100 stale jax orbit entries)
     #1268  diskdf: keep the scipy-quad scalar path off the backend  <- MY regression, closed
     #1269  slow-skip 109 -> 104
     #1270  slow-skip 104 -> 98
-    #1271  planar adapters -> undecorated evaluators (989 -> 5 crossings)
+    #1271  planar adapters   -> undecorated evaluators (989 -> 5 crossings)
+    #1272  vertical adapters -> undecorated evaluators (1708 -> 244)   7418aed5
 
-    slow-skip ledger:  210 -> 98   (-53% in one day)
+    slow-skip ledger:  210 -> 92   (-56% in one day; 92 is on #1273)
+
+**The boundary arc, end to end.** A `@backend_input` leaf costs ~178 us per call
+under a forced backend. Harmless at a few calls; ruinous in a loop, and
+*invisible* to the suite because values stay correct and only time changes. Four
+sites found and measured; three fixed and merged, one patched and waiting:
+
+    workload                    start        now
+    diskdf.oortA             133,332          0   (#1268)
+    aAVertical.actionsFreqs     1,722         0   (#1272 + #1273)
+    aAAdiabatic.actions         4,166         9   (never targeted; 460x)
+    aASpherical.actionsFreqs    1,023        23   (#1271)
+    interpRZPotential          30,603    30,603   <- #211, fix written
+    every other workload                   <= 112
+
+The `aAAdiabatic` line is the one to notice: nobody was looking at it, it was the
+hottest workload in the library, and it fell out of fixing two adapters plus a
+closure. That, plus censusing 40 workloads, is why my recommendation on item 8 is
+**four targeted fixes, not a 34-site convention sweep**.
 
 **Open / staged:** #1272 (vertical adapters, 1708 -> 244; gates green, guard
 A/B-verified). #210 implemented behind it (-244 more, byte-identical, ordering
