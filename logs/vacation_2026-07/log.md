@@ -30335,3 +30335,27 @@ shape as the `set_jit` returning-without-error trap in
 this time (it cost several earlier today) and used `importlib.import_module`.
 
     #1273  41 pass / 110 pending; codecov/project converging -45.88 -> -26.34
+
+### 2026-08-08 — checked I was not neglecting other PRs while heads-down on the boundary arc
+
+Spent the day on one PR at a time, which is the instruction — but "one PR at a
+time" can quietly become "one PR while another rots". Listed every open PR:
+
+    #748   Symbolic potential            (Jo's, Mar)
+    #872   WIP Triaxial Staeckel Fudge   (Jo's, Jun)
+    #892   feat/backends -> main   DRAFT  147 pass / 3 skipping / 0 red
+    #1204  develop -> feat/backends DRAFT  140 pass / 55 pending / 2 codecov
+    #1273  mine, active                    54 pass / 97 pending / 2 codecov
+
+Nothing neglected. #1204 is the integration PR and has just picked up the #1272
+merge, so its two codecov reds are the same partial-upload phantom, on the same
+trajectory. #1264 (evolveddiskdf) is absent from the open list — it merged, so
+the task entry calling it OPEN is stale bookkeeping, not a stalled PR.
+
+**Did not mass-close stale in_progress tasks.** Several (#91 Staeckel rewrite,
+#92 jit/device follow-up, #134 AA mop-up, #71 torch orbit burndown) look done,
+and `git log | grep` finds 6 staeckel-jit commits and 6 ledger-regen commits on
+develop. That is *suggestive*, not evidence that a specific task finished, and
+closing them on a grep count would be inventing status — the same failure I have
+spent the day avoiding in measurements. Left as-is; a wrong "completed" is worse
+than an untidy list.
