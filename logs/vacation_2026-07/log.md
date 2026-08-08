@@ -27455,3 +27455,35 @@ be upload-side, and each was diagnosed rather than waved through.
 
 Remaining on #1268: `backend status report` + `all-clear`, MERGEABLE/BLOCKED on
 those two aggregators only.
+
+### 2026-08-08 — scoping #125: test_king_sigmar is NOT the #208 shape
+
+Task #125's blocker is `test_king_sigmar` at **1028.6 s** — the one entry the
+last spherical-DF prune had to keep. Scoped it before planning any fix:
+
+    numpy  kingdf.sigmar(0.5)      0.00 s
+    forced-jax, COLD               4.17 s   (1541x)   crossings = 1
+    forced-jax, WARM               0.092 s
+
+**One boundary crossing.** So this is not the diskdf class at all — my
+`boundary_census.py` would report it clean while the test runs 17 minutes. Worth
+recording as a stated limitation of that tool: **it finds boundary hotspots, and
+is blind to per-scalar jax work *inside* a computation.** Two different problem
+shapes needing two different instruments.
+
+Cold 4.17 s vs warm 0.092 s is a **45x** gap, so the dominant cost is
+trace/compile, not execution. Warm hotspots:
+
+    _vmomentdensity                                       0.091 s cum
+      _evaluatePotentials -> interpSpherical._revaluate
+        -> backend/interpolate.py:eval_ppoly              0.055 s
+      _vmax_at_r                                          0.047 s
+
+**Open question I have NOT answered, and must before proposing anything:** is
+the test's 1028 s ~11,000 warm calls, or a smaller number of calls that each
+re-trigger compilation? Those imply opposite fixes — vectorize versus stabilise
+shapes/cache. #125's current wording assumes "vectorize jeans/KingPotential",
+and that assumption is exactly what the numbers above put in doubt.
+
+Not acting on it: two PRs are open, and the next step is a measurement (count
+sigmar calls and distinct trace triggers in the real test), not a change.
