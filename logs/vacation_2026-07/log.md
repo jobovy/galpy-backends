@@ -26639,3 +26639,25 @@ these five, with the measured times and an explicit note that the cause is
 upstream of #208.
 
 `evdirect` restored: fix re-applied, all 5 slow-skip entries back.
+
+### 2026-08-07 — un-defer PR body written; branch held
+
+Wrote `/tmp/pr_diskdf_undefer_body.md` now, while the numbers are fresh, for the
+follow-up that un-defers the 5 diskdf sampling entries (109 -> 104). Branch NOT
+created yet -- both slots are taken by #1267 and #1268, and creating it early
+just means rebasing it later for nothing.
+
+The body leads with the attribution rather than burying it: **these five are not
+my fix's doing**, with the per-test A/B (median 0.97x) and an explicit warning
+that the whole-file number points the opposite way and is misleading (3613 s vs
+1295 s, which is the moment quadratures, not sampling). Someone reading the
+un-defer next month should not have to re-derive which change gets the credit.
+
+Also carried forward the margin rule and its arithmetic (all five under 240 s,
+slowest at 60% of cap) and the reason the **sixth** entry stays:
+`test_galpypaper.py::test_diskdf` is a different file, was not covered by this
+run, and absence of measurement is not evidence of speed -- the same rule the
+last prune used.
+
+    #1267  149 pass / 4 pending / phantom only, BLOCKED on the last checks
+    #1268  149 pending / 2 pass, no real reds
