@@ -27007,3 +27007,32 @@ only successes is how the #1261-style regression gets written twice.
 
 Still in flight: #1268 (93 pass / 58 pending, falsifier 0 of 2 so the patch
 prediction is untested), #1269 (just started).
+
+### 2026-08-07 — corrected a wrong roadmap claim in #1268
+
+I wrote in #1268's description that "migrating the quadrature itself is Pdf.3,
+and is what actually removes this [numpy pin]". Went to scope that work and
+found it does not exist -- **the quadrature is already migrated**:
+
+    oortA(jnp.asarray(1.0))   is_backend_array=True   0.4805462559
+                              numpy ref               0.4805462559
+    jax.grad(oortA)(1.0)      = -0.485356
+
+Backend array in, backend array out, value identical to numpy, and it
+differentiates. Pdf.3 landed that.
+
+So the pin is **not a placeholder awaiting migration** -- it is the permanent,
+correct dispatch for the one genuinely-numpy case (scipy's adaptive quadrature
+calling back with plain scalars). Corrected the PR body rather than leaving a
+plausible-sounding future-work claim that would send the next person hunting for
+a task that is already done.
+
+Worth noting how the error happened: I inferred the roadmap item from the
+*shape* of the fix ("consumer pins numpy" sounds like a stopgap) instead of
+checking what the backend path already did. The test file's own docstring says
+the moments "run the scipy.dblquad region as a fixed-order nested Gauss-Legendre
+rule on the backend" -- it was written down, in the file I had already edited
+today, and I did not read it before writing the claim.
+
+Falsifier for #1268's patch coverage still unmet (test_backend*.py builds 0 of
+2). #1269 just started, no reds.
