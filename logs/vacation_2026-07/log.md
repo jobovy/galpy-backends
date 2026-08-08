@@ -28340,3 +28340,31 @@ actual numbers, and every step that inflated it came from trusting a prior
 description — including three of my own from earlier the same day.
 
 Session so far: 4 merged, 2 open, slow-skip 210 -> 104 (98 pending).
+
+### 2026-08-08 — #1271 helps more than the site it was found at
+
+Ran the full 15-workload census on the fix branch rather than only re-measuring
+the site I was chasing:
+
+                              before   after
+    aASpherical.actions          989       5
+    aASpherical.actionsFreqs    1023      23
+    qdf.density                   64      52
+    qdf.sigmaR2                   84      60
+    diskdf / Potential / Orbit / aAStaeckel   unchanged (already <=10)
+
+`planarPotential.py:_evaluate` was the **top caller at 1968** crossings across
+the whole sweep and is now absent from the ranking. Highest remaining
+per-workload count 60, down from 84. Nothing regressed.
+
+The qdf rows are the part I would have missed by only re-running the workload
+that motivated the fix: qdf goes through the same planar adapters, so it got a
+~20-30% cut for free. Posted the table to the PR — a reviewer should see the
+blast radius is wider than the title suggests, in the good direction.
+
+Left the `KNOWN_HOT` entries in place deliberately: deleting them now would make
+the census exit 1 against develop until #1271 lands. That deletion is the
+acceptance test and belongs in the same beat as the merge.
+
+    #1270  149 pending, no reds
+    #1271  149 pending, no reds
