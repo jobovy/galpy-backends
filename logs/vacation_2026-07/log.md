@@ -26848,3 +26848,27 @@ number looks reassuring.
 
     #1267  152 pass / 2 pending, no reds, All-backend tests still QUEUED
     #1268  34 pass / 117 pending, both reds codecov
+
+### 2026-08-07 — boundary cost recorded against the decorator's own memory
+
+Attached the measured per-crossing cost to [[backend-kernel-decorator]] rather
+than filing it separately, so anyone reading about `@backend_input` sees its
+price in the same place as its API:
+
+    undecorated numpy        1.3 us
+    decorated numpy          2.8 us   (2.2x)
+    decorated forced-jax     178.2 us (141x)  <- EAGER
+    decorated forced-jax+jit 151.1 us (120x)
+
+with the rule it implies -- do not decorate a hot leaf that already-coerced code
+calls in a loop; the leaf wants its coercion done once by its caller -- and the
+detector (a `coerce_coords` counter; signature is tens of thousands, and the
+empirical sweep found nothing above 4 once diskdf was fixed).
+
+That memory previously described the decorator as a *correctness* device only
+(explicit coords, the `v=[...]` list hazard, byte-identity). It had no notion
+that it costs anything, which is precisely the gap that let me write #1261 and
+then spend a day finding out. The cost now sits next to the API.
+
+    #1267  152 pass / 2 pending, All-backend tests QUEUED
+    #1268  37 pass / 114 pending, codecov reds only
