@@ -26744,3 +26744,30 @@ rather than filing under "CI is slow".
 
 No action: [[all-clear-queued-rerun-and-ledger-rebase]] says do not re-run a
 QUEUED all-clear, and re-running would only re-enter the same queue further back.
+
+### 2026-08-07 — #1268 patch: prediction recorded before the jobs land
+
+    head  24.94% -> 48.59%   (uploads arriving)
+    patch 70.0%  -> 70.0%    (UNCHANGED, 7 of 10)
+    covering jobs: 1 of 8 complete; both test_backend*.py builds still pending
+
+Patch standing still while head climbs is the expected shape, not a worry: the
+uploads that have landed are from jobs that do not execute the new branches. The
+one covering job that finished is `build ... tests/test_diskdf.py`, i.e. the
+**numpy** path -- which covers exactly the middle branch.
+
+**Prediction, written down now so it can be wrong:** the 3 missed statements are
+the two backend branches --
+
+    482  return bound(R, **kwargs)              (R is already a backend array)
+    486  with use("numpy", force=True):         (plain R, backend forced)
+    487  return as_numpy(bound(R, **kwargs))
+
+-- and they are covered only by `tests/test_backend_diskdf.py`, whose two builds
+are still queued. When those land, patch should go to 100%. If it does not, the
+three lines get covered properly; the local `settrace` result proves they are
+reachable by tests, which is not the same as CI running them.
+
+Numbers on the middle branch line up too: 483-485 are the numpy path, and the
+one completed covering job is the numpy `test_diskdf.py` build. That is why 7 of
+10 are already hit rather than fewer.
