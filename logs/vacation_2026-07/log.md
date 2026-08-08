@@ -26565,3 +26565,26 @@ is about durations.
 
     #1267  148 pass / 5 pending / codecov phantom
     #1268  149 pending / 2 pass
+
+### 2026-08-07 — all 5 targets PASSED without the fix; durations pending
+
+    arm  113/129, alive, 54:01
+    all five target nodeids: PASSED (no timeouts)
+    test_dehnendf_cold_*_oortA: PASSED at 20%
+
+**The oortA line needs explaining before it confuses a later reader (or me).**
+The #208 regression showed those two as 300 s timeouts, and here they pass. Not
+a contradiction: this arm is `--backend=jax` **EAGER**, the regression was
+`--jit`. The 133k boundary crossings cost a coercion each eagerly but a coercion
+*plus a jit dispatch and a static-key hash* when traced -- which is why the
+traced arm blew the cap and the eager one does not.
+
+That is also why eager is the *correct* arm here: the five slow-skip entries are
+keyed to `jax`, not `jax-jit`, and the with-fix run I am comparing against was
+the same eager configuration. Measuring them traced would have been a different
+question with a different answer.
+
+Still no claim. `-v` has given me outcomes (all PASSED, so none hit the cap) but
+the pre-registered rule is about **durations** -- whether they sit near the
+with-fix 178.6/64.2/60.4/57.3/30.6 or well above -- and those come from the
+junitxml at the end. 16 tests to go.
