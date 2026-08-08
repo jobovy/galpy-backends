@@ -28285,3 +28285,31 @@ torch arm is going now. There is no reason to cut that corner — #1270 is queue
 behind saturated runners anyway, so pushing early buys nothing.
 
     #1270  8 runs queued, none started, no reds
+
+### 2026-08-08 — rewrote task #88's description, because the old one caused the delay
+
+Task #88 read: *"Unify actionAngleSpherical numpy<->backend (drop scipy loop,
+vectorize numpy) — speed/DRY, relaxes byte-identity"*. Every clause of that is
+wrong, and the "relaxes byte-identity" clause is why I had been treating it as
+needing Jo's sign-off rather than as landable work:
+
+* numpy and backend are already separate branches, so no waiver is needed;
+* the leaf is not the scipy loop and not `_radicand`, but the planar adapter's
+  forward through the decorated public API;
+* it is 5 call sites in one file, not a rewrite.
+
+Replaced it with the measured facts, the commit SHA, the gate results, and the
+acceptance test (delete the `KNOWN_HOT` entries). Also rewrote #125 with the
+in-file timings and — the part most likely to be re-derived by someone later —
+the **negative** result that the 6 `test_interp_potential.py` entries are
+genuinely slow and must not be re-probed.
+
+A stale task description is not a cosmetic problem. This one sat there long
+enough to defer real work on a false premise, and the fix took ten minutes of
+reading the code. Same failure mode as the 1028.6s slow-skip figure and the
+"~5 potentials" roadmap line: **the ledger decays faster than the code**, and
+the entries that decay worst are the ones carrying a *reason* rather than a
+fact.
+
+    #1270  8 runs queued, no reds
+    #88    torch gate running; numpy + jax already green
