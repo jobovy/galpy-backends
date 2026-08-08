@@ -30015,3 +30015,29 @@ Consequence for item 8: #211 splits into a trivial high-value part (3 sites,
 no API change, halves the default constructor) and an optional follow-up (4 new
 inners, only for dens/2nd-deriv grids). The first part needs no decision at all
 beyond "yes".
+
+### 2026-08-08 — #211 and #212 overlap: sequence them, do not pick one
+
+Both patches modify the *same three* grid-build calls in
+`interpRZPotential.py` (they sit at different line numbers only because
+feat/backends adds ~105 lines earlier in the file):
+
+    #211 (feat/backends, 6905c0a8)  @@ 269, 294, 319   -> undecorated inners
+    #212 (main, cd81fbed)           @@ 246, 271, 296 (+ 34 more sites)
+
+They are **complementary, not alternatives**, and each is insufficient alone:
+
+* #212 alone does not remove a single boundary crossing — measured, 60 crossings
+  with and without `use_physical=False` on 20 calls. The flag skips the units
+  decorator, not `@backend_input`.
+* #211 alone covers only 3 of the 7 quantities and none of the 22 off-grid
+  fallbacks or 4 per-r helpers, so the units bug would survive in
+  dens/R2deriv/z2deriv/Rzderiv/vcirc/dvcircdR/epifreq/verticalfreq.
+
+**Recommended order: #212 first** (it is the correctness fix and belongs on
+main), then #211 rebases on top and swaps its three sites from
+`evaluatePotentials(..., use_physical=False)` to `_evaluatePotentials(...)`,
+dropping the flag as redundant at those sites.
+
+Worth flagging because handing over two patches to the same file without saying
+this invites a merge that silently drops one of them.
