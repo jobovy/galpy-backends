@@ -27773,3 +27773,48 @@ diff can physically affect.
 
     probe2 (interp_potential + pv2qdf): alive, 3 reported at 4:20 — slow, as
     befits entries that were slow-skipped; the timings are the whole point
+
+### 2026-08-08 — census blind spot closed; found a ~1000-crossing site in actionAngleSpherical
+
+The detector I built for the #1261 class only sampled **df and potential**
+workloads. So a hot-boundary site anywhere in actionAngle, qdf, or orbit was
+invisible to it — the detector had the same shape of gap as the test suite it
+was meant to compensate for. Added 7 workloads across those three areas.
+
+The first run found one immediately:
+
+    aAStaeckel.actionsFreqs        0 crossings     <- vectorized
+    aASpherical.actions          989
+    aASpherical.actionsFreqs    1023               <- above HOT
+    qdf.density / sigmaR2      64 / 84
+    Orbit.E / L                 4 / 0
+
+980+ of them come from a single site, `planarPotential.py:_evaluate`:
+`actionAngleSpherical` runs a scipy quadrature loop that evaluates the potential
+~1000 times per call, one scalar boundary crossing each (~0.18 s of pure
+boundary at the measured 178 us). **The Staeckel comparison is what makes this a
+finding rather than a number** — same family, same job, vectorized, scores 0.
+
+This confirms pending task **#88** ("unify actionAngleSpherical, drop the scipy
+loop") which until now was justified on speed/DRY grounds without a measurement.
+
+**Checked the environment before believing it.** The first run was in a worktree
+with no C extension and jax x64 off; both can change dispatch, so the count could
+have been a fallback artifact ([[worktree-missing-c-ext-fakes-passes]]). Re-ran
+in a C-ext-loaded checkout with x64 on and got the same 989/1023. Also added the
+x64 config to the script itself, since silently measuring float32 measures a
+configuration nobody ships.
+
+**Design choice: `KNOWN_HOT`.** Adding a genuinely-hot workload would make the
+script exit 1 forever, and a permanently-red detector stops being a signal. So
+known sites print and are labelled with their tracking item but do not fail the
+run; only a *new* hot workload does. Deleting the entry is how a fix gets locked
+in. Also fixed a summary line that compared unlike things — it reported the max
+per-*caller* total ("max 1968") against a per-*workload* threshold, which read as
+a contradiction.
+
+NOT starting #88 now: it is the kind of change that touches numpy byte-identity,
+and there are two jobs in flight.
+
+    #1269  120 pass / 32 pending, phantom only
+    probe2 alive, 10 reported at 13:10
