@@ -28313,3 +28313,30 @@ fact.
 
     #1270  8 runs queued, no reds
     #88    torch gate running; numpy + jax already green
+
+### 2026-08-08 — #1271 OPEN: the planar-adapter fix
+
+Torch gate green (182 passed / 0 failed, 4:45), so all three arms are clean:
+
+    numpy  1492 passed / 0 failed
+    jax     180 passed / 0 failed
+    torch   182 passed / 0 failed
+
+Pushed and opened **#1271**. Two PRs open now (#1270 ledger, #1271 code) — the
+limit, and they touch disjoint files (`tests/backend_slow_skip.txt` vs
+`galpy/potential/planarPotential.py`), so neither will need a rebase when the
+other merges.
+
+The arc of this one in a single day is worth noting, because none of it came
+from reasoning:
+
+    census had no AA coverage      -> added workloads      -> found 1023 crossings
+    "scipy loop, needs a waiver"   -> read the code        -> no waiver, wrong layer
+    "_radicand(evaluate=...)"      -> followed the chain   -> already undecorated
+    "class-wide convention"        -> checked which inners exist -> 5 sites, +8/-5
+
+Every step that shrank the work came from looking at the actual code or the
+actual numbers, and every step that inflated it came from trusting a prior
+description — including three of my own from earlier the same day.
+
+Session so far: 4 merged, 2 open, slow-skip 210 -> 104 (98 pending).
