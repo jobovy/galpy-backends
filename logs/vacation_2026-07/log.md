@@ -26181,3 +26181,34 @@ leaving tasks open because I have not.
 
 Attribution arm still burning the two 300 s oortA timeouts it must pay without
 the fix -- ~600 s of its wall time before it even reaches the sampling tests.
+
+### 2026-08-07 — class sweep gap CLOSED: sphericaldf is clean too
+
+Earlier I stated a limitation rather than papering over it -- "sphericaldf's
+quadratures were not exercised, so this bounds what it sampled rather than
+proving absence". Closed it:
+
+    isotropicNFWdf.__call__(Orbit)         8 coercions @backend
+    isotropicHernquistdf.vmomentdensity    4
+    eddingtondf.fE                        14
+    isotropicHernquistdf.sigmar            4
+
+Against diskdf's 133,332. **No second instance of the #1261 class anywhere in
+the sweep** -- now 9 sites across `Potential`, `planarPotential`, `diskdf` and
+`sphericaldf`.
+
+Two process notes:
+
+**Two of the four initially failed on MY wrong call signatures**, not on galpy
+bugs (`isotropicNFWdf(...)(array)` -> TypeError, `fE(-0.8)` -> not subscriptable).
+The tempting move is to report "2 of 4 clean, 2 skipped" and move on -- which
+reads as coverage while quietly being a partial sweep whose gaps are exactly the
+sites I could not drive. Read the `__call__` docstring instead (it takes
+(E,L,Lz), cylindrical coords, or an Orbit) and drove all four.
+
+**The wall-clock column is again not the finding.** These show 0.001 s numpy vs
+~4 s forced-jax, which looks catastrophic and is just first-call trace/compile
+on a sub-millisecond call -- the known flat per-call overhead (#79). The
+coercion count is the discriminator; the timing column is decoration. Same trap
+I flagged in the first sweep, and it is worth re-stating because the numbers
+*look* like the more alarming story.
