@@ -31257,3 +31257,37 @@ accuracy bug that belongs with task #103, not with a bar.
 
     #1275  91 pass / 61 pending / project -14.60% -> -13.91%
     #1274  145 pass / 6 pending / green
+
+### 2026-08-08 — self-audit of #207: is the graded ladder duplicating a backend helper?
+
+Applied the same audit to my own PR that step (2) applies to others', since a
+panel-grading scheme is exactly the "general-ish function written in a specific
+method file" the standing instruction warns about.
+
+`galpy/backend/quadrature.py` **does** already have a near-miss:
+`transformed_quad(..., interior_point=c)` splits at an interior near-singular
+point and clusters nodes toward it via the `X = xi**k` boundary-layer map.
+
+Not a duplicate — different mechanism, and the reach is the discriminator:
+
+| | mechanism | closest approach |
+|---|---|---|
+| `transformed_quad` | warps nodes *inside* 2 panels | `span*(1/n)**k` ~ **4e-6** |
+| `_bk_split_quad` dyadic | refines *panels*, fixed ladder | `R*2**-K` ~ **6e-8** |
+| `_bk_split_quad` geometric | refines *panels*, spans to `dmin` | `4\|z\|`, **any scale** |
+
+Node-warping cannot resolve a peak narrower than its own innermost node, so the
+shared helper bottoms out three orders of magnitude short of where the *old*
+ladder did and eleven short of what this PR needs at `|z|=1e-12`. They are
+complementary: warping suits an endpoint singularity of unknown shape, panel
+refinement a peak of *known width*.
+
+Recorded in the PR body along with the follow-up I deliberately did not take:
+giving `transformed_quad` an optional `peak_width=` so both strategies sit
+behind one interface. That is an API change to a helper with callers in
+`FerrersPotential`, `AnySphericalPotential` and five df modules; this PR changes
+a spacing law inside one existing private method, and mixing the two would make
+a two-line diff into a cross-cutting one.
+
+    #1275  114 pass / 38 pending / build 74 pass, 20 uploads outstanding
+    #1274  149 pass / 2 pending / green
