@@ -28002,3 +28002,42 @@ placement, not a speed finding.
 
     #1269  150 pass / 3 pending (2x py3.14 build + all-clear), phantom only
     probe2 alive, 48 reported at 58:36 — past the slow entries, moving fast now
+
+### 2026-08-08 — probe2 result: 5 stale, 6 genuinely slow. Batch is 6 entries, 104 -> 98
+
+`test_interp_potential.py` + `test_pv2qdf.py`, whole-file, forced jax, 300s cap,
+59:33 wall. **6 failed / 44 passed**, and the split is completely clean:
+
+    test_interp_potential.py  (6)   ALL timeout at exactly 300.0s  -> KEEP deferred
+    test_pv2qdf.py            (5)   ALL pass:
+        test_pvRvz_staeckel_diffngl    61.8s
+        test_pvRvT_staeckel            67.3s
+        test_pvTvz_staeckel            71.9s
+        test_pvTvz_staeckel_diffngl   143.2s
+        test_pvRvT_staeckel_diffngl   151.8s
+
+All five clear the 240s margin, worst at 51% of cap; CI runs ~0.71x local
+([[ci-faster-than-devbox-for-jax-shards]]) so the true margin is wider still.
+
+**The 6 failures are the good outcome, not a problem.** They fail as *timeouts*,
+not assertions — which is the distinction I checked before reading the result,
+because an assertion failure would have meant the slow-skip was masking a real
+defect rather than a slow test. Six entries measured, six confirmed correctly
+deferred. That is the probe doing its job in the negative direction: I now know
+those are not stale, instead of assuming either way.
+
+Branch `feat/undefer-king-sigmar` now carries exactly the justified six:
+
+    tests/backend_slow_skip.txt | 6 ------
+    - jax tests/test_sphericaldf.py::test_king_sigmar
+    - jax tests/test_pv2qdf.py::test_pvRvT_staeckel[_diffngl]
+    - jax tests/test_pv2qdf.py::test_pvRvz_staeckel_diffngl
+    - jax tests/test_pv2qdf.py::test_pvTvz_staeckel[_diffngl]
+
+Held unpushed until #1269 merges — same file, so opening now would put two PRs
+on one file. Slow-skip trajectory: 210 -> 109 (merged) -> 104 (#1269) -> 98.
+
+This is why the one-line PR was worth holding: same CI cost, six entries instead
+of one, and the two files that would have been guessed at are now measured.
+
+    #1269  150 pass / 3 pending (2x py3.14 + all-clear), phantom only
