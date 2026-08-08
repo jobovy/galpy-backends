@@ -26724,3 +26724,23 @@ yourself.
 
 I will still re-check patch when the 8 jobs finish -- a local trace proves the
 lines are *reachable by tests*, not that CI's chosen shards *ran* them.
+
+### 2026-08-07 — #1267's last two checks are QUEUED, and #1268 is why
+
+    #1267  152 pass / 2 pending
+             all-clear            in_progress
+             All-backend tests    QUEUED  <- "backend status report" waits on this
+    #1268  14 pass / 137 pending / 2 codecov reds
+
+Checked the runs rather than assuming a stall, after the stale-check surprise on
+#1266. Not stuck -- not picked up. The runners are busy, and **#1268's ~150 jobs
+are what they are busy with**. I opened it the moment #1266 merged, which put a
+large job set directly in front of #1267's final run.
+
+That is within the two-PR allowance and I would do it again -- #1268 carries a
+regression fix and idling a slot to shave queue time off a ledger PR is the
+wrong trade. But it is my sequencing, not bad luck, and worth writing down
+rather than filing under "CI is slow".
+
+No action: [[all-clear-queued-rerun-and-ledger-rebase]] says do not re-run a
+QUEUED all-clear, and re-running would only re-enter the same queue further back.
