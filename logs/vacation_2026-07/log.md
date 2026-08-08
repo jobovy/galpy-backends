@@ -31291,3 +31291,44 @@ a two-line diff into a cross-cutting one.
 
     #1275  114 pass / 38 pending / build 74 pass, 20 uploads outstanding
     #1274  149 pass / 2 pending / green
+
+### 2026-08-08 — #211(B) scoping: the array-safety blocker is 3 potentials, not "per-potential"
+
+I sold (B) to Jo as blocked on broad per-potential array safety. Measured:
+
+    potentials carrying check_potential_inputs_not_arrays :  5 of 67 modules
+    of those, actually potentials                         :  3
+        AnyAxisymmetricRazorThinDiskPotential   (opt-out DELIBERATE)
+        DoubleExponentialDiskPotential          (sets _backend_accepts_arrays = True -- opts IN)
+        RotateAndTiltWrapperPotential
+    (linearPotential.py and Potential.py are the base/definition modules)
+
+So the fallback-to-scalar-loop path (B) needs is for **AnyAxisym and
+RotateAndTilt**, and DoubleExponentialDisk already declares itself array-safe.
+That is a much narrower job than "audit 67 potentials", and it makes (B) closer
+to a normal PR than the project I described.
+
+**One thing I misread and am correcting before it propagates.** Seeing
+
+    self._potGrid, err = calc_potential_c(self._origPot, self._rgrid, self._zgrid)
+
+alongside the double loop, I first read it as "a vectorized Python path already
+exists, so (B) is mostly reuse". It is not: that is the **C** path, which takes
+whole grids because the loop lives in C. The Python `else` branch is the double
+loop, and that is exactly where the 30603 boundary crossings are. (B) still has
+to write the vectorized Python form; it just does not have to invent
+array-safety for 67 potentials.
+
+Shape of the work, for when a slot frees:
+  * replace each `for ii: for jj: evaluateFOO(pot, rgrid[ii], zgrid[jj])` with one
+    broadcast call on a 2-D meshgrid, in the `else` (no-C) branch only
+  * guard with a capability check, falling back to the loop for the two
+    array-rejecting potentials
+  * byte-identity is the gate: the decorated call is retained, so numpy values
+    must not move at all (sha256 over the grid, as in #211(A)'s measurement)
+
+    #1275  124 pass / 28 pending / project 86.05% held 4 polls
+           18 build jobs outstanding INCLUDING the test_orbit/test_orbits shards
+           -- which are both the slowest AND the ones covering Orbits.py, the
+           file this PR edits. So the stall has a specific cause, not just "uploads pending".
+    #1274  149 pass / 2 pending / green
