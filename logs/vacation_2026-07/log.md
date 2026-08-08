@@ -27273,3 +27273,25 @@ it. A duration is not a finding until you know what it is being compared to.
 
     #1268  129 pass / 22 pending, codecov-only reds
     #1269  149 pending / 2 pass
+
+### 2026-08-08 — "a duration is not a finding until you know its baseline" -> memory
+
+Folded this wake's lesson into [[gha-job-start-not-run-created]], which already
+covers "do not trust a CI timing number without knowing what it measures". The
+new instance is the same family from a different angle: I had a number (56 min),
+no reference, and two available stories.
+
+Recorded the recipe (same job name, recent merged commit, `gh run view --json
+jobs`) and one thing worth internalising:
+
+> when a slow job is one *you* just added tests to, the self-blaming story feels
+> rigorous and is still just a guess.
+
+That mirrors the C-extension trap from earlier today, which flattered me
+(a fake speedup credited to my fix) where this one accused me. Both felt like
+diligence. Neither was, until measured. The direction a plausible story points
+says nothing about whether it is true -- which is exactly why the check has to be
+mechanical rather than motivated.
+
+    #1268  131 pass / 20 pending, codecov-only reds, falsifier 0 of 2
+    #1269  149 pending / 2 pass
