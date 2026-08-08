@@ -31140,3 +31140,24 @@ and the gate is being re-run on the built worktree rather than resting on it.
 
     #1275  50 pass / 102 pending / project -15.01% -> -14.60% (moving again)
     #1274  122 pass / green
+
+**Addendum.** C extension built in `port207` (`_ext_loaded: True`, and
+`integrateFullOrbit_stm` present once probed correctly). Two probe errors worth
+noting because both produced confident-looking wrong answers:
+
+* `load_libgalpy()` returns a **tuple** `(_lib, _ext_loaded)`. Binding it to one
+  name made every `hasattr` False — including in the main repo, which is what
+  flagged it: a probe that reports a symbol missing from a *working* install is
+  measuring itself, not the install.
+* Relaunching both measurements in one command, only the first ran in the
+  worktree. `cd X && nohup A &` puts the `cd` inside the backgrounded subshell,
+  so the second launch inherited the parent cwd — [[cd-does-not-survive-ampersand]]
+  again. It failed loudly ("file or directory not found") only because
+  `feat/backends` genuinely lacks that test file; had the file existed in both
+  checkouts it would have silently measured the wrong branch.
+
+Both re-running with the C extension present. Early signal: streamTrack under
+`--jit` is now **far slower** than the void run (3 tests in the wall time that
+previously "finished" all 45), which is expected — the C-STM path now executes
+instead of aborting — and points the opposite way from the conclusion I was
+drafting. Numbers when they land, not before.
