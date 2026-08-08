@@ -28929,3 +28929,21 @@ ever diagnosed correctly.
 
     #1270  135 pass / 18 pending, NO REDS, pre-audited -- merges on the last check
     #1271  33 pass / 119 pending, project phantom only
+
+### 2026-08-08 — persisted the cheap patch-red discriminator
+
+Folded today's finding into the existing codecov memory rather than creating a
+competing one: **check `.coveragerc` before theorising about which shard covers
+what.** `omit = tests/*` plus `--cov galpy` means a diff touching only `tests/`
+cannot cause a real patch red — it contributes no measurable lines.
+
+That is what let me classify #1271 correctly in one command instead of reasoning
+about backend-shard coverage uploads (a story that was plausible, cited a real
+memory, and was wrong). Recorded the diagnosis order too:
+
+    (1) does the diff touch measured files at all?
+    (2) if yes, have the covering jobs finished uploading?
+    (3) only then hunt uncovered lines
+
+    #1270  140 pass / 13 pending, no reds
+    #1271  42 pass / 110 pending, project phantom only
