@@ -29736,3 +29736,42 @@ attribute shadows the submodule. I nearly logged "galpy has no undecorated
 evaluators at all". The tell was that I had *already* imported
 `_evaluatePotentials` from that module minutes earlier — a contradiction with my
 own recent output, not with the docs. Fixed with `importlib.import_module`.
+
+### 2026-08-08 — #212 fix implemented and tested (branch fix/interprz-units, NOT pushed)
+
+Built on `origin/main` in `/var/tmp/units212` with the C extension compiled
+(`_ext_loaded=True`, verified from inside the worktree). Commit `ff87e75e`.
+
+**37 call sites** get `use_physical=False`, in four classes — and I only found
+all four because the regression test failed twice:
+
+    7   grid build      evaluateFOO(self._origPot, self._rgrid[ii], self._zgrid[jj])
+    4   per-r lists     [FOO(self._origPot, r) for r in self._rgrid]
+    4   lambda-x grid   lambda x: FOO(self._origPot, self._rgrid[x])
+   22   off-grid falls  FOO(self._origPot, R) and FOO(..., R[True ^ indx])
+
+My first pass fixed only the 7 grid sites. A hand probe then showed the
+**off-grid fallback** was equally wrong (x48400) — a site I had deliberately
+left alone on the theory it was the interpolator's own business. Fixed those,
+and the new test *still* failed: `interpepifreq` off-grid, x28.12, because my
+regex matched `evaluateFOO(...)` but not `epifreq(self._origPot, R)`. Two
+separate misses, each caught by an assertion rather than by re-reading the diff.
+
+**A/B, the way that actually proves it:**
+
+    WITHOUT fix   1 failed     <- test detects exactly this change
+    WITH fix      1 passed
+    full file     41 passed    (40 pre-existing + 1 new), C ext loaded
+
+Byte-identity is preserved where it matters: for a unitless potential
+`use_physical=False` is a no-op, so the 40 existing tests are untouched — the
+only behaviour that changes is the path that was returning vo^2-scaled numbers.
+
+Not pushed: needs Jo's call on target branch (it is a main bug, but
+feat/backends carries the same defect), and the two-PR limit stands.
+
+Also of note: the pre-commit hook rejected the first commit (ruff-format
+reformatted both files), exactly as [[precommit-hooks-reject-first-commit]]
+says. Caught by comparing SHA before/after rather than trusting the exit code,
+then re-ran the suite post-format — 41 passed — because a formatter touching
+the file after the tests ran is not a verified state.
