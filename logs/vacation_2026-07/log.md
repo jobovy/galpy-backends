@@ -30215,3 +30215,34 @@ current numbers rather than the state it was written in. That staleness bit me
 earlier today: the file still advertised aASpherical at 989/1023 after #1271 had
 taken it to 5/23, and a detector whose docs describe a fixed defect trains you
 to ignore it.
+
+### 2026-08-08 — #1273 codecov: phantom, verified line-by-line (again)
+
+    codecov/patch    14.28% of diff hit (target 86.05%)
+    codecov/project  40.18% (-45.88%)
+
+`project` at -45.88% for a 6-line source change is impossible, and only 15 of
+151 checks had finished — partial upload. But this PR touches **source in a
+measured file**, so `patch` could red for real (unlike a tests-only diff, where
+`.coveragerc`'s `omit = tests/*` rules it out). Measured the changed lines:
+
+    16                 COVERED    (17-19 are continuation lines of the same
+                                  multi-line import; coverage attributes a
+                                  multi-line statement to its FIRST line, so
+                                  they were never separate statements)
+    325 336 365 388    COVERED    from the guard alone
+    434                COVERED
+    417                COVERED    but NOT by the guard -- it lives in
+                                  _calc_angle_backend, and the guard calls
+                                  actionsFreqs, not actionsFreqsAngles
+
+So the first measurement showed 417 "not executed" and that was **my test
+selection, not a coverage gap**: re-running across all 15 vertical backend tests
+covers it. Two lessons in one check — a partial-line report can be an artifact of
+how coverage attributes multi-line statements, and "not executed" under `-k foo`
+means "foo doesn't reach it", which is a statement about the filter.
+
+Verdict: phantom. Expect both to clear as shards upload, as they did on #1272
+(where the same line-by-line check predicted the exact final 100.00%).
+
+    #1273  15 pass / 136 pending / 2 codecov (expected to self-heal)
