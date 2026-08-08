@@ -27434,7 +27434,13 @@ through in one pass instead of hunted across tasks and ledger comments.
    `interpRZPotential.__init__` builds grids with nested `for ii: for jj:` loops
    calling the decorated evaluator once per point; crossings are exactly linear
    in grid points (10.00/point over four grid sizes), which is why a toy 6x4 grid
-   scores a harmless 240 and hides it.
+   scores a harmless 240 and hides it. In wall-clock, for the default grid:
+
+       numpy       0.19 s
+       forced jax  7.76 s   (40.2x)
+       of which    5.45 s   is boundary (30603 x 178 us) -- 70% of the total
+
+   so #211 recovers about 70% of that slowdown.
 
    → **Question, now much narrower: land the four measured fixes (#1271 done,
    #1272 held, #210, #211) and skip the sweep?** That is what I recommend — the
@@ -29956,3 +29962,21 @@ lesson about the commit series):
 * jax and torch, both skipif-gated. No isfinite-style assertions.
 
 Verdict: clean. Merge as soon as all-clear goes green.
+
+### 2026-08-08 — #211 in wall-clock, not just crossings
+
+I have been quoting this defect class in crossing counts, which is the right
+*detector* metric but not the one that tells Jo whether it matters. Measured the
+default-grid build directly:
+
+    interpRZPotential(interpPot=True, use_c=False), default 101x101
+        numpy        0.19 s
+        forced jax   7.76 s   (40.2x)
+        boundary     5.45 s   (30603 x 178 us) = 70% of the total
+
+So the boundary is the *dominant* term, not a contributor — #211 recovers ~70%
+of a 40x slowdown on a routine constructor. That is a user-visible number in a
+way "30603 crossings" is not, and it is what belongs in the PR body.
+
+Both #1272 attempt-2 runs are down to one macOS job each (24 and 15 min in),
+progressing normally. 151 pass / 3 pending / 0 red.
