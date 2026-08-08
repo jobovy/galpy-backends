@@ -28662,3 +28662,33 @@ Pushed as `e6d07fd5` to #1271.
 
     #1270  88 pending / 64 pass, phantom only
     #1271  now 2 commits, CI restarts
+
+### 2026-08-08 — vertical branch gains the mirror guard (also A/B-verified)
+
+Added the same boundary guard to the held vertical branch, in the existing
+`tests/test_backend_linearpotential.py` (which already imports
+`toVerticalPotential` — the right home, no new file):
+
+    verticalPotential._evaluate / ._force   == 0 crossings
+    _force2deriv (negative control)          > 0 crossings
+
+A/B'd against develop exactly as with the planar one:
+
+    with the branch   2 passed
+    on develop        2 failed
+
+Branch is now `3d1ca138` — fix + guard — and stays unpushed until a slot frees.
+
+**Fourth pre-commit rejection today** (`ruff-format` this time; `isort` the
+other three). The pattern is now unmistakable: the hooks reformat on the first
+attempt and abort the commit, so a first `git commit` here is best treated as
+"stage and normalise", never as "committed". Every one was caught by printing
+the SHA and comparing; without that the earlier push would have silently
+reported success on a commit that was never made.
+
+Doing this for the held branch *now*, rather than at push time, is deliberate:
+it costs nothing while waiting, and it means #209 arrives complete rather than
+needing a follow-up commit after review starts.
+
+    #1270  78 pending / 74 pass, phantom only
+    #1271  CI restarted on the guard commit
