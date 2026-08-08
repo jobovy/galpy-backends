@@ -31390,3 +31390,49 @@ DeprecationWarning called it out. Re-extracted with `is not None`.)
 
     #1275  132 pass / 20 pending / project 86.05% (orbit shards still out)
     #1274  149 pass / 2 pending / green
+
+### 2026-08-08 — branch hygiene, and how #194 should actually land
+
+**#207 de-tangled.** The #194 conftest edit was sitting uncommitted in the #207
+worktree. Extracted to `/var/tmp/194-conftest.patch` (re-verified it still
+applies) and reverted, so the branch is exactly its two intended files with 0
+conflicts against develop `9f3c3166`. Left alone, a test-infra change would have
+ridden inside a numerical-fix PR — [[stacked-pr-branch-surgery-leak]], which is
+easy to do and hard to notice once pushed.
+
+**#194's shape, now that both big files are measured.** Un-deferring everything
+at once is not viable: 75 jax slow-skip entries, of which I have measured 2
+(both whole-file). Measuring the other ~73 under `--jit` before landing anything
+would stall the change indefinitely.
+
+The safe migration is instead:
+
+1. flip inheritance off for the slow-skip list only (the conftest patch);
+2. **seed** the jit list with the currently-inherited eager entries, so CI
+   behaviour is unchanged on day one;
+3. immediately prune the two files I *have* measured, which un-defers ~108
+   traced tests;
+4. mark the seeded-but-unmeasured entries explicitly, so they are a visible
+   burndown rather than silent inheritance.
+
+Step 2 looks like the thing [[jit-trace-mode]]'s note warns against ("copying
+the eager list reproduces exactly the bug being fixed"), and it would be, if it
+stopped there. The difference is that after the copy the entries are *written
+down and attributable* instead of implied by a naming rule — which is what makes
+step 4's burndown possible at all. Silent inheritance has no burndown by
+construction.
+
+What lands with it, from the measurements:
+
+    prune  jax-jit  tests/test_streamTrack.py   (43 of 45 un-defer)
+      keep jax-jit  ::test_streamTrack_plot_spread_non_cartesian   498 s
+      keep jax-jit  ::test_streamTrack_with_progpot                348 s
+    prune  jax-jit  tests/test_streamdf.py      (65 of 79 un-defer)
+      keep jax-jit  ::test_progenitor_coordtransformparams         243 s (marginal)
+      + 10 new jax-jit LEDGER entries (all one root: jax immutable in-place assignment)
+      + 4 -> backend_skip.txt (actionAngleTorus, out of scope by standing decision)
+
+    #1275  138 pass / 14 pending -- ALL 14 remaining build jobs are the
+           test_orbit/test_orbits shards, i.e. exactly the ones covering
+           Orbits.py. The "stuck at 86.05%" prediction is now directly verified.
+    #1274  151 pass / 0 pending / fully green, Jo's to merge
