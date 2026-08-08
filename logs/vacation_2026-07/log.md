@@ -30629,3 +30629,37 @@ the failing STEP, not just the job name, and the question answers itself.
 Re-run dispatched. Everything else on develop is green or still running.
 
     #1274 (draft)  2 pass / 126 pending / 0 red
+
+### 2026-08-08 — #203 is NOT explained by the missing cherry-pick (I speculated; measured instead)
+
+Told Jo that his main-side fix `cd81fbed` ("small-|z| force/**2nd-derivative**
+band") might already have resolved my open item #203 (AnyAxisym `_R2deriv` at
+z=0 off by ~3.3e-6), since the backend branch never received it. Checked before
+letting that stand.
+
+`_R2deriv` vs an independent central-difference of `Rforce`, same potential and
+points on both branches:
+
+                       R2deriv        FD-of-Rforce    rel.diff
+    main    R=0.05     11.968483385   11.968452849    2.55e-06
+    develop R=0.05     11.968483383   11.968448006    2.96e-06
+    main    R=0.20      0.603740660    0.603736040    7.65e-06
+    develop R=0.20      0.603740660    0.603735278    8.91e-06
+
+Two findings:
+
+1. **`cd81fbed` does not fix #203** — main still shows the same ~3e-6 band. The
+   missing cherry-pick was not the explanation, so #203 stays open as reported.
+2. **Both branches' `R2deriv` agree to ~1e-10**, despite completely different
+   quadrature strategies (main `_quad_apeak` substitution vs develop graded-dyadic
+   #1259 + `ellipkm1` #1254). The backend rewrite did not move these values.
+
+**And the FD cross-check cannot adjudicate.** Both the `Rforce` and `R2deriv`
+integrals raise `IntegrationWarning: probably divergent or slowly convergent` at
+small R, so a 3e-6 disagreement between two marginally-converged quadratures
+says only that they disagree — not which is wrong. The original #203 verdict
+used mpmath as arbiter, which is the correct instrument
+([[mpmath-quadosc-final-arbiter]]); FD is a cheap screen, not the judge.
+
+Net: my speculation was wrong and is retracted here rather than left in the
+handover. #203 is a real open item on BOTH branches.
