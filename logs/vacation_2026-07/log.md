@@ -27345,3 +27345,49 @@ probes so I do not repeat them.
 
     #1268  138 pass / 13 pending
     #1269  4 pass / 147 pending -- its matrix has started
+
+---
+
+## AWAITING JO — consolidated decision list (as of 2026-08-08)
+
+Nothing here blocks me; I have work either way. Collected so it can be worked
+through in one pass instead of hunted across tasks and ledger comments.
+
+### A. Tolerances (need a call, not a fix)
+
+1. **actionAngle residual, 2 entries** (task #171). Group A merged as #1250; the
+   residual is 2, not the 10 originally scoped.
+   - measured `2.34757e-07` against a `1e-7` bar
+   - measured `9.363e-12` against an **absolute `1e-16`** bar
+2. **`actionAngleStaeckelGrid` jax-jit** (ledger, added by #1267). A *computed*
+   circular-orbit eccentricity asked to vanish to `1e-16`; jax-jit gives
+   9.363e-12, torch-jit 1.5305e-10 — physically zero. Tracing is entitled to
+   reassociate, so eager and traced landing on opposite sides of an absolute
+   bar is expected rather than a defect.
+   → **The question in all three: should these bars be relative, or
+   backend-aware?** Each un-ledgers immediately if so.
+
+### B. Pre-existing numpy defects (predate the backend work, mine to fix only if you want them fixed)
+
+3. **`AnyAxisym._R2deriv` at z=0** (task #203) — wrong by up to **3.3e-6** at
+   small R. Resolved against mpmath, so the reference is trustworthy.
+4. **`RazorThinExponentialDiskPotential.Rforce`** (task #206) — wrong by up to
+   **2.8e-3** at small |z|.
+
+### C. Design decisions
+
+5. **AnyAxisym traced z-discontinuity** (task #207, from #1259). The fix is to
+   **continuity, not accuracy**, and the quadrature change plus the test
+   recalibration have to land together — which is why I did not do it solo.
+6. **Slow-skip inheritance** (task #194). Tracing can make a slow test
+   *runnable* (streamTrack is the counterexample), so `-jit` inheriting the
+   eager slow-skip list is not always right.
+7. **The 4 AnyAxisym / 2 units traced-ledger entries** are by-design, not
+   defects: GL is used on the backend path so gradients exist, and it cannot
+   resolve the a=R principal value or the z=0 Hadamard 2nd derivative; a
+   units-based density strips a tracer to numpy by construction. They stay
+   unless you want the design changed.
+
+**Headline for the traced track: traced-green is achieved as far as code can
+take it.** All 7 remaining traced-ledger entries are in A or C above. None is an
+unmigrated potential.
