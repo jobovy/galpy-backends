@@ -26315,3 +26315,25 @@ diskdf row to look green in hindsight. The table is a record of what the sweep
 found on the day; rewriting it would erase the fact that the sweep caught a
 regression, which is the main argument for making `workflow_dispatch(jit=true)`
 a standing pre-merge run.
+
+### 2026-08-07 — verifying the branch I would push, not the one I developed in
+
+Ran #208's tests from `feat/diskdf-ssp-traced-perf` itself (`/var/tmp/sspfix`,
+commit 1509795d), not from `evdirect` where I wrote them:
+
+    tests/test_backend_diskdf.py -k ssp    16 passed   9.4s
+
+Small thing, but the two are not the same claim. Everything I have measured for
+#208 so far ran in `evdirect` -- a detached worktree carrying an uncommitted
+patch. The committed branch is what CI will build, and the difference between
+"the change works" and "the commit contains the change" is exactly the class of
+error that [[checkout-ref-file-stages-a-revert]] and
+[[precommit-hooks-reject-first-commit]] are both about.
+
+Also noticed a real gap while doing it: I had only ever run `-k ssp`, never the
+whole 80-test file with the new tests present. The new guard installs a
+`monkeypatch` spy on `coerce_coords`; pytest's fixture undoes that per-test, so
+it *should* be inert for the rest of the file -- but "should" is what I keep
+getting caught by. Whole file now running on the committed branch.
+
+#1266 at 24 pending / 129 pass, still zero failures.
