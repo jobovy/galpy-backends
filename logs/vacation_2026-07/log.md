@@ -28247,3 +28247,19 @@ duration this morning ([[gha-job-start-not-run-created]]).
     tests       numpy test_potential.py + test_actionAngle.py running
 
     #1270  149 pending / 2 pass, no reds
+
+### 2026-08-08 — #1270 is queued, not stuck
+
+Its checks had shown 149 pending across several wakes, which could read as a
+stall. Checked the runs rather than the aggregate:
+
+    runs by status: {'queued': 8}   all created 27m ago, none started
+
+Pure runner saturation — normal for this repo, and exactly the case where the
+per-check summary is uninformative and the run list is not
+([[gha-job-start-not-run-created]]). No action, no ping; a queue is not a
+blocker.
+
+Used the wait to launch #88's forced-backend arm: `test_actionAngle.py
+--backend=jax`, the direct consumer of the five changed adapter forwards.
+numpy gate (`test_potential.py` + `test_actionAngle.py`) still clean at 7:26.
