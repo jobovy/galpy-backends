@@ -28070,3 +28070,40 @@ statement that the 6 `test_interp_potential.py` entries were measured and stay
 deferred (all timeout at exactly 300.0s).
 
 Slow-skip arc today: **210 -> 109 -> 104 -> 98 pending**.
+
+### 2026-08-08 — #88 scope correction #2: the leaf is a class-wide convention, not a one-liner
+
+Started implementing the `_radicand(evaluate=...)` design and it is **aimed at
+the wrong layer**. Following the chain properly:
+
+    _radicand -> _evaluateplanarPotentials(pot, r)
+                    -> Pot._call_nodecorator(...)     <- ALREADY undecorated
+                 ...
+    planarPotentialFromRZPotential._evaluate
+                    -> self._Pot(R, 0.0, t=t, use_physical=False)   <- THE crossing
+
+`_evaluateplanarPotentials` is already the no-decorator path, so parameterising
+`_radicand` would have bought nothing. The crossing is one level deeper, where
+the planar *adapter* calls the decorated 3D public API.
+
+And it is not one call site. The whole adapter class does this:
+
+    _evaluate  -> self._Pot(R, 0.0, t=t, use_physical=False)
+    _Rforce    -> self._Pot.Rforce(R, 0.0, t=t, use_physical=False)
+    _R2deriv   -> self._Pot.R2deriv(R, 0.0, t=t, use_physical=False)
+
+So "call the undecorated inner" is a **class-wide convention change**, touching
+the adapters that sit under essentially every planar consumer in the library —
+high blast radius, on a path where numpy must stay byte-identical.
+
+**Not starting that at the tail of a long session with #1270's CI mid-flight.**
+This is the second scope correction on #88 today (first: no byte-identity waiver
+needed; now: not a one-liner). Both came from reading the code instead of
+trusting the previous note — including my own from an hour earlier.
+
+The measurement stands and is what makes it worth doing: 1023 crossings/call on
+jax, 1031 on torch, ~0.18 s of pure boundary, and `aAStaeckel` at 0 proving it
+is fixable. The census `KNOWN_HOT` entry carries it, and deleting that line is
+still the acceptance test.
+
+    #1270  150 pending / 1 pass, no reds (just launched)
