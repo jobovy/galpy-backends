@@ -26692,3 +26692,35 @@ it covers cannot be counted yet.
 So: not a phantom claim, not a defect claim. Re-check when those 8 are done. If
 patch is still short of 100% then, the three lines get identified and covered,
 not explained away.
+
+### 2026-08-07 — #1268 patch coverage: answered locally, not by waiting
+
+codecov said patch 70% (10 lines, 7 hits, 3 misses) and I refused to call that a
+phantom, because patch coverage of *new* lines is exactly the thing that must
+not be waved through. Rather than wait for CI to tell me, traced the three
+branches directly:
+
+    479-487  HIT (all nine executable lines)
+    478      the `def _ssp(...)` line -- executed at import, before the tracer
+             was installed. Tracer artifact, not a miss.
+
+So **every line of the change is exercised by the suite**:
+
+    line 481-482  backend-array branch   <- test_ssp_backend_array_uses_backend
+    line 483-485  plain + numpy active   <- the numpy test_diskdf.py suite
+    line 486-487  plain + forced backend <- test_ssp_plain_scalar_stays_on_numpy
+
+The 3 codecov misses are the two backend branches, whose covering jobs
+(`build ... tests/test_backend*.py`) are among the **7 of 8 still pending**.
+Uploads, not a gap.
+
+Two attempts failed first and are worth noting so the next person skips them:
+`coverage run --source=galpy.df.diskdf` collects nothing (source wants a path or
+package dir), and `--include="*/galpy/df/diskdf.py"` also reported "No data" --
+the repo `.coveragerc` appears to constrain collection. `sys.settrace` sidesteps
+the config entirely and took one command. Consistent with
+[[codecov-line-coverage-parse-is-bogus]]: for "which lines ran", trace it
+yourself.
+
+I will still re-check patch when the 8 jobs finish -- a local trace proves the
+lines are *reachable by tests*, not that CI's chosen shards *ran* them.
