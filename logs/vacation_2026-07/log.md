@@ -26661,3 +26661,34 @@ last prune used.
 
     #1267  149 pass / 4 pending / phantom only, BLOCKED on the last checks
     #1268  149 pending / 2 pass, no real reds
+
+### 2026-08-07 — #1268 codecov/patch red: NOT dismissing this one as a phantom
+
+    #1267  152 pass / 2 pending / 0 fail  (codecov cleared itself again)
+    #1268  codecov/project FAIL + codecov/patch FAIL
+           base cov 86.06 lines 48414 hits 41666
+           head cov 24.94 lines 48421 hits 12078
+           patch cov 70.0  lines 10  hits 7  misses 3
+
+**`codecov/patch` is a different animal from `codecov/project`.** Patch measures
+the *changed* lines, so "3 of my 10 new lines uncovered" would be a real gap and
+exactly the thing [[no-hiding-uncovered-code]] is about. It does not get waved
+through with the phantom argument.
+
+**And my discriminator does not even apply here.** It is "`lines` identical on
+both sides"; #1268 has 48414 -> 48421, which differs. That is my PR legitimately
+adding 7 lines, not a coverage regression -- but the rule as I wrote it would
+have said "REAL DROP, investigate". Recording the correction: the identical-
+`lines` test is only valid for PRs that change no line counts (#1266, #1267 --
+txt files and a 5-line branch). For a line-adding PR the phantom signal is
+head *hits* far below base while jobs are still uploading, which is what 12078
+vs 41666 at 24.94% is.
+
+**What actually decides it:** whether the jobs that execute the new branches have
+finished. 7 of 8 are still pending, including both `test_backend*.py` builds --
+and `tests/test_backend_diskdf.py` is where the new guard lives, so the branches
+it covers cannot be counted yet.
+
+So: not a phantom claim, not a defect claim. Re-check when those 8 are done. If
+patch is still short of 100% then, the three lines get identified and covered,
+not explained away.
