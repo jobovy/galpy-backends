@@ -30130,3 +30130,31 @@ measurement attached. Being wrong costs one red CI run, not a bad merge.
 Also cancelled 7 superseded CI runs on the prior SHA after the burndown push,
 keeping the 8 on the new head — the SHA-equality guard is what stops that from
 cancelling the run I actually need ([[cancel-stale-pr-ci-on-push]]).
+
+### 2026-08-08 — burndown stops at 92: the qdf deferral is REAL
+
+Third pass. Scanned all 12 slow-skip blocks for deferral rationales whose cited
+cause has since been fixed. The qdf block looked stale — deferred pending "Track
+F df migration", and that migration is done (galpy task #136). Measured:
+
+    test_qdf.py::test_meanjz_noaac_issue300, test_sampleV_interpolate
+        > 10 min (my own timeout, not theirs) -- still far over the 300 s cap
+
+So that deferral is **correct** and stays. Worth doing: "the cited blocker was
+fixed" is a hypothesis, not a finding — two of my three guesses today were right
+and this one was wrong, which is roughly the rate that makes measuring worth it.
+
+The remaining blocks are genuinely heavy batteries (orbit dxdv/lyapunov,
+streamdf, FDM dynamical friction, energy-jacobi over no-C potentials). Nothing
+else looks stale on inspection, so the burndown ends here:
+
+    slow-skip  98 -> 96 -> 92     (both prunes ride on #1273)
+
+**Near-miss worth recording.** The qdf run hit my 10-minute command timeout,
+which killed the `cp` that restores `backend_slow_skip.txt` — leaving the
+worktree with 2 entries silently deleted, in the branch that is an open PR. A
+later `git add -A` would have committed a ledger change I never intended and
+whose measurement had *failed*. Caught by restoring from the backup and printing
+`git status` + entry count (92) + `git diff --stat` (empty) before doing anything
+else. Any temporary mutation of a tracked file needs its restore verified, not
+assumed — the failure path is exactly where the restore does not run.
