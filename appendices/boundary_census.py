@@ -125,7 +125,11 @@ def census(fn, backend="jax"):
 
 
 def _workloads():
-    from galpy.actionAngle import actionAngleSpherical, actionAngleStaeckel
+    from galpy.actionAngle import (
+        actionAngleSpherical,
+        actionAngleStaeckel,
+        actionAngleVertical,
+    )
     from galpy.df import dehnendf, isotropicHernquistdf, quasiisothermaldf
     from galpy.orbit import Orbit
     from galpy.potential import (
@@ -141,6 +145,9 @@ def _workloads():
     ddf = dehnendf(beta=0.0, profileParams=(1.0 / 3.0, 1.0, 0.1))
     aAS = actionAngleStaeckel(pot=MWPotential2014, delta=0.4)
     aASph = actionAngleSpherical(pot=hp)
+    from galpy.potential import toVerticalPotential
+
+    aAVert = actionAngleVertical(pot=toVerticalPotential(MWPotential2014, 1.0))
     qdf = quasiisothermaldf(
         1.0 / 3.0, 0.2, 0.1, 1.0, 1.0, pot=MWPotential2014, aA=aAS, cutcounter=True
     )
@@ -165,6 +172,8 @@ def _workloads():
             "aASpherical.actionsFreqs",
             lambda: aASph.actionsFreqs(1.0, 0.1, 1.1, 0.0, 0.1),
         ),
+        ("aAVertical.Jz", lambda: aAVert(0.1, 0.05)),
+        ("aAVertical.actionsFreqs", lambda: aAVert.actionsFreqs(0.1, 0.05)),
         ("qdf.density", lambda: qdf.density(1.0, 0.1)),
         ("qdf.sigmaR2", lambda: qdf.sigmaR2(1.0, 0.1)),
         ("Orbit.E", lambda: o.E(pot=MWPotential2014)),
@@ -186,6 +195,11 @@ KNOWN_HOT = {
     # is a separate `else:` and untouched.
     "aASpherical.actions": "galpy task #88: eager bisect_root re-crosses per iteration",
     "aASpherical.actionsFreqs": "galpy task #88: eager bisect_root re-crosses per iteration",
+    # verticalPotential adapters forward through the decorated 3D API; fixed on
+    # feat/vertical-adapter-nodecorator (task #209, 1708 -> 244). The residual
+    # after that fix is actionAngleVertical's own bisection closure (task #210).
+    "aAVertical.Jz": "galpy tasks #209/#210: vertical adapter + AA bisection closure",
+    "aAVertical.actionsFreqs": "galpy tasks #209/#210: vertical adapter + AA bisection closure",
 }
 
 
