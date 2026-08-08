@@ -27387,6 +27387,23 @@ through in one pass instead of hunted across tasks and ledger comments.
    resolve the a=R principal value or the z=0 Hadamard 2nd derivative; a
    units-based density strips a tracer to numpy by construction. They stay
    unless you want the design changed.
+8. **[added 2026-08-08] Internals calling the DECORATED public evaluators —
+   scope: three fixes or a convention?** A `@backend_input` entry point costs
+   ~178 us per call under a forced backend. Harmless at a few calls, ruinous
+   inside a loop. Found and measured three:
+
+       planar adapter `_evaluate`          989 -> 5     (PR #1271, gates green)
+       vertical adapter `_evaluate`       1708 -> 244   (held, gates green)
+       actionAngleVertical `f` closure     238           (task #210, not started)
+
+   An AST scan finds **96 internal call sites across 17 files** that use a
+   decorated public evaluator where an undecorated inner already exists (34 of
+   them in the two `actionAngleVertical*` modules). **96 is a population, not a
+   defect count** — only loop-resident sites matter, and only 3 are measured.
+   → **Question: land the 3 measured fixes and stop, or adopt a convention
+   ("internals call the inner; the decorated entry is the user-facing API") and
+   sweep?** The sweep is mechanical but touches numpy-byte-identity-critical
+   paths in bulk, so it is your call on risk appetite, not mine.
 
 **Headline for the traced track: traced-green is achieved as far as code can
 take it.** All 7 remaining traced-ledger entries are in A or C above. None is an
