@@ -31023,3 +31023,64 @@ junitxml intersected with the ledger nodeids is usable.
     #1275  43 pass / 109 pending / audit DONE, merge-ready on green
     #1274  117 pass / fully green / Jo's review
     #207   committed eee43498, held local
+
+### 2026-08-08 (later still) — #171 measured: 3 of the 5 are not tolerances at all
+
+`pytest tests/test_actionAngle.py --backend X --runxfail`, whole file, junitxml
+intersected with the ledger nodeids. This **corrects** what I had recorded.
+
+I had #171 down as two tolerance entries, "2.35e-07 against a 1e-7 bar" and
+"9.36e-12 against an absolute 1e-16 bar on a circular-orbit eccentricity". The
+second does not exist in the current ledger. Measured:
+
+| entry | measured | bar | ratio | class |
+|---|---|---|---|---|
+| jax `Adiabatic_linear_angles_cylsep` | 1.677e-07 | 1e-7 | 1.7x | tolerance |
+| torch `Adiabatic_linear_angles_cylsep` | 2.618e-07 | 1e-8 | 26x | tolerance |
+| jax `AdiabaticGrid_outsidegrid_c` | 4.7e-3 | 1e-8 | **470,000x** | real bug |
+| torch `AdiabaticGrid_outsidegrid_c` | — | — | — | real bug (TypeError) |
+| torch `StaeckelGrid_basicAndConserved` | — | — | — | real bug (TypeError) |
+
+The count of two was right; the numbers were not, and the entry I described in
+most detail was the one that does not exist. Worth stating plainly because the
+whole point of a tolerance decision is that the number is the argument.
+
+**The useful find is the other three.** Both torch failures are the identical
+message —
+
+    TypeError: sqrt(): argument 'input' (position 1) must be Tensor, not numpy.ndarray
+
+— i.e. one shared source defect leaking numpy out of the AA-grid path under
+torch, worth two ledger entries for one fix. And the jax `outsidegrid` entry is
+off by 470,000x, which is an accuracy bug (task #103, off-grid fallback), not
+something a bar should ever be moved for. Papering those over with looser bars
+would have been the wrong read of "backend aware".
+
+Implementation constraint for the genuine pair: the bars are log10 exponents
+passed **positionally to a shared helper**
+(`check_actionAngle_linear_angles(..., -8,-8,-7.5, -8,-8,-8, -7,-7,-7)`) that
+many other tests also call, so the backend-aware bar has to go at the call site.
+numpy's exponents stay exactly as they are.
+
+#### #194: the inheritance rule is real, documented, and half-right
+
+`_load_backend_nodeids` deliberately makes `<backend>-jit` inherit `<backend>`,
+reasoning that "tracing ... only makes a slow test slower, since the trace has
+to compile first" and that this is "a property of the backend name, not of which
+list is being read."
+
+Sound for the **ledger** — tracing cannot repair a numerical gap. Wrong for the
+**slow-skip list**, and the file argues against itself: the streamdf and
+streamTrack entries both name *per-trackpoint / per-track eager XLA dispatch* as
+the cost, which is exactly what tracing removes, and both say "un-skip when
+jit-vectorized". Inheritance made that unmeasurable — skipped under `--jit` for
+a cost the traced run may not pay.
+
+So it is a property of the list. Split implemented (`inherit_eager=False` for
+slow-skip only), and `test_streamTrack.py` is running under `--backend jax --jit`
+now to find out which way it actually goes. Populating the jit list from
+measurement has to precede flipping this in CI, or 75 inherited jax entries all
+start running at once.
+
+    #1275  46 pass / 106 pending / 58 build jobs still to upload coverage
+    #1274  121 pass / green
