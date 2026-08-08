@@ -28878,3 +28878,32 @@ either confirms it or catches me being wrong.
 
 **#1270 is red-free and pre-audited**; 128 pass, 25 pending (all-clear among
 them). It merges the moment the last checks land.
+
+### 2026-08-08 — #210's "numpy-path trap" turns out to be mechanically separable
+
+Classified all 19 `evaluatelinearPotentials` call sites in
+`actionAngleVertical.py` by enclosing function:
+
+    BACKEND-only (safe to swap)   6   _E_backend, _calc_xmax_backend::f,
+                                      _calc_{J,omega,angle}_backend::integrand,
+                                      _unbound_backend
+    numpy / shared (hands off)   13   _evaluate, _actionsFreqs,
+                                      _actionsFreqsAngles, calcxmax
+
+The trap I wrote down earlier — "most sites are on the numpy path, so this is
+risky" — is true as stated and **misleading as guidance**, because the split
+follows the `*_backend` naming convention exactly. That turns #210 from a
+judgement call into a bounded 6-line change with a mechanical criterion.
+
+`_calc_xmax_backend::f` is the 238-crossing site, so the one that matters is in
+the safe set.
+
+Wrote the exact line numbers and both lists into task #210 so the future PR does
+not re-derive them — and kept the instruction to run the sha256 A/B anyway.
+numpy byte-identity holds *by construction* here (no numpy caller reaches a
+changed line), and "by construction" is precisely the kind of reasoning I have
+been catching myself on all day; it is a reason to expect the A/B to pass, not a
+reason to skip it.
+
+    #1270  131 pass / 22 pending, no reds -- merges when the last checks land
+    #1271  28 pass / 123 pending, 2 codecov reds (predicted to clear)
