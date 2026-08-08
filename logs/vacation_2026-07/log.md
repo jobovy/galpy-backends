@@ -31196,3 +31196,64 @@ that those 8 were backend shards, which contribute no coverage at all.
 
     #1275  58 pass / 94 pending / 0 real reds / audit DONE
     #1274  128 pass / green
+
+### 2026-08-08 (late) — both questions answered on the built worktree
+
+#### #194: the jit slow-skip list needs TWO nodeids, not a file
+
+`tests/test_streamTrack.py --backend jax --jit`, C extension present:
+
+    45 cases -> 45 PASSED, 0 failed
+    total 1342 s   max 498 s   median 9.6 s
+
+      498.1 s  test_streamTrack_plot_spread_non_cartesian
+      347.7 s  test_streamTrack_with_progpot
+       40.1 s  <- next highest, then a long tail at ~10 s
+
+Two conclusions, both measured:
+
+1. **Correctness under jit is fine** — 45/45. The 36 failures I reported last
+   wake were entirely the unbuilt worktree.
+2. **The cost is two tests.** Against the 240 s un-defer margin (80% of the
+   300 s per-test cap), exactly those two stay deferred; the other **43
+   un-defer**. Eager, the whole file is skipped under jax.
+
+So Jo's "own list" call lands: inheritance was deferring 43 traced tests for a
+cost only 2 of them pay, and the entry's own rationale ("un-skip when
+jit-vectorized") was describing a state that had already arrived for most of the
+file.
+
+#### #171: my last-wake correction was itself the wrong one
+
+Re-measured with `--runxfail` on the built worktree, torch:
+
+| entry | measured | bar | class |
+|---|---|---|---|
+| `Adiabatic_linear_angles_cylsep` | 1.77912e-07 | 1e-7 | tolerance |
+| `StaeckelGrid_basicAndConserved_actions` | 1.5305e-10 | **absolute 1e-16** | tolerance |
+| `AdiabaticGrid_outsidegrid_c` | 4.7e-3 | 1e-8 | real bug (470,000x) |
+
+The unbuilt run showed **85** failures; the built one shows **3**. The two
+`TypeError: sqrt(): argument must be Tensor, not numpy.ndarray` results I built
+a "one shared numpy/Tensor collision worth two entries" theory on were the
+missing C extension, not a defect.
+
+And the entry I confidently retracted last wake — "9.36e-12 against an absolute
+1e-16 bar on a circular-orbit eccentricity that is physically zero" — **exists**.
+It is `StaeckelGrid_basicAndConserved_actions`, asserting
+`fabs(e) < 1e-16` on a circular orbit, now measuring 1.5305e-10. My original
+note was right in kind; the "correction" was the contaminated reading. Net: I
+corrected a true statement into a false one and have now corrected it back, so
+the current numbers above are the ones to trust, measured with C present.
+
+The lesson is the same one as the streamTrack void, and it has now cost two
+retractions in two wakes: **a measurement's environment is part of its result.**
+Establish it first, and re-establish it after any change to the worktree.
+
+Actionable shape of #171: two genuine tolerance entries, both wanting
+backend-aware bars (one of which is an absolute machine-eps bar on a physically
+zero quantity, which was never meetable off numpy), plus one real off-grid
+accuracy bug that belongs with task #103, not with a bar.
+
+    #1275  91 pass / 61 pending / project -14.60% -> -13.91%
+    #1274  145 pass / 6 pending / green
