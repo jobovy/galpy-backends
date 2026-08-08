@@ -30763,3 +30763,31 @@ jit/grad tests. Written into task #207 with the numbers.
 Also recorded there: #207 (this cliff, main is correct) is **distinct** from #203
 (R2deriv ~3e-6 vs mpmath), which is present on BOTH branches and NOT fixed by
 cd81fbed. Two separate items in the same file; easy to conflate.
+
+### 2026-08-08 — #207 refinement: BOTH paths collapse, and the rebase brings half the fix free
+
+Checked which implementation my z-sweep actually exercised, because `_zforce`
+dispatches two ways: `_zforce_numpy` (scipy `quad`, `points=[R]`) and
+`_zforce_gl` (the graded-dyadic backend path from #1259). Plain floats take the
+numpy path, so my earlier "develop's graded-dyadic quadrature misses the peak"
+was an assumption, not a measurement.
+
+Measured both:
+
+           z        numpy path      jax (gl) path
+       1e-06     1.0000017281       1.0000017281
+       1e-07     0.0000001728       0.0000001728
+       1e-10              nan                nan
+
+**Both collapse, to identical digits.** So #1259's backend quadrature faithfully
+reproduces the scipy behaviour *including its failure* — the spec in #207 holds,
+but it must fix **two** implementations, not one.
+
+**Sequencing consequence worth flagging before anyone starts:** Jo's eventual
+rebase onto main brings `cd81fbed` — which fixes the *numpy* path — for free.
+Porting the numpy half now would just create another conflict in the file that
+already has 8. So the original work is only the **backend** half (`_zforce_gl`):
+carry the a = R + |z|t substitution into the graded-dyadic path, and let the
+rebase supply `_quad_apeak` for numpy.
+
+That halves the port and removes the conflict risk. Recorded in #207.
