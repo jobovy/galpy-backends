@@ -28368,3 +28368,43 @@ acceptance test and belongs in the same beat as the merge.
 
     #1270  149 pending, no reds
     #1271  149 pending, no reds
+
+### 2026-08-08 — the same adapter bug exists in verticalPotential, and it is HOTTER
+
+Asked whether the pattern #1271 fixes appears elsewhere, rather than assuming it
+was unique to the planar adapters. Grepping for decorated forwards outside
+`planarPotential.py`:
+
+    verticalPotential.py:125  self._Pot(tR, z, phi=tphi, t=t, use_physical=False)
+    verticalPotential.py:156  self._Pot.zforce(...)
+    verticalPotential.py:164  self._Pot.z2deriv(...)
+    verticalPotential.py:212  self._Pot(Rb, z, ...)        } full - mid
+    verticalPotential.py:213  self._Pot(Rb, 0.0*z, ...)    }
+
+Measured before claiming anything, C extension loaded, x64 on:
+
+    aAVertical.Jz            1708 crossings   (1464 from verticalPotential._evaluate)
+    aAVertical.actionsFreqs  1722             (1476)
+    aAVertical.calcxmax       154
+    verticalPot value          14
+
+**Hotter than the planar site I just fixed** (1023). `actionAngleVertical` and
+`actionAngleVerticalInverse` both sit on it.
+
+Swappable sites: 125, 212, 213 -> `_evaluatePotentials`; 156 -> `_evaluatezforces`.
+Site 164 (`z2deriv`) has no inner, same as the planar second derivatives — it
+stays.
+
+Ran the measurement twice on purpose. The first was in `slowprune`, which has
+**no C extension**; the counts happened to be identical (1708/1722) but I did not
+know that in advance, and a fallback path can change dispatch
+([[worktree-missing-c-ext-fakes-passes]]). Re-ran in a C-ext-loaded checkout and
+confirmed. Cheap, and it is the same check that made the aASpherical 989
+trustworthy this morning.
+
+Queued as the natural follow-up to #1271 — same class, same fix shape, same
+byte-identity argument, and it needs its own slot. Not opening a third PR.
+
+    #1270  codecov/project red again (ledger-only PR, runs still queued -> the
+           known stale-base phantom; it self-healed last time, no action)
+    #1271  149 pending, no reds
