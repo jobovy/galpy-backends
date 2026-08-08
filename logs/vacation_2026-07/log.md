@@ -28718,3 +28718,29 @@ Pushed `04a0f52b`. #1271 is now three commits: fix, guard, hoist.
 Fifth pre-commit rejection today (isort). Same catch, same one-line check.
 
     #1270  73 pending / 79 pass, phantom only
+
+### 2026-08-08 — reclaimed 14 runners I had myself tied up
+
+Two pushes to #1271 (guard, then hoist) left the earlier commits' CI still
+running. Checked rather than assumed:
+
+    superseded 58ef4c35   7 active runs
+    superseded e6d07fd5   7 active runs
+    current    04a0f52b   (untouched)
+
+**14 runs consuming a queue I have been complaining is saturated — my own doing.**
+Cancelled all 14 ([[cancel-stale-pr-ci-on-push]]).
+
+Guarded the cancel explicitly: the script re-resolves each SHA and **refuses if
+it equals the branch head**, because cancelling the head's run is the thing that
+leaves a PR permanently un-mergeable
+([[cancel-push-run-leaves-cosmetic-red]]). `#1271` still shows its head checks
+pending with no reds afterwards, which is the intended state.
+
+The lesson I am taking is about the *earlier* decision, not the cleanup: I pushed
+twice in quick succession (guard, then the hoist that the guard made necessary).
+Had I run the duplication audit **before** pushing the guard, that would have
+been one push and one CI cycle. The self-audit was right; its timing cost 7 runs.
+
+    #1270  64 pending / 88 pass, phantom only
+    #1271  head CI running clean
