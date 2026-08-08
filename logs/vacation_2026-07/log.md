@@ -29424,3 +29424,38 @@ state rather than its label.
 Tracked, not forgotten.
 
     #1272  148 pending / 2 pass, 1 infra red awaiting re-run
+
+### 2026-08-08 — the owed C-ext measurement: 1708 -> 0, and a stray file in the PR worktree
+
+Discharged the measurement I owed on #210 (its counts were taken in a worktree
+without the C extension). Applied #210's diff temporarily onto `evdirect`
+(C-ext=True) so the reading is of the **combined post-merge state**, and asserted
+`_ext_loaded` *inside the run* before believing anything:
+
+    C-ext loaded: True
+    aAVertical.Jz            1708 -> 0
+    aAVertical.actionsFreqs  1722 -> 0
+
+**Zero.** The `actionAngleVertical` path stops crossing the `@backend_input`
+boundary entirely once both fixes are in: #1272 removes the adapter's 1464, #210
+the closure's 244. The C-ext-less numbers (1464/1476 after #210 alone) were not
+misleading, but I did not know that until now, and the vertical-adapter case is
+the reason I check rather than assume.
+
+**Caught a real hygiene problem doing it.** `evdirect` — the worktree holding the
+**pushed #1272 branch** — had an uncommitted `tests/test_backend_actionAngle.py`
+(+38 lines): the leftover guard I had `cp`-ed in during the earlier scratch
+rehearsal. Deleting the scratch *branch* did not remove the *file*. Had I
+committed anything in that worktree, the guard would have silently leaked into
+#1272 — exactly [[stacked-pr-branch-surgery-leak]].
+
+It surfaced only because I printed `git status --short | wc -l` before applying a
+patch and saw `1` where I expected `0`. Restored and verified:
+
+    uncommitted files: 0
+    HEAD == origin/feat/vertical-adapter-nodecorator: YES
+
+**Rule reinforced: check the worktree is clean before AND after borrowing it.**
+A worktree that holds a live PR branch is not scratch space.
+
+    #1272  139 pending / 11 pass; 2 codecov (early-upload) + 1 torus infra red
