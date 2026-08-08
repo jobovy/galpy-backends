@@ -27611,3 +27611,29 @@ niche one), then removing a Pdf.3 roadmap claim that turned out already done.
 
 Slow-skip across the session: **210 -> 109**, with #1269 open to take it to 104
 and #125 rescoped to a further one-line un-defer (104 -> 103).
+
+### 2026-08-08 — #125 shard-context measurement launched
+
+A slot freed when #1268 merged, so started the measurement that has to precede
+the un-defer: whole `tests/test_sphericaldf.py --backend=jax --timeout=300`
+with the single entry lifted, on `evdirect` moved to the post-merge base
+`d627badc`.
+
+Three things done deliberately, each because a version of them bit earlier
+today:
+
+* **Asserted the edit removed exactly one line** (`assert len(keep) == len(lines)-1`)
+  rather than trusting a filter. My over-broad regex and over-strict nodeid
+  check both passed silently while being wrong.
+* **Restore AFTER the run, never during** — the first un-defer probe was voided
+  by a restore that raced collection.
+* **`-v`, not dots** — a killed run then still yields per-test data.
+
+Why this and not the 21.9 s number I already have: 21.9 s solo is not 21.9 s
+in-file. The cap applies in the shard context, module-scope fixtures and
+accumulated jax compilation caches change per-test cost in both directions, and
+the 240 s margin rule has to be applied to the in-file figure
+([[handpicked-nodeid-batch-is-not-a-context]]).
+
+    #1268  MERGED d627badc
+    #1269  77 pass / 75 pending, phantom only
