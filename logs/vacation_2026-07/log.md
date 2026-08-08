@@ -31332,3 +31332,61 @@ Shape of the work, for when a slot frees:
            -- which are both the slowest AND the ones covering Orbits.py, the
            file this PR edits. So the stall has a specific cause, not just "uploads pending".
     #1274  149 pass / 2 pending / green
+
+### 2026-08-08 — #194's big unknown measured: streamdf under --jit is 7x faster than eager
+
+`tests/test_streamdf.py --backend jax --jit`, C extension present,
+`test_streamTrack_multi_parallel` deselected (the known `parallel_map` fork
+deadlock), run under `setsid` so the group stays killable:
+
+    79 cases -> 65 passed, 14 failed
+    total 797 s (13 min)    median 0.11 s    max 242.6 s
+
+The eager rationale in `backend_slow_skip.txt` says this file blows the jax
+shard "from ~12 min to >90 min (the job cap -> cancelled)". Traced, the whole
+file is **13 min** — back to roughly its pre-migration cost, and the median test
+is **0.11 s**. That is the strongest evidence yet for Jo's "own list" call: the
+eager cost really was per-call dispatch, and tracing removes it.
+
+What un-deferring this file under `--jit` would actually require:
+
+* **1 jit slow-skip entry** — `test_progenitor_coordtransformparams` at 242.6 s,
+  marginally over the 240 s rule (it would be ~172 s on CI at the 0.71x factor,
+  so this one is a judgement call rather than a clear defer)
+* **10 jax-jit ledger entries** — all one root: `TypeError: JAX arrays are
+  immutable and do not support in-place item assignment`, i.e. streamdf writes
+  into arrays it built (`track[:,ii] = ...`). Real, fixable, one defect.
+* **4 permanent skips** — `actionAngleTorus wraps the external Torus C++
+  library`, already out of scope by standing decision, so `backend_skip.txt`
+  rather than the ledger.
+
+Net: **65 tests that currently do not run at all under `--jit` would run**, at
+13 min for the file.
+
+Combined with streamTrack (43 of 45 un-defer), the shape of #194 is now clear
+and it is not a two-line change: it is one conftest change plus a measured jit
+list plus ~10 new ledger entries, and it un-defers ~108 traced tests.
+
+#### #171 closed out: jax was never contaminated
+
+The jax re-run on the built worktree reproduces the pre-build numbers exactly
+(1.67707e-07; 0.00470897), which makes sense in hindsight -- jax's two failures
+were always assertion failures, never the `TypeError` that the missing C
+extension manufactured on torch. Final:
+
+| entry | jax | torch | class |
+|---|---|---|---|
+| `linear_angles_cylsep` | 1.67707e-07 vs 1e-7 | 1.77912e-07 vs 1e-7 | tolerance |
+| `StaeckelGrid_basicAndConserved` | — | 1.5305e-10 vs **abs 1e-16** | tolerance |
+| `AdiabaticGrid_outsidegrid_c` | 0.00470897 vs 1e-8 | 0.0047 vs 1e-8 | **one bug, 2 entries** |
+
+So the "two entries, one fix" shape I was hunting does exist -- it is the
+off-grid accuracy bug (identical 0.0047 on both backends), not the numpy/Tensor
+collision I invented from contaminated data.
+
+(Also tripped [[junitxml-find-truthiness-trap]] mid-analysis: `fl = c.find("failure")
+or c.find("error")` silently reported *no* jax failures. Python's own
+DeprecationWarning called it out. Re-extracted with `is not None`.)
+
+    #1275  132 pass / 20 pending / project 86.05% (orbit shards still out)
+    #1274  149 pass / 2 pending / green
