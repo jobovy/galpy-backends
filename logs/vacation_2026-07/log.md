@@ -26544,3 +26544,24 @@ The arm has reached the sampling tests (`sampledSurfacemassLOS`, `sampleVRVT_*`,
 `sampleLOS_*` all PASSED) but **not yet the five target nodeids** -- those are
 `*_sample_*_returnROrbit`/`returnOrbit`, which are different tests. Still no
 claim.
+
+### 2026-08-07 — #1268 rebase verified content-preserving
+
+I tested #208 at commit `1509795d` and pushed `bfd6c8e8` after rebasing onto
+`b6bf4b54`. Those are different SHAs, so "I tested it" was not automatically
+true of what CI is now building. Checked by diffing the two commits' own diffs:
+
+    IDENTICAL -- the rebase changed only the parent, not the change
+    pushed head bfd6c8e84 == remote bfd6c8e84
+
+Cheap, and it closes the same gap as running the tests from the committed branch
+rather than the dev worktree: every step between "measured" and "in CI" is a
+place the artifact can quietly change identity.
+
+Arm at 107/129, alive, all five target nodeids passing so far (one of mine plus
+four dehnendf variants that are not in the target set). No timeouts. Timings
+still pending -- `-v` gives outcomes, the junitxml gives durations, and the rule
+is about durations.
+
+    #1267  148 pass / 5 pending / codecov phantom
+    #1268  149 pending / 2 pass
