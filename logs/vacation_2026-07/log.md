@@ -28408,3 +28408,31 @@ byte-identity argument, and it needs its own slot. Not opening a third PR.
     #1270  codecov/project red again (ledger-only PR, runs still queued -> the
            known stale-base phantom; it self-healed last time, no action)
     #1271  149 pending, no reds
+
+### 2026-08-08 — vertical-adapter fix implemented and HELD (1708 -> 244)
+
+Committed `6c60c59f` on `feat/vertical-adapter-nodecorator`, **not pushed** —
+two-PR limit. Disjoint file from both open PRs, so it will not need a rebase
+whenever they land.
+
+    aAVertical.Jz            1708 -> 244
+    aAVertical.actionsFreqs  1722 -> 246
+    numpy   BYTE-IDENTICAL, sha256 over 7218 values, two worktrees
+
+7x, not the planar fix's 198x, because the residual **244 comes from a different
+site** (`Potential.py:wrapper:235`) that this change does not touch. Saying "7x"
+without that decomposition would imply the fix underperformed; it removed
+essentially all of what it targeted (1464 of 1464 from
+`verticalPotential._evaluate`) and exposed the next layer.
+
+`isort` rejected the commit on the first attempt again — same as #1271, caught
+the same way, by printing the SHA and seeing it still on develop. That check has
+now paid twice in one session; it costs one line.
+
+Filed as task #209 with the remaining gate work spelled out, rather than
+carrying it in my head: three arms (numpy `test_potential.py`, jax and torch
+`test_actionAngle.py`), consumers `actionAngleVertical` /
+`actionAngleVerticalInverse`.
+
+    #1270  146 pending, phantom codecov only
+    #1271  149 pending, no reds
