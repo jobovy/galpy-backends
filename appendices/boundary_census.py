@@ -53,8 +53,25 @@ Measured through the three fixes, C extension loaded, x64 on::
 
 ``actionAngleAdiabatic`` was never a target -- it is a 460x improvement that
 falls out of fixing the two adapters plus the closure. That is the argument
-against the sweep: the 34 candidates are mostly cold, and the hot ones share a
+against the sweep: the candidates are mostly cold, and the hot ones share a
 handful of root causes.
+
+**But a workload sweep only covers sites its workloads reach.** A static AST
+scan (``candidates.py``) found **99** loop- or closure-resident call sites, and
+the first sweep had touched none in ``interpRZPotential``, ``SCFPotential``,
+``EllipsoidalPotential``, ``CompositePotential`` or
+``ChandrasekharDynamicalFrictionForce``. Censusing those families found 12 of 13
+cold (<= 19) -- and one that is not:
+
+    interpRZPotential(interpPot=True), default 101x101 grid   30603 crossings
+    ... with interpDens=True as well                         ~102000
+
+``__init__`` builds its grids with nested ``for ii: for jj:`` loops calling the
+DECORATED ``evaluatePotentials`` once per point. Crossings are **exactly linear
+in grid points** (10.00/point, measured over 4 grid sizes), which is why a toy
+6x4 grid scores a harmless 240 and hides it completely. Sized by galpy's own
+default, this is the second-largest count measured anywhere, behind only the
+``diskdf`` case that started all of this. Tracked as galpy task #211.
 
 **The wall-clock column is not the finding** and is printed only for context. A
 sub-millisecond numpy call against a first-call jax trace/compile shows ratios
@@ -160,6 +177,7 @@ def _workloads():
     from galpy.orbit import Orbit
     from galpy.potential import (
         HernquistPotential,
+        interpRZPotential,
         MiyamotoNagaiPotential,
         MWPotential2014,
         NFWPotential,
@@ -211,6 +229,13 @@ def _workloads():
         ("aAAdiabatic.actions", lambda: aAAd(1.0, 0.1, 1.1, 0.0, 0.1)),
         ("Potential.rguiding", lambda: o.rguiding(pot=MWPotential2014)),
         ("Potential.rE", lambda: nfw.rE(-1.0)),
+        # Added 2026-08-08: grid construction is itself the loop. Crossings are
+        # exactly linear in grid points (measured 10/point with
+        # interpPot+interpDens), so a toy grid HIDES this -- galpy's default
+        # 101x101 grid crosses 30603 times for interpPot alone.
+        ("interpRZPot.build(24x16)", lambda: interpRZPotential(
+            RZPot=mp, rgrid=(0.5, 1.5, 24), zgrid=(0.0, 0.2, 16),
+            interpPot=True, interpDens=True, use_c=False)),
     ]
 
 
@@ -222,6 +247,15 @@ HOT = 1000
 # otherwise the detector is permanently red and stops being a regression signal.
 # Removing an entry here is how a fix gets locked in.
 KNOWN_HOT = {
+    # interpRZPotential builds its grids with nested `for ii: for jj:` loops
+    # calling the DECORATED evaluatePotentials once per grid point (L270-272 and
+    # the same shape at 295/320/348/370/392/414, plus per-r comprehensions at
+    # 449/470/493/525). Crossings are exactly linear in grid points, so the
+    # default 101x101 grid pays 30603 (interpPot) to ~102k (interpPot+interpDens).
+    # The census uses a small grid, which under-reports by design -- keep the
+    # default-grid number in mind when judging the fix.
+    "interpRZPot.build(24x16)": "galpy task #211: vectorize/undecorate the grid build",
+
     # verticalPotential adapters forward through the decorated 3D API; fixed on
     # feat/vertical-adapter-nodecorator (task #209, 1708 -> 244). The residual
     # after that fix is actionAngleVertical's own bisection closure (task #210).

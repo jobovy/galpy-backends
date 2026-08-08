@@ -29607,3 +29607,44 @@ All six covered → the 50% is the partial-upload phantom, matching
 Ran in `evdirect` with `COVERAGE_FILE` pointed at the scratchpad so the live PR
 worktree stayed clean (verified 0 dirty, `.coveragerc` intact —
 [[coverage-glob-deletes-coveragerc]]).
+
+### 2026-08-08 — a FOURTH hot site: interpRZPotential's grid build (30603 at default)
+
+I was about to hand Jo "the defect is concentrated; three fixes cover it".
+Before doing that I checked the claim's own scope, because a *workload* sweep
+only covers sites its workloads reach. A static AST scan of every call to a
+``@backend_input``-decorated entry point from inside a loop or nested closure
+found **99** sites (54 decorated entry points) — and my 27-workload sweep had
+touched **none** in `interpRZPotential`, `SCFPotential`, `EllipsoidalPotential`,
+`CompositePotential`, or `ChandrasekharDynamicalFrictionForce`.
+
+So I censused those families. Twelve of thirteen were cold (≤ 19). The
+thirteenth was not, and the first measurement nearly hid it:
+
+    grid      points   crossings   per-point
+    6x4           24         240       10.00
+    12x8          96         960       10.00
+    24x16        384        3840       10.00
+    48x32       1536       15360       10.00
+
+Exactly linear. My toy 6x4 grid scored a harmless 240 — so I sized it by
+galpy's own default instead (`rgrid=(log 0.01, log 20, 101)`,
+`zgrid=(0,1,101)`):
+
+    interpRZPotential(interpPot=True)   DEFAULT 101x101   30603 crossings
+    ... plus interpDens=True                             ~102000
+
+`__init__` builds its grids with nested `for ii: for jj:` loops calling the
+**decorated** `evaluatePotentials` once per grid point (L270-272, same shape at
+295/320/348/370/392/414, plus per-r comprehensions at 449/470/493/525). Same
+defect as #1271/#1272/#210, at the second-largest scale measured anywhere —
+behind only the diskdf case (133,332) that started this whole thread.
+
+**The lesson is about parameter choice, not about interpRZPotential.** A
+"measured" number is only as good as the size you measured it at; a linear-in-N
+cost measured at toy N reads as clean. I only caught it because 168 crossings
+for a grid build looked too cheap for what the code was obviously doing.
+
+Item 8's recommendation is updated: still "don't sweep all 99", but it is
+**four** fixes, not three. #211 filed; not started (two-PR limit — #1272 open,
+#210 staged).
