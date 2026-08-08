@@ -26486,3 +26486,39 @@ Note what that does NOT license: "the without-fix arm is slower overall" is not
 pre-registered rule is about. The file also contains the two oortA tests that
 time out at 300 s each without the fix, which alone distorts any whole-run
 comparison. Still no claim until those five nodeids report.
+
+## 2026-08-07 — #1266 MERGED (b6bf4b54); #1268 opened
+
+    #1266  154 pass / 0 pending / 0 fail, mergeState CLEAN -> squash-merged b6bf4b54
+    #1267  MERGEABLE, no rebase needed, description corrected 210->110 => 209->109
+    #1268  OPEN: the #208 diskdf fix, rebased onto b6bf4b54, 0 conflicts
+
+**Two things I did NOT do, both deliberate.**
+
+*Did not force-push #1267.* I rebased it out of habit the moment #1266 landed,
+then stopped: a rebase requires a force-push, and I had already proven with
+`merge-tree` that the two auto-merge. Checked GitHub -- **MERGEABLE with the
+branch untouched** -- and reset the local branch back to the remote state. Two
+memories were pulling the same direction here
+([[no-force-push-open-prs]], [[dont-reflexively-rebase-disjoint-prs]]) and the
+habit nearly overrode both. The rebase was not wasted, though: it confirmed the
+combined count locally before I discarded it.
+
+    jax 92, torch 15, torch-jit 2   total 109
+
+which is exactly the 109 predicted before either PR merged (#1266's -3 streamdf
+/ +2 interpRZ applied cleanly on top).
+
+*Did not rewrite #1267's original numbers in place.* Added a "resolved" section
+recording 209->109 and left the as-measured text above it, so the pre- and
+post-merge states stay distinguishable rather than the description silently
+claiming it always said 209.
+
+**A stale-check trap worth recording.** `gh pr checks` showed 2 pending for a
+long stretch, including a backend shard, while `gh run view` showed the
+All-backend workflow **completed / success with 45/45 jobs**. Paginating
+`check-runs` directly (152 of them, two pages) showed **0 incomplete** -- the
+`gh pr checks` view was simply stale. Re-querying returned 154/154 pass and
+CLEAN. So: when the aggregate view disagrees with the run view, believe the
+runs, and note that `check-runs` needs pagination -- page 1 alone reported "0
+incomplete" while the pending ones sat on page 2 in an earlier query.
