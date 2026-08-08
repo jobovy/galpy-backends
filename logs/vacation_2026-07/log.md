@@ -27559,3 +27559,30 @@ Not acting yet: needs the whole-file measurement in the real shard context, the
 way #1267 and #1269 were done -- one nodeid measured in isolation is not the
 context the cap applies to ([[handpicked-nodeid-batch-is-not-a-context]]). That
 is the next PR after #1268/#1269 land.
+
+### 2026-08-08 — #125 rescoped: 1 entry, not 5, and it is an un-defer not a fix
+
+Checked the actual slow-skip file rather than the task text:
+
+    jax tests/test_sphericaldf.py::test_king_sigmar     <- the ONLY sphericaldf entry
+
+Task #125 said "un-defer 5 jax test_sphericaldf tests". The other 4 went in
+#1252 (27 un-deferred, 1 kept). So **both halves of #125's framing were stale**:
+the count (5 -> 1) and the premise (vectorize -> nothing to vectorize; the test
+is 21.9 s against a ledgered 1028.6 s, and jeans.sigmar is already faster on jax
+than numpy).
+
+Rewrote the task to say what is actually true, with the numbers, and what is
+left to do: measure in the **real shard context** — whole `test_sphericaldf.py`
+under `--backend=jax --timeout=300` with the entry lifted — before opening a
+one-line un-defer. 21.9 s solo does not prove 21.9 s in-file, and the 240 s
+margin rule applies to the in-file number.
+
+Pattern worth naming, since it is now three-for-three today: **#158 said "~5
+potentials to fix" (there were none), #125 said "5 tests, vectorize" (one test,
+nothing to vectorize), and the 1028.6 s I chased was itself a stale
+measurement.** Roadmap text ages faster than code, and I keep finding it by
+measuring rather than by reading. The ledger-staleness discipline I have been
+applying to test lists applies just as hard to my own task list.
+
+Cannot open the PR: #1268 and #1269 hold both slots.
