@@ -26803,3 +26803,33 @@ mis-taught the next reader about where boundary costs bite.
 Also worth keeping: the decorator on the **numpy** path is 1.3 -> 2.8 us, i.e.
 2.2x on a trivial leaf. Harmless at normal call counts, and exactly what makes
 133k calls a 200 ms tax before any backend is involved.
+
+### 2026-08-07 — empirical hot-boundary ranking: nothing left to find
+
+My earlier class sweep picked 9 call sites by hand and found no second instance.
+That bounds what it sampled, so I replaced it with an empirical version: count
+every non-numpy `coerce_coords` crossing across a workload and rank by caller.
+
+    workload                  crossings   seconds
+    diskdf.oortA                      0     3.64s     <- was 133,332
+    diskdf.sigmaR2                    0     0.25s
+    Potential.mass                    2     0.53s
+    Potential.surfdens                4     1.51s
+    isoHernq.vmomentdensity           4     3.25s
+
+The ranking section printed nothing because there is nothing to rank -- the
+maximum anywhere is **4**. At 178 us per crossing that is 0.7 ms, i.e. noise.
+
+Two things this establishes that the hand-picked sweep could not:
+
+1. **`diskdf.oortA` is now 0, not merely smaller.** The fix removes the hot
+   boundary rather than trimming it. That is a stronger statement than the
+   4.40 s / 4.09 s timings, which could in principle have come from a cheaper
+   boundary rather than no boundary.
+2. **The 133k site was singular.** Four orders of magnitude separate it from
+   everything else measured. There is no second one hiding behind a call site I
+   failed to guess, at least across these five workloads.
+
+Still not a proof of absence -- five workloads, and the instrumentation only
+sees `coerce_coords`, so a boundary that skips it would be invisible. But it is
+evidence of a different kind than "I checked the places I thought of".
