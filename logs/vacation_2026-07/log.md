@@ -29301,3 +29301,37 @@ that just landed in #1271. Not worth it for an ordering that is already the
 natural one.
 
     #1272  149 pending / 2 pass, no reds
+
+### 2026-08-08 — the C-ext probe lied when run from outside the worktree
+
+Checked whether `slowprune` (where #210 lives) has the C extension, because
+gating there would otherwise be unreliable
+([[worktree-missing-c-ext-fakes-passes]]). Got contradictory answers:
+
+    probed with PYTHONPATH from /home/bovy/Repos/galpy   C-ext=True   <- WRONG
+    run from inside /var/tmp/slowprune                   C-ext=False  <- truth
+    run from inside /var/tmp/evdirect                    C-ext=True
+
+The outside probe printed the **correct provenance** (`slowprune/galpy/...`) and
+the **wrong** `_ext_loaded`. That is the dangerous combination: the field I use
+to detect import shadows looked right, so the answer looked trustworthy. The
+`.so` lookup evidently depends on cwd in a way `PYTHONPATH` does not fix.
+
+**Rule: read `_ext_loaded` from a process whose cwd IS the worktree.** Same
+family as [[cd-does-not-survive-ampersand]] — cwd is part of the environment
+under test, not an incidental.
+
+Consequence for #210, stated rather than glossed:
+
+* the **crossing counts** (1708 -> 1464, 1722 -> 1476) were measured **without**
+  the C extension and must be re-measured in a C-ext build before I quote them
+  in a PR body. For the vertical adapter the two agreed exactly, so I expect
+  agreement — but that is an expectation, not a measurement, and expecting it is
+  precisely what this check exists to stop.
+* the **byte-identity A/B** stands: both arms ran in the same worktree with the
+  same (missing) C-ext, toggling only `actionAngleVertical.py`.
+
+#210 has to rebase into `evdirect` (C-ext=True) after #1272 anyway, so the
+re-measure costs nothing extra. Recorded on the task.
+
+    #1272  149 pending / 2 pass, no reds
