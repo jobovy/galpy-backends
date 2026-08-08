@@ -30490,3 +30490,33 @@ coverage-uploading `build` shards landed.
 Remaining gate is two `test_orbit` build shards plus all-clear. Everything
 substantive on this PR is verified: byte-identity, guard A/B, audit, and both
 burndown halves confirmed in shard context.
+
+### 2026-08-08 — #1273 MERGED (9f3c3166). Eight PRs, slow-skip 210 -> 92.
+
+    #1273  154 pass / 0 pending / 0 red  ->  squash-merged  9f3c3166
+
+Everything on it was verified before the merge, not after:
+
+    numpy byte-identity   sha256 e2a8028f60e8f046 WITH and WITHOUT, one worktree,
+                          one C-ext state, toggling one file
+    guard                 A/B'd (2 failed without the fix), negative control,
+                          jax + torch
+    audit                 no if->xp.where exposure, no duplication, no misplaced
+                          helper; 13/6 import split verified by counting
+    burndown              validated in SHARD context: actionAngle 3->1 deferred
+                          /182 passed, potential group 5 9->5 /260 passed
+    codecov               patch 100.00% -- matching the line-by-line prediction
+
+**The boundary arc closes here.** Four hot sites, found by measurement rather
+than inspection; three fixed and merged, one (#211) patched and waiting on Jo:
+
+    diskdf.oortA            133,332 -> 0   (#1268)
+    aAVertical.actionsFreqs   1,722 -> 0   (#1272 + #1273)
+    aAAdiabatic.actions       4,166 -> 9   (never targeted; 460x)
+    aASpherical.actionsFreqs  1,023 -> 23  (#1271)
+    every other workload            <= 112
+    interpRZPotential        30,603        <- #211, fix written and measured
+
+Session: **8 PRs merged**, slow-skip ledger **210 -> 92** (-56%), two
+pre-existing numpy bugs found and characterised for Jo (#206 RazorThin Rforce,
+#212 interpRZPotential units).
