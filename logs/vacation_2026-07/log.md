@@ -30611,3 +30611,21 @@ the *invocation*. Same failure shape as the earlier cross-worktree wall-clock
 comparison today, where the C-extension state differed between arms.
 
     #1274  2 pass / 126 pending / 0 red (draft)
+
+### 2026-08-08 — develop red after the #1273 merge: apt 403, not my merge
+
+Post-merge validation on develop @ 9f3c3166 threw a red:
+
+    run 31276932569  Test documentation notebooks  completed/failure
+    job 93151920831  run-notebooks (3.13)
+        failed step: "Install system dependencies"
+        E: Failed to fetch https://packages.microsoft.com/... 403 Forbidden
+        exit code 100
+
+The job died in **apt**, before any galpy code ran, so it cannot be caused by
+the merge. Same class as the "Install torus code" failure earlier today: read
+the failing STEP, not just the job name, and the question answers itself.
+
+Re-run dispatched. Everything else on develop is green or still running.
+
+    #1274 (draft)  2 pass / 126 pending / 0 red
