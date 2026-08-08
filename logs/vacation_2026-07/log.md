@@ -27295,3 +27295,24 @@ mechanical rather than motivated.
 
     #1268  131 pass / 20 pending, codecov-only reds, falsifier 0 of 2
     #1269  149 pending / 2 pass
+
+### 2026-08-08 — queue picture, so future wakes do not expect #1269 soon
+
+    #1268  136 pass / 15 pending  (the 2 test_backend builds, ~90-104 min each, are in there)
+    #1269  ALL runs queued, none started
+
+#1269 has not begun: every one of its workflows is `queued`. It is behind
+#1268's remainder and #1204's umbrella re-run, on a runner pool that is the
+binding constraint all day.
+
+Realistic sequencing, so I stop re-deriving it each wake:
+
+    #1268 finishes    -> tens of minutes (the two long builds dominate)
+    #1269 then starts -> ~150 checks, hours
+    patch falsifier   -> resolves with #1268's test_backend builds, not before
+
+Nothing to drive on either. No real reds anywhere in this session's work: every
+red seen has been codecov upload-side, and each was diagnosed rather than waved
+through -- twice by the identical-`lines` discriminator, once by the structural
+argument (#1267 touches zero library files), and once (#1268's patch) left
+deliberately open with a falsifiable prediction I will honour either way.
