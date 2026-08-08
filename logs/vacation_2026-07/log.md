@@ -27415,3 +27415,18 @@ change touched.
 
     #1268  141 pass / 10 pending, falsifier 0 of 2
     #1269  6 pass / 145 pending
+
+### 2026-08-08 — #1269's first codecov red: phantom, two independent ways
+
+    base lines 48414 hits 41332 | head lines 48414 hits 21649
+    lines identical -> uploads pending
+    AND #1269 touches 0 library files -> a real library-coverage drop is impossible
+
+Two arguments agreeing is worth more than repeating one, and the structural one
+(zero library files) does not need to wait for uploads to be conclusive.
+
+#1268's `test_backend` build is at **89 min** against its 90-104 min baseline --
+still normal, so the falsifier remains genuinely pending rather than late. Its
+verdict is the next thing worth recording; I am deliberately not logging
+"still waiting" each wake, because a log padded with non-events is worse for the
+summaries it exists to serve.
