@@ -28140,3 +28140,44 @@ adapter -> decorated 3D API, 3 methods), byte-identity de-risked (5 pots x 2
 quantities), and two open gaps: list/composite potentials, and R2deriv.
 
     #1270  149 pending / 2 pass, no reds
+
+### 2026-08-08 — #88 gaps closed; and I wrote the SAME vacuous check twice
+
+Both open gaps resolved, and the scope shrank again — in the good direction.
+
+**Gap 2 (R2deriv) — resolved structurally.** There is no `_evaluateR2derivs`;
+only `_evaluatePotentials`, `_evaluateRforces`, `_evaluatephitorques`,
+`_evaluatezforces` have undecorated inners. But `_R2deriv` is not on the hot
+path either (980 of the crossings are `_evaluate`, 52 `_Rforce`, R2deriv absent).
+So the fix touches **the 2 methods that are both hot and have an inner**, not the
+whole class. Third scope revision on #88 today, and the first that makes it
+smaller.
+
+**Gap 1 (composites) — resolved, on the second attempt.** `_evaluatePotentials`
+rejects a raw list (`'list' object has no attribute '_call_nodecorator'`); lists
+are converted to a composite by the decorator before reaching an adapter, and
+`toPlanarPotential(MWPotential2014)` is a single `planarCompositePotential` whose
+`_potlist` holds the real adapters. Descending into it:
+
+    PowerSphericalPotentialwCutoff  __call__ / Rforce   BIT-IDENTICAL
+    MiyamotoNagaiPotential          __call__ / Rforce   BIT-IDENTICAL
+    NFWPotential                    __call__ / Rforce   BIT-IDENTICAL
+    comparisons actually run: 6
+
+**The thing worth recording is the mistake, which I made twice in a row.** First
+the MW14 row compared the inner against itself via an `isinstance(P, list)`
+fallback. Then the composite loop did `P = getattr(a, "_Pot", None); if P is
+None: continue` on an object that has no `_Pot` — **zero iterations**, and `ok`
+stayed `True` from its initialiser. Both printed a confident `True`. Neither
+tested anything.
+
+A boolean initialised to `True` and only ever ANDed reports success when the loop
+body never runs. The fix is to **count the comparisons and assert the count**,
+which is what the final run does (`comparisons actually run: 6`). Same family as
+[[assertion-comparison-outside-reducer]]: the assertion passed while measuring
+the wrong thing — here, nothing at all.
+
+#88 is now fully de-risked: measured, localised to 2 methods, numpy-bit-identical
+across 5 standalone potentials and 3 composite components, x 2 quantities.
+
+    #1270  149 pending / 2 pass, no reds
