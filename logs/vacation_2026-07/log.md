@@ -29687,3 +29687,18 @@ so it needs Jo. Filed #212.
 Worth noting how this surfaced: not by auditing units, but by asking "why does
 this call site omit `use_physical=False` when #210's did not?" The
 inconsistency was the tell.
+
+**Verified pre-existing.** I had written "present on main" in #212 from reasoning,
+having measured only on develop+#1272. Checked it properly against
+`origin/main` (cd81fbed) — identical ratios to the digit:
+
+    MAIN  potential(use_c=F)  x48400.016934
+    MAIN  dens                x0.175847
+    MAIN  R2deriv             x790.994398
+    MAIN  epifreq             x28.124585
+
+So it is genuinely a main bug, not something feat/backends introduced. Bonus
+confirmation: that worktree has **no C extension**, yet its dens/R2deriv/epifreq
+ratios match evdirect's `use_c=True` numbers exactly — independent evidence that
+those three grids never use the C path, which is what makes them wrong
+regardless of `use_c`.
