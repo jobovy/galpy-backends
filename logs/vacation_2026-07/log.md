@@ -27245,3 +27245,31 @@ higher level.
 
     #1268  128 pass / 23 pending, falsifier 0 of 2 (those builds are in the last 23)
     #1269  149 pending / 2 pass
+
+### 2026-08-08 — the falsifier's timescale, measured instead of worried about
+
+`test_backend*.py` on #1268 had been in_progress 56 min and I did not know
+whether that was normal, slow, or my fault (I added 16 tests to
+`test_backend_diskdf.py` in that PR). Checked the same job on recent merged
+commits before forming an opinion:
+
+    b6bf4b54f   90.1 min  success
+    b6bf4b54f   99.8 min  success
+    4d47ac8d7   92.8 min  success
+    4d47ac8d7  104.0 min  success
+
+**90-104 min is the baseline.** 56 min is about halfway. Not stuck, not a
+regression from my tests.
+
+That also explains the thing I have been reporting every wake without
+understanding: "falsifier 0 of 2" persists because each of those two builds
+takes ~1.5 h, and they are queued behind #1269's fresh matrix and #1204's
+umbrella re-run. The patch-coverage prediction simply cannot resolve quickly.
+
+Worth noting the shape: I had a number (56 min), no baseline, and two available
+stories -- "normal" and "my change broke it". Without the baseline I would have
+picked one by temperament rather than evidence. Two `gh run view` calls settled
+it. A duration is not a finding until you know what it is being compared to.
+
+    #1268  129 pass / 22 pending, codecov-only reds
+    #1269  149 pending / 2 pass
