@@ -171,8 +171,12 @@ HOT = 1000
 # otherwise the detector is permanently red and stops being a regression signal.
 # Removing an entry here is how a fix gets locked in.
 KNOWN_HOT = {
-    "aASpherical.actions": "galpy task #88: scipy quad loop, not vectorized",
-    "aASpherical.actionsFreqs": "galpy task #88: scipy quad loop, not vectorized",
+    # Measured 2026-08-08: 981 of the 989 come from _calc_rperi_rap_backend,
+    # i.e. the EAGER bisection loop re-entering the decorated potential once per
+    # iteration -- not the quadrature (4 and 8) and not the numpy branch, which
+    # is a separate `else:` and untouched.
+    "aASpherical.actions": "galpy task #88: eager bisect_root re-crosses per iteration",
+    "aASpherical.actionsFreqs": "galpy task #88: eager bisect_root re-crosses per iteration",
 }
 
 
