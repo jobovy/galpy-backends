@@ -27940,3 +27940,41 @@ succeeded and did nothing.
 
     #1269  136 pass / 16 pending, phantom only
     probe2 alive at 23:15, log quiet 287s = a test near the 300s cap, not a stall
+
+### 2026-08-08 — the plain-float hypothesis: ubiquitous, but NOT a general problem
+
+Ran the test I said I would rather than generalising from one call site. Arg
+types across all 15 census workloads under forced jax:
+
+    Potential.mass                2 crossings   100% scalar
+    isoHernquistdf.sigmar         4             100% scalar
+    Potential.surfdens            4             100% scalar
+    Potential.vesc               10              70% scalar
+    aASpherical.actions         989              75% scalar
+    aASpherical.actionsFreqs   1023              74% scalar
+    qdf.density / sigmaR2     64 / 84         23% / 26% scalar
+    Orbit.E                       4               0% scalar
+
+**Refuted, in the way that matters.** Scalar-carrying crossings are everywhere —
+several sites are 100% scalar — and they are harmless, because those sites cross
+2-4 times total. The scalar *share* is not the discriminator; the crossing
+*count* is. A 100%-scalar site at 4 crossings costs ~0.7 ms and nobody cares.
+
+So "the decorator marshals a constant `t=0.0` across the boundary on most calls"
+is a true description of the library and **not** a performance finding. Had I
+written it up from the aASpherical numbers alone — which is exactly what the
+74% invited — I would have opened a library-wide work item chasing something
+that costs nothing at 4 crossings per call.
+
+What survives: `actionAngleSpherical` is hot because it crosses ~1000 times, and
+the 74% figure is useful only as a *hint for the fix* (the constant `t`/`phi` can
+be hoisted out of the loop alongside the real coercion), not as a finding of its
+own.
+
+This is the third time today the same discipline paid: the ComplexWarnings were
+main's, the "eager-only" claim was wrong, and now the scalar share is a
+non-finding. In each case the cheap check was available and the plausible story
+was wrong.
+
+    #1269  141 pass / 11 pending, phantom only
+    probe2 alive, 15 reported at 28:01
