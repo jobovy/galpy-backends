@@ -31436,3 +31436,34 @@ What lands with it, from the measurements:
            test_orbit/test_orbits shards, i.e. exactly the ones covering
            Orbits.py. The "stuck at 86.05%" prediction is now directly verified.
     #1274  151 pass / 0 pending / fully green, Jo's to merge
+
+### 2026-08-08 — #194 gets its own worktree; next measurement target chosen by size
+
+Created `/var/tmp/jit194` on `feat/jit-slow-skip-own-list` off develop, applied
+the extracted conftest patch there (4 refs), and started the C-extension build —
+which is now a precondition I check rather than assume, after it voided a whole
+measurement earlier today.
+
+Remaining jax slow-skip entries, by file, i.e. the burndown #194 has to shrink:
+
+    25  tests/test_orbit.py
+    19  tests/test_noninertial.py
+    12  tests/test_potential.py
+     6  tests/test_interp_potential.py
+     3  tests/test_FDMdynamfric.py
+     2  tests/test_qdf.py, tests/test_orbits.py
+     1  each: streamTrack, streamspraydf, streamdf, galpypaper, dynamfric, actionAngle
+
+`test_streamdf.py` and `test_streamTrack.py` are the two whole-file entries,
+both now measured. Next target is **test_noninertial.py**: 19 entries, one
+bounded file, and its entries are timeout-driven rather than correctness-driven
+(they were moved here FROM the xfail ledger as mis-filed timeouts, #198) — which
+is exactly the population where tracing should help most, and where inheritance
+is therefore most likely to be deferring runnable tests.
+
+Queued it to launch automatically when the build finishes, gated on an explicit
+`load_libgalpy()` assertion so a half-built worktree aborts the run instead of
+silently producing another void result.
+
+    #1275  142 pass / 10 pending -- all 10 still the orbit shards
+    #1274  151 pass / 0 pending / green
