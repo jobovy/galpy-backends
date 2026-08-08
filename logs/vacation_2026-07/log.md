@@ -26522,3 +26522,25 @@ All-backend workflow **completed / success with 45/45 jobs**. Paginating
 CLEAN. So: when the aggregate view disagrees with the run view, believe the
 runs, and note that `check-runs` needs pagination -- page 1 alone reported "0
 incomplete" while the pending ones sat on page 2 in an earlier query.
+
+### 2026-08-07 — post-merge state; #1267 codecov is the phantom again
+
+    #1267  147 pass / 6 pending / codecov/project red
+    #1268  149 pending / 2 pass (just started)
+    arm    ALIVE 44:33, 102/129 reported, now inside the sampling block
+
+#1267's codecov went red again after the base moved -- re-checked rather than
+waved through, since "it was a phantom last time" is not evidence about this
+time:
+
+    base lines 48414 hits 48394 | head lines 48414 hits 41666  (86.06%)
+    lines identical both sides -> PHANTOM, uploads still arriving
+
+And the structural argument still holds independently: #1267 touches zero
+library files, so a real library-coverage drop is impossible by construction.
+Two independent reasons agreeing is worth more than repeating one of them.
+
+The arm has reached the sampling tests (`sampledSurfacemassLOS`, `sampleVRVT_*`,
+`sampleLOS_*` all PASSED) but **not yet the five target nodeids** -- those are
+`*_sample_*_returnROrbit`/`returnOrbit`, which are different tests. Still no
+claim.
