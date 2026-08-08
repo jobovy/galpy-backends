@@ -79,17 +79,26 @@ def _install_spy(counter):
     # that actually loops.
     _SKIP = ("galpy/backend/", "galpy/util/conversion.py")
 
+    # Decorator boilerplate. galpy's decorators all name their inner function
+    # "wrapper", and blaming one says only "a decorated function was called" --
+    # true of nearly every call, and useless for finding the caller that loops.
+    # Measured 2026-08-08: without this, 244 of the residual vertical-adapter
+    # crossings were attributed to Potential.py:wrapper:235, which is just
+    # potential_list_of_potentials_input.
+    _SKIP_NAMES = ("wrapper", "wrapped")
+
     def spy(xp, *coords):
         if xp is not numpy:
             f = sys._getframe(1)
-            while f is not None and any(s in f.f_code.co_filename for s in _SKIP):
+            while f is not None and (
+                any(s in f.f_code.co_filename for s in _SKIP)
+                or f.f_code.co_name in _SKIP_NAMES
+            ):
                 f = f.f_back
             where = "?"
             if f is not None:
                 name = f.f_code.co_name
-                # A decorator's inner function is usually called "wrapper"; if we
-                # landed on one anyway, keep the line number so it is locatable.
-                if name in ("wrapper", "<lambda>"):
+                if name == "<lambda>":
                     name = f"{name}:{f.f_lineno}"
                 where = f"{f.f_code.co_filename.split('galpy/')[-1]}:{name}"
             counter[where] += 1
