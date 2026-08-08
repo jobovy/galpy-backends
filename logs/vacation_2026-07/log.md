@@ -30359,3 +30359,31 @@ develop. That is *suggestive*, not evidence that a specific task finished, and
 closing them on a grep count would be inventing status — the same failure I have
 spent the day avoiding in measurements. Left as-is; a wrong "completed" is worse
 than an untidy list.
+
+### 2026-08-08 — the un-deferral is CONFIRMED in full-shard context
+
+When I un-deferred six tests I flagged the weakness honestly: timed in isolation,
+not in the full shard, with CI as the real check. That check has now come back
+for the actionAngle half.
+
+    backend jax tests/test_actionAngle.py   PASS
+    shard census: "Backend jax: 182 passed, 2 xfail (ledger),
+                   1 deferred (slow-skip), 0 XPASS(fix-me)"
+
+Read the census rather than re-deriving it locally
+([[backend-shard-prints-full-census]]), then checked the arithmetic against the
+ledger instead of eyeballing "it passed":
+
+    jax entries for test_actionAngle.py   develop: 3   this branch: 1
+
+3 -> 1 is exactly the two `actionAngleAdiabatic` timeouts I removed, and the
+shard reports 1 deferred. So they **ran** and **passed** in shard context — not
+skipped, which is the failure mode that made my first two local measurements
+worthless today (a `-k` that deselected everything, then a run where the
+slow-skip list skipped the very tests I was timing).
+
+    validating shards: 3/6 green (actionAngle + potential groups 1,3), 0 red
+    #1273  94 pass / 57 pending; codecov/project -45.88 -> -13.91 and converging
+
+The other three `test_potential.py` groups are still running; the four
+dissipative/conversion un-deferrals live in one of them.
