@@ -29648,3 +29648,42 @@ for a grid build looked too cheap for what the code was obviously doing.
 Item 8's recommendation is updated: still "don't sweep all 99", but it is
 **four** fixes, not three. #211 filed; not started (two-PR limit — #1272 open,
 #210 staged).
+
+### 2026-08-08 — chasing #211 uncovered a real numpy bug: interpRZPotential + units
+
+Before writing the #211 fix I checked one risk: the grid loops call
+`evaluatePotentials(...)` **without** `use_physical=False`, so swapping to the
+undecorated inner might change behaviour. It does — and the reason is a
+pre-existing bug, not a subtlety of my change.
+
+    evaluatePotentials(mp_with_ro_vo, 1.1, 0.2)   -> -55040.799   (PHYSICAL)
+    _evaluatePotentials(same)                     ->      -1.1372 (internal)
+
+So when `_origPot` has ro/vo set, the grid stores **physical** values while the
+interpolator is queried in internal units. End to end (ratio interp/direct,
+both `use_physical=False`):
+
+    use_c=False   potential  x48400.0169  == vo^2
+                  Rforce     x6.1874      == conversion.force_in_kmsMyr(220,8)
+    use_c=True    potential  x1.0000  ok  (C path works in internal units)
+                  Rforce     x1.0000  ok
+
+The C path is fine, which would make this look narrow — except the quantities
+with **no C grid implementation** always take the Python loop and are wrong
+regardless:
+
+    use_c=True    dens x0.1758   R2deriv x790.99   epifreq/verticalfreq x28.12
+
+`interpRZPotential` exists for fast orbit integration, so wrong forces mean
+wrong orbits, silently. 284 test references, **none** passing `ro=`/`vo=` —
+the units path is completely uncovered, which is why it survived.
+
+Same root cause as #211 (loops call the decorated public API), so **one change
+fixes both**: ~30603 crossings AND the units bug. That makes #211
+**non-byte-identical on the numpy path** for units-set potentials — in the
+direction of correctness, but the standing rule is to surface any such change,
+so it needs Jo. Filed #212.
+
+Worth noting how this surfaced: not by auditing units, but by asking "why does
+this call site omit `use_physical=False` when #210's did not?" The
+inconsistency was the tell.
