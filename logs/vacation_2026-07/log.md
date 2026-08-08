@@ -29702,3 +29702,37 @@ confirmation: that worktree has **no C extension**, yet its dens/R2deriv/epifreq
 ratios match evdirect's `use_c=True` numbers exactly — independent evidence that
 those three grids never use the C path, which is what makes them wrong
 regardless of `use_c`.
+
+### 2026-08-08 — #211 and #212 are separable, and #212 needs no byte-identity waiver
+
+I had bundled these: "one change fixes both". Measuring the fix options split
+them cleanly, and the split makes #212 much easier to approve.
+
+**Only 3 of the 7 grid quantities have an undecorated inner.**
+`_evaluatePotentials` / `_evaluateRforces` / `_evaluatezforces` exist;
+`_evaluateR2derivs`, `_evaluatez2derivs`, `_evaluateRzderivs`,
+`_evaluateDensities` do **not**. (Consistent with #1272, where `_force2deriv`
+had to keep `.z2deriv` for exactly this reason and became the guard's negative
+control.) So the undecorate-the-call fix cannot cover the grid build alone.
+
+**But `use_physical=False` fixes the units bug for all seven, bit-for-bit.**
+Checked each against the unitless potential as ground truth over 9 (R,z)
+points: all seven return the exact internal value. And for a unitless potential
+the flag is a no-op — verified bit-identical — so the change touches *nothing*
+except the currently-wrong path.
+
+That reframes the decision I sent Jo. It is not "accept a non-byte-identical
+numpy change to get a perf win". It is:
+
+  #212  units bugfix, byte-identical except where it repairs a bug,
+        self-contained, belongs on main, lands independently
+  #211  boundary crossings, needs 4 new undecorated inners, feat/backends,
+        NOT blocked by #212
+
+**Process note.** My first probe reported all seven inners "MISSING" — wrong.
+`import galpy.potential.Potential as P` binds the re-exported **class**, because
+`potential/__init__.py` does `from .Potential import Potential` and the
+attribute shadows the submodule. I nearly logged "galpy has no undecorated
+evaluators at all". The tell was that I had *already* imported
+`_evaluatePotentials` from that module minutes earlier — a contradiction with my
+own recent output, not with the docs. Fixed with `importlib.import_module`.
