@@ -29572,3 +29572,38 @@ was in the data — `planarPotential:_evaluate 2940` and
 base predated both. Re-ran via `python3 - < script` (sys.path[0]='' -> cwd).
 Had I not printed provenance, I would have "discovered" two fixed defects and
 reported the sweep as finding nothing new.
+
+### 2026-08-08 — #1272 codecov/patch 50%: verified phantom, not assumed
+
+`codecov/patch: 50.00% of diff hit` on #1272. The reflex is "phantom, it always
+self-heals" — but the cheap discriminator that cleared #1271
+([[codecov-project-blocks-via-all-clear]]) does **not** apply here. #1271's diff
+was tests-only, and `.coveragerc` omits `tests/*`, so it *could not* red for
+real. #1272's diff is 6 lines of `verticalPotential.py` — a measured file. A
+real gap was possible, so I measured instead of assuming.
+
+Coverage of the 6 changed lines, union of two runs:
+
+    14,15  imports                          any import
+    127    verticalPotential._evaluate      test_backend_linearpotential / test_linear_dxdv
+    158    verticalPotential._force         same
+    214-5  _BatchedVerticalPotential._eval  test_backend_aa_grad_probes
+
+All six covered → the 50% is the partial-upload phantom, matching
+`project`'s -13.91% (a 6-line diff cannot move project coverage 14 points).
+
+**Two tooling traps on the way**, both worth recording:
+
+* `pytest --cov` dies with `ImportError: cannot load module more than once per
+  process` in this repo (C extension + coverage re-import). Use
+  `python3 -m coverage run -m pytest` instead.
+* `.coveragerc` sets `concurrency = multiprocessing` + `parallel = true`, so the
+  run writes per-PID data files and a plain `coverage report` says **"No data to
+  report"** — which reads exactly like "nothing was covered". `coverage combine`
+  first. Same family as [[forked-child-coverage-ignores-cov-flag]]: the honest
+  answer and the broken-tool answer look identical, and only one of them is
+  about the code.
+
+Ran in `evdirect` with `COVERAGE_FILE` pointed at the scratchpad so the live PR
+worktree stayed clean (verified 0 dirty, `.coveragerc` intact —
+[[coverage-glob-deletes-coveragerc]]).
