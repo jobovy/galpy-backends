@@ -26364,3 +26364,28 @@ Housekeeping note so it does not get lost: `evdirect` is still deliberately
 reverted (fix removed, 5 entries lifted) for this arm. Restore is
 `cp /tmp/keep_fix.py galpy/df/diskdf.py` plus the slow-skip file, to be done
 AFTER the run reports -- not during.
+
+### 2026-08-07 — #208 branch: whole file green, spy-fixture gap closed
+
+    /var/tmp/sspfix (commit 1509795d)
+    tests/test_backend_diskdf.py    80 passed, 0 failed    145.2s
+
+So the new guard's `monkeypatch` spy on `coerce_coords` really is inert for the
+other 64 tests -- pytest's fixture teardown behaved as documented. Which was the
+expected answer, and is now a measured one; the whole point of checking a
+"should" is that the cheap outcome is confirmation and the expensive outcome is
+finding out at review time.
+
+#208's evidence is now complete end-to-end:
+
+    mechanism      133,332 plain-scalar calls, 0 backend arrays (instrumented)
+    traced jax     25.26 s -> 4.40 s
+    traced torch   42.79 s -> 4.09 s
+    whole file     jax-jit 124/5/0 | torch-jit 129/0/0
+    numpy suite    129 passed / 0 failed
+    numpy bits     identical across 3 checkouts (provenance + grep verified)
+    guard flips    16 pass with / 8 fail without (4 jax + 4 torch)
+    branch itself  80/80 on the committed commit, not the dev worktree
+    class sweep    9 sites, no second instance
+
+#1266 at 17 pending / 136 pass, zero failures.
