@@ -29068,3 +29068,28 @@ rebasing: disjoint files, `MERGEABLE`, and a rebase would need a force-push.
 
     #1271  130 pass / 22 pending, project phantom only
     #209   ready, held for one clean push
+
+### 2026-08-08 — pre-verified the post-merge state of #209 instead of waiting to find out
+
+Built a throwaway branch = **#1271 + #209 + the dedupe** and ran it, so the
+sequence that will follow #1271's merge is proven rather than planned:
+
+    4 passed  (2 planar guards + 2 vertical guards)
+    grep "def .*count.*crossings" tests/  ->  exactly ONE definition
+
+The dedupe is saved as `/var/tmp/209-dedupe.patch` (57 lines) and the exact
+5-step post-merge recipe is written into task #209, including the assertion that
+catches the failure mode: **one definition of the counter, verified by grep, not
+by intending to delete the local copy.**
+
+Why bother now: the risk was never a conflict — `merge-tree` said 0 twice. It was
+that #209's local helper would silently survive the dedupe and reintroduce the
+duplication I removed an hour earlier, with nothing failing to tell me. Testing
+the combined state is the only way to know, and it costs nothing while waiting on
+runners.
+
+Scratch branch deleted, `evdirect` restored to `feat/vertical-adapter-nodecorator`
+@ `3d1ca138` — verified by printing the branch and SHA, not assumed from the
+checkout command.
+
+    #1271  133 pass / 19 pending, project phantom only (stale base = pre-#1270)
