@@ -26900,3 +26900,37 @@ and #892 are long-lived integration PRs, not work I opened.
 
 #1204's own two reds are codecov, same shape as everywhere else on a PR whose
 uploads are still landing. Not mine to drive.
+
+### 2026-08-07 — productized the boundary detector (appendices/boundary_census.py)
+
+I had written the `coerce_coords` counter ad-hoc three times today, so it is now
+a script with the reasoning attached. Verified end-to-end:
+
+    diskdf.oortA                              0     3.95s
+    diskdf.sigmaR2                            0     0.28s
+    Potential.mass                            2     0.54s
+    Potential.vesc                           10     0.22s
+    isoHernquistdf.vmomentdensity             4     3.05s
+    no workload reached 1000 crossings (max 22)     exit 0
+
+Design choices worth stating:
+
+* **Exit code 1 above 1000 crossings**, so it can gate rather than just inform.
+  1000 is three orders below diskdf's 133,332 and two above the healthy max
+  seen (22) -- a wide gap on both sides, which is what makes the threshold safe.
+* **The docstring says the wall-clock column is not the finding.** Every time I
+  ran this by hand the timings screamed (sub-ms numpy vs first-call jax compile)
+  and meant nothing. A tool that prints a misleading number next to the real one
+  needs to say which is which, or the next reader repeats my mistake.
+* **Caller attribution walks out of `galpy/backend/` frames** so crossings are
+  blamed on the code that caused them, not on the boundary itself. It currently
+  lands on `util/conversion.py:wrapper` (the units decorator, one frame further
+  out than ideal) -- honest but coarse; the workload column is the useful axis
+  today.
+* Caveats are in the module docstring, not just here: only `coerce_coords` is
+  visible, the workloads are a sample, and without the C extension the timings
+  are meaningless.
+
+This is what task #200 ("boundary-count column in the census") was really
+asking for, arrived at from the other direction -- I needed the detector to
+diagnose my own regression, and the detector is the deliverable.
