@@ -27210,3 +27210,38 @@ visibly stale.
 
     #1268  115 pass / 36 pending, falsifier 0 of 2
     #1269  149 pending / 2 pass
+
+### 2026-08-08 — the "3 crossings" lead: real, and NOT worth optimising
+
+Traced where the 3 crossings in one `evaluateRforces` come from. All three are
+the same site, once per coordinate:
+
+    [1] coords=['float64']   from potential/Potential.py:wrapper:123
+    [2] coords=['float64']   from potential/Potential.py:wrapper:123
+    [3] coords=['float']     from potential/Potential.py:wrapper:123
+
+R, z, and an injected scalar default. Mechanism confirmed in the source:
+`galpy/backend/_input.py:93` does `(out,) = coerce_coords(xp, val)` -- **one call
+per coordinate**, even though `coerce_coords` takes varargs and could take all
+three at once.
+
+That looks exactly like a free win, so I measured it before proposing it:
+
+    3 separate coerce_coords calls : 262.5 us
+    1 batched coerce_coords(a,b,c) : 251.6 us
+    saving                         :  10.9 us  (4%)
+
+**4%.** The per-call overhead is nearly nothing; the cost is the per-coord
+`asarray_on_device` jax dispatch, which batching cannot remove -- three scalars
+still become three device arrays. Refactoring the decorator's coercion loop
+would buy 4% of half the per-call cost, i.e. ~2% of a force call, in exchange
+for touching the boundary every migrated potential depends on. Not worth it.
+
+Recording it as a **closed** avenue rather than an open TODO, because the shape
+of it ("N redundant-looking calls where 1 would do") is exactly the kind of
+thing I would rediscover in three weeks and spend a PR on. The real lever
+remains what #79 already says: stop crossing per-scalar, i.e. vectorize at a
+higher level.
+
+    #1268  128 pass / 23 pending, falsifier 0 of 2 (those builds are in the last 23)
+    #1269  149 pending / 2 pass
