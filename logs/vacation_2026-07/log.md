@@ -29040,3 +29040,31 @@ axes N/A, 104 - 6 = 98 cross-checked against `gh`'s own +/- summary after my
 parser miscounted), so the merge needed no fresh work.
 
     #1271  124 pass / 28 pending, project phantom only -- next in the queue
+
+### 2026-08-08 — a slot is free and I am deliberately not using it yet
+
+#1270 merged, so only #1271 is open and #209 could go now. Holding it, because
+pushing now would repeat this morning's mistake exactly:
+
+* #209 still carries its local `_count_vertical_coercions`;
+* the hoisted `count_boundary_crossings` exists only on #1271's branch;
+* so pushing now ships the duplicate and needs a **second** commit to dedupe
+  after #1271 merges — a second full CI cycle on a runner-constrained repo.
+
+That is the guard-then-hoist double push again, and it cost 14 runs earlier
+today. One push after #1271 lands is strictly better, and #1271 is at 130/153.
+"A slot is free" is not by itself a reason to fill it.
+
+Verified the wait is safe rather than assuming, via `merge-tree` against the new
+develop (`1726834e`):
+
+    #209  vs develop   0 conflicts
+    #1271 vs develop   0 conflicts
+    #209 files vs everything develop gained since its base: no overlap
+
+#1271's base is `ffde6f86` (pre-#1270), which is also the cause of its remaining
+`codecov/project` red — the stale-base phantom, for the third time today. Not
+rebasing: disjoint files, `MERGEABLE`, and a rebase would need a force-push.
+
+    #1271  130 pass / 22 pending, project phantom only
+    #209   ready, held for one clean push
