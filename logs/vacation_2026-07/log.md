@@ -27637,3 +27637,27 @@ the 240 s margin rule has to be applied to the in-file figure
 
     #1268  MERGED d627badc
     #1269  77 pass / 75 pending, phantom only
+
+### 2026-08-08 — sphericaldf is one entry from fully clean
+
+Checked the **xfail** ledger (a different list from slow-skip) for the
+spherical-DF family. Every match is a **comment** describing past work; there
+are **zero live entries**:
+
+    non-comment xfail entries mentioning sphericaldf/king/eddington/
+      constantbeta/osipkov:  NONE
+    full ledger post-#1268:  jax 5, torch 5, jax-jit 6, torch-jit 1  (17)
+
+So Track F's spherical DFs currently carry **0 xfail + 1 slow-skip**, and that
+one is `test_king_sigmar`, measured at 21.9 s against its ledgered 1028.6 s and
+under measurement in the shard context right now. When #125 lands, the whole
+sphericaldf family is clean in both lists.
+
+Worth checking the *other* list rather than assuming: slow-skip and xfail are
+maintained separately, inherit differently (`-jit` inherits eager xfail entries
+but the slow-skip rule is its own), and a family can look done in one while
+carrying entries in the other. Here it happened to be clean — but that is a
+measurement, not an inference from "the migration merged".
+
+    #1269  87 pass / 65 pending, phantom only
+    #125 shard run: alive, 81 tests in at 4:38
