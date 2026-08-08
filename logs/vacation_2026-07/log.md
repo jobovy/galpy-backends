@@ -27497,7 +27497,12 @@ through in one pass instead of hunted across tasks and ledger comments.
    `test_interp_potential.py` 41 passed.
 
    → **Question: land on `main` (it is a main bug) or on `feat/backends`?**
-   Both branches carry the defect. Not pushed — two-PR limit.
+   Both branches carry the defect.
+
+   **Now open as DRAFT PR #1274 against `main`** (2026-08-08, after #1273
+   merged freed a slot). Draft, so I cannot merge it — it is there to be
+   reviewable and CI-validated instead of sitting on a local branch you would
+   have to reconstruct. Retarget to feat/backends if you prefer.
 
 **Headline for the traced track: traced-green is achieved as far as code can
 take it.** All 7 remaining traced-ledger entries are in A or C above. None is an
@@ -30550,3 +30555,23 @@ remaining ledger blocks are heavy-by-measurement, not stale. Nothing is being
 sat on.
 
     develop 9f3c3166 post-merge CI: queued/in_progress, no reds
+
+### 2026-08-08 — #212 opened as DRAFT PR #1274 (not landed)
+
+With #1273 merged both PR slots were free, and I reconsidered whether "#212 is
+blocked on Jo" justified leaving a tested bugfix as a local commit. It does not:
+a local branch is invisible, gets no CI, and would have to be reconstructed.
+
+Opened as a **draft** against `main`. That respects the actual constraint — I
+must not *land* a numpy behaviour change unreviewed — while removing the
+downsides of hiding it. A draft cannot be auto-merged, and #892/#1204 already
+use the same convention.
+
+The PR body carries the full case: the measured ratios (x48400 = vo^2, x6.1874 =
+force_in_kmsMyr, and dens/R2deriv/epifreq wrong regardless of `use_c`), the
+verification that it reproduces on `main`, the 37 call sites in four classes,
+the bit-for-bit argument for why it needs no byte-identity waiver, the
+fail-without/pass-with test evidence, and the two decisions (target branch,
+and ordering against #211 which touches the same sites).
+
+    #1274  DRAFT, base=main, head=fix/interprz-units (ff87e75e)

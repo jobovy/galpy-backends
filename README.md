@@ -249,3 +249,4 @@ backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). 
 | #1271 | planar adapters: forward to the undecorated evaluators (989 -> 5 crossings) | MERGED `f1bb9f83` |
 | #1272 | vertical adapters: forward to the undecorated evaluators (1708 -> 244 crossings) | MERGED `7418aed5` |
 | #1273 | actionAngleVertical backend path -> undecorated linear evaluators (244 -> 0); slow-skip 98 -> 92 | MERGED `9f3c3166` |
+| #1274 | interpRZPotential: keep grids + off-grid fallbacks in internal units (pre-existing numpy bug) | DRAFT — needs Jo |
