@@ -31161,3 +31161,38 @@ Both re-running with the C extension present. Early signal: streamTrack under
 previously "finished" all 45), which is expected — the C-STM path now executes
 instead of aborting — and points the opposite way from the conclusion I was
 drafting. Numbers when they land, not before.
+
+### 2026-08-08 (late) — #207 gate re-confirmed on the built worktree
+
+    tests/test_backend_anyaxisymdisk.py --backend jax    49 passed, 0 failed  (115 s)
+
+Same result as the pre-build run, which is what I expected — AnyAxisym has no C
+implementation, so the missing extension could not have masked anything there —
+but expecting it and measuring it are different, and the argument is now
+retired in favour of the number. torch gate running.
+
+Also re-launched the `--runxfail` actionAngle sweep on the built worktree,
+because the #171 classification was measured BEFORE the build and three of its
+five entries are the C-dependent ones (`AdiabaticGrid_outsidegrid_c`,
+`StaeckelGrid_...`). The "one shared torch numpy/Tensor collision worth two
+entries" reading is therefore **provisional** and may be the same contamination
+that voided the streamTrack run. The tolerance entry is not affected in kind --
+`test_actionAngleAdiabatic_linear_angles_cylsep` builds
+`actionAngleAdiabatic(..., c=False, ...)` -- but its *number* could still shift,
+since the orbit integration feeding it can take a C path, so all five are being
+re-measured rather than the three.
+
+**#1275 project is confirmed a partial-upload phantom, not a real drop.**
+Job-group breakdown at 58 pass / 94 pending:
+
+    build          45 pass / 49 pending    <- these upload coverage
+    backend         5 pass / 39 pending    <- these upload NONE
+    run-notebooks   6 pass /  4 pending
+
+49 coverage-producing jobs have not reported yet, so -14.60% is a lower bound
+mid-flight, exactly as #1274 walked -54.95% -> +0.00%. The reason project
+appeared "stuck" at 85.36% across two polls while passes climbed 50 -> 58 is
+that those 8 were backend shards, which contribute no coverage at all.
+
+    #1275  58 pass / 94 pending / 0 real reds / audit DONE
+    #1274  128 pass / green
