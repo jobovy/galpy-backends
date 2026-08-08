@@ -26443,3 +26443,28 @@ killed run still yields per-test data.
 #1266 is one step from fully green, already audited (if->xp.where: 0
 data-dependent branches; duplication: reuses jit_mode(); placement: helper in
 galpy.backend). Merging on the next wake if the last checks land clean.
+
+### 2026-08-07 — #1266 merge sequence prepared
+
+    #1266  mergeable: MERGEABLE   state: BLOCKED (pending checks only, no conflict)
+           7 pending / 146 pass / 0 fail  -- remainder includes the all-clear gate
+    #1267  40 pending / 112 pass / phantom only
+
+Ordered checklist so the merge window is mechanical rather than improvised:
+
+  1. squash-merge #1266 (matches how #1265 landed -- single parent 199ee10e)
+  2. rebase #1267 onto the new base; auto-merge already verified via
+     `merge-tree` (0 conflicts), combined slow-skip lands at 109
+  3. update #1267's description: 210->110 becomes 209->109 once #1266 is in
+  4. open #208 into the freed slot -- body already written at /tmp/pr_ssp_body.md,
+     branch disjoint from both, whole file 80/80 on the committed commit
+  5. galpy-jax README + log updated on landing, per the standing rule
+
+Step 3 is the one that would otherwise rot: the numbers in #1267's description
+are correct only against today's base, and I said so in the PR itself. Writing
+it into the sequence means it gets fixed rather than silently drifting into the
+stale-description failure mode ([[pr-description-drifts-after-rework]]).
+
+Attribution arm alive (99.5% CPU, 8:18 elapsed, 14 tests in) -- it is deep in the
+slow tests, which is where the without-fix arm was always going to spend its
+time.
