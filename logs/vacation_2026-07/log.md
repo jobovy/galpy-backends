@@ -30467,3 +30467,26 @@ climb is still to come.
 Cheap check, real value: "converging" and "stalled at a bad value" produce the
 same reading if you only watch the percentage. What separates them is knowing
 which of the remaining jobs can even move it.
+
+### 2026-08-08 — #1273 codecov green; the measured prediction was exact, again
+
+    codecov/patch    success  100.00% of diff hit  (was 14.28%)
+    codecov/project  success  99.95% (+0.00%)      (was -45.88% at worst)
+
+    #1273  151 pass / 3 pending / 0 red
+           mergeable=MERGEABLE  state=BLOCKED (all-clear still running)
+           0 behind develop, 0 conflict markers
+
+Second time today a line-by-line local measurement predicted codecov's final
+patch number exactly (#1272 also landed on 100.00%). The value of doing it is
+not the prediction — it is that on both PRs the diff touched **source in a
+measured file**, where the "it always self-heals" heuristic is not valid, and
+measuring is what distinguished "wait" from "fix".
+
+The plateau diagnosis held too: project sat at -13.91% while nine
+no-coverage `backend` jobs finished, then moved to +0.00% once the
+coverage-uploading `build` shards landed.
+
+Remaining gate is two `test_orbit` build shards plus all-clear. Everything
+substantive on this PR is verified: byte-identity, guard A/B, audit, and both
+burndown halves confirmed in shard context.
