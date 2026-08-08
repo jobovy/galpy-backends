@@ -27397,13 +27397,33 @@ through in one pass instead of hunted across tasks and ledger comments.
        actionAngleVertical `f` closure     238           (task #210, not started)
 
    An AST scan finds **96 internal call sites across 17 files** that use a
-   decorated public evaluator where an undecorated inner already exists (34 of
-   them in the two `actionAngleVertical*` modules). **96 is a population, not a
-   defect count** — only loop-resident sites matter, and only 3 are measured.
+   decorated public evaluator where an undecorated inner already exists. But 96
+   is a population, not a defect count — only *loop-resident* sites can hurt.
+   Classifying them by syntactic context:
+
+       inside a for/while/comprehension     27
+       inside a nested def/lambda            7   (closures given to root-finders)
+       straight-line, called once           62   <- harmless at ~178 us
+       ------------------------------------------
+       AT RISK                              34
+
+   concentrated in exactly the modules whose consumers are loops:
+
+       actionAngleVertical.py         16
+       actionAngleVerticalInverse.py   5
+       orbit/Orbits.py                 5
+       potential/interpRZPotential.py  3
+       constantbetadf / streamgapdf / streamspraydf / Potential.py   1 each
+
+   **Caveat, stated: loop-residency is syntax, not measurement.** A call inside a
+   `for` that runs twice costs nothing. So 34 is an upper bound on *candidates*;
+   3 are measured hot, the other 31 are unmeasured. I am not claiming 34 defects.
    → **Question: land the 3 measured fixes and stop, or adopt a convention
    ("internals call the inner; the decorated entry is the user-facing API") and
-   sweep?** The sweep is mechanical but touches numpy-byte-identity-critical
-   paths in bulk, so it is your call on risk appetite, not mine.
+   sweep the 34?** The sweep is mechanical but touches numpy-byte-identity-
+   critical paths in bulk, so it is your call on risk appetite, not mine. If you
+   want a middle path, the 21 sites in the two `actionAngleVertical*` modules are
+   the concentrated, highest-yield slice.
 
 **Headline for the traced track: traced-green is achieved as far as code can
 take it.** All 7 remaining traced-ledger entries are in A or C above. None is an
@@ -28772,3 +28792,31 @@ later, like an oversight rather than a deliberate ordering.
 
     #1270  57 pending / 95 pass, phantom only
     #1271  head CI running clean
+
+### 2026-08-08 — the at-risk population is 34, not 96
+
+The raw 96 was honest but not decision-grade: it counted every internal call of
+a decorated public evaluator, and most of those run once. Classified them by
+syntactic context instead:
+
+    inside a for/while/comprehension     27
+    inside a nested def/lambda            7   (closures given to root-finders)
+    straight-line, called once           62   <- harmless
+    AT RISK                              34
+
+and the concentration matches where the three measured hits already were:
+`actionAngleVertical` 16, `actionAngleVerticalInverse` 5, `Orbits` 5,
+`interpRZPotential` 3, four files with 1 each.
+
+**Stated the caveat in the decision item rather than letting 34 read as a defect
+count:** loop-residency is syntax, not measurement — a call inside a `for` that
+runs twice costs nothing. 34 is an upper bound on candidates; 3 are measured, 31
+are not. Same discipline that killed the "74% scalar" finding this morning: a
+count only becomes a finding once something is measured.
+
+Also gave Jo a middle option that did not exist before the classification: the
+**21 sites in the two `actionAngleVertical*` modules** are the concentrated,
+highest-yield slice, so "sweep everything" and "do nothing more" are no longer
+the only two choices.
+
+    #1270  50 pending / 102 pass, phantom only
