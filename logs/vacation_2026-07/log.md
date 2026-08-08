@@ -30520,3 +30520,33 @@ than inspection; three fixed and merged, one (#211) patched and waiting on Jo:
 Session: **8 PRs merged**, slow-skip ledger **210 -> 92** (-56%), two
 pre-existing numpy bugs found and characterised for Jo (#206 RazorThin Rforce,
 #212 interpRZPotential units).
+
+### 2026-08-08 — post-merge: what is actually available next
+
+#1273 merged, so both PR slots are free. Went looking for the next *unblocked*
+piece rather than idling, and closed out two candidates by reading rather than
+assuming:
+
+* **`backend_skip.txt` is not burndown material.** The roadmap lists "revisit
+  fully-SKIPPED tests" as step 3, but the file's own header says these are "a
+  PERMANENT exclusion, NOT pending work, so they are not part of any burndown":
+  60 entries = network-dependent `from_name` + the out-of-scope
+  `actionAngleVerticalInverse` family ([[verticalinverse-out-of-scope]]).
+  Settled by reading the docs ([[read-code-docs-before-classifying]]), not by
+  measuring 60 tests.
+
+* **Task #76 was already fixed.** It asked to set `_backend_compatible` before
+  `normalize()` in the Ellipsoidal subclasses. Current code:
+
+      PerfectEllipsoidPotential   L89 _backend_compatible = True   L93 normalize()
+      TriaxialGaussianPotential   L92 _backend_compatible = True   L96 normalize()
+
+  Closed **with the lines as evidence** — which is the bar I refused to meet
+  earlier today when a `git log | grep` count tempted me to bulk-close four
+  other tasks. A read of the actual code clears it; a keyword tally does not.
+
+So the genuinely-next items (#211, #212) are the two waiting on Jo, and the
+remaining ledger blocks are heavy-by-measurement, not stale. Nothing is being
+sat on.
+
+    develop 9f3c3166 post-merge CI: queued/in_progress, no reds
