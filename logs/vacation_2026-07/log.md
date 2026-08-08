@@ -26265,3 +26265,27 @@ conflict discovered in advance is just a rebase to schedule. `merge-tree` costs
 nothing and touches no worktree.
 
 #1266 at 35 pending / 118 pass, no failures. #1267 at 95 pending, phantom only.
+
+### 2026-08-07 — file-disjointness across the three in-flight changes
+
+    #208   galpy/df/diskdf.py            tests/test_backend_diskdf.py
+    #1266  galpy/util/multi.py           tests/backend_slow_skip.txt
+    #1267  tests/backend_slow_skip.txt   tests/backend_xfail.txt
+
+    #208 vs #1266   NONE -- disjoint
+    #208 vs #1267   NONE -- disjoint
+    #1266 vs #1267  tests/backend_slow_skip.txt   (auto-merges, 0 conflicts, verified)
+
+So #208 can open into a free slot at any time without interacting with either
+open PR, and the single overlap is the one already checked with `merge-tree`.
+That is the whole point of the granularity rule ([[pr-granularity-less-atomic]]
+says group related fixes but keep files disjoint): the payoff is that merge
+order stops mattering, which is exactly what you want when a maintainer is
+squash-merging on his own schedule and I cannot assume any particular sequence.
+
+Not a discovery so much as a confirmation, but it is cheap and it is the thing
+that would hurt if it were false -- three PRs contending for one file while Jo
+merges them in an order I do not control is a conflict I would be handling
+blind.
+
+#1266 at 31 pending / 122 pass, still zero failures.
