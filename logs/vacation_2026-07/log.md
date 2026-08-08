@@ -26771,3 +26771,35 @@ reachable by tests, which is not the same as CI running them.
 Numbers on the middle branch line up too: 483-485 are the numpy path, and the
 one completed covering job is the numpy `test_diskdf.py` build. That is why 7 of
 10 are already hit rather than fewer.
+
+### 2026-08-07 — CORRECTION to my own framing: #208 is not a jit-only regression
+
+Measured the `@backend_input` boundary cost directly, to turn the diskdf lesson
+into a general number:
+
+    one crossing, scalar arg          us/call
+    undecorated, numpy                    1.3
+    decorated, numpy                      2.8   (the ~12% I saw, in absolute terms)
+    decorated, forced jax EAGER         178.2   (141x)
+    decorated, forced jax + jit         151.1   (120x)
+
+**Eager is if anything slower than traced.** So the cost is a *forced-backend*
+cost, not a jit cost -- and 133,332 x 178 us = 23.7 s reproduces the oortA
+regression from the eager side alone. Confirmed end-to-end, no jit:
+
+    forced jax EAGER oortA   without fix 31.09 s   with fix 4.65 s   6.7x
+
+I had been calling #208 "a traced regression" since I found it, because traced
+is where it broke a test. That was the visible symptom, not the fault. Retitled
+#1268 and added a section rather than quietly editing the numbers.
+
+**Why the correction matters rather than being pedantry:** `backend-tests` runs
+**eager** forced backends on every push. #1261 slowed the routine
+`backend jax tests/test_diskdf.py` shard by ~2.8x (whole file 3613 s -> 1295 s,
+measured as a side-effect of the un-defer A/B) and it stayed green, so nothing
+flagged it. Framing the fix as jit-only would have understated what it buys and
+mis-taught the next reader about where boundary costs bite.
+
+Also worth keeping: the decorator on the **numpy** path is 1.3 -> 2.8 us, i.e.
+2.2x on a trivial leaf. Harmless at normal call counts, and exactly what makes
+133k calls a 200 ms tax before any backend is involved.
