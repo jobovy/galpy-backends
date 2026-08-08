@@ -27661,3 +27661,43 @@ measurement, not an inference from "the migration merged".
 
     #1269  87 pass / 65 pending, phantom only
     #125 shard run: alive, 81 tests in at 4:38
+
+### 2026-08-08 — torch census clean; the 30k ComplexWarnings are main's, not ours
+
+Ran the productized boundary census (task #200) on the **torch** arm, which had
+never been swept — the #1268 verification was jax-only:
+
+    diskdf.oortA                 0 crossings   <- was 133,332 pre-#1268
+    diskdf.sigmaR2               0
+    Potential.vesc              10             <- highest
+    max over callers             8
+
+Nothing within two orders of magnitude of the HOT threshold, and `oortA` is now
+literally zero. Recording the real numbers rather than reusing the jax sweep's
+"nothing above 4": torch's max is **10**, not 4. Same code, different branches;
+the claim to carry forward is "far below 1000", not a specific integer.
+
+**Unasked-for finding, then closed as not-ours.** The run emitted a scipy
+`ComplexWarning` ("casting complex values to real discards the imaginary part").
+Chased it because a warning that appears only under a forced backend means a
+dtype leak, and `-W error` makes warnings CI-fatal
+([[test-backend-W-error-deprecation]]). It isn't backend-specific:
+
+    plain numpy / forced numpy / forced jax / forced torch   30,324 each
+    origin/main (throwaway worktree, provenance asserted)    30,324
+
+Identical on all five. Localised to the `dblquad` integrand
+(`_vmomentsurfacemass` 22,386, `meanvT` 6,615, `surfacemass` 1,323). So:
+**pre-existing galpy behaviour on `main`, not introduced by this branch, not a
+backend defect.** Values are correct and byte-identity holds. Logging it as a
+low-priority observation for Jo — 30k complex→real casts inside one `oortA()`
+suggests the integrand takes a power of a marginally-negative base — but it is
+not a blocker and not in scope.
+
+Two habits paid here: asserting `galpy.__file__` was in the probe worktree
+before believing the result ([[galpy-editable-install-import-shadow]]), and
+checking `main` at all rather than assuming a warning seen in my branch is from
+my branch.
+
+    #1269  90 pass / 62 pending, phantom only
+    #125 shard run: alive, 121 tests in at 9:49
