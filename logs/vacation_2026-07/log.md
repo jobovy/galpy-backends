@@ -29980,3 +29980,38 @@ way "30603 crossings" is not, and it is what belongs in the PR body.
 
 Both #1272 attempt-2 runs are down to one macOS job each (24 and 15 min in),
 progressing normally. 151 pass / 3 pending / 0 red.
+
+### 2026-08-08 — #211: the headline case needs NO new API (and a bad A/B caught)
+
+I told Jo #211 needs 4 new undecorated inners. That is true for the *density and
+2nd-derivative* grids, and **false for the case that actually costs**. Per
+interp option, 24x16 grid:
+
+    interpPot (DEFAULT)   1152 -> 0      <- inner already exists
+    interpRforce          1152 -> 0      <- inner already exists
+    interpDens            2688 -> 2688   needs _evaluateDensities
+    interpR2deriv         2688 -> 2688   needs _evaluateR2derivs
+    interpvcirc            192 -> 192    needs a vcirc inner
+
+At galpy's default 101x101 grid, valid A/B (same worktree, same C-ext state,
+one file toggled):
+
+    WITHOUT   30603 crossings   9.69 s   grid_sha=7bc7b1149185ff7b
+    WITH          0 crossings   4.92 s   grid_sha=7bc7b1149185ff7b
+
+**1.97x faster, byte-identical grid, three call sites, zero new API.** Patch
+saved (scratchpad/211-3inner.patch); worktree removed.
+
+**The A/B I nearly published was invalid.** My first pass compared 6.32 s in the
+new worktree against 7.76 s measured earlier in `evdirect` — different
+worktrees, and the new one had **no C extension** (its own warning line said
+so). That comparison would have reported a ~1.4 s saving for a change that
+actually saves 4.77 s, i.e. understated the result by 3x, in the *favourable*
+direction for once. Same discipline as [[verify-burndown-flips-stash-rerun]] and
+the #212 work: one worktree, one C-ext state, toggle one file. The provenance
+line I print out of habit is what flagged it.
+
+Consequence for item 8: #211 splits into a trivial high-value part (3 sites,
+no API change, halves the default constructor) and an optional follow-up (4 new
+inners, only for dens/2nd-deriv grids). The first part needs no decision at all
+beyond "yes".
