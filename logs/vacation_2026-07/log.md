@@ -28107,3 +28107,36 @@ is fixable. The census `KNOWN_HOT` entry carries it, and deleting that line is
 still the acceptance test.
 
     #1270  150 pending / 1 pass, no reds (just launched)
+
+### 2026-08-08 — #88 de-risked: the undecorated swap IS numpy-bit-identical
+
+Before committing to a class-wide adapter change, ran the decisive cheap test:
+does calling the undecorated inner give bit-identical numpy results to the
+decorated public call? sha256 over 200 radii, `use_physical=False`:
+
+    MN / NFW / Hern / Log / Plummer     __call__   BIT-IDENTICAL
+    MN / NFW / Hern / Log / Plummer     Rforce     BIT-IDENTICAL
+
+So `self._Pot(R, 0.0, t=t, use_physical=False)` -> `_evaluatePotentials(...)` is
+value-preserving on numpy, and the boundary crossing it removes is pure
+overhead. The approach is viable; the remaining work is scope and care, not
+feasibility.
+
+**One row of my own table is worthless and I am recording it as such.** MW14 is
+a *list*, and my "decorated" lambda has an `isinstance(P, list)` fallback that
+calls the very same inner function — so the MW14 row compares inner to inner and
+proves nothing. It printed BIT-IDENTICAL and is a tautology. Real evidence: 5
+potentials x 2 quantities. A composite/list case still needs covering before the
+PR, and I would have counted it as covered if I had only read the verdict column
+([[assertion-comparison-outside-reducer]] — same shape: the check passed while
+comparing the wrong things).
+
+Also hit `_evaluateR2derivs` not existing (import error), so second derivatives
+are unverified. The real PR must cover `_R2deriv` explicitly, not assume it
+mirrors the other two.
+
+Status of #88 after today: measured (1023 jax / 1031 torch), localised (planar
+adapter -> decorated 3D API, 3 methods), byte-identity de-risked (5 pots x 2
+quantities), and two open gaps: list/composite potentials, and R2deriv.
+
+    #1270  149 pending / 2 pass, no reds
