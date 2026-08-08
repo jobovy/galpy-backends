@@ -30575,3 +30575,39 @@ fail-without/pass-with test evidence, and the two decisions (target branch,
 and ordering against #211 which touches the same sites).
 
     #1274  DRAFT, base=main, head=fix/interprz-units (ff87e75e)
+
+### 2026-08-08 — #1274 false alarm: I nearly blamed my own PR with an invalid A/B
+
+Ran the other `interpRZPotential` consumers locally to pre-empt CI failures on
+#1274 (my verification had only covered `test_interp_potential.py`):
+
+    test_snapshotpotential.py + test_quantity.py -k "interp or Interp"
+        1 failed, 14 passed
+        FAILED test_quantity.py::test_quasiisothermaldf_interpolate_sample
+
+First instinct was to check whether it was mine. First check:
+
+    that single test, alone, with origin/main's file   ->  1 passed
+
+which reads as "passes without my change, fails with it" — i.e. **my change
+broke it**. That conclusion was wrong, and the comparison that produced it was
+invalid: the failing run was *two files with a `-k` filter selecting 15 tests*,
+the passing run was *one test alone*. I had changed the code AND the test
+context, then attributed the difference to the code.
+
+Redone with the identical command, toggling only the file:
+
+    same 2-file command, WITHOUT my change  ->  1 failed  (same test)
+
+So it is **pre-existing and context-dependent**: `test_quantity.py`'s qdf
+sampling test fails when it runs after `test_snapshotpotential.py` (shared RNG
+state — the known [[xdist-shared-state-artifacts]] family), and passes in
+isolation. Nothing to do with #1274, whose test body does not reference
+`interpRZPotential` at all (grepped: 0 refs).
+
+The rule I broke and re-learned: **an A/B must change exactly one thing.**
+[[verify-burndown-flips-stash-rerun]] says it for the fix; it applies equally to
+the *invocation*. Same failure shape as the earlier cross-worktree wall-clock
+comparison today, where the C-extension state differed between arms.
+
+    #1274  2 pass / 126 pending / 0 red (draft)
