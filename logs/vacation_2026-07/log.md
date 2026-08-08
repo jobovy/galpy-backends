@@ -29775,3 +29775,37 @@ reformatted both files), exactly as [[precommit-hooks-reject-first-commit]]
 says. Caught by comparing SHA before/after rather than trusting the exit code,
 then re-ran the suite post-format — 41 passed — because a formatter touching
 the file after the tests ran is not a verified state.
+
+### 2026-08-08 — separability of #211/#212 CONFIRMED (and a hybrid-import trap)
+
+I told Jo the two are separable. Verified rather than left asserted, from both
+directions:
+
+**1. `use_physical=False` does not bypass the boundary.** On feat/backends,
+20 calls to `evaluatePotentials`:
+
+    without use_physical      -> 60 crossings
+    with use_physical=False   -> 60 crossings
+
+The flag skips the *units* decorator, not `@backend_input`. So #212's fix leaves
+the crossing count untouched and #211 is still needed in full.
+
+**2. On main the question does not arise** — `galpy/backend/` does not exist
+there, so there is no boundary to cross.
+
+Point 2 arrived as a crash, and the crash is worth recording. Running the census
+in the `main` worktree spliced two checkouts into one import graph:
+
+    galpy         = /var/tmp/units212/galpy/__init__.py    <- correct worktree
+    galpy.backend = /var/tmp/streamtorch/galpy/backend/    <- a DIFFERENT checkout
+    ImportError: cannot import name '_ARRAY_API_COMPAT_LOADED' ...
+
+`galpy.__file__` was right; a *subpackage* the branch lacks silently came from
+the editable install. This is a sharper version of
+[[galpy-editable-install-import-shadow]]: provenance on the top-level package is
+not sufficient. It crashed here, which was lucky — two close-enough checkouts
+would splice silently and I would have measured a chimera. Memory updated.
+
+The right reading is not "work around the import": if a probe needs a package
+the branch under test does not have, the measurement is **inapplicable to that
+branch**, and that is the answer.
