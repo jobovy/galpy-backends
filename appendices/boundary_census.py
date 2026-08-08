@@ -193,8 +193,7 @@ KNOWN_HOT = {
     # i.e. the EAGER bisection loop re-entering the decorated potential once per
     # iteration -- not the quadrature (4 and 8) and not the numpy branch, which
     # is a separate `else:` and untouched.
-    "aASpherical.actions": "galpy task #88: eager bisect_root re-crosses per iteration",
-    "aASpherical.actionsFreqs": "galpy task #88: eager bisect_root re-crosses per iteration",
+
     # verticalPotential adapters forward through the decorated 3D API; fixed on
     # feat/vertical-adapter-nodecorator (task #209, 1708 -> 244). The residual
     # after that fix is actionAngleVertical's own bisection closure (task #210).

@@ -29192,3 +29192,40 @@ the earlier attempt to read the live log was never going to work. The
 check-run API carries the conclusion either way.
 
     #1271  153 pass, all-clear re-running, no reds
+
+### 2026-08-08 — #1271 MERGED; #1272 (vertical) OPEN; acceptance test passes
+
+**#1271 merged as `f1bb9f83`.** Audit before merge caught a scare worth
+recording: `gh pr diff --patch` listed `+def _count_coercions` as added, which
+would mean the duplication I hoisted away had survived. It had not — checked the
+**actual tree** at the PR head:
+
+    definitions of a crossing counter:  backend_jit_helpers.py:63  (exactly one)
+    _count_coercions occurrences in the guard file:  0
+
+`gh pr diff --patch` emits the **commit series**, not the net diff, so an
+intermediate commit's addition shows even after a later commit removes it. Same
+family as the #1270 miscount (that one included the PR body). Rule: audit against
+the tree, not the patch stream.
+
+**#1272 open** — the vertical adapters, executed exactly as rehearsed:
+
+    rebase onto post-#1271 develop     clean
+    apply the saved dedupe patch       applied
+    4 guards (2 planar + 2 vertical)   passed
+    counter definitions in tests/      exactly 1
+    local `_count_vertical_coercions`  0 occurrences
+
+The rehearsal was worth it: the risk was never a conflict but the local helper
+silently surviving, and the grep is what would have caught it. Sixth pre-commit
+rejection of the day (isort) also caught by the SHA check.
+
+**Acceptance test executed, not just described:** deleted the `aASpherical`
+entries from `KNOWN_HOT` and the census still exits 0. The planar fix genuinely
+put those sites under threshold rather than being excused by the allow-list. The
+`aAVertical` entries stay until #1272 lands.
+
+Top caller now: `actionAngleVertical.py:f` at **476** — task #210's target, and
+correctly the only thing left standing in this defect class.
+
+    develop  f1bb9f83  (slow-skip 98)
