@@ -17,8 +17,19 @@ the detector: it counts the crossings directly.
 Reading the output
 ------------------
 The signature of the bug is a crossing count in the **tens of thousands**. A
-healthy call site is single digits. After #1268 an empirical sweep over five
-workloads found nothing above 4.
+healthy call site is single digits to low tens.
+
+Sweep of the 15 built-in workloads, 2026-08-08, C extension loaded, x64 on:
+
+    jax    every df/potential/orbit/qdf workload <= 84;  aAStaeckel 0
+    torch  same shape, max 10
+    OUTLIER: aASpherical.actions 989, .actionsFreqs 1023
+
+``actionAngleSpherical`` runs a scipy quadrature loop that evaluates the
+potential ~1000 times per call, one scalar crossing each. It is listed in
+``KNOWN_HOT`` (galpy task #88) so it does not mask a *new* regression. The
+comparison that localises it: ``actionAngleStaeckel``, which does the same job
+vectorized, scores **0**.
 
 **The wall-clock column is not the finding** and is printed only for context. A
 sub-millisecond numpy call against a first-call jax trace/compile shows ratios
@@ -105,10 +116,13 @@ def census(fn, backend="jax"):
 
 
 def _workloads():
-    from galpy.df import dehnendf, isotropicHernquistdf
+    from galpy.actionAngle import actionAngleSpherical, actionAngleStaeckel
+    from galpy.df import dehnendf, isotropicHernquistdf, quasiisothermaldf
+    from galpy.orbit import Orbit
     from galpy.potential import (
         HernquistPotential,
         MiyamotoNagaiPotential,
+        MWPotential2014,
         NFWPotential,
     )
 
@@ -116,6 +130,12 @@ def _workloads():
     nfw = NFWPotential(a=2.0, normalize=1.0)
     hp = HernquistPotential(a=1.0, normalize=1.0)
     ddf = dehnendf(beta=0.0, profileParams=(1.0 / 3.0, 1.0, 0.1))
+    aAS = actionAngleStaeckel(pot=MWPotential2014, delta=0.4)
+    aASph = actionAngleSpherical(pot=hp)
+    qdf = quasiisothermaldf(
+        1.0 / 3.0, 0.2, 0.1, 1.0, 1.0, pot=MWPotential2014, aA=aAS, cutcounter=True
+    )
+    o = Orbit([1.0, 0.1, 1.1, 0.0, 0.1, 0.0])
     return [
         ("diskdf.oortA", lambda: ddf.oortA(1.0)),
         ("diskdf.sigmaR2", lambda: ddf.sigmaR2(1.0)),
@@ -128,11 +148,32 @@ def _workloads():
             lambda: isotropicHernquistdf(pot=hp).vmomentdensity(1.0, 0, 0),
         ),
         ("isoHernquistdf.sigmar", lambda: isotropicHernquistdf(pot=hp).sigmar(1.0)),
+        # actionAngle / qdf / orbit: added 2026-08-08. Their absence is why the
+        # aASpherical site below went unmeasured until then.
+        ("aAStaeckel.actionsFreqs", lambda: aAS.actionsFreqs(1.0, 0.1, 1.1, 0.0, 0.1)),
+        ("aASpherical.actions", lambda: aASph(1.0, 0.1, 1.1, 0.0, 0.1)),
+        (
+            "aASpherical.actionsFreqs",
+            lambda: aASph.actionsFreqs(1.0, 0.1, 1.1, 0.0, 0.1),
+        ),
+        ("qdf.density", lambda: qdf.density(1.0, 0.1)),
+        ("qdf.sigmaR2", lambda: qdf.sigmaR2(1.0, 0.1)),
+        ("Orbit.E", lambda: o.E(pot=MWPotential2014)),
+        ("Orbit.L", lambda: o.L()),
     ]
 
 
 # A crossing count at or above this is the #1261 signature, not noise.
 HOT = 1000
+
+# Sites already known to be hot, with the tracking item. These still print and
+# still get flagged in the output, but they do NOT set a failing exit code --
+# otherwise the detector is permanently red and stops being a regression signal.
+# Removing an entry here is how a fix gets locked in.
+KNOWN_HOT = {
+    "aASpherical.actions": "galpy task #88: scipy quad loop, not vectorized",
+    "aASpherical.actionsFreqs": "galpy task #88: scipy quad loop, not vectorized",
+}
 
 
 def main(argv=None):
@@ -140,6 +181,16 @@ def main(argv=None):
     ap.add_argument("--backend", default="jax", help="forced backend (jax/torch)")
     ap.add_argument("--top", type=int, default=10, help="per-caller ranking depth")
     args = ap.parse_args(argv)
+
+    # Match the test suite's dtype, or jax silently truncates to float32 and the
+    # run measures a configuration nobody ships.
+    if args.backend == "jax":
+        try:
+            import jax
+
+            jax.config.update("jax_enable_x64", True)
+        except ImportError:  # pragma: no cover
+            pass
 
     import galpy
 
@@ -155,6 +206,7 @@ def main(argv=None):
 
     total = collections.Counter()
     hot = []
+    counts = []
     print(f"\n  {'workload':32s} {'crossings':>10s} {'seconds':>9s}")
     for name, fn in _workloads():
         try:
@@ -162,10 +214,13 @@ def main(argv=None):
         except Exception as e:
             print(f"  {name:32s} SKIP ({type(e).__name__}: {str(e)[:34]})")
             continue
-        flag = "  <-- HOT" if n >= HOT else ""
-        print(f"  {name:32s} {n:10d} {secs:8.2f}s{flag}")
+        flag = ""
         if n >= HOT:
+            flag = "  <-- HOT (known)" if name in KNOWN_HOT else "  <-- HOT"
             hot.append((name, n))
+        print(f"  {name:32s} {n:10d} {secs:8.2f}s{flag}")
+        if name not in KNOWN_HOT:
+            counts.append(n)
         total.update(callers)
 
     if total:
@@ -176,13 +231,19 @@ def main(argv=None):
         print("\n  no crossings recorded at all")
 
     print()
-    if hot:
-        print(f"  {len(hot)} workload(s) at or above {HOT} crossings -- investigate:")
-        for name, n in hot:
+    new_hot = [(name, n) for name, n in hot if name not in KNOWN_HOT]
+    for name, n in hot:
+        if name in KNOWN_HOT:
+            print(f"  known hot: {name}: {n} crossings -- {KNOWN_HOT[name]}")
+    if new_hot:
+        print(f"  {len(new_hot)} NEW workload(s) at or above {HOT} crossings:")
+        for name, n in new_hot:
             print(f"    {name}: {n}")
         return 1
-    print(f"  no workload reached {HOT} crossings (max "
-          f"{max(total.values()) if total else 0}). Sampled, not exhaustive.")
+    # Compare like with like: the threshold is per workload, so report the
+    # largest *workload* count, not the largest per-caller total.
+    print(f"  no new workload reached {HOT} crossings (max unknown-hot workload "
+          f"{max(counts, default=0)}). Sampled, not exhaustive.")
     return 0
 
 
