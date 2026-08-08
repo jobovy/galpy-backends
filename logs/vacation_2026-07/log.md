@@ -30420,3 +30420,27 @@ progress counts say nothing about the specific check you care about — the same
 error shape as reading "N passed" without reading skipped/deselected.
 
     #1273  111 pass / 40 pending / 0 real reds; codecov/project -13.91% and converging
+
+### 2026-08-08 — burndown FULLY validated in shard context (both halves)
+
+Group 5 — the one shard that decides the four dissipative/conversion
+un-deferrals — has passed, so the risk I flagged when un-deferring on
+isolation timings is now discharged in full:
+
+    test_actionAngle.py shard    3 -> 1 deferred,  182 passed   (aAAdiabatic pair)
+    test_potential.py group 5    9 -> 5 deferred,  260 passed   (the other four)
+
+    jax entries for test_potential.py:  develop 16 -> branch 12   (-4, all group 5)
+
+Both checked the same way: read the shard's own census, then reconcile the
+deferred count against the ledger diff, rather than accepting "the shard is
+green". Group 5 also reports **0 xfail (ledger)**, which rules out the other way
+these could have looked green without running — quietly re-skipped by the
+xfail-ledger instead of the slow-skip list.
+
+So all six un-deferred tests ran and passed in the sharded context that
+originally timed them out. slow-skip 98 -> 92 is real, not an isolation
+artifact.
+
+    #1273  120 pass / 31 pending / 0 real reds
+           codecov/project -13.91% and converging; audit already done
