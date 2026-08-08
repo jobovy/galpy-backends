@@ -27161,3 +27161,27 @@ would be a third.
 
     #1268  111 pass / 40 pending, head coverage 86.05% vs base 86.06% (project about to clear)
     #1269  149 pending / 2 pass
+
+### 2026-08-07 — worktree hygiene: cleaned the ambiguous state before it bit again
+
+`evdirect` was still carrying an **uncommitted** copy of the #208 fix plus the
+new test. Everything about that is fine while I remember it and a trap the
+moment I do not -- it is the same ambiguity that made me verify, twice today,
+which tree a measurement had actually come from.
+
+Verified the content was safe before discarding: `sspfix` HEAD contains the fix,
+local `bfd6c8e84` == the pushed `#1268` head. Only then `git checkout --` (working
+tree only, not `checkout <ref> -- <file>`, which would have staged a revert).
+
+    /var/tmp/evdirect   <detached>                       dirty=0
+    /var/tmp/sspfix     feat/diskdf-ssp-traced-perf      dirty=0   (= #1268)
+    /var/tmp/slowprune  feat/diskdf-sampling-undefer     dirty=0   (= #1269)
+    /var/tmp/pre1261    <detached>                       dirty=0
+
+All four clean, each identifiable at a glance. `evdirect` and `pre1261` stay --
+they are the built-C-extension A/B pair that made today's measurements possible,
+and rebuilding them costs ~2 min each.
+
+    #1268  115 pass / 36 pending; codecov base fluctuated 86.06% -> 99.95%
+           (stale-base wobble), head 86.05%, patch 70% with falsifier 0 of 2
+    #1269  149 pending / 2 pass, no reds
