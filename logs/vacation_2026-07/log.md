@@ -28181,3 +28181,41 @@ the wrong thing — here, nothing at all.
 across 5 standalone potentials and 3 composite components, x 2 quantities.
 
     #1270  149 pending / 2 pass, no reds
+
+### 2026-08-08 — #88 IMPLEMENTED: 989 -> 5 crossings, numpy byte-identical
+
+Branch `feat/planar-adapter-nodecorator`. The planar adapters forwarded to the
+**decorated** 3D API; five of those forwards have an existing undecorated inner,
+so they now call it:
+
+    _evaluate   self._Pot(...)            -> _evaluatePotentials(self._Pot, ...)
+    _Rforce     self._Pot.Rforce(...)     -> _evaluateRforces(self._Pot, ...)
+    _evaluate   (non-axi, phi)            -> _evaluatePotentials(...)
+    _Rforce     (non-axi, phi)            -> _evaluateRforces(...)
+    _phitorque  self._Pot.phitorque(...)  -> _evaluatephitorques(...)
+
+The four second-derivative forwards keep the decorated call: there is no
+`_evaluateR2derivs` / `_evaluatephi2derivs` / `_evaluateRphideriv`, and none of
+them is on the hot path. Not inventing new inners to make the diff look uniform.
+
+**Effect, measured:**
+
+    aASpherical.actions        989 -> 5    (198x)
+    aASpherical.actionsFreqs  1023 -> 23   (44x)
+
+**numpy byte-identity, two worktrees, one script:**
+
+    BEFORE (develop)  3918 values  a1f4e689...655e
+    AFTER  (fix)      3918 values  a1f4e689...655e     IDENTICAL
+
+The hash covers 5 potentials x {value, Rforce} x 300 radii through the planar
+adapter, a `DehnenBarPotential` non-axi adapter x {value, Rforce, phitorque} x
+100 radii x 3 azimuths (so the phi-carrying sites are actually exercised, not
+assumed), and `actionAngleSpherical.actionsFreqs` itself — the real consumer.
+Ran in two separate worktrees rather than stashing ([[git-stash-is-repo-wide-not-worktree]]),
+with provenance asserted on both sides.
+
+Now gating on `test_potential.py` + `test_actionAngle.py` under numpy, then the
+forced-backend arms before push ([[forced-backend-gate-before-push]]).
+
+    #1270  149 pending / 2 pass, no reds
