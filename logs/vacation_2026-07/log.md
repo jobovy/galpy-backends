@@ -29093,3 +29093,27 @@ Scratch branch deleted, `evdirect` restored to `feat/vertical-adapter-nodecorato
 checkout command.
 
     #1271  133 pass / 19 pending, project phantom only (stale base = pre-#1270)
+
+### 2026-08-08 — "CI is green" does not prove my new guards RAN
+
+Both guards are `skipif(not _HAS_JAX)` / `skipif(not _HAS_TORCH)`. If the shard
+that collects `test_backend_planarpotential.py` has neither framework installed,
+both skip and #1271 goes green **without the guard ever executing** — a vacuous
+pass at the CI level, the same shape as the vacuous `ok &= ...` loops I wrote
+earlier today, one layer out.
+
+First attempt to check was aimed wrong: I grepped the `backend jax/torch
+test_potential.py` shard logs and found no mention of `recross`. That is doubly
+uninformative — `-q` does not print passing test names, **and** my guards are not
+in `test_potential.py` at all. Wrong job.
+
+The right one is `build (ubuntu-latest, 3.14, tests/test_backend*.py)`, currently
+`in_progress`. Recording the verification I still owe, with the exact command,
+rather than letting a green tick stand in for it:
+
+    gh run view --job <that job id> --log | grep -E "recross|_HAS_(JAX|TORCH)"
+    # want: both guards collected, and NOT both skipped
+    # note [[ci-single-backend-install-blindspot]] -- one framework per shard is
+    # expected, so ONE of the two skipping there is fine; BOTH skipping is not.
+
+    #1271  137 pass / 15 pending, project phantom only
