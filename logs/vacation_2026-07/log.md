@@ -30701,3 +30701,34 @@ fails here — and identically on clean develop under the identical command
 ([[verify-burndown-flips-stash-rerun]], the same one-thing-at-a-time rule I broke
 earlier today on #1274). Both arms lacked the C extension and it is a `_c` test,
 so it may be a missing-`.so` artifact.
+
+### 2026-08-08 — #1274 patch-coverage: my local number is a LOWER BOUND, not a gap
+
+#1274 shows `codecov/patch 6.66%` with 102 shards pending. Since this diff is 88
+changed lines of source (not the 6 of #1272), a genuine gap was plausible, so I
+measured instead of assuming the phantom.
+
+    tests/test_interp_potential.py alone -> 70/88 changed lines covered
+    not executed: 440 443 444 465 468 469 478 494 497 498 531 534 535 544
+                  803 824 845 866
+
+All in the `numcores is not None` / `multi.parallel_map` branches of the
+vcirc / dvcircdR / epifreq / verticalfreq grid builds.
+
+**But that number is not evidence of a coverage gap.** I ran ONE file; CI runs
+the whole suite. And `test_interp_potential.py` itself contains a
+`numcores=1, interpvcirc=True` case, so those branches are reachable — a
+single-file run with forked children is simply not the same measurement codecov
+makes ([[forked-child-coverage-ignores-cov-flag]]).
+
+Same shape as the line-417 result earlier today: "not executed" under a narrow
+selection is a statement about the selection. I nearly used it to justify adding
+speculative `numcores` tests to my own PR — which would have been test churn
+motivated by a measurement artifact.
+
+Position: let codecov converge, as it did on #1272 (50% -> 100.00%) and #1273
+(14.28% -> 100.00%). If patch still reds when the uploads finish, THEN the gap is
+real and I close it with a targeted test.
+
+    #1275  1 pass / 150 pending / 0 red   (cherry-picks, mergeable)
+    #1274  27 pass / 102 pending / 2 codecov (draft, converging)
