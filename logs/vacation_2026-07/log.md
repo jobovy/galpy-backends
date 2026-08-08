@@ -27860,3 +27860,43 @@ starts from the right line.
 
     #1269  126 pass / 26 pending, phantom only
     probe2 alive, 10 reported at 13:44
+
+### 2026-08-08 — #88 design settled (implementation next wake)
+
+Traced the crossing to its source. Per bisection iteration:
+
+    _radicand -> _evaluateplanarPotentials -> <adapter>._evaluate
+              -> Potential.__call__   @potential_physical_input
+                                      @backend_input("R","phi","t")   <- crosses
+
+**The trap I nearly walked into.** The obvious fix is "make `_radicand` use an
+undecorated evaluator" — but `_radicand`'s own docstring says it is *shared by
+the numpy integrands (xp=numpy, scalar r) and the backend panels*, and is
+"byte-identical on numpy". Editing it would silently change the numpy path,
+which is the one thing this whole branch must not do. The finding being
+backend-only does not make every fix backend-only.
+
+**Design that keeps both properties.** Parameterise rather than duplicate:
+
+    _radicand(xp, r, E, L, pot, evaluate=_evaluateplanarPotentials)
+
+* numpy callers pass nothing -> identical call, byte-identity preserved by
+  construction (not by testing afterwards);
+* `_calc_rperi_rap_backend` passes an evaluator that skips the decorator, with
+  the coercion hoisted **once** outside the loop.
+
+A second near-copy of `_radicand` would have been the easy route and exactly the
+duplication the standing audit rule forbids — a general-purpose helper wants one
+implementation, not a backend twin ([[audit-placement-and-duplication]]).
+
+Expected effect: ~981 -> single digits for `_calc_rperi_rap_backend`, removing
+~0.18 s of pure boundary per `actionsFreqs` call, eager only (traced already
+rolls into `lax.fori_loop`). The census entry is the acceptance test — deleting
+the `KNOWN_HOT` line is how the fix gets locked in.
+
+Deliberately NOT implementing this wake: two jobs in flight, and this touches a
+shared helper on a byte-identity-critical path. It wants its own slot, a
+numpy-hash A/B across the touched calls, and forced-backend runs on both arms.
+
+    #1269  133 pass / 19 pending, phantom only
+    probe2 alive, 12 reported at 18:33
