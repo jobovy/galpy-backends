@@ -29229,3 +29229,45 @@ Top caller now: `actionAngleVertical.py:f` at **476** — task #210's target, an
 correctly the only thing left standing in this defect class.
 
     develop  f1bb9f83  (slow-skip 98)
+
+### 2026-08-08 — #210 implemented; and I caught myself mislabelling an A/B
+
+Swapped the **6 backend-only** `evaluatelinearPotentials` sites in
+`actionAngleVertical.py` to the undecorated inner. Two things the plan did not
+predict, both caught by running rather than reading:
+
+* the inner is `(Pot, x, t=0.0)` — **no `use_physical` kwarg** (that comes from
+  the decorator), so the initial swap would have raised `TypeError`; dropped it
+  from all 6 calls;
+* the module imported only the *decorated* name, so the new references were a
+  latent `NameError`. My own guard condition (`"from ..potential.linearPotential
+  import" not in s`) was satisfied by the existing import line and skipped the
+  fix. Fixed, then **executed the numpy path** to prove the symbol resolves.
+
+Effect, measured on develop with only #210 applied:
+
+    aAVertical.Jz            1708 -> 1464   (-244)
+    aAVertical.actionsFreqs  1722 -> 1476   (-246)
+
+exactly the residual previously attributed to `actionAngleVertical:f`. The two
+fixes are **additive**: #1272 removes the 1464, #210 the 244.
+
+**The mislabelled A/B.** My first byte-identity run printed
+`=== BEFORE (develop) ===` — but that arm was `evdirect`, which is on **#1272's
+branch**, and which also *has* the C extension while the other arm does not. The
+hashes matched, so the conclusion happened to be right; the experiment was not
+the one I labelled. Re-ran it properly: **one worktree, one C-ext state, toggling
+only `actionAngleVertical.py`** between develop and the fix:
+
+    BEFORE (develop file)  108 values  875a794e...c7e4
+    AFTER  (#210 file)     108 values  875a794e...c7e4   IDENTICAL
+
+A matching number from the wrong comparison is the most dangerous kind, because
+nothing looks wrong. Checking `git rev-parse --abbrev-ref HEAD` in both arms is
+what surfaced it — the same provenance habit that caught the import shadow
+earlier ([[galpy-editable-install-import-shadow]]).
+
+Committed `4e775f10`. Seventh pre-commit rejection today (ruff-format), caught by
+the SHA check.
+
+    #1272  150 pending / 1 pass, no reds
