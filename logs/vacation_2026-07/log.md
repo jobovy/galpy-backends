@@ -26601,3 +26601,41 @@ change is what is buying the last six tests. Budget used: 59 of 150 minutes.
 Nothing to drive. Both PRs are progressing normally and the only red on either
 is the codecov upload phantom, which on #1267 is additionally impossible by
 construction (zero library files touched).
+
+### 2026-08-07 — ATTRIBUTION: the 5 sampling entries were ALREADY stale. Not my fix.
+
+Run VALID (0 of 5 skipped), 129 passed / 0 failed, 3613 s.
+
+    nodeid                                        WITH    WITHOUT   ratio
+    test_dehnendf_sample_flat_returnROrbit       178.6s     182.3s   1.02x
+    test_shudf_sample_flat_returnOrbit            57.3s      53.4s   0.93x
+    test_shudf_sample_flat_returnROrbit           30.6s      29.8s   0.97x
+    test_shudf_sample_flat_returnROrbit_rrange    64.2s      65.0s   1.01x
+    test_shudf_sample_powerrise_returnROrbit      60.4s      58.0s   0.96x
+                                                        median ratio 0.97x
+
+Within +-7% -- indistinguishable. **My fix has nothing to do with these five.**
+Pre-registered rule fires: separate ledger PR, and **#208 claims nothing**.
+
+This is the whole point of writing the rule down first. "My fix also un-defers 5
+tests" is a better story than "5 tests were already fine and I checked", and I
+had a plausible-looking supporting fact -- the without-fix arm ran 3613 s against
+the with-fix 1295 s. I noted at the time that whole-run slowness is not
+sampling-test slowness. It wasn't: the 2.8x is entirely the *moment* quadratures
+(surfacemass/sigma2/oortA, which the fix genuinely does speed up and which
+dominate the file), and the sampling tests are flat. Same number, opposite
+conclusion, depending on which tests you attribute it to.
+
+My original reasoning was right for the right reason -- the ledger comment said
+these are orbit-integration bound ("~300 orbits per call with no vectorization"),
+not `_ssp`-bound -- and I still measured it rather than trusting it. Both halves
+matter: the reasoning told me what to expect, the measurement is why I can say it.
+
+**Credit where it belongs:** these five went stale under the batched in-backend
+integrator / C-STM routing that landed earlier, not under #208.
+
+Follow-up queued (NOT now -- two PRs already open): a small ledger PR un-deferring
+these five, with the measured times and an explicit note that the cause is
+upstream of #208.
+
+`evdirect` restored: fix re-applied, all 5 slow-skip entries back.
