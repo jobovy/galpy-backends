@@ -28692,3 +28692,29 @@ needing a follow-up commit after review starts.
 
     #1270  78 pending / 74 pass, phantom only
     #1271  CI restarted on the guard commit
+
+### 2026-08-08 — self-audit caught my own duplication before it doubled
+
+Writing the vertical guard produced `_count_vertical_coercions`, a near-copy of
+the `_count_coercions` I had written for the planar guard an hour earlier. **Two
+copies of a general-purpose probe living in two specific test modules** is
+precisely what the standing audit rule forbids — and I had written the second one
+without noticing, while the rule was fresh from applying it to `_radicand`.
+
+Hoisted into `tests/backend_jit_helpers.py`, the shared module the
+`test_backend_*` files already import from (~8 adopters), as
+`count_boundary_crossings(fn, backend)`. Its docstring carries the rule that
+keeps the check honest: **always pair the zero-crossing assertion with a negative
+control that is expected to cross**, or a counter that quietly breaks makes
+everything pass.
+
+Sequencing, so the two branches do not collide on the same file: the helper lands
+in **#1271**, and the held vertical branch adopts it when it rebases onto
+post-#1271 develop. Adding it to both branches independently would have created a
+conflict in `backend_jit_helpers.py` for no benefit.
+
+Pushed `04a0f52b`. #1271 is now three commits: fix, guard, hoist.
+
+Fifth pre-commit rejection today (isort). Same catch, same one-line check.
+
+    #1270  73 pending / 79 pass, phantom only
