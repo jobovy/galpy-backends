@@ -28559,3 +28559,28 @@ suggestive: those are the modules whose consumers are loops by construction.
     vertical gates:  torch 182 passed, jax 180 passed, numpy still running
     #1270  131 pending / 21 pass, phantom only
     #1271  149 pending, no reds
+
+### 2026-08-08 — #209 all three gates GREEN; #1270 notebook flake queued for re-run
+
+    numpy  test_potential.py + test_actionAngle.py   1492 passed / 0 failed
+    jax    test_actionAngle.py --backend=jax          180 passed / 0 failed
+    torch  test_actionAngle.py --backend=torch        182 passed / 0 failed
+
+Identical counts to #1271's gates, which is the expected result for a change that
+is byte-identical on numpy and only removes boundary crossings elsewhere.
+`feat/vertical-adapter-nodecorator` (`6c60c59f`) is fully validated and waiting
+only on a PR slot.
+
+**#1270 picked up `run-notebooks (3.12)`.** Did not need the log to classify it:
+#1270 changes **one plain-text ledger file** and no code, so it cannot affect
+notebook execution. Environmental, in the known VizieR-flake family
+([[no-rerun-vizier-notebook-flakes]] — the policy is re-run, never cancel).
+
+`gh run rerun --failed` refused: *"This workflow is already running"*. Correct —
+other jobs in that run are still in progress, and GitHub will not re-run a subset
+mid-flight. So the re-run is **queued behind the run completing**, not forgotten.
+Worth writing down because "I tried to re-run and it did nothing" is exactly the
+kind of half-action that silently becomes a stuck PR.
+
+    #1270  104 pending / 47 pass, 2 reds (both known: codecov phantom + notebook flake)
+    #1271  149 pending, no reds
