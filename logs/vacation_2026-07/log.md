@@ -30983,3 +30983,43 @@ of stale rationale that sends the next person porting a fix they do not need.
 
     #1275  38 pass / 114 pending / project -31.11% -> -15.01% (converging)
     #1274  fully green: patch 100.00%, project 99.93% (+0.00%)
+
+### 2026-08-08 (later) — #1275 pre-audited; #207 held off the wire on purpose
+
+Both PRs are runner-bound, so this wake was audit + preparation rather than
+merges.
+
+**#1275 audit — clean.** Three commits, two of them main fixes brought across:
+
+* `elif` -> `if` in `Orbits._integrate_impl`: the interpSphericalPotential
+  range warning was chained to the FDMDynamicalFrictionForce check, so it never
+  fired when a composite contained both. Dispatches on `isinstance`, i.e.
+  static, so it is *outside* the `if`->`xp.where` array-input class — worth
+  stating explicitly, since a bare `elif`->`if` in a diff looks like exactly
+  that class until you check what it branches on.
+* `self.alpha/self.beta` hoisted out of the `conc is None and rmax is None`
+  branch in NFWPotential. This moves them from *unset* to `1`/`3` on the
+  conc/rmax paths, which is a behaviour change, so I checked whether anything
+  keys off their absence: `grep -rn "hasattr(.*alpha|.*beta)" galpy/` returns
+  nothing. Safe.
+* the expired `_NUMPY_1_23` tolerance conditional, with `dx=1e-6` retained on
+  `test_Rzderiv` for the backend.
+
+No new helpers, so no placement question; no duplication introduced.
+
+**#207 deliberately not pushed.** `build.yml` triggers on `push` with
+`paths: ['**']`, so pushing `feat/anyaxisym-zforce-peak` would start a full
+build run on a branch with no PR — and #1275 is already starved for runners
+(43 pass / 109 pending, project stuck at -15.01% because no new coverage
+uploads have landed). The branch stays local until a slot frees. PR body is
+written and waiting at `/var/tmp/207-pr-body.md`.
+
+This is the second time this wake that reading the trigger config beat
+assuming: the first was `--runxfail`, which I reached for to see the ledgered
+failures' real errors. It disables xfail handling *globally*, so galpy's own
+intentional xfails also report as F — the raw count is meaningless and only the
+junitxml intersected with the ledger nodeids is usable.
+
+    #1275  43 pass / 109 pending / audit DONE, merge-ready on green
+    #1274  117 pass / fully green / Jo's review
+    #207   committed eee43498, held local
