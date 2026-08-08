@@ -27701,3 +27701,42 @@ my branch.
 
     #1269  90 pass / 62 pending, phantom only
     #125 shard run: alive, 121 tests in at 9:49
+
+### 2026-08-08 — #125 measured (9.1s); held rather than opened, probe widened
+
+Shard-context run finished clean: **223 passed, 0 skipped, 0 failed** in 886.8s.
+
+    test_king_sigmar   in-file  9.1s   (3.0% of the 300s cap)
+                       solo    21.9s
+                       ledger 1028.6s   <- 113x stale
+
+Faster in-file than solo, so the margin rule passes with room to spare. Slowest
+test in the whole file is 69.4s; nothing is near the cap.
+
+**Did not open the PR.** Checked first and #1269 already edits
+`tests/backend_slow_skip.txt`, so a concurrent #125 would put two open PRs on
+one file — against the disjoint-files rule in [[pr-granularity-less-atomic]],
+and needing a rebase the moment either merges. Folding the line into #1269
+instead would restart CI that is 113/152 through, which is real waste on a
+runner-constrained repo.
+
+So the line is committed and **held locally** on `feat/undefer-king-sigmar`
+(`3f4582d4`, unpushed). A one-line PR is also exactly what the granularity
+policy discourages, which turns the constraint into an opportunity: spend the
+wait finding *more* stale entries and land them as one batch at the same CI
+cost.
+
+Projected composition after #1269 (**104**, independently reproducing the
+earlier estimate):
+
+    25 jax test_orbit.py          19 jax test_noninertial.py
+    16 jax test_potential.py      13 torch test_orbit.py
+     6 jax test_interp_potential.py   5 jax test_pv2qdf.py
+
+Picked `test_interp_potential.py` + `test_pv2qdf.py` (11 jax entries) to probe:
+both had their subjects backend-migrated (#112 interp, Pdf.4 qdf), which is the
+same setup that made `king_sigmar` stale. Skipped `test_orbit.py`'s 25 — #1267
+already un-deferred 100 there, so the residue is the genuinely slow tail — and
+`test_noninertial.py`'s 19, which are the real timeouts re-filed in #198.
+
+    #1269  113 pass / 39 pending, phantom only
