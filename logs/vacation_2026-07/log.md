@@ -26212,3 +26212,33 @@ on a sub-millisecond call -- the known flat per-call overhead (#79). The
 coercion count is the discriminator; the timing column is decoration. Same trap
 I flagged in the first sweep, and it is worth re-stating because the numbers
 *look* like the more alarming story.
+
+### 2026-08-07 — #1266 codecov cleared itself; merge audit done in advance
+
+    #1266  {'pending': 36, 'pass': 117}     <- codecov/project red is GONE
+    #1267  {'pass': 56, 'fail': 1, ...}     <- still the phantom, earlier in its run
+
+The phantom healed with no intervention, as diagnosed three samples ago. Worth
+noting the counterfactual: the reflex on a red merge-gate is to go find code to
+fix, and any "fix" pushed at it would now look like it worked. Diagnosing it as
+an artefact and *doing nothing* was the correct action and produced the correct
+outcome -- but only the discriminator (`lines` identical both sides) made that
+distinguishable from negligence at the time.
+
+Ran the merge audit now rather than after the last 36 checks land, so merging is
+immediate when it goes green:
+
+  * **if -> xp.where array-input class**: 0 data-dependent branches on arrays.
+    `if jit_mode() != "off"` branches on a mode STRING, resolved before any
+    tracing -- not a value-dependent branch on array contents. Clean.
+  * **duplication**: mirrors the Windows escape three lines above deliberately
+    and says so in the comment. It *reuses* `jit_mode()` rather than
+    reimplementing a trace check. Clean.
+  * **helper placement**: `jit_mode` comes from `..backend`, the right home for
+    a backend-state query -- no general helper defined in a specific module. The
+    import is function-local with a stated reason (keeps `galpy.util.multi`
+    importable without `galpy.backend`). Clean.
+  * slow-skip edit: 3 cured entries out, 2 measured ones in, A/B numbers in the
+    comment.
+
+Verdict: mergeable as soon as CI finishes. Attribution arm at 38 items.
