@@ -28584,3 +28584,23 @@ kind of half-action that silently becomes a stuck PR.
 
     #1270  104 pending / 47 pass, 2 reds (both known: codecov phantom + notebook flake)
     #1271  149 pending, no reds
+
+### 2026-08-08 — #1270 notebook flake re-run, cleared
+
+The notebooks workflow finished (one run failed, a sibling succeeded), which is
+what `gh run rerun --failed` had been waiting on. Re-ran run `31246381080`;
+`run-notebooks (3.12)` dropped off the red list immediately, leaving only the
+codecov phantom:
+
+    before   reds: codecov/project, run-notebooks (3.12)
+    after    reds: codecov/project
+
+The deferred re-run from the previous wake was the right call rather than a
+missed one — GitHub genuinely will not re-run a subset mid-run, so retrying
+earlier would have failed again. Tracking it explicitly is what made it happen
+on the first opportunity instead of being noticed several wakes later.
+
+    #1270  95 pending / 54 pass, phantom only
+    #1271  149 pending, no reds
+    #209   all 3 gates green, held
+    #210   scoped, queued
