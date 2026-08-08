@@ -26588,3 +26588,16 @@ Still no claim. `-v` has given me outcomes (all PASSED, so none hit the cap) but
 the pre-registered rule is about **durations** -- whether they sit near the
 with-fix 178.6/64.2/60.4/57.3/30.6 or well above -- and those come from the
 junitxml at the end. 16 tests to go.
+
+### 2026-08-07 — arm past the point where the last one died
+
+    arm    ALIVE 58:48, 123/129 reported  (the killed run stopped at 123)
+    #1267  149 pass / 4 pending / codecov phantom, no real reds
+    #1268  149 pending / 2 pass, no real reds
+
+123 is exactly where the previous attempt was killed, so the `timeout 9000`
+change is what is buying the last six tests. Budget used: 59 of 150 minutes.
+
+Nothing to drive. Both PRs are progressing normally and the only red on either
+is the codecov upload phantom, which on #1267 is additionally impossible by
+construction (zero library files touched).
