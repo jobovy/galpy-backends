@@ -29138,3 +29138,28 @@ whether a **particular CI shard** has a framework (job-defined, not something a
 log grep would have told me either). Only the first was a real risk.
 
     #1271  137 pass / 15 pending, project phantom only
+
+### 2026-08-08 — verification debt paid in CI; #1271's phantom cleared (4 for 4)
+
+**The guards demonstrably executed in CI**, not just locally:
+
+    job 93088012011  build (ubuntu-latest, 3.14, tests/test_backend*.py)
+      RAN: test_planar_adapter_forwards_do_not_recross_boundary_jax
+      RAN: test_planar_adapter_forwards_do_not_recross_boundary_torch
+      6616 passed, 329 skipped, in 1:13:43
+
+Both arms ran, which mildly corrects what I expected: I had assumed one would
+skip per [[ci-single-backend-install-blindspot]], but that pattern describes the
+*all-backend* shards; this build job carries both frameworks. The assumption was
+conservative rather than wrong, and checking cost one command.
+
+That closes the thread I opened two wakes ago ("green CI does not prove the
+guards ran"). Chain of evidence for the guard now: local pass, local A/B failure
+on develop, local skipif probe with a framework hidden, and CI execution by name.
+
+**#1271 has no reds** — `codecov/project` cleared with no intervention. That is
+**four phantoms, four self-heals** today (#1269 project, #1270 project, #1271
+patch, #1271 project). Declining to rebase around them was right every time, and
+each rebase would have cost a force-push on an open PR.
+
+    152 pass / 2 pending (one test_backend build + all-clear)
