@@ -27487,3 +27487,36 @@ and that assumption is exactly what the numbers above put in doubt.
 
 Not acting on it: two PRs are open, and the next step is a measurement (count
 sigmar calls and distinct trace triggers in the real test), not a change.
+
+### 2026-08-08 — #125 scoping: three candidates eliminated, cause NOT found
+
+Correcting my own previous entry first: I profiled `kingdf.sigmar`, but
+`test_king_sigmar` **does not call it**. The test builds a KingPotential and a
+kingdf, samples 1e6 stars three times, and calls
+`check_sigmar_against_jeans` — which uses `jeans.sigmar(pot, r)`. I scoped the
+wrong function and said "scoping #125" while doing it.
+
+Measured the three plausible culprits:
+
+    dfk.sample  WARM, flat in n: 1.808s @1k, 1.813s @5k, 1.872s @20k
+                -> ~3.4 us/star marginal; n=1e6 x3 extrapolates to ~16 s
+    jeans.sigmar WARM forced-jax 0.038 s  (numpy 0.099 s -- jax is FASTER)
+                -> the test's ~108 calls = ~4.1 s
+    kingdf.sigmar  not called by this test
+
+**~20 s accounted for against a ledgered 1028.6 s.** I have not found the cause.
+
+Stating that plainly instead of nominating a suspect. Today I have had four
+mechanism hypotheses overturned by measurement on #208 alone; the pattern is
+that I am good at finding *where* and poor at guessing *why*, and the discipline
+that keeps working is refusing to name a cause before the numbers do.
+
+Also worth flagging: **task #125's premise may be wrong.** It says "vectorize
+jeans/KingPotential", and jeans.sigmar is already faster on jax than on numpy.
+Whatever costs 1000 s is somewhere I have not looked.
+
+**Next step, when a slot frees:** run `test_king_sigmar` itself under cProfile
+(with the slow-skip lifted) rather than guessing which of its parts is slow. One
+17-minute run answers what four targeted probes did not. Not doing it now —
+two PRs are open and this would be a third stream of long-running local compute
+competing with the CI I am shepherding.
