@@ -27520,3 +27520,42 @@ Whatever costs 1000 s is somewhere I have not looked.
 17-minute run answers what four targeted probes did not. Not doing it now —
 two PRs are open and this would be a third stream of long-running local compute
 competing with the CI I am shepherding.
+
+### 2026-08-08 — #125: the 1028.6 s entry is STALE. The test takes 21.9 s.
+
+Profiled `test_king_sigmar` itself under forced jax, after four targeted probes
+accounted for only ~20 s of a ledgered 1028.6 s:
+
+    DONE test_king_sigmar forced-jax: 21.9 s
+      3,491,817 function calls in 21.832 s
+        sphericaldf.sample        5.05 s cum   (3 calls, 1e6 stars each)
+        backend/interpolate.eval_ppoly  7.01 s cum (666 calls)
+        _sample_v                 3.26 s cum
+
+**21.9 s, not 1028.6 s.** My probes were right and the *ledger entry* was wrong —
+I spent the last few wakes hunting for a thousand seconds that no longer exist.
+
+Two things worth separating:
+
+*What I got right.* The probes said ~20 s and the truth is 21.9 s. Refusing to
+nominate a suspect when the numbers did not add up was correct: there was no
+suspect to find, and any story I invented would have been fiction fitted to a
+stale premise.
+
+*What I got wrong.* I never questioned the 1028.6 s itself. It came from the
+ledger comment, I treated it as ground truth for four probes, and the whole
+"where does the time go" investigation presupposed it. The same staleness I have
+spent all session finding in slow-skip entries was sitting in the number driving
+my search. **A measurement someone else recorded is evidence about the past, not
+the present** -- exactly what [[ledger-staleness-sweep-from-artifacts]] exists
+for, applied to everything except the number I was reasoning from.
+
+**Consequence for #125:** its premise ("vectorize jeans/KingPotential" to make
+this fast enough) is void. `jeans.sigmar` is already faster on jax than numpy
+(0.038 s vs 0.099 s), and the test fits inside the 300 s cap with a 14x margin.
+This is an un-defer, not an optimisation.
+
+Not acting yet: needs the whole-file measurement in the real shard context, the
+way #1267 and #1269 were done -- one nodeid measured in isolation is not the
+context the cap applies to ([[handpicked-nodeid-batch-is-not-a-context]]). That
+is the next PR after #1268/#1269 land.
