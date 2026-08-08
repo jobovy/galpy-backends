@@ -28820,3 +28820,35 @@ highest-yield slice, so "sweep everything" and "do nothing more" are no longer
 the only two choices.
 
     #1270  50 pending / 102 pass, phantom only
+
+### 2026-08-08 — #1270 phantom cleared; pre-audit done; my diff parser was wrong
+
+**#1270 has no reds.** 127 pass / 26 pending — the `codecov/project` phantom
+self-healed with no intervention, exactly as the stale-base diagnosis said and
+exactly as #1269 did. Not rebasing to "fix" a phantom has now been the right call
+twice.
+
+Pre-audited so the merge is instant when it goes green:
+
+    files                     tests/backend_slow_skip.txt only  (+0/-6)
+    code files                0
+    if->xp.where array-input  N/A
+    duplication               N/A
+    helper placement          N/A
+    entries                   104 - 6 = 98   (matches the PR title)
+
+**Caught my own tooling lying.** My patch parser reported **7** entries removed
+against `gh`'s `+0/-6`. Chased the one-line discrepancy instead of taking the
+number: `gh pr diff --patch` emits the PR body before the diff, and my skip list
+excluded `---`/`+++` but not a body line beginning `--timeout=300`. Counted as a
+deletion.
+
+The same parser produced the "-5 entries" figure for #1269 — that one happened to
+be corroborated independently (develop 109 -> 104), so it was right, but by luck
+of cross-checking rather than by the parser being sound. Rule going forward:
+**cross-check any hand-rolled diff count against `gh`'s own file-level +/-
+summary**; when they disagree, the hand-rolled one is the suspect.
+
+    #1271  19 pass / 132 pending, 2 codecov reds (project AND patch) -- too early
+           to classify: coverage uploads accumulate across jobs, so a patch red at
+           13% of checks complete is expected noise, not a finding yet
