@@ -61,14 +61,26 @@ def _install_spy(counter):
 
     real = _bi.coerce_coords
 
+    # Frames to walk past when attributing a crossing. galpy/backend/ is the
+    # boundary itself; util/conversion.py is the units decorator that wraps
+    # nearly every public method, so blaming it says only "a decorated method
+    # was called" -- true of everything, and useless for finding the caller
+    # that actually loops.
+    _SKIP = ("galpy/backend/", "galpy/util/conversion.py")
+
     def spy(xp, *coords):
         if xp is not numpy:
             f = sys._getframe(1)
-            while f is not None and "galpy/backend/" in f.f_code.co_filename:
-                f = f.f_back  # attribute to the first frame OUTSIDE galpy.backend
+            while f is not None and any(s in f.f_code.co_filename for s in _SKIP):
+                f = f.f_back
             where = "?"
             if f is not None:
-                where = f"{f.f_code.co_filename.split('galpy/')[-1]}:{f.f_code.co_name}"
+                name = f.f_code.co_name
+                # A decorator's inner function is usually called "wrapper"; if we
+                # landed on one anyway, keep the line number so it is locatable.
+                if name in ("wrapper", "<lambda>"):
+                    name = f"{name}:{f.f_lineno}"
+                where = f"{f.f_code.co_filename.split('galpy/')[-1]}:{name}"
             counter[where] += 1
         return real(xp, *coords)
 
