@@ -245,3 +245,4 @@ merge (main refactor+time-dep vs backend migration; numpy byte-identical, backen
 preserved). New numpy-only features ledgered (jax 121, torch 802) pending Phase-2
 backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). -->
 | #1269 | slow-skip: un-defer 5 measured-stale jax diskdf sampling entries (109 -> 104) | MERGED `ffde6f86` |
+| #1270 | slow-skip: un-defer 6 measured-stale jax entries (104 -> 98) | MERGED `1726834e` |

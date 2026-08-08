@@ -29017,3 +29017,26 @@ for each.
 
     #1270  147 pass / 6 pending, no reds
     #1271  75 pass / 77 pending, project phantom only
+
+### 2026-08-08 — #1270 MERGED: slow-skip 104 -> 98
+
+Fully green: **154 pass / 0 pending / 0 fail, CLEAN**. The decisive
+`backend jax test_qdf/test_pv2qdf` shard passed, which is the part that matters:
+it confirms the in-file margin measurement (61.8-151.8 s locally against a 300 s
+cap) survives the real CI context, rather than only my laptop's.
+
+Merged as `1726834e`; develop's slow-skip file is now **98 entries**, verified by
+counting on the merged tree rather than trusting arithmetic.
+
+    210 -> 109 (#1267) -> 104 (#1269) -> 98 (#1270)
+
+Both codecov phantoms on this PR cleared without intervention, as diagnosed.
+That is now three for three (#1269, #1270 project; #1271 patch) — declining to
+rebase around a phantom has been right every time, and rebasing would each time
+have cost a force-push on an open PR.
+
+Audit was done in advance (one plain-text ledger file, zero code files, all three
+axes N/A, 104 - 6 = 98 cross-checked against `gh`'s own +/- summary after my
+parser miscounted), so the merge needed no fresh work.
+
+    #1271  124 pass / 28 pending, project phantom only -- next in the queue
