@@ -28947,3 +28947,27 @@ memory, and was wrong). Recorded the diagnosis order too:
 
     #1270  140 pass / 13 pending, no reds
     #1271  42 pass / 110 pending, project phantom only
+
+### 2026-08-08 — the check that decides #1270 is the one exercising the change
+
+144 pass / 9 pending, no reds. Looked at *which* 9 rather than treating them as
+interchangeable:
+
+    backend jax tests/test_qdf.py tests/test_pv2qdf.py   <- THE one
+    backend jax  test_orbit x2, test_quantity
+    backend torch test_orbit, test_potential
+    build 3.12, build 3.14
+    all-clear   (gates on the rest)
+
+The `pv2qdf` shard is where the five un-deferred entries actually run under CI's
+timeout. Everything else is regression surface; that shard is the *hypothesis
+test* for the measurement this PR is built on — 61.8-151.8 s locally against a
+300 s cap, with CI ~0.71x local
+([[ci-faster-than-devbox-for-jax-shards]]).
+
+If my margin reasoning is wrong, that is the check that says so, and it will say
+so as a timeout rather than an assertion — the same distinction that told me the
+6 `test_interp_potential` entries were genuinely slow rather than masking a
+defect. Waiting on it is not bureaucracy.
+
+    #1271  48 pass / 104 pending, project phantom only
