@@ -28852,3 +28852,29 @@ summary**; when they disagree, the hand-rolled one is the suspect.
     #1271  19 pass / 132 pending, 2 codecov reds (project AND patch) -- too early
            to classify: coverage uploads accumulate across jobs, so a patch red at
            13% of checks complete is expected noise, not a finding yet
+
+### 2026-08-08 — classified #1271's codecov/patch red from config, not from vibes
+
+Two codecov reds appeared on #1271 and the tempting story was that my new test
+helper is uncovered — plausible, because `backend-tests.yml` uploads no coverage
+([[backend-branches-need-test-backend-coverage]]), so anything only exercised by
+backend shards genuinely would be.
+
+Checked the config instead of reasoning:
+
+    .coveragerc  omit = tests/*   (with a comment explaining the forked-child reason)
+    CI           pytest --cov galpy
+
+`tests/*` is omitted and the scope is `galpy`, so **`backend_jit_helpers.py` and
+the guard tests contribute zero measurable lines**. Patch coverage on #1271 can
+only concern the 5 changed lines in `galpy/potential/planarPotential.py`, and
+those are exercised by the ordinary numpy `test_potential.py` in
+coverage-uploading build jobs.
+
+At 24 of 153 checks complete, most of those jobs have not uploaded. So: **upload
+noise, expected to clear**, not a real gap — the same discriminator as the
+project phantom, applied to patch. Recording the prediction so the next wake
+either confirms it or catches me being wrong.
+
+**#1270 is red-free and pre-audited**; 128 pass, 25 pending (all-clear among
+them). It merges the moment the last checks land.
