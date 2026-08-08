@@ -26833,3 +26833,18 @@ Two things this establishes that the hand-picked sweep could not:
 Still not a proof of absence -- five workloads, and the instrumentation only
 sees `coerce_coords`, so a boundary that skips it would be invisible. But it is
 evidence of a different kind than "I checked the places I thought of".
+
+### 2026-08-07 — #1268 patch prediction still standing (checked the falsifier)
+
+    #1268  head 48.59% -> 76.33%   patch 70.0% -> 70.0% (7/10)
+    test_backend*.py builds: 0 of 2 complete
+
+Checked the thing that would falsify the prediction, not the thing that would
+confirm it: patch is frozen at 7/10 **and** neither of the two builds that
+execute the missing statements has finished. If those were done and patch were
+still 70%, the prediction would be dead and I would owe three covered lines.
+They are not, so it stands -- for now, on the stated grounds, not because the
+number looks reassuring.
+
+    #1267  152 pass / 2 pending, no reds, All-backend tests still QUEUED
+    #1268  34 pass / 117 pending, both reds codecov
