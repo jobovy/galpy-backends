@@ -27442,12 +27442,24 @@ through in one pass instead of hunted across tasks and ledger comments.
 
    so #211 recovers about 70% of that slowdown.
 
-   → **Question, now much narrower: land the four measured fixes (#1271 done,
-   #1272 held, #210, #211) and skip the sweep?** That is what I recommend — the
-   34 candidates are mostly cold and the hot ones share a handful of root causes.
-   #211 additionally needs a call on whether to add the 4 missing undecorated
-   inners (`_evaluateR2derivs` / `_evaluatez2derivs` / `_evaluateRzderivs` /
-   `_evaluateDensities`); only 3 of the 7 exist today.
+   → **Question, now much narrower: land the four measured fixes and skip the
+   sweep?** That is what I recommend — the candidates are mostly cold and the hot
+   ones share a handful of root causes. Status as of 2026-08-08:
+
+       #1271  planar adapters          MERGED  f1bb9f83
+       #1272  vertical adapters        MERGED  7418aed5
+       #1273  actionAngleVertical      OPEN, audited, CI running
+       #211   interpRZPotential        patch written + measured, needs you
+
+   **#211 needs less than I first said.** I originally flagged "add the 4 missing
+   undecorated inners" as a decision. Measured afterwards: the **default** case
+   needs none of them — `interpPot`/`interpRforce` go 30603 -> 0 using the
+   already-existing `_evaluatePotentials`/`_evaluateRforces` (3 call sites,
+   9.69 s -> 4.92 s, grid sha256 unchanged). Only `interpDens` / `interpR2deriv` /
+   `interpvcirc` would need `_evaluateR2derivs` / `_evaluatez2derivs` /
+   `_evaluateRzderivs` / `_evaluateDensities`, which do not exist. So it splits
+   into a small no-decision part and an optional follow-up — and it must land
+   **after** #212 (item 9), which touches the same call sites.
 
 9. **[added 2026-08-08] `interpRZPotential` + units is a REAL pre-existing numpy
    bug — fix is written and tested, needs your target-branch call** (task #212).
