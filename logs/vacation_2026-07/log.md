@@ -28988,3 +28988,32 @@ says. The verdict comes from the shard's result, not its clock
 
     #1270  145 pass / 8 pending, no reds
     #1271  53 pass / 99 pending, project phantom only
+
+### 2026-08-08 — closed the census gap I had left open on the vertical path
+
+I extended the census to actionAngle/qdf/orbit earlier today and then measured
+`actionAngleVertical` **ad hoc**, outside the tool. So the detector still could
+not see the hottest site in the codebase — the same blind-spot shape I had just
+finished fixing, one module over. Added `aAVertical.Jz` / `.actionsFreqs` as
+workloads.
+
+On develop it now prints the entire defect class in a single view:
+
+    2940  potential/verticalPotential.py:_evaluate    <- #209 fixes (held)
+    1968  potential/planarPotential.py:_evaluate      <- #1271 fixes (open)
+     476  actionAngle/actionAngleVertical.py:f        <- #210 scoped
+
+with all three labelled `known hot` against their tracking tasks and exit 0, so
+the tool still fails only on something *new*.
+
+The general lesson, which is why this is worth an entry: **a measurement I take
+by hand does not extend the detector.** I had recorded 1708 crossings in the log
+and the task, felt the site was "covered", and it was not — nothing would have
+caught a regression there. Findings live in prose; coverage lives in the tool,
+and only writing it into the tool moves the second one.
+
+Deleting these `KNOWN_HOT` entries as #1271/#209/#210 land is the acceptance test
+for each.
+
+    #1270  147 pass / 6 pending, no reds
+    #1271  75 pass / 77 pending, project phantom only
