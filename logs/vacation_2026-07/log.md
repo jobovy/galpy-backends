@@ -26468,3 +26468,21 @@ stale-description failure mode ([[pr-description-drifts-after-rework]]).
 Attribution arm alive (99.5% CPU, 8:18 elapsed, 14 tests in) -- it is deep in the
 slow tests, which is where the without-fix arm was always going to spend its
 time.
+
+### 2026-08-07 — #1266 two checks from green; arm confirms the -v change was right
+
+    #1266  151 pass / 2 pending / 0 fail   (one jax shard + all-clear)
+    arm    ALIVE pid=664474 cpu=99.8 elapsed=30:21 log_age=65s, 28 tests reported
+
+The `-v` change is already earning its keep: I can see the arm has reported 28
+tests and **has not yet reached any sampling test**, which the previous dotted
+run could never have told me. That also explains the earlier death -- at ~28
+tests in 30 min, the without-fix arm is running far slower than the with-fix one
+(which did all 129 in 1295 s), so the 3600 s budget was never going to be enough
+and the 9000 s one is the right order of magnitude.
+
+Note what that does NOT license: "the without-fix arm is slower overall" is not
+"the sampling tests are slower", and the sampling tests are the ones the
+pre-registered rule is about. The file also contains the two oortA tests that
+time out at 300 s each without the fix, which alone distorts any whole-run
+comparison. Still no claim until those five nodeids report.
