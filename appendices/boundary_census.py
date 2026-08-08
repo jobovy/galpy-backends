@@ -19,17 +19,42 @@ Reading the output
 The signature of the bug is a crossing count in the **tens of thousands**. A
 healthy call site is single digits to low tens.
 
-Sweep of the 15 built-in workloads, 2026-08-08, C extension loaded, x64 on:
+Sweep of the built-in workloads, 2026-08-08, C extension loaded, x64 on, with
+the planar (galpy #1271) and vertical (#1272) adapter fixes applied:
 
-    jax    every df/potential/orbit/qdf workload <= 84;  aAStaeckel 0
+    jax    every df/potential/orbit/qdf workload <= 112;  aAStaeckel 0
     torch  same shape, max 10
-    OUTLIER: aASpherical.actions 989, .actionsFreqs 1023
+    residual: aAVertical 244/246 and aAAdiabatic 251, all one closure (#210)
 
-``actionAngleSpherical`` runs a scipy quadrature loop that evaluates the
-potential ~1000 times per call, one scalar crossing each. It is listed in
-``KNOWN_HOT`` (galpy task #88) so it does not mask a *new* regression. The
-comparison that localises it: ``actionAngleStaeckel``, which does the same job
-vectorized, scores **0**.
+``actionAngleSpherical`` was the original outlier at 989/1023: it runs a scipy
+quadrature loop that evaluates the potential ~1000 times per call, one scalar
+crossing each. It went to **5/23** when #1271 stopped the planar adapters
+forwarding through the decorated 3D API, and its ``KNOWN_HOT`` entry was deleted
+-- that deletion is how the fix is locked in. The comparison that localised it
+originally: ``actionAngleStaeckel``, which does the same job vectorized, scored
+**0** throughout.
+
+How big is the rest of the problem? (sweep, 2026-08-08)
+-------------------------------------------------------
+A static scan found 96 internal call sites reaching a decorated entry point, 34
+of them inside a loop -- a tempting library-wide sweep. Measuring 27 previously
+uncensused workloads (potential root-finders, orbit derived quantities, two more
+action-angle families, five more DFs, streams) instead showed the cost is
+**concentrated, not diffuse**: with the planar (galpy #1271) and vertical
+(#1272) adapter fixes in, every one of the 27 scored <= 153 except
+``actionAngleAdiabatic``, and its residual was the *already-identified*
+``actionAngleVertical`` closure (#210).
+
+Measured through the three fixes, C extension loaded, x64 on::
+
+    workload                pre-#1271   +#1271/#1272   +#210
+    aAAdiabatic.actions          4166            251       9
+    aAVertical.Jz                1708            244       0
+
+``actionAngleAdiabatic`` was never a target -- it is a 460x improvement that
+falls out of fixing the two adapters plus the closure. That is the argument
+against the sweep: the 34 candidates are mostly cold, and the hot ones share a
+handful of root causes.
 
 **The wall-clock column is not the finding** and is printed only for context. A
 sub-millisecond numpy call against a first-call jax trace/compile shows ratios
@@ -126,6 +151,7 @@ def census(fn, backend="jax"):
 
 def _workloads():
     from galpy.actionAngle import (
+        actionAngleAdiabatic,
         actionAngleSpherical,
         actionAngleStaeckel,
         actionAngleVertical,
@@ -148,6 +174,7 @@ def _workloads():
     from galpy.potential import toVerticalPotential
 
     aAVert = actionAngleVertical(pot=toVerticalPotential(MWPotential2014, 1.0))
+    aAAd = actionAngleAdiabatic(pot=MWPotential2014, c=False)
     qdf = quasiisothermaldf(
         1.0 / 3.0, 0.2, 0.1, 1.0, 1.0, pot=MWPotential2014, aA=aAS, cutcounter=True
     )
@@ -178,6 +205,12 @@ def _workloads():
         ("qdf.sigmaR2", lambda: qdf.sigmaR2(1.0, 0.1)),
         ("Orbit.E", lambda: o.E(pot=MWPotential2014)),
         ("Orbit.L", lambda: o.L()),
+        # Added 2026-08-08 after an exploratory sweep of 27 previously-uncensused
+        # workloads. Only these three earned a permanent slot; the other 24 all
+        # scored <= 153 and would just pad the run. See the module docstring.
+        ("aAAdiabatic.actions", lambda: aAAd(1.0, 0.1, 1.1, 0.0, 0.1)),
+        ("Potential.rguiding", lambda: o.rguiding(pot=MWPotential2014)),
+        ("Potential.rE", lambda: nfw.rE(-1.0)),
     ]
 
 
@@ -189,11 +222,6 @@ HOT = 1000
 # otherwise the detector is permanently red and stops being a regression signal.
 # Removing an entry here is how a fix gets locked in.
 KNOWN_HOT = {
-    # Measured 2026-08-08: 981 of the 989 come from _calc_rperi_rap_backend,
-    # i.e. the EAGER bisection loop re-entering the decorated potential once per
-    # iteration -- not the quadrature (4 and 8) and not the numpy branch, which
-    # is a separate `else:` and untouched.
-
     # verticalPotential adapters forward through the decorated 3D API; fixed on
     # feat/vertical-adapter-nodecorator (task #209, 1708 -> 244). The residual
     # after that fix is actionAngleVertical's own bisection closure (task #210).

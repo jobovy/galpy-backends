@@ -29530,3 +29530,45 @@ Both re-runs refused ("workflow is already running"); both are queued behind
 their runs completing, tracked the same way as #1270's notebook flake.
 
     #1272  80 pass / 69 pending; 2 codecov (early-upload) + 2 external macOS
+
+### 2026-08-08 — sweep: the boundary defect is CONCENTRATED, not diffuse (answers item 8)
+
+Item 8 asked Jo to choose between three measured fixes and a sweep of the 34
+loop-resident call sites. Rather than leave that on speculation while CI ran, I
+measured 27 previously-uncensused workloads: potential root-finders (rl/rE/LcE/
+rtide/ttensor/rhalf/rvir), orbit derived quantities (rap/zmax/e/Jacobi/ER/
+rguiding), two more AA families, five more DFs (shu/king/osipkov-merritt/
+constantbeta/isotropic), and streamspraydf.
+
+**Every one scored <= 153** with #1271+#1272 in — except `aAAdiabatic`, whose
+residual was the *already-identified* #210 closure. A/B'd rather than trusted
+to attribution:
+
+    workload                pre-#1271   +#1271/#1272   +#210
+    aAAdiabatic.actions          4166            251       9
+    aAVertical.Jz                1708            244       0
+
+`actionAngleAdiabatic` was never a target — a **460x** reduction falls out of
+the three fixes. That is the argument against the sweep: the 34 candidates are
+mostly cold, and the hot ones share a handful of root causes. Item 8 updated
+from a question into a recommendation.
+
+**The run also caught two stale things in my own tool**, both found by reading
+output rather than assuming:
+
+* `aASpherical` is documented as the headline outlier at 989/1023. It now scores
+  **5/23** — #1271 fixed it and its `KNOWN_HOT` entry was correctly deleted, but
+  the docstring and an orphaned comment still described the old world. A
+  detector whose docs advertise a fixed defect trains you to ignore it.
+* Promoted only 3 of the 27 workloads into the committed census (aAAdiabatic,
+  rguiding, rE). The other 24 would pad every future run to no signal.
+
+**Process note — the shadow bit me again.** First sweep printed
+`PROVENANCE: /var/tmp/streamtorch/galpy` while I ran with cwd=evdirect:
+`python3 script.py` sets `sys.path[0]` to the *script's* directory, not the cwd,
+so the editable install won ([[galpy-editable-install-import-shadow]]). The tell
+was in the data — `planarPotential:_evaluate 2940` and
+`verticalPotential:_evaluate 968`, both sites #1271/#1272 already fix, so the
+base predated both. Re-ran via `python3 - < script` (sys.path[0]='' -> cwd).
+Had I not printed provenance, I would have "discovered" two fixed defects and
+reported the sweep as finding nothing new.
