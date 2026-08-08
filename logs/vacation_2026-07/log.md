@@ -28907,3 +28907,25 @@ reason to skip it.
 
     #1270  131 pass / 22 pending, no reds -- merges when the last checks land
     #1271  28 pass / 123 pending, 2 codecov reds (predicted to clear)
+
+### 2026-08-08 — the patch-red prediction held
+
+Last wake I classified #1271's `codecov/patch` red as upload noise from the
+config (`.coveragerc` omits `tests/*`, CI runs `--cov galpy`, so the guard and
+the hoisted helper contribute zero measurable lines) and wrote the prediction
+down so it could be checked.
+
+    then   33 checks in: reds = codecov/project, codecov/patch
+    now    33 -> more in: reds = codecov/project only
+
+`patch` cleared without intervention. `project` is the same stale-base phantom
+that cleared on #1269 and again on #1270 today.
+
+Recording the confirmation rather than quietly moving on: I have been wrong
+often enough today (eager-only, scalar-share, the diff parser, the two vacuous
+loops) that a prediction which *holds* is worth the same one line as one that
+does not. Otherwise the log preserves only my errors and reads as if nothing is
+ever diagnosed correctly.
+
+    #1270  135 pass / 18 pending, NO REDS, pre-audited -- merges on the last check
+    #1271  33 pass / 119 pending, project phantom only
