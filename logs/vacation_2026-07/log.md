@@ -27185,3 +27185,28 @@ and rebuilding them costs ~2 min each.
     #1268  115 pass / 36 pending; codecov base fluctuated 86.06% -> 99.95%
            (stale-base wobble), head 86.05%, patch 70% with falsifier 0 of 2
     #1269  149 pending / 2 pass, no reds
+
+### 2026-08-07 — closed #178 and #200 on evidence
+
+Both verifiable, unlike the in_progress entries I left alone earlier:
+
+* **#178** (parallel_map fork deadlock) — #1266 is merged (`b6bf4b54`). Closed
+  with the full record: two distinct bugs sharing a symptom, both refuted knobs
+  and why, the A/B, and the explicit non-claim about interpRZ.
+* **#200** (productize jitcount / boundary-count census) — `boundary_census.py`
+  exists, runs, and gates. Closed with the threshold rationale (1000: three
+  orders below diskdf's 133,332, two above the healthy max of 8) and the
+  caveats that live in its docstring.
+
+#200 is worth noting for how it arrived: it was a roadmap item I never planned
+to do this session, and I completed it sideways — I needed a detector to
+diagnose my own regression, built it three times ad-hoc, and the third time
+made it a script. The task description now records that provenance, because
+"why does this tool exist" is the part that decays fastest.
+
+Still declining to touch #12/#39/#71/#74/#91/#92/#134: I cannot verify those
+from here, and a wrongly-closed task is invisible whereas a stale one is
+visibly stale.
+
+    #1268  115 pass / 36 pending, falsifier 0 of 2
+    #1269  149 pending / 2 pass
