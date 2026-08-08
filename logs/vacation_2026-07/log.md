@@ -26960,3 +26960,27 @@ prune starts from numbers instead of from someone's recollection.
 Remaining in flight: **#1268** (the #208 diskdf fix) at 77 pass / 74 pending,
 reds codecov-only. Its `test_backend*.py` builds are still 0 of 2, so the patch
 prediction has still not been put to the test.
+
+### 2026-08-07 — #1269 opened: the un-defer, with credit assigned away from myself
+
+    #1269  slow-skip 109 -> 104, off 4f8ce41a
+    loader verified: jax 87 / torch 15 / torch-jit 17, 0 malformed,
+                     and the 5 target nodeids confirmed GONE from the parsed list
+
+Both the commit message and the PR body lead with the attribution rather than
+burying it: **these five owe nothing to the diskdf fix in #1268**, median ratio
+0.97x across the A/B. They went fast under the batched in-backend integrator and
+the C-STM routing -- which is precisely what the original 2026 comment predicted
+would be needed ("~300 orbits per call with no vectorization"). The comment was
+right; it just outlived the problem by several months.
+
+The rewritten in-file comment carries the five measured times and the A/B ratio,
+so the next reader does not have to find this log to know why they went.
+
+Sixth entry deliberately kept: `test_galpypaper.py::test_diskdf` is a different
+file, was not covered by that run, and absence of measurement is not evidence of
+speed -- the same rule that kept 13 unobserved entries in #1267.
+
+Two PRs in flight again (#1268, #1269), both slow-skip/df-adjacent but
+**file-disjoint**: #1268 is galpy/df/diskdf.py + tests/test_backend_diskdf.py,
+#1269 is tests/backend_slow_skip.txt only. Merge order does not matter.
