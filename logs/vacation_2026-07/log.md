@@ -26242,3 +26242,26 @@ immediate when it goes green:
     comment.
 
 Verdict: mergeable as soon as CI finishes. Attribution arm at 38 items.
+
+### 2026-08-07 — verified the #1266 -> #1267 rebase before it is needed
+
+Both PRs edit `tests/backend_slow_skip.txt`, which is the one place they are not
+file-disjoint, and I asserted in #1267's description that whichever merges
+second "needs a rebase but not a judgement call". Checked that rather than left
+it as a claim, with `git merge-tree` against the real merge base (no worktree
+mutation, nothing to clean up):
+
+    #1266 head e9de6c338
+    #1267 head 4d47ac8d7
+    merge-base 199ee10e4
+    -> "changed in both", 0 conflict markers
+
+Same file, disjoint hunks, git auto-merges. The claim in the PR description
+holds. Combined slow-skip lands at 109, as verified earlier.
+
+Worth doing now rather than at merge time: a conflict discovered while merging
+is a decision made under time pressure with a half-merged tree; the same
+conflict discovered in advance is just a rebase to schedule. `merge-tree` costs
+nothing and touches no worktree.
+
+#1266 at 35 pending / 118 pass, no failures. #1267 at 95 pending, phantom only.
