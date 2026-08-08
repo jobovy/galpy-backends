@@ -29503,3 +29503,30 @@ Scratch copy deleted; the real census is untouched (still carries both entries
 until #1272 lands).
 
     #1272  113 pending / 37 pass; 2 codecov (early) + 1 torus infra
+
+### 2026-08-08 — the two macOS reds are DIFFERENT failures, both external
+
+A second `build (macos-15-intel, 3.14, ...)` red appeared. The check names are
+near-identical, so the easy read is "the same infra failure twice". Enumerated
+the failing **step** per job across all runs instead:
+
+    run 31259600507  job 93108239358   step: Install torus code   <- infra fetch
+    run 31259588020  job 93108209673   step: Test with pytest     <- a REAL test
+
+The second one *did* run tests. Cause:
+
+    FAILED tests/test_orbits.py::test_from_name_values
+      pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+`from_name` resolves object names over the network — the VizieR/SIMBAD service
+family ([[no-rerun-vizier-notebook-flakes]]: re-run, never cancel). External
+dependency, not code, and nothing in #1272 touches name resolution.
+
+So: two macOS reds, two *different* external causes, neither mine. Worth the
+extra call — had I stopped at "same name, same cause", I would have re-run one
+and been puzzled when the other stayed red.
+
+Both re-runs refused ("workflow is already running"); both are queued behind
+their runs completing, tracked the same way as #1270's notebook flake.
+
+    #1272  80 pass / 69 pending; 2 codecov (early-upload) + 2 external macOS
