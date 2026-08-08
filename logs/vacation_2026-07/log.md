@@ -28263,3 +28263,25 @@ blocker.
 Used the wait to launch #88's forced-backend arm: `test_actionAngle.py
 --backend=jax`, the direct consumer of the five changed adapter forwards.
 numpy gate (`test_potential.py` + `test_actionAngle.py`) still clean at 7:26.
+
+### 2026-08-08 — #88 gates green, committed; torch arm running
+
+    numpy  test_potential.py + test_actionAngle.py   1492 passed / 0 failed  (19:34)
+    jax    test_actionAngle.py --backend=jax          180 passed / 0 failed  (13:37)
+
+Committed as `58ef4c35` on `feat/planar-adapter-nodecorator`. Final diff is one
+file, **8 insertions / 5 deletions**: three imports and five call-site swaps.
+
+**The pre-commit hook rejected the first attempt** — `isort` reordered the new
+imports and failed the run, so nothing was committed. Caught it because I print
+the resulting SHA and it was still `ffde6f86`, i.e. develop
+([[precommit-hooks-reject-first-commit]]). Re-added and re-committed; verified
+HEAD moved off develop, then re-read the committed diff rather than assuming the
+second attempt captured everything.
+
+Not opening the PR yet: the standing rule is to gate on **both** forced backends
+before pushing ([[forced-backend-gate-before-push]]), and only jax has run. The
+torch arm is going now. There is no reason to cut that corner — #1270 is queued
+behind saturated runners anyway, so pushing early buys nothing.
+
+    #1270  8 runs queued, none started, no reds
