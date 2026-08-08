@@ -29335,3 +29335,62 @@ Consequence for #210, stated rather than glossed:
 re-measure costs nothing extra. Recorded on the task.
 
     #1272  149 pending / 2 pass, no reds
+
+---
+
+## SESSION SUMMARY — 2026-08-08
+
+**Shipped: 6 PRs merged.**
+
+    #1266  parallel_map: do not fork while traced
+    #1267  slow-skip 209 -> 109  (100 stale jax orbit entries)
+    #1268  diskdf: keep the scipy-quad scalar path off the backend  <- MY regression, closed
+    #1269  slow-skip 109 -> 104
+    #1270  slow-skip 104 -> 98
+    #1271  planar adapters -> undecorated evaluators (989 -> 5 crossings)
+
+    slow-skip ledger:  210 -> 98   (-53% in one day)
+
+**Open / staged:** #1272 (vertical adapters, 1708 -> 244; gates green, guard
+A/B-verified). #210 implemented behind it (-244 more, byte-identical, ordering
+constraint proven).
+
+### The arc that mattered
+
+A regression I introduced yesterday (#1261) was **found by a tool I built for
+exactly that purpose**, then closed within twelve hours. Chasing its residual
+turned up a whole defect class: `@backend_input` costs ~178 us per crossing, and
+internal loops were calling *decorated* entry points once per iteration.
+
+    planar adapter   989 -> 5     merged
+    vertical adapter 1708 -> 244  in review
+    AA closure       -244         implemented
+
+Each fix is numpy-byte-identical by sha256 A/B, each carries a regression guard
+with a **negative control**, and each guard was proven to *fail without the fix*.
+
+### What the day actually taught
+
+Nearly every real finding came from measuring something I could have assumed:
+
+* the `@backend_input` cost is **forced-backend**, not jit — so it degrades
+  routine CI, not just the traced suite (I had it backwards and wrote it down);
+* "74% of crossings are plain scalars" is **ubiquitous and harmless** — the
+  crossing *count* is the discriminator, not the scalar share;
+* the 96 decorated-entry call sites are **34 loop-resident candidates**, of which
+  **3 are measured** — a population is not a defect count;
+* `actionAngleVertical`'s guard proved an **ordering constraint git cannot see**:
+  disjoint files, 0 merge conflicts, and still dependent *in measurement*.
+
+And a run of self-caught tooling errors, each of which would have produced a
+confident wrong number: two vacuous `ok &= ...` loops over empty iterations; a
+diff parser counting PR-body text; `gh pr diff --patch` emitting the commit
+series rather than the net diff; a mislabelled A/B whose "develop" arm was
+another branch with a different C-ext state; and a C-ext probe that reported
+`True` from outside the worktree and `False` from inside.
+
+**The pattern worth keeping:** a number that matches expectation is not
+self-validating. Every one of those was caught by checking *what was compared*,
+not by doubting the result.
+
+---
