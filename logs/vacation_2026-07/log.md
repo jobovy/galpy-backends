@@ -27348,7 +27348,7 @@ probes so I do not repeat them.
 
 ---
 
-## AWAITING JO — consolidated decision list (as of 2026-08-08)
+## AWAITING JO — consolidated decision list (as of 2026-08-08, 9 items)
 
 Nothing here blocks me; I have work either way. Collected so it can be worked
 through in one pass instead of hunted across tasks and ledger comments.
@@ -27418,12 +27418,56 @@ through in one pass instead of hunted across tasks and ledger comments.
    **Caveat, stated: loop-residency is syntax, not measurement.** A call inside a
    `for` that runs twice costs nothing. So 34 is an upper bound on *candidates*;
    3 are measured hot, the other 31 are unmeasured. I am not claiming 34 defects.
-   → **Question: land the 3 measured fixes and stop, or adopt a convention
-   ("internals call the inner; the decorated entry is the user-facing API") and
-   sweep the 34?** The sweep is mechanical but touches numpy-byte-identity-
-   critical paths in bulk, so it is your call on risk appetite, not mine. If you
-   want a middle path, the 21 sites in the two `actionAngleVertical*` modules are
-   the concentrated, highest-yield slice.
+
+   **RESOLVED BY MEASUREMENT, 2026-08-08 — my recommendation is now "four fixes,
+   no sweep".** I stopped guessing and censused 27 previously-unmeasured
+   workloads (potential root-finders, orbit derived quantities, two more AA
+   families, five more DFs, streams), then a second pass over the module families
+   the first sweep never reached (interpRZPotential, SCF, Ellipsoidal, Composite,
+   ChandrasekharDynamicalFriction). Result: the cost is **concentrated**, and one
+   more hot site exists:
+
+       aAAdiabatic.actions   4166 -> 251 (#1271+#1272) -> 9 (#210)   never targeted, 460x
+       interpRZPotential     30603 at galpy's DEFAULT 101x101 grid   <- 4th site (#211)
+       all 38 other workloads              <= 153
+
+   `interpRZPotential.__init__` builds grids with nested `for ii: for jj:` loops
+   calling the decorated evaluator once per point; crossings are exactly linear
+   in grid points (10.00/point over four grid sizes), which is why a toy 6x4 grid
+   scores a harmless 240 and hides it.
+
+   → **Question, now much narrower: land the four measured fixes (#1271 done,
+   #1272 held, #210, #211) and skip the sweep?** That is what I recommend — the
+   34 candidates are mostly cold and the hot ones share a handful of root causes.
+   #211 additionally needs a call on whether to add the 4 missing undecorated
+   inners (`_evaluateR2derivs` / `_evaluatez2derivs` / `_evaluateRzderivs` /
+   `_evaluateDensities`); only 3 of the 7 exist today.
+
+9. **[added 2026-08-08] `interpRZPotential` + units is a REAL pre-existing numpy
+   bug — fix is written and tested, needs your target-branch call** (task #212).
+   Verified on `origin/main` (cd81fbed), so not something feat/backends did.
+   Building it from a potential with `ro`/`vo` set stores PHYSICAL values in the
+   grids while the interpolator is queried in internal units:
+
+       use_c=False  potential x48400 (vo^2)   Rforce x6.1874 (force_in_kmsMyr)
+       use_c=True   potential ok, Rforce ok   (C path works internally)
+       ANY use_c    dens x0.1758  R2deriv x790.99  epifreq/verticalfreq x28.12
+                    (those grids have no C implementation -> always the Python loop)
+
+   `interpRZPotential` exists for fast orbit integration, so this is wrong forces
+   -> wrong orbits, silently. 284 test references, **none** passing `ro=`/`vo=`,
+   which is why it survived.
+
+   Fix is committed locally on `fix/interprz-units` (branch off main, `ff87e75e`,
+   C ext built): `use_physical=False` at all 37 call sites, which restores the
+   internal value bit-for-bit for all seven quantities. **It needs no
+   byte-identity waiver** — on a unitless potential the flag is a no-op, verified
+   bit-for-bit, so the only behaviour that changes is the path that was already
+   wrong. New regression test fails without it, passes with it;
+   `test_interp_potential.py` 41 passed.
+
+   → **Question: land on `main` (it is a main bug) or on `feat/backends`?**
+   Both branches carry the defect. Not pushed — two-PR limit.
 
 **Headline for the traced track: traced-green is achieved as far as code can
 take it.** All 7 remaining traced-ledger entries are in A or C above. None is an
