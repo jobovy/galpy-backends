@@ -27058,3 +27058,70 @@ collecting everything, 8 is the largest genuine caller.
 
     #1268  103 pass / 48 pending, falsifier still 0 of 2
     #1269  149 pending / 2 pass, no reds
+
+---
+
+## SESSION SUMMARY — 2026-08-07
+
+**Merged:** #1266 (`b6bf4b54`), #1267 (`4f8ce41a`).
+**Open:** #1268 (diskdf forced-backend fix), #1269 (un-defer 109→104).
+**Slow-skip:** 210 → 109, with 104 pending in #1269. **Traced xfail ledger:** 17.
+
+### The one that matters: I shipped a regression and caught it myself
+
+#1261 (my merge that morning) decorated `expSurfaceSigmaProfile`'s four
+R-evaluators with `@backend_input` -- the correct way to remove a numpy island,
+and it made every `diskdf` moment 5-10x slower under any forced backend.
+
+* **Found** by the traced sweep I ran under "never idle", within twelve hours of
+  merging it. CI could not have caught it: `backend-tests` has no `--jit`
+  dimension, and eager still passed.
+* **Mechanism** (four wrong guesses first, each killed by measurement): scipy's
+  adaptive quadrature calls the profile with **plain scalars**, and under a
+  forced backend a plain float resolves to that backend -- so 133,332 scalar
+  round-trips per `oortA()`.
+* **Fixed** in #1268: `_ssp` splits three cases. jax 25.26→4.40 s, torch
+  42.79→4.09 s, numpy back to pre-#1261 within noise.
+* **Corrected my own framing twice.** It is a *forced-backend* regression, not a
+  jit one (eager is 178 us/crossing vs 151 traced) -- which means it was slowing
+  a routine CI shard 2.8x while staying green, not just breaking traced tests.
+  And I removed a "Pdf.3 will remove this pin" claim after checking: the
+  quadrature is already migrated and differentiable.
+* **Byte-identity proven** across three checkouts (identical sha256 over 120
+  values), with provenance *and* a distinguishing grep in each -- because three
+  identical hashes is also what comparing one checkout with itself looks like.
+
+### Numbers worth keeping
+
+    @backend_input crossing   1.3 us undecorated | 2.8 numpy | 178 forced-jax eager | 151 traced
+    slow-skip                 210 -> 109 (-101), 88% of what was measured was stale
+    traced ledger             17 total; all 7 traced entries need Jo or are by-design
+    hot boundaries            diskdf.oortA 133,332 -> 0; max anywhere else: 8
+
+### Traced-green: done as far as code can take it
+
+All 7 traced ledger entries are by-design (GL vs scipy, 4), not-traceable by
+construction (Quantity→numpy, 2), or a tolerance case (1). **None is an
+unmigrated potential.** What remains is maintainer decisions.
+
+### Tools left behind
+
+* `appendices/boundary_census.py` -- detector for this regression class; exits 1
+  above 1000 crossings so it can gate.
+* `appendices/slow_skip_prune.py`, `appendices/ledger_sweep.py` -- from earlier.
+
+### Process failures this session, all self-caught
+
+1. Reported a **dead run as still running** for ~5 wakes (killed by its own
+   `timeout 3600`, no junitxml). Tell was an identical progress count twice.
+2. Nearly shipped a **regression guard that could not see torch** -- it asserted
+   on a value the code normalises. Rewritten to watch `coerce_coords`: 4 fails
+   → 8, and torch was the *worse* case.
+3. Nearly ran an A/B in a **worktree with no C extension**, which would have
+   credited my fix with a speedup it did not cause.
+4. Rebased #1267 out of habit, which needs a force-push; undone after checking
+   GitHub reported MERGEABLE untouched.
+
+Pre-registering the check before looking at the result is what caught 1, 2 and
+the un-defer attribution. That attribution came back **0.97x** -- the five
+entries were already stale and owe nothing to my fix, which #1269 says plainly.
