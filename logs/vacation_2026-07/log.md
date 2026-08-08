@@ -30791,3 +30791,25 @@ carry the a = R + |z|t substitution into the graded-dyadic path, and let the
 rebase supply `_quad_apeak` for numpy.
 
 That halves the port and removes the conflict risk. Recorded in #207.
+
+### 2026-08-08 — #1274 patch hits 100.00%: the "gap" was my measurement, as suspected
+
+    codecov/patch    100.00% of diff hit   (was 6.66%)
+    codecov/project  86.44% (-13.49%)      (-54.95% -> -30.80% -> -13.49%)
+
+Two wakes ago my local run said **18 of 88 changed lines uncovered**, all in the
+`numcores` / `parallel_map` branches, and the tempting response was to add
+`numcores` tests to close the gap. I stopped because the measurement used ONE
+test file while codecov sees the whole suite — a lower bound, not a gap.
+
+CI now says 100.00%. So the restraint was right, and the cost of getting it
+wrong would have been real: speculative multiprocessing tests added to a PR that
+did not need them, on a code path known for fork-related flakiness
+([[torch-fork-deadlock-streamdf]]).
+
+Third time today the changed-lines check predicted codecov exactly (#1272, #1273,
+#1274) — but this instance is the useful one, because the right call was to do
+**nothing** rather than to act on a number.
+
+    #1275  2 pass / 149 pending / 0 red   (starved behind #1274 + develop)
+    #1274  57 pass / 73 pending / project still converging
