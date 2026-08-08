@@ -29828,3 +29828,28 @@ Worth writing down because the 90 in `backend-tests.yml` is a trap: the job
 *names* look alike ("backend jax ..." vs "build (..., tests/test_backend*.py)")
 and grepping one number out of the workflows would have had me report a job as
 2.5 minutes from death when it had four hours of headroom.
+
+### 2026-08-08 — codecov cleared, and the prediction was exact
+
+Both codecov checks on #1272 went green on their own:
+
+    codecov/patch    success  100.00% of diff hit   (was 50.00%)
+    codecov/project  success  99.95% (+0.00%)       (was -13.91%)
+
+The patch number is worth recording because it was **predicted, not hoped for**.
+Earlier today I measured coverage of all 6 changed lines locally (127 and 158
+via test_backend_linearpotential/test_linear_dxdv; 214-215 via
+test_backend_aa_grad_probes; the 2 imports trivially) and concluded the 50% was
+a partial-upload artifact. Codecov's final answer is exactly 100.00%.
+
+That matters more than the outcome: the same "it'll heal" conclusion could have
+been reached by pattern-matching on four earlier phantoms, and on this PR that
+reasoning was NOT valid — unlike #1271's tests-only diff, this one edits a
+measured source file, so a genuine patch red was possible. Measuring turned a
+guess into a prediction, and the prediction was checkable.
+
+Remaining on #1272: one red, run 31259600507's macOS job failing at
+`step=Install torus code` — infra, no galpy code ran. Its run is still
+in_progress so `gh run rerun --failed` is still refused; queued.
+
+Tally of self-healing codecov phantoms today: 6 for 6.
