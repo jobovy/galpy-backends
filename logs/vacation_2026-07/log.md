@@ -28436,3 +28436,25 @@ carrying it in my head: three arms (numpy `test_potential.py`, jax and torch
 
     #1270  146 pending, phantom codecov only
     #1271  149 pending, no reds
+
+### 2026-08-08 — vertical fix: all three gates launched in parallel
+
+Ran the same three-arm gate #1271 passed, concurrently rather than in sequence
+(72 cores, `OMP_NUM_THREADS=4` each — the arms are independent and only pass/fail
+matters here, not timing):
+
+    numpy  test_potential.py + test_actionAngle.py
+    jax    test_actionAngle.py --backend=jax   --timeout=300
+    torch  test_actionAngle.py --backend=torch --timeout=300
+
+Consumers of the changed adapters are `actionAngleVertical` and
+`actionAngleVerticalInverse`, both in `test_actionAngle.py`; `test_potential.py`
+exercises `verticalPotential` directly.
+
+Sequencing note for later: timings from these runs are NOT comparable to the
+#1271 gate numbers, because three suites shared the box. Pass/fail is what this
+gate is for; if a duration from one of them ever becomes a finding, it needs
+re-measuring alone ([[gha-job-start-not-run-created]]).
+
+    #1270  143 pending / 9 pass, phantom codecov only
+    #1271  149 pending / 2 pass, no reds
