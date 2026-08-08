@@ -29117,3 +29117,24 @@ rather than letting a green tick stand in for it:
     # expected, so ONE of the two skipping there is fine; BOTH skipping is not.
 
     #1271  137 pass / 15 pending, project phantom only
+
+### 2026-08-08 — paid the verification debt locally instead of waiting on CI
+
+The `test_backend*.py` job is still `in_progress`, so I settled the actual
+question — *can both guards skip and pass vacuously?* — on this box, by hiding a
+framework with a stub module that raises `ImportError`:
+
+    both jax+torch present     2 passed              <- both guards execute
+    torch hidden (jax-only)    1 passed, 1 skipped   <- the jax guard EXECUTES
+
+So a single-framework shard runs exactly one guard, and both skipping requires
+*neither* framework installed — impossible for the job whose purpose is the
+backend suite. The skipif wiring is the part that could have been wrong, and it
+is right.
+
+Worth separating two things I had conflated when I wrote the debt down: whether
+the **markers** are wired correctly (locally checkable, now checked) versus
+whether a **particular CI shard** has a framework (job-defined, not something a
+log grep would have told me either). Only the first was a real risk.
+
+    #1271  137 pass / 15 pending, project phantom only
