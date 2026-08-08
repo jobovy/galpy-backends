@@ -30301,3 +30301,37 @@ the moment I want to open the PR.
 
     codecov/project converging as documented:  -45.88% -> -30.64%
     #1273  25 pass / 126 pending / 2 codecov (phantom, lines verified)
+
+### 2026-08-08 — jit gap-check on #1273: "no regression" for a weaker reason than I expected
+
+The backend suite runs **eager** ([[eager-only-potential-gaps]]), and #1273 swaps
+to undecorated inners while jit is applied *at* the decorated boundary — so
+"does the traced path still work?" is a fair question about my own PR. Ran it:
+
+    tests/test_backend_actionAngle.py --backend jax --jit -k vertical
+        15 passed   (same 15 as eager)
+
+Pass counts do not prove tracing though ([[jit-coverage-not-pass-counts]]), so I
+demanded positive evidence — arg types seen at the inner:
+
+    set_jit(off) -> {'ArrayImpl': 122, 'JVPTracer': 1}
+    set_jit(jax) -> {'ArrayImpl': 122, 'JVPTracer': 1}
+
+**No `DynamicJaxprTracer` in either mode.** So the honest conclusion is not
+"tracing still works through the inner" — it is "**this path is not traced at
+all**, in either mode, so there was no tracing for my change to remove."
+`actionAngleVertical`'s public methods carry `physical_conversion_actionAngle`,
+not `@backend_input`, so they were never a jit boundary. That also explains why
+the eager and --jit runs are identical at 15 passed.
+
+Weaker claim, but the true one. Had I stopped at "15 passed under --jit, traced
+path fine", I would have published a verification that never happened — the same
+shape as the `set_jit` returning-without-error trap in
+[[measure-boundary-properties-at-the-boundary]].
+
+**Hit the class-shadows-module trap again** getting there:
+`galpy.potential.linearPotential` is the re-exported **class**, so patching
+`LP._evaluatelinearPotentials` raised AttributeError. Recognised it in one step
+this time (it cost several earlier today) and used `importlib.import_module`.
+
+    #1273  41 pass / 110 pending; codecov/project converging -45.88 -> -26.34
