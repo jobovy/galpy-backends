@@ -27461,6 +27461,18 @@ through in one pass instead of hunted across tasks and ledger comments.
    into a small no-decision part and an optional follow-up — and it must land
    **after** #212 (item 9), which touches the same call sites.
 
+   **There is a second design I did not take, and you may prefer it.** Fixing
+   #211 by *vectorizing* the grid build (evaluate the meshgrid in one call)
+   keeps the **decorated** evaluator, so units behaviour is unchanged — which
+   makes it strictly byte-identical, needing **no decision from you at all**,
+   while taking crossings to O(1) and speeding the numpy path too. I did not
+   start it because not every potential is array-safe on that path
+   (`AnyAxisymmetricRazorThinDisk`'s array opt-out is deliberate), so it needs a
+   per-potential fallback — a larger design change than swapping three calls,
+   and not one to land unilaterally while you are away. Flagging it because it
+   is the better end state if you want the loop gone rather than just the
+   coercion.
+
 9. **[added 2026-08-08] `interpRZPotential` + units is a REAL pre-existing numpy
    bug — fix is written and tested, needs your target-branch call** (task #212).
    Verified on `origin/main` (cd81fbed), so not something feat/backends did.
