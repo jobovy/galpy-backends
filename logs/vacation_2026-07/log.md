@@ -27391,3 +27391,27 @@ through in one pass instead of hunted across tasks and ledger comments.
 **Headline for the traced track: traced-green is achieved as far as code can
 take it.** All 7 remaining traced-ledger entries are in A or C above. None is an
 unmigrated potential.
+
+### 2026-08-08 — cross-checked #1269's description against its own code
+
+PR bodies and in-file comments quote the same five measurements independently,
+so they can disagree. Checked:
+
+    file block : ['30.6', '57.3', '60.4', '64.2', '178.6']
+    PR body    : ['30.6', '57.3', '60.4', '64.2', '178.6']   MATCH
+
+**My first attempt reported a MISMATCH and was wrong** — the regex `(\d+\.\d) s`
+swept the *whole file*, picking up three numbers from unrelated comment blocks
+(1028.6 s KingPotential, a 0.0 s torch construction failure, 300.0 s interpRZ
+from #1266's note). Scoping to the lines this PR wrote gives a clean match.
+
+Worth noting because the failure mode is one I have hit repeatedly today in
+different clothes: **an over-broad check produces a false alarm, and a false
+alarm costs the same credibility as a missed defect.** Earlier it was
+`'::' in nodeid` flagging legitimate whole-file slow-skip entries as malformed;
+here it was a bare regex over a 100-line file. Both times the tool was wrong and
+the artifact was fine. The fix is the same: scope the check to exactly what the
+change touched.
+
+    #1268  141 pass / 10 pending, falsifier 0 of 2
+    #1269  6 pass / 145 pending
