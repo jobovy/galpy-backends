@@ -29394,3 +29394,33 @@ self-validating. Every one of those was caught by checking *what was compared*,
 not by doubting the result.
 
 ---
+
+### 2026-08-08 — #1272's macOS red is an infra step, not my code
+
+A NON-codecov red appeared: `build (macos-15-intel, 3.14, tests/test_orbit.py -k
+'test_en...')`. An orbit *energy* test on a PR that touches `verticalPotential`
+is exactly the kind of coincidence that deserves suspicion, and the same job
+**passed** on develop at #1270 — so the honest first read was "possibly mine,
+possibly #1271's, which is already merged".
+
+Read the job steps instead of guessing:
+
+    16. Install torus code      -> FAILURE
+    17. Install package         -> skipped
+    21. Test with pytest        -> skipped
+
+The failure is fetching an **external C++ dependency**, before galpy is even
+installed, and every later step including the tests was skipped. **No galpy code
+ran**, so it cannot be #1271 or #1272. Infrastructure.
+
+Worth noting how close this came to a wrong conclusion: the check *name* contains
+`test_orbit.py -k test_en`, which reads like a physics failure. Judging by the
+name would have sent me hunting an energy-conservation regression in a merged PR.
+The step list settles it in one call — the same lesson as reading a check-run's
+state rather than its label.
+
+`gh run rerun --failed` refused ("workflow is already running"), so the re-run is
+**queued behind the run completing**, exactly as with #1270's notebook flake.
+Tracked, not forgotten.
+
+    #1272  148 pending / 2 pass, 1 infra red awaiting re-run
