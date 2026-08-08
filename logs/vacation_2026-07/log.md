@@ -29459,3 +29459,25 @@ patch and saw `1` where I expected `0`. Restored and verified:
 A worktree that holds a live PR branch is not scratch space.
 
     #1272  139 pending / 11 pass; 2 codecov (early-upload) + 1 torus infra red
+
+### 2026-08-08 — #210's PR body written while the numbers are verified
+
+Drafted `/var/tmp/210-pr-body.md` now rather than at push time. Every figure in
+it is one I measured today and can point at:
+
+    develop -> +#1272 -> +#1272+#210
+    aAVertical.Jz            1708 -> 244 -> 0
+    aAVertical.actionsFreqs  1722 -> 246 -> 0
+
+plus the byte-identity hash, the guard's A/B, and — stated in the body itself —
+**why the PR is stacked**: `merge-tree` says 0 conflicts and the files are
+disjoint, but the guard's threshold only means anything after #1272 removes the
+adapter's 1464 crossings. A reviewer seeing "disjoint files, stacked anyway"
+deserves that sentence rather than having to reconstruct it.
+
+Writing it now is deliberate: PR descriptions drift when they are composed from
+memory after the fact ([[pr-description-drifts-after-rework]]), and today I have
+already caught myself mislabelling one A/B and misreading two tool outputs. The
+body is cheapest to get right while the terminal scrollback still proves it.
+
+    #1272  127 pending / 23 pass; 2 codecov (early-upload) + 1 torus infra
