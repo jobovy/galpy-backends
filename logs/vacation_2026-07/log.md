@@ -29271,3 +29271,33 @@ Committed `4e775f10`. Seventh pre-commit rejection today (ruff-format), caught b
 the SHA check.
 
     #1272  150 pending / 1 pass, no reds
+
+### 2026-08-08 — #210's guard exposed a real ordering constraint
+
+Wrote the guard as "crossings < 80" (the bracketing schedule is 80 steps, so
+>=80 means the per-iteration crossing is back). It **failed on the #210 branch**
+— and the failure was correct: on develop the vertical *adapter* is still
+unfixed, so the total is 1476, and my threshold silently assumed #1272 was
+present. The docstring said "pin the closure's own contribution"; the assertion
+measured the total. Those are not the same thing, and only running it showed the
+gap.
+
+Verified on a scratch branch = **#1272 + #210** (the same rehearsal technique as
+the dedupe), then A/B'd it:
+
+    #1272 + #210            2 passed
+    #1272 only (revert #210)  2 failed
+
+So the guard detects exactly this fix, and **#210 must land after #1272** rather
+than beside it. That is an ordering constraint I would not have discovered by
+reading — the two changes are in different files and `merge-tree` reports no
+conflict, so every structural check said "independent". They are independent in
+git and dependent in *measurement*.
+
+Recorded on task #210. The alternative — making the guard caller-aware so it is
+independent of #1272 — would mean extending the now-shared
+`count_boundary_crossings` to return per-caller counts, which changes a helper
+that just landed in #1271. Not worth it for an ordering that is already the
+natural one.
+
+    #1272  149 pending / 2 pass, no reds
