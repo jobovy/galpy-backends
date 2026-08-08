@@ -26934,3 +26934,29 @@ Design choices worth stating:
 This is what task #200 ("boundary-count column in the census") was really
 asking for, arrived at from the other direction -- I needed the detector to
 diagnose my own regression, and the detector is the deliverable.
+
+## 2026-08-07 — #1267 MERGED (4f8ce41a). Slow-skip 210 -> 109.
+
+    #1267  154 pass / 0 pending / 0 fail, CLEAN -> squash-merged 4f8ce41a
+    develop slow-skip: jax 92, torch 15, torch-jit 2   TOTAL 109
+
+**109 was predicted before either PR merged** (via `merge-tree` plus a local
+rebase I then discarded), and it landed with no rebase and no force-push,
+because #1266 and #1267 edited different blocks of the same file. Nice
+confirmation that checking the interaction in advance was worth the two minutes.
+
+Final audit before merging, same three axes as #1266:
+
+    files touched         tests/backend_slow_skip.txt, tests/backend_xfail.txt
+    library files         0
+    data-dependent ifs    0
+    duplication/placement n/a -- no code
+
+Session arc on the slow-skip list: **210 -> 209 (#1266) -> 109 (#1267)**, i.e.
+101 entries retired, 100 of them measured stale by 88% of what a real CI-context
+run covered. Every retained entry now carries its measured seconds, so the next
+prune starts from numbers instead of from someone's recollection.
+
+Remaining in flight: **#1268** (the #208 diskdf fix) at 77 pass / 74 pending,
+reds codecov-only. Its `test_backend*.py` builds are still 0 of 2, so the patch
+prediction has still not been put to the test.
