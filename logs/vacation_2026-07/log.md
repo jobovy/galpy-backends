@@ -28744,3 +28744,31 @@ been one push and one CI cycle. The self-audit was right; its timing cost 7 runs
 
     #1270  64 pending / 88 pass, phantom only
     #1271  head CI running clean
+
+### 2026-08-08 — proved the queued branches are disjoint (and wrote down the one thing that could still go wrong)
+
+`git merge-tree` against develop, which answers the question without mutating
+either worktree:
+
+    #1271 touches  planarPotential.py, backend_jit_helpers.py, test_backend_planarpotential.py
+    #209  touches  verticalPotential.py, test_backend_linearpotential.py
+    overlap        (none)
+    conflict markers  0
+
+So the queue is safe to land in order; no rebase surprises.
+
+**The real risk is not a conflict, it is a silent duplication.** #209 still
+carries a local `_count_vertical_coercions`, and #1271 hoists the identical
+probe into `backend_jit_helpers` as `count_boundary_crossings`. If #209 is
+pushed after #1271 merges without switching, the duplication I just removed
+comes straight back in the next PR — and nothing would fail, so nothing would
+tell me.
+
+Recorded it as a ★ MUST DO line inside task #209 rather than relying on
+remembering, together with *why* the local copy exists (importing the shared one
+now would break #209's own gates, since the helper does not exist on develop
+yet). A note that says only "switch to the shared helper" would read, weeks
+later, like an oversight rather than a deliberate ordering.
+
+    #1270  57 pending / 95 pass, phantom only
+    #1271  head CI running clean
