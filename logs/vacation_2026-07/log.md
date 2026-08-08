@@ -27978,3 +27978,27 @@ was wrong.
 
     #1269  141 pass / 11 pending, phantom only
     probe2 alive, 15 reported at 28:01
+
+### 2026-08-08 — #88 confirmed on torch too; one fix covers both arms
+
+Ran the extended census on the torch arm (the AA/qdf/orbit workloads had only
+been swept on jax):
+
+              jax          torch
+    aASpherical.actions      989   997
+    aASpherical.actionsFreqs 1023  1031
+    aAStaeckel.actionsFreqs     0     0
+    everything else          <=84  <=84
+
+Same site, same magnitude. `_calc_rperi_rap_backend` is backend-agnostic code,
+so one fix covers jax and torch together — worth knowing before scoping the PR,
+since a torch-only divergence would have meant two code paths.
+
+`KNOWN_HOT` behaves correctly on the second arm too: labelled, exit 0.
+
+Ignoring the wall-clock column exactly as the tool's own docstring instructs —
+torch's `actionsFreqs` reads 0.06s against jax's 2.42s, which is trace/compile
+placement, not a speed finding.
+
+    #1269  150 pass / 3 pending (2x py3.14 build + all-clear), phantom only
+    probe2 alive, 48 reported at 58:36 — past the slow entries, moving fast now
