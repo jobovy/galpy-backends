@@ -28971,3 +28971,20 @@ so as a timeout rather than an assertion — the same distinction that told me t
 defect. Waiting on it is not bureaucracy.
 
     #1271  48 pass / 104 pending, project phantom only
+
+### 2026-08-08 — resisted over-reading the in-flight shard
+
+The decisive `backend jax test_qdf/test_pv2qdf` shard has been running 23 min.
+Tempting inference: "still going, so nothing has timed out". **False** —
+`pytest-timeout` fails the individual test and the shard carries on, so an
+elapsed-time reading cannot distinguish "healthy" from "already recorded a
+timeout, still working through the rest".
+
+What 23 min does support is only a scale check: the five un-deferred tests total
+~496 s locally, ~5.9 min at CI's 0.71x, inside a shard that also runs all of
+`test_qdf`. So the duration is unremarkable, and that is the whole of what it
+says. The verdict comes from the shard's result, not its clock
+([[never-report-partial-run-as-result]]).
+
+    #1270  145 pass / 8 pending, no reds
+    #1271  53 pass / 99 pending, project phantom only
