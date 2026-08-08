@@ -28492,3 +28492,33 @@ correct — but its *attribution* column was quietly weaker than it looked.
     #1270  139 pending / 13 pass, phantom codecov only
     #1271  149 pending, no reds
     vertical gates: all three running
+
+### 2026-08-08 — a THIRD instance of the same defect, found by the fixed attribution
+
+The corrected census pointed at `actionAngleVertical.py:f` for 238 of the 246
+residual crossings. Read it:
+
+    def f(xm, E_):
+        return E_ - evaluatelinearPotentials(self._pot, xm, use_physical=False)
+
+`evaluatelinearPotentials` is the decorated public entry (five decorators,
+including `@backend_input("x","t")`), called once per bracketing/bisection step.
+Same defect as #1271 and #209, one level up in the AA module. The undecorated
+inners `_evaluatelinearPotentials` / `_evaluatelinearForces` already exist.
+
+Filed as task #210 **with the trap written down**, because this one is not a copy
+of the previous two: `actionAngleVertical.py` has ~10 call sites of the decorated
+function and **most are in the numpy scalar-loop branches**. Swapping those would
+touch the numpy path. Only the backend-path sites may change — or the swap must
+be proven byte-identical *for linear potentials specifically*. The 3D proof does
+not transfer; that would be assuming exactly what I have been checking all day.
+
+Not starting it: two PRs open and one held is already the queue. Three instances
+of one defect class in one day is a pattern worth naming — `@backend_input` on a
+public entry point that internal loops call directly. Whether it is worth a
+systematic sweep (rather than three ad-hoc fixes) is a question for Jo, not
+something to decide unilaterally at 4am.
+
+    torch gate  182 passed / 0 failed
+    #1270  138 pending / 14 pass, phantom only
+    #1271  149 pending, no reds
