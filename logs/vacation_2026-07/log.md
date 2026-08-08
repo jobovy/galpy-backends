@@ -26421,3 +26421,25 @@ Relaunched with two changes, both fixing the harness rather than my attention:
   * `-v` -- per-test outcomes stream to the log, so a killed run still yields
     partial per-test data instead of an undifferentiated wall of dots. A run
     whose only progress signal is dots is a run you cannot diagnose.
+
+### 2026-08-07 — liveness check, and #1266 one step from green
+
+Relaunched arm verified alive properly this time -- worker pid, not the wrapper,
+and log mtime against the clock:
+
+    ALIVE pid=664474 cpu=98.9 threads=202 elapsed=03:31
+    log mtime 20:54:24   now 20:54:36      <- 12 s old, so it is writing
+
+Folded the inverse trap into [[never-report-partial-run-as-result]], which only
+had the "healthy run looks hung" direction. The new one is worse because it fails
+silently in the direction of complacency: a dead run looks like patience.
+Recorded the three fixes -- liveness from the worker + log mtime never from log
+content; size the timeout from the SLOW arm; run long measurements with `-v` so a
+killed run still yields per-test data.
+
+    #1266  13 pending / 140 pass / 0 fail
+    #1267  47 pending / 105 pass / phantom only
+
+#1266 is one step from fully green, already audited (if->xp.where: 0
+data-dependent branches; duplication: reuses jit_mode(); placement: helper in
+galpy.backend). Merging on the next wake if the last checks land clean.
