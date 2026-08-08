@@ -30041,3 +30041,35 @@ dropping the flag as redundant at those sites.
 
 Worth flagging because handing over two patches to the same file without saying
 this invites a merge that silently drops one of them.
+
+### 2026-08-08 — #1272 MERGED; #210 opened as #1273
+
+    #1272  154 pass / 0 pending / 0 red  ->  squash-merged  7418aed5
+
+Pre-merge audit was already done (clean on all three criteria). Verified
+MERGEABLE/CLEAN and swept for conflict markers before merging
+([[grep-conflict-markers-after-rebase]]).
+
+**#210 -> PR #1273**, rebased onto the post-#1272 develop in a fresh worktree
+with the C extension built (`_ext_loaded=True`, asserted from inside):
+
+    guard                     2 passed (jax + torch)
+    aAVertical.Jz                  0 crossings   (1708 pre-#1272, 244 post)
+    aAVertical.actionsFreqs        0 crossings   (1722 / 246)
+    aAAdiabatic.actions            9 crossings   (4166 / 251)
+    numpy byte-identity      sha256 e2a8028f60e8f046 WITH and WITHOUT
+
+Byte-identity A/B done the disciplined way: one worktree, one C-ext state,
+toggling only `actionAngleVertical.py`.
+
+**Caught myself reporting a vacuous pass.** My first guard run printed
+`324 deselected in 23.81s` — I had guessed `-k "recross or boundary"` and it
+matched *nothing*. Zero tests ran and pytest exits 0, so a careless read is
+"guard passes". The real name is
+`test_aavertical_backend_path_uses_undecorated_evaluators`; with it, 2 passed.
+Exactly [[never-report-partial-run-as-result]] in a new costume: the count of
+*selected* tests is part of the result, not scenery.
+
+Also deleted the `aAVertical` entries from the census `KNOWN_HOT` now that
+#1272 has landed — deleting the entry is how the fix gets locked in, and if
+they ever climb back over 1000 the detector fails.

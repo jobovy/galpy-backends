@@ -256,11 +256,10 @@ KNOWN_HOT = {
     # default-grid number in mind when judging the fix.
     "interpRZPot.build(24x16)": "galpy task #211: vectorize/undecorate the grid build",
 
-    # verticalPotential adapters forward through the decorated 3D API; fixed on
-    # feat/vertical-adapter-nodecorator (task #209, 1708 -> 244). The residual
-    # after that fix is actionAngleVertical's own bisection closure (task #210).
-    "aAVertical.Jz": "galpy tasks #209/#210: vertical adapter + AA bisection closure",
-    "aAVertical.actionsFreqs": "galpy tasks #209/#210: vertical adapter + AA bisection closure",
+    # (aAVertical entries deleted 2026-08-08 when galpy #1272 merged: the vertical
+    # adapter fix took them 1708/1722 -> 244/246, below the HOT threshold.
+    # Deleting the entry is how the fix gets locked in -- if they ever climb back
+    # over 1000 the detector fails, which is the point.)
 }
 
 
