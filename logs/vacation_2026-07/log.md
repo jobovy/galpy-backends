@@ -27900,3 +27900,43 @@ numpy-hash A/B across the touched calls, and forced-backend runs on both arms.
 
     #1269  133 pass / 19 pending, phantom only
     probe2 alive, 12 reported at 18:33
+
+### 2026-08-08 — CORRECTION: the aASpherical cost is NOT eager-only, and 74% of it is plain floats
+
+Went to verify the "eager only (traced already rolls into `lax.fori_loop`)" line
+I wrote last entry. It is **wrong**, and the check that found it also found
+something better.
+
+First probe was itself invalid: I called `_calc_rperi_rap_backend` directly,
+which bypasses the `@backend_input` boundary — and the boundary is exactly where
+jit is applied ([[jit-trace-mode]]). Measuring an internal for a boundary
+property measures nothing. Re-ran through the public `actionsFreqs`, and
+confirmed tracing positively (by the appearance of tracer objects) rather than
+trusting the mode flag:
+
+    mode=off   crossings=1023   args: float 754, ArrayImpl 266, JVPTracer 2
+    mode=jax   crossings=1023   args: float 754, ArrayImpl 248, DynamicJaxprTracer 18
+
+Tracing IS active in the second row, and the crossing count is **identical**. So
+this cost lands on the traced suite too, not just eager. The correction matters:
+it widens who pays.
+
+**The better finding: 754 of 1023 crossings (74%) carry a plain Python `float`,
+not a backend array.** That is the same scalar-round-trip class as #208/#1261 —
+a plain scalar resolving onto the forced backend, coerced in and cast back. The
+`@backend_input("R","phi","t")` sites declare `t`, whose default is the literal
+`0.0`, so a constant is being marshalled across the boundary on most calls.
+
+That is potentially library-wide, not an actionAngleSpherical quirk — but I am
+explicitly NOT generalising from one call site this time. "Every decorated
+potential call coerces its default t" is a hypothesis with an obvious test
+(census the arg types across all 15 workloads), and the last four times I
+reasoned instead of measuring on this exact class of question I was wrong.
+
+Method note worth keeping: `set_jit("jax")` returning without error does not
+mean the call was traced. Positive evidence is a tracer object showing up in the
+data. Same family of error as [[use-is-a-context-manager]] — the API call
+succeeded and did nothing.
+
+    #1269  136 pass / 16 pending, phantom only
+    probe2 alive at 23:15, log quiet 287s = a test near the 300s cap, not a stall
