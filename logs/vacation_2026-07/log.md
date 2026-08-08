@@ -26337,3 +26337,30 @@ it *should* be inert for the rest of the file -- but "should" is what I keep
 getting caught by. Whole file now running on the committed branch.
 
 #1266 at 24 pending / 129 pass, still zero failures.
+
+### 2026-08-07 — pre-registering the un-defer decision rule
+
+The attribution arm is nearly done (~122/129). Writing the decision rule down
+**before** seeing its numbers, because twice today the pre-registered check is
+what stopped me accepting a plausible-looking result:
+
+    WITH the fix:  178.6 / 64.2 / 60.4 / 57.3 / 30.6 s
+
+  * **WITHOUT-fix times within ~20% of these** -> the entries were ALREADY stale.
+    My fix is not why they are fast; credit belongs to the batched in-backend
+    integrator / C-STM routing that landed earlier. They go in a SEPARATE ledger
+    PR, and #208's description says nothing about them.
+  * **WITHOUT-fix times substantially larger** -> my fix is load-bearing for
+    them, and the un-defer folds into #208 with the A/B as evidence.
+  * **Any of the 5 reported SKIPPED** -> void again, redo. (Not expected: the
+    lifted file stays lifted for this whole run.)
+
+The temptation this guards against is specific and worth naming: I have just
+spent a lot of effort on #208, and "my fix also un-defers 5 tests" is a more
+satisfying story than "5 tests were already fine and I checked". The rule makes
+that not my call once the numbers land.
+
+Housekeeping note so it does not get lost: `evdirect` is still deliberately
+reverted (fix removed, 5 entries lifted) for this arm. Restore is
+`cp /tmp/keep_fix.py galpy/df/diskdf.py` plus the slow-skip file, to be done
+AFTER the run reports -- not during.
