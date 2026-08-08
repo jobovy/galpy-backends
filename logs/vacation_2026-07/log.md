@@ -29853,3 +29853,29 @@ Remaining on #1272: one red, run 31259600507's macOS job failing at
 in_progress so `gh run rerun --failed` is still refused; queued.
 
 Tally of self-healing codecov phantoms today: 6 for 6.
+
+### 2026-08-08 — both macOS re-runs now in flight (and a misread worth recording)
+
+Enumerating every run on the head SHA instead of tracking two IDs:
+
+    31259588020  Linux/Mac build     in_progress  attempt=2
+    31259600507  Linux/Mac build     in_progress  attempt=2
+    31259600497  All-backend tests   completed/success
+    31259600501  all-clear           in_progress
+
+Both failed runs are on **attempt 2**. My per-wake `case` had already dispatched
+the second re-run; the explicit retry a moment later returned
+
+    cannot be rerun; This workflow is already running
+
+which I first read as *still blocked*. It meant *already re-running* — the same
+sentence GitHub used for the genuinely-blocked case in earlier wakes. The
+`run_attempt` field is the discriminator; the message is not. Listing runs by
+`head_sha` with attempt numbers gives the truth in one call, and is what I
+should have done the first time rather than polling two IDs and interpreting
+prose.
+
+The PR still shows 1 red because that is attempt 1's conclusion; attempt 2
+replaces it on completion. All-backend tests already passed
+(31259600497 completed/success), which is the shard that actually exercises
+#1272's guard.
