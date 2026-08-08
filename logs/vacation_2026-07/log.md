@@ -27586,3 +27586,28 @@ measuring rather than by reading. The ledger-staleness discipline I have been
 applying to test lists applies just as hard to my own task list.
 
 Cannot open the PR: #1268 and #1269 hold both slots.
+
+## 2026-08-08 — #1268 MERGED (d627badc). The #208 regression is closed.
+
+    #1268  154 pass / 0 pending / 0 fail, CLEAN -> squash-merged d627badc
+
+Audit before merge, three axes:
+
+    data-dependent ifs on array VALUES   none (the 2 added ifs dispatch on
+                                         type/namespace, resolved pre-trace)
+    duplication                          no new library helpers; only 2 test
+                                         functions + a local spy closure
+    helper placement                     imports as_numpy/get_namespace/
+                                         is_backend_array/use from ..backend,
+                                         defines nothing that belongs in a util
+
+**The arc, start to finish, inside one day:** I merged #1261 in the morning; the
+traced sweep I ran under "never idle" caught the regression within twelve hours;
+four mechanism hypotheses died to measurement before the real one; the fix
+landed with byte-identity proven across three checkouts; and I corrected my own
+framing twice against the numbers — first from "traced regression" to
+"forced-backend regression" (which is what makes it a routine-CI problem, not a
+niche one), then removing a Pdf.3 roadmap claim that turned out already done.
+
+Slow-skip across the session: **210 -> 109**, with #1269 open to take it to 104
+and #125 rescoped to a further one-line un-defer (104 -> 103).
