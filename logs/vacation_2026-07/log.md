@@ -27818,3 +27818,45 @@ and there are two jobs in flight.
 
     #1269  120 pass / 32 pending, phantom only
     probe2 alive, 10 reported at 13:10
+
+### 2026-08-08 — #88 re-diagnosed: it is the eager bisection, and it is backend-only
+
+Decomposed the 989 crossings by sub-step:
+
+    _setup_backend                4
+    _calc_rperi_rap_backend     981     <- essentially all of it
+    _calc_jr_backend              4
+    _calc_or_op_backend           8
+
+So the hot site is the **rperi/rap root-find**, not the quadrature. The shared
+`bisect_root` runs a plain Python for-loop when eager — it only becomes a
+`lax.fori_loop` under tracing ([[jit-trace-mode]], task #105) — and each
+iteration re-enters the decorated potential, paying the ~178 us boundary again.
+
+**This changes what task #88 is.** The task was filed as "drop the scipy loop,
+vectorize numpy — relaxes byte-identity", and I had been treating it as blocked
+on Jo for that reason. Reading the code says otherwise:
+
+    elif xp is not numpy:  return self._actionsFreqs_backend(...)   <- forced jax
+    else:                  ... numpy scalar loop ...                <- untouched
+
+numpy and backend are already *separate branches*, and `_actionsFreqs_backend`
+is already vectorised (`xp.where`, no Python loop over orbits). The measured
+cost lives entirely in the backend branch, so a fix there **cannot** perturb
+numpy and needs no byte-identity waiver. It is landable without a sign-off.
+
+The shape of the fix is the #1268 lesson applied one level down: the leaf wants
+its coercion done **once by its caller**, so the bisection should call an
+undecorated inner evaluator with already-coerced arrays rather than re-crossing
+per iteration ([[backend-kernel-decorator]]).
+
+Two things I would have got wrong by reasoning instead of measuring: the
+quadrature was the obvious suspect and is clean (4 and 8), and the task's own
+framing pointed at numpy, which is not involved at all.
+
+Not starting the implementation this wake — it wants tests and a free slot.
+Recorded in `KNOWN_HOT` with the precise sub-step so the next person (me)
+starts from the right line.
+
+    #1269  126 pass / 26 pending, phantom only
+    probe2 alive, 10 reported at 13:44
