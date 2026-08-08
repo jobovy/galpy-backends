@@ -26872,3 +26872,31 @@ then spend a day finding out. The cost now sits next to the API.
 
     #1267  152 pass / 2 pending, All-backend tests QUEUED
     #1268  37 pass / 114 pending, codecov reds only
+
+### 2026-08-07 — where the runner pressure actually comes from
+
+Listed the open PRs instead of assuming only mine exist:
+
+    #1268  my diskdf fix          (active pair)
+    #1267  my slow-skip un-defer  (active pair)
+    #1204  feat/backends-develop -> feat/backends   <- UMBRELLA, 60 commits ahead
+    #892   multi-backend integration
+    #872, #748  Jo's older WIPs
+
+**#1204 is the piece I had not accounted for.** It is the accumulating
+develop→backends PR, and every merge I land into `feat/backends-develop`
+re-triggers its full matrix -- 195 checks, currently 135 pass / 60 pending.
+So one merge of mine costs roughly three CI runs: the PR's own, the
+push-to-develop run, and #1204's re-run.
+
+That, plus #1268's ~150, is why #1267's last `All-backend tests` has been queued
+rather than slow. Structural, not a fault, and not something I can change (I
+cannot edit `.github/workflows`). Worth knowing so I stop reading "queued" as a
+symptom of something wrong, and so the merge cadence is a considered choice
+rather than an accident.
+
+Two-PR allowance is being respected: #1267 + #1268 are the active pair; #1204
+and #892 are long-lived integration PRs, not work I opened.
+
+#1204's own two reds are codecov, same shape as everywhere else on a PR whose
+uploads are still landing. Not mine to drive.
