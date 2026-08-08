@@ -256,7 +256,13 @@ KNOWN_HOT = {
     # default 101x101 grid pays 30603 (interpPot) to ~102k (interpPot+interpDens).
     # The census uses a small grid, which under-reports by design -- keep the
     # default-grid number in mind when judging the fix.
-    "interpRZPot.build(24x16)": "galpy task #211: vectorize/undecorate the grid build",
+    # Measured 2026-08-08: the DEFAULT case needs no new API. interpPot and
+    # interpRforce go 1152 -> 0 (24x16) and 30603 -> 0 (default 101x101) by
+    # calling the already-existing _evaluatePotentials / _evaluateRforces --
+    # three call sites, 9.69 s -> 4.92 s, grid sha256 unchanged. Only
+    # interpDens / interpR2deriv / interpvcirc need the four undecorated inners
+    # that do not exist yet, so do NOT start by writing those.
+    "interpRZPot.build(24x16)": "galpy task #211: 3 sites use existing inners; dens/2nd-deriv need new ones",
 
     # (aAVertical entries deleted 2026-08-08 when galpy #1272 merged: the vertical
     # adapter fix took them 1708/1722 -> 244/246, below the HOT threshold.
