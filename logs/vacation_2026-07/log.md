@@ -28522,3 +28522,40 @@ something to decide unilaterally at 4am.
     torch gate  182 passed / 0 failed
     #1270  138 pending / 14 pass, phantom only
     #1271  149 pending, no reds
+
+### 2026-08-08 — sizing the pattern: 96 internal sites, but that is NOT 96 bugs
+
+Three instances in one day justified asking how large the class is. AST scan of
+`galpy/` for calls to a **decorated public evaluator that has an undecorated
+inner** (9 such pairs exist):
+
+    96 internal call sites across 17 files
+
+    19  actionAngle/actionAngleVertical.py         evaluatelinearPotentials
+    15  actionAngle/actionAngleVerticalInverse.py  evaluatelinear{Potentials,Forces}
+    13  potential/Potential.py                     evaluateplanar* / evaluate*
+    12  orbit/Orbits.py                            evaluate{planar,,linear}Potentials
+     9  potential/interpRZPotential.py             evaluate{Potentials,Rforces,zforces}
+     6  snapshot/directnbody.py                    six different ones
+     5  df/streamspraydf.py, 5 MovingObjectPotential, 4 streamgapdf, ...
+
+**96 is a population, not a defect count, and I am not going to present it as
+one.** A decorated call costs ~178 us; that is invisible at a handful of calls
+and catastrophic inside a bisection. The discriminator is *called-in-a-loop*, not
+*exists* — the same correction I had to make this morning when 74%-scalar looked
+like a finding and turned out to be ubiquitous and harmless. Of these 96, exactly
+three are measured hot so far (planar `_evaluate`, vertical `_evaluate`,
+`actionAngleVertical:f`); the rest are unmeasured, and most are surely fine.
+
+What the number is good for: it tells Jo the class is **structural**, not three
+coincidences, and that a decision is needed on scope — three targeted fixes
+versus a convention ("internals call the inner; the decorated entry is for
+users"). That is a design call about the library's shape, so it goes in the
+AWAITING JO list rather than getting decided here.
+
+The concentration in the two `actionAngleVertical*` files (34 of 96) is also
+suggestive: those are the modules whose consumers are loops by construction.
+
+    vertical gates:  torch 182 passed, jax 180 passed, numpy still running
+    #1270  131 pending / 21 pass, phantom only
+    #1271  149 pending, no reds
