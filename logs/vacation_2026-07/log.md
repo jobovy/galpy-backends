@@ -26984,3 +26984,26 @@ speed -- the same rule that kept 13 unobserved entries in #1267.
 Two PRs in flight again (#1268, #1269), both slow-skip/df-adjacent but
 **file-disjoint**: #1268 is galpy/df/diskdf.py + tests/test_backend_diskdf.py,
 #1269 is tests/backend_slow_skip.txt only. Merge order does not matter.
+
+### 2026-08-07 — README table brought current for both merges
+
+The PR table stopped at #1263; #1266 and #1267 had landed since. Added both,
+per the standing rule that the README + log get updated **on landing**, not in a
+batch later ([[keep-galpy-jax-log-current]]).
+
+Each row carries what a reader needs to not re-derive it:
+
+* **#1266** — the mechanism (child inherits *compiled* kernels + their thread
+  pool), **both refuted knobs with their A/B**, the 3× timeout → 27.7/14.0/45.4 s
+  result, and the explicit non-claim about interpRZ.
+* **#1267** — the CI-shard-context method, 88% stale, and the three rules the
+  numbers forced, including the one that is genuinely surprising: **`passed` does
+  not imply "within the cap"**, measured at 620 s under a 300 s cap.
+
+Both rows record the refutations and non-claims, not just the wins. A table of
+only successes is how the #1261-style regression gets written twice.
+
+    slow-skip across the session: 210 -> 209 (#1266) -> 109 (#1267) -> 104 (#1269, open)
+
+Still in flight: #1268 (93 pass / 58 pending, falsifier 0 of 2 so the patch
+prediction is untested), #1269 (just started).
