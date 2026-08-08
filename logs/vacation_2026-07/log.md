@@ -30912,3 +30912,74 @@ than only below a cutoff.
 
     #1275  3 pass / 148 pending / 0 red   (queued, audit-ready)
     #1274  77 pass / patch 100.00% / project -1.15% and closing
+
+### 2026-08-08 — #207: the bug I set out to port was in the other code path
+
+Jo cleared #207 ("fix the backend"), so I went to port main's `cd81fbed`
+substitution into `_bk_split_quad`. There was no backend bug of that kind.
+
+**`_bk_dispatch` routes CONCRETE backend input to the numpy function.** Only a
+tracer or a `requires_grad` tensor reaches the GL path:
+
+```python
+try:    Rf, zf = float(R), float(z)   # concrete -> scipy quad
+except Exception: pass                 # tracer  -> in-backend GL
+else:   return ...numpy_fn(Rf, zf)...
+```
+
+My probe passed plain `jnp.asarray` scalars. So every number I reported for
+"the backend at small |z|" was **scipy's**, and the collapse below |z|~1e-6 is
+the numpy defect (#189 / `cd81fbed`) that the rebase supplies for free.
+
+This is exactly [[value-checks-cannot-see-numpy-fallback]], and I had already
+written that memory. What should have stopped me a step earlier: I monkeypatched
+`_bk_split_quad` and swept K over 24/40/60, and the outputs were **identical to
+the last digit**. I read that as "the panels reach the peak, so the integrand
+must be wrong there" — a coherent story that even predicted the observed onset.
+The other reading, that the function was never called, was the right one. A
+patch that changes nothing is evidence about *reachability* before it is
+evidence about *behaviour*.
+
+#### Measured under jit, the real defect is two decades lower
+
+    |z|      dyadic K=24   geometric K=24     (fraction of the sheet limit)
+    1e-08    1.000000017   1.000000017
+    1e-10    1.005054471   0.999999993
+    1e-12    0.054         1.000003514
+
+So the GL path was already fine down to 1e-8 — better than numpy, which is
+`nan` by 1e-10. The genuine bug is that the dyadic ladder
+`dk = max(R*2**-k, dmin)` bottoms out at `R*2**-K`, so below `R*2**-K/4` the
+innermost panel never reaches the peak.
+
+#### The fix is smaller than the port would have been
+
+Span **geometrically** from `R/2` to `dmin` rather than dyadically. Same K, so
+the jit graph does not grow, and it resolves the peak at any |z|. No threshold,
+no substitution, no `f(a, u, d2)` signature change — main needs all three only
+because `integrate.quad` chooses its own nodes and cannot be told the offset,
+while `_bk_split_quad` already *places* its nodes at `R ± dk`.
+
+It also deletes the `xp.maximum` kink where the two arms crossed, so panel edges
+are now smooth in R. That is load-bearing: the file already carries a test
+recording that an earlier *unconditionally-graded* schedule "passed every
+accuracy check above and was wrong here by 193%" on the FD-in-R probe. The new
+schedule is smoother than the one it replaces, and that test passes.
+
+#### Gates
+
+    numpy byte-identical   sha256 674eb2ec4b9bf838 both arms (48 values,
+                           one worktree, one file toggled)
+    new tests              12 fail without / 12 pass with
+    file                   49 passed jax, 49 passed torch
+    wider jax gate         206+94skip / 7 / 43 passed
+
+Committed `eee43498` on `feat/anyaxisym-zforce-peak`, held for a PR slot behind
+#1274/#1275.
+
+Also corrected the module docstring, which claimed "GL cannot resolve the
+small-z sheet structure" — true when written, false now, and precisely the kind
+of stale rationale that sends the next person porting a fix they do not need.
+
+    #1275  38 pass / 114 pending / project -31.11% -> -15.01% (converging)
+    #1274  fully green: patch 100.00%, project 99.93% (+0.00%)
