@@ -30073,3 +30073,33 @@ Exactly [[never-report-partial-run-as-result]] in a new costume: the count of
 Also deleted the `aAVertical` entries from the census `KNOWN_HOT` now that
 #1272 has landed — deleting the entry is how the fix gets locked in, and if
 they ever climb back over 1000 the detector fails.
+
+### 2026-08-08 — ledger burndown folded into #1273: slow-skip 98 -> 96
+
+The two jax `actionAngleAdiabatic` entries were deferred with this rationale:
+"under forced-jax the integration dispatches eager-jax **per step** and exceeds
+the 300 s timeout. Defer until action-angle is backend-migrated/vectorized."
+
+That per-step dispatch is precisely what #1272 + #210 remove (aAAdiabatic:
+4166 -> 251 -> 9 crossings). Measured on the #1273 branch, forced jax, C ext:
+
+    test_actionAngleAdiabaticGrid_basicAndConserved_actions   59.60 s
+    test_actionAngleAdiabatic_conserved_actions_cylsep        27.44 s
+
+against a 300 s cap; CI ~0.71x local -> ~42 s and ~19 s, inside the 240 s
+margin. Un-deferred, folded into #1273 so the fix and the burndown it enables
+land together and are measured on the same state.
+
+**The first timing run was worthless and looked fine.** It printed
+
+    1 passed, 2 skipped, 206 deselected ... 3.09s
+
+The 1 that passed was `..._cylsep_c` (the C variant); the **2 skipped were the
+ledgered tests themselves**, skipped by the very slow-skip list I was trying to
+measure against. A run cannot measure a test it skipped. There is no env
+override for the list path, so the honest method is to remove the two lines,
+run, and restore — which is what produced the numbers above.
+
+Same family as the `-k` that deselected everything an hour ago: pytest exits 0
+and prints a green-looking line whether or not the tests you care about ran.
+Read the skipped/deselected counts, every time.
