@@ -30732,3 +30732,34 @@ real and I close it with a targeted test.
 
     #1275  1 pass / 150 pending / 0 red   (cherry-picks, mergeable)
     #1274  27 pass / 102 pending / 2 codecov (draft, converging)
+
+### 2026-08-08 — specced the AnyAxisym port (#207) instead of attempting it
+
+Jo's rebase is days out and the cherry-pick of `cd81fbed` is deliberately not in
+#1275, so the residual is a **port**. Rather than start numerical-method surgery
+on a physics kernel unsupervised, I specified it precisely — measurement is the
+part that does not need review.
+
+`zforce(1.0, z)` / thin-disk limit, on feat/backends-develop:
+
+    1e-04  1.0001727682     1e-07  0.0000001728  COLLAPSED
+    1e-05  1.0000172803     1e-08  0.0000000173
+    1e-06  1.0000017281     1e-09  0.0000000017
+                            1e-10  nan
+                            1e-11  0.0
+
+A **cliff** between 1e-6 and 1e-7, then a fall that is **linear in z** — and that
+linearity names the mechanism without needing to read the quadrature: the
+integrand's 1/((a-R)^2+z^2) peak has width ~|z| and contributes 1/|z|, which must
+cancel the -4z prefactor to leave a finite limit. Step over the peak and the
+integral goes to 0, so zforce goes to -4z*(finite) -> 0 proportional to z. Exactly
+the observed pattern, and exactly what main's a = R + |z|t substitution prevents.
+
+So the port is now a one-line design statement rather than an exploration: carry
+main's substitution into the backend-native path, keep `ellipkm1` for the exact
+complement, then re-run this sweep + the R2deriv/FD screen + the AnyAxisym
+jit/grad tests. Written into task #207 with the numbers.
+
+Also recorded there: #207 (this cliff, main is correct) is **distinct** from #203
+(R2deriv ~3e-6 vs mpmath), which is present on BOTH branches and NOT fixed by
+cd81fbed. Two separate items in the same file; easy to conflate.
