@@ -30158,3 +30158,35 @@ whose measurement had *failed*. Caught by restoring from the backup and printing
 `git status` + entry count (92) + `git diff --stat` (empty) before doing anything
 else. Any temporary mutation of a tracked file needs its restore verified, not
 assumed — the failure path is exactly where the restore does not run.
+
+### 2026-08-08 — #1273 pre-merge audit DONE (clean)
+
+Done now so the merge is not gated on it. Net tree diff vs develop, 3 files:
+
+**Source** — `actionAngleVertical.py`, +30/-19 across 6 sites:
+
+* **if -> xp.where array-input class:** nothing. No conditionals introduced; six
+  call-site swaps. The `> 1e-7` in `_unbound_backend` is pre-existing and already
+  returns an array comparison.
+* **Duplication / placement:** none added. Reuses the existing
+  `_evaluatelinearPotentials`; no new helper.
+* **Units:** all six sites *already* passed `use_physical=False`, and the inner
+  returns internal units, so this is a pure value no-op — the same check that
+  went the *other* way for interpRZPotential (#212), where the flag was missing
+  and that was the bug. Matches the measured sha256 byte-identity
+  (e2a8028f60e8f046 with and without).
+* **Import not dead:** the decorated `evaluatelinearPotentials` is still used at
+  **13** sites (the numpy/shared paths) and the undecorated at **6** — exactly
+  the split the PR body claims. Verified by counting rather than asserting; an
+  import left behind for callers that no longer exist would be a quiet wart.
+
+**Tests** — `test_backend_actionAngle.py` +39: shared
+`count_boundary_crossings`, threshold tied to the 80-step bracketing schedule,
+jax + torch.
+
+**Ledger** — `backend_slow_skip.txt`: exactly **6 removals, 0 additions**, all
+measured, matching the two burndown commits (2 aAAdiabatic + 4 dissipative).
+
+Verdict: clean. Merge when green.
+
+    #1273  2 pass / 149 pending / 0 red
