@@ -27740,3 +27740,36 @@ already un-deferred 100 there, so the residue is the genuinely slow tail — and
 `test_noninertial.py`'s 19, which are the real timeouts re-filed in #198.
 
     #1269  113 pass / 39 pending, phantom only
+
+### 2026-08-08 — #1269 codecov red diagnosed structurally (codecov API is down)
+
+Tried to run the usual phantom discriminator against the codecov API and got
+`upstream connect error or disconnect/reset before headers` on every commit —
+a codecov.io service problem, not a bad query. So the numeric check (lines
+identical both sides + head hits climbing) is unavailable.
+
+The structural argument settles it anyway:
+
+    #1269 files changed:   tests/backend_slow_skip.txt   (ONLY)
+    codecov/patch:         pass
+    codecov/project:       fail
+    base 4f8ce41a  <-  predates #1268 d627badc (+71 lines, incl. a covered test file)
+    mergeable=MERGEABLE, state=BLOCKED
+
+The PR changes **no Python source at all** — one plain-text ledger file — so its
+own coverage cannot differ from its base. A project-coverage drop with a green
+patch on such a PR is the stale-base phantom
+([[codecov-stale-base-892-suppression]]), not a regression.
+
+**Not rebasing to clear it.** That needs a force-push on an open PR, against
+[[no-force-push-open-prs]], and `MERGEABLE` says there is no conflict to fix
+([[dont-reflexively-rebase-disjoint-prs]]). Documented path: let the 34 pending
+checks finish, then re-run the all-clear, which is the gate that actually blocks
+merge.
+
+Worth noting the discriminator has a dependency I had not written down: it needs
+codecov's API to be *up*. When it isn't, fall back to reasoning about what the
+diff can physically affect.
+
+    probe2 (interp_potential + pv2qdf): alive, 3 reported at 4:20 — slow, as
+    befits entries that were slow-skipped; the timings are the whole point
