@@ -26289,3 +26289,29 @@ merges them in an order I do not control is a conflict I would be handling
 blind.
 
 #1266 at 31 pending / 122 pass, still zero failures.
+
+### 2026-08-07 — README updated with where traced-green actually stands
+
+The nine-run table in the README still showed `test_diskdf.py jax-jit 122/2` and
+described the Oort-A timeouts as an open item. That is now fixed and measured,
+so added a "Where traced-green actually stands" section rather than leaving the
+table to imply otherwise:
+
+  * the diskdf entry is closed -- my own #1261 regression, caught by this sweep
+    within twelve hours of merging it, now 4.40 s jax / 4.09 s torch against
+    25.26 / 42.79, whole file 124/5/0 and 129/0/0
+  * the remaining traced ledger is **7 entries**, grouped by *why*: 4 by-design
+    (GL vs scipy), 2 not-traceable by construction (Quantity -> numpy), 1
+    tolerance (computed e vs an absolute 1e-16)
+  * **none is an unmigrated potential**
+
+The README is what Jo will actually read; the running log is where the working
+is. So the headline belongs there, stated as "traced-green is achieved as far as
+code changes can take it, what remains is maintainer decisions" -- which is both
+the accurate claim and the one that tells him what he needs to decide.
+
+Deliberately kept the original nine-run table intact rather than editing the
+diskdf row to look green in hindsight. The table is a record of what the sweep
+found on the day; rewriting it would erase the fact that the sweep caught a
+regression, which is the main argument for making `workflow_dispatch(jit=true)`
+a standing pre-merge run.

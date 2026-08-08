@@ -211,6 +211,26 @@ Five distinct problems today were visible only under `--jit`. That is the case
 for making `workflow_dispatch(jit=true)` a standing pre-merge run rather than an
 occasional one.
 
+### Where traced-green actually stands
+
+The `diskdf` Oort-A entry above is **fixed** — it was a regression I introduced
+in #1261, found by this sweep within twelve hours of merging it, and traced
+`oortA` now runs 4.40 s on jax and 4.09 s on torch against 25.26 s / 42.79 s
+before. Whole file: 124/5/0 on jax-jit, 129/0/0 on torch-jit.
+
+That leaves **7 entries in the whole traced ledger**, and re-reading them
+(2026-08-07) gives a cleaner headline than the burndown language implies:
+
+| what | n | why it is there |
+|---|---|---|
+| `AnyAxisymmetricRazorThinDisk` | 4 | **by design** — the backend path uses GL so gradients exist; GL cannot resolve the `a=R` principal value or form the `z=0` Hadamard 2nd derivative |
+| units-based density | 2 | **not traceable by construction** — astropy `Quantity` arithmetic strips a tracer to numpy |
+| `actionAngleStaeckelGrid` | 1 | tolerance — a *computed* circular-orbit eccentricity asked to vanish to `1e-16` (measured 9.4e-12 / 1.5e-10) |
+
+**None is an unmigrated potential.** Traced-green is achieved as far as code
+changes can take it; what remains is maintainer decisions about tolerances and
+two acknowledged design limits, not migration work.
+
 ## Backend support snapshot (this env)
 - jax 0.9.2 ✅ · torch 2.12 (CPU) ✅ · array-api-compat 1.14 ✅
 - `array_api_compat.array_namespace`: numpy → (normalized to plain numpy), jax → `jax.numpy`, torch → `array_api_compat.torch`.
