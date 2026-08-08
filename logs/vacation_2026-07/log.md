@@ -30663,3 +30663,41 @@ used mpmath as arbiter, which is the correct instrument
 
 Net: my speculation was wrong and is retracted here rather than left in the
 handover. #203 is a real open item on BOTH branches.
+
+### 2026-08-08 — PR #1275: cherry-pick 3 of main's 9 missing commits (Jo's call)
+
+Jo: rebase must wait days, so cherry-pick now and drop them in the rebase later.
+`feat/backends-develop` was 9 commits behind main. Picked the code fixes with
+`-x` (records the main SHA, so the rebase drops them cleanly):
+
+    8ccaaa65 <- 93105a46  NFWPotential alpha/beta on rmax/conc init paths
+    350c2348 <- b87eb09f  interpSphericalPotential range vs FDM friction (#1107)
+    7b195b5f <- 80a10d66  drop expired _NUMPY_1_23 conditional in test_SpiralArms
+
+Left for the rebase: dependabot x2 (**and I cannot edit .github/workflows
+anyway**), pre-commit autoupdate, notebook outputs, a docs tutorial.
+
+**Did NOT pick `cd81fbed` (#1245), deliberately.** Measured first, because "both
+branches fixed the same physics" could mean either "already covered" or "still
+broken". `zforce(1.0,z)` vs the thin-disk limit:
+
+                    z=1e-6          z=1e-8
+    main     ratio  1.0000017281    1.0000000173   correct
+    develop  ratio  1.0000017281    0.0000000173   collapses to ~0
+
+So the backend branch DOES have a real defect below |z|~1e-7 (task #207) — my
+earlier guess that #1254+#1259 superseded main's fix was wrong. But main's fix is
+`_quad_apeak`, a scipy-`quad` construction; cherry-picking it would swap the
+backend-native jit-traceable path for a numpy-only one. That is a port, not a
+merge resolution, so it goes to Jo rather than being done unilaterally.
+
+**Conflict resolution, 1 of 3.** `80a10d66` conflicted in `test_Rzderiv`: main
+drops the version conditional and keeps `dx=1e-8`; this branch uses `dx=1e-6`
+(#1258) because 1e-8 is amplification-bound under jax. Took main's cleanup with
+this branch's dx; verified passing on numpy AND `--backend jax`.
+
+**Pre-existing failure, checked not mine.** `test_ExpTruncNFW_smallr_series_c`
+fails here — and identically on clean develop under the identical command
+([[verify-burndown-flips-stash-rerun]], the same one-thing-at-a-time rule I broke
+earlier today on #1274). Both arms lacked the C extension and it is a `_c` test,
+so it may be a missing-`.so` artifact.
