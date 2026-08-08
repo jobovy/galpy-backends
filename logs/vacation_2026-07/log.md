@@ -30103,3 +30103,30 @@ run, and restore — which is what produced the numbers above.
 Same family as the `-k` that deselected everything an hour ago: pytest exits 0
 and prints a green-looking line whether or not the tests you care about ran.
 Read the skipped/deselected counts, every time.
+
+### 2026-08-08 — second burndown pass on #1273: 96 -> 92
+
+Having found two stale deferrals, I checked the neighbouring block rather than
+stopping. The four `#960 coercion ascent` entries were deferred for a *different*
+cause than the adapter fix — ChandrasekharDynamicalFriction's per-scalar
+`sigma_r` dispatch and an un-migrated-Orbit interpolation error — so they were
+not obviously stale. Measured anyway (cheap):
+
+    test_toVerticalPotential      1.86 s     test_rforce_dissipative     1.05 s
+    test_RZToplanarPotential      0.28 s     test_RZToverticalPotential  0.08 s
+
+against a 300 s cap. A **>150x** margin: both cited causes have since been
+fixed by other work, and nobody re-measured. All four un-deferred.
+
+Stated the weakness in the commit rather than hiding it: these were timed in
+isolation, not in the full `test_potential.py` shard
+([[handpicked-nodeid-batch-is-not-a-context]]). The margin makes a context
+effect implausible, and un-deferring returns them to the CI shard, which *is*
+the full-context check — if any is slow or fails there, re-defer with the shard
+measurement attached. Being wrong costs one red CI run, not a bad merge.
+
+    slow-skip  98 -> 96 (aAAdiabatic) -> 92 (dissipative/conversion)
+
+Also cancelled 7 superseded CI runs on the prior SHA after the burndown push,
+keeping the 8 on the new head — the SHA-equality guard is what stops that from
+cancelling the run I actually need ([[cancel-stale-pr-ci-on-push]]).
