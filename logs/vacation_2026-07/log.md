@@ -30399,3 +30399,24 @@ slow-skip list skipped the very tests I was timing).
 
 The other three `test_potential.py` groups are still running; the four
 dissipative/conversion un-deferrals live in one of them.
+
+### 2026-08-08 — which shard actually validates the other four un-deferrals? Group 5, still pending
+
+"4 of 6 validating shards green" reads like the burndown is nearly checked. It
+is not. Collected each split group to find where the four dissipative/conversion
+un-deferrals actually live:
+
+    group 1: 0 of 4     group 2: 0 of 4     group 3: 0 of 4
+    group 4: 0 of 4     group 5: 4 of 4   <-- still pending
+
+Groups 1 and 3 are the two that passed, and neither contains any of them. So the
+aAAdiabatic pair is confirmed (test_actionAngle shard, 3 -> 1 deferred, 182
+passed) and the other four are **not yet validated at all** — one shard decides
+them, and it has not run.
+
+Worth the two minutes: without this I would have carried "4/6 green, looking
+good" into the merge decision, when the relevant number is 0/1. Aggregate
+progress counts say nothing about the specific check you care about — the same
+error shape as reading "N passed" without reading skipped/deselected.
+
+    #1273  111 pass / 40 pending / 0 real reds; codecov/project -13.91% and converging
