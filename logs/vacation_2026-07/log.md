@@ -27430,3 +27430,28 @@ still normal, so the falsifier remains genuinely pending rather than late. Its
 verdict is the next thing worth recording; I am deliberately not logging
 "still waiting" each wake, because a log padded with non-events is worse for the
 summaries it exists to serve.
+
+### 2026-08-08 — patch prediction RESOLVED, and it was right
+
+    FALSIFIER  2 of 2 test_backend*.py builds done
+    patch      70.0% (7/10)  ->  100.0% (10/10)
+    #1268      152 pass / 2 pending / ZERO reds -- both codecov checks cleared
+
+The 3 missing statements were exactly the two backend branches named in advance
+(482 `return bound(...)`, 486-487 the forced-backend pin), covered only by
+`tests/test_backend_diskdf.py`, whose builds had not run.
+
+Worth stating what the pre-registration actually bought, since the outcome was
+the comfortable one: it meant that for ~15 wakes I reported "patch is 70%, and
+here is the specific thing that would prove me wrong" instead of "patch is a
+phantom, ignore it". Had the builds landed with patch still at 70%, I had
+already written down that the local `settrace` proof shows only *reachability*,
+not that CI runs those lines, and that I would cover them properly. The
+prediction being right is luck; having it be checkable was not.
+
+Also notable: **codecov/project cleared itself too**, so #1268 has no reds at
+all. Every codecov red in this session -- five across four PRs -- turned out to
+be upload-side, and each was diagnosed rather than waved through.
+
+Remaining on #1268: `backend status report` + `all-clear`, MERGEABLE/BLOCKED on
+those two aggregators only.
