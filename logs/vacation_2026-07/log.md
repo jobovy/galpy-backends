@@ -30813,3 +30813,102 @@ Third time today the changed-lines check predicted codecov exactly (#1272, #1273
 
     #1275  2 pass / 149 pending / 0 red   (starved behind #1274 + develop)
     #1274  57 pass / 73 pending / project still converging
+
+### 2026-08-08 — Jo clears the AWAITING queue: five decisions, two issues filed
+
+Jo answered every open item in one pass. Recording the decisions verbatim in
+effect, because they set the direction for the rest of the vacation:
+
+| item | decision |
+|---|---|
+| #1274 | **target `main`** (already did — no change needed) |
+| #211 interpRZ | **(B) vectorize**, not the measured 3-site inner swap |
+| #207 AnyAxisym zforce | **fix the backend** — go |
+| #203 / #206 | **not urgent — open as issues** |
+| #171 tolerances | **backend-aware** bars |
+| #194 jit slow-skip | **own list** |
+
+Two of these are worth more than a table row.
+
+#### #211: Jo took the harder option, and it is the right one
+
+I presented (A) swap-to-inners as measured-and-ready (30603 → 0 crossings,
+9.69 s → 4.92 s) and (B) vectorize as "its own project". Jo chose (B).
+
+The deciding property is one I had listed but under-weighted: **(B) keeps the
+decorated call**, so it is strictly byte-identical on numpy and needs no units
+ruling — where (A) changes units-set behaviour and would have inherited #1274's
+open question, coupling two unrelated PRs. (B) also speeds up **numpy**, which
+(A) does not, since (A) only bypasses a boundary the numpy path never pays.
+
+So the "cheap" option was cheap only if you stop measuring at the backend.
+
+The blocker stands and is the whole of the work: `AnyAxisym` deliberately opts
+out of array inputs, so (B) needs a **per-potential fallback** to the scalar
+loop rather than a blanket vectorization.
+
+#### #206 was mischaracterised, and re-measuring before filing caught it
+
+I had it recorded as "Rforce wrong by up to 2.8e-3 at small |z|". Filing a public
+issue forced a re-measure, and the shape is different:
+
+    R=0.5  z=1e-6   rel 5.2e-03    <- quadrature branch
+    R=1.0  z=1e-3   rel 8.3e-04    <- quadrature branch
+    R=1.0  z=1e-2   rel 1.5e-06
+    R=1.0  z=1e-1   rel 5.8e-12
+    R=1.0  z=1e-7   rel 1.3e-07    <- CLOSED-FORM branch, below the switch
+
+It is a **band**, 1e-6 ≲ |z| ≲ 1e-2, not a small-|z| limit. The closed form
+below the `|z| < 1e-6` switch is *accurate*; the quadrature above it degrades as
+z → 0. So `Rforce(1., 1e-7)` is more accurate than `Rforce(1., 1e-6)` — **the
+switch hands over in the wrong direction**, which is a different and more
+reportable defect than "wrong at small z", and 5.2e-3 is ~2x the number I had.
+
+The same threshold appears at **four** sites in the file, so other methods
+plausibly share it. I said so in the issue *and* said I had not checked them.
+
+Filed: **gh#1276** (band) and **gh#1277** (`R2deriv`, peak 9.9e-6 at R=0.2 —
+also higher than the 3.3e-6 I had recorded).
+
+Both were re-verified on a real `main` checkout, not inferred from the
+byte-identity invariant — and they returned values identical to `feat/backends`
+to every printed digit, which re-confirms that invariant as a side effect.
+
+Arbiter discipline per [[mpmath-quadosc-final-arbiter]]: the mpmath Hankel
+reference was validated *per quantity* before use — against galpy's own
+closed form at z=0 for `Rforce` (3.5e-15), and against FD-of-Hankel-`Rforce` for
+`R2deriv` (11 digits). An unvalidated arbiter would have been the third
+plausible-but-wrong number in this pair.
+
+#### #207: the K-sweep refuted the panel-reach hypothesis in one run
+
+Before porting main's fix I checked my own explanation. `_bk_split_quad` grades
+dyadic panels toward a=R with `dmin = min(4|z|, R/2)` and `K=24` levels, and
+`R·2^-24 ≈ 6e-8` — so "24 levels cannot reach the peak once |z| is small" was
+a clean, plausible story that predicted the observed 1e-7 onset almost exactly.
+
+It is wrong. K=24 / 40 / 60 give **identical** values at every z:
+
+     z        K=24          K=40          K=60
+     1e-06    1.000001728   1.000001728   1.000001728
+     1e-07    0.000000173   0.000000173   0.000000173
+     1e-09    0.000000002   0.000000002   0.000000002
+
+The panels reach the peak; the integrand *there* is garbage. main's commit
+message names the mechanism — `(a-R)^2+z^2` formed by **subtraction** cancels
+catastrophically — and its fix threads `u = a-R` and `d2` analytically through
+an `f(a, u, d2)` signature.
+
+Cost of not checking: I would have "fixed" #207 by raising K, measured no
+change, and looked for a second bug.
+
+**The backend port comes out cleaner than main's.** main needs the `|z| < 1e-4·R`
+threshold because `integrate.quad` picks its own nodes and cannot know the
+offset. `_bk_split_quad` *places* its nodes at `R ± dk` with `dk` in closed
+form — so it can pass the offset through analytically at every |z|: no
+threshold, hence **no data-dependent branch**, hence natively traceable with no
+`xp.where` evaluating both arms, and uniformly more accurate than main rather
+than only below a cutoff.
+
+    #1275  3 pass / 148 pending / 0 red   (queued, audit-ready)
+    #1274  77 pass / patch 100.00% / project -1.15% and closing
