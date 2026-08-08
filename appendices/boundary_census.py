@@ -20,11 +20,13 @@ The signature of the bug is a crossing count in the **tens of thousands**. A
 healthy call site is single digits to low tens.
 
 Sweep of the built-in workloads, 2026-08-08, C extension loaded, x64 on, with
-the planar (galpy #1271) and vertical (#1272) adapter fixes applied:
+the planar (galpy #1271), vertical (#1272) and actionAngleVertical-closure
+(#1273) fixes applied:
 
-    jax    every df/potential/orbit/qdf workload <= 112;  aAStaeckel 0
+    jax    aAVertical 0/0 · aAAdiabatic 9 · aASpherical 5/23 · aAStaeckel 0
+           every other df/potential/orbit/qdf workload <= 112
     torch  same shape, max 10
-    residual: aAVertical 244/246 and aAAdiabatic 251, all one closure (#210)
+    residual: interpRZPotential only (task #211), 3840 here / 30603 default grid
 
 ``actionAngleSpherical`` was the original outlier at 989/1023: it runs a scipy
 quadrature loop that evaluates the potential ~1000 times per call, one scalar

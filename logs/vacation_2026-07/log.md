@@ -30190,3 +30190,28 @@ measured, matching the two burndown commits (2 aAAdiabatic + 4 dissipative).
 Verdict: clean. Merge when green.
 
     #1273  2 pass / 149 pending / 0 red
+
+### 2026-08-08 — closing census for the boundary arc (on the #1273 state)
+
+                              start        now
+    aAVertical.Jz              1708          0
+    aAVertical.actionsFreqs    1722          0
+    aAAdiabatic.actions        4166          9
+    aASpherical.actions         989          5
+    aASpherical.actionsFreqs   1023         23
+    diskdf.oortA            133,332          0    (fixed earlier, #1268)
+    every other workload                  <= 112
+    interpRZPotential        30,603     30,603    <- the one left (#211)
+
+Three PRs (#1271 merged, #1272 merged, #1273 open) plus #1268 take every
+censused workload except one to double digits or zero. The single remaining
+known-hot site is `interpRZPotential`, whose fix is written and measured
+(30603 -> 0, 1.97x faster build, byte-identical grid) and waiting on Jo only
+because it changes numpy behaviour for units-set potentials — which is #212, the
+pre-existing bug it also fixes.
+
+Docstring sweep block refreshed so the detector's own documentation states the
+current numbers rather than the state it was written in. That staleness bit me
+earlier today: the file still advertised aASpherical at 989/1023 after #1271 had
+taken it to 5/23, and a detector whose docs describe a fixed defect trains you
+to ignore it.
