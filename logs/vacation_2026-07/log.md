@@ -26389,3 +26389,35 @@ finding out at review time.
     class sweep    9 sites, no second instance
 
 #1266 at 17 pending / 136 pass, zero failures.
+
+### 2026-08-07 — CORRECTION: the attribution arm had been dead for hours
+
+I reported "attribution arm still running" across several wakes. It was not.
+
+    worker process        GONE (pgrep matched only my own subshell)
+    log last written      20:46:02, checked at 00:50 -- 4h stale
+    log content           72 dots (55%) + 51 = 123 of 129, then nothing
+    junitxml              NEVER WRITTEN -- the run produced no result at all
+
+It was killed by its own `timeout 3600`, ~6 tests from finishing.
+
+**How I missed it:** the dot count grew for a while, then stopped, and I kept
+reading a static log as "in progress". I have a memory
+([[never-report-partial-run-as-result]]) about `pgrep` matching the `timeout`
+wrapper and reading a healthy run as hung -- this is the *inverse* error, reading
+a dead run as healthy, and the same fix covers both: **check the worker, not the
+log.** The tell was there and free: identical dot count on two consecutive
+checks. I saw it and did not act on it.
+
+**What the failure does say, and what it does not.** With the fix the file takes
+1295 s; this arm blew past 3600 s. The two oortA timeouts only account for ~600 s
+of that, so something else is substantially slower without the fix -- consistent
+with the sampling tests being fix-sensitive after all. That is a *hint*, not the
+measurement, and it does not satisfy the rule I pre-registered. No claim.
+
+Relaunched with two changes, both fixing the harness rather than my attention:
+  * `timeout 9000` -- the without-fix arm is far slower than the with-fix one, so
+    sizing its budget from the fast arm was wrong.
+  * `-v` -- per-test outcomes stream to the log, so a killed run still yields
+    partial per-test data instead of an undifferentiated wall of dots. A run
+    whose only progress signal is dots is a run you cannot diagnose.
