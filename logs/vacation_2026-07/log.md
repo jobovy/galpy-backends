@@ -27036,3 +27036,25 @@ today, and I did not read it before writing the claim.
 
 Falsifier for #1268's patch coverage still unmet (test_backend*.py builds 0 of
 2). #1269 just started, no reds.
+
+### 2026-08-07 — boundary_census attribution fixed (the limitation I flagged)
+
+Shipped the tool with a stated weakness -- crossings were all blamed on
+`util/conversion.py:wrapper`, the units decorator that wraps nearly every public
+method, so the answer was "a decorated method was called": true of everything and
+useless for finding the caller that loops. Fixed rather than left as a caveat:
+
+    8  potential/Potential.py:vesc
+    6  potential/Potential.py:wrapper:123
+    4  appendices/boundary_census.py:<lambda>:124    <- the probe's own sites
+
+`Potential.py:vesc` is a real answer. Two changes: walk past
+`galpy/util/conversion.py` as well as `galpy/backend/`, and when the frame is
+still a `wrapper`/`<lambda>`, append its line number so it is locatable instead
+of anonymous.
+
+The per-caller max moved 22 -> 8, which is the point: 22 was one bucket
+collecting everything, 8 is the largest genuine caller.
+
+    #1268  103 pass / 48 pending, falsifier still 0 of 2
+    #1269  149 pending / 2 pass, no reds
