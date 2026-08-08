@@ -28219,3 +28219,31 @@ Now gating on `test_potential.py` + `test_actionAngle.py` under numpy, then the
 forced-backend arms before push ([[forced-backend-gate-before-push]]).
 
     #1270  149 pending / 2 pass, no reds
+
+### 2026-08-08 — #88 backend values unchanged; the deviation has a baseline
+
+Checked that fewer crossings did not move the numbers. `actionAngleSpherical.
+actionsFreqs`, 3 phase-space points x {jax, torch} x 6 outputs = **36
+comparisons (count asserted, so not vacuous — the lesson from two entries ago)**:
+
+    worst relative backend-vs-numpy deviation   6.4239e-10
+
+Then the part that makes that figure mean anything — the same probe on develop:
+
+    BEFORE (develop)  36 comparisons  worst rel 6.4239e-10
+    AFTER  (fix)      36 comparisons  worst rel 6.4239e-10
+
+Identical to 5 significant figures. So the ~6e-10 is pre-existing quadrature /
+bisection convergence between the numpy and backend paths, **not** something the
+change introduced. Reporting "agrees to 6e-10" without that second run would
+have been a number with no baseline — the exact error I logged about the CI job
+duration this morning ([[gha-job-start-not-run-created]]).
+
+#88 evidence now complete:
+
+    crossings   989 -> 5   /   1023 -> 23
+    numpy       byte-identical, 3918 values, two worktrees
+    backend     deviation unchanged (6.4239e-10 both sides)
+    tests       numpy test_potential.py + test_actionAngle.py running
+
+    #1270  149 pending / 2 pass, no reds
