@@ -29879,3 +29879,36 @@ The PR still shows 1 red because that is attempt 1's conclusion; attempt 2
 replaces it on completion. All-backend tests already passed
 (31259600497 completed/success), which is the shard that actually exercises
 #1272's guard.
+
+### 2026-08-08 — #1272 reds all clear; pre-merge audit DONE
+
+    #1272  151 pass / 3 pending / 0 red
+
+Both macOS re-runs (attempt 2) cleared. Remaining pending: the two Linux/Mac
+build runs finishing and all-clear.
+
+Pre-merge audit done now so the merge is not gated on it (net tree diff, not
+`gh pr diff --patch`, per [[pr-description-drifts-after-rework]]'s sibling
+lesson about the commit series):
+
+**Source** — `verticalPotential.py`, +6/-4, four forwards:
+
+* **if -> xp.where array-input class:** nothing to flag. The diff introduces no
+  conditionals at all; it is four call-site swaps.
+* **Duplication:** none. Reuses the existing `_evaluatePotentials` /
+  `_evaluatezforces`; no new helper.
+* **Units:** the old sites *already* passed `use_physical=False`, so the swap is
+  a pure value no-op here — unlike interpRZPotential (#212), where the same
+  pattern omitted the flag and that omission WAS the bug. Same shape of code,
+  opposite verdict; worth checking each site rather than pattern-matching.
+  Consistent with the sha256 byte-identity over 7218 values measured earlier.
+
+**Tests** — `test_backend_linearpotential.py`, +48:
+
+* Uses the shared `count_boundary_crossings` from `tests/backend_jit_helpers.py`
+  (hoisted in #1271) — no local copy.
+* Asserts `== 0` on the two migrated forwards **and** `> 0` on `_force2deriv` as
+  a negative control, so a dead spy cannot make it pass vacuously.
+* jax and torch, both skipif-gated. No isfinite-style assertions.
+
+Verdict: clean. Merge as soon as all-clear goes green.
