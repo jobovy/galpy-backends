@@ -29163,3 +29163,32 @@ patch, #1271 project). Declining to rebase around them was right every time, and
 each rebase would have cost a force-push on an open PR.
 
     152 pass / 2 pending (one test_backend build + all-clear)
+
+### 2026-08-08 — all-clear failed by RACING the codecov heal; re-run cleared it
+
+`all-clear` concluded **failure** after 163 min (54% of its 18000 s budget), with
+every other check green. Diagnosed from the check-run state rather than assumed:
+
+    all-clear        conclusion=failure
+    codecov/patch    success      <- both green NOW
+    codecov/project  success
+    everything else  153 pass
+
+So the aggregator sampled while `codecov/project` was still red and concluded
+before the phantom healed — the documented trap in
+[[codecov-project-blocks-via-all-clear]]. Nothing is wrong with the PR.
+
+Re-ran the all-clear; the red cleared immediately and it is polling again.
+
+**This is the case where "re-running will not help" inverts.** That rule applies
+to a *real* coverage drop, where the fix is to cover lines. For an aggregator
+that raced a heal, re-running IS the fix. The discriminator is codecov's
+**current** state, which is why I read it before touching anything — had I
+treated a failed all-clear as evidence of a broken PR, the next move would have
+been rebasing or hunting a nonexistent coverage gap.
+
+Also worth noting: `gh run view --log` returns nothing for an in-progress job, so
+the earlier attempt to read the live log was never going to work. The
+check-run API carries the conclusion either way.
+
+    #1271  153 pass, all-clear re-running, no reds
