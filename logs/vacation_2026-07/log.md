@@ -30444,3 +30444,26 @@ artifact.
 
     #1273  120 pass / 31 pending / 0 real reds
            codecov/project -13.91% and converging; audit already done
+
+### 2026-08-08 — why codecov plateaued at -13.91%, and why that is still a phantom
+
+`codecov/project` moved -45.88 -> -30.64 -> -27.50 -> -26.34 -> -25.73 -> -13.91
+and then **sat at -13.91% for four polls** while the pass count climbed 90 -> 133.
+A stuck number with tests still finishing is exactly what a *real* drop would
+look like near the end, so I checked instead of waiting it out.
+
+Classified the pending jobs by whether they upload coverage at all:
+
+    pending 16 = backend-tests  9   <- uploads NO coverage
+               + build          6   <- uploads
+               + all-clear      1
+
+So the plateau is expected: the nine finishing `backend ...` jobs add passes and
+no coverage ([[backend-branches-need-test-backend-coverage]]). Six coverage-
+uploading `build` jobs remain, two of them the `test_orbit.py tests/test_orbits.py`
+shards, which cover a large slice of the library — the bulk of the remaining
+climb is still to come.
+
+Cheap check, real value: "converging" and "stalled at a bad value" produce the
+same reading if you only watch the percentage. What separates them is knowing
+which of the remaining jobs can even move it.
