@@ -31084,3 +31084,59 @@ start running at once.
 
     #1275  46 pass / 106 pending / 58 build jobs still to upload coverage
     #1274  121 pass / green
+
+### 2026-08-08 (later) — 27 deadlocked orphans reaped; the streamTrack jit result is VOID
+
+**Housekeeping first.** 27 orphaned `python3` processes, 29 h old, 0.0% CPU,
+`ppid=1`, holding ~15.5 GB RSS between them — all
+`test_streamdf.py::test_streamTrack_multi_parallel --backend torch --jit`,
+i.e. the torch+fork `parallel_map` deadlock (task #178) from an earlier
+session's measurement.
+
+Two things made them immortal: `--timeout-method=thread` cannot interrupt a
+wedged fork child, and once the parent died they were reparented to init with no
+timeout supervising them at all. Reaped; box back to 22 GB used of 125 GB.
+
+Worth remembering as a property of that deadlock, not just an anecdote: it does
+not merely hang a run, it **leaks processes that outlive the run**. Any local
+`--jit` measurement that touches `parallel_map` needs a post-run sweep.
+
+(Own-goal en route: `pkill -f "<pattern>"` matched the very shell whose command
+line contained the pattern, so it killed itself mid-command — exit 144. The
+TERMs had already gone out, so the reap completed, but the right form excludes
+`$$` or matches on a pid list gathered first.)
+
+**The streamTrack --jit measurement is void.** I reported it as "45 cases,
+9 passed / 36 failed, whole file in 225 s" and read that as (a) tracing removes
+the eager dispatch cost and (b) one shared jit defect worth 36 entries.
+
+Neither holds. `/var/tmp/port207` has **no built C extension**:
+
+    _ext_loaded: False
+    libgalpy.cpython-313-x86_64-linux-gnu.so image was not found
+    hasattr(lib, 'integrateFullOrbit_stm') -> False
+
+and all 36 failures bottom out at
+
+    galpy/orbit/integrateFullOrbit.py:884 in integrateFullOrbit_stm_c
+    AttributeError: 'NoneType' object has no attribute 'integrateFullOrbit_stm'
+
+So the failures are the worktree, not jax. And the 225 s is void *too*, which is
+the part I nearly kept: 36 of 45 tests failed fast instead of doing the work, so
+the wall time measures an early abort, not a traced run. A timing is only
+meaningful if the run it times actually succeeded.
+
+This is [[worktree-missing-c-ext-fakes-passes]] in its fail-direction form, and
+the second time this session an environment check belonged *before* the
+measurement rather than after the surprising result ( the first being
+`_bk_dispatch` routing concrete input to numpy). The shared lesson is narrow and
+worth stating once: **establish what code the harness is actually running before
+interpreting any number it produces.** Building now, then re-running.
+
+**Consequence for #207.** Its gate (49+49 on the AnyAxisym file, 206/7/43 on the
+wider jax suites) also ran without the C extension. AnyAxisym has no C
+implementation, so the change itself is unaffected — but that is an argument,
+and the gate is being re-run on the built worktree rather than resting on it.
+
+    #1275  50 pass / 102 pending / project -15.01% -> -14.60% (moving again)
+    #1274  122 pass / green
