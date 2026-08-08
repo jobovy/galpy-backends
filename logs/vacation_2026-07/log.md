@@ -29809,3 +29809,22 @@ would splice silently and I would have measured a chimera. Memory updated.
 The right reading is not "work around the import": if a probe needs a package
 the branch under test does not have, the measurement is **inapplicable to that
 branch**, and that is the answer.
+
+### 2026-08-08 — first macOS re-run finally dispatched
+
+Run 31259588020 reached `completed failure`, so `gh run rerun --failed` was
+finally accepted (it had been refused with "This workflow is already running"
+across several wakes — the re-run is only possible once the whole run finishes,
+not once the job does). The `test_from_name_values` VizieR flake is re-running.
+
+Run 31259600507 (the torus-install infra failure) is still in_progress; its last
+job is the `tests/test_backend*.py` shard at 87 min. Checked whether that is at
+risk of a timeout: **no**. `timeout-minutes` is set only in `all-clear.yml`
+(330) and `backend-tests.yml` (90); this shard is a `build.yml` matrix job, so
+it runs under GitHub's 360-minute default. #1271's equivalent shard took 73 min,
+so 87 is runner variance, not a hang.
+
+Worth writing down because the 90 in `backend-tests.yml` is a trap: the job
+*names* look alike ("backend jax ..." vs "build (..., tests/test_backend*.py)")
+and grepping one number out of the workflows would have had me report a job as
+2.5 minutes from death when it had four hours of headroom.
