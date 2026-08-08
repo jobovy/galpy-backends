@@ -27125,3 +27125,39 @@ unmigrated potential.** What remains is maintainer decisions.
 Pre-registering the check before looking at the result is what caught 1, 2 and
 the un-defer attribution. That attribution came back **0.97x** -- the five
 entries were already stale and owe nothing to my fix, which #1269 says plainly.
+
+### 2026-08-07 — decomposing the forced-backend per-call cost (advances #79)
+
+    numpy evaluateRforces           12.1 us/call
+    forced-jax evaluateRforces    1031.8 us/call   (85x)
+    boundary crossings per call        3
+    x 178.2 us/crossing              534.6 us      (51.8% of the forced cost)
+    remainder                        497.2 us      (48.2%)
+
+**About half the per-call backend overhead is the `@backend_input` boundary**,
+not the jax work. I would have guessed a few percent.
+
+**Two honesty notes on this number.**
+
+*It is an estimate, not a measurement.* 178.2 us/crossing was measured on
+`surfaceSigmaProfile.surfacemass` (one scalar coord); `evaluateRforces` crosses
+with R, z and possibly phi/t, so its crossings may not cost the same. The
+**3 crossings** are counted directly; the 534.6 us is 3 x an imported constant.
+Treat 52% as "boundary is roughly half", not as 51.8%.
+
+*It does not refute task #79's "~5 ms".* That was a different potential under
+different conditions; I measured MiyamotoNagai at 1.03 ms. Different setups,
+both plausibly right -- I am adding structure to #79, not correcting it.
+
+**The interesting number is 3.** One force evaluation crossing the boundary
+three times is worth understanding before optimising anything: if two of those
+are redundant re-coercions of already-coerced coords, that is ~35% of the
+per-call overhead available without touching any jax code. `boundary_census.py`
+already attributes crossings to callers, so the next step is a per-crossing
+breakdown of a single force call rather than a whole-workload count.
+
+Filed as structure for #79 rather than acted on: two PRs are open, and this
+would be a third.
+
+    #1268  111 pass / 40 pending, head coverage 86.05% vs base 86.06% (project about to clear)
+    #1269  149 pending / 2 pass
