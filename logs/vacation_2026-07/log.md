@@ -31467,3 +31467,42 @@ silently producing another void result.
 
     #1275  142 pass / 10 pending -- all 10 still the orbit shards
     #1274  151 pass / 0 pending / green
+
+### 2026-08-08 — two harness bugs of my own, one of them for the third time
+
+The chained "build then measure" launcher never ran the measurement. Two
+independent faults, both mine, both in the *harness* rather than in galpy:
+
+**1. `build_ext --inplace` puts the .so at the WORKTREE ROOT, not in `galpy/`.**
+
+    /var/tmp/jit194/libgalpy.cpython-313-x86_64-linux-gnu.so       <- actual
+    /var/tmp/jit194/galpy/libgalpy*.so                             <- what I gated on
+
+So my gate would have reported "BUILD FAILED - no .so" on a perfectly good
+build. Worth noting this also explains an earlier oddity I let pass: `ls
+port207/galpy/libgalpy*.so` printed nothing while `_ext_loaded` was True. I
+read that as noise at the time; it was the same fact. The authoritative check is
+`load_libgalpy()`, not a path glob — the loader knows where it put it and I do
+not.
+
+**2. `pgrep -f` / `pkill -f` match the shell running them.** The waiter looped
+forever because `pgrep -f "setup.py build_ext"` matched the waiter's own command
+line, which contains that string. Then two attempts to clean it up with
+`pkill -f` killed the invoking shell instead (exit 144) — the same footgun that
+hit the orphan reap earlier today, now three times total.
+
+Rule, adopted: **kill by PID, never by pattern.** Capture `$!` at launch, and
+if a pid must be discovered later, resolve it once and operate on the number.
+A pattern that describes the work also describes the thing doing the work.
+
+Neither bug touched galpy or any result — both cost only wall-clock — but three
+repeats of the same one is a process failure, not bad luck, hence writing the
+rule down rather than the incident.
+
+`/var/tmp/jit194` now verified properly: galpy resolves into the worktree, C
+extension loads (`integrateFullOrbit` present), conftest patch applied.
+`test_noninertial.py --backend jax --jit` launched under `setsid` with its pid
+recorded.
+
+    #1275  145 pass / 8 pending -- still the orbit shards
+    #1274  151 pass / 0 pending / green
