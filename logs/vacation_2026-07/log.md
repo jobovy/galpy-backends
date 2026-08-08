@@ -28458,3 +28458,37 @@ re-measuring alone ([[gha-job-start-not-run-created]]).
 
     #1270  143 pending / 9 pass, phantom codecov only
     #1271  149 pending / 2 pass, no reds
+
+### 2026-08-08 — census attribution fixed: 244 "unknown" crossings were a decorator frame
+
+Chased the residual 244 from the vertical fix. `Potential.py:wrapper:235` turned
+out to be `potential_list_of_potentials_input` — **decorator boilerplate**, the
+exact problem the tool already excluded `util/conversion.py` for. It wraps nearly
+every public function, so blaming it says only "something decorated was called".
+
+Taught the spy to walk past frames named `wrapper`/`wrapped` as well as the
+skipped files. Attribution before and after, same workload:
+
+    BEFORE   244  potential/Potential.py:wrapper:235      <- useless
+    AFTER    238  actionAngle/actionAngleVertical.py:f    <- the root-find closure
+               4  actionAngle/actionAngleVertical.py:integrand
+               2  _E_backend / _unbound_backend
+
+Crossing count **unchanged at 246** — verified explicitly, because a tool edit
+that silently changes the measurement while claiming to change only the labelling
+is exactly the kind of thing that poisons later findings.
+
+So the vertical residual is **not** an adapter problem at all: it is
+`actionAngleVertical`'s own bisection closure `f` calling the potential once per
+iteration — the same class as the aASpherical bisection, one level up in the AA
+module rather than in the adapter. That is the next target, and it is now
+identified by name rather than guessed.
+
+Worth stating plainly: the tool had been mislabelling a real caller as a
+decorator for its whole life, and I only noticed because I followed a residual I
+could have shrugged off as "small". The first two findings it produced were still
+correct — but its *attribution* column was quietly weaker than it looked.
+
+    #1270  139 pending / 13 pass, phantom codecov only
+    #1271  149 pending, no reds
+    vertical gates: all three running
