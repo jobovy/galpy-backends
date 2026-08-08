@@ -27316,3 +27316,32 @@ red seen has been codecov upload-side, and each was diagnosed rather than waved
 through -- twice by the identical-`lines` discriminator, once by the structural
 argument (#1267 touches zero library files), and once (#1268's patch) left
 deliberately open with a falsifiable prediction I will honour either way.
+
+### 2026-08-08 — pre-checking the FAILURE case for #1268's patch prediction
+
+Tried to establish, before the falsifier resolves, whether `test_backend*.py`
+contributes coverage at all -- because if it does not, my 3 lines stay uncovered
+and the fix is a different one (exercise those branches from a
+coverage-uploading context) rather than "wait".
+
+Two probes, both inconclusive, recorded as such:
+
+* `file_report` for `galpy/backend/_input.py` on the develop branch returned
+  `coverage=None` -- wrong query shape for that endpoint.
+* Merged PRs #1266/#1267 report `patch 0% (0/0 lines)` -- codecov's compare
+  endpoint does not retain patch data post-merge, so "did #1266's jit-only
+  branch pass patch?" is unanswerable from here.
+
+What the prediction actually rests on is directly observed, not inferred:
+`build (ubuntu-latest, 3.14, tests/test_backend*.py, ...)` appears in the
+pending list, and `build.yml` is the workflow that uploads coverage. That is
+why those two jobs are the falsifier and why 7/10 is the expected reading until
+they land.
+
+Stopping this line here -- I have the contingency identified (cover the branches
+from a numpy-visible context if patch stays at 70%) and further pre-work would
+be engineering for a failure that has not happened. Recording the two dead
+probes so I do not repeat them.
+
+    #1268  138 pass / 13 pending
+    #1269  4 pass / 147 pending -- its matrix has started
