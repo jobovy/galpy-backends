@@ -29481,3 +29481,25 @@ already caught myself mislabelling one A/B and misreading two tool outputs. The
 body is cheapest to get right while the terminal scrollback still proves it.
 
     #1272  127 pending / 23 pass; 2 codecov (early-upload) + 1 torus infra
+
+### 2026-08-08 — rehearsed #1272's acceptance test: deletable on its own
+
+The `KNOWN_HOT` deletion is the acceptance test for each fix, so I checked
+whether #1272's entries can go when #1272 merges, or whether they need #210 too.
+Ran the census on a scratch copy with the `aAVertical` entries removed, against
+`evdirect` (**#1272 only**):
+
+    EXIT=0
+    max unknown-hot workload   246     (threshold is 1000)
+    top caller  actionAngle/actionAngleVertical.py:f   476   <- #210's target
+
+So the answer is **#1272 alone suffices** — 244/246 is far under the bar, and the
+entries come out on merge rather than waiting on the stack. Worth checking rather
+than assuming: had 244 been near the threshold, deleting on #1272 and landing
+#210 later would have left the detector red in between, which is the state that
+makes people stop trusting it.
+
+Scratch copy deleted; the real census is untouched (still carries both entries
+until #1272 lands).
+
+    #1272  113 pending / 37 pass; 2 codecov (early) + 1 torus infra
