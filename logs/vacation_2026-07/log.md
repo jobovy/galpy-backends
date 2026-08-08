@@ -30265,3 +30265,27 @@ Verdict: phantom. Expect both to clear as shards upload, as they did on #1272
 (where the same line-by-line check predicted the exact final 100.00%).
 
     #1273  15 pass / 136 pending / 2 codecov (expected to self-heal)
+
+### 2026-08-08 — two small correctness chores while #1273 builds
+
+**1. #211's tracking note was over-scoped.** The census `KNOWN_HOT` entry said
+"vectorize/undecorate the grid build", written before I measured which options
+actually need what. Whoever picks it up would reasonably start by writing the
+four missing undecorated inners — the expensive part — when the default case
+needs **none** of them:
+
+    interpPot / interpRforce   1152 -> 0 (24x16), 30603 -> 0 (default) via the
+                               ALREADY-EXISTING _evaluatePotentials/_evaluateRforces
+    interpDens / interpR2deriv / interpvcirc   need the four that do not exist
+
+Entry now says so explicitly, including "do NOT start by writing those". A
+tracking note that misdirects the fix is worse than a terse one.
+
+**2. Verified the #211 patch still applies to post-#1272 develop.** It was cut
+against 6905c0a8 (#1272's branch head) and develop is now the *squashed* merge,
+so the SHA differs even though content should not. `git apply --check` on a fresh
+develop worktree: clean. Cheap to check, and the alternative is discovering it at
+the moment I want to open the PR.
+
+    codecov/project converging as documented:  -45.88% -> -30.64%
+    #1273  25 pass / 126 pending / 2 codecov (phantom, lines verified)
