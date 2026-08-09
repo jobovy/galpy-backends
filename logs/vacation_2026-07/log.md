@@ -37074,3 +37074,49 @@ every eager-jax cluster worth a stopwatch has now had one:
 The remaining jax ledger is **real slowness**, and the next lever is
 vectorisation (SCF/Multipole/wrapper eval, interpRZ grid build), not
 measurement. Recorded in STATUS.md as the burndown floor.
+
+### 2026-08-09 — gh#1284 MERGED; gh#1286 opened; the "rebase gh#1285" plan was wrong
+
+**gh#1284 merged at 154/154.** develop `9dc31569` -> **`277bf897`**.
+
+Re-ran the merge audit against the *current* diff rather than trusting the pass
+I banked before the PR was reworked in `19832bb1`. Three files, and only four
+changed lines of code:
+
+* **array-input class:** no source changes at all — N/A. The whole diff is two
+  ledger files plus 2 assertion-site `as_numpy(...)` wraps.
+* **duplication:** uses `from galpy.backend import as_numpy`, the centralised
+  helper, not a per-file copy. And the wrap sits *inside* `numpy.fabs(...)`,
+  which is the placement that avoids the `-W error` deprecation trap that only
+  fires in CI.
+* **helper placement:** no new helper.
+* **ledger invariant:** checked that no `(backend, nodeid)` key appears in both
+  `backend_slow_skip.txt` and `backend_xfail.txt` — a slow-skip *skips*, so a
+  duplicated key silently hides an xfail. **None.** (Nine nodeids appear in both
+  files under *different modes*, e.g. `jax` slow-skip + `jax-jit` xfail; those
+  are distinct keys and legitimate.) Delta: slow-skip −14/+4, xfail +9.
+
+**gh#1286 opened** — the 24-entry burndown, rebased onto the new develop.
+Recomputed after the merge: `slow_skip` **108 -> 84**, removed 24 / added 0,
+matching the projection exactly. The body's counts were regenerated rather than
+left at the pre-merge `118 -> 94` ([[pr-description-drifts-after-rework]]).
+
+**The standing plan for gh#1285 was wrong, and I caught it before executing.**
+It read "after gh#1284 lands, rebase gh#1285 and drop the 5 torch-jit
+`poisson_surfdens` lines". But rebasing an open PR means a **force-push**, which
+is exactly what [[no-force-push-open-prs]] forbids — and it would have thrown
+away the CI already burned on the branch. I had already run the rebase locally
+before noticing; reset back to `a2d24422`.
+
+`git merge-tree` then settles it: the **un-rebased** branch merges cleanly with
+the new develop, 0 conflicts. So gh#1285 needs no rebase, no force-push, and
+keeps its progress.
+
+The 5 torch-jit lines become their **own follow-up PR** after gh#1285 merges.
+That is strictly better than folding them in: those lines only exist in the tree
+after gh#1284's merge, and dropping them is a claim that needs **torch --jit**
+evidence, not the eager-torch 5/5 gate gh#1285 actually ran. A separate PR lets
+that measurement happen without blocking anything.
+
+Pipeline now: **gh#1285** (rt-vertical-split) + **gh#1286** (burndown) — the
+two-PR cap, both open, neither blocked on me.
