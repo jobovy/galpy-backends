@@ -35923,3 +35923,37 @@ Correction to last wake: I said opening gh#1284 would cost gh#1283 "close to
 nil". gh#1283 completed **zero** checks this wake while gh#1284 ran 7. That is
 weak evidence, not proof -- the outstanding gh#1283 jobs are genuinely long --
 but I stated it more confidently than I had grounds for.
+
+### 2026-08-09 (cont.) — regression sweeps dispatched for the split branch; placement audit
+
+gh#1283 has sat at ~90-92/153 green for three wakes. Not stuck: **32 of the 39
+pending checks are the eager backend shards** (full jax/torch suites), which are
+the slowest things in the matrix. Several more hours of CI, nothing to drive.
+gh#1284 climbing normally. Only red on either is the confirmed codecov phantom.
+
+`backend-jit/rt-vertical-split` touches **shared** code (`Potential.py`,
+`CompositePotential.py`), so its own six tests are not sufficient evidence that
+it is safe. Dispatched two full-file regression sweeps against it, in background:
+
+* `test_potential.py` on **numpy** (does the `_surfdens_poisson` extraction
+  disturb anything?)
+* `test_potential.py` under **`--backend jax --jit`** (traced regressions)
+
+The ledger is its own baseline for the traced arm: ledgered tests xfail, so a
+clean run means zero *unexpected* failures and no separate control run is
+needed. Both were still going at end of wake (numpy 93%, jax ~45%), no `F` so
+far.
+
+**Placement / duplication audit** (mission directive), done before proposing the
+branch as a PR:
+
+* 13 potential-specific `_surfdens` overrides exist, but every one is an
+  **analytic formula** (Plummer, Kuzmin, Burkert, ...). Mine is the only
+  composite-level one and is structurally different -- delegation, not a formula.
+  Not duplication.
+* `_surfdens_poisson` exists in exactly two places, base + composite, as intended.
+* I considered reusing `evaluateSurfaceDensities(self._potlist, ...)` instead of
+  hand-rolling the component sum. Rejected: `CompositePotential`'s `_dens`,
+  `_evaluate` and `_Rforce` all hand-roll the identical
+  `sum(... if not pot.isDissipative)`, so matching the file's established idiom
+  beats introducing a third style for the same operation.
