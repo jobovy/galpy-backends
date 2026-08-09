@@ -32790,3 +32790,39 @@ nothing else is queued to do.
     gh#1279  100 pass / 20 running / 32 queued / codecov 19-of-28
     gh#1280  10 pass / 15 running / 82 queued
     sweep    test_interp_potential in flight (8 min), 5 files behind
+
+### 2026-08-09 — STATUS.md was 5 days stale; rewritten from gathered facts
+
+codecov on gh#1279 is now **99.47% at 21 of 28 sessions**, up from 76.12% at 19.
+That is the predicted trajectory, so the diagnosis is confirmed by the data
+rather than merely consistent with it.
+
+Then noticed the actual gap: `STATUS.md` -- the file whose own header says it is
+the "where are things now" answer and is meant to be **overwritten** -- was
+dated **2026-08-04**. Five days stale, still describing `#1246`-`#1251` and a
+ledger of 34. `log.md` meanwhile is 32,792 lines and purely chronological. Jo
+said explicitly he will not read a two-week trace but will ask for summaries, so
+the stale file is the one that actually matters.
+
+Rewritten from gathered facts, not recollection:
+
+    develop                f963eb42, ~19 PRs merged since the last snapshot
+    ledger  develop 17  ->  after #1279  24  ->  after #1280  14
+    slow-skip  jax 75 / torch 15 / torch-jit 2, + jax-jit 11 from #1279
+
+The 17 -> 24 -> 14 shape is worth stating carefully, because 24 looks like a
+regression and is not: #1279 stops a *performance* deferral from concealing a
+real jax defect, which makes 10 failures visible; #1280 then fixes all 10 at one
+site. Net **-3**, and a class of bug that had no way of being seen before.
+
+STATUS.md now carries: the pipeline, the ledger arithmetic, the codecov
+quantification, the rehearsed merge path, the sweep table (4 of 10), the queued
+next steps, and the standing caveats -- plus the AWAITING JO block reduced to
+**one decision** (does CI get a `--jit` dimension), **one action** (merge
+gh#1274), and **one fact worth knowing** (build.yml double-runs every in-repo
+PR, ~2x CI tax, halved by a branch filter). All three need workflow scope or
+maintainer rights I do not have.
+
+    gh#1279  110 pass / 11 running / 31 queued / codecov 21-of-28 @ 99.47%
+    gh#1280  11 pass / 24 running / 72 queued
+    sweep    test_interp_potential in flight, 5 files behind

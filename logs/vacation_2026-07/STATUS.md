@@ -1,123 +1,108 @@
-# Vacation status snapshot — 2026-08-04
+# Vacation status snapshot — 2026-08-09
 
-**This file is OVERWRITTEN, not appended.** It is the "where are things now" answer.
-`log.md` is the trace; read this first and go there only for the why.
+**This file is OVERWRITTEN, not appended.** It is the "where are things now"
+answer. `log.md` is the trace; read this first and go there only for the why.
 
 ---
 
 ## PR pipeline
 
-| state | branch / PR | effect |
+| state | PR | effect |
 |---|---|---|
-| **merged** | #1246, #1247, #1248 → `730657c3`, #1249 → `9695ae4a`, #1250 → `1adbe26e` | jit helper; scipy-1.18 spline pickling; planar adapters derive `_backend_compatible`; ledger 42 → 34 |
-| **open** | **#1251** `feat/hoist-gl-order` @ `98c2d5c7` | de-duplicates `_BACKEND_GL_ORDER`; corrects its documented floor |
-| ready | `feat/undefer-sphericaldf-jax` @ `7c4c2e8d` | **slow-skip 230 → 203** (27 of 28 un-deferred, measured) |
-| ready | `feat/diskdf-unphysical-draw` @ `4fff75ad` | jax NaN-orbit defect fixed; **ledger −4** |
-| ready | `feat/interpspherical-frozen-scalars` @ `bde9df0e` | torch numpy/Tensor collision fixed; **ledger −1** |
+| **merged since the last snapshot (08-04)** | ~19 PRs, `#1256` → `#1278` | develop is now `f963eb42` |
+| **open** | **gh#1279** `feat/jit-slow-skip-own-list` @ `d3545330` | `--jit` slow-skip stops inheriting eager; 11 measured traced entries; 3 tolerance entries burned |
+| **open, stacked on #1279** | **gh#1280** `feat/streamdf-inplace-writes` @ `5ff4464c` | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared** |
+| **open, FOR JO** | **gh#1274** → `main` | **151 green.** Targets `main`, so it is yours to merge, not mine |
+| **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
-All three ready branches are cut from `1adbe26e` (current develop) and verified
-with `git diff --stat` against it. `diskdf` and `interpspherical` both touch
-`tests/backend_xfail.txt`, but they edit different lines and
-`git merge-tree --merge-base` reports a **clean merge** — no rebase or conflict
-resolution needed when they land in sequence. (An earlier note here said the
-second would need a rebase; that was checked and is wrong.)
+**CI right now:** #1279 110 green / 11 running / 31 queued; #1280 11 green /
+24 running / 72 queued. The only red on either is `codecov/project`, which is a
+**quantified upload phantom** — the API reports head at 21 of base's 28 upload
+sessions, and coverage has climbed 70.83% → 76.12% → **99.47%** as they land
+(base is 99.95%). `lines` is identical on both sides. No action; if it is still
+red at session parity, re-run all-clear.
 
-**#1251 status:** 131 green, 18 running, 2 red:
+**Merge path is rehearsed** (dry-run in a throwaway worktree, zero conflicts):
+squash #1279 → retarget #1280 to develop → rebase → push.
 
-* `codecov/project` — partial-upload artifact, coverage climbing (74 → 86 %),
-  "N uploads less than BASE" shrinking 15 → 4. Base is now correct (`1adbe26`)
-  after the rebase; the earlier `-0.14 %` was a stale-base phantom.
-* `build (ubuntu-latest, 3.10, test_orbit.py …)` — **runner eviction, not a test
-  failure**: the log ends with "The runner has received a shutdown signal" after
-  36 min, against 59 min of honest runtime for the same shard on the prior run.
-  Re-runnable once the parent run finishes.
-
-## Ledger
+## Ledger and deferrals
 
 ```
-156 → … → 48 → 45 → 44 → 42 → 34 → (29 when the three ready PRs land)
+xfail ledger      develop  17   →  after #1279  24   →  after #1280  14
+                  (jax 5, jax-jit 6,      (the +10 is streamdf      (jax 4, jax-jit 6,
+                   torch 5, torch-jit 1)   immutability, surfaced    torch 3, torch-jit 1)
+                                           then fixed by the pair)
+
+slow-skip         develop  jax 75, torch 15, torch-jit 2
+                  #1279 adds jax-jit 11 (measured, not inherited)
 ```
 
-**34 on `feat/backends-develop`**, `jax 15 / jax-jit 3 / torch 15 / torch-jit 1`;
-**31** once `feat/diskdf-unphysical-draw` lands. By file: `test_actionAngle` 12 (9 torch + 3 jax), `test_streamdf`
-3, `test_diskdf` 3, `test_orbit` 4, `test_potential` 3, `test_noninertial` 2,
-`test_interp_potential` 2, `test_sphericaldf` 2, `test_qdf` 2,
-`test_SpiralArmsPotential` 1.
+The pair takes the ledger **17 → 14** net. The intermediate 24 is the point of
+the pair, not a regression: #1279 stops a *performance* deferral from hiding a
+real jax defect, which makes 10 failures visible; #1280 fixes them at one site.
 
-**Verified to contain zero stale entries** (2026-08-04), by intersecting the
-ledger with the junit artifacts of #1248's completed backend run: torch **19/19
-matched, 0 passing**; jax 10/19 observable, 0 passing. So burndown must come from
-fixes or decisions — there is nothing left to prune. *(The first version of that
-sweep silently compared against nothing; see log. Validate the matcher.)*
+## Awaiting Jo
 
-### What the remaining entries actually are
+**One decision:**
 
-**`test_quantity` (8) — SOLVED, in the queued tolerance PR.** One root cause: an
-absolute `1e-8` bound on values of ~1.6e10 (= 6e-19 relative, ~5e-6 of one ULP);
-the measured difference is exactly 1 ULP. Three of the four tests were never
-independently broken — a failure between `_APY_UNITS = False` and its restore
-leaked the flag for the rest of the session.
+* **Should CI gain a `--jit` dimension?** No workflow runs `--jit` today
+  (checked across all 10 files in `.github/workflows/`), so the traced ledger,
+  the traced slow-skip list and `assert_jit_matches_eager`'s premise are
+  validated on the dev box and **nowhere else**. Options: a nightly shard on the
+  two measured files / fold into `backend-tests.yml` / accept and document.
+  Needs `workflow` scope, which my token lacks.
 
-**`test_actionAngle` (12) — TRIAGED, none is a defect:**
+**One action:** merge **gh#1274** (green, targets `main`).
 
-| kind | n | disposition |
-|---|---|---|
-| GL-vs-adaptive quadrature floor (~2e-6 for angles) | **8** | **Jo's decision.** Spherical 4 + Adiabatic 2 (delegates to Spherical) + Vertical 2. Verified *not* fixable by raising the order: n=50/100/200/400 → 3.3e-6 / 2.1e-6 / 1.8e-6 / **3.5e-6** (does not converge; round-off wins at 400). |
-| sub-epsilon bound | 2 | **Jo's decision.** StaeckelGrid Jr=0: bound `1e-16` < eps `2.22e-16`; numpy returns *exactly* 0.0, so only bit-exact zero passes. |
-| documented design | 2 | AdiabaticGrid off-grid: backend AA grids have no off-grid fallback (docstring says so). Clears only via feature #103. **Keep out of the tolerance batch.** |
+**One thing worth knowing:** `build.yml` triggers on both `push:` (no branch
+filter) and `pull_request:`, so **every in-repo PR runs ~52 build jobs where 26
+would do**. Observed directly: develop's `f963eb42` carried two complete,
+identical job sets created 3 s apart. A branch filter on the push trigger halves
+the CI bill. Also a workflow edit.
 
-## Waiting on Jo
+## In flight locally
 
-1. **GL quadrature floor** (8 entries): backend-specific bound at the measured
-   floor, *or* re-base the test on a gold reference instead of treating scipy's
-   adaptive quad as truth. The second is the better test, the larger change.
-2. **Sub-epsilon bounds** (2 entries): the `1e-16` Jr=0 style assertions.
-3. AnyAxisym small-|z| threshold (#189, pre-existing).
+A serial traced sweep of the **10 files** whose eager-jax slow-skip entries stop
+being inherited under #1279 but were never measured traced (54 entries). Serial
+because concurrent jax oversubscribes the XLA CPU pool and corrupts the timings.
 
-Group A/B tolerance approval (2026-08-01) covered `test_quantity`; these are a
-**new** batch. `actionAngleVerticalInverse` and `actionAngleTorus` remain
-permanently out of scope.
+**4 of 10 done:**
 
-## The bigger debt: deferrals, not the ledger
+| file | tests | eager entries | → jax-jit | un-deferred |
+|---|---|---|---|---|
+| `test_dynamfric` | 7 | 1 | 1 | — |
+| `test_FDMdynamfric` | 9 | 3 | 2 | `test_dynamfric_c` (226.6 s) |
+| `test_galpypaper` | 15 | 1 | 0 | `test_diskdf` |
+| `test_streamspraydf` | 38 | 1 | 0 | `test_center` (81.5 s) |
+| | | **6** | **3** | **3** |
 
-`backend_slow_skip.txt` = **230 entries (jax 215 / torch 15)**; the census counts
-334 jax *instances*. Decomposed by the file's own documented causes:
+**Half the eager deferrals do not survive a traced run**, and in the FDM file
+inheritance was wrong in *both* directions at once. **Zero defect candidates**
+across 69 traced tests so far. Remaining: `test_interp_potential`, `test_qdf`,
+`test_orbits`, `test_actionAngle`, `test_potential`, `test_orbit` — the last
+three are large and will take hours.
 
-| n | cause | actionable by me? |
-|---|---|---|
-| **66** | jax orbit heavy eager >45 s — per-CI-group session-cap fit | **only via speed work** |
-| 39 | jax single-orbit variational/dxdv/lyapunov (Track D) | yes |
-| 28 | jax spherical-DF sampling/quadrature (Track F) | yes |
-| 17 | NonInertialFrameForce eager-XLA timeout | yes |
-| 13 | torch orbit dissipative/variational dxdv | yes |
-| 12 | jax multi-orbit battery (Track D/E) | yes |
-| 55 | composite-MW Poisson 10, misc single-orbit 10, qdf 7, diskdf 6, dissipative 6, interpRZ 5, streamdf 6, FDM 3, AA 2 | mixed |
+## Queued next, in order
 
-**Do not read this as "one fix clears 127 orbit tests"** — that was an earlier
-error of mine from grouping by *filename*. The largest block (66) is a CI-budget
-fit whose knobs (`--timeout 300`, `timeout-minutes: 180`, pytest-split groups)
-live in `.github/workflows/backend-tests.yml`, which **I cannot edit — no
-`workflow` scope**. For those, faster code is my only route.
+1. Merge #1279, retarget+merge #1280 (path rehearsed).
+2. File the sweep's measured `jax-jit` entries — into #1279 if it is still open,
+   else a follow-up.
+3. **#211(B)** `interpRZPotential` grid-build vectorisation — Jo chose (B). All
+   **7** sites are structurally identical, so it is one module-private helper
+   used 7×. Two gates before it lands: per-potential numpy byte-identity by
+   sha256 (vectorised evaluation can take a *different* code path inside some
+   potentials), and an explicit decision for the 2 array-unsafe potentials.
+   Blocked on #1274 merging (shared call sites) and a free PR slot.
 
-Largest genuine capability gap I *can* close: **Track D variational
-vectorization (39 + 12 = 51)**, then Track F spherical-DF (28).
+## Standing caveats
 
-## Jit progress
-
-`test_sphericaldf` under `--backend jax --jit`: **99.8 % of boundary calls traced**
-(152 293 traced / 375 not), **0 C-library entries** → nothing not-traceable by
-construction. Caveat: that is over the **87 %** of the suite that runs; the 28
-skips are the jax slow-skips, excluded by construction rather than passing.
-
-## Operating notes earned this fortnight
-
-* codecov `project` red on a fresh PR is a **partial-upload artifact** — check
-  "HEAD has N uploads less than BASE" and wait; #1248 walked 40.86 → 85.43 →
-  99.95 % with no intervention. The note vanishing from the comment is *not* a
-  completion signal.
-* A worktree without `libgalpy.so` **flips ledgered tests to PASS**. Build it
-  before attributing any local result.
-* Hand-picked nodeids are not a context: two `test_quantity` tests passed in
-  isolation and failed in the full file.
-* Read the docstring before classifying a numeric difference. Three times this
-  session a "bug" turned out to be documented intended behaviour.
+* **numpy stays byte-identical.** Every deviation is flagged, never quietly
+  shipped. #1280's claim is backed by sha256 of all five arrays its function
+  produces, in a patched vs unpatched tree.
+* **Traced green is asserted by me, not enforced by CI** — see the decision above.
+* `actionAngleVerticalInverse` and `actionAngleTorus` are permanently out of
+  scope (external C++ wrapper / prior decision).
+* A repo-wide AST inventory found **98** in-place augmented array writes
+  (83 in backend-aware files). It is a **watchlist, not a defect list** — a site
+  only matters if a backend array reaches it, and the honest filter is a traced
+  test result. streamdf had 27 such sites; exactly 3 were reachable.
