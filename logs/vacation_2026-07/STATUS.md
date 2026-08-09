@@ -210,3 +210,16 @@ Also corrected: **3** of the 15 sit inside the 240–300 s judgement band
   (83 in backend-aware files). It is a **watchlist, not a defect list** — a site
   only matters if a backend array reaches it, and the honest filter is a traced
   test result. streamdf had 27 such sites; exactly 3 were reachable.
+
+## RotateAndTilt poisson_surfdens (5 ledgered) — DIAGNOSED 2026-08-09
+
+Root cause: `symmetric_quad` splits at `z=0`; an offset/tilted wrapper's disk
+plane is elsewhere (z=-1 for `mockOffsetMWP14WrapperPotential`). Affects BOTH
+call sites at very different magnitudes: Poisson force integral 1.8e-04,
+direct `_surfdens` density integral **6.4e-02** (the latter reproduces the
+failing `tdens = 0.07209774` to 8 digits).
+
+Node count is not the lever (n=200 wrong-split = 6.2e-03; n=50 right-split =
+1.2e-10). Fix: `interior_point` = z where the wrapped mid-plane crosses the
+vertical line at (R, phi). Follow-up PR **after gh#1283** (needs the file
+gh#1283 reverted).
