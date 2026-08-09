@@ -32236,3 +32236,69 @@ contended (1% over the margin -> a needless deferral) and 197.5 s alone.
     gh#1279  2 pass / 149 pending / 0 red
     gh#1274  151 pass / green
     develop  f963eb42, push run in flight
+
+### 2026-08-09 (later) — #213 streamdf immutability: all 10 entries burned, one two-line site
+
+`#1279` sits behind a runner queue (2 pass / 149 mostly QUEUED), so the wake
+went to local work: the 10-test jax defect `#1279` itself surfaced.
+
+**One site, not ten.** `_determine_stream_spreadLB` scaled the l/b/d Jacobian in
+place, and `coords.lbd_to_XYZ_jac` has been backend-native since the streams
+coords PR, so under a forced jax backend every one of those writes raises:
+
+    tjacLB[:3, :] /= ro                              ->  tjacLB = tjacLB / row_scale
+    tjacLB[3:, :] /= vo
+    for jj in range(6):                              ->  tjacLB = tjacLB * col_scale
+        tjacLB[:, jj] *= self._ErrCovsLBScale[jj]
+
+**Verified traced, whole file, alone on the machine, C extension present:**
+
+    tests/test_streamdf.py --backend jax --jit
+    65 passed, 4 skipped, 1 deselected, 10 xpassed, 0 failed, 776 s
+
+All 10 xpass and are removed from the ledger. The 4 skips are the standing
+Torus exclusion. **Pattern (b) never trips**: the file also has four
+pre-allocated accumulator loops (`ObsTrack[ii, :] = multiOut[3]`, lines
+1318/1348/1368/1394) that looked like the same class -- with (a) fixed they do
+not fail, so they are not touched.
+
+**numpy byte-identity, on the real object rather than a synthetic.** sha256 of
+every array the function produces, built from the Bovy (2014) stream in a
+patched tree and an unpatched copy at the same base:
+
+    _allErrCovsLBUnscaled              6a8a7fce..8bf1b9   ==
+    _interpolatedAllErrCovsLBUnscaled  ee1986fc..fcd36b   ==
+    _trackLogDetJacLB                  efd8821b..0da119   ==
+    _interpolatedTrackLogDetJacLB      c7746b22..36cee0   ==
+    _ErrCovsLBScale                    11e2d1c7..594576   ==
+
+The probe prints `galpy.__file__` so the editable-install shadow is ruled out by
+evidence, not assumption. Per element (i, j) both forms are `(a_ij / r_i) * s_j`
+-- same operands, same order -- so equality is expected; the point of running it
+is that "expected" is not "measured".
+
+**Scoped out deliberately:** `streamgapdf.py` has four sites of the same shape
+(`Om[0, :] += dOr`, `tilew[:, 1] -= ...`). None of the 10 failures reach them,
+and `test_streamgapdf.py` is in no deferral list -- it already runs traced and
+passes. Changing code that no failing test exercises would ship an unverifiable
+edit. Follow-up, not this PR.
+
+Committed `6a09db8e` on `feat/streamdf-inplace-writes`, stacked on `#1279`
+(`d3545330`). It **must** stack: run against develop it reports `1 skipped`,
+because the old inheritance rule slow-skips the whole streamdf file under
+jax-jit. A jax defect was untestable behind a *performance* deferral -- the same
+pathology `#1279` exists to fix, met from the other side.
+
+Still running: `test_streamgapdf.py` under jax --jit, and both stream files
+under torch (`test_streamdf.py` is deferred only under EAGER jax, so torch is a
+live regression surface).
+
+**Runner starvation has a named cause now.** develop's `f963eb42` carries two
+complete, identical sets of build jobs created 3 s apart (04:21:32 and
+04:21:35) -- the `build.yml` push+pull_request double-trigger already flagged
+for Jo, here doubling the load that `#1279` is queued behind. Not cancelled: a
+cancelled run on a same-SHA push blocks merges.
+
+    gh#1279  2 pass / 5 in_progress / 144 queued / 0 red
+    gh#1274  151 pass / green -- Jo's to merge
+    #213     6a09db8e, jax-jit + numpy byte-identity done, torch arms running
