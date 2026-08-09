@@ -36194,3 +36194,36 @@ Two small method notes from doing it:
   file first. Same shape as needing `--runxfail` to see a ledgered failure.
 
 Provenance audit closed. gh#1284 head `19832bb1`, CI restarted.
+
+### 2026-08-09 (cont.) — gh#1283 merge audit done ahead of green (131/153, 0 red)
+
+Audited the full diff now so the squash-merge is immediate when CI finishes,
+rather than rushed at the moment it goes green. Two files, 60 diff lines.
+
+**1. `if` -> `xp.where` / array-input class.** Nothing data-dependent added. The
+change is `numpy.cos/sin` -> `xp.cos/sin` plus `out += ...` -> `out = out + ...`.
+That second one is not cosmetic: rebinding rather than accumulating in place is
+the safe form once `out` can be a traced array
+([[as-numpy-on-jax-is-readonly]]). For the numpy path both spellings are
+identical on floats, consistent with the sha256 byte-identity check already run.
+
+**2. Duplication.** Reuses `backend.quadrature.quad`; adds no helper. The single
+sibling that still calls `scipy.integrate.quad` from a `_mass` override,
+`EllipsoidalPotential._mass`, is deliberately untouched with its rationale
+recorded (23 `_mass` overrides scanned, exactly 2 used scipy).
+
+**3. Helper placement.** The import is function-local, which looked like a smell
+until I checked the convention: **both** forms exist in the tree — module-level
+in 5 files, function-local in 3 sites — and `Potential.py:938` and
+`AnySphericalPotential.py:185` already use *literally* `from ..backend.quadrature
+import quad as _bk_quad` inside a function. Same alias, same shape. This PR
+matches the nearer idiom rather than inventing one.
+
+(Non-blocking observation for later: `Potential.py` carries *both* idioms, a
+module-level `_bquad` and a function-local `_bk_quad`. Pre-existing, not
+introduced here, not worth churning a shared file over mid-flight.)
+
+**4. Ledger:** −2 entries (`test_McMillan17`, `test_Cautun20`), verified by set
+difference.
+
+Verdict: clean. Merge on green, no changes wanted.
