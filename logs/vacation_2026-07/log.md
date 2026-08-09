@@ -36583,3 +36583,31 @@ have not measured — but four different places it bites, and a single merged no
 would be too abstract to fire at the right moment.
 
 CI: gh#1284 115/153, gh#1285 2/151 (still behind develop's doubled matrix).
+
+### 2026-08-09 (cont.) — gh#1284 merge audit done ahead of green (118/153)
+
+Same pre-audit habit that made gh#1283's merge a two-command operation. gh#1284
+is 3 files and the **entire code change is two lines**:
+
+    -    assert numpy.amax(numpy.fabs(o.r(t) - r_pred)) / r0 < 0.001, (
+    +    assert numpy.amax(numpy.fabs(as_numpy(o.r(t)) - r_pred)) / r0 < 0.001, (   (x2)
+
+**1. array-input class:** nothing data-dependent added. A boundary cast at an
+assertion site is the *inverse* of the failure mode — it stops `numpy.fabs` being
+handed a Tensor, which is the `-W error` deprecation trap that only bites in CI
+([[test-backend-W-error-deprecation]]).
+
+**2. duplication:** uses the centralized `galpy.backend.as_numpy`, not a local
+`.detach().cpu().numpy()`. That helper exists *because* ~23 per-file duplicates
+were consolidated into it, so this is the non-duplicating choice — and the same
+file already applied it at 4 other lines. These 2 were simply missed.
+
+**3. helper placement:** no new helper.
+
+Ledger half already verified twice today, including the correction that moved 4
+mis-typed defects out of `slow-skip` and added a 5th that had been missed.
+
+Verdict: clean. Merge on green.
+
+CI: gh#1284 118/153; gh#1285 2/151, still behind develop's doubled matrix.
+develop itself remains failure-free post-merge.
