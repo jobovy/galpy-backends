@@ -36659,3 +36659,20 @@ green with 2 running — it has started getting runners now that develop's
 post-merge matrix is draining.
 
 Both merge audits are banked, so whichever finishes first merges immediately.
+
+### 2026-08-09 (cont.) — measurement in the 900 s-cap tail; wakes now firing fast
+
+`test_orbit` eager: 61 % at ~1000 s, 8 workers busy. It sat at 61 % across four
+consecutive checks, which is the tail behaving exactly as designed — the tests
+still running are the ones with a 900 s per-test cap, so a single worker can
+hold one slot for a quarter of an hour without the percentage moving.
+
+Noting the cadence explicitly: several wakes now arrive inside the same wall
+minute. That changes what "never idle" should mean — re-reporting identical CI
+counts every wake is not work. Better uses, in order: push a running measurement
+toward completion, do a merge audit ahead of green (both banked), or verify
+something I asserted earlier. Polling the same numbers is the thing to avoid,
+and it is a trap precisely because it *looks* like diligence.
+
+CI: gh#1284 124/153 with only the healing codecov phantom; gh#1285 climbing now
+that develop's post-merge matrix has drained.
