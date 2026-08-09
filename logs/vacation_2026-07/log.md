@@ -36092,3 +36092,34 @@ minutes into a 10-minute job.
 numpy 1283/0, traced 1276/0, 6 A/B'd tests, ledger 347->342, placement audited.
 PR body written to `/var/tmp/rt-split-pr-body.md`. Held only by the two-PR cap
 (gh#1283 at 112/153, gh#1284 at 40) -- opens as soon as one merges.
+
+### 2026-08-09 (cont.) — the fix holds on torch too, and appears to make those tests much faster
+
+`--backend torch --jit`, the same 5 nodeids: **5 passed in 243 s**. So the
+clearance is cross-backend, not a jax accident -- which matters because defects
+here have repeatedly been per-backend
+([[ci-single-backend-install-blindspot]]).
+
+**A likely side effect worth re-measuring, not asserting.** gh#1284 adds
+`torch-jit` *slow-skip* entries for 4 of these same tests, measured at
+**313-398 s each** in the 2026-08-09 torch sweep. All 5 together now run in
+243 s. The plausible cause is the array-broadcast half of this branch: with
+`_backend_accepts_arrays = True` the quadrature hands the wrapper the whole node
+array instead of looping ~100 nodes scalar-by-scalar.
+
+I am not claiming a 6x speedup: the two numbers come from different contexts
+(a long unattended sweep vs a 5-test run) and I have not measured them
+side-by-side on a quiet box. What I *am* recording is the consequence: **once
+this branch lands, gh#1284's 4 torch-jit slow-skip entries for these tests are
+probably stale and should be re-measured**, not carried forward on faith. That
+is the [[ledger-staleness-sweep-from-artifacts]] pattern -- entries outlive the
+condition that justified them.
+
+**Branch status: validated on both backends.** numpy 1283/0, jax traced 1276/0
+(7 expected xfail), torch 5/5, 6 A/B'd tests, ledger 347->342. PR body ready at
+`/var/tmp/rt-split-pr-body.md`; opens when the two-PR cap frees.
+
+**CI:** gh#1283 119/153 with 27 backend shards left; its codecov phantom is
+visibly healing exactly as the sessions diagnosis predicted --
+head **26 sessions @ 86.05%** (was 14 @ 72.28%), base 28 @ 99.95%, patch 100%.
+No intervention needed.
