@@ -36501,3 +36501,23 @@ you spend hours to confirm what someone already knew.
 So the noninertial burndown branch stays at **-11, eager only**, and I will not
 be touching the 9 traced entries. A negative result, but it bounded the next
 piece of work and stopped me from doing a pointless run.
+
+### 2026-08-09 (cont.) — noninertial commit amended: "untouched" -> "measured and correct"
+
+The branch is unpushed, so amended `f795e787` -> **`1e39b6ac`** rather than
+adding a second commit. The only change is the message, and the change matters:
+
+it previously said *"the 9 jax-jit entries are a separate question, untouched
+here"*, which reads like an omission a reviewer should be suspicious of. It now
+says they were **run and verified** — 53 passed / 0 failed in 1595 s, all 9 at
+395-681 s, zero droppable — so leaving them is a measured decision, not a gap.
+
+That is the difference between "I did not look" and "I looked and there is
+nothing there", and only one of those is evidence.
+
+Also folded in the eager-vs-traced contrast (58 % stale vs 0 % stale on the same
+file, same day) so the reasoning travels with the commit rather than living only
+in this log.
+
+CI: gh#1284 112/153; gh#1285 still 2/151, starved behind it — expected with two
+PRs sharing a constrained runner pool, not a fault.
