@@ -35996,3 +35996,35 @@ the same mid-sweep mutation I logged against myself during the torch sweep. With
 xdist the workers had already imported the module so the result is almost
 certainly sound, but "almost certainly" is not a gate: re-dispatched the whole
 file traced against the final commit. Reporting that number, not this one.
+
+### 2026-08-09 (cont.) — the final gate HUNG; investigating before claiming the clearance
+
+The re-dispatched whole-file traced sweep (on the final commit cf8828e7, with the
+5 entries un-ledgered so they actually execute) **hung**. Not slow -- hung:
+
+* stalled at 10%, log mtime frozen for >50 min;
+* every xdist worker at **0.0% CPU**, cputime 1:17 total.
+
+The identical command on the *pre-mock* tree finished in **586 s**. The only
+difference is that those 5 tests now run instead of xfailing. So either they
+deadlock under `-n 8`, or they interact badly with xdist + jax.
+
+This matters more than the ledger drop: **CI runs `test_potential.py` under
+`pytest-split` (`--splits 5 --group N`), not xdist**, so a pure xdist artifact
+would not affect the PR -- but I am not going to assert that from the shape of
+the failure. Re-running the whole file **serially** (no xdist) to discriminate:
+
+* completes -> the hang is an xdist interaction, local-only, PR unaffected;
+* hangs at the same place -> a real deadlock in the newly-executing tests, which
+  must be fixed before this branch becomes a PR.
+
+Caveat on the serial run: at ~8x the parallel wall-clock it may exceed its own
+`timeout 3300`, and **a killed pytest writes no junitxml at all**
+([[per-test-cap-not-per-file-timeout]]), so a timeout yields zero data rather
+than partial data. If that happens, next attempt is `-n 4`.
+
+**The 5-entry clearance therefore stands on: the 5 nodeids passing in isolation
+(5 passed, 40 s), the numpy whole-file run (1283 passed / 0 failures), and the
+pre-mock traced whole-file run (1271 passed / 0 failures / 1 xpass).** What is
+NOT yet established is a clean whole-file traced run on the final tree. Not
+claiming it until I have it.
