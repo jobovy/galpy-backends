@@ -34430,3 +34430,14 @@ Two independent workflow gaps, both needing scope I do not have:
 Fix (1) and this stops needing a human. Until then I will check for orphaned
 SHAs whenever a PR sits queued after a rebase — it is not obvious from
 `gh pr checks`, which only ever shows the head.
+
+**Confirmed within 5 minutes.** Before the cancellation gh#1281 was
+`{QUEUED: 149, SUCCESS: 2}` and had been for two hours; after, it is
+`{IN_PROGRESS: 5, QUEUED: 144, SUCCESS: 2}`. The head's jobs picked up the
+runners as soon as the orphans released them, so the diagnosis was right and the
+fix was the cancellation, not waiting.
+
+Also swept the rest of the repo for the same waste — compared every
+`in_progress` run's SHA against its branch tip — and found **no other stale-SHA
+runs**. The only one left is develop's `all-clear` on the current tip. So this
+was a one-off caused by my rebase, not an accumulating leak.
