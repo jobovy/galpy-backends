@@ -34480,3 +34480,31 @@ the rest of the run. Further code edits go in a separate checkout. This is the
 second contamination of this same sweep — first CPU (a concurrent jax job), now
 the tree — and both were self-inflicted while "not idling". Being busy next to a
 long measurement is exactly how you corrupt it.
+
+**Sharpening the torch RotateAndTilt datum** (previous entry called it
+provisional). On the unfixed tree, torch gives:
+
+    poisson_surfdens[mockRotatedAndTiltedMWP14WrapperPotential]                PASSED
+    poisson_surfdens[mockRotatedAndTiltedMWP14WrapperPotentialwInclination]    FAILED (300.0s cap)
+
+So torch does **not** hit the `_backend_accepts_arrays` guard on either — the
+second is a *timeout*, not the TypeError jax raises. The two backends therefore
+disagree in kind, not just degree:
+
+| | jax | torch |
+|---|---|---|
+| RotateAndTilt poisson_surfdens | **defect** (guard TypeError) | one passes, one **slow** (300 s) |
+| AnyAxisym forceAsDeriv | defect | **same defect** |
+
+That is consistent with the traced torch path never handing the wrapper a node
+array — so the guard is never consulted, and the quadrature just grinds
+per-node instead.
+
+**A hypothesis worth testing, not yet a claim:** my RotateAndTilt fix exists
+precisely so the quadrature *can* pass the whole Gauss-Legendre node array at
+once. If that is what the `wInclination` variant is spending 300 s not doing,
+the same fix may turn a torch slow-skip entry into a fast pass — i.e. burn a
+torch entry as a side effect of fixing a jax defect. Testable directly once the
+sweep frees the CPU: re-run that one nodeid on the fixed tree and compare
+against 300 s. Recorded as a hypothesis because the alternative (it is slow for
+an unrelated reason) is equally consistent with what I have.
