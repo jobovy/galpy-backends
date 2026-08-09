@@ -36311,3 +36311,44 @@ commits. That memory is one wake old and it already changed what I did.
 Classification will be by **duration**, not by timeout-failure — signal-based
 timeouts cannot interrupt a C-bound test, which is how the torch sweep lost 7 of
 8 slow additions.
+
+### 2026-08-09 (cont.) — test_noninertial eager re-measurement: 11 of 19 are stale
+
+Whole file, clean `de0745c5` worktree, `--backend jax` eager, the 19 entries
+removed so they actually run: **4 failed, 49 passed in 1422.7 s**. Classified by
+junitxml **duration** (240 s bar), never by pass/fail:
+
+| verdict | n | evidence |
+|---|---|---|
+| still slow — **keep** | 8 | 4 hit the 600 s cap; 4 more at 450–508 s |
+| **fast — DROP** | **11** | 9 of them under 31 s; two at **0.2 s and 0.7 s** |
+| failing (defect) | 0 | — |
+
+All four `F`s were cap-hits, i.e. genuinely slow. Had I classified by pass/fail
+I would have called 4 defects and missed that 11 entries are pure waste — the
+same error that cost the torch sweep 7 of its 8 slow additions.
+
+Two of these tests run in **under a second** and have been skipped in every
+eager CI run since they were listed. Since **per-PR CI runs eager**, this is
+coverage the actual gate has not had.
+
+The threshold story is unusually clean here: the distribution is strongly
+bimodal — 235.8 s, then a gap straight down to 30.6 s — so exactly one entry
+sits anywhere near the bar, and it is *below* it. The traced sweep by contrast
+had three inside the 240–300 s judgement band.
+
+**Caveats I am not glossing:**
+
+* these are `-n 6` xdist numbers on a box also polling CI. Contention *inflates*
+  durations, so it is conservative for the 11 fast ones (alone they can only be
+  faster) — but the 8 keepers' margins are not precision figures;
+* removing an entry is the only way to measure it, which is the
+  "a slow-skip hides its own re-measurement" trap again; the un-deferral is only
+  proven in a full-file context, which is what this run was
+  ([[handpicked-nodeid-batch-is-not-a-context]]).
+
+Becomes a ledger-burndown PR when a slot frees: **slow-skip 118 → 107**, the
+largest single-file cut available after `test_orbit`. The 9 `jax-jit`
+noninertial entries are a separate question and were not touched.
+
+**gh#1283 at 151/153, 0 red** — one jax orbit shard and all-clear left.
