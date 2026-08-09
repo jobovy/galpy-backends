@@ -34282,3 +34282,41 @@ sweep the same way I did earlier. It waits.
 
 Branch now carries **7 of the sweep's 8 traced defects** fixed (2 mass +
 5 RotateAndTilt); the 8th is the pre-existing AnyAxisym one, already filed.
+
+### 2026-08-09 — cross-backend check + self-audit of the two held fixes
+
+CI is slow, not wedged: 5 runs in progress repo-wide including two `Linux/Mac
+build` jobs for gh#1281's branch, 96 min in. A second full run-set was created
+41 min ago and the older `all-clear` shows `cancelled` — that is a normal
+supersede, not a failure. Nothing to escalate.
+
+**Caught a blind spot before it shipped.** I had verified the RotateAndTilt fix
+under **jax only**, and it leans on `xp.broadcast_arrays` — which torch does not
+have natively (it has `broadcast_tensors`). galpy's torch namespace is
+`array_api_compat.torch`, which *does* provide the Array-API
+`broadcast_arrays`, so it works — but that was luck I had not checked. Re-ran
+the full probe under forced torch:
+
+    TORCH: 40 checks, PROBLEMS: 0        (4 geometries x 10 methods)
+
+and the KD `_mass` fix under torch, including autograd:
+
+    d mass/dR  = 1.01575362e+08   (torch)  vs  1.01575303e+08 (jax)
+
+agreeing to ~6e-7 relative — the Gauss-Legendre consistency, not an error.
+
+**Self-audit of the diff**, against the three things this loop asks for:
+
+* **`if` → `xp.where` array-input class**: no new data-dependent branches. The
+  only conditionals I touched are `if self._offset is not None` (a Python None
+  check) and `if not self._norot` (a Python bool attribute); `xyzp.ndim` is a
+  static shape property, fine under trace.
+* **duplication**: no new helpers. The KD fix *removes* a duplicate by routing
+  onto the existing `backend.quadrature.quad`; the RotateAndTilt fix is pure
+  rank/shape work with nothing extractable.
+* **helper placement**: nothing general enough to hoist, so nothing to move.
+
+PR body drafted at `/var/tmp/defects-pr-body.md`, ready to open the moment
+gh#1281 merges. **Still owed: the pytest gate** (5 ledgered tests + numpy
+regression) — the torch sweep has the CPU and is on `test_potential` now, which
+will incidentally answer the torch half of the KD question authoritatively.
