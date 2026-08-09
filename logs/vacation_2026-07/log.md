@@ -35314,3 +35314,24 @@ numbers. Whoever picks up RotateAndTilt needs that, not a clean diff.
 
 The PR claims **2 fixes**, which is what the gate supports. Four wakes ago I was
 describing this branch as *7 of 8*.
+
+### 2026-08-09 — last owed re-measurement launched (and the revert made it free)
+
+gh#1282 CI is running (7 in progress / 142 queued / 2 green). With the CPU free,
+started the final provisional row: `test_dxdv_3d_c_vs_python[RotateAndTilt…]`
+measured on an **unpatched** tree.
+
+The convenient part: because I reverted the RotateAndTilt commit, `defects-edit`
+*is* the unpatched tree for that file — verified rather than assumed
+(`git diff de0745c5 HEAD -- RotateAndTiltWrapperPotential.py` is empty). So the
+re-run needs no third worktree and no second build; the tree that just passed
+two gates is exactly the right control.
+
+Running the whole `test_dxdv_3d_c_vs_python` function (all parametrizations, not
+just the ledgered one) with a **600 s** cap rather than 300 — the original
+reading was 201.9 s and the question is whether it is genuinely under the
+margin, so a cap at 300 would truncate exactly the case that matters. And after
+today's `signal`-timeout finding, the verdict will come from the junitxml
+**duration**, not from pass/fail.
+
+That leaves the torch delta with every row measured on a clean, correctly-attributed tree.
