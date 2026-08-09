@@ -33573,3 +33573,41 @@ Running ledger arithmetic, all steps accounted:
 
     gh#1280   2 pass / 149 queued
     sweep     test_orbit in flight
+
+### 2026-08-09 — RotateAndTilt: the trigger is a missing FLAG, not the guard (`532f251f`)
+
+Read the guard instead of leaving my own diagnosis at "it fires". It is not a
+blanket array refusal:
+
+    if arrays and not (getattr(self, "_backend_accepts_arrays", False)
+                       and all(is_backend_array(x) for x in arrays)):
+        raise TypeError(...)
+
+Under tracing the `is_backend_array` half is **satisfied** -- traced arrays are
+backend arrays. So what actually trips is that **RotateAndTiltWrapperPotential
+never sets `_backend_accepts_arrays`**.
+
+That changes the shape of the work: it is a **one-flag opt-in**, not a guard
+rewrite. It does *not* make it a safe one-line fix -- the gate exists precisely
+to keep arrays out of potentials whose internals dispatch to bare numpy/scipy,
+so the flag must not be flipped before verifying the wrapper is actually correct
+on array input. (The AnyAxisym opt-out is deliberate for that reason; this one
+reads as unverified rather than intentional, which is why all 5 stay **xfail**
+-- a burndown item -- rather than becoming a permanent skip.)
+
+Did not start the fix: it would be a third open PR against a two-PR cap, and it
+needs array-correctness verification I cannot run while the sweep owns the
+machine. Recorded in the ledger entry itself so the next person starts from the
+mechanism rather than the symptom.
+
+Also fixed my own commit-message quoting bug on the first attempt -- backticks
+and quotes in a heredoc-less `-m` got word-split by the shell and git tried to
+treat the prose as pathspecs. Re-committed from a message file. The file edit
+had already succeeded, so the check was "did the SHA move", not "did it print
+something".
+
+Follow-up branch: `9fe4a647` -> `20e2f86b` -> `532f251f`, ledger at 31.
+
+    gh#1280   3 pass / 8 running / 140 queued
+    gh#1274   ready, awaiting Jo's review
+    sweep     test_orbit 279 outcomes and counting -- last file
