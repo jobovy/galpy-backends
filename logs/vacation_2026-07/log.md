@@ -37336,3 +37336,44 @@ path too, leaving numpy on scipy. It would be numpy-byte-identical by
 construction. **Unverified** — I have not checked whether accuracy holds at the
 extremes (the GL-vs-adaptive floor is a known trap here), nor what it does to
 the 12 ledgered entries. That is the next wake's measurement, not a conclusion.
+
+### 2026-08-09 — tested last wake's hypothesis: GL-for-eager is viable but NOT unconditional
+
+The candidate lever was "let the backend quadrature serve the eager forced path
+too". Tested it the only way that settles it: ran both arms on the **real**
+poisson integrand (MWPotential2014) over a 4x4 grid of (R, |z|) spanning the
+extremes, GL n=50 with mid-plane clustering vs `scipy.integrate.quad` adaptive.
+
+    R\|z|      0.01      0.5        5         50
+    0.01     5.8e-14   2.6e-13   5.9e-10   2.6e-05   <-- 
+    0.1      4.4e-15   4.3e-13   1.9e-13   1.8e-09
+    1.0      2.2e-16   7.5e-13   5.0e-16   2.1e-11
+    8.0      1.5e-15   1.2e-12   1.4e-10   4.8e-11
+
+**Verdict: agrees to ~1e-12 across the useful domain, and loses five digits at
+extreme aspect ratio** — 2.6e-05 at (R=0.01, |z|=50), where the integrand has
+structure on scale ~R across a 5000:1 range. This is the
+[[match-numpy-quadrature-floor]] trap arriving exactly where that note says to
+look, which is why I tested the corners rather than a mid-range point.
+
+**But the framing changes on inspection.** The **traced** path *already* uses
+this GL rule — that is what `_quad_needs_backend` selects when tracing. So the
+2.6e-05 is not a new error the swap would introduce; it is an error that
+**already exists in traced jax today**, and eager currently disagrees with
+traced at the extremes. Making eager use GL would make the two *consistent*,
+not less accurate in aggregate.
+
+So the honest statement is: the lever is real (2299 crossings on the poisson
+route), the accuracy cost is bounded and quantified, and the decision is a
+**design question, not a mechanical change** — either let eager match traced and
+accept 1e-5 at extreme aspect ratio, or make the node count adapt to |z|/R so
+both paths improve. I am not making that call unilaterally inside a CI wait; it
+changes numerical behaviour on a path users can hit.
+
+Recorded with the numbers so it can be decided rather than re-derived. numpy is
+untouched either way — it keeps scipy.
+
+Note also what the grid shows about the SPLIT fix itself: at R>=0.1 the
+agreement is 1e-12 to 1e-16 across four decades of |z|, i.e. the clustered-node
+rule is sound where it is used; the failure is specific to R much smaller than
+|z|, not general.
