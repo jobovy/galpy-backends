@@ -36467,3 +36467,37 @@ suite (that is why the entries exist), so it needs a quiet box and a long window
 rather than a spare wake.
 
 CI: gh#1284 94/153, gh#1285 2/151, both clean but for the codecov phantom.
+
+### 2026-08-09 (cont.) — the traced noninertial list is 100 % accurate; the eager one was 58 % wrong
+
+Second half of the noninertial measurement, `--backend jax --jit`, whole file,
+9 entries removed: **53 passed / 0 failed in 1595 s**, nothing hit the 900 s cap.
+Durations of the 9 formerly-deferred `jax-jit` entries:
+
+    680.6  643.3  631.5  556.5  546.3  486.9  454.0  414.0  395.5   (seconds)
+
+**All nine are above the 240 s bar. Zero droppable.** The traced list is exactly
+right.
+
+Put beside this morning's eager result on the *same file*, that is the sharpest
+evidence yet for the whole approach:
+
+| list | how it was built | entries | stale |
+|---|---|---|---|
+| `jax` (eager) | inherited / accumulated | 19 | **11 (58 %)** |
+| `jax-jit` (traced) | **measured** by gh#1279's sweep | 9 | **0 (0 %)** |
+
+Same file, same code, same day. The list that was *measured* holds up perfectly;
+the list that was *inherited* was wrong more often than right. That is the
+"measure, don't inherit" thesis of gh#1279/gh#1281 validated on a file neither
+of them touched.
+
+**It also corrects my own roadmap.** Last wake I sized `test_orbit` as the next
+target at 45 entries. The right target is only its **25 eager** ones — its 7
+`jax-jit` entries came out of the traced sweep and should be assumed accurate on
+this evidence, not re-measured speculatively. Measuring a measured list is how
+you spend hours to confirm what someone already knew.
+
+So the noninertial burndown branch stays at **-11, eager only**, and I will not
+be touching the 9 traced entries. A negative result, but it bounded the next
+piece of work and stopped me from doing a pointless run.
