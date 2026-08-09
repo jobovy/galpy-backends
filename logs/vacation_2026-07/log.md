@@ -27350,6 +27350,11 @@ probes so I do not repeat them.
 
 ## AWAITING JO — consolidated decision list (as of 2026-08-08, 9 items)
 
+> **SUPERSEDED 2026-08-09.** Jo answered all nine on 2026-08-08; several of the
+> numbers below were later found to be measured on an unbuilt worktree and are
+> wrong (see the re-measurement entries). Current list is at the END of this
+> file — search "AWAITING JO — current". Kept for the decision trail only.
+
 Nothing here blocks me; I have work either way. Collected so it can be worked
 through in one pass instead of hunted across tasks and ledger comments.
 
@@ -31742,3 +31747,46 @@ a Jo decision, and it belongs on the AWAITING list rather than in a PR.
              26 in ~1 h, so the pool is small. Not stalled, just slow.
     gh#1274  151 pass / green
     noninertial serial: 16/53
+
+## AWAITING JO — current (2026-08-09). 1 decision, 1 action, 2 filed.
+
+The 2026-08-08 list is superseded: Jo answered all nine, and the work has since
+either landed or been re-scoped. What is actually outstanding is short.
+
+### Decision (1)
+
+1. **Should CI gain a `--jit` dimension?** Verified across all 10 workflow
+   files: **no job runs `--jit`.** So the traced ledger, the traced slow-skip
+   list, and `assert_jit_matches_eager`'s premise are exercised **only on this
+   dev box**. A regression in traced behaviour would not be caught by CI.
+   I cannot add the shard (no workflow-edit scope). Options as I see them:
+   * a nightly `--backend jax --jit` shard on the two files now measured
+     (streamTrack, streamdf) — cheapest, catches the common case;
+   * fold `--jit` into `backend-tests.yml` as a matrix dimension — thorough,
+     but roughly doubles that workflow's cost;
+   * leave it local and accept the gap explicitly, documented in the README so
+     it is a known limitation rather than an oversight.
+
+### Action, not a decision (1)
+
+2. **gh#1274 is green and waiting on you** — 151 pass, 0 pending, patch 100.00%,
+   project +0.00%. It targets `main` (your call, 2026-08-08). Nothing further
+   from me.
+
+### Filed, non-urgent (2)
+
+3. **gh#1276** — `RazorThinExponentialDiskPotential` forces lose ~3 digits in a
+   band `1e-6 <~ |z| <~ 1e-2`; worst 5.2e-3.
+4. **gh#1277** — `AnyAxisymmetricRazorThinDiskPotential.R2deriv` ~1e-5 at small
+   R; worst 9.9e-6.
+   Both pre-existing on `main`, both filed per your "not urgent, open as an
+   issue". No action needed unless you want them fixed.
+
+### Decided, in flight (no input needed)
+
+* #171 tolerances → "backend aware". 2 genuine tolerance entries + 1 real
+  off-grid accuracy bug (0.0047 vs 1e-8, both backends) that belongs with #103.
+* #194 `--jit` slow-skip → "own list". Rule committed (`ac2cd27e`); jit entries
+  added from serial measurement as it lands. No seeding needed (see item 1).
+* #211 interpRZPotential → "(B) vectorize". Blocker is 2 potentials, not 67.
+* #207 → landed as gh#1278, open.
