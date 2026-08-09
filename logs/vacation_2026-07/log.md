@@ -37232,3 +37232,29 @@ numpy stays byte-identical, checked rather than asserted: the split value is
 **bitwise identical** (struct-packed) for rotated, offset and rotated+offset
 wrappers at two (R, phi) each. Dividing by `float` vs `numpy.float64` is the
 same float64 arithmetic. `test_backend_wrappers.py` 529 passed.
+
+### 2026-08-09 — follow-up branch prepared (not pushed): 5 torch-jit entries
+
+Both open PRs restarted from their latest pushes and sit at ~150 queued checks
+each, so there is nothing to drive. Spent the window turning the A/B evidence
+into a ready branch rather than starting a new workstream half-way.
+
+`backend-jit/torchjit-poisson-undefer` @ `c4acbf96`, off develop `277bf897`:
+**xfail 26 -> 21**, verified `-5 / +0`, no other file touched. The two
+`AnyAxisym` entries are deliberately kept — that potential was the *control* in
+the A/B and stayed xfailed on both sides.
+
+**Held, not pushed**, for two reasons worth keeping straight:
+
+1. the two-PR cap is full (gh#1285, gh#1286);
+2. more importantly it **must land after gh#1285** — these entries only pass
+   because of that PR's split fix. Merging it first would leave the ledger
+   claiming five tests pass that do not. The dependency is stated at the top of
+   the commit message, not just held in my head.
+
+Also considered and rejected for this window: starting the vectorisation work.
+It is the right next lever, but it is a large workstream and beginning it inside
+a CI wait, with two PRs already open, is how sprawl starts. The `jitcount`
+boundary-count tooling I would want for it is not in this tree either (it lives
+in the galpy-jax side), so the first step there is finding/rebuilding the
+measurement, which deserves its own wake rather than a spare twenty minutes.
