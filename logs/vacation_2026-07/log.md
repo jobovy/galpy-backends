@@ -34390,3 +34390,43 @@ with `-p no:randomly` the order is file order, and the `poisson_surfdens` and
 `mwpotentials` tests that produced 7 of jax's 8 defects come later in the file.
 A partial run is not a result — I will take the counts from the finished
 junitxml.
+
+### 2026-08-09 — gh#1281 was starved by its OWN pre-rebase runs. Cancelled them.
+
+Two hours at 2/151 was not ordinary slowness. Job-level detail showed the head
+SHA's 26 jobs **all queued, none started**, while runners were busy — with runs
+for a *different* SHA:
+
+    31309341573  sha=915ccb57  pull_request  in_progress
+    31309338114  sha=915ccb57  push          in_progress
+    31311623779  sha=1be681c3  pull_request  queued      <- the actual PR head
+    31311622068  sha=1be681c3  push          queued
+
+`915ccb57` is **my own pre-rebase commit** ("slow-skip: test_orbit's 7 measured
+jax-jit entries"), and `git merge-base --is-ancestor` says it is **not an
+ancestor** of the head — the rebase orphaned it. Its 52 jobs (2 duplicate sets ×
+26) were holding the runners while the real head waited behind them.
+
+Cancelled all 3 active runs on the stale SHA. Safe, and checked rather than
+assumed: the merge gate evaluates check runs on the **head** SHA, and this is
+not it — so the "never cancel a same-SHA push run, it blocks the merge" rule
+does not apply here. That rule is about the head; this is its orphan.
+
+**This sharpens the `build.yml` item for Jo, and makes it worse than I said.**
+I had reported the double-run as roughly a 2× CI *bill*. On a runner-constrained
+account it is also a 2× *wall-clock* cost, and today it compounded: **four**
+complete job sets were live for one PR — duplicate × {stale SHA, head SHA} —
+so the head was fourth in line behind three sets nobody needed.
+
+Two independent workflow gaps, both needing scope I do not have:
+
+1. **no `concurrency:` group** — after a rebase or force-push, the superseded
+   SHA's runs keep going. A `concurrency: {group: <workflow>-<ref>,
+   cancel-in-progress: true}` would auto-cancel them, which is exactly what I
+   just did by hand.
+2. **`build.yml` triggers on both `push:` (no branch filter) and
+   `pull_request:`** — every in-repo PR runs ~52 build jobs where 26 would do.
+
+Fix (1) and this stops needing a human. Until then I will check for orphaned
+SHAs whenever a PR sits queued after a rebase — it is not obvious from
+`gh pr checks`, which only ever shows the head.
