@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-09 (04:20 EDT)
+# Vacation status snapshot — 2026-08-09 (05:30 EDT)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -10,46 +10,51 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 | state | PR | effect |
 |---|---|---|
 | **merged since the last snapshot (08-04)** | ~19 PRs, `#1256` → `#1278` | develop is now `f963eb42` |
-| **open** | **gh#1279** `feat/jit-slow-skip-own-list` @ `d3545330` | `--jit` slow-skip stops inheriting eager; 11 measured traced entries; 3 tolerance entries burned |
-| **open, stacked on #1279** | **gh#1280** `feat/streamdf-inplace-writes` @ `5ff4464c` | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared** |
+| **MERGED** | **gh#1279** | `--jit` slow-skip stops inheriting eager; 11 measured traced entries; 3 tolerance burned. develop `f963eb42` → **`d2ad93c9`** |
+| **open** | **gh#1280** `feat/streamdf-inplace-writes` @ `ec7e67e2` | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared**. Retargeted to develop + rebased clean after #1279 merged |
 | **open, FOR JO** | **gh#1274** → `main` | **151 green.** Targets `main`, so it is yours to merge. It was still marked **draft** until 2026-08-09 — i.e. un-mergeable while I was asking you to merge it; now `ready`, blocked only on required review |
+| **local, not yet opened** | `backend-jit/sweep-measured-entries` @ `1fc19ede` | the sweep's measured entries + 8 diagnosed traced defects; waits on `test_orbit` |
 | **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
-**CI right now: both PRs are RED-FREE.** #1279 151 green / 2 running; #1280 104
-green / 5 running.
+**CI right now: no reds anywhere.** gh#1280 5 green / 12 running / 134 queued
+on its new base (a rebase changes every SHA, so it restarted a full cycle).
 
 Every codecov red on both PRs was an **upload phantom** and every one cleared on
-its own, on the predicted curve — #1279's coverage went 70.83% → 76.12% →
-99.47% → **99.95%** as sessions went 9 → 22 (base 99.95%), and #1280's patch
-then project cleared in upload order. Nothing was "fixed"; the discriminator was
-the API's `sessions` count, base vs head.
+its own — #1279 went 70.83% → 76.12% → 99.47% → **99.95%** as sessions went
+9 → 22 (base 99.95%), and #1280's patch then project cleared in upload order.
+Nothing was "fixed"; the discriminator was the API's `sessions` count.
 
-**One live anomaly**: #1279's `backend torch test_potential.py --splits 5 --group
-3` has run **~50 min against a 15m36s historical norm** for that exact shard
-(measured from a completed run, not assumed). It is bounded — `backend-tests.yml`
-sets `timeout-minutes: 90`, so it self-terminates by 08:56:10Z. Deliberately not
-cancelled: the backstop settles it either way, and a timeout just earns a
-targeted single-job re-run. `all-clear` sitting at 2h40m is *not* an anomaly — it
-waits on all other jobs by design.
+One shard on #1279 ran **3× its 15m36s historical norm** and then failed at 53
+min — a **runner eviction**, not a test failure, on four signatures: the pytest
+step frozen at `in_progress`, the artifact-upload steps never reached, the job
+log absent (`BlobNotFound`), and well under the 90-min cap. A targeted single-job
+re-run passed inside the normal 15m36s, `all-clear` was re-run after it, and the
+PR merged at 154/154.
 
-**Merge path is rehearsed** (dry-run in a throwaway worktree, zero conflicts):
-squash #1279 → retarget #1280 to develop → rebase → push.
+The merge path was rehearsed in a throwaway worktree first (zero conflicts) and
+then executed exactly: squash #1279 → retarget #1280 → rebase → push, with the
+end state verified by value (`0` streamdf jax-jit entries, `4` torch useTM
+skips, out-of-place line present, no conflict markers).
 
 ## Ledger and deferrals
 
 ```
-xfail ledger      develop  17   →  after #1279  24   →  after #1280  14
-                  (jax 5, jax-jit 6,      (the +10 is streamdf      (jax 4, jax-jit 6,
-                   torch 5, torch-jit 1)   immutability, surfaced    torch 3, torch-jit 1)
-                                           then fixed by the pair)
+xfail ledger   develop pre-#1279   17
+               #1279  +10 -3   ->  24     (+10 = streamdf immutability, made
+                                           VISIBLE by the inheritance split)
+               follow-up  -1    ->  23     StaeckelGrid, measured stale (XPASS)
+               follow-up  +8    ->  31     traced test_potential defects
+               #1280     -10    ->  21     streamdf immutability FIXED
 
-slow-skip         develop  jax 75, torch 15, torch-jit 2
-                  #1279 adds jax-jit 11 (measured, not inherited)
+slow-skip      develop  jax 75 / torch 15 / torch-jit 2
+               #1279    + jax-jit 11 (measured, not inherited)
+               follow-up+ jax-jit  8 (measured, 8 of 10 files)
 ```
 
-The pair takes the ledger **17 → 14** net. The intermediate 24 is the point of
-the pair, not a regression: #1279 stops a *performance* deferral from hiding a
-real jax defect, which makes 10 failures visible; #1280 fixes them at one site.
+**The 23 → 31 step is measurement, not regression.** `test_potential.py` has
+only per-test eager slow-skip entries, never a whole-file one, so the rest of it
+already ran traced *before* #1279 — nobody was looking, because no workflow runs
+`--jit`. All 8 pass eager. This is traced-only exposure being written down.
 
 ## Awaiting Jo
 
@@ -90,6 +95,7 @@ because concurrent jax oversubscribes the XLA CPU pool and corrupts the timings.
 | `test_qdf` | 56 | 2 | 1 | 1 |
 | `test_orbits` | 116 | 2 | 2 (1 **new**) | 1 |
 | `test_actionAngle` | 209 | 1 | 1 (1 **new**) | 1 |
+| `test_potential` | 1385 | 0 | 0 | — (**8 defects**, below) |
 | | | **17** | **8** | **11** |
 
 **Two-thirds of the eager deferrals do not survive a traced run**, and the
@@ -113,8 +119,23 @@ so that ledger entry is stale — it goes in the follow-up, not by amending #127
 (a new commit there restarts 153 checks for hours). Ledger net becomes
 **17 → 13**.
 
-Remaining: `test_potential` (in flight, 664+ cases — 14 `parametrize`
-decorators expand it well past its 221 function count) and `test_orbit` (245).
+`test_potential.py` (9th file) added no slow entries but **8 defects** — the
+first time the slow-vs-defect split had anything to separate, and it kept all 8
+out of the slow-skip list. Three groups, each now naming a *mechanism*:
+
+| n | what | mechanism |
+|---|---|---|
+| 5 | `poisson_surfdens[mockRotatedAndTilted…]` | `RotateAndTiltWrapperPotential` never sets `_backend_accepts_arrays`; the guard's `is_backend_array` half *is* satisfied under tracing. A one-flag opt-in — but the flag must not be flipped before verifying array-correctness, since the gate exists to keep arrays out of bare-numpy internals |
+| 2 | `test_McMillan17`, `test_Cautun20` | one root: `mass()` integrates with `scipy.integrate.quad`, which calls `float()` and rejects a tracer. Cautun20 fails in `__init__`, so it cannot even be *constructed* traced |
+| 1 | `forceAsDeriv[AnyAxisym…]` | traced `Phi` at **exactly z==0** is off by ~7.3e-5 from its own neighbour; the test's one-sided difference divides that by dz=1e-8 → 7.35e+03. `zforce(0.5,0)=0` is correct — the derivative is the wrong side |
+
+The AnyAxisym one was **A/B'd against pre-#1278** by swapping only that file:
+byte-identical (`7.345878e+03` both sides). **Pre-existing, not the grading
+change that landed today.** The first probe returned `diff = 0` and I explicitly
+refused to read that as exoneration — it used a centred difference, which
+cancels across z=0 by symmetry, and the wrong surfdens.
+
+Remaining: `test_orbit` (245 functions), in flight, 0 failures so far.
 
 ## Queued next, in order
 
