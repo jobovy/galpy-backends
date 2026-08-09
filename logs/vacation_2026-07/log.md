@@ -36698,3 +36698,36 @@ and stop.** Manufacturing activity against a queue I cannot speed up would add
 risk (mid-flight edits, cancelled runs, contended measurements) for no progress,
 and today already supplied three examples of exactly that kind of self-inflicted
 cost.
+
+### 2026-08-09 (cont.) — gh#1285 codecov: phantom, but patch=17.6% is a real thing to re-check
+
+gh#1285 went red on **both** codecov checks. Project is the known phantom. Patch
+is not automatically dismissible — it measures *my new lines*, and hiding
+uncovered new code is explicitly out of bounds
+([[no-hiding-uncovered-code]]) — so I read the numbers instead of assuming:
+
+    base   sessions=20   86.05%
+    head   sessions=2    26.35%
+    patch  sessions=0    17.64%   lines=51  hits=9  misses=42
+
+Two uploads out of ~28. Far too early to mean anything, and there is an extra
+wrinkle: **the base is incomplete too.** gh#1285's base is `9dc31569`, whose own
+post-merge matrix is still running, so codecov is comparing an incomplete head
+against an incomplete base. Base at 20 sessions / 86.05 % instead of the usual
+28 / 99.95 % is that showing through.
+
+**But 51 patch lines with 42 currently unhit is a number I want to see again at
+full upload**, because there is a plausible way for it to stay low that has
+nothing to do with phantoms: most of what this PR adds is **backend-path** code —
+`CompositePotential`'s sum-over-components branch, the wrapper's plane-crossing
+solve, the `xp.where` fallback. The numpy branch is trivially covered; the
+backend branches need the eager jax/torch shards to actually reach them.
+
+Expectation, written down now so it can be checked rather than rationalised
+later: patch should climb well above 17.6 % as the backend shards upload, and the
+6 new `test_backend_wrappers.py` tests should cover the hook, the edge-on
+degenerate branch and the composite override directly. **If it does not, that is
+a genuine coverage gap in this PR and I add tests rather than explain it away.**
+
+Recorded as a re-check, not a conclusion. gh#1284 128/153; test_orbit
+measurement 74 % at 1470 s.
