@@ -14,7 +14,7 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 | **MERGED** | **gh#1280** | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared**. develop `d2ad93c9` → **`a45a4f1d`** |
 | **open, FOR JO** | **gh#1274** → `main` | **151 green.** Targets `main`, so it is yours to merge. It was still marked **draft** until 2026-08-09 — i.e. un-mergeable while I was asking you to merge it; now `ready`, blocked only on required review |
 | **open** | **gh#1281** `backend-jit/sweep-measured-entries` @ `1be681c3` | the completed 10-file sweep: 15 measured jax-jit slow-skip entries, 8 diagnosed traced defects, 1 un-ledger. Rebased onto `a45a4f1d` through two real conflicts |
-| **held local, NOT opened** | `backend-jit/kd-mass-quadrature` @ `e1fa8bf9` | **fixes 7 of gh#1281's 8 traced defects** (KD `_mass` → backend quadrature; RotateAndTilt broadcasts over a node axis). Not opened because it must land *after* gh#1281 — it deletes ledger lines gh#1281 adds — and a 3rd PR would compete for the runners gh#1281 needs |
+| **held local, gate re-running** | `backend-jit/kd-mass-quadrature` | **fixes 2** of gh#1281's 8 traced defects (KD `_mass` → backend quadrature, clearing `McMillan17`+`Cautun20`). I earlier described this as *7 of 8*: the RotateAndTilt half **failed its pytest gate and is reverted** — opting the wrapper into array input removes a `TypeError` but exposes a silent **6.8%** Poisson-surfdens error at \|Z\|=10, because the traced path uses fixed-order GL where scipy's adaptive quad coped |
 | **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
 **CI right now:** gh#1281 29 green / 22 running / 101 queued, and the single
