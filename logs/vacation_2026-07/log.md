@@ -36551,3 +36551,35 @@ No action available to me: both fixes need `workflow` scope. Recording the
 concrete cost — **gh#1285 idle 44 min behind a duplicated base-branch matrix** —
 since a measured example is more persuasive than the general complaint I filed
 earlier.
+
+### 2026-08-09 (cont.) — develop is clean post-merge; memory hygiene checked
+
+**Verified my own merge did not break the base branch.** develop's post-merge
+matrix on `9dc31569`: notebooks **success**, the rest queued/in-progress, **no
+failures**. Worth doing explicitly rather than assuming — I merged it, so
+confirming develop stayed green is mine to check, not something to notice later
+from someone else's red.
+
+Incidental finding: develop's runs carry **both** `push` and `pull_request`
+events, which means an open PR has `feat/backends-develop` as its head (not one
+of mine — 1274/1284/1285 are all elsewhere). So the doubling I flagged is
+structural for this branch, not a one-off.
+
+Also ran a hygiene pass on the 4 memories written today, since a dangling
+`[[link]]` degrades recall silently and I cross-linked heavily:
+
+    reproduce-the-assertion-not-a-proxy        4 links, 0 dangling
+    measure-elapsed-time-never-assume-it       2 links, 0 dangling
+    verify-sweep-tree-provenance-completely    3 links, 0 dangling
+    simulate-the-merge-dont-assume-conflict    2 links, 0 dangling
+
+All four resolve and all four are in `MEMORY.md`. 153 memory files total.
+
+They are deliberately distinct rather than merged: *reproduce-the-assertion*
+is about proxies for a failing test, *measure-elapsed-time* about inventing
+clock readings, *provenance* about the tree a measurement ran on, and
+*simulate-the-merge* about untested blockers. Same root habit — asserting what I
+have not measured — but four different places it bites, and a single merged note
+would be too abstract to fire at the right moment.
+
+CI: gh#1284 115/153, gh#1285 2/151 (still behind develop's doubled matrix).
