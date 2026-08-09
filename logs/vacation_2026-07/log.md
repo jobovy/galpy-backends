@@ -36800,3 +36800,34 @@ Cumulative eager-jax burndown now measured: noninertial 11/19 stale,
 test_orbit 13/25 stale — **24 of 44 measured entries (55 %)**, consistent with
 the traced sweep's two-thirds finding and with the same cause: these lists were
 inherited, never measured.
+
+### 2026-08-09 — eager burndown consolidated: one branch, 24 measured entries
+
+Merged the two eager measurements into a single branch
+**`backend-jit/eager-undefer-measured`** (rebased onto `9dc31569`):
+
+    noninertial   -11
+    test_orbit    -13
+    ---------------------
+    total         -24 removed, 0 added   (verified by set difference)
+
+Kept as **one** PR because both touch `tests/backend_slow_skip.txt` — two PRs
+would have been a guaranteed conflict, which is the file-disjointness rule
+([[pr-granularity-less-atomic]]) applied in the direction that actually matters
+here: group when the file is shared, split when it is not.
+
+The `test_orbit` commit message records the two things a reviewer would
+otherwise have to re-derive: that both "failures" are
+`Failed: Timeout (>900.0s)` cap-hits rather than defects, and that
+`test_dxdv_3d_c_vs_python[OblateStaeckel...]` at **237.9 s** is the single
+judgement call against a 240 s bar — dropped, and named as the first to
+re-defer if that shard ever runs long. Burying a 2.1 s margin in a bulk deletion
+would be the kind of thing that looks fine until it isn't.
+
+**Measured eager-jax burndown so far: 24 of 44 entries (55 %) stale**, from two
+files whose lists were inherited rather than measured. The remaining eager-jax
+population is 31 entries spread thinly across other files — no single cluster
+left worth a dedicated run.
+
+Queue: gh#1284 (138/153, 0 red, audit banked) → gh#1285 (10 entries) →
+this branch (24 entries). That is **34 ledger entries** staged behind two PRs.
