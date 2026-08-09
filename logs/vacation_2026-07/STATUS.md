@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-09 (05:30 EDT)
+# Vacation status snapshot — 2026-08-09 (07:50 EDT)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,9 +11,9 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 |---|---|---|
 | **merged since the last snapshot (08-04)** | ~19 PRs, `#1256` → `#1278` | develop is now `f963eb42` |
 | **MERGED** | **gh#1279** | `--jit` slow-skip stops inheriting eager; 11 measured traced entries; 3 tolerance burned. develop `f963eb42` → **`d2ad93c9`** |
-| **open** | **gh#1280** `feat/streamdf-inplace-writes` @ `ec7e67e2` | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared**. Retargeted to develop + rebased clean after #1279 merged |
+| **MERGED** | **gh#1280** | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared**. develop `d2ad93c9` → **`a45a4f1d`** |
 | **open, FOR JO** | **gh#1274** → `main` | **151 green.** Targets `main`, so it is yours to merge. It was still marked **draft** until 2026-08-09 — i.e. un-mergeable while I was asking you to merge it; now `ready`, blocked only on required review |
-| **local, not yet opened** | `backend-jit/sweep-measured-entries` @ `1fc19ede` | the sweep's measured entries + 8 diagnosed traced defects; waits on `test_orbit` |
+| **open** | **gh#1281** `backend-jit/sweep-measured-entries` @ `1be681c3` | the completed 10-file sweep: 15 measured jax-jit slow-skip entries, 8 diagnosed traced defects, 1 un-ledger. Rebased onto `a45a4f1d` through two real conflicts |
 | **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
 **CI right now: no reds anywhere.** gh#1280 5 green / 12 running / 134 queued
@@ -58,7 +58,20 @@ already ran traced *before* #1279 — nobody was looking, because no workflow ru
 
 ## Awaiting Jo
 
-**One decision:**
+**Two decisions:**
+
+* **`RotateAndTiltWrapperPotential` and array input** — 5 traced entries hang on
+  this and it is a design call, not a fix. `_backend_accepts_arrays` does not
+  mean "tolerates arrays"; the comment says it means the backend evaluation
+  **broadcasts over a trailing node axis**, so the traced quadrature may hand it
+  the whole GL node array. **Only `DoubleExponentialDiskPotential` sets it**, and
+  the scalar-only contract is called *documented* in that same comment. So:
+  opt the wrapper in (after demonstrating the trailing-axis property), or have
+  the quadrature **fall back to per-node evaluation** when a potential is not
+  opted in, instead of raising. I lean to the second — a missing opt-in should
+  cost speed, not correctness — but it redefines a quadrature contract, so I did
+  not make it. The guard also wraps the private methods, so the property cannot
+  be probed from outside without editing the guard.
 
 * **Should CI gain a `--jit` dimension?** No workflow runs `--jit` today
   (checked across all 10 files in `.github/workflows/`), so the traced ledger,
@@ -77,13 +90,11 @@ would do**. Observed directly: develop's `f963eb42` carried two complete,
 identical job sets created 3 s apart. A branch filter on the push trigger halves
 the CI bill. Also a workflow edit.
 
-## In flight locally
+## The traced sweep — DONE, and it is gh#1281
 
-A serial traced sweep of the **10 files** whose eager-jax slow-skip entries stop
-being inherited under #1279 but were never measured traced (54 entries). Serial
-because concurrent jax oversubscribes the XLA CPU pool and corrupts the timings.
-
-**8 of 10 done:**
+All **10 files**, ~2456 traced cases, ~5 h serial (concurrent jax oversubscribes
+the XLA CPU pool and corrupts the very timings being collected). **42 eager
+entries → 15 measured jax-jit entries, + 8 diagnosed defects, + 1 un-ledgered.**
 
 | file | tests | eager entries | → jax-jit | un-deferred |
 |---|---|---|---|---|
@@ -96,7 +107,8 @@ because concurrent jax oversubscribes the XLA CPU pool and corrupts the timings.
 | `test_orbits` | 116 | 2 | 2 (1 **new**) | 1 |
 | `test_actionAngle` | 209 | 1 | 1 (1 **new**) | 1 |
 | `test_potential` | 1385 | 0 | 0 | — (**8 defects**, below) |
-| | | **17** | **8** | **11** |
+| `test_orbit` | 581 | 25 | **7** | 18 |
+| | | **42** | **15** | **26** |
 
 **Two-thirds of the eager deferrals do not survive a traced run**, and the
 measurement found things inheritance cannot produce at all:
@@ -135,13 +147,18 @@ change that landed today.** The first probe returned `diff = 0` and I explicitly
 refused to read that as exoneration — it used a centred difference, which
 cancels across z=0 by symmetry, and the wrong surfdens.
 
-Remaining: `test_orbit` (245 functions), in flight, 0 failures so far.
+`test_orbit` finished **opposite to the average**: across the other nine files
+two-thirds of eager entries were dropped, but here most survive (25 → 7 is still
+a big cut, yet every survivor is a genuine timeout). Per-file variation that
+large is what a single inheritance rule — set either way — cannot express.
+
+Also corrected: **3** of the 15 sit inside the 240–300 s judgement band
+(296/277/265 s), not "only one threshold case" as an earlier note claimed.
 
 ## Queued next, in order
 
-1. Merge #1279, retarget+merge #1280 (path rehearsed).
-2. File the sweep's measured `jax-jit` entries — into #1279 if it is still open,
-   else a follow-up.
+1. ~~Merge #1279, #1280~~ — both **MERGED**, develop at `a45a4f1d`.
+2. ~~File the sweep's measured entries~~ — **gh#1281**, open, CI running.
 3. **#211(B)** `interpRZPotential` grid-build vectorisation — Jo chose (B). All
    **7** sites are structurally identical, so it is one module-private helper
    used 7×. Two gates before it lands: per-potential numpy byte-identity by
