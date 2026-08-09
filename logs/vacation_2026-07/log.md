@@ -32047,3 +32047,36 @@ against a 3 h budget. The tail is where the time is, as with noninertial.
     gh#1278  94 pass / 58 pending / 1 red (patch, explained)
     gh#1274  151 pass / green
     #194     002b721a -- rule + #171 bars + 9 measured noninertial jit entries
+
+### 2026-08-09 — streamTrack serial: conclusion CONFIRMED, and contention scales with concurrency
+
+    45 cases -> 45 PASSED   total 1215 s   median 8.7 s   2 over the 240 s margin
+      452.2 s  test_streamTrack_plot_spread_non_cartesian   (concurrent: 498.1 s)
+      313.5 s  test_streamTrack_with_progpot                (concurrent: 347.7 s)
+
+The retracted numbers were **~10% high here, not 6x**. streamTrack ran alongside
+one competing jax process; test_noninertial ran alongside four. So the inflation
+scales with how many jax processes are fighting for the same thread pool, which
+is obvious in hindsight and was not obvious from inside either run.
+
+Consequence: **this file's split was never actually wrong.** Both slow tests
+clear 240 s at either measurement, so "2 stay, 43 un-defer" stood the whole time.
+Re-measuring confirmed it rather than changed it.
+
+That does not make the retraction wrong. A 10% error and a 600% error are
+indistinguishable from inside a contended run — the only way to tell which one
+you have is to re-run clean. Retracting both and re-measuring both was the
+correct response to not knowing which was which; the cost was ~20 min of CPU and
+the alternative was shipping a threshold decision on unreproducible numbers.
+
+Committed 685a0335. jit list now 11 entries (9 noninertial + 2 streamTrack);
+eager list untouched at 75.
+
+streamdf re-measure running — the one where this genuinely matters, since its
+slowest test was 242.6 s concurrent, 1% over the margin. If serial puts it under
+240, that file goes from one deferred entry to **zero**.
+
+    gh#1278  113 pass / 39 pending / 1 red (patch). All 26 build jobs have now
+             STARTED (16 done, 10 running, 0 queued); the test_backend* shards
+             that gate patch are among the running ten.
+    gh#1274  151 pass / green
