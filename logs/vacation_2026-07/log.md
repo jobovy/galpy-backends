@@ -31506,3 +31506,31 @@ recorded.
 
     #1275  145 pass / 8 pending -- still the orbit shards
     #1274  151 pass / 0 pending / green
+
+### 2026-08-08 — #1275 codecov/project resolved to +0.00%, exactly as diagnosed
+
+    codecov/project  86.05% (-13.91%)  ->  99.95% (+0.00%)   SUCCESS
+
+The red is gone and #1275 has **zero failing checks**. Worth recording because
+the diagnosis was load-bearing, not decorative: across five polls the figure sat
+frozen at 86.05% while passes climbed 91 -> 103 -> 114 -> 124 -> 132, which is
+exactly the shape of a real coverage drop. Two facts said otherwise:
+
+* `codecov/patch` was 100.00% throughout — the changed lines were covered;
+* every outstanding `build` job was a `test_orbit.py`/`test_orbits.py` shard,
+  i.e. the slowest ones AND the only ones that cover `galpy/orbit/Orbits.py`,
+  the file the PR edits.
+
+So the number could not move until those landed, and when they did it closed to
++0.00%. That is the difference between "wait, it is a phantom" and "investigate
+a 14-point coverage regression" — and the second would have burned the whole
+vacation window on nothing.
+
+Head is still `7b195b5f`, so the earlier audit stands unchanged (the `elif`->`if`
+dispatches on `isinstance`, not array data, so it is outside the
+`if`->`xp.where` class; the `alpha`/`beta` hoist has no `hasattr` dependents;
+no new helpers). Merging as soon as `all-clear` releases — it is the last gate,
+waiting on 5 remaining orbit shards.
+
+    #1275  148 pass / 6 pending / 0 RED / audit valid for this SHA / MERGE ON GREEN
+    #1274  151 pass / 0 pending / green, Jo's to merge
