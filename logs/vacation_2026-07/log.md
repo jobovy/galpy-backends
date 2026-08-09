@@ -32156,3 +32156,38 @@ safe here because this is a pass/fail check and only wall-clock is contended.
     gh#1278  142 pass / 9 pending / 2 codecov reds; test_backend* shards
              (the ~93 min ones) still running -- they gate patch
     gh#1274  151 pass / green
+
+### 2026-08-09 — #171 verified on both backends; 3 ledger entries burned
+
+`--runxfail` over the whole tests/test_actionAngle.py, C extension present:
+
+    test_actionAngleAdiabatic_linear_angles_cylsep          jax PASS   torch PASS
+    test_actionAngleStaeckelGrid_basicAndConserved_actions  jax PASS   torch PASS
+    test_actionAngleAdiabaticGrid_outsidegrid_c             jax FAIL   <- stays
+
+The third line is the result I most wanted to see. `outsidegrid_c` is off by
+4.7e-3 against a 1e-8 bar -- 470,000x -- so its bar was deliberately left alone
+and it still fails. The same run therefore demonstrates both halves of the
+distinction #171 turned on: the two tolerance entries clear their new
+backend-aware bars, and the accuracy defect does not get absorbed by one.
+
+Had I "fixed the class" -- moved every bar in that neighbourhood -- the 470,000x
+error would now be green and invisible. Eight near-identical
+`"does not have e=0"` assertions sit in that file; only the one ledgered entry
+moved, and 53 other 1e-16 bars are untouched.
+
+Un-ledgered 3 lines (commit 271f3667). Ledger 27 -> 24 entries.
+
+**Not** removed, deliberately: the `jax-jit` StaeckelGrid entry. The
+verification above is EAGER, and tracing is entitled to reassociate differently
+-- which is the entire reason that entry exists separately from the eager one.
+Eager evidence cannot un-ledger a traced entry.
+
+#194 is now feature-complete on `feat/jit-slow-skip-own-list`: 6 commits, 6
+files, all under tests/, no galpy/ source. PR body written at
+/var/tmp/194-pr-body.md. Waiting only on a PR slot.
+
+    gh#1278  149 pass / 3 pending (2 test_backend* shards + all-clear) / 2
+             codecov reds, both downstream of those shards. ~90 min elapsed
+             against a 93 min historical baseline -- normal.
+    gh#1274  151 pass / green
