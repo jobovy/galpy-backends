@@ -31907,3 +31907,31 @@ call site, same treatment.
              0.00% (covering shard queued)
     gh#1274  151 pass / green
     noninertial serial: 26/53 at 1:08
+
+### 2026-08-09 — contention diagnosis corroborated from galpy's own code
+
+Checked whether the suite already caps backend thread pools, which would have
+falsified the contention explanation for the 6x timing inflation.
+
+`galpy.backend.restrict_to_single_thread` exists but is called **only** from
+`galpy.util.multi.parallel_map`'s forked children — not by the test suite. So
+measurement runs get the full pool, and the diagnosis holds. Its docstring
+argues the same point independently:
+
+* "one process per core already saturates the machine" — i.e. N concurrent
+  full-pool processes oversubscribe by construction;
+* "jax has no equivalent knob" — so a jax run cannot be capped the way torch
+  can, which is why my four concurrent jax runs each tried to own all 72 cores.
+
+Useful for later, with a caveat: timing runs *could* be parallelised safely by
+pinning each to a disjoint CPU set (`taskset`). That would arguably also be more
+CI-representative, since CI runners have ~2-4 cores rather than 72. But it
+changes the baseline, and I am mid-measurement on an unpinned run — so not now.
+Introducing a second variable to fix the first is how the earlier retraction
+happened.
+
+    gh#1278  27 pass / 124 pending / project 54.37% -> 68.78%, patch still
+             0.00% (covering shard queued)
+    gh#1274  151 pass / green
+    noninertial serial: 28/53 at 1:18
+    #194 branch: ac2cd27e (rule) + 92cce363 (#171 bars), not yet a PR
