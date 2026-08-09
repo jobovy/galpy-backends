@@ -31534,3 +31534,24 @@ waiting on 5 remaining orbit shards.
 
     #1275  148 pass / 6 pending / 0 RED / audit valid for this SHA / MERGE ON GREEN
     #1274  151 pass / 0 pending / green, Jo's to merge
+
+### 2026-08-08 — the last #1275 shard is slow, not stuck (calibrated, not assumed)
+
+`build (ubuntu-latest, 3.14, tests/test_backend*.py)` has been `in_progress`
+for 82 min and is the only thing (besides the `all-clear` that gates on it)
+holding #1275 at 152 pass / 0 red.
+
+Two checks before touching anything:
+
+* `build.yml` sets no `timeout-minutes`, so the job inherits GitHub's 6 h
+  default — 82 min is nowhere near a kill.
+* the **same** shard on develop's last build run: `success, 93 min`.
+
+So it is running normally and has ~10 min to go. The tempting move — re-run the
+"stuck" job — would have discarded 82 minutes of real work and re-queued it
+behind the entire matrix on a runner-constrained repo. "Slow" and "stuck" look
+identical from a status field; the discriminator is the historical duration of
+that same job, which is one API call away.
+
+    #1275  152 pass / 0 RED / audit valid at 7b195b5f / merges on all-clear
+    #1274  151 pass / green
