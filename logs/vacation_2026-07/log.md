@@ -34508,3 +34508,29 @@ torch entry as a side effect of fixing a jax defect. Testable directly once the
 sweep frees the CPU: re-run that one nodeid on the fixed tree and compare
 against 300 s. Recorded as a hypothesis because the alternative (it is slow for
 an unrelated reason) is equally consistent with what I have.
+
+### 2026-08-09 — edit worktree set up (discipline enforced, not intended)
+
+Created `/var/tmp/defects-edit`, detached at `e1fa8bf9` (both held fixes), so
+`/var/tmp/port207` stays frozen for the rest of the torch sweep. `git worktree
+add` only touches `.git/worktrees` and the new path, so it cannot disturb the
+running sweep.
+
+**Before that tree can gate anything, three things — all previously-paid-for
+lessons:**
+
+1. **Build the C extension there.** It has none right now, and a missing
+   `libgalpy` does not error, it *fakes passes*. Build it, do not symlink the
+   `.so` from another tree — a symlinked one SIGABRTs.
+2. **Verify `galpy.__file__` points into `/var/tmp/defects-edit`.** An editable
+   install elsewhere silently shadows a worktree's own source.
+3. **Only after the sweep finishes.** Building costs CPU, which is the first of
+   the two ways I have already corrupted this sweep.
+
+Then the owed pytest gate runs there: the 5 ledgered
+`test_poisson_surfdens_potential` tests under `--backend jax --jit`, a numpy
+regression pass, and the torch-slow hypothesis (`wInclination` at 300 s on the
+unfixed tree vs the fixed one).
+
+CI meanwhile is healthy and moving: `{IN_PROGRESS: 11, SUCCESS: 4, QUEUED: 136}`,
+no failures — the orphan cancellation did its job.
