@@ -32745,3 +32745,48 @@ failures came out of exactly this kind of run.
     gh#1279  95 pass / 21 running / 36 queued / codecov 18-of-28
     gh#1280  7 pass / 13 running / 87 queued
     sweep    test_interp_potential in flight, 5 files behind
+
+### 2026-08-09 — merge sequence dry-run: stacked retarget is clean
+
+gh#1279 is at 100/151 and could go green in the next couple of wakes, so I
+rehearsed the step that follows instead of discovering it at merge time. The
+two PRs **overlap on two files**:
+
+    #1279  backend_skip.txt  backend_slow_skip.txt  backend_xfail.txt
+           conftest.py  test_actionAngle.py  test_backend_ledger.py
+    #1280  streamdf.py  backend_skip.txt  backend_xfail.txt
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ overlap
+
+and gh#1280 does not just touch the same files, it **edits lines gh#1279 adds**
+(removing the 10 jax-jit streamdf entries it introduced; extending the useTM
+skip block it introduced). That is exactly the shape that goes wrong after a
+squash.
+
+Dry-run in a throwaway detached worktree -- squash-merge gh#1279 onto develop
+`f963eb42`, then cherry-pick gh#1280's two commits onto the result:
+
+    231a2e13  SIMULATED squash of #1279
+    dbbca2fc  streamdf: out-of-place LB jacobian scaling
+    48d4609e  skip: streamdf useTM Torus exclusion also applies to torch
+
+**Zero conflicts.** And verified the end state rather than just that git stayed
+quiet:
+
+    jax-jit streamdf xfail entries   0   (want 0)
+    torch useTM skips                4   (want 4)
+    jax-jit useTM skips              4   (want 4)
+    streamdf out-of-place line       present
+    conftest inherit_eager           present
+    conflict markers                 none
+
+Worktree removed; real branches confirmed untouched (`feat/streamdf-inplace-
+writes` still `5ff4464c`, develop still `f963eb42`). Detached worktree
+specifically to avoid the branch-surgery leak that has bitten this stack before.
+
+So the merge path is: squash gh#1279 -> retarget gh#1280 to develop -> rebase
+(clean) -> push. No conflict handling needed unless develop moves first, which
+nothing else is queued to do.
+
+    gh#1279  100 pass / 20 running / 32 queued / codecov 19-of-28
+    gh#1280  10 pass / 15 running / 82 queued
+    sweep    test_interp_potential in flight (8 min), 5 files behind
