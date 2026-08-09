@@ -31790,3 +31790,39 @@ either landed or been re-scoped. What is actually outstanding is short.
   added from serial measurement as it lands. No seeding needed (see item 1).
 * #211 interpRZPotential → "(B) vectorize". Blocker is 2 potentials, not 67.
 * #207 → landed as gh#1278, open.
+
+### 2026-08-09 — gh#1278 reds are "the covering shard has not run", not "uncovered"
+
+    codecov/patch    0.00% of diff hit (target 86.05%)   FAILURE
+    codecov/project  51.64% (-34.42%)                    FAILURE
+
+`patch = 0.00%` reads like the worst possible result — none of the changed lines
+covered. It is the opposite of informative here. The diff is exactly two files:
+
+    galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py
+    tests/test_backend_anyaxisymdisk.py
+
+and the 7 build shards that have reported so far are `test_actionAngle`,
+`test_quantity`, `test_diskdf`, `test_orbit`, `test_conversion`,
+`test_evolveddiskdf`, `test_sphericaldf` — **not one of them executes either
+file.** The shard that does, `tests/test_backend*.py`, is still queued (both
+copies of it).
+
+So 0.00% is "no shard that exercises these lines has uploaded", not "these lines
+are uncovered". Structurally the same trap as #1275's frozen project figure,
+but sharper: because this diff lives in a single test file, patch coverage stays
+at exactly zero until one specific shard lands, and then jumps straight to its
+final value. There is no gradual convergence to watch, which makes the
+mid-flight number look like a verdict.
+
+The discriminator is the same one that worked on #1275 and is worth stating as a
+rule: **before believing a coverage number, check whether the job that covers
+the diff has actually reported.** Job names carry the test files; the diff
+carries the source files; if they do not intersect in the completed set, the
+number is about scheduling, not about coverage.
+
+Doing nothing. That shard is queued behind develop's push run (11 of 26 done).
+
+    gh#1278  9 pass / 142 pending / 2 codecov reds, both explained by the above
+    gh#1274  151 pass / green
+    noninertial serial: 24/53 at 59:19 (~2.4 min/test, ~126 min projected, 240 min budget)
