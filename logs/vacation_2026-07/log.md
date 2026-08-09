@@ -35335,3 +35335,11 @@ today's `signal`-timeout finding, the verdict will come from the junitxml
 **duration**, not from pass/fail.
 
 That leaves the torch delta with every row measured on a clean, correctly-attributed tree.
+
+**Memory strengthened, not just re-read.** The `cd`-and-`&` slip was the
+*fourth* hit on a memory I already had. Adding emphasis to a warning I had
+already read would not have helped, so the entry now prescribes a mechanical
+substitute instead: **`git -C <path>`** for every git call against a worktree,
+and **named-file staging** rather than `git add -A`. The second is what turns a
+wrong-cwd slip from harmless into repo-polluting, and it is the one I can
+eliminate outright.
