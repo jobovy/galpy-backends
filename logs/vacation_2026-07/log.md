@@ -35657,3 +35657,56 @@ real assertion in its real mode — here, `--backend jax --jit`.
 
 Now running the actual nodeid traced, with the reverted broadcast fix restored,
 to get the 6.8e-02 in situ. Reporting that number when it lands, not before.
+
+### 2026-08-09 (final) — DIAGNOSED, with a bit-exact reproduction of the failure
+
+Ran the real nodeid traced with `--runxfail` (the ledger was xfailing it, which is
+why the first attempt printed nothing). Its own assertion:
+
+    (R,Z,phi) = (0.500,10.000,0.000)
+    tpoissondens = 0.07701375
+    tdens        = 0.07209774
+    rel. diff    = 6.818545e-02
+
+That immediately reframes the problem. **`tpoissondens` is the side that is
+nearly right** (scipy says 0.07699991, so it is off by 1.8e-04 — exactly the
+split-point error I had measured). The 6.8% lives in **`tdens`**, i.e.
+`evaluateSurfaceDensities(..., forcepoisson=False)`, the *direct* `_surfdens`
+path — the **other** `symmetric_quad` call site (Potential.py:873), which
+integrates the density rather than the Poisson force combination.
+
+Reproducing that site alone in numpy:
+
+    scipy (numpy path)      : 0.07699991
+    GL n=50  split   0.0    : 0.07209774   rel.err 6.366e-02   <-- test's tdens, to all 8 digits
+    GL n=200 split   0.0    : 0.07747929   rel.err 6.226e-03
+    GL n=50  split  -1.0    : 0.07699991   rel.err 1.176e-10
+    GL n=200 split  -1.0    : 0.07699991   rel.err 6.231e-13
+
+**Bit-exact.** So the mechanism was right the whole time — the split point — and
+my error each round was probing the wrong *integrand*: the force combination,
+which is smooth and only loses 1.8e-04, instead of the density, which for a disk
+displaced to z=-1 is sharply peaked exactly where the rule puts fewest nodes.
+
+Two things this settles:
+
+- **Node count is not the lever.** n=200 with the wrong split is still 6.2e-03;
+  n=50 with the right split is 1.2e-10. Quadrupling work buys one order;
+  moving the split buys nine. The PR body's earlier "node count or placement
+  needs work too" was wrong and is corrected.
+- **Both call sites are affected**, at very different magnitudes (1.8e-04 and
+  6.4e-02) for the same root cause, which is why measuring only one of them was
+  so misleading.
+
+**Fix design for the follow-up** (not for gh#1283, which is scoped and in CI):
+`interior_point` must be the z at which the *wrapped* potential's own mid-plane
+crosses the vertical line at (R, phi) — for a pure offset that is the offset's
+z; for the tilted cases it is a one-line linear solve from the rotation matrix.
+That generalises to all 5 ledgered entries rather than special-casing the offset
+one. It needs `RotateAndTiltWrapperPotential`, which gh#1283 deliberately
+reverted, so it lands **after** gh#1283 merges to keep files disjoint.
+
+**Method note.** Three probes, three wrong answers, then the real test settled it
+in 15 seconds. The reproduction was cheap and available the whole time; what it
+needed was `--runxfail`, because the ledger entry silently converts the failure
+I wanted to read into an xfail. Recorded as [[reproduce-the-assertion-not-a-proxy]].
