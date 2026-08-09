@@ -33791,3 +33791,32 @@ body is drafted, so the open-and-push is mechanical once the sweep lands.
     gh#1274   ready, awaiting Jo
     follow-up e0f67aad local
     sweep     test_orbit 404/581 (69%), 0 failures, ETA ~2.5-3 h
+
+### 2026-08-09 — ETA corrected downward; wait-bound wake
+
+Last wake I quoted "~2.5-3 h remaining" off a 56 s/test rate. That was measured
+in the `*_planar_dxdv_c_vs_python` block, which is one of the slowest regions in
+the file, so it over-extrapolated. Re-measured across three windows:
+
+    outcomes 419 of 581
+      mean over last  20 :  38.9 s/test
+      mean over last  50 :  31.4 s/test
+      mean over last 100 :  16.3 s/test
+    remaining 162  ->  ~105 min at the last-20 rate
+
+So **~1.5-2 h**, not 2.5-3, and the spread between the three windows (16 s to
+39 s) is itself the point: a single-window rate on a file with this much
+structure is not a reliable extrapolation. Quoting one was sloppier than it
+looked.
+
+Still **0 failures** at 72%.
+
+Nothing actionable this wake. gh#1280 is 29 of 151 with 98 queued and the known
+codecov phantom; the sweep owns the machine; the follow-up branch is complete
+bar one file's rows with its PR body already written. The honest report is that
+this is wait-bound -- "never idle" means do not sit while work exists, not
+invent work when it does not.
+
+    gh#1280   29 pass / 24 running / 98 queued / codecov phantom
+    gh#1274   ready, awaiting Jo
+    sweep     test_orbit 419/581 (72%), 0 failures, ETA ~1.5-2 h
