@@ -34058,3 +34058,58 @@ a commit to refine a comment at the price of restarting ~151 checks.
     develop   a45a4f1d
     gh#1281   149 queued on the new base
     gh#1274   ready, awaiting Jo
+
+### 2026-08-09 (later) — the mass() defect: right family, wrong site. Fixed, 2 traced defects cleared.
+
+Went to fix the 2-defect `mass()` group from the sweep and found my own
+one-line diagnosis was wrong in a way that mattered. The PR body says:
+
+> `mass()` integrates with `scipy.integrate.quad`, which calls `float()` and
+> rejects a tracer
+
+`Potential.mass()` was **already** migrated to `backend.quadrature.quad` — I did
+that earlier. Re-running traced (rather than trusting the note) gave the real
+site:
+
+    galpy/potential/KuijkenDubinskiDiskExpansionPotential.py:485: in _mass
+        return out + 2.0*numpy.pi*integrate.quad(_integrand, 0.0, numpy.pi)[0]
+
+A **per-potential `_mass` override** with the same shell-quadrature shape as the
+already-migrated `Potential.mass()` — textbook duplication, one copy migrated
+and the other missed. `DiskSCFPotential` inherits it, which is how McMillan17
+reaches it.
+
+Fix is the mechanical swap onto the **existing** helper (no new helper, per the
+placement rule): `integrate.quad` → `backend.quadrature.quad` with
+namespace-anchored limits, `numpy.cos/sin` → `xp.cos/sin`, and the `scipy`
+import dropped (now unused).
+
+**Both** traced tests pass — `2 passed in 58.10s`. Cautun20 too, which I had
+filed separately as "fails in `__init__`, cannot even be constructed traced".
+That was true as a *description* but the chain
+(`AdiabaticContractionWrapper.__init__` → `Potential.mass` →
+`CompositePotential._mass` → …) bottoms out at the same KD `_mass`, so one fix
+clears both. The "one root" claim in the PR body was right; the site I named
+was not.
+
+Checks done before believing it:
+
+* **numpy byte-identity** — sha256 of `mass()` at 4 radii, same base commit
+  `a45a4f1d`, unmodified worktree vs edited: `a0b8d1c4…` both sides. My first
+  attempt at this A/B was against an *older* develop whose KD file differs by 48
+  lines — that would not have been a test of my edit, so I redid it against a
+  detached worktree at the exact base.
+* **`vectorized=True` is the helper's default**, meaning the integrand gets the
+  whole GL node array. Measured rather than assumed: `Hz` over a 7-node array
+  matches the scalar loop.
+* **differentiable**: `d mass/dR = 1.0158e+08` at R=50/8.21 via `jax.grad`.
+
+Traced vs numpy differ by **6.0e-6 relative** — the GL-vs-adaptive floor, well
+inside the test's own ~1.5e-2 band. Noting it rather than hiding it.
+
+Also checked, and it was a false alarm: 7 sweep logs contain "C extension module
+not loaded", which would have invalidated the whole measurement. It is
+`libgalpy_actionAngleTorus` (out of scope, expected); `libgalpy` itself loads in
+the sweep tree. The PR body's claim stands.
+
+gh#1281 still 2/151 — runner-starved behind develop's own post-merge push runs.
