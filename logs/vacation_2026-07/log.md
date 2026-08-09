@@ -34696,3 +34696,15 @@ independent coin flips.
 Practical consequence: the informative part of this file has not started. Any
 "torch drops entries like jax did" conclusion drawn now would be drawn from a
 sample that contains none of the population of interest.
+
+**Method correction on that check.** I matched the 13 nodeids with a plain
+`grep "::${nm} "`, and parametrized nodeids contain `[...]`, which grep reads as
+a **character class** — `[sigma_clamp]` matches a single character. Re-ran with
+`grep -F`: **same answer, all 13 still ahead**, so the conclusion stands. But it
+stands by luck; the check could not have distinguished "not yet run" from "my
+pattern never matched", and both look like an unremarkable negative.
+
+Saved as its own trap, because every ledger-vs-log cross-reference in this
+project is exposed to it and the failure is a plausible-looking false negative —
+the same family as the junitxml `find()` truthiness trap. Rule: `grep -F` (or
+Python `find`) for any nodeid match.
