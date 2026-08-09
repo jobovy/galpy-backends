@@ -33764,3 +33764,30 @@ sitting falsified in the ledger for two wakes.
     gh#1274   ready, awaiting Jo
     follow-up e0f67aad local, waits on test_orbit
     sweep     test_orbit 401 outcomes, 0 failures
+
+### 2026-08-09 — concrete ETA for the sweep's last file, and a deliberate wait
+
+Replaced "test_orbit is slow" with a number:
+
+    collected 581 items;  at 404  ->  69%
+    last 20 outcomes: 1119 s  ->  ~56 s/test in this region
+    remaining 177 tests  ->  ~2.5-3 h   (finishes ~07:30-08:00 EDT)
+
+So the next few wakes are genuinely wait-bound, and saying so is better than
+manufacturing work. gh#1280 is in the same shape: 29 of 151 checks, 103 queued.
+
+**Decided (not drifted) to hold the follow-up PR rather than open it at 9 of 10
+files.** Opening now would start its ~151 checks in parallel with the sweep --
+tempting, since CI is the long pole -- but `test_orbit`'s entries have to go in
+regardless, and any later commit restarts the whole cycle. So opening early
+costs **two** full CI cycles instead of one, on a runner pool already
+established as the bottleneck (and already paying the `build.yml` double-run
+tax). Waiting costs 2-3 h of latency and one cycle. Waiting wins.
+
+The branch is complete for everything except that one file's rows, and its PR
+body is drafted, so the open-and-push is mechanical once the sweep lands.
+
+    gh#1280   29 pass / 19 running / 103 queued / codecov phantom
+    gh#1274   ready, awaiting Jo
+    follow-up e0f67aad local
+    sweep     test_orbit 404/581 (69%), 0 failures, ETA ~2.5-3 h
