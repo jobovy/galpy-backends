@@ -35574,3 +35574,42 @@ that would have caught this before the PR.
 
 Updated gh#1283's body: it now records both excluded explanations with their
 numbers, rather than sending the next reader at the quadrature twice.
+
+### 2026-08-09 — I refuted the right hypothesis using the WRONG potential. It is confirmed.
+
+Last entry recorded the split-point hypothesis as *measured and refuted*. **That
+refutation was invalid.** I probed `RotateAndTilt(zvec=[0,1,0], galaxy_pa=0.3)`
+— a pure *rotation*, no offset — while the failing test is
+`mockOffsetMWP14WrapperPotential`, which is `zvec=None, galaxy_pa=None,
+offset=[1,1,1]`: a pure **offset**, no rotation.
+
+I refuted an off-centre-structure hypothesis using a potential whose offset is
+zero. Of course the peak sat at z=0 there.
+
+Redone on the actual failing configuration, at the exact failing point:
+
+    scipy adaptive reference : 7.6999913746e-02   (test: tpoissondens 0.0770, tdens 0.0721)
+    integrand |peak| at z    : -1.0000            (= the z offset)
+    GL(n=50) split at  0.0   : rel.err 6.752e-02  <- reproduces the observed 6.8e-02
+    GL(n=50) split at -1.0   : rel.err 2.391e-04  <- 280x better
+
+**The hypothesis is confirmed and the failure is reproduced to two figures.**
+`symmetric_quad` splits at z=0; the offset moves the disk plane to z=−1; the
+nodes cluster where the integrand is flat.
+
+Also still true, and now correctly scoped: the wrapper's array evaluation agrees
+with its scalar evaluation to **1.7e-16 at all 100 quadrature nodes** — so the
+broadcast fix itself is sound, and it is the *downstream* split point that is
+wrong.
+
+**The lesson is the sharp one.** I checked the mechanism against a potential I
+picked for convenience rather than the one named in the failing test — twice,
+across two wakes, reporting one refutation as measured. The failing parametrization
+was in the test ID the whole time (`mockOffset…`). Reproduce with the *named*
+fixture, not a plausible stand-in; a stand-in that lacks the very feature under
+test can only produce a false negative.
+
+Fix direction for the follow-up: pass the wrapper's shifted mid-plane as
+`interior_point`. That reaches ~2.4e-4, still short of the 1e-8 bar, so node
+count or placement needs work on top — this is the dominant term, not a
+finished fix.
