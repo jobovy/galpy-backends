@@ -32442,3 +32442,37 @@ Still blocked on #1274 merging (shared call sites) and a free PR slot.
     gh#1279  29 pass / 21 running / 102 queued / codecov-project phantom
     gh#1280  2 pass / 105 queued
     sweep    test_dynamfric 5/7, 9 files behind
+
+### 2026-08-09 (cont.) — sweep design flaw caught before it cost the data
+
+`test_dynamfric` sat 21 min on its 5th test. Identified it: **`test_dynamfric_c`
+-- which is exactly the file's one eager `jax` slow-skip entry.** So the very
+first file of the sweep already confirms the gap: #1279 un-defers it traced, and
+it is genuinely slow traced too, so it needs a `jax-jit` line.
+
+But finding that exposed a flaw in how I'd built the sweep. There was only a
+per-FILE timeout, and **pytest writes junitxml only at session end** -- so one
+very slow test eats the file budget and the whole file's data is lost at the
+kill. That is the same timeout-as-data-retention trap that cost the noninertial
+run earlier in this mission, rebuilt from scratch in a new place.
+
+Also confirmed while checking: there is **no timeout in the repo config**. The
+300 s cap is passed on the CI command line, so local runs are uncapped -- which
+is why a 21-minute test was possible at all.
+
+Rebuilt with a **per-test** cap and restarted (pid 665925):
+
+    --timeout=300 --timeout-method=thread
+
+300 s matches CI's cap and sits above the 240 s slow-skip margin, so anything
+hitting it is a slow-skip candidate whether it wanted 301 s or 3000 s -- which
+is the only bit the sweep needs. Failures at the cap ARE the result, not an
+error. It also bounds the whole sweep: 245-test `test_orbit.py` can no longer be
+held hostage by one test.
+
+Cost: the 21 min already spent. Worth it -- uncapped, `test_orbit.py` would very
+likely have produced nothing at all after many hours.
+
+    gh#1279  37 pass / 23 running / 92 queued / codecov-project phantom
+    gh#1280  2 pass / 105 queued
+    sweep    restarted capped, test_dynamfric again
