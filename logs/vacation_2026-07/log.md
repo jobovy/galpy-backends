@@ -35431,3 +35431,28 @@ is unchanged — but a row decided at 250 s by differencing could easily be a
 
 Next: fold this into `backend-jit/torch-sweep-fixes` (which already carries the
 `as_numpy` fix), correct the PR body's counts, and open it behind gh#1283.
+
+### 2026-08-09 — torch ledger delta committed (`5b2c8a00`), verified by set difference
+
+`backend-jit/torch-sweep-fixes` rebased onto `de0745c5` (clean) and the delta
+applied:
+
+    backend_slow_skip.txt:  removed=14  added=8
+    backend_xfail.txt:      removed=0   added=2
+
+Verified by **set difference against the base**, not by trusting the script's
+own counters — the script asserts 13 deletions and a reclassify, and the
+independent recount agrees (13 + 1 = 14 out, 8 in). Same discipline as the
+gh#1283 ledger check, and for the same reason: a ledger edit that is off by one
+is invisible until CI.
+
+Removed two comment lines I had written into `backend_xfail.txt` saying
+`central_limit` is "NOT ledgered". A ledger file explaining what is *absent*
+from it is noise — the commit message is where that belongs.
+
+The commit message carries the reasoning a reviewer needs: why classification is
+by duration (the 534 s test that PASSED under a 300 s cap), that it missed 7 of
+the 8 additions, that the jax sweep re-audits clean, and which two rows were
+re-measured on a clean tree and why.
+
+Branch is ready; it opens behind gh#1283 rather than now, keeping to two PRs.
