@@ -32400,3 +32400,45 @@ entire tree (my line) -- nothing to consolidate.
              so there is no mechanism for a real project drop)
     gh#1280  2 pass / 105 queued
     sweep    test_dynamfric in flight, 9 files behind
+
+### 2026-08-09 (cont.) — #211(B) scoped concretely; sweep confirmed computing
+
+Sweep health-checked rather than assumed: `test_dynamfric` showed 4 dots for
+5+ min, which looks exactly like the known jax fork deadlock. It is not --
+pytest is at **111% CPU, 2 GB RSS, state Rl**. Just a slow traced test.
+
+(Two stale python3 processes, 6 d and 2.5 d old at 0% CPU, turned out to be
+`http.server` owned by another user on this box. Checked before killing.)
+
+**#211(B) is now fully scoped, compute-free.** All **7** grid-build sites in
+`interpRZPotential.py` (lines 271/296/321/349/371/393/415) are structurally
+identical:
+
+    XGrid[ii, jj] = evaluateX(origPot, rgrid[ii], zgrid[jj])
+
+over evaluatePotentials / Rforces / zforces / R2derivs / z2derivs / Rzderivs /
+Densities. So (B) is **one helper used seven times**:
+
+    def _grid_eval(evaluator, pot, rgrid, zgrid):
+        Rmesh, zmesh = numpy.meshgrid(rgrid, zgrid, indexing="ij")
+        return evaluator(pot, Rmesh, zmesh)
+
+Placement decided: **module-private in interpRZPotential.py, NOT galpy.backend**
+-- it is specific to this class's grid build, and the directive is to hoist
+*general* helpers, not every helper.
+
+Two gates before it can land, both recorded on the task:
+
+1. **numpy byte-identity per potential**, sha256 scalar-loop grid vs vectorized
+   grid across everything `test_interp_potential.py` exercises. Vectorized
+   evaluation can take a *different* code path (broadcast, quadrature) inside
+   some potentials -- this is precisely the class the byte-identity rule exists
+   to catch, so it is not assumable from "same arithmetic".
+2. The 2 array-unsafe potentials need an array-safety fix or an **explicit**
+   scalar fallback, decided per potential. No silent fallback.
+
+Still blocked on #1274 merging (shared call sites) and a free PR slot.
+
+    gh#1279  29 pass / 21 running / 102 queued / codecov-project phantom
+    gh#1280  2 pass / 105 queued
+    sweep    test_dynamfric 5/7, 9 files behind
