@@ -32109,3 +32109,50 @@ states are the same fact -- incomplete uploads -- read against different bases.
     gh#1278  123 pass / 28 pending / 2 codecov reds, both base/shard artifacts
     gh#1274  151 pass / green
     streamdf serial: 71/79
+
+### 2026-08-09 — streamdf serial: re-measuring CHANGED this one, and surfaced two hidden classes
+
+    79 cases -> 65 passed, 14 failed
+    total 704 s   median 0.08 s   **0** over the 240 s margin
+    test_progenitor_coordtransformparams: 242.6 s concurrent -> 197.5 s alone
+
+Under contention that test sat **1% over** the margin and would have added a
+deferral. Alone it is comfortably under, so this file needs **no** jax-jit
+slow-skip entry: all 79 traced tests run. Eager, the whole file is deferred
+because per-trackpoint XLA dispatch takes it from ~12 min to >90 min and the
+shard is cancelled.
+
+So across the three files re-measured serially:
+
+| file | concurrent | serial | verdict |
+|---|---|---|---|
+| test_noninertial | 132 s/test (4 competitors) | median 11.1 s | 6x inflation, 11 of 19 un-defer |
+| test_streamTrack | 498/348 s (1 competitor) | 452/314 s | ~10% high, split unchanged |
+| test_streamdf | max 242.6 s (2 competitors) | max 197.5 s | **verdict flipped**, 0 entries |
+
+One confirmed, one unchanged, one flipped. That distribution is the argument for
+re-running all three rather than guessing which were affected.
+
+**The two hidden classes.** streamdf's 14 traced failures are not timing at all:
+
+* **10** share one defect -- "JAX arrays are immutable and do not support
+  in-place item assignment", streamdf writing into arrays it built. Ledgered
+  jax-jit; they clear together.
+* **4** reach `actionAngleTorus` (external C++ wrapper, out of scope by standing
+  decision) -> `backend_skip.txt`, permanent, not a burndown item.
+
+Both were invisible before, and that is the sharpest case for the whole change:
+a **real jax defect** and a **permanent exclusion** were sitting behind a
+*performance* deferral. A slow-skip entry was suppressing correctness
+information, which is exactly what a slow-skip entry must never do.
+
+Committed 248f192f. #194's measurement phase is complete:
+rule + #171 bars + 11 slow-skip + 10 ledger + 4 skip, every entry measured.
+
+Last gate before the PR opens: backend-verify the #171 bars. Launched jax and
+torch `--runxfail` over the whole test_actionAngle.py -- overlapping, which is
+safe here because this is a pass/fail check and only wall-clock is contended.
+
+    gh#1278  142 pass / 9 pending / 2 codecov reds; test_backend* shards
+             (the ~93 min ones) still running -- they gate patch
+    gh#1274  151 pass / green
