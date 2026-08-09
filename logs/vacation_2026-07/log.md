@@ -34894,16 +34894,31 @@ set-verified. The merge is a one-liner the moment those 14 land.
 
     tests/test_orbit.py::test_eccentricity FAILED    ~0.4 s
 
-**0.4 s, so a defect, not a timeout** — and it is **not ledgered** for torch in
-any form: not a slow-skip entry, not an xfail. So it is a genuine traced defect
-that inheritance could never have surfaced, since inheritance only carries
-*eager* entries forward and this was never one.
+**0.4 s, so a defect, not a timeout.** I first wrote that it was "not ledgered
+in any form" and the mechanism was unknown. **Both were wrong**, and checking
+the ledger rather than only the torch entries list settles it — it is ledgered
+for `jax-jit`, with the mechanism already written down:
 
-Mechanism unknown until the junitxml lands (tracebacks are written at session
-end, not streamed by `-v`), so it is filed as found-not-diagnosed. Not guessing:
-`test_eccentricity` touches the orbit analytic/eccentricity path, and there are
-at least three plausible causes on the torch traced path, which is exactly the
-situation where a guess would get written down and later quoted.
+    # test_eccentricity is the same AnyAxisymmetricRazorThinDisk story seen through an
+    # orbit: its traced GL forces carry ~1e-6 error, so a circular orbit comes back
+    # with e=5.4e-6 against a 1e-8 tolerance. Passes eager jax. Un-ledger if the
+    # tolerance is ever made backend-aware.
+    jax-jit tests/test_orbit.py::test_eccentricity
+
+So this is **not a new defect** — it is the **AnyAxisym story again**, and what
+is missing is simply the `torch-jit` line (the ledger is per-backend, and torch
+was never measured traced, so nobody could have written it). jax's own sweep
+shows it `XFAIL (backend-xfail-ledger)`, i.e. correctly deferred there.
+
+That makes it **corroboration rather than novelty**, and it is the better
+result: the AnyAxisym ~1e-6 traced-force error now shows up in **two test files
+on two backends** — `forceAsDeriv`/`poisson_surfdens` in `test_potential` and
+`eccentricity` in `test_orbit` — all from one root cause. It also explains the
+tolerance shape: a circular orbit returning `e=5.4e-6` against a `1e-8` bar.
+
+Third time today I have checked a narrower thing than the claim I then made
+(here: the torch entries list, not the ledger). The fix each time was to re-run
+the check against the actual artifact, so that is what I will keep doing.
 
 Running torch tally now:
 
@@ -34912,7 +34927,7 @@ Running torch tally now:
 | `test_dynamfric` | 1 | 0 | the eager entry, kept |
 | `test_FDMdynamfric` | 1 | 1 | entry reclassified slow→defect; 1 new slow |
 | `test_potential` | 1 | 1 | vs jax's 0 slow / 8 defects |
-| `test_orbit` (running) | 0 so far | **1 new** | 11 of its 13 entries have **dropped** |
+| `test_orbit` (running) | 0 so far | 1 (**known** — AnyAxisym, needs a torch-jit line) | 11 of its 13 entries have **dropped** |
 
 The shape that keeps repeating: **the eager list is wrong in both directions at
 once** — entries that evaporate traced (11 of 13 here, 9 of them ~50x inside the
