@@ -34632,3 +34632,38 @@ Three branches now held, none opened:
 | `backend-jit/kd-mass-quadrature` `e1fa8bf9` | 7 of gh#1281's 8 jax traced defects | 5 ledgered tests + numpy regression |
 | `backend-jit/torch-sweep-fixes` `d49f92c3` | torch sweep fixes, 1 so far | re-run `central_limit` traced |
 | — | ledger delta for torch | `test_orbit` + clean `test_FDMdynamfric` re-run |
+
+### 2026-08-09 — duplication audit extended: one sibling, deliberately excluded (stale reason)
+
+The KD `_mass` fix was justified as removing a duplicate of an
+already-migrated pattern, so I owed the obvious follow-up: **are there other
+`_mass` overrides in the same shape?** Grepped the whole tree rather than just
+the file I touched.
+
+**23 `_mass` overrides; exactly two use `scipy.integrate.quad`** — the KD one I
+fixed, and `EllipsoidalPotential._mass`. That second one is *not* an oversight:
+
+    # Pspecial-blocked: the generic ellipsoidal mass uses an adaptive
+    # scipy.integrate.quad over the density, which has no backend-agnostic
+    # (jax/torch) replacement -> numpy only.
+
+So it is a **documented deliberate exclusion**, and I am not touching it. But
+the stated reason looks **stale**: `backend.quadrature.quad` is exactly that
+"backend-agnostic replacement", it exists today, and the *same file* uses it 35
+lines further down (the comment at line 490 describes it delegating to scipy for
+numpy byte-identity and fixed-order GL otherwise). The comment appears to predate
+the helper.
+
+Not changing it, for three reasons that all point the same way:
+
+* it is marked deliberate, and a comment saying "intended" is exactly the signal
+  to stop and check rather than fix;
+* **no evidence demands it** — no traced defect in either sweep points here, so
+  changing it would be scope I invented rather than scope the measurement found;
+* the reason being stale is my *inference* from the helper existing, not a
+  demonstration that `_mdens` is traceable or that the adaptive-vs-GL accuracy
+  is acceptable for this integrand. Those are measurements I have not made.
+
+Recorded as a lead: if the ellipsoidal family ever needs a differentiable
+`mass()`, the first question is whether that comment is still true, and the
+answer is probably no.
