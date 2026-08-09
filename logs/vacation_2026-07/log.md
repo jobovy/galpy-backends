@@ -34061,15 +34061,15 @@ a commit to refine a comment at the price of restarting ~151 checks.
 
 ### 2026-08-09 (later) — the mass() defect: right family, wrong site. Fixed, 2 traced defects cleared.
 
-Went to fix the 2-defect `mass()` group from the sweep and found my own
-one-line diagnosis was wrong in a way that mattered. The PR body says:
+Went to fix the 2-defect `mass()` group from the sweep. Precisely what was
+wrong: the **ledger entry names the right site** —
 
-> `mass()` integrates with `scipy.integrate.quad`, which calls `float()` and
-> rejects a tracer
+    #  McMillan17  Potential.mass -> KuijkenDubinskiDiskExpansionPotential._mass
 
-`Potential.mass()` was **already** migrated to `backend.quadrature.quad` — I did
-that earlier. Re-running traced (rather than trusting the note) gave the real
-site:
+— but the **PR-body prose** compressed it to "`mass()` integrates with
+`scipy.integrate.quad`", and that is the sentence I acted on. It sent me to
+`Potential.mass()`, which was **already** migrated to `backend.quadrature.quad`.
+Re-running traced (rather than trusting either note) gave the real site:
 
     galpy/potential/KuijkenDubinskiDiskExpansionPotential.py:485: in _mass
         return out + 2.0*numpy.pi*integrate.quad(_integrand, 0.0, numpy.pi)[0]
@@ -34089,8 +34089,9 @@ filed separately as "fails in `__init__`, cannot even be constructed traced".
 That was true as a *description* but the chain
 (`AdiabaticContractionWrapper.__init__` → `Potential.mass` →
 `CompositePotential._mass` → …) bottoms out at the same KD `_mass`, so one fix
-clears both. The "one root" claim in the PR body was right; the site I named
-was not.
+clears both. The "one root" claim was right, and so was the ledger; only the
+prose summary was lossy — which is the failure mode worth remembering, since the
+summary is what a reader (me, a week later) actually acts on.
 
 Checks done before believing it:
 
@@ -34113,3 +34114,18 @@ not loaded", which would have invalidated the whole measurement. It is
 the sweep tree. The PR body's claim stands.
 
 gh#1281 still 2/151 — runner-starved behind develop's own post-merge push runs.
+
+**Sequencing this fix against gh#1281.** #1281 *adds* the two ledger lines
+
+    +jax-jit tests/test_potential.py::test_McMillan17
+    +jax-jit tests/test_potential.py::test_Cautun20
+
+which this fix makes stale. So the KD branch cannot land first, and it cannot
+carry the removal yet either — those lines do not exist on develop. It waits for
+#1281, then rebases and drops them in the same commit. Held local, committed at
+`56e179e5`, **not opened**: two PRs are already open and #1281 is sitting at
+2/151 behind a saturated runner pool — a third would compete with the very CI I
+am waiting on.
+
+That closes the actionable share of the sweep's 8 defects: **2 fixed here**, 1
+AnyAxisym pre-existing and filed, 5 RotateAndTilt needing Jo's design call.
