@@ -33982,3 +33982,38 @@ upload phantom, now seen often enough to be unremarkable.
     gh#1280   151 pass / 2 running / NO REDS -- audit done, merges next wake
     gh#1281   early cycle, codecov phantom
     gh#1274   ready, awaiting Jo
+
+### 2026-08-09 — gh#1280 MERGED; gh#1281 rebased through two real conflicts
+
+gh#1280 went **154/154 CLEAN** and squash-merged. develop `d2ad93c9` ->
+**`a45a4f1d`**. Merged at `ec7e67e2`, the exact SHA whose post-rebase content I
+had verified by value.
+
+Then rebased gh#1281 onto it, and this time the conflicts were **real** -- both
+PRs edit `backend_xfail.txt`, and unlike the earlier dry-run the two edits
+overlap:
+
+**Conflict 1.** HEAD had the StaeckelGrid line and no streamdf block (#1280
+removed it); mine removed StaeckelGrid and still carried the block. Both sides
+are *deletions of different things*, so the resolution is **neither side** --
+take both removals. Git cannot infer that; taking either side alone would have
+silently resurrected 10 just-fixed entries or dropped my un-ledger.
+
+**Conflict 2.** Same shape one commit later: HEAD empty, mine re-introducing the
+streamdf block *followed by* my 8 defect entries. Resolution: keep only the
+second half.
+
+Verified by **value**, not by git being quiet:
+
+    ledger total              21   (14 after #1280, -1 StaeckelGrid, +8 defects)
+    streamdf jax-jit entries   0
+    StaeckelGrid jax-jit       0
+    jax-jit slow-skip         26   (11 from #1279, +8, +7 test_orbit)
+    conflict markers, FULL TREE: none
+
+That last grep is the habit that exists because a marker once shipped. Pushed
+with `--force-with-lease`.
+
+    develop   a45a4f1d
+    gh#1281   rebased, CI restarting on the new base
+    gh#1274   ready, awaiting Jo
