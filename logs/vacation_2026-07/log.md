@@ -34129,3 +34129,46 @@ am waiting on.
 
 That closes the actionable share of the sweep's 8 defects: **2 fixed here**, 1
 AnyAxisym pre-existing and filed, 5 RotateAndTilt needing Jo's design call.
+
+### 2026-08-09 — the torch sweep was never blocked. Running it.
+
+Went looking for the `parallel_map` torch `--jit` deadlock to fix it, and found
+it already fixed — by **#1266** (`b6bf4b54`, "parallel_map: do not fork while
+galpy is running traced"), which sidesteps it entirely:
+
+    if jit_mode() != "off":
+        return list(map(function, sequence))
+
+Capping the child's thread count (#1256) cured only the *eager* case; under
+`--jit` the parallelism is baked into the compiled kernel, so children still
+parked inside the generated `call`. #1266 does not fork at all when traced.
+
+Verified by running rather than reading: `tests/test_backend_multi.py` →
+**3 passed in 10.66 s** under `--backend torch --jit`.
+
+**I had written the stale blocker into gh#1281's body** — "A torch sweep is not
+run because `parallel_map` still deadlocks … That needs the deadlock fixed
+first." Corrected the body (a body edit does not restart CI — confirmed the
+check counts were unchanged after). The lesson is the one I keep relearning: a
+blocker I recorded is a claim with a timestamp, not a standing fact, and this
+one vetoed real work for days.
+
+**So the torch sweep is running.** 4 files, launched 08:10 EDT:
+
+| file | torch eager entries |
+|---|---|
+| `test_dynamfric` | 1 |
+| `test_FDMdynamfric` | 1 |
+| `test_orbit` | 13 |
+| `test_potential` | 0 — included anyway |
+
+The first three are the actual un-deferral debt (15 entries, 13 of them in
+`test_orbit`). `test_potential` has no torch slow entries but is where all 8
+jax traced defects were found, and **defects are per-backend** — the jax sweep
+could not have told me anything about torch there.
+
+Same harness as the jax sweep for the same reasons (per-test `--timeout=300
+--timeout-method=signal`, streamed through a timestamper, strictly serial).
+One caveat recorded in the script header: the tree under test carries the
+unmerged KD `_mass` fix (`56e179e5`), so `test_McMillan17`/`test_Cautun20` are
+expected to pass here — that is the fix, not a torch-vs-jax difference.
