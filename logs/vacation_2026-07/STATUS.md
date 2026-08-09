@@ -224,18 +224,15 @@ Node count is not the lever (n=200 wrong-split = 6.2e-03; n=50 right-split =
 vertical line at (R, phi). Follow-up PR **after gh#1283** (needs the file
 gh#1283 reverted).
 
-### DECISION FOR JO — surfdens vertical quadrature (blocks 5 ledgered entries)
+### RotateAndTilt surfdens — SOLVED, branch PR-ready (was: decision for Jo)
 
-Current rule splits at z=0; a displaced disk breaks it (6.4e-02 vs a 1e-4 bar).
-Measured options:
+`backend-jit/rt-vertical-split` (local, unpushed) **clears all 5** RotateAndTilt
+`poisson_surfdens` jax-jit entries. Gates: numpy whole-file 1283/0, traced
+whole-file 1276/0 (7 expected xfail), 6 A/B'd tests, ledger 347->342.
 
-- **(2) per-component composite surfdens** + the `_vertical_quad_split` hook
-  (built, unpushed, `backend-jit/rt-vertical-split`): exact (1.2e-10), no extra
-  cost, but needs composites to integrate component-wise.
-- **(3) hybrid panel rule** (clustered inner + geometric shells): 1.7e-06 on the
-  failing case AND improves the z=0 control 2.5e-09 -> 1.3e-15, needs no
-  per-potential knowledge -- but **5x the density evaluations** on a path whose
-  tests already run 300-400 s traced.
+The 5x-cost hybrid panel rule is **no longer needed** for these entries -- the
+declared-plane approach works once the delegation chain is complete
+(CompositePotential + the test mock both had to forward). Keep the hybrid in mind
+only for a user class that sums displaced components without delegating.
 
-Plain geometric grading (no clustered inner panel) is refuted: regresses z=0 by
-six orders. Not committing the 5x unilaterally.
+Opens as a PR as soon as gh#1283 or gh#1284 merges (two-PR cap).
