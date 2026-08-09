@@ -35957,3 +35957,42 @@ branch as a PR:
   `_evaluate` and `_Rforce` all hand-roll the identical
   `sum(... if not pot.isDissipative)`, so matching the file's established idiom
   beats introducing a third style for the same operation.
+
+### 2026-08-09 (cont.) — the 5 RotateAndTilt entries are CLEARED
+
+All five pass traced. The delegation chain, end to end:
+
+1. array broadcast on the wrapper (re-applied; gh#1283 had reverted it),
+2. `Potential._vertical_quad_split` + the wrapper's plane-crossing override,
+3. `CompositePotential` delegates **both** surfdens routes per component,
+4. `testMWPotential` forwards `_surfdens_poisson`.
+
+(4) was the last link and it is a one-method test-side addition, not a fudge:
+the mock already forwards `_evaluate`, `_Rforce`, `_zforce`, `_R2deriv`,
+`_z2deriv`, `_dens`, `_surfdens` and `vcirc`. Its `_surfdens` even threads
+`forcepoisson` through -- but `Potential.surfdens` **raises before it ever
+reaches `_surfdens`** on the Poisson route, so that parameter was dead code and
+the route integrated at the mock's own mid-plane (0). Forwarding
+`_surfdens_poisson` makes the delegation complete.
+
+**Evidence:**
+
+| run | result |
+|---|---|
+| the 5 nodeids, `--backend jax --jit` | **5 passed** |
+| `test_potential.py`, numpy, whole file | 1283 passed, **0 failures**, 0 errors |
+| `test_potential.py`, `--backend jax --jit`, whole file (pre-mock tree) | 1271 passed, **0 failures**, 11 xfail, 1 **xpass** |
+
+The xpass was `mockRotatedAndTiltedTriaxialLogHaloPotentialwInclination` -- it
+had already been cleared by the source-only changes, which is why one of the 5
+"passed" in every earlier run.
+
+**Ledger: 347 -> 342**, exactly 5 dropped, verified by set difference. The
+`AnyAxisym` poisson_surfdens entry is deliberately **kept**: different root
+cause (the known 1-m cancellation), untouched here.
+
+**Process note.** I edited the tree while the full traced sweep was running --
+the same mid-sweep mutation I logged against myself during the torch sweep. With
+xdist the workers had already imported the module so the result is almost
+certainly sound, but "almost certainly" is not a gate: re-dispatched the whole
+file traced against the final commit. Reporting that number, not this one.
