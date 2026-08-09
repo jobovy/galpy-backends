@@ -34362,3 +34362,31 @@ Running tally for the torch un-deferral debt (15 entries, 2 files done):
 * `test_dynamfric_c` → stays deferred (genuine 300 s timeout)
 * `central_limit` → **comes off** slow-skip; it is a defect with a known fix
 * `const_FDMfactor` → **new** entry inheritance could never have produced
+
+### 2026-08-09 — AnyAxisym confirmed backend-independent (torch reproduces it)
+
+`test_potential.py` under `--backend torch --jit` is mid-run, and the first
+failure to appear is:
+
+    tests/test_potential.py::test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential] FAILED
+
+which is **the identical test and parametrization** jax fails, and the one
+ledgered as gh#1281's 8th defect.
+
+This matters for the attribution. I had A/B'd that failure against pre-gh#1278
+by swapping only the one file — byte-identical, `7.345878e+03` on both sides —
+and concluded **pre-existing, not the geometric-grading change**. That was a
+single-backend argument. Two independent backends now failing the same test the
+same way is much stronger evidence for the same conclusion: the defect lives in
+the potential's own math, not in anything backend-specific and not in #1278.
+
+It also means the torch ledger needs the same entry, which the completed sweep
+will produce.
+
+**Explicitly not concluding anything about the counts yet.** The run is at
+~517/1385 with 1 failure, and it is tempting to read that as "torch's
+`test_potential` is far cleaner than jax's 8 defects". It is not readable yet:
+with `-p no:randomly` the order is file order, and the `poisson_surfdens` and
+`mwpotentials` tests that produced 7 of jax's 8 defects come later in the file.
+A partial run is not a result — I will take the counts from the finished
+junitxml.
