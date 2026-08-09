@@ -35290,3 +35290,27 @@ durable fix is not vigilance: use **`git -C <path>`** for every git call against
 a worktree, which is what the redone commit does, and stage the **named file**
 rather than `-A`. Both of those make the failure impossible rather than
 unlikely.
+
+### 2026-08-09 12:30 — gh#1282 OPENED (2 traced defects, honestly scoped)
+
+    numpy regression: 159 passed, 64 skipped, 0 failed  (291s)
+    jax --jit gate:   163 passed, 45 skipped, 7 xfailed, 0 failed  (427s)
+
+https://github.com/jobovy/galpy/pull/1282 — `backend-jit/kd-mass-quadrature` →
+`feat/backends-develop`.
+
+**Deliberately kept the revert in the branch history** rather than rewriting it
+away:
+
+    5c1b9264  ledger: un-defer McMillan17 + Cautun20
+    4ded6cd9  Revert "RotateAndTilt: broadcast over a trailing node axis"
+    2aea9647  RotateAndTilt: broadcast over a trailing node axis
+    dbb584cb  KuijkenDubinski _mass: backend quadrature
+
+A squashed-clean branch would present this as "a small mass fix" and lose the
+most useful thing in it — that the obvious next fix was tried, measured, and
+produces a **silent 6.8% error**. The PR body says so explicitly with the
+numbers. Whoever picks up RotateAndTilt needs that, not a clean diff.
+
+The PR claims **2 fixes**, which is what the gate supports. Four wakes ago I was
+describing this branch as *7 of 8*.
