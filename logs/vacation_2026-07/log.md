@@ -36611,3 +36611,32 @@ Verdict: clean. Merge on green.
 
 CI: gh#1284 118/153; gh#1285 2/151, still behind develop's doubled matrix.
 develop itself remains failure-free post-merge.
+
+### 2026-08-09 (cont.) — dispatched the test_orbit eager measurement (25 entries)
+
+The box went quiet when the noninertial runs finished, which is the precondition
+this one needed, so the largest remaining cluster is now running:
+**`test_orbit.py`'s 25 eager-jax slow-skip entries**, never re-measured.
+
+Setup, following the provenance discipline that caught the gh#1284 mis-ledgering:
+fresh worktree at **`9dc31569`**, `status --porcelain` = 0, `log
+origin/develop..HEAD` = 0 extra commits, C ext built in place. Entries removed:
+383 -> 358 (exactly 25). Whole file, `--backend jax` eager, `-n 8`, junitxml,
+**per-test** 900 s cap.
+
+Two deliberate choices, both from things that went wrong earlier today:
+
+* **stdout to a file, not piped through `tail`** — piping buffers until exit and
+  makes a healthy run look frozen, which I mistook for a hang this morning;
+* classification will be **by junitxml duration**, not pass/fail — a 900 s
+  cap-hit is reported as `F` but means *slow*, and signal timeouts cannot
+  interrupt C-bound tests at all.
+
+`test_orbit` eager under jax is the slowest thing in the suite (581 tests, and
+these 25 are the ones deferred *for* being slow), so this runs across wakes. No
+prediction recorded: noninertial's 58 % staleness is one file, and today already
+cost me several retractions for stating numbers ahead of measuring them.
+
+CI meanwhile: gh#1284 119/153 with codecov healing on schedule (head 26/28
+sessions, 86.05 % climbing to a 99.95 % base); gh#1285 finally picked up its
+first runner.
