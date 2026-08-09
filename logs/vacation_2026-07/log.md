@@ -35098,3 +35098,51 @@ torch (strengthening gh#1281's single-backend attribution), while
 
 Body is drafted, not opened: two provisional rows are still being re-measured,
 and a PR whose numbers might move is not ready.
+
+### 2026-08-09 — PASS does not mean "under the cap". My torch delta was wrong.
+
+The clean `test_FDMdynamfric` re-run was supposed to settle one contaminated
+row. It exposed a hole in the classification rule instead:
+
+    const_FDMfactor   contaminated: 300.0s FAIL(cap)
+                      clean:        534.0s **PASS**
+
+534 s **passing** with `--timeout=300`. The timeout did not fire, and the reason
+is mechanical: `--timeout-method=signal` delivers SIGALRM, and the handler
+cannot run while the interpreter is inside a C extension call that does not
+return to bytecode. The alarm is pending, the test finishes, nobody notices.
+
+**So "PASSED" does not imply "under the cap"** — and my torch delta table
+classified slow-vs-not by *timeout failure*, which silently drops every such
+test. Audited both sweeps for passing tests over the 240 s margin:
+
+| sweep | passing-over-margin |
+|---|---|
+| jax (gh#1281) | 5 |
+| torch (mine, this session) | 8 |
+
+**gh#1281 is safe** — I checked all 5 against its added entries and every one is
+already there, because the jax classification went by *duration*. The merge
+stands.
+
+**The torch delta was not.** Recomputed by duration:
+
+| | old (failure-based) | corrected |
+|---|---|---|
+| slow additions | 2 | **9** |
+| defects | 2 | 2 |
+| keep | 1 | 1 |
+| reclassify | 1 | 1 |
+| deletes | 14 | **13** |
+
+The four `poisson_surfdens[RotateAndTilt…]` variants are the clearest case: I
+reported "4 pass, 1 slow", but three of those "passes" took **313–398 s**. They
+are all slow. Also newly caught: `test_interprz_dxdv_3d` (295 s),
+`test_liouville_planar` (250 s), `test_analytic_zmax` (269 s).
+
+Corrected net: **delete 13, add 11, keep 1, reclassify 1** — against the
+"delete 14, add 4, reclassify 1" I had drafted into the PR body an hour ago.
+
+Caught only because I re-measured a row I had flagged as contaminated. The
+contamination turned out not to matter for that row's *verdict*; chasing it is
+what surfaced the rule error, which mattered a great deal more.
