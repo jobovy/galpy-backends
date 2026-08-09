@@ -32302,3 +32302,39 @@ cancelled run on a same-SHA push blocks merges.
     gh#1279  2 pass / 5 in_progress / 144 queued / 0 red
     gh#1274  151 pass / green -- Jo's to merge
     #213     6a09db8e, jax-jit + numpy byte-identity done, torch arms running
+
+**Opened as gh#1280**, base `feat/jit-slow-skip-own-list` (stacked on gh#1279).
+Two commits, three files: `6a09db8e` the fix + 10 ledger removals, `5ff4464c`
+four torch skips.
+
+The torch arm turned up something CI structurally cannot see. `test_streamdf.py
+--backend torch` failed 4 tests -- `test_bovy14_useTM*`, all
+`NotImplementedError: actionAngleTorus wraps the external Torus C++ library`.
+A/B against the unpatched copy: **identical 4 failures without the fix**, so
+pre-existing, not a regression.
+
+Why it had never shown up anywhere: those tests need the external Torus C++
+library. It is built on this dev box (`actionAngleTorus_c_ext/torus/`) and is
+NOT built in CI, so in CI they skip before reaching the backend guard at all.
+No CI run can ever surface this -- a list entry is the only thing that covers
+it. The inverse of the usual "works locally != property of the code": here it is
+"fails locally, and CI is blind to it".
+
+Entered `torch` (measured; `torch-jit` inherits). Plain `jax` deliberately NOT
+entered -- the eager whole-file slow-skip means it has never been measured
+there.
+
+    tests/test_streamdf.py --backend torch    before: 4 failed, 76 passed
+                                              after: 76 passed, 4 skipped
+
+Final verification matrix for gh#1280, each a whole-file run, C extension
+present, alone on the machine:
+
+    test_streamdf.py    --backend jax --jit    65 pass  4 skip  10 XPASS  0 fail  776 s
+    test_streamdf.py    --backend torch        76 pass  4 skip            0 fail  329 s
+    test_streamgapdf.py --backend jax --jit    31 pass                    0 fail  398 s
+    test_streamgapdf.py --backend torch        31 pass                    0 fail  376 s
+
+    gh#1280  opened, stacked on gh#1279
+    gh#1279  queued behind develop's duplicated build set
+    gh#1274  151 pass / green -- Jo's to merge
