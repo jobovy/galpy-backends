@@ -35198,3 +35198,26 @@ minutes.
 Next: build finishes → verify `galpy.__file__` → pytest gate (5 ledgered
 `poisson_surfdens` + numpy regression) → open with
 `/var/tmp/defects-pr-body.md`.
+
+### 2026-08-09 — defects branch: tree verified, pytest gate running
+
+C extension built in `/var/tmp/defects-edit` and the tree checks out on all
+three things the earlier lessons demand:
+
+    galpy.__file__:  /var/tmp/defects-edit/galpy/__init__.py   (own source, not shadowed)
+    libgalpy loaded: True
+    libgalpy.cpython-313-x86_64-linux-gnu.so   built in-place, 11:46
+
+Built rather than copied `port207`'s, even though the branch diff vs `de0745c5`
+is two `.py` files so a copy would have been valid — a built `.so` has
+provenance that needs no argument.
+
+Gate running: `test_potential.py --backend jax --jit` filtered to
+`poisson_surfdens or McMillan17 or Cautun20 or forceAsDeriv` — i.e. the 5
+entries the branch un-ledgers, the 2 mass tests, and the AnyAxisym one it
+deliberately **keeps** ledgered. That last inclusion is the point: if my ledger
+drop were too broad, AnyAxisym would show as a failure rather than an `x`, and
+the first character of the run is already `x`.
+
+Once green: numpy regression, then commit the ledger drop and open with
+`/var/tmp/defects-pr-body.md`.
