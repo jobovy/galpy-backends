@@ -32983,3 +32983,34 @@ Remaining: `test_orbits` (116 tests, in flight), then `test_actionAngle` (209),
 
     gh#1279  122 pass / 10 running / 21 queued / NO REDS
     gh#1280  33 pass / 23 running / 51 queued / codecov stacked phantom
+
+### 2026-08-09 — the un-deferral gap is not jax-only; gh#1279 body was incomplete
+
+Checked whether the inheritance split I measured for jax also lands on torch.
+It does -- the rule is **per-list**, so `torch-jit` stops inheriting exactly the
+same way, and my scope table only covered jax:
+
+    jax   : eager 75  ->  jax-jit   11 measured  ->  67 un-deferred (54 UNMEASURED)
+    torch : eager 15  ->  torch-jit  2 measured  ->  15 un-deferred (15 UNMEASURED)
+
+The torch 15: **13 in `test_orbit.py`**, 1 each in `test_dynamfric.py` and
+`test_FDMdynamfric.py`. So the honest total is **69 unmeasured entries**, not 54.
+PR body corrected.
+
+**Deliberately NOT starting a torch sweep**, and the reason is specific rather
+than caution: `parallel_map` still deadlocks under `torch --jit` (eager torch is
+fixed, traced is not), and `--timeout-method=signal` cannot interrupt a wedged
+fork child -- signal is delivered to the parent and the child never returns to
+Python. So a `test_orbit.py` torch-traced run would plausibly **hang rather than
+report**, which is the one failure mode this sweep was rebuilt to avoid. That
+work needs the deadlock fixed first; it is now stated in the PR instead of being
+a silent hole.
+
+Worth noting the shape of the two gaps differs: jax's 54 are spread over 10
+files, torch's 15 are 87% concentrated in `test_orbit.py` alone -- so the torch
+side is one file's problem, and it is the same file that will dominate the jax
+sweep's remaining runtime.
+
+    gh#1279  123 pass / 10 running / 20 queued / NO REDS
+    gh#1280  39 pass / 21 running / 47 queued / codecov stacked phantom
+    sweep    test_orbits 29/116, then the three large files
