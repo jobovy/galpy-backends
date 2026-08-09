@@ -32476,3 +32476,49 @@ likely have produced nothing at all after many hours.
     gh#1279  37 pass / 23 running / 92 queued / codecov-project phantom
     gh#1280  2 pass / 105 queued
     sweep    restarted capped, test_dynamfric again
+
+### 2026-08-09 (cont.) — repo-wide inventory of the streamdf in-place class
+
+Compute-free while the sweep owns the machine: an **AST** inventory (not grep)
+of `X[...] op= ...` -- augmented assignment to a subscript, the form that is
+*strictly* impossible on a jax array whatever the values, which is exactly what
+broke streamdf.
+
+    98 sites in 21 files
+      83 in 15 backend-AWARE files (import get_namespace/resolve_namespace/
+                                    backendNative/backend_input)
+      15 in  6 pure-numpy modules  -> cannot break, no backend exposure
+
+    24  galpy/df/streamdf.py            (was 27; gh#1280 removes 3)
+    10  galpy/df/streamgapdf.py
+     9  galpy/potential/Potential.py
+     9  galpy/potential/MultipoleExpansionPotential.py
+     6  galpy/df/evolveddiskdf.py
+     5  galpy/util/coords.py
+     5  galpy/actionAngle/actionAngleStaeckelGrid.py
+     4  galpy/actionAngle/actionAngleSpherical.py
+     2  each: Orbits, constantbetadf, backend/interpolate, actionAngleAdiabaticGrid
+     1  each: osipkovmerrittNFWdf, eddingtondf, actionAngleStaeckel_c
+
+**Checked the two highest-risk files by hand; both CLEAN, and for reasons the
+code already documents:**
+
+* `coords.py` -- two of the five sites sit in `@backendNative` functions
+  (`vxvyvz_to_vrpmllpmbb`, `XYZ_to_lbd`), which looked alarming. Both are behind
+  an explicit `if xp is numpy:` / `if xp is not numpy:` split with an
+  out-of-place backend branch above. `vxvyvz_to_vrpmllpmbb`'s comment even names
+  the hazard: *"the two in-place row divisions are what backend arrays reject"*.
+  Dual-path, which the standing policy accepts (a dual path is not an island).
+* `galpy/backend/interpolate.py` -- would be the worst place to find one, being
+  backend code. Both sites write into `w = numpy.zeros(n)`, an explicitly
+  numpy-constructed geometry-only weight vector later used as a dot product
+  against backend data. Safe.
+
+**This is a watchlist, not a defect list**, and deliberately so. A site only
+matters if a backend array actually reaches it, and the honest filter for that
+is the traced test result, not static reading -- streamdf had 27 such sites and
+exactly 3 were reachable. So the inventory gets cross-referenced against the
+sweep as files come back, rather than driving speculative fixes.
+
+    gh#1279  40 pass / 22 running / 90 queued / codecov-project phantom
+    gh#1280  2 pass / 105 queued
