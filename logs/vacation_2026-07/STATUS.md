@@ -58,20 +58,7 @@ already ran traced *before* #1279 — nobody was looking, because no workflow ru
 
 ## Awaiting Jo
 
-**Two decisions:**
-
-* **`RotateAndTiltWrapperPotential` and array input** — 5 traced entries hang on
-  this and it is a design call, not a fix. `_backend_accepts_arrays` does not
-  mean "tolerates arrays"; the comment says it means the backend evaluation
-  **broadcasts over a trailing node axis**, so the traced quadrature may hand it
-  the whole GL node array. **Only `DoubleExponentialDiskPotential` sets it**, and
-  the scalar-only contract is called *documented* in that same comment. So:
-  opt the wrapper in (after demonstrating the trailing-axis property), or have
-  the quadrature **fall back to per-node evaluation** when a potential is not
-  opted in, instead of raising. I lean to the second — a missing opt-in should
-  cost speed, not correctness — but it redefines a quadrature contract, so I did
-  not make it. The guard also wraps the private methods, so the property cannot
-  be probed from outside without editing the guard.
+**One decision:**
 
 * **Should CI gain a `--jit` dimension?** No workflow runs `--jit` today
   (checked across all 10 files in `.github/workflows/`), so the traced ledger,

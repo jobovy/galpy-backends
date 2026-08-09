@@ -34235,3 +34235,50 @@ is **not** being read as a result.
 
 Torch sweep so far: `test_dynamfric` 7 tests, 1 failure — `test_dynamfric_c` at
 the 300 s cap, i.e. torch's single entry there is a genuine traced slow entry.
+
+### 2026-08-09 — RotateAndTilt FIXED via axis order. numpy bits held.
+
+Picked the write-up from the previous entry back up and finished it. The
+axis-order idea works, and it clears the constraint the einsum could not.
+
+**Three rank assumptions, not one.** The first-order stack was only the first:
+
+1. `_rect_transformed` stacked `[x, y, z]` where only `z` carries the node axis
+   → `broadcast_arrays` first. The rotation then needs nothing, since
+   `(3,3) @ (3,N)` is the same matmul as `(3,3) @ (3,)`.
+2. the **offset** add assumed `(3,)` against a `(3,N)` stack → reshape to
+   `(3,1,…)`. Found only because I added an `offset` geometry to the probe;
+   the first three geometries all passed without it.
+3. `_2ndderiv_xyz` built the Hessian as `(3,3,N)`, so `deriv2p @ inv_rot.T`
+   contracted the node axis against 3 → rebuilt as `(...,3,3)`, tensor axes
+   **last**, so a node axis becomes a leading batch axis that matmul carries.
+   Consumers index `[..., i, j]`.
+
+**Why axis order and not einsum.** `xp.einsum("ia,ab...,jb->ij...")` broadcasts
+perfectly too, but picks a different contraction order and is **not numpy
+byte-identical** (`507263c4…` vs stock `433a5731…`). Chained matmul on a plain
+`(3,3)` executes exactly the operations it did before, so the bits survive.
+That is the whole reason the first attempt was reverted and this one lands.
+
+**Verified before claiming it:**
+
+* **40/40 bit-identical** — 4 geometries (`zvec+pa`, `inclination+sky_pa`,
+  `offset`, `no-rotation+offset`) × 10 methods, array call vs scalar loop,
+  max rel `0.000e+00`; results are backend arrays, not a numpy fallback.
+* **numpy byte-identity**: 600 scalar values over the same 4 geometries × 10
+  methods × 15 `(R,z)` points → sha256 `fe477c1b…` on **both** the patched tree
+  and an unmodified worktree at the same base commit.
+
+Two things the probe caught that reading would not have: `_z2deriv` returns
+`[2, 2]` directly rather than through the `phi2` local, so my regex missed it;
+and the offset case, which only appeared once I stopped testing the geometry I
+had in mind and tested the ones the tests actually use.
+
+Committed `e1fa8bf9` on `backend-jit/kd-mass-quadrature`, alongside the KD
+`_mass` fix. **Still owed: the pytest gate** — the 5 ledgered
+`test_poisson_surfdens_potential` tests and a numpy regression run. That needs
+the CPU, and the torch sweep has it; running them now would contaminate the
+sweep the same way I did earlier. It waits.
+
+Branch now carries **7 of the sweep's 8 traced defects** fixed (2 mass +
+5 RotateAndTilt); the 8th is the pre-existing AnyAxisym one, already filed.
