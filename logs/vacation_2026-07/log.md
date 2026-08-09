@@ -36352,3 +36352,19 @@ largest single-file cut available after `test_orbit`. The 9 `jax-jit`
 noninertial entries are a separate question and were not touched.
 
 **gh#1283 at 151/153, 0 red** — one jax orbit shard and all-clear left.
+
+### 2026-08-09 (cont.) — noninertial un-defer branch built and verified
+
+`backend-jit/noninertial-eager-undefer` @ `f795e787` (local, unpushed).
+Ledger-only: **removed 11, added 0**, verified by set difference against
+`origin/feat/backends-develop`. The 8 measured-slow entries stay; the 9
+`jax-jit` noninertial entries are untouched.
+
+Third in the queue behind gh#1283 → rt-split, so it waits on the two-PR cap.
+Built now because the measurement is fresh and the classification is the part
+that rots — the durations are in the commit message, so nobody has to re-derive
+why 11 went and 8 stayed.
+
+Queue is now: **gh#1283** (151/153, 0 red, audit done) → **rt-split**
+(10 entries) → **noninertial** (11 entries), with **gh#1284** in flight
+alongside.
