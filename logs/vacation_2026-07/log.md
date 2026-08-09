@@ -35491,3 +35491,24 @@ tax, already on Jo's list.
 Added the staged torch branch to STATUS's pipeline table so the full picture is
 in the file Jo reads, not just in this log: gh#1283 open, `torch-sweep-fixes`
 staged behind it with its delta committed and verified.
+
+### 2026-08-09 — torch PR body: made the counts reconcile with the raw diff
+
+The body said **delete 13**; the diff reads **−14** on `backend_slow_skip.txt`.
+Both true — `central_limit` *also* leaves the slow list (reclassified, and since
+this PR fixes it, deleted rather than moved) — but a reviewer counting removals
+sees 14 against a claimed 13 and has to stop and work out why.
+
+Added the reconciliation table explicitly:
+
+    -13  the 13 test_orbit entries that pass traced
+    -1   central_limit leaves too (reclassified, fixed here)
+    +8   slow additions
+    +2   defect entries (backend_xfail.txt)
+
+Same class of fix as the gh#1283 ledger-position cleanup an hour ago: **a diff
+should not need a footnote, and where it does, the footnote goes in the body.**
+Both times the numbers were right and the presentation would have cost a
+reviewer's trust.
+
+gh#1283 still 2/149 — pure CI throughput now, no orphans, nothing to cancel.
