@@ -15,6 +15,7 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 | **open, FOR JO** | **gh#1274** → `main` | **151 green.** Targets `main`, so it is yours to merge. It was still marked **draft** until 2026-08-09 — i.e. un-mergeable while I was asking you to merge it; now `ready`, blocked only on required review |
 | **open** | **gh#1281** `backend-jit/sweep-measured-entries` @ `1be681c3` | the completed 10-file sweep: 15 measured jax-jit slow-skip entries, 8 diagnosed traced defects, 1 un-ledger. Rebased onto `a45a4f1d` through two real conflicts |
 | **open** | **gh#1283** `backend-jit/kd-mass-quadrature-v2` | **fixes 2** of gh#1281's 8 traced defects (KD `_mass` → backend quadrature, clearing `McMillan17`+`Cautun20`). I earlier described this as *7 of 8*: the RotateAndTilt half **failed its pytest gate and is reverted** — opting the wrapper into array input removes a `TypeError` but exposes a silent **6.8%** Poisson-surfdens error at \|Z\|=10, because the traced path uses fixed-order GL where scipy's adaptive quad coped |
+| **staged, opens behind gh#1283** | `backend-jit/torch-sweep-fixes` @ `5b2c8a00` | the **torch** half of the traced measurement: **delete 13 / add 10 / keep 1 / reclassify 1**, plus the `as_numpy` fix that turns one deferred 'slow' test into a 36.9 s defect. Every row measured on a clean tree; two were re-measured after contamination |
 | **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
 **CI right now:** gh#1281 29 green / 22 running / 101 queued, and the single

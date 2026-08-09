@@ -35476,3 +35476,18 @@ have added the cancel recipe to memory so the manual workaround is one command.
 
 Cancellation is async — the count read 8 immediately after the requests and 1
 twenty seconds later, so re-query rather than concluding the cancels failed.
+
+### 2026-08-09 13:20 — gh#1283 is moving; the queue behind it is legitimate
+
+    1283: 2 SUCCESS / 149 QUEUED, one run IN_PROGRESS (check states lag runs)
+    runners held by: develop's own post-merge runs on de0745c5 (2 builds + all-clear)
+                     + gh#1283's notebooks run
+
+Checked *who* holds the runners rather than assuming starvation again — this
+time it is develop validating the gh#1281 merge, which is work that should
+happen. No orphans, nothing to cancel. The queue is the `build.yml` double-run
+tax, already on Jo's list.
+
+Added the staged torch branch to STATUS's pipeline table so the full picture is
+in the file Jo reads, not just in this log: gh#1283 open, `torch-sweep-fixes`
+staged behind it with its delta committed and verified.
