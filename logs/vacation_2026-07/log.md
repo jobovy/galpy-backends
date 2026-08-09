@@ -32338,3 +32338,65 @@ present, alone on the machine:
     gh#1280  opened, stacked on gh#1279
     gh#1279  queued behind develop's duplicated build set
     gh#1274  151 pass / green -- Jo's to merge
+
+### 2026-08-09 (cont.) — audits done ahead of green; #1279 scope corrected
+
+Both PRs queued behind the same starved runner pool, and the traced sweep owns
+the machine (nothing else may run jax without corrupting its timings), so this
+wake went to the compute-free half of the loop: the pre-merge audits.
+
+**gh#1279 audit** — tests-only, 6 files, **0 lines under `galpy/`**, so the
+`if -> xp.where` array-input class cannot apply by construction.
+
+* *Placement*: one shared parser (`_load_backend_nodeids`) with three thin
+  wrappers. The new `inherit_eager` defaults to the previous behaviour and only
+  `_load_slow_skip` opts out -- mechanism in the parser, policy in the wrapper
+  that owns it. No second loader introduced.
+* *Duplication*: checked `galpy.backend`'s whole public surface first --
+  `as_numpy, get_namespace, is_backend_array, is_backend_compatible,
+  name_of_namespace, resolve_namespace`. There is **no** existing numpy
+  predicate, so the two new bars compose the existing two rather than inventing
+  a helper. Two inline uses in one file is under the bar for hoisting; if the
+  approved tolerance batch adds more, an `on_numpy()` predicate in
+  `galpy.backend` becomes the right move.
+
+**gh#1279 scope was overstated and is now fixed.** The body claimed inheritance
+was applying to "19 + 2 whole files". Checked through the loaders, not by grep:
+
+    eager jax entries : 75      un-deferred traced: 67 across 13 files
+    jax-jit entries   : 11        measured:   13   UNMEASURED: 54 in 10 files
+
+`test_orbit` (25), `test_potential` (12), `test_interp_potential` (6),
+`test_FDMdynamfric` (3), `test_orbits`/`test_qdf` (2 each) + 4 singletons come
+off deferral traced with nothing measured behind them. The PR now carries that
+as a table. No CI exposure -- no workflow runs `--jit` -- so it is local-traced
+only, but the whole premise of that PR is that a slow-skip entry must be
+measured on the mode it applies to, and 54 of them are not.
+
+Serial sweep of the ten launched (pid 661576). Serial is necessity, not
+caution: concurrent jax oversubscribes the XLA pool and corrupts exactly the
+timings being collected.
+
+**gh#1280 audit found a better explanation than the one I shipped.** The other
+two `lbd_to_XYZ_jac` callers (2106/2110) are pattern (b) -- and they sit
+*inside the same function* as the fixed site. "Pattern (b) doesn't trip" was
+true but not explanatory. The real distinction:
+
+    write INTO a jax array   -> impossible, jax arrays are immutable
+    write a jax VALUE into a numpy array -> fine, numpy converts a CONCRETE
+                                            jax scalar via __array__
+
+and the values are concrete because `--jit` traces at the `@backend_input`
+boundary, so streamdf is never itself inside a trace. **That last step is
+reasoned from where the boundary sits, not measured** -- flagged as such in the
+PR. The measured claim remains only "0 failed". Probe deferred rather than run,
+because a 30 s jax process would perturb the sweep it would be stolen from.
+
+Also checked: `numpy.array([ro, ro, ro, vo, vo, vo])` occurs exactly once in the
+entire tree (my line) -- nothing to consolidate.
+
+    gh#1279  18 pass / 24 running / 110 queued / codecov-project PHANTOM
+             (patch is green; diff is tests-only and xfail tests still execute,
+             so there is no mechanism for a real project drop)
+    gh#1280  2 pass / 105 queued
+    sweep    test_dynamfric in flight, 9 files behind
