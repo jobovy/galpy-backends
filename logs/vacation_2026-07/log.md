@@ -33868,3 +33868,22 @@ gh#1280 keeps climbing -- 67 green, only `codecov/project` red, same phantom.
     gh#1280   67 pass / 30 running / 55 queued
     gh#1274   ready, awaiting Jo
     sweep     test_orbit 503/581 (87%), 1 cap hit, 0 defects
+
+### 2026-08-09 — test_orbit's second failure is also a cap hit; still 0 defects
+
+    test_zmax                     303.3 s   CAP HIT -> slow-skip
+    test_integrate_negative_time  300.6 s   CAP HIT -> slow-skip
+
+Both are already in the **eager** `jax` slow-skip, so both are cases where
+inheritance would have been right -- the third and fourth this sweep. Worth
+noting because the headline result is "two-thirds of eager deferrals do not
+survive traced", and `test_orbit` is so far running the other way. That is not a
+contradiction, it is the per-file variation the whole exercise exists to
+capture: `test_interp_potential` shed 5 of 6, `test_orbit` is keeping what it
+had. A single rule would have been wrong on one file or the other.
+
+**Still 0 real defects** across 532 traced cases in this file. Every failure is
+the 300 s cap, and the classifier files those as slow-skip automatically.
+
+    gh#1280   82 pass / 35 running / 35 queued / codecov project only
+    sweep     test_orbit 532/581 (92%), 2 cap hits, 0 defects
