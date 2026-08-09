@@ -36068,3 +36068,27 @@ The serial re-run is healthy and progressing (194% CPU, `etimes` confirms it,
 5-10%), so the gate is coming from it regardless. No conclusions about the
 5-entry clearance change: what is established is still the 5 nodeids in
 isolation, numpy whole-file, and the pre-mock traced whole-file.
+
+### 2026-08-09 (cont.) — final gate CLEAN; rt-vertical-split fully validated
+
+The whole-file traced gate on the final commit (cf8828e7):
+
+    1276 passed, 102 skipped, 7 xfailed, 0 failures, 0 errors   (586.36 s)
+
+versus the pre-mock tree's `1271 passed / 11 xfail / 1 xpass`. The +5 passed and
+-4 xfail (-1 xpass) reconcile exactly: the 5 formerly-ledgered tests now pass
+outright.
+
+All 7 remaining xfails are accounted for: 3 AnyAxisym (the known 1-m
+cancellation, deliberately untouched), 2 pickling, and McMillan17/Cautun20 --
+which gh#1283 fixes on a *different* branch, so they correctly still defer here.
+
+Note the wall clock: **586.36 s now vs 586.19 s** for the identical `-n 8`
+command earlier. Same configuration, same duration -- independent confirmation
+that the "hang" I retracted last wake never existed; that run was simply 2
+minutes into a 10-minute job.
+
+**`backend-jit/rt-vertical-split` is now fully validated** and PR-ready:
+numpy 1283/0, traced 1276/0, 6 A/B'd tests, ledger 347->342, placement audited.
+PR body written to `/var/tmp/rt-split-pr-body.md`. Held only by the two-PR cap
+(gh#1283 at 112/153, gh#1284 at 40) -- opens as soon as one merges.
