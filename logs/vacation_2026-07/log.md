@@ -32913,3 +32913,41 @@ argument could have taken, and it only exists because the runs were made.
     gh#1279  116 pass / 12 running / 25 queued / NO REDS
     gh#1280  23 pass / 22 running / 62 queued / codecov 3-of-22 (stacked phantom)
     sweep    test_qdf in flight, 4 files behind (the 3 large ones last)
+
+### 2026-08-09 — streamgapdf follow-up: there is nothing to fix (and my PR text was wrong twice)
+
+Closed out the piece I deliberately deferred from gh#1280, compute-free. Two
+corrections to what that PR said:
+
+**Count was wrong.** I wrote "four sites" from a grep. An AST scan finds **10**,
+across 5 functions.
+
+**Verdict was wrong in the safe direction.** I framed them as a deferred fix on
+the grounds that "no failing test reaches them" -- true, but that is an absence
+of evidence. The actual mechanism:
+
+* `impulse_deltav_general` -- the public impulse kernel, the most exposed of the
+  ten -- returns early **above** the in-place line:
+
+      if is_backend_array(v) or is_backend_array(y) or is_backend_array(w):
+          return _impulse_deltav_general_backend(v, y, b, w, pot)
+      ...
+      tilew[:, 1] -= numpy.sqrt(...)        # numpy-only side of the guard
+
+  the standard leaf data-guard, with the backend path in a separate function.
+* The other four functions write into arrays born from `numpy.dot` /
+  `numpy.tile` / scipy interpolators -- numpy by construction.
+
+So a backend array cannot reach any of them, and `test_streamgapdf.py` passing
+31/31 traced and 31/31 on torch is a *consequence*, not a coincidence. **There
+is no follow-up here.** PR body corrected on both counts.
+
+This is also the general answer to the 98-site AST watchlist: the interesting
+question is never "is there an in-place write" but "can a backend array reach
+it", and that is answered by reading the dispatch above it. coords.py (dual
+path), backend/interpolate.py (numpy-constructed weights) and now streamgapdf
+(early return) have all cleared for three different structural reasons.
+
+    gh#1279  120 pass / 12 running / 21 queued / NO REDS
+    gh#1280  28 pass / 23 running / 56 queued / codecov stacked phantom
+    sweep    test_qdf in flight, 4 files behind
