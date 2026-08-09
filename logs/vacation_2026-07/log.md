@@ -35710,3 +35710,55 @@ reverted, so it lands **after** gh#1283 merges to keep files disjoint.
 in 15 seconds. The reproduction was cheap and available the whole time; what it
 needed was `--runxfail`, because the ledger entry silently converts the failure
 I wanted to read into an xfail. Recorded as [[reproduce-the-assertion-not-a-proxy]].
+
+### 2026-08-09 (later still) — split fix built and verified, but it does NOT clear the 5 entries
+
+Built the fix the diagnosis called for, on `backend-jit/rt-vertical-split`
+(local, unpushed): a `Potential._vertical_quad_split(R, phi, t)` hook (0.0 by
+default) that `surfdens`/`_surfdens` clamp into `[-|z|,|z|]` and pass as
+`symmetric_quad`'s `interior_point`, overridden in
+`RotateAndTiltWrapperPotential` with the plane-crossing solve
+
+    z = -(rot[2,0] x + rot[2,1] y + offset[2]) / rot[2,2]
+
+plus the array-broadcast fix gh#1283 reverted (that one is a prerequisite: the
+wrapper rejects the node array outright without it).
+
+**It works, and it does not fix the tests.** Both halves verified:
+
+- bare wrapper, `offset=[1,1,1]`: hook returns **-1.0**, and the wrapped `z'`
+  really vanishes there (checked against `_rect_transformed`, 0.0e+00);
+  clamps to -0.3 when `|z|=0.3`; ordinary potentials keep a literal `0.0`.
+- earlier numpy measurement: that split turns 6.4e-02 into **1.2e-10**.
+
+But an A/B over the 5 ledgered entries -- broadcast-only vs broadcast+split --
+gives **byte-identical results**: 4 failed / 1 passed both ways, same four
+rel. diffs (6.818545e-02, 1.482317e-02, 9.244103e-04, 3.596995e-04). The one
+that passes was already passing on broadcast alone.
+
+**Why:** every one of the 5 is a `testMWPotential`, a `Potential` subclass whose
+`_dens` delegates to a `CompositePotential`. So `Potential._surfdens` integrates
+at the **composite** level, where `self` is the mock and the hook returns the
+base 0.0 -- it never reaches the wrapper that knows where its plane is. The hook
+is at the wrong level for a summed density.
+
+The fix is still correct for the path users actually take (a bare wrapper, or a
+list of potentials, where `evaluateSurfaceDensities` sums each potential's own
+`surfdens`). It is simply not what these tests exercise.
+
+**Options for finishing it**, none started:
+1. make the split resolvable through composition (a composite returns its
+   components' common split, or refuses when they disagree);
+2. integrate a composite's surfdens **per component** rather than as one summed
+   density -- arguably the real bug, since a sum of displaced disks has no
+   single mid-plane;
+3. drop the declared-plane approach for a structure-agnostic panel rule; gh#1278
+   already did geometric panel grading for AnyAxisym, so there may be a helper
+   to reuse rather than invent.
+
+(2) is the most principled and (3) the most reusable. Not guessing between them
+on a Sunday; the branch stays unpushed and the 5 entries stay ledgered.
+
+**Method note.** I nearly reported "1 of 5 now passes" off the post-fix run
+alone. The A/B is what showed that pass was pre-existing and the fix contributed
+nothing -- [[verify-burndown-flips-stash-rerun]] earning its keep.
