@@ -36247,3 +36247,32 @@ is mechanical instead of a judgement call at merge time.
 
 Running total for rt-split once both land: **10 ledger entries** (5 jax-jit +
 5 torch-jit), from what began as a single "5 entries, mechanism unknown" note.
+
+### 2026-08-09 (cont.) — STATUS.md rewritten; it had drifted badly
+
+gh#1283 at 138/153, 0 red; the 15 remaining are all slow eager backend shards
+plus all-clear. Nothing to drive, so I read STATUS.md — the file Jo actually
+opens — and it was misleading:
+
+* headed **09:25**, six hours stale;
+* still listed **gh#1281 as open** when it had merged (develop moved
+  `a45a4f1d` → `de0745c5`);
+* "Torch sweep — **running now**" for a sweep that finished hours ago;
+* the torch branch as "staged, opens behind gh#1283" when it is open as gh#1284;
+* the RotateAndTilt problem written up **three times** — DIAGNOSED, then a
+  decision-for-Jo, then SOLVED — with the superseded two left in place.
+
+Root cause is my own discipline, not drift: the file's **first line says "This
+file is OVERWRITTEN, not appended"** and I appended to it all day, because
+appending is what `log.md` wants and I stopped distinguishing the two. A
+status file that accumulates is a log with a misleading name.
+
+Rewritten from scratch as a genuine snapshot: current PR table with real SHAs
+and counts, the RotateAndTilt fix as one closed story (not three), the gh#1284
+mis-ledgering, the gh#1283 audit result, and the three things actually awaiting
+Jo. Dropped every historical narration that `log.md` already carries.
+
+Also folded in the two operational facts worth having at the top level rather
+than buried: the codecov `sessions` discriminator lives on the **compare**
+endpoint, and `gh run cancel` silently no-ops on a fully-queued run where
+`force-cancel` works.
