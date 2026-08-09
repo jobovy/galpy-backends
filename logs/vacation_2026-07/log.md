@@ -37258,3 +37258,30 @@ a CI wait, with two PRs already open, is how sprawl starts. The `jitcount`
 boundary-count tooling I would want for it is not in this tree either (it lives
 in the galpy-jax side), so the first step there is finding/rebuilding the
 measurement, which deserves its own wake rather than a spare twenty minutes.
+
+### 2026-08-09 — CI starvation: found and freed 3 stale runners, left 6 alone
+
+Both PRs sat at 149/151 queued with zero movement, so I checked whether
+something was *holding* runners rather than assuming saturation.
+
+**Found: three runs on `feat/backends-develop` still `in_progress` since
+20:46 — nearly three hours — all on `9dc31569`,** which two merges have since
+superseded (develop is `277bf897`). They gated nothing: the current develop SHA
+has its own runs. Force-cancelled all three, verified `completed/cancelled`.
+gh#1286 picked up a slot immediately afterwards (0 -> 1 in progress).
+
+**Found and deliberately did NOT cancel: six duplicate runs on develop**, one
+`push` and one `pull_request` for each of All-backend tests / Linux-Mac build /
+Windows build, same SHA. This is the `build.yml` double-trigger gap in the
+"awaiting Jo" list, so cancelling the redundant half looked like free capacity.
+It is not: **gh#1204 is an open PR with `feat/backends-develop` as its HEAD**,
+so those `pull_request` runs are gh#1204's own checks. Cancelling them would
+have left that PR with cancelled checks — the same class of mistake as
+[[cancel-push-run-leaves-cosmetic-red]], reached from the other direction. One
+`gh pr list` settled it.
+
+**Residual state is starvation, not breakage:** 1 in-progress run repo-wide
+against 28 queued. Nothing further to drive; not a blocker (work resumes on its
+own), so no phone ping. This is, however, concrete evidence for the
+`concurrency:` group Jo needs to add — superseded SHAs kept three runners busy
+for three hours, and I only found it by looking.
