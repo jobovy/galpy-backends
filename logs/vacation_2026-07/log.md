@@ -31663,3 +31663,45 @@ the cost of waiting was zero and the cost of overlapping was another retraction.
     gh#1278  (#207) open, CI starting
     gh#1274  151 pass / green / Jo's to merge
     noninertial serial run: 13/53
+
+### 2026-08-09 — #194 breaks an existing test that ASSERTS the old contract
+
+Ran the contract-invalidation check I should have run when I first edited
+conftest: grep the changed symbol across `tests/`. It is covered.
+
+`tests/test_backend_ledger.py::test_jit_inheritance_applies_to_every_list`
+asserts that **all three** loaders inherit, and its docstring states the
+rationale as fact:
+
+    "A test too slow to run eager is slower still traced (it must compile first)"
+
+That is precisely the claim the streamdf measurement disproves — eager >90 min
+(shard cancelled) against 13 min traced. So the change is not just a conftest
+tweak; it invalidates a documented, tested contract, and the PR has to replace
+the *rationale* as well as the assertion or the next reader re-derives the old
+rule from the docstring.
+
+The correct contract turns out to be a **3-way** split, not the 2-way I had in
+mind:
+
+| loader | inherit | why |
+|---|---|---|
+| `_load_ledger` | yes | tracing cannot repair a numerical gap or a `_reject_backend` guard |
+| `_load_backend_skip` | yes | "excluded for hitting the network is excluded however it is run" — still true |
+| `_load_slow_skip` | **no** | tracing changes runtime in both directions |
+
+The conftest patch already does exactly this (only `_load_slow_skip` passes
+`inherit_eager=False`), so the code was right and only the test needs to follow.
+Worth noting the permanent-skip list keeps inheriting on a rationale I did not
+have to touch — the reason it inherits is a property of the *exclusion*, not of
+speed, so the measurement says nothing about it.
+
+Also verified, since I asserted it last wake without checking: gh#1278's body
+contains **no wall-clock claims at all** (grep for time units and
+faster/slower/speed returns nothing). Its numbers are accuracy values, hashes
+and pass counts, so the contention retraction genuinely does not touch it.
+
+    gh#1278  2 pass / 149 pending -- runs created 00:41Z, sharing runners with
+             the develop push run from #1275's merge (00:40Z). Expected, not stalled.
+    gh#1274  151 pass / green
+    noninertial serial: 15/53 at 18:21
