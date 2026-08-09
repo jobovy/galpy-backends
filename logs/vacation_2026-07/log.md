@@ -36227,3 +36227,23 @@ introduced here, not worth churning a shared file over mid-flight.)
 difference.
 
 Verdict: clean. Merge on green, no changes wanted.
+
+### 2026-08-09 (cont.) — rt-split sequencing pinned down (merge tested, not assumed)
+
+gh#1283 at 134/153, 0 red, 19 left. gh#1284 restarted and climbing. Nothing to
+drive, so nailed down the rt-split hand-off while waiting.
+
+`git merge-tree` says **rt-split merges onto gh#1284's head cleanly** — tested
+rather than asserted, which is the whole point of
+[[simulate-the-merge-dont-assume-conflict]] (I burned two wakes on an untested
+conflict claim earlier today).
+
+Enumerated exactly what rt-split must additionally drop once gh#1284 lands:
+**5 of the 6 `torch-jit` poisson_surfdens xfails** — the wrapper ones, which this
+branch fixes on torch (verified, 5 passed). The 6th,
+`[AnyAxisymmetricRazorThinDiskPotential]`, stays: different root cause, exactly
+as its jax twin stays. Written into the PR body as literal lines so the rebase
+is mechanical instead of a judgement call at merge time.
+
+Running total for rt-split once both land: **10 ledger entries** (5 jax-jit +
+5 torch-jit), from what began as a single "5 entries, mechanism unknown" note.
