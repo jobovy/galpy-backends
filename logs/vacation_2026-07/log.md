@@ -36731,3 +36731,35 @@ a genuine coverage gap in this PR and I add tests rather than explain it away.**
 
 Recorded as a re-check, not a conclusion. gh#1284 128/153; test_orbit
 measurement 74 % at 1470 s.
+
+### 2026-08-09 (cont.) — the 900 s cap is unenforceable here, as designed; classification survives it
+
+`test_orbit` eager has sat at 86 % for **921 s** — past its own per-test cap.
+That is not a hang and not a surprise: `--timeout-method=signal` delivers
+SIGALRM, whose handler only runs when control returns to bytecode, so a test
+inside a C-extension call **cannot be interrupted**
+([[signal-timeout-misses-c-extension]]). Measured earlier today on
+`const_FDMfactor`: 534 s under a 300 s cap, reported as PASS.
+
+So the cap does not bound this run's wall clock. Two consequences, one of which
+is reassuring:
+
+* **the run may take substantially longer than 8 x 900 s of slack suggests**, and
+  in the worst case a C-bound test never yields and the run never writes its
+  junitxml at all (written at session end — [[per-test-cap-not-per-file-timeout]]);
+* **but the classification is already determined for the half I care about.**
+  The question is which of the 25 are *fast enough to drop*; every one of those
+  completed early and is in the junitxml-to-be. Anything still running past 900 s
+  is "slow, keep" by definition — its exact duration changes nothing.
+
+So the downside is precision on entries I would keep regardless, not the verdict
+itself. Letting it run rather than killing it: switching to
+`--timeout-method=thread` would `os._exit()` the whole pytest process and lose
+every result, which is strictly worse than an imprecise number on a keeper.
+
+Watching it. If it is still at 86 % after a substantially longer window I will
+harvest what completed and classify the remainder as keepers on the >900 s
+evidence, which is sound and does not require the run to finish.
+
+CI: gh#1284 **134/153, 0 red** (codecov cleared) — audit banked, merges on green.
+gh#1285 8 green, 14 running, both codecov reds still early-upload.
