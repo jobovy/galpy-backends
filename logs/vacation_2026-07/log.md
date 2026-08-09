@@ -31555,3 +31555,35 @@ that same job, which is one API call away.
 
     #1275  152 pass / 0 RED / audit valid at 7b195b5f / merges on all-clear
     #1274  151 pass / green
+
+### 2026-08-09 — caught a measurement about to destroy its own output
+
+The `test_noninertial.py --backend jax --jit` run was 35 min in at 16/53 tests,
+i.e. ~2.2 min/test, projecting **~117 min** — against the `timeout -k 60 5400`
+(90 min) I had given it.
+
+That is not merely "it would not finish". pytest writes the junitxml **at
+session end**, so a wall-clock kill at 90 min would have produced ~41 completed
+tests and **zero recorded timings** — the one thing the run exists to produce.
+The dots in the log give a count, not a duration, and duration is the whole
+question for #194 (which entries clear the 240 s margin).
+
+Relaunched with a 4 h budget for a ~2 h job. The 35 min already spent is lost,
+which is the cheaper half of the trade: the alternative was losing it at minute
+90 *and* having nothing to show.
+
+Worth generalising, because I set that 5400 s myself without projecting against
+it: **a timeout on a measurement is a data-retention decision, not just a
+safety net.** For a run whose output is written only at the end, the budget has
+to exceed the projected duration with margin, or the safety net silently becomes
+the failure mode. Where that is not possible, the run needs per-test bounding
+(`--timeout`) so the session still completes and records what it learned.
+
+Early signal, still not a conclusion at 16/53: noninertial averages ~132 s/test
+traced, against streamdf's 0.11 s median. If that holds, most of this 19-entry
+cluster stays deferred under `--jit` and the honest outcome is "measured, and it
+stays" rather than a burndown win.
+
+    #1275  152 pass / 0 RED / the py3.14 backend shard is at 87 min of its
+           historical 93 -- normal, no action
+    #1274  151 pass / green
