@@ -35343,3 +35343,42 @@ substitute instead: **`git -C <path>`** for every git call against a worktree,
 and **named-file staging** rather than `git add -A`. The second is what turns a
 wrong-cwd slip from harmless into repo-polluting, and it is the one I can
 eliminate outright.
+
+### 2026-08-09 — gh#1282 contained the WRONG commits. Closed; gh#1283 is correct.
+
+Caught by checking what the PR actually contained rather than what I believed I
+had pushed. `gh pr view 1282 --json headRefOid` came back **`e1fa8bf9`** — the
+*old* tip, with the RotateAndTilt code that **fails its own gate** — not the
+`5c1b9264` I had gated.
+
+**Mechanism.** The branch `backend-jit/kd-mass-quadrature` was already checked
+out in `port207` at `e1fa8bf9`. So in `defects-edit`:
+
+* `git checkout -b <name>` failed (branch exists),
+* `git branch -f <name> HEAD` failed (checked out in another worktree),
+* both were `2>/dev/null`-suppressed, and
+* `git push -u origin <name>` then pushed **that other worktree's branch**.
+
+Three silent failures composing into a confidently wrong result. The `rev-parse
+--abbrev-ref HEAD` in my own command printed `HEAD` (detached) — I read past it.
+
+**Fix, without force-pushing an open PR** (my own standing rule): closed gh#1282
+with an explanatory comment, pushed the gated commits to a *new* branch
+`…-v2`, opened **gh#1283**, and then **verified the PR's content** rather than
+its existence:
+
+    head=5c1b9264 -> 07deb9c1  base=feat/backends-develop
+    files: KuijkenDubinskiDiskExpansionPotential.py, tests/backend_xfail.txt
+    ledger diff: -test_McMillan17, -test_Cautun20      (2 removals, 0 additions)
+
+**Also cleaned the ledger diff.** Restoring the reverted entries had put them
+back at a different position, so the diff read as *7 removals + 5 re-additions*
+— net −2, but a reviewer would reasonably see "7 entries un-deferred" and stop.
+Rebuilt the file from the base minus exactly the 2 fixed entries. A diff should
+say what it does.
+
+**The lesson is not "be careful with branches".** It is that `git push`
+succeeding tells you a push happened, not that it pushed *your work* — and every
+step that could have caught it was suppressed or skimmed. The check that works
+is reading the PR's own head SHA and diff back from the API afterwards, which is
+now what I do.
