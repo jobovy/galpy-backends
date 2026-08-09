@@ -37120,3 +37120,24 @@ that measurement happen without blocking anything.
 
 Pipeline now: **gh#1285** (rt-vertical-split) + **gh#1286** (burndown) — the
 two-PR cap, both open, neither blocked on me.
+
+### 2026-08-09 — torch --jit A/B dispatched for the 5 poisson entries
+
+The follow-up PR drops 5 `torch-jit poisson_surfdens` xfail entries on the claim
+that gh#1285's split fix makes them pass. gh#1285 gated **eager torch** (5/5),
+which is not evidence about `torch-jit`. So: measure, both sides.
+
+    FIX  side  /var/tmp/rt-split      @ a2d24422  (the split fix)
+    BASE side  /var/tmp/torch-orbit-m @ 9dc31569  (clean develop, no fix)
+    both: tests/test_potential.py --backend torch --jit
+          -k "poisson_surfdens_potential and (mockRotated or mockOffset or AnyAxisym)"
+
+Two sides, not one, because [[ab-must-reproduce-before-it-can-clear]]: a green
+FIX side alone proves nothing unless the BASE side is red. `AnyAxisym` is in the
+selection as a **control** — it is ledgered `torch-jit` for a different reason
+and should stay red on *both* sides. If it flips, the selection or the harness
+is lying to me, not the fix.
+
+Note the entries do not exist in either tree's ledger (both predate gh#1284's
+merge), so the tests run for real rather than being skipped — no `--runxfail`
+needed, and no risk of [[ledger-entry-hides-its-own-remeasurement]].
