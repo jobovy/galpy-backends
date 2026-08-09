@@ -33735,3 +33735,32 @@ region -- ~51 s between consecutive `*_planar_dxdv_c_vs_python` cases -- but
     gh#1274   ready, awaiting Jo
     follow-up e0f67aad local, body drafted, waits on test_orbit
     sweep     test_orbit 397 outcomes, 0 failures, healthy
+
+### 2026-08-09 — steady state; persisted the A/B lesson
+
+No change to drive: gh#1280 at 20 green / 19 running / 112 queued with the
+already-diagnosed codecov phantom (1-of-22 sessions), sweep at 401 outcomes with
+0 failures.
+
+Wrote down the sharpest reusable lesson from this stretch, because I nearly got
+it wrong in both directions on the same defect:
+
+**An A/B can only attribute or clear a change if the probe REPRODUCES the
+failure on the bad side** -- and the two sides must genuinely differ. My first
+AnyAxisym probe came back `diff = 0` and looked like exoneration; it used a
+centred difference (which cancels across z=0 by symmetry) and a guessed
+`surfdens`, so it provoked nothing at all. Reading the test body -- `tclass()`
+means *default* arguments, and the derivative is *one-sided* -- turned it into
+an exact reproduction (`7.345878e+03`), and only then was the comparison worth
+anything.
+
+And the corollary I missed the first time: **once it does reproduce, check what
+else the same evidence settles.** That run cleared gh#1278 *and* refuted my
+stated mechanism (the degenerate `ratio` ladder exists only in the newer
+version, yet both fail). I banked the first conclusion and left the second
+sitting falsified in the ledger for two wakes.
+
+    gh#1280   20 pass / 19 running / 112 queued
+    gh#1274   ready, awaiting Jo
+    follow-up e0f67aad local, waits on test_orbit
+    sweep     test_orbit 401 outcomes, 0 failures
