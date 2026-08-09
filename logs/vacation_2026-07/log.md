@@ -34534,3 +34534,43 @@ unfixed tree vs the fixed one).
 
 CI meanwhile is healthy and moving: `{IN_PROGRESS: 11, SUCCESS: 4, QUEUED: 136}`,
 no failures — the orphan cancellation did its job.
+
+### 2026-08-09 — torch test_potential done: 1 slow, 1 defect (jax had 0 and 8)
+
+Authoritative, from the junitxml — **1385 tests, 2 failures, 102 skipped,
+3132 s**:
+
+| kind | test | time |
+|---|---|---|
+| **slow** | `poisson_surfdens[mockRotatedAndTiltedMWP14WrapperPotentialwInclination]` | 300.0 s (cap) |
+| **defect** | `forceAsDeriv[AnyAxisymmetricRazorThinDiskPotential]` | 0.3 s |
+
+(The "4 failed" I quoted from the streaming log was a grep artifact: pytest's
+"short test summary info" repeats every FAILED line, so 2 failures counted
+twice. junitxml is the authority, as it should have been the first time.)
+
+**Against jax's 0 slow / 8 defects, the two backends barely overlap:**
+
+| jax defect | torch outcome |
+|---|---|
+| `forceAsDeriv[AnyAxisym]` | **same defect** |
+| 5 × `poisson_surfdens[RotateAndTilt…]` | 4 pass, 1 is **slow** (300 s) — no guard error |
+| `test_McMillan17`, `test_Cautun20` | **cannot be compared** — this tree carried my KD `_mass` fix |
+
+That third row is the one to be careful about, and it is why the script header
+recorded the tree under test. Those two passing under torch is evidence about
+**my fix**, not about torch. Reading it as "torch does not have the mass defect"
+would be exactly the kind of unearned conclusion the provenance note exists to
+prevent.
+
+So of jax's 8 traced defects, exactly **one reproduces on torch**, and the
+RotateAndTilt family turns into a *performance* problem there rather than a
+correctness one. Backend-specific traced behaviour is the rule, not the
+exception — which is the strongest argument yet that the torch sweep was worth
+running rather than inheriting jax's answers.
+
+**codecov/project is red and is a phantom.** `coverage=15.03%` with
+**sessions=0** at 25/153 checks: essentially no coverage has uploaded yet, so
+the comparison against base is guaranteed to look like a collapse. Real coverage
+is ~99%. It self-heals as shards upload; re-check when CI completes and re-run
+`all-clear` only if it is still red then. No action now.
