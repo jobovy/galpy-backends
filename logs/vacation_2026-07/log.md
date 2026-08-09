@@ -33959,3 +33959,26 @@ gh#1281 has started its first cycle: 3 running, 146 queued.
     gh#1280   132 pass / 21 pending / NO REDS -- audit done, ready to merge
     gh#1281   just started
     gh#1274   ready, awaiting Jo
+
+### 2026-08-09 — gh#1280 at 151/153, no reds; last shard within normal variance
+
+Waited it down through four cycles: **151 pass / 2 running / 0 red**. Head is
+`ec7e67e2`, the post-rebase SHA I pushed.
+
+Checked the remaining shard against its own history rather than calling it slow
+or fine by feel -- the habit that caught the eviction earlier:
+
+    backend jax test_qdf/test_pv2qdf/test_streamgapdf
+        reference run : 09:35:50Z -> 10:13:52Z  = 38m02s
+        gh#1280       : 10:55:16Z -> now        = 45m36s   (1.2x)
+
+**1.2x is ordinary variance**, not the 3x that flagged the evicted runner, and
+it is far from the 90-min cap. Nothing to do. `all-clear` is the other one and is
+last by design.
+
+gh#1281's `codecov/project` is red at 16 of 153 checks -- the same early-cycle
+upload phantom, now seen often enough to be unremarkable.
+
+    gh#1280   151 pass / 2 running / NO REDS -- audit done, merges next wake
+    gh#1281   early cycle, codecov phantom
+    gh#1274   ready, awaiting Jo
