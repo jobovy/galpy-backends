@@ -33214,3 +33214,27 @@ entries are new -- neither reachable by inheritance from the eager list.
     gh#1279  148 pass / 5 running / NO REDS
     gh#1280  91 pass / 17 running / codecov project only
     sweep    test_potential (221 tests) in flight, then test_orbit (245)
+
+### 2026-08-09 — both PRs red-free; gh#1279 at 151/153
+
+**gh#1280's `codecov/project` cleared too**, so *both* PRs now carry zero reds.
+Both codecov reds on that PR were upload phantoms and both resolved on their own,
+as diagnosed -- patch first, then project, in upload order.
+
+gh#1279: **151 green, 0 red, 2 running.** Identified the two rather than assume
+a hang:
+
+    backend torch test_potential.py --splits 5 --group 3   ~38 min  (normal)
+    all-clear                                              ~2h40m   (by design last)
+
+`all-clear` waits on every other job, so it being the final one is its intended
+behaviour, not a stall. Nothing to re-run.
+
+The merge is staged and rehearsed: squash gh#1279 -> retarget gh#1280 to
+develop -> rebase (verified clean) -> push. Audit already done against the exact
+SHA that will merge (`d3545330`, unchanged).
+
+    gh#1279  151 pass / 2 running / NO REDS
+    gh#1280  96 pass / 13 running / NO REDS
+    gh#1274  READY, 151 green, awaiting Jo's review
+    sweep    test_potential 122/221, then test_orbit (245) last
