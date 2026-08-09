@@ -33238,3 +33238,39 @@ SHA that will merge (`d3545330`, unchanged).
     gh#1280  96 pass / 13 running / NO REDS
     gh#1274  READY, 151 green, awaiting Jo's review
     sweep    test_potential 122/221, then test_orbit (245) last
+
+### 2026-08-09 — one gh#1279 shard is running 3x its normal time (bounded, not cancelled)
+
+gh#1279 sat at 151/153 for three consecutive checks. Rather than keep calling it
+"normal for that shard", I looked up what normal actually is, from a **completed**
+run of the same workflow:
+
+    backend torch test_potential.py --splits 5 --group 3
+        reference run 31294392608 :  05:58:24Z -> 06:14:00Z   = 15m36s
+        gh#1279  job 93196998034  :  07:26:10Z -> still running at ~08:15Z  = ~49m
+
+So it is **>3x** its own historical duration. That is an anomaly, and my earlier
+"within normal range for that shard" was a guess I had not checked. The sibling
+groups in the reference run took 4-7 min each, so group 3 is the slow one, but
+not by this much.
+
+**Bounded, so waiting is the right call**: `backend-tests.yml` sets
+`timeout-minutes: 90` (line 83, with a comment naming it the final backstop), so
+the job self-terminates by **08:56:10Z** at the latest. That is ~41 min out
+against a 55 min wake cadence.
+
+Chose to wait rather than cancel-and-rerun. Cancelling would discard ~49 min of
+possibly-real progress on a guess, and the backstop resolves it either way: if
+it finishes, the PR goes green; if it times out, it reds and gets a **targeted
+single-job re-run** -- which is the sanctioned response to a stuck shard, unlike
+a polling re-run loop that cancels in-progress jobs.
+
+Recorded because it is the kind of thing that looks like "CI is slow today" and
+is actually a measurable outlier. `all-clear` sitting at 2h40m is *not* an
+outlier -- it waits on all other jobs by design.
+
+    gh#1279  151 pass / 2 running / NO REDS   (deadline 08:56:10Z)
+    gh#1280  101 pass / 8 running / NO REDS
+    gh#1274  READY, awaiting Jo
+    sweep    test_potential 664+ cases (14 parametrize decorators expand it well
+             past its 221 function count), then test_orbit last
