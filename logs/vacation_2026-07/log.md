@@ -36123,3 +36123,42 @@ condition that justified them.
 visibly healing exactly as the sessions diagnosis predicted --
 head **26 sessions @ 86.05%** (was 14 @ 72.28%), base 28 @ 99.95%, patch 100%.
 No intervention needed.
+
+### 2026-08-09 (cont.) — my own open PR was mis-ledgering 4 defects as "slow"
+
+Set out to check the speedup I flagged last wake. It was not a speedup, and
+chasing it found a real defect in **gh#1284**.
+
+**A/B on one nodeid, `torch --jit`:** with the branch 115 s (passes); with clean
+develop source **33 s (FAILS)**. So there is no slow-vs-fast comparison — without
+the array-broadcast fix the wrapper's guard rejects the node array and the test
+never runs to completion. My "~6x faster" inference was wrong and is withdrawn.
+
+**Which makes the sweep's 300-400 s numbers impossible on develop.** Checked the
+worktree they came from: `/var/tmp/port207` is at **`e1fa8bf9` = "RotateAndTilt:
+broadcast over a trailing node axis"**. The sweep measured a tree carrying an
+unmerged fix.
+
+Re-measured on clean develop source, `torch --jit`: **4 failed in 35.6 s total**,
+plus a 5th (`...TriaxialLogHalo...`, 28.3 s) that fails identically and was never
+ledgered at all.
+
+**So gh#1284 as filed classified 4 defects as `slow-skip` — which SKIPS them.**
+It would have silently masked four real failures in exactly the traced runs meant
+to surface them, and left a fifth unrecorded. Pushed `19832bb1` moving all five
+into `backend_xfail.txt` with the mechanism, and corrected the PR body's
+reconciliation table (now −14/+7 slow, +14 xfail) and its provenance section.
+
+Per-PR CI is unaffected: `JIT_FLAG` is only set by a `workflow_dispatch` with
+`jit=true`, so the backend shards run **eager**. The damage was to the traced
+ledger's honesty, not to a gate.
+
+**The lesson is precise.** That PR body *already* carried a provenance warning —
+"the tree under test carried the unmerged KD `_mass` fix" — and I wrote it. I
+checked that worktree for **one** contaminant and treated it as cleared.
+`git log --oneline -1` on the tree you measured is one command; a provenance note
+that names one fix is not a provenance check. Recorded as
+[[verify-sweep-tree-provenance-completely]].
+
+Silver lining: my rt-split branch fixes all five on torch (5 passed), so it will
+un-ledger these too — the entries it removes now number 5 jax-jit + 5 torch-jit.
