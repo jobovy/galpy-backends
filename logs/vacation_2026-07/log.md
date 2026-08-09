@@ -35382,3 +35382,18 @@ succeeding tells you a push happened, not that it pushed *your work* — and eve
 step that could have caught it was suppressed or skimmed. The check that works
 is reading the PR's own head SHA and diff back from the API afterwards, which is
 now what I do.
+
+### 2026-08-09 — deleted the stale remote branch behind the closed gh#1282
+
+`backend-jit/kd-mass-quadrature` was still on the remote at `e1fa8bf9` — the
+version that **fails its own gate**. Checked first that no open PR referenced it
+(none), then deleted it.
+
+Worth doing rather than leaving: a closed PR's branch is exactly the artifact
+that gets mistaken for current work later, and the failing version sitting under
+a plausible name is how the *next* wrong push happens. The local branch still
+exists in `port207`; it is the remote one a reader (or a future `git push
+<name>`) would resolve.
+
+State: gh#1283 CI starting (2 green / 149 queued), unpatched dxdv re-run still
+going.
