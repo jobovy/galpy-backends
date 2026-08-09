@@ -35806,3 +35806,39 @@ They compose well: (2) as the cheap default, hybrid as the fallback for
 potentials that cannot declare a plane. I am not committing a 5x slowdown on a
 shared hot path unilaterally while Jo is away -- recording it in STATUS for a
 decision, and the cheap half (2) is buildable meanwhile.
+
+### 2026-08-09 (cont.) — torch PR opened as gh#1284; I had held it on an untested assumption
+
+Opened `backend-jit/torch-sweep-fixes` as **gh#1284** (head 5b2c8a00, base
+feat/backends-develop, 3 files: both ledgers + `test_FDMdynamfric.py`). Verified
+head SHA and file list after opening, per [[verify-pr-content-not-push-success]].
+
+**I had been holding it for two wakes for a reason that turns out to be false.**
+I wrote, twice, that it and gh#1283 "both edit the same ledger files, so opening
+it now guarantees a rebase conflict". Actually testing that:
+
+    git merge-tree --write-tree <gh#1283 head> <torch head>   ->  no conflict
+
+It merges **cleanly**: gh#1283's two xfail deletions are mid-file, the torch
+additions are appended at the end. Same file is not the same hunk, and I never
+checked. `merge-tree` answers this in one second and costs nothing.
+
+The second reason for holding -- runner starvation -- was also weaker than I
+thought: **queued jobs keep their place**, so a new PR's jobs enter the queue
+*behind* gh#1283's 57 already-queued ones rather than competing with them. The
+cost to gh#1283 is close to nil.
+
+Also corrected a real inaccuracy in the PR body before opening: it reconciled the
+counts against a raw diff of "-14/+8 slow-skip, +2 xfail", but the raw diff is
+**-14/+11 and +5** -- the difference being 3 comment lines in each file. The
+entry counts (8 slow, 2 defects) were right; the diff line counts were not, which
+is exactly the sort of thing that makes a reviewer distrust the rest of a table.
+
+**Lesson.** "These touch the same file" is a hypothesis about a *merge*, and
+merges are cheap to simulate. I let a plausible-sounding blocker sit unexamined
+across two wakes while the work it gated was finished and waiting. Sibling of
+[[reproduce-the-assertion-not-a-proxy]]: I reasoned about the artifact instead of
+running the operation on it.
+
+Two PRs now in flight, which is the standing cap: **gh#1283** (KD `_mass`, 57
+green / 57 queued, only the codecov/project phantom red) and **gh#1284**.
