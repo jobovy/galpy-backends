@@ -36395,3 +36395,21 @@ flight; `noninertial-eager-undefer` @ `f795e787` (11 entries) staged behind them
 gh#1274 still awaiting Jo.
 
 Ledger trajectory once all three land: xfail 21 → 14, slow-skip 118 → 107.
+
+### 2026-08-09 (cont.) — both PRs clean; traced noninertial still running
+
+gh#1284 80/153 (only the codecov phantom red), gh#1285 just spun up. Nothing to
+drive.
+
+The traced `test_noninertial` measurement is at ~600 s with **6 xdist workers at
+~101 % CPU each** — healthy. Its log *looked* frozen at one line, which for a
+moment read like this morning's fictitious hang. Cause this time is different
+and entirely mine: I piped pytest through `tail -4`, which **buffers until the
+process exits**, so no progress can appear. Redirect to a file and tail the
+file. Folded into [[measure-elapsed-time-never-assume-it]] as a corollary,
+since the false signal ("log not moving ⇒ stalled") is identical even though the
+mechanism is not.
+
+Checking `ps -eo pcpu,args` for busy workers is the cheap discriminator, and it
+is the *workers* that carry the CPU under xdist — the coordinator sits near 0 %,
+which is exactly what fooled me earlier.
