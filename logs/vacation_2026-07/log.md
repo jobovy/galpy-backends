@@ -35146,3 +35146,19 @@ Corrected net: **delete 13, add 11, keep 1, reclassify 1** — against the
 Caught only because I re-measured a row I had flagged as contaminated. The
 contamination turned out not to matter for that row's *verdict*; chasing it is
 what surfaced the rule error, which mattered a great deal more.
+
+**Arithmetic correction on that correction.** I wrote "9 slow additions / add 11"
+into the PR body; the table under it lists **8**. Counted the rows
+programmatically rather than trusting the sentence, and the computed classifier
+agrees: 1 `const_FDMfactor` + 4 `poisson_surfdens` + `interprz_dxdv_3d` +
+`analytic_zmax` + `liouville_planar` = **8 slow**, plus 2 defects = **10
+additions**.
+
+Corrected net: **delete 13, add 10, keep 1, reclassify 1.** `test_dynamfric_c`
+is a *keep*, not an add, and `test_analytic_ecc_rperi_rap` is already an xfail
+entry — those two are what I double-counted.
+
+Two consecutive arithmetic slips in one summary is a signal about the format,
+not just the instance: prose totals sitting next to a table drift from it. The
+fix I will actually use is to derive the totals from the table
+programmatically before writing them down, which is how both were caught.
