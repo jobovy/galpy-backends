@@ -34667,3 +34667,32 @@ Not changing it, for three reasons that all point the same way:
 Recorded as a lead: if the ellipsoidal family ever needs a differentiable
 `mass()`, the first question is whether that comment is still true, and the
 answer is probably no.
+
+### 2026-08-09 — "244 passed, 0 failures" says nothing about torch's 13 entries yet
+
+Checked rather than inferred, because the tempting read was there: `test_orbit`
+is 244 outcomes deep with **zero** failures, and torch has 13 eager entries in
+that file, so it looks like they are evaporating the way jax's did. Matched the
+13 nodeids against the streaming log:
+
+    all 13 -> (not yet run)
+
+Every one is still ahead. They are not scattered either — the whole list is
+`dxdv` / `chandrasekhar` / `lyapunov`:
+
+    test_chandrasekhar_dxdv_fd_of_flow_branches[const_lnLambda|minr_gate|sigma_clamp]
+    test_chandrasekhar_dxdv_phase_volume_law
+    test_dissipative_dxdv_python_raises
+    test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tilted]
+    test_fdm_dxdv_fd_of_flow_branches[6 variants]
+    test_lyapunov_spectrum_henonheiles_chaotic
+
+So torch's un-deferral debt is **concentrated in the variational machinery**,
+not spread across orbit integration — a structural fact worth having before the
+numbers land, since it predicts that whatever the verdict is, it will likely be
+the *same* verdict for most of the 13 (they share a code path), rather than 13
+independent coin flips.
+
+Practical consequence: the informative part of this file has not started. Any
+"torch drops entries like jax did" conclusion drawn now would be drawn from a
+sample that contains none of the population of interest.
