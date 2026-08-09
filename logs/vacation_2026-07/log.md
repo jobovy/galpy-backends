@@ -35221,3 +35221,42 @@ the first character of the run is already `x`.
 
 Once green: numpy regression, then commit the ledger drop and open with
 `/var/tmp/defects-pr-body.md`.
+
+### 2026-08-09 — THE GATE FAILED, and it was right to. RotateAndTilt reverted.
+
+    4 failed, 164 passed, 45 skipped, 2 xfailed in 457.27s
+
+Four of the five `poisson_surfdens[RotateAndTilt…]` tests **still fail** on the
+fixed tree. My fix does what I measured it to do — the array-input guard is
+gone — but what it uncovers is worse than what it removed:
+
+    (R,Z,phi) = (0.500, 10.000, 0.000)
+    tpoissondens = 0.07701375   vs   tdens = 0.07209774
+    rel. diff = 6.8e-02   against a 1e-8 bar
+
+**The opt-in trades a hard `TypeError` for a silent 6.8% wrong answer.** Once
+the wrapper accepts the node array, the traced path evaluates the Poisson
+surfdens with fixed-order Gauss-Legendre where scipy's adaptive `quad` had been
+coping, and at |Z|=10 that is not nearly enough. An exception is a bad outcome;
+a plausible-looking number that is 6.8% off is a worse one.
+
+So I **reverted the RotateAndTilt commit** and restored its 5 ledger entries.
+Verified by set difference rather than by reading the diff: exactly
+`test_McMillan17` and `test_Cautun20` removed, **0 added**.
+
+**What I claimed and what is true.** I had this branch described — in STATUS, in
+the log, and in a drafted PR body — as *"fixes 7 of gh#1281's 8 traced
+defects"*. It fixes **2**. The 40/40 bit-identical broadcast measurement was
+real and is still real; I over-read it as evidence the *tests* would pass, when
+all it showed was that the wrapper computes the same values array-wise as
+scalar-wise. It does — and the quadrature built on it is still wrong at large
+|Z|.
+
+That is exactly the gap the pytest gate exists to close, which is why it was
+owed before opening rather than after. Every prior wake that deferred the PR for
+"the gate is still owed" was the right call.
+
+**RotateAndTilt goes back to the follow-up list** with what is now known:
+opting it in requires the traced surfdens quadrature to be range-aware (there is
+already a `surfdens` range-aware mechanism in the tree from earlier work — that
+is the thread to pull), not merely rank-correct.
