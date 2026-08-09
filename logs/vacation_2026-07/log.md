@@ -32522,3 +32522,47 @@ sweep as files come back, rather than driving speculative fixes.
 
     gh#1279  40 pass / 22 running / 90 queued / codecov-project phantom
     gh#1280  2 pass / 105 queued
+
+### 2026-08-09 (cont.) — CORRECTION: the per-test cap did NOT fix the data loss
+
+Checked the sweep's output instead of trusting the flag, and the fix from the
+previous entry **did not work**. `test_dynamfric` ended `rc=1` after 5m40s and
+the sweep moved on, which looked right -- but:
+
+    ls /var/tmp/jitsweep/*.xml   -> nothing
+    grep -c "passed|failed" log  -> 0
+
+**No junitxml, no session summary.** `--timeout-method=thread` does not fail the
+test and continue; it dumps stacks and **hard-exits the process**. So it turned
+one slow test into total data loss for that file -- precisely the failure the
+per-test cap was added to prevent. I swapped a slow total loss for a fast one.
+
+Rebuilt properly, and this time verified against the running process rather than
+the script:
+
+    --timeout=300 --timeout-method=signal      raises INSIDE the test, so the
+                                               session finishes and writes xml
+    python3 -u -m pytest ... -v | stamp.py     one timestamped line per test as
+                                               it completes
+
+Belt and braces, because neither survives every case alone: `signal` cannot
+interrupt a call stuck in C/XLA, and streaming has no session summary. Together,
+per-test durations are recoverable by differencing **even on a hard kill**.
+
+Verified live, not assumed:
+
+    1786254507.729 ...::test_..._constLambda PASSED [ 14%]
+    1786254519.628 ...::test_..._varLambda   PASSED [ 28%]     -> 11.9 s
+
+and the process really carries `--timeout-method=signal`.
+
+The memory note I wrote one wake earlier recommended `thread`. That was wrong
+advice about to be recalled in future sessions, so it is corrected in place.
+
+Three data losses now from the same root (`test_noninertial` 90-min cap, sweep
+v1 file-caps-only, sweep v2 thread-method). The durable lesson is not a flag, it
+is: **check that the artifact exists, rather than that the option was passed.**
+
+    gh#1279  46 pass / 23 running / 83 queued / codecov-project phantom
+    gh#1280  2 pass / 105 queued
+    sweep    v3 running, test_dynamfric
