@@ -33847,3 +33847,24 @@ same upload phantom.
 
     gh#1280   61 pass / 27 running / 64 queued / codecov project only
     sweep     test_orbit 458/581 (79%), 1 cap hit, 0 real defects
+
+### 2026-08-09 — waited on the sweep; still ~45 min out
+
+Held for the sweep rather than starting anything, since its completion is what
+unblocks the follow-up PR and the wake had no other actionable work. It did not
+land: 503 of 581 (87%), ~36 s/test in the current region, so **~45 min** more.
+
+Still **1 failure total** in the file, and it is the `test_zmax` cap hit already
+classified as slow-skip -- so `test_orbit` has produced **0 real defects** across
+503 traced cases.
+
+Ready to act the moment it finishes: the follow-up branch `e0f67aad` carries 8
+measured slow-skip entries, 8 diagnosed ledger entries and 1 un-ledger; the
+classifier will emit `test_orbit`'s rows; the PR body is written. Open-and-push
+is mechanical from there.
+
+gh#1280 keeps climbing -- 67 green, only `codecov/project` red, same phantom.
+
+    gh#1280   67 pass / 30 running / 55 queued
+    gh#1274   ready, awaiting Jo
+    sweep     test_orbit 503/581 (87%), 1 cap hit, 0 defects
