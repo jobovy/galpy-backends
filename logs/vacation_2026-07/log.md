@@ -32868,3 +32868,48 @@ So: still no action on either PR's codecov. Both reds are upload artifacts.
     gh#1279  113 pass / 11 running / 28 queued / codecov 21-of-28 @ 99.47%
     gh#1280  15 pass / 25 running / 67 queued / codecov 2 sessions, stacked base
     sweep    test_interp_potential in flight (18 min), 5 files behind
+
+### 2026-08-09 — gh#1279 codecov CLEARED; sweep 5 of 10, two-thirds un-deferring
+
+**gh#1279 has no reds.** 116 green / 12 running / 25 queued, **0 failures**.
+codecov head is **99.95% at 22 of 28 sessions** -- identical to base. The
+phantom self-healed exactly along the predicted curve:
+
+    sessions   9   ->  12  ->  17  ->  19  ->  21    ->  22
+    coverage  70.83   76.12   ...     76.12   99.47     99.95   (base 99.95)
+
+Diagnosis confirmed by the data, and no coverage was "fixed" that was never
+broken. Still 37 checks pending, so not merge-ready yet.
+
+**`test_interp_potential.py`** -- the biggest eager-entry file so far, 6 entries,
+40 tests, 1120 s traced. Only **one** survives:
+
+     300.0s  KEEP        test_interpolation_potential_force_c
+     176.8s  UN-DEFERS   test_interpolation_potential_force
+     154.3s  UN-DEFERS   test_interpolation_potential_secondderivs
+      93.0s  UN-DEFERS   test_interpolation_potential_dens
+      88.2s  UN-DEFERS   test_interpolation_potential_c
+      53.2s  UN-DEFERS   test_interpolation_potential_secondderivs_c
+
+**Running totals, 5 of 10 files:**
+
+    file                    tests   eager  ->  jax-jit   un-deferred
+    test_dynamfric              7     1         1          -
+    test_FDMdynamfric           9     3         2          1
+    test_galpypaper            15     1         0          1
+    test_streamspraydf         38     1         0          1
+    test_interp_potential      40     6         1          5
+                                     ---       ---        ---
+                                      12         4          8
+
+**Two-thirds of the eager deferrals do not survive a traced run** (8 of 12), and
+the survivors are not marginal -- every keeper hit the 300 s cap, every
+un-deferral came in at 177 s or below. The gap is not a judgement call at the
+boundary; it is a clean separation. That is the strongest form the gh#1279
+argument could have taken, and it only exists because the runs were made.
+
+**Zero defect candidates** across 109 traced tests in 5 files.
+
+    gh#1279  116 pass / 12 running / 25 queued / NO REDS
+    gh#1280  23 pass / 22 running / 62 queued / codecov 3-of-22 (stacked phantom)
+    sweep    test_qdf in flight, 4 files behind (the 3 large ones last)
