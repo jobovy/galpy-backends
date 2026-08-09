@@ -33679,3 +33679,37 @@ standard the rest of this work is held to.
     gh#1274   ready, awaiting Jo's review
     follow-up 1fc19ede local, body drafted
     sweep     test_orbit 383 outcomes, 0 failures -- last file
+
+### 2026-08-09 — my AnyAxisym hypothesis was falsified by my own A/B (`e0f67aad`)
+
+Went back to the ledger entry I wrote two wakes ago and found it asserting
+something the evidence in the same entry rules out. It said:
+
+    The suspect is the z==0 degenerate ladder (`ratio` is 1 there, so the panels
+    collapse), which the dyadic version had too.
+
+The second clause is false. `ratio` exists **only** in the geometric version
+gh#1278 introduced -- the dyadic version has no such variable. (Confirmed by
+diffing the two files: 16 changed lines, `xp.maximum(Rp * 2**-k, dmin)` vs
+`ratio = dmin / half`. The `ratio` grep hits in the old file are the substring
+inside *"configuration"*.)
+
+So the very A/B that cleared gh#1278 **also rules out the ladder as the cause**:
+both versions fail identically at 7.345878e+03, and only one of them has the
+degenerate grading. I had used the A/B for one conclusion and not noticed it
+settled a second.
+
+Entry corrected to say cause-not-identified, and to warn explicitly **off** the
+quadrature ladder. A falsified hypothesis left in the file is worse than none --
+it sends the next person to the one place the evidence has already excluded.
+
+What survives, and is measured: it is eager-vs-traced, not version-vs-version.
+Eager has `Phi(z=0)` and `Phi(z=1e-8)` agreeing to 11 digits; traced does not.
+
+Also verified the two file versions genuinely differ *before* trusting the A/B
+at all -- otherwise "identical results" would have proved nothing except that I
+had swapped a file with itself.
+
+    gh#1280   11 pass / 18 running / 122 queued, no reds
+    follow-up 9fe4a647 -> 20e2f86b -> 532f251f -> 1fc19ede -> e0f67aad
+    sweep     test_orbit 393 outcomes, 0 failures
