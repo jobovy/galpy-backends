@@ -34574,3 +34574,33 @@ running rather than inheriting jax's answers.
 the comparison against base is guaranteed to look like a collapse. Real coverage
 is ~99%. It self-heals as shards upload; re-check when CI completes and re-run
 `all-clear` only if it is still red then. No action now.
+
+### 2026-08-09 — torch ledger delta, 3 of 4 files (test_orbit still running)
+
+Computed against the current `torch` slow-skip/xfail lists rather than eyeballed:
+
+| test | traced verdict | was | action |
+|---|---|---|---|
+| `test_dynamfric_c` | SLOW (300 s cap) | eager entry | **keep** |
+| `test_FDMDynamicalFrictionForce_central_limit` | **DEFECT** 35.9 s | eager entry | **move off slow-skip** |
+| `test_FDMDynamicalFrictionForce_const_FDMfactor` | SLOW (300 s cap) | not ledgered | **add** |
+| `test_forceAsDeriv_potential[AnyAxisym…]` | **DEFECT** 0.3 s | not ledgered | **add** |
+| `test_poisson_surfdens_potential[mockRotatedAndTilted…wInclination]` | SLOW (300 s cap) | not ledgered | **add** |
+
+**Zero drops** — both torch eager entries in these files still fail traced (one
+as slow, one reclassified as a defect). That is the *opposite* of the jax
+sweep, where two-thirds of eager entries evaporated (42 → 15). n=2 here, so it
+is a straw in the wind, not a result; `test_orbit` holds the other **13** torch
+entries and will decide the number.
+
+Also notable so far: **3 additions vs 2 inherited entries**. Inheritance can
+only carry eager entries forward, so every one of those 3 is invisible to any
+rule that propagates the eager list — the same shape of finding as the jax
+sweep, in a file set that shares only one test with it.
+
+**One row is provisional.** `const_FDMfactor`'s 300 s is from the run I
+contaminated with a concurrent jax job. A cap hit is fairly robust — but a test
+genuinely at ~250 s could be pushed over by contention, and "fairly robust" is
+not a measurement. `test_FDMdynamfric` gets re-run alone before any of this is
+written into the ledger. `central_limit`'s classification is unaffected: a
+`TypeError` at 35.9 s is not a timing judgement.
