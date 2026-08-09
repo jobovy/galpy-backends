@@ -33820,3 +33820,30 @@ invent work when it does not.
     gh#1280   29 pass / 24 running / 98 queued / codecov phantom
     gh#1274   ready, awaiting Jo
     sweep     test_orbit 419/581 (72%), 0 failures, ETA ~1.5-2 h
+
+### 2026-08-09 — test_orbit's first failure is a CAP HIT, not a defect
+
+`test_zmax` FAILED at 72%. Checked what kind before reacting: timed it from the
+streamed log timestamps (the junitxml does not exist until the session ends).
+
+    previous outcome : test_apocenter
+    test_zmax        : 303.3 s   ->  hit the 300 s cap
+
+So it is a **slow-skip candidate**, not a defect -- and the classifier will file
+it on the right side automatically, which is the whole reason that split exists.
+
+Its eager entry reads `jax tests/test_orbit.py::test_zmax  # 300s (failed)`, so
+eager it also hit 300 s. Tracing neither helped nor hurt here: the second case
+this sweep where inheritance would have given the right answer (after
+`test_dynamfric_c`). Both directions keep showing up, which is the argument for
+measuring rather than picking a rule.
+
+The streamed-timestamp trick is worth keeping: it gives per-test durations
+*during* a run, before any junitxml exists, which is exactly what the
+`-v | stamp.py` streaming was added for after the two data-loss incidents.
+
+gh#1280's `codecov/patch` has cleared; only `project` remains, and it is the
+same upload phantom.
+
+    gh#1280   61 pass / 27 running / 64 queued / codecov project only
+    sweep     test_orbit 458/581 (79%), 1 cap hit, 0 real defects
