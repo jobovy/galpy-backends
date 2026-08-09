@@ -34965,3 +34965,40 @@ It is queued with the other post-sweep work, which is now:
 
 gh#1281: 143 green, 10 running, 0 red — unchanged this wake; the remainder are
 the heavy `test_orbit` shards.
+
+### 2026-08-09 — all 13 torch test_orbit entries decided: 13/13 DROP
+
+`test_dissipative_dxdv_python_raises` PASSED and
+`test_lyapunov_spectrum_henonheiles_chaotic` PASSED, so every one of the 13 is
+now decided. **All 13 pass traced.** With the earlier two files, torch's full
+un-deferral debt resolves as:
+
+| file | eager entries | traced verdict |
+|---|---|---|
+| `test_dynamfric` | 1 | **1 keeps** (300 s cap) |
+| `test_FDMdynamfric` | 1 | **1 reclassified** slow → defect (35.9 s `TypeError`) |
+| `test_orbit` | 13 | **13 drop** |
+
+**15 torch eager entries → 1 genuine keeper.** The torch slow-skip list is
+~93% stale under tracing, and nine of the drops were inside the margin by a
+factor of ~50. For comparison jax went 42 → 15 (64% dropped); torch is far more
+extreme, which fits the mechanism: these were measured eager, where torch has no
+compiled kernel, and traced they compile once and run in seconds.
+
+**Two of the 13 are provisional, so the honest count is 12 clean + 1 pending:**
+`test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tilted]` ran on the tree
+carrying my RotateAndTilt fix and needs an unpatched re-run. (The other
+provisional row, `const_FDMfactor`, is an *addition*, not one of the 13.)
+
+Against that, the sweep **adds** entries no inheritance rule could reach:
+`const_FDMfactor` (slow), `AnyAxisym forceAsDeriv` (defect, cross-backend),
+`RotateAndTilt…wInclination` (slow), and a `torch-jit` line for
+`test_eccentricity` (known AnyAxisym mechanism, missing only because torch had
+never been measured traced).
+
+So the net is not "delete 15 lines" — it is **delete 14, add 4, reclassify 1**,
+and every one of those numbers required running the thing rather than reasoning
+about it.
+
+`test_orbit` is at 85%; the remaining tests hold no ledger entries, so the
+un-deferral question is settled even before the file finishes.
