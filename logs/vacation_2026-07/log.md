@@ -36831,3 +36831,43 @@ left worth a dedicated run.
 
 Queue: gh#1284 (138/153, 0 red, audit banked) → gh#1285 (10 entries) →
 this branch (24 entries). That is **34 ledger entries** staged behind two PRs.
+
+### 2026-08-09 — next burndown target: checked before measuring, and it was already mine
+
+Planned the next cluster off the current ledger: **torch `test_orbit.py`, 13
+entries** — the biggest single un-measured block, and torch had never had the
+staleness treatment jax got. Built a clean worktree at `9dc31569` for it.
+
+Before dispatching the run, diffed **gh#1284**'s ledger delta against develop.
+It removes **all 13 of those exact entries**. The cluster was already my own open
+PR; develop still lists them only because gh#1284 has not merged. A ~1 h jax run
+would have measured entries that were already gone.
+
+The general rule this is an instance of: *the ledger on `develop` is not the
+ledger you are about to have.* With PRs in flight, pick targets from the
+**projected** ledger, not the checked-out one. Projection after gh#1284 +
+gh#1285 + the burndown branch land:
+
+| file | develop | projected |
+|---|---|---|
+| `backend_slow_skip.txt` | 118 | **84** |
+| `backend_xfail.txt` | 19 | **23** (→ 18 after gh#1285's post-rebase torch-jit drops) |
+
+And the composition shifts decisively:
+
+    slow-skip projected:  jax 51 | jax-jit 26 | torch-jit 6 | torch 1
+
+**Torch eager is essentially finished** — 1 slow-skip and 3 xfail entries left
+across the whole suite. The remaining burndown is a jax problem (77 of 84
+slow-skip rows), which is consistent with torch's eager per-call overhead being
+the thing that was already fixed and jax's not.
+
+Of the jax rows, `test_orbit`, `test_noninertial` (eager **and** traced) are
+already measured. The genuinely unmeasured clusters are
+**`test_interp_potential` (6)** and **`test_FDMdynamfric` (3)** — small files,
+cheap to measure. Dispatched those 9 under forced jax at 18:43.
+
+Also of note: `pkill -f "setup.py build_ext"` killed its own command chain again
+(the wrapper's argv contains the pattern). Killed by PID instead. Second time
+this exact trap has cost a command; it is in memory and I still reached for
+`pkill` first.
