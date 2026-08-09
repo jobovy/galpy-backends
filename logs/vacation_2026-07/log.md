@@ -35397,3 +35397,37 @@ exists in `port207`; it is the remote one a reader (or a future `git push
 
 State: gh#1283 CI starting (2 green / 149 queued), unpatched dxdv re-run still
 going.
+
+### 2026-08-09 — last provisional row settled: DROP. Torch delta is complete.
+
+Unpatched tree, `test_dxdv_3d_c_vs_python`: **45 tests, 0 failures, 841.5 s**.
+
+    [RotateAndTiltWrapperPotential_tiltedTriaxialNFW]   100.3 s   pass   <- the ledgered entry
+    [RotateAndTiltWrapperPotential_offset]               79.3 s   pass
+    [RotateAndTiltWrapperPotential_norot]                95.2 s   pass
+
+100.3 s against a 240 s margin → **DROP**, and measured on a tree with the
+RotateAndTilt fix reverted, so the verdict owes nothing to my patch. That was
+the entire reason the row was flagged provisional.
+
+**A measurement-method note.** The sweep's stamped-log differencing gave
+**201.9 s** for this test; the junitxml says **100.3 s** — a factor of two. The
+differencing method charges each test with everything that happened since the
+previous outcome line: fixture setup, teardown, collection work. It is fine for
+"is this ~5 s or ~300 s", which is what I used it for live, but it is not a
+duration. Both readings land on the same side of the margin here, so the verdict
+is unchanged — but a row decided at 250 s by differencing could easily be a
+130 s test. **junitxml `time` is the only number that goes in the ledger.**
+
+**The torch delta is now complete, every row measured on a clean tree:**
+
+| action | count | detail |
+|---|---|---|
+| **delete** | 13 | all 13 `test_orbit` entries pass traced; 9 of them ~5 s |
+| **add (slow)** | 8 | by duration, incl. 4 `poisson_surfdens[RotateAndTilt…]` at 300–398 s |
+| **add (defect)** | 2 | `AnyAxisym forceAsDeriv`; `torch-jit` line for `test_eccentricity` |
+| **keep** | 1 | `test_dynamfric_c` at the 300 s cap |
+| **reclassify** | 1 | `central_limit`: slow → defect (35.9 s `TypeError`) |
+
+Next: fold this into `backend-jit/torch-sweep-fixes` (which already carries the
+`as_numpy` fix), correct the PR body's counts, and open it behind gh#1283.
