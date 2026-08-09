@@ -33313,3 +33313,44 @@ what, and I guessed the wrong mechanism from it.
     gh#1280  106 pass / 3 running / NO REDS
     gh#1274  READY, awaiting Jo
     sweep    test_potential still running, test_orbit last
+
+### 2026-08-09 — gh#1279 MERGED; gh#1280 retargeted + rebased clean
+
+The evicted shard's re-run **passed** (finished within its 15m36s historical
+norm, confirming the earlier 53-min run was the sick runner and not the test).
+`all-clear` re-run after it, in that order -- firing it earlier would only have
+re-failed it on a still-running dependency.
+
+    gh#1279  154/154 SUCCESS, mergeStateStatus CLEAN
+
+**Squash-merged.** develop `f963eb42` -> **`d2ad93c9`**. Merged at head
+`d3545330` -- the exact SHA audited, re-verified immediately before, and the
+exact SHA the merge rehearsal was run against (`develop` had not moved either).
+
+**gh#1280 retargeted to develop and rebased**, exactly as rehearsed:
+
+    d2ad93c9  (develop, the squash of #1279)
+    a2b18be5  streamdf: out-of-place LB jacobian scaling
+    ec7e67e2  skip: streamdf useTM Torus exclusion also applies to torch
+
+Zero conflicts, matching the dry run. The rebase is **required**, not cosmetic:
+#1280's branch carried #1279's *original* commits, which develop no longer has
+as such (it has the squash), so without it the PR would have re-shown #1279's
+whole diff.
+
+End state verified against values, not just "git was quiet":
+
+    jax-jit streamdf xfail entries   0   (want 0)
+    torch useTM skips                4   (want 4)
+    out-of-place line                present
+    diff vs develop                  3 files, +24 / -30
+    conflict markers                 none
+
+Force-push was `--force-with-lease`. It is the one case where rewriting an open
+PR's history is correct -- a stacked PR whose base has just squash-merged -- and
+it matches the established retarget flow used for the Pdf.2 family PRs.
+
+    gh#1279  MERGED -> develop d2ad93c9
+    gh#1280  rebased ec7e67e2, CI restarting on the new base
+    gh#1274  READY, awaiting Jo
+    sweep    test_potential 1137+ cases, then test_orbit last
