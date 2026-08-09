@@ -223,3 +223,19 @@ Node count is not the lever (n=200 wrong-split = 6.2e-03; n=50 right-split =
 1.2e-10). Fix: `interior_point` = z where the wrapped mid-plane crosses the
 vertical line at (R, phi). Follow-up PR **after gh#1283** (needs the file
 gh#1283 reverted).
+
+### DECISION FOR JO — surfdens vertical quadrature (blocks 5 ledgered entries)
+
+Current rule splits at z=0; a displaced disk breaks it (6.4e-02 vs a 1e-4 bar).
+Measured options:
+
+- **(2) per-component composite surfdens** + the `_vertical_quad_split` hook
+  (built, unpushed, `backend-jit/rt-vertical-split`): exact (1.2e-10), no extra
+  cost, but needs composites to integrate component-wise.
+- **(3) hybrid panel rule** (clustered inner + geometric shells): 1.7e-06 on the
+  failing case AND improves the z=0 control 2.5e-09 -> 1.3e-15, needs no
+  per-potential knowledge -- but **5x the density evaluations** on a path whose
+  tests already run 300-400 s traced.
+
+Plain geometric grading (no clustered inner panel) is refuted: regresses z=0 by
+six orders. Not committing the 5x unilaterally.

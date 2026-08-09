@@ -35762,3 +35762,47 @@ on a Sunday; the branch stays unpushed and the 5 entries stay ledgered.
 **Method note.** I nearly reported "1 of 5 now passes" off the post-fix run
 alone. The A/B is what showed that pass was pre-existing and the fix contributed
 nothing -- [[verify-burndown-flips-stash-rerun]] earning its keep.
+
+### 2026-08-09 (cont.) — measured the three options; my preferred one was the worst
+
+Last entry listed three ways to finish the split-point fix and said I would not
+guess between them. Measured, on the failing offset wrapper and on a no-offset
+control that must not regress (numpy, pointwise, vs adaptive scipy):
+
+| rule | offset case | no-offset control | nodes |
+|---|---|---|---|
+| current (split at 0, clustered)          | 6.366e-02 | 2.501e-09 | 100 |
+| geometric panels K=4 n=50                | 1.664e-06 | **9.815e-03** | 450 |
+| hybrid: clustered inner + geometric shells, K=4 n=50 | **1.664e-06** | **1.330e-15** | 500 |
+
+Test bar is rel diff < 1e-4 (the assertion squares it against 1e-8).
+
+**Option 3 as I first wrote it is refuted.** Plain geometric grading fixes the
+offset case but regresses the ordinary z=0 case by **six orders** (2.5e-09 ->
+9.8e-03), because my panels threw away the clustering-toward-zero that makes the
+current rule so good for a disk at the origin. I had called (3) "the most
+reusable" -- it was the worst.
+
+**The hybrid works and is strictly better on both.** Keep the current clustered
+split-at-0 rule for the innermost panel, add geometric shells outside it: the
+offset case reaches 1.664e-06 and the control *improves* to 1.330e-15. It needs
+no per-potential knowledge, so unlike the `_vertical_quad_split` hook it also
+reaches the composite path these tests exercise. K=4 saturates; n=50 is required
+(K=4 n=30 gives 5.8e-04, just over the bar).
+
+**The catch is cost: 5x the density evaluations** (500 vs 100 nodes) on a path
+whose tests already run 300-400 s traced. That is exactly the
+[[migration-flips-numpy-fallthrough-to-eager-slow]] shape, so it is not a free
+win.
+
+So the real choice is now a measured trade-off, not a guess:
+
+- **(2) per-component composite surfdens** -- exact (1.2e-10 measured earlier via
+  the hook) at **no** extra cost, but needs composites to integrate component-wise
+  and only works where each component can declare its plane.
+- **(3-hybrid)** -- works everywhere with no declarations, **5x cost**.
+
+They compose well: (2) as the cheap default, hybrid as the fallback for
+potentials that cannot declare a plane. I am not committing a 5x slowdown on a
+shared hot path unilaterally while Jo is away -- recording it in STATUS for a
+decision, and the cheap half (2) is buildable meanwhile.
