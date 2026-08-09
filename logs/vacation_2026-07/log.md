@@ -32669,3 +32669,48 @@ Validated on the one finished file; matches the manual read exactly:
     gh#1279  60 pass / 25 running / 67 queued / codecov 12-of-27 uploads, rising
     gh#1280  2 pass / 105 queued
     sweep    test_galpypaper in flight, 8 files behind
+
+### 2026-08-09 — sweep results 1-3: inheritance was wrong in BOTH directions
+
+Three files done, and they settle the question gh#1279 raised, with numbers.
+
+**`test_FDMdynamfric.py`** is the clearest case. Eager `jax` defers 3 tests.
+Traced:
+
+     300.0s  FAIL  FDMDynamicalFrictionForce_central_limit    <- still slow, KEEP
+     300.0s  FAIL  FDMDynamicalFrictionForce_const_FDMfactor  <- still slow, KEEP
+     226.6s  pass  test_dynamfric_c                           <- UN-DEFERS
+       8.1s  pass  FDMDynamicalFrictionForce_classicalregime
+       4.7s  pass  FDMDynamicalFrictionForce_pickling
+       2.4s  pass  test_dynamfric_c_minr_warning
+       2.2s  pass  FDMDynamicalFrictionForce_const_FDMfactor_c
+       2.0s  pass  test_dynamfric_c_minr
+       0.1s  pass  FDMDynamicalFrictionForce_evaloutsideminrmaxr
+
+So within a **single file**, inheritance was wrong both ways: it would have kept
+deferring a test that traces fine, while the two that genuinely are slow traced
+had no traced entry at all. That is the argument for the split, measured rather
+than asserted.
+
+**Running totals, 3 of 10 files:**
+
+    file                 tests  eager entries  ->  jax-jit entries
+    test_dynamfric           7        1               1
+    test_FDMdynamfric        9        3               2   (1 un-defers)
+    test_galpypaper         15        1               0   (test_diskdf clears)
+                                      --                  --
+                                       5                   3
+
+**Zero defect candidates so far** -- every non-timeout test passed traced. The
+slow/defect split the classifier enforces has not yet had to fire, which is the
+outcome I want but not one I could have assumed.
+
+**One honest caveat**: `test_dynamfric_c` at 226.6 s clears the 240 s margin by
+only 5.6%. Measured alone on the machine, so it is a clean number, but it is
+marginal and worth re-checking if it ever flakes. It is comfortable on CI ratios
+(CI/local ~ 0.71 on jax shards, so ~161 s) -- though no CI job runs `--jit`
+today, so this is a local-run concern only.
+
+    gh#1279  90 pass / 24 running / 38 queued / codecov 17-of-28, rising
+    gh#1280  6 pass / 10 running / 91 queued  (started moving)
+    sweep    test_streamspraydf in flight, 6 files behind
