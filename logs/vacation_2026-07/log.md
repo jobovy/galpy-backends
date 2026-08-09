@@ -36521,3 +36521,33 @@ in this log.
 
 CI: gh#1284 112/153; gh#1285 still 2/151, starved behind it — expected with two
 PRs sharing a constrained runner pool, not a fault.
+
+### 2026-08-09 (cont.) — gh#1285 starved, but by legitimate runs: NOT cancelling
+
+gh#1285 has sat at 2/151 for 44 min. Checked for the stale-run pattern that
+caused two starvation incidents today. **There are none.** The 21 active runs are:
+
+* **9 on `9dc31569` = develop itself** — the post-merge matrix kicked off when
+  gh#1283 landed (44.8 min);
+* 8 on gh#1285 (43.9 min, queued);
+* 4 on gh#1284 (114 min, running).
+
+Three full matrices live at once. So this is oversubscription, not orphans.
+
+**Decision: leave develop's runs alone.** They are the post-merge health signal
+for the base branch — cancelling them would speed up my own PRs at the cost of
+Jo's visibility into whether develop is green after a merge. That is not a
+trade I should make unilaterally, and it is different in kind from cancelling a
+superseded SHA or a closed PR's orphans, which I have done freely today.
+
+Worth noting the develop runs are themselves **doubled** (Windows/notebooks/
+Linux-Mac/All-backend each appear twice) — the `push:` + `pull_request:`
+double-trigger already on the *Awaiting Jo* list. Every merge into develop now
+costs two full matrices instead of one, and today that lands directly on the
+PRs queued behind it. The concurrency and double-trigger gaps are not
+independent annoyances; they compound exactly here.
+
+No action available to me: both fixes need `workflow` scope. Recording the
+concrete cost — **gh#1285 idle 44 min behind a duplicated base-branch matrix** —
+since a measured example is more persuasive than the general complaint I filed
+earlier.
