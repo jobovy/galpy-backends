@@ -34017,3 +34017,44 @@ with `--force-with-lease`.
     develop   a45a4f1d
     gh#1281   rebased, CI restarting on the new base
     gh#1274   ready, awaiting Jo
+
+### 2026-08-09 — RotateAndTilt: this is a DESIGN CALL, not a fix. Not making it.
+
+Took the 5-entry RotateAndTilt burndown with the machine finally free, and
+stopped short of the change. What the code actually says:
+
+    # Opt-in escape hatch: a potential whose BACKEND evaluation broadcasts
+    # over a trailing node axis (``_backend_accepts_arrays``) may be handed
+    # the whole Gauss-Legendre node array ... Gated on every array argument
+    # being a BACKEND array, so the documented numpy contract -- these
+    # methods take scalars -- is unchanged
+
+Three things follow, and together they change the task:
+
+1. The flag does **not** mean "tolerates arrays". It means the backend
+   evaluation **broadcasts over a trailing node axis**, so the traced
+   surfdens/mass quadrature may hand it the whole GL node array at once. That
+   is a property to demonstrate, not a switch to flip.
+2. **Only `DoubleExponentialDiskPotential` sets it** -- one potential in the
+   whole tree, added for exactly that quadrature purpose.
+3. "These methods take scalars" is called **documented** in the comment. The
+   scalar-only contract is deliberate, not an oversight.
+
+Tried to measure the broadcasting property anyway -- array call vs scalar loop,
+element by element -- and the guard also wraps the private methods, so it cannot
+be probed from outside without editing the guard itself.
+
+So the honest position: **the fix is one of two designs, and choosing is Jo's.**
+Either opt the wrapper in (after demonstrating the trailing-axis property), or
+have the quadrature *fall back* to per-node evaluation when a potential is not
+opted in, instead of the guard raising. The second is arguably the better shape
+-- a missing opt-in should cost speed, not correctness -- but it changes a
+quadrature contract, which is not mine to redefine while Jo is away.
+
+Did not flip the flag. The ledger entry already carries the mechanism and the
+"do not flip before verifying" caveat, and gh#1281 is in CI, so I am not adding
+a commit to refine a comment at the price of restarting ~151 checks.
+
+    develop   a45a4f1d
+    gh#1281   149 queued on the new base
+    gh#1274   ready, awaiting Jo
