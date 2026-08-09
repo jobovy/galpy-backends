@@ -35456,3 +35456,23 @@ the 8 additions, that the jax sweep re-audits clean, and which two rows were
 re-measured on a clean tree and why.
 
 Branch is ready; it opens behind gh#1283 rather than now, keeping to two PRs.
+
+### 2026-08-09 — closing gh#1282 did not stop its CI; 8 runs were starving gh#1283
+
+gh#1283 sat at 2/151 with nothing starting — the same standstill as gh#1281
+earlier today, so I checked the same thing and found the same shape of cause:
+
+    8 runs still ACTIVE on e1fa8bf9  (the CLOSED PR's SHA, branch deleted)
+
+Closing a PR does not cancel its runs, and deleting the branch does not either.
+Cancelled all 8. Safe without argument this time: the PR is closed, the branch
+is gone, and those commits fail their own gate — none of it gates anything.
+
+Second instance today of runner starvation from work nobody wants, from two
+*different* causes (an orphaned pre-rebase SHA, then a closed PR's runs). Both
+have the same root: **no `concurrency:` group in the workflows**. That item is
+already in *Awaiting Jo*; this is a second, independent argument for it, and I
+have added the cancel recipe to memory so the manual workaround is one command.
+
+Cancellation is async — the count read 8 immediately after the requests and 1
+twenty seconds later, so re-query rather than concluding the cancels failed.
