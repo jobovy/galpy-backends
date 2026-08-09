@@ -32022,3 +32022,28 @@ streamTrack serial re-measure launched next (3 h budget, alone), then streamdf.
     gh#1278  64 pass / 87 pending / project 69.95% -> 71.59%, patch still 0.00%
     gh#1274  151 pass / green
     #194     ce7b3f48, rebased onto develop 44b06e31
+
+### 2026-08-09 — gh#1278 down to one red, and it is the predicted one
+
+    codecov/project  86.05% (-0.01%)   SUCCESS   <- resolved on its own
+    codecov/patch    0.00%             FAILURE   <- covering shard still pending
+
+Worth noting because the two resolved differently and that was predictable.
+`project` is computed over the whole repo, so every shard that uploads moves it,
+and enough have now landed for it to close. `patch` is computed over the changed
+lines only, and this diff is confined to
+`AnyAxisymmetricRazorThinDiskPotential.py` + `test_backend_anyaxisymdisk.py` —
+so it cannot move at all until the one shard that executes those files reports.
+Both `tests/test_backend*.py` jobs are still pending (build run: 9 completed,
+11 in progress, 6 queued).
+
+So the same uploads that fixed project are structurally incapable of fixing
+patch. That asymmetry is the diagnostic: a `patch` red that sits at exactly
+0.00% while `project` climbs is a scheduling fact, not a coverage fact.
+
+streamTrack's serial re-measure is at 44/45, worker at ~208% CPU, ~14 min in
+against a 3 h budget. The tail is where the time is, as with noninertial.
+
+    gh#1278  94 pass / 58 pending / 1 red (patch, explained)
+    gh#1274  151 pass / green
+    #194     002b721a -- rule + #171 bars + 9 measured noninertial jit entries
