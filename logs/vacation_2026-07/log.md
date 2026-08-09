@@ -33931,3 +33931,31 @@ until one lands.
     gh#1280   100 pass / 30 running / 22 queued / codecov project only
     gh#1281   just opened
     gh#1274   ready, awaiting Jo
+
+### 2026-08-09 — gh#1280 codecov cleared; 132/153, no reds
+
+`codecov/project` on gh#1280 went green when its uploads completed:
+**99.95% at 27 of base's 28 sessions**, matching base exactly. That is the third
+time this cycle the phantom resolved itself with no intervention, and the third
+time the `sessions` count predicted it. gh#1280 now carries **no reds at all**.
+
+    132 pass / 17 running / 4 queued
+
+The remaining checks are the long shards plus `all-clear`, which is last by
+design. Its **audit is already done and still valid**:
+
+    if -> xp.where class : the streamdf change contains no `if` at all
+    duplication          : `numpy.array([ro,ro,ro,vo,vo,vo])` occurs exactly
+                           once in the whole tree -- that line
+    helper placement     : no new helper introduced
+
+and the post-rebase content was verified **by value** (0 streamdf jax-jit
+entries, 4 torch useTM skips, out-of-place line present, no conflict markers),
+not merely by git staying quiet. So it can merge as soon as the last checks
+land.
+
+gh#1281 has started its first cycle: 3 running, 146 queued.
+
+    gh#1280   132 pass / 21 pending / NO REDS -- audit done, ready to merge
+    gh#1281   just started
+    gh#1274   ready, awaiting Jo
