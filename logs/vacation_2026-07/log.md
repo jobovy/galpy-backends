@@ -33061,3 +33061,45 @@ measurement, and it is the first of its kind.
     gh#1279  135 pass / 13 running / 5 queued / NO REDS  -- close
     gh#1280  65 pass / 25 running / 18 queued / codecov PATCH CLEARED, project left
     sweep    test_actionAngle (209 tests) in flight, then potential + orbit
+
+### 2026-08-09 — burndown map of the 14 ledger entries left after gh#1280
+
+Merge prerequisites re-verified first: develop still `f963eb42`, gh#1279 head
+still `d3545330` (the SHA I audited), gh#1280 still `5ff4464c`. So the audit and
+the merge rehearsal are both still valid. gh#1279 is `MERGEABLE` / `BLOCKED`,
+blocked only on 11 pending checks -- no conflicts.
+
+Classified what the ledger actually contains once the pair lands (14 entries):
+
+**By design / not traceable -- 4.** `test_qdf::test_call_diffinoutputs` (jax +
+torch; the unbound pair is by design) and the two `jax-jit` pickling entries
+(units make them not traceable). These are not burndown candidates at all; they
+are the floor.
+
+**Known defects that already have an owner -- 5.** `AdiabaticGrid_outsidegrid_c`
+(jax + torch) is the 4.7e-3-vs-1e-8 off-grid accuracy defect -> the AA grid
+off-grid fallback work. `AnyAxisym` `poisson_surfdens` (jax-jit + torch-jit) and
+`2ndDeriv` (jax-jit) trace to the accuracy issue filed as gh#1277.
+
+**Orbit, uncharacterised -- 4.** `test_analytic_ecc_rperi_rap` (jax + torch),
+`test_analytic_zmax` (jax), `jax-jit test_eccentricity`. The file's own header
+warns about one of these specifically: *`test_analytic_ecc_rperi_rap` passes
+locally but xfails in CI group g3* -- a pytest-split shard-context effect, so it
+must not be re-measured on the dev box.
+
+**Tolerance under tracing -- 1, and possibly already stale.**
+`jax-jit StaeckelGrid_basicAndConserved_actions` was kept in gh#1279 on the
+principle that *eager evidence cannot un-ledger a traced entry*. But gh#1279
+also made that bar backend-aware, `1e-16` -> `1e-9` for non-numpy, and the
+measured `jax-jit` value is **9.363e-12** -- which now clears `1e-9` by two
+orders of magnitude.
+
+So the entry is **predicted** to xpass traced. Stated as a prediction, not a
+result: `test_actionAngle.py` is running in the sweep right now, and its junitxml
+will settle it with traced evidence -- exactly the evidence the earlier decision
+said was required. If it xpasses, that entry un-ledgers and the pair's net
+becomes 17 -> 13.
+
+    gh#1279  142 pass / 10 running / 1 queued / NO REDS
+    gh#1280  73 pass / 28 running / 7 queued / codecov project only
+    sweep    test_actionAngle 72/209
