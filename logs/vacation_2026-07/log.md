@@ -37141,3 +37141,34 @@ is lying to me, not the fix.
 Note the entries do not exist in either tree's ledger (both predate gh#1284's
 merge), so the tests run for real rather than being skipped — no `--runxfail`
 needed, and no risk of [[ledger-entry-hides-its-own-remeasurement]].
+
+### 2026-08-09 — A/B result (BASE side) + gh#1286 runtime cost stated up front
+
+**BASE side of the torch --jit A/B is in: 5 failed, 1 xfailed, 112.3 s.** The 5
+failures are an exact match for the 5 entries gh#1284 added:
+
+    mockOffsetMWP14WrapperPotential
+    mockRotatedAndTiltedMWP14WrapperPotential
+    mockRotatedAndTiltedMWP14WrapperPotentialwInclination
+    mockRotatedAndTiltedTriaxialLogHaloPotentialwInclination
+    mockRotatedTiltedOffsetMWP14WrapperPotential
+
+and the 1 xfail is the `AnyAxisym` control, which is ledgered for an unrelated
+reason and stayed red as required. **So the "bad" side reproduces**, which is
+the precondition for the fix side to mean anything. FIX side still running, and
+notably *slower* — consistent with the fix making these tests do real quadrature
+instead of failing fast at the array guard.
+
+**gh#1286: stated its own runtime cost in the PR body rather than letting a
+shard timeout announce it.** Un-deferring 24 tests puts them back in the jax
+shards:
+
+    test_noninertial.py   11 entries    359.7 s  (6.0 min)
+    test_orbit.py         13 entries   1559.3 s (26.0 min)
+    total                 24          1919.0 s (32.0 min)   -> ~23 min at CI's 0.71x
+
+That is the kind of thing that surfaces as an unrelated red on a *later* PR if
+nobody writes it down. The body now names the two entries to re-defer first if a
+jax shard goes long (`test_dxdv_3d_c_vs_python[OblateStaeckel...]` 237.9 s and
+`test_linacc_changingacc_xyz_accellsrframe_vecomegaz` 235.8 s), so the lever is
+identified before it is needed.
