@@ -36989,3 +36989,38 @@ moved, and force-cancelled the 7 runs still executing on the superseded SHA --
 `gh run cancel` no-ops on queued runs, so that needs the `force-cancel`
 endpoint. Test-only change: no source touched, numpy path unaffected.
 Whole file 529 passed; all three lines verified executed under coverage.
+
+### 2026-08-09 (cont.) — the dissipative-composite defect, characterised
+
+Ran the discriminator rather than reasoning about it. Under forced torch:
+
+    CompositePotential([MN, Hernquist])                    _backend_ready = True
+    CompositePotential([MN, Hernquist, ChandrasekharDF])   _backend_ready = False
+    get_namespace(0.5, 2.0)                             -> torch  in BOTH cases
+
+So `@backend_input`'s gate is `xp is not numpy and _backend_ready(args[0])`,
+while the method body resolves its **own** `xp = get_namespace(...)`, which
+under a forced backend ignores `_backend_ready` entirely. When the gate says
+"not ready" the coordinates stay Python floats and the body still takes the
+backend branch — `xp.abs(z)` on a float, and torch raises.
+
+The sharp part: `surfdens` **filters dissipative members out** and never touches
+the friction term, yet its presence flips the whole composite. **The gate is
+per-object; the coercion need is per-call-path.**
+
+Deliberately NOT fixing it in this wait. It is not a local patch — the two
+notions of "are we on the backend" have to be made to agree, either by teaching
+the body to respect `_backend_ready` or by making the gate stop being
+per-object, and `_backend_ready` is already marked TEMPORARY with a documented
+history of a removal that was tried, measured and reverted (#1196, four
+independent breakages). Patching the `xp.abs` site would hide it. Recorded in
+the existing gate memory with the measurement, as its own follow-up.
+
+Also settled by simulation rather than assumption: the burndown branch merges
+**cleanly against both current develop and gh#1284's head** (`git merge-tree`,
+0 conflicts each). Both delete lines from `backend_slow_skip.txt`, which looks
+like a certain conflict, but the deleted sets are disjoint and git resolves it
+at line level — so no rebase is needed once gh#1284 lands.
+
+gh#1284 sits at **152/154, zero red**, waiting only on `all-clear` and a queued
+`backend status report` — runner contention, nothing to fix.
