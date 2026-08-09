@@ -33611,3 +33611,39 @@ Follow-up branch: `9fe4a647` -> `20e2f86b` -> `532f251f`, ledger at 31.
     gh#1280   3 pass / 8 running / 140 queued
     gh#1274   ready, awaiting Jo's review
     sweep     test_orbit 279 outcomes and counting -- last file
+
+### 2026-08-09 — the 2 concretization entries are ONE root: mass() uses scipy.quad (`1fc19ede`)
+
+The sweep's junitxml carries full tracebacks, so this cost nothing to extract --
+and it collapsed "a gap in two composite MW potentials" into a single cause:
+
+    McMillan17   Potential.mass -> KuijkenDubinskiDiskExpansionPotential._mass
+                 L485: integrate.quad(_integrand, 0.0, numpy.pi)
+                 -> scipy _quadpack_py.py:626 -> ConcretizationTypeError on float()
+
+    Cautun20     fails at CONSTRUCTION, not evaluation:
+                 mwpotentials.py:86 -> Cautun20.py:105
+                 -> AdiabaticContractionWrapperPotential.__init__ L95
+                 -> Potential.mass L2317 -> the same wall
+
+**`mass()` integrates with `scipy.integrate.quad`, which calls `float()` and so
+rejects a tracer.** One missing backend-native mass quadrature, hit once while
+evaluating and once inside a wrapper's `__init__`. That is materially different
+work from chasing two potentials -- and the same treatment the other migrations
+already got.
+
+Cautun20 failing in `__init__` is the more interesting half: it means the
+potential cannot even be *constructed* under a trace, so no amount of fixing its
+evaluation would help.
+
+Three ledger entries now name mechanisms rather than symptoms:
+
+    RotateAndTilt (5)   `_backend_accepts_arrays` never set -> one-flag opt-in,
+                        gated on verifying array-correctness first
+    McMillan/Cautun (2) mass() -> scipy.quad -> not traceable
+    AnyAxisym (1)       traced Phi wrong at exactly z==0, A/B'd as pre-existing
+
+Follow-up branch: `9fe4a647` -> `20e2f86b` -> `532f251f` -> `1fc19ede`.
+
+    gh#1280   3 pass / 10 running / 138 queued
+    sweep     test_orbit 290 outcomes, 43 min in -- last file
