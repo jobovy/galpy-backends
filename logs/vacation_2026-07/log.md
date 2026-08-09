@@ -36871,3 +36871,40 @@ Also of note: `pkill -f "setup.py build_ext"` killed its own command chain again
 (the wrapper's argv contains the pattern). Killed by PID instead. Second time
 this exact trap has cost a command; it is in memory and I still reached for
 `pkill` first.
+
+**Burndown branch gated properly.** Before opening the 24-entry PR I checked the
+claim it actually rests on — that each dropped entry is *fast **and** green*,
+not merely fast. Matched all 24 nodeids into the junitxml of the run that
+measured them:
+
+    24/24 located, 24/24 pass, slowest 237.9 s (bar: 240 s)
+
+Two process notes from doing it, both of which nearly produced a false green:
+
+* my first matcher keyed on the junitxml `file` attribute, which these files do
+  not set — it located **0 of 24** and then printed `NON-PASS: none`. A
+  vacuously clean result from an empty match set, which is the
+  [[ab-must-reproduce-before-it-can-clear]] failure mode in a new costume. The
+  fix is to assert the located count, never just the failure count.
+* the second matcher took "most recent xml wins" and pulled the noninertial rows
+  out of **`ni_jit.xml`** — the *traced* run — while the entries being dropped
+  are eager. Right numbers, wrong population. Re-pinned each group to its own
+  measurement (`ni_eager.xml`, `oe.xml`); that is the table above.
+
+**Measurement in flight** (survives this wake): `/var/tmp/torch-orbit-m`
+(clean `9dc31569`, ledger dirty by design — the 9 target lines removed),
+9 unmeasured jax eager entries, `test_interp_potential` (6) +
+`test_FDMdynamfric` (3), under forced jax `-n 8`, 900 s cap, junitxml at
+`/var/tmp/torch-orbit-m/jax_interp_fdm.xml`. Launched 18:43, 28/49 at 18:46.
+Next wake: classify by **duration** against the 240 s bar (`d < 240 and no
+timeout-failure`), not by pass/fail.
+
+**CI.** gh#1284 140/153, **0 red**. gh#1285 picked up a `run-notebooks (3.11)`
+red — the VizieR `DALServiceError: Unable to access the capabilities endpoint`
+flake in `known_objects.ipynb`, i.e. a re-run, not a fix. It sat in the **push**
+run, which must not be cancelled, and a job cannot be re-run while its run is
+in progress; once that run completed I re-ran the single job and **verified**
+it went to attempt 2 rather than trusting the silent exit. gh#1285's remaining
+2 reds are codecov at ~35/153 checks — its compare endpoint still returns bare
+SHAs with `totals: null`, so the promised patch-coverage re-check is **not yet
+readable** and stays open rather than being explained away early.
