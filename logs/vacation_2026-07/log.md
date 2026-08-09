@@ -33535,3 +33535,41 @@ by construction"), inherited from the dyadic version rather than introduced.
 
     gh#1280   on the new base, CI running
     sweep     test_orbit -- last file
+
+### 2026-08-09 — the 8 traced defects filed with diagnoses (`20e2f86b`)
+
+With the attribution settled, put all 8 into the follow-up branch as **xfail
+entries carrying their own measurements**, so the next person does not re-derive
+any of it.
+
+    tests/backend_xfail.txt   23 -> 31
+
+**That number going UP is not a quality drop, and the file says so.**
+`test_potential.py` has only per-test eager slow-skip entries, never a
+whole-file one -- so the rest of it already ran traced *before* gh#1279. Nobody
+was looking, because no workflow runs `--jit`. All 8 pass eager; develop merged
+green at 154/154. The sweep is simply the first end-to-end traced measurement of
+that file, and this is the result being written down. Same shape as streamdf's
+10, and the opposite of hiding them behind a performance deferral.
+
+Filed as **xfail, not permanent skip**, for all three causes -- each is
+plausibly fixable, so each stays a burndown item rather than an exclusion:
+
+    5  RotateAndTilt scalar-only guard vs 0-d traced arrays
+    2  ConcretizationTypeError (McMillan17, Cautun20)
+    1  AnyAxisym traced Phi wrong at exactly z==0  [pre-existing, A/B'd]
+
+Follow-up branch now: `9fe4a647` (8 measured slow-skip + 1 un-ledger) ->
+`20e2f86b` (8 diagnosed ledger entries). Still local; `test_orbit` is the last
+file and will add to both lists before it opens.
+
+Running ledger arithmetic, all steps accounted:
+
+    develop pre-#1279  17
+    #1279              +10 -3        ->  24
+    follow-up          -1  (stale)   ->  23
+    follow-up          +8  (traced)  ->  31
+    #1280              -10           ->  21
+
+    gh#1280   2 pass / 149 queued
+    sweep     test_orbit in flight
