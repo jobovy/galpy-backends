@@ -34836,3 +34836,34 @@ gh#1279 said it would not accept from an eager run.
 
 **Verdict: ready to squash-merge the moment CI completes.** Nothing in the diff
 touches the numpy path, because nothing in the diff touches code at all.
+
+### 2026-08-09 — post-merge sequence prepared and set-verified
+
+gh#1281: **134 green, 19 running, 0 red**. `mergeable=MERGEABLE`,
+`mergeStateStatus=BLOCKED` — blocked only on the pending required checks, which
+are the heavy `test_orbit` shards plus `all-clear`. Nothing to fix.
+
+Wrote `/var/tmp/post_merge_defects_pr.sh` so the merge → next-PR transition is
+one command instead of hand-editing under time pressure. The risky step is
+deleting exactly the 7 ledger lines the held branch invalidates: an over-broad
+match there would silently un-defer unrelated tests, and that does not surface
+until CI. So the script:
+
+* matches with `grep -qxF` (whole line, fixed string) — nodeids contain `[...]`,
+  which is a regex character class;
+* **aborts** if any of the 7 is not present after the rebase (i.e. if gh#1281
+  changed under me);
+* **aborts** unless the line count drops by exactly 7;
+* does **not** push or open — it prints the diff for review, because the pytest
+  gate still has to pass first.
+
+Verified the drop list by set arithmetic rather than by reading it:
+
+    1281 adds      : 8
+    script drops   : 7
+    drop ⊆ added   : True
+    kept           : forceAsDeriv[AnyAxisymmetricRazorThinDiskPotential]
+
+The one kept entry is exactly right — AnyAxisym is the pre-existing defect this
+branch does *not* fix, filed separately and confirmed cross-backend. Had I
+written the drop list from memory I would very plausibly have taken all 8.
