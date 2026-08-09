@@ -36943,3 +36943,49 @@ The same check kills a target I might otherwise have picked: the 12 jax
 ~1750-1840 s, `test_Cautun20` ~1440 s). At 5-9x the cap those are not going to
 fall to a stopwatch; they need SCF/Multipole/wrapper vectorisation. Not a
 burndown target — a Track-A work item.
+
+### 2026-08-09 (cont.) — asked codecov WHICH lines, and found two real gaps
+
+gh#1285's patch coverage had climbed 17.64 % -> 56.86 % as uploads landed
+(2 -> 17 of 25 sessions), which is the phantom signature. Rather than wait for
+the verdict I asked the `file_report` endpoint *which* lines were flagged. Two
+of the three files' flagged lines turned out to be real, and would have failed
+the check at full upload -- `codecov.yml` sets no patch target, so the default
+is `auto` = the base's **99.95 %**, and 50/51 lines is 98.04 %.
+
+**`RotateAndTiltWrapperPotential.py:189`** -- the `return 0.0` for identity
+rotation and no offset. Constructible (`zvec=[0,0,1], galaxy_pa=0.`) and
+verified so. Covered by a fifth `_SPLIT_CASES` entry asserting the result is a
+plain `0.0` **float**, which is the property callers depend on to skip the
+`xp.where` entirely.
+
+**`CompositePotential.py:318` and `:352`** -- the backend branch of *both*
+delegating surfdens routes. **Nothing in that 527-test file was running them.**
+`get_namespace` only leaves numpy once the inputs are backend arrays, and the
+existing composite test passes numpy scalars deliberately (its assertions are
+structural, because a value check is vacuous on the eager path). So the third
+of the four links in this PR's own fix had no test at all -- a coverage report
+found a test gap, not just a reporting gap.
+
+The new test pins the contract both routes owe: the sum over the
+**non-dissipative** components, with a friction term present so the
+`isDissipative` filter has to hold. Writing it caught my own error -- the
+density route delegates to the *public* `surfdens`, which applies each
+component's `_amp`, and my first reference summed the private `_surfdens`
+without it (0.0397 vs 0.0863, a 54 % gap). A test that had asserted something
+weaker would have sailed past that.
+
+**And it surfaced a separate pre-existing defect.** With a dissipative member,
+the composite is not backend-compatible, so `@backend_input` skips the
+coercion while `get_namespace` still resolves to the forced backend -- `z`
+reaches `xp.abs` as a Python float and torch raises. A/B'd on a clean develop
+worktree: **identical failure without any of this PR's overrides**, so it is
+pre-existing and belongs to its own fix. The test calls the private methods
+with backend scalars to stay clear of it, and says so in its docstring rather
+than quietly routing around it. Filed as a follow-up, not folded in.
+
+Pushed as a NEW commit `a2d24422` (never amend an open PR), verified the PR head
+moved, and force-cancelled the 7 runs still executing on the superseded SHA --
+`gh run cancel` no-ops on queued runs, so that needs the `force-cancel`
+endpoint. Test-only change: no source touched, numpy path unaffected.
+Whole file 529 passed; all three lines verified executed under coverage.
