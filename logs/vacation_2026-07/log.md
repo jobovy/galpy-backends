@@ -35613,3 +35613,47 @@ Fix direction for the follow-up: pass the wrapper's shifted mid-plane as
 `interior_point`. That reaches ~2.4e-4, still short of the 1e-8 bar, so node
 count or placement needs work on top — this is the dominant term, not a
 finished fix.
+
+### 2026-08-09 (later) — RETRACTION: the "confirmation" above is withdrawn
+
+The entry immediately above claims the split-point mechanism is confirmed and
+reproduces the 6.8e-02 failure. **Withdrawn.** A more careful measurement does
+not reproduce those figures, and the probe that produced them did not exercise
+the code path under test.
+
+What actually reproduces, via the tree's **own** `symmetric_quad` (numpy,
+integrand evaluated pointwise so the rule is isolated from broadcasting), at the
+exact failing point `R=0.5, Z=10, phi=0`:
+
+    scipy reference (surfdens) : 7.699991374572e-02
+    n=50   interior_point= 0.0 : rel.err 1.797e-04
+    n=50   interior_point=-1.0 : rel.err 1.983e-15
+    n=400  interior_point= 0.0 : rel.err 3.484e-09
+
+A hand-rolled clustering and the tree's rule agree to within a factor of ~1.1 on
+these, so the **split point is real and it is worth 11 orders of magnitude**.
+On its own it already blows the test's tolerance. That much stands.
+
+What does **not** stand is the magnitude attribution. Split-at-0 costs 1.8e-04,
+not the observed 6.8e-02, so the split point is **not sufficient** to explain
+the failure. The earlier 6.752e-02 / 2.391e-04 pair is not reproducible by me
+and is withdrawn rather than explained.
+
+Two structural findings that make the earlier probes worthless:
+
+1. **Eager jax never runs the backend quadrature.** `_quad_needs_backend`
+   routes to `scipy.integrate.quad` (Potential.py:811) under a forced-but-
+   untraced backend. Every eager probe of this path measures scipy, not the GL
+   rule. This is [[value-checks-cannot-see-numpy-fallback]] again, in a new spot.
+2. The same probe silently ran in **float32** (jax x64 off), so even its
+   agreement would not have been evidence.
+
+**The lesson, and it is the same one twice in one day.** I refuted the
+hypothesis using the wrong potential, then "confirmed" it using a proxy that
+never entered the code path. Both errors have one shape: I built something that
+*resembled* the failing test instead of running the failing test. A proxy can
+support a mechanism; it cannot confirm a number. The reproduction must be the
+real assertion in its real mode — here, `--backend jax --jit`.
+
+Now running the actual nodeid traced, with the reverted broadcast fix restored,
+to get the 6.8e-02 in situ. Reporting that number when it lands, not before.
