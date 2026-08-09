@@ -32080,3 +32080,32 @@ slowest test was 242.6 s concurrent, 1% over the margin. If serial puts it under
              STARTED (16 done, 10 running, 0 queued); the test_backend* shards
              that gate patch are among the running ten.
     gh#1274  151 pass / green
+
+### 2026-08-09 — a codecov check can go green and then red again with no PR change
+
+gh#1278's `codecov/project` passed at 86.05% (-0.01%), then failed at 86.05%
+(-13.91%) two wakes later. The PR head never moved. What changed is the base:
+
+    patch target   86.05%  ->  99.95%
+    project        -0.01%  ->  -13.91%   (same 86.05% on this PR)
+
+Codecov compares against an **adjusted base** when the base commit's own
+coverage is incomplete. develop's push run (from #1275's merge) was still
+uploading, so the adjusted base was 86.05% and #1278 matched it exactly. Once
+develop finished uploading, the real base became 99.95% and the same #1278
+number became a 13.91-point drop.
+
+So a green `codecov/project` is not durable while either side is still
+uploading. It is not evidence the PR is fine; it can be evidence that both sides
+are equally incomplete. The stable signal is still the one identified earlier:
+**has the shard that covers the diff reported?** For #1278 that is
+`tests/test_backend*.py`, and it has not — which is why `patch` has sat at
+exactly 0.00% through both the green phase and the red phase.
+
+Practical consequence: do not treat an early `codecov/project` pass as a reason
+to stop watching, and do not treat its later failure as a regression. Both
+states are the same fact -- incomplete uploads -- read against different bases.
+
+    gh#1278  123 pass / 28 pending / 2 codecov reds, both base/shard artifacts
+    gh#1274  151 pass / green
+    streamdf serial: 71/79
