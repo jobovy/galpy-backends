@@ -35888,3 +35888,38 @@ Two hypotheses tested and refuted along the way: that clamping the split to the
 interval edge caused the tilted regressions (fallback-to-0 gave byte-identical
 results), and that the tilted splits were bad (they match the peak to ~1%).
 Branch `backend-jit/rt-vertical-split`, local, unpushed.
+
+### 2026-08-09 (cont.) — regression tests for the split fix, A/B'd
+
+`backend-jit/rt-vertical-split` had a real 8-order accuracy fix with nothing
+pinning it. Added 6 tests to `test_backend_wrappers.py`: **6 pass with the fix,
+6 fail without it.**
+
+Design notes worth keeping:
+
+- the split is checked against `_rect_transformed` (does the wrapped z' actually
+  vanish there, <1e-12?) rather than against a re-derivation of my own formula --
+  a self-consistent re-derivation would not catch a sign error or a transposed
+  rotation;
+- the quadrature test asserts **both** arms: accurate at the mid-plane (<1e-8)
+  *and* visibly wrong at 0 (>1e-2). One-sided, it could pass on an integrand
+  that happened to be easy;
+- the composite test is structural. My **first draft compared values and passed
+  vacuously on jax without the fix** -- untraced, both routes go through the same
+  adaptive scipy quadrature and agree no matter what. Its torch arm "failed"
+  only on an incidental pre-existing TypeError, i.e. for the wrong reason. Caught
+  by running the A/B rather than trusting 7 green.
+
+That is [[value-checks-cannot-see-numpy-fallback]] wearing a different hat: a
+test that exercises the fallback measures the fallback, and passes whether or
+not the code under test is right.
+
+**CI:** gh#1283 90/153 green (unchanged this wake -- its remaining jobs are the
+long Windows/notebook ones, 122 min in), gh#1284 spinning up. Only red on either
+is the codecov/project phantom, now confirmed numerically (base 28 sessions @
+99.95%, head 14 @ 72.28%, patch 100%).
+
+Correction to last wake: I said opening gh#1284 would cost gh#1283 "close to
+nil". gh#1283 completed **zero** checks this wake while gh#1284 ran 7. That is
+weak evidence, not proof -- the outstanding gh#1283 jobs are genuinely long --
+but I stated it more confidently than I had grounds for.
