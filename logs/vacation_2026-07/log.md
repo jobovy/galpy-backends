@@ -34889,3 +34889,31 @@ days while I kept asking for it). This one has not. No action.
 gh#1281: **139 green, 14 running, 0 red**, still `BLOCKED` on the remaining
 `test_orbit` shards + `all-clear`. Audit done, post-merge script prepared and
 set-verified. The merge is a one-liner the moment those 14 land.
+
+### 2026-08-09 — first NEW torch defect in test_orbit: test_eccentricity
+
+    tests/test_orbit.py::test_eccentricity FAILED    ~0.4 s
+
+**0.4 s, so a defect, not a timeout** — and it is **not ledgered** for torch in
+any form: not a slow-skip entry, not an xfail. So it is a genuine traced defect
+that inheritance could never have surfaced, since inheritance only carries
+*eager* entries forward and this was never one.
+
+Mechanism unknown until the junitxml lands (tracebacks are written at session
+end, not streamed by `-v`), so it is filed as found-not-diagnosed. Not guessing:
+`test_eccentricity` touches the orbit analytic/eccentricity path, and there are
+at least three plausible causes on the torch traced path, which is exactly the
+situation where a guess would get written down and later quoted.
+
+Running torch tally now:
+
+| file | slow (cap) | defects | notes |
+|---|---|---|---|
+| `test_dynamfric` | 1 | 0 | the eager entry, kept |
+| `test_FDMdynamfric` | 1 | 1 | entry reclassified slow→defect; 1 new slow |
+| `test_potential` | 1 | 1 | vs jax's 0 slow / 8 defects |
+| `test_orbit` (running) | 0 so far | **1 new** | 11 of its 13 entries have **dropped** |
+
+The shape that keeps repeating: **the eager list is wrong in both directions at
+once** — entries that evaporate traced (11 of 13 here, 9 of them ~50x inside the
+margin) sitting alongside failures nobody had recorded at all.
