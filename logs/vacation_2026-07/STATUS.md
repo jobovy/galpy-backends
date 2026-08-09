@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-09 (19:12 EDT)
+# Vacation status snapshot — 2026-08-09 (19:20 EDT)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -7,18 +7,24 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## PR pipeline
 
-develop is at **`9dc31569`**.
+develop is at **`277bf897`**.
 
 | state | PR | effect |
 |---|---|---|
-| **merged today** | gh#1279, gh#1280, gh#1281, **gh#1283** | develop `f963eb42` → `d2ad93c9` → `a45a4f1d` → `de0745c5` → **`9dc31569`** |
+| **merged today** | gh#1279, gh#1280, gh#1281, gh#1283, **gh#1284** | develop `f963eb42` → `d2ad93c9` → `a45a4f1d` → `de0745c5` → `9dc31569` → **`277bf897`** |
 | **open, FOR JO** | **gh#1274** → `main` | **151 green, MERGEABLE.** Targets `main`, so it is yours. Also the sole blocker on #211(B) — see below |
-| **open** | **gh#1284** `backend-jit/torch-sweep-fixes` @ `19832bb1` | torch half of the traced sweep. **152/154 green, 0 red**; only `all-clear` + the status-report comment outstanding. Audit done — merges on green |
 | **open** | **gh#1285** `backend-jit/rt-vertical-split` @ `a2d24422` | the RotateAndTilt vertical-split fix, **clears 10 ledger entries**. Just gained a coverage commit (below); CI restarted from it |
-| **ready, unpushed** | `backend-jit/eager-undefer-measured` @ `72873140` | **−24 measured-stale eager-jax ledger entries.** Committed, gated, PR body written (`/var/tmp/noninertial/PRBODY.md`). Waiting only on a PR slot |
+| **open** | **gh#1286** `backend-jit/eager-undefer-measured` | **−24 measured-stale eager-jax entries**, `slow_skip` 108 → 84. Every dropped entry verified fast AND green. CI just started |
 | **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
-Two PRs at a time, so the burndown branch opens when gh#1284 merges.
+Two PRs at a time: **gh#1285 + gh#1286**, both open, neither blocked on me.
+
+**gh#1285 needs no rebase.** The standing plan said to rebase it onto the new
+develop and drop the 5 torch-jit lines — but that means a **force-push** on an
+open PR, which is forbidden and would discard its CI. `git merge-tree` shows the
+un-rebased branch merges cleanly (0 conflicts), so those 5 lines become their own
+follow-up, which also lets them get the **torch --jit** evidence the drop
+actually requires (gh#1285 only gated eager torch).
 
 ## Where the ledger actually stands
 
@@ -27,8 +33,8 @@ PRs in flight, pick targets from the projection):
 
 | file | develop | projected |
 |---|---|---|
-| `backend_slow_skip.txt` | 118 | **84** |
-| `backend_xfail.txt` | 19 | 23 → **18** after gh#1285's post-rebase drops |
+| `backend_slow_skip.txt` | 108 (post-gh#1284) | **84** via gh#1286 |
+| `backend_xfail.txt` | 28 | **23** after gh#1285, → 18 with the torch-jit follow-up |
 
     slow-skip projected:  jax 51 | jax-jit 26 | torch-jit 6 | torch 1
 
@@ -42,11 +48,22 @@ staleness so far is 24 of 44 (55 %), but what is left is documented slow:
 need SCF/Multipole/wrapper vectorisation. **The burndown is near its floor; the
 next real lever is vectorisation.**
 
-One measurement in flight: the 9 jax `test_interp_potential` + `test_FDMdynamfric`
-entries, worth re-running not because they are unmeasured but because their
-numbers predate the adapter work in #1271/#1272/#1273, which removed exactly the
-per-point XLA dispatch the ledger cites as their cause. 48/49 done, **3 F's** —
-to be classified by **duration**, not by the letter.
+**The eager-jax burndown is now CLOSED, and the last measurement refuted my own
+hypothesis.** I re-ran the 9 jax `test_interp_potential` + `test_FDMdynamfric`
+entries expecting the adapter work (#1271/#1272/#1273) to have gutted the
+per-point XLA dispatch the ledger names as their cause. It had not:
+
+    drop = 0    keep = 9    defects = 0        (49 tests, 1935.1 s)
+
+Four hit the 900 s cap (`Failed: Timeout` — *slow*, not defects; reading the
+letter would have moved four correct entries into the xfail ledger), the other
+five ran 356-701 s against a 240 s bar. `test_interpolation_potential_c` was
+ledgered at 263 s and now measures **438.6 s**. So the entries stand.
+
+Cumulative: **24 of 44 measured stale** (noninertial 11/19, test_orbit 13/25),
+**0 of 9** for interp/FDM, and 12 jax `test_potential` entries documented at
+1440-2641 s that no stopwatch will rescue. Every eager-jax cluster worth
+measuring has now been measured.
 
 ## What the coverage check found in gh#1285
 
@@ -95,10 +112,12 @@ cancel` silently no-ops on queued runs), and `build.yml` triggering on both
 
 ## Queued next, in order
 
-1. Merge **gh#1284** on green (audit done), then push the **24-entry burndown**.
-2. **gh#1285** → green; after gh#1284 lands, rebase it and drop the 5 torch-jit
-   `poisson_surfdens` lines named in gh#1284's body.
-3. Classify the in-flight jax interp/FDM measurement by duration; un-defer what
-   is genuinely stale.
+1. **gh#1285** and **gh#1286** → green, then merge (audit each at merge time).
+2. Follow-up PR: drop the 5 torch-jit `poisson_surfdens` lines — needs a
+   **torch --jit** run to back the claim, which gh#1285 never gated (it gated
+   eager torch). Measurement dispatched.
+3. **Vectorisation, not measurement** — this is now the only lever left on the
+   jax ledger. SCF/Multipole/wrapper eval is where the 1440-2641 s entries live.
 4. **#211(B)** `interpRZPotential` grid-build vectorisation — blocked on gh#1274.
-5. Follow-up: the dissipative-composite forced-backend coercion defect.
+5. Follow-up: the dissipative-composite forced-backend coercion defect
+   (characterised, deliberately not patched at the symptom site).
