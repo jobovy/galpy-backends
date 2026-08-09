@@ -33133,3 +33133,41 @@ JO list both said "merge gh#1274" without noticing it was un-mergeable.
     gh#1280  83 pass / 25 running / codecov project only
     gh#1274  READY (was draft), 151 green, awaiting Jo's review
     sweep    test_actionAngle 90/209
+
+### 2026-08-09 — the 4 orbit ledger entries: the blocker is GRANULARITY, not difficulty
+
+Characterised the uncharacterised group compute-free, by reading what the tests
+actually assert rather than running anything (the ledger header explicitly warns
+these must not be re-measured on the dev box -- one of them passes locally and
+xfails in CI group g3).
+
+`test_analytic_ecc_rperi_rap` and `test_analytic_zmax` are **monolithic matrix
+tests**: a nested `for p in pots:` x `for integrator in integrators:` over the
+*entire* potential list and 11 integrators, all inside a single test function.
+
+That is why these entries are opaque. One ledger line covers hundreds of
+potential/integrator combinations, and it cannot say **which** combination
+fails -- so it cannot be burned down by inspection, only by pulling the failure
+detail out of a CI artifact. The entry hides its own cause by construction.
+
+**And the fix is already an accepted pattern in this repo.** `test_potential.py`
+carries `@pytest.mark.parametrize("potname", _XXX_POTS)` in **14** places,
+introduced for precisely this reason. Applying the same treatment to
+test_orbit's analytic loop tests would turn 3 opaque entries
+(`analytic_ecc_rperi_rap` jax + torch, `analytic_zmax` jax) into per-potential
+entries, of which the large majority would pass immediately -- the same shape as
+the earlier test_potential.py work, which is recorded as done.
+
+Not started: it is a `main`-targeting test refactor (that is where the
+test_potential.py precedent landed), there is no free PR slot, and it wants the
+CI failure detail first to confirm the expected per-potential split. Recorded as
+a scoped, precedented proposal rather than begun.
+
+Net effect on the burndown map: of the 14 entries after gh#1280, the "orbit,
+uncharacterised" group of 4 is really **3 granularity + 1 traced** -- and the
+granularity three have a known, already-blessed remedy.
+
+    gh#1279  147 pass / 6 running / NO REDS
+    gh#1280  85 pass / 23 running / codecov project only
+    gh#1274  READY, awaiting Jo's review
+    sweep    test_actionAngle 123/209
