@@ -36162,3 +36162,35 @@ that names one fix is not a provenance check. Recorded as
 
 Silver lining: my rt-split branch fixes all five on torch (5 passed), so it will
 un-ledger these too — the entries it removes now number 5 jax-jit + 5 torch-jit.
+
+### 2026-08-09 (cont.) — completeness pass on the contaminated sweep: 1 row left to check, and it is fine
+
+Having found that the sweep's worktree carried an unmerged RotateAndTilt fix, the
+obvious next question is which OTHER rows that contamination could have touched.
+Enumerated the whole gh#1284 delta for anything naming that wrapper:
+
+* **5 `poisson_surfdens` additions** -- the ones already corrected in `19832bb1`
+  (4 mis-typed as slow, 1 missed entirely);
+* **1 removal**: `torch tests/test_orbit.py::test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tiltedTriaxialNFW]`.
+
+That last one the PR body claimed was "re-measured on a clean tree" -- but at the
+time I took "clean" to mean *without the KD `_mass` fix*, which is exactly the
+one-contaminant blind spot that caused this whole thread. So I measured it again,
+on develop source, eager torch, with its ledger line bypassed:
+
+    1 passed in 68.90s      (slow threshold is 240 s)
+
+**Justified.** The removal stands. Everything else in the delta (FDM,
+chandrasekhar, lyapunov, interprz, analytic_zmax, liouville, central_limit) is
+unrelated to that wrapper, so the broadcast fix cannot have moved those numbers.
+
+Two small method notes from doing it:
+
+* the first attempt fed pytest a **multi-line** nodeid, because my `grep -F` for
+  the test name matched the jax rows too. `grep '^torch '` first, then strip;
+* the second attempt reported `1 skipped in 15.68 s` -- the ledger entry was
+  still active, so the harness skipped the very test I was trying to time. A
+  slow-skip entry hides its own re-measurement; the line has to come out of the
+  file first. Same shape as needing `--runxfail` to see a ledgered failure.
+
+Provenance audit closed. gh#1284 head `19832bb1`, CI restarted.
