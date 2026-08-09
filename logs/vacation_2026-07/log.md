@@ -34867,3 +34867,25 @@ Verified the drop list by set arithmetic rather than by reading it:
 The one kept entry is exactly right — AnyAxisym is the pre-existing defect this
 branch does *not* fix, filed separately and confirmed cross-backend. Had I
 written the drop list from memory I would very plausibly have taken all 8.
+
+### 2026-08-09 — verified gh#1274 has not gone stale under the ask
+
+I have been asking Jo to merge gh#1274 for several days, so I checked whether
+the request is still actionable rather than repeating it on faith:
+
+    base=main  mergeable=MERGEABLE  draft=false
+    checks: 151 SUCCESS / 3 SKIPPED
+    vs main: ahead_by=1  behind_by=0
+
+**Not stale, not conflicted, not behind.** `behind_by=0` means `main` has not
+moved under it at all, so there is nothing to rebase and the green checks still
+describe the code that would land. Its `BLOCKED` state is the required review
+and nothing else — which is exactly what STATUS claims.
+
+Worth doing because a request that has been sitting for days is precisely the
+kind that quietly rots (the PR was, after all, silently a *draft* for several
+days while I kept asking for it). This one has not. No action.
+
+gh#1281: **139 green, 14 running, 0 red**, still `BLOCKED` on the remaining
+`test_orbit` shards + `all-clear`. Audit done, post-merge script prepared and
+set-verified. The merge is a one-liner the moment those 14 land.
