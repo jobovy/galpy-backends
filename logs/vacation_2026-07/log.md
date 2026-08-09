@@ -33444,3 +33444,50 @@ precisely the blind spot this sweep was run to survey.
     9 of 10 files:  17 eager -> 8 jax-jit -> 11 un-deferred, and now 8 defects
     gh#1280   2 pass / 149 queued on the new base
     sweep     test_orbit (245 tests) -- the last file, in flight
+
+### 2026-08-09 — AnyAxisym A/B: NARROWED, not settled (and my probe does not exonerate #1278)
+
+Chased the one defect that might be my own merged regression. Two real
+narrowings, and one honest non-result.
+
+**Narrowing 1 -- which side is wrong.** The assertion is
+`assert mpotderiv**2 < 10**-4.9` *inside the branch taken when zforce is already
+below tolerance*. So `zforce(0.5, 0.0) = 0` is **correct**; it is the
+**numerical dPhi/dz that comes out 7346**. My earlier framing ("zforce vs
+derivative") did not say which side failed. It is the derivative.
+
+**Narrowing 2 -- #1278 is byte-neutral on the configuration I probed.**
+Swapped only the one file gh#1278 changed (it touches exactly 2 files: that
+potential + a test) and ran the same probe both ways:
+
+    pre-#1278 (dyadic)    Phi(0.5, +-1e-8) = -5.6730954062 eager / -5.6730953680 jit
+    post-#1278 (geometric) Phi(0.5, +-1e-8) = -5.6730954062 eager / -5.6730953680 jit
+    zforce = 0, diff = 0, on both, eager and traced
+
+Identical to every printed digit.
+
+**The non-result, stated plainly: this does NOT exonerate gh#1278.** My probe
+used `surfdens=exp(-R)` and `dz=1e-8` -- both guesses -- and it produces
+`diff = 0`, i.e. **it does not reproduce the failure at all**. A probe that
+cannot reproduce the reported failure cannot clear the change that might have
+caused it. Concluding "no regression" from it would be exactly the
+value-check-that-cannot-see-the-real-path error.
+
+**One observation worth carrying forward**: eager and traced disagree on Phi at
+the ~6.7e-9 relative level, identically in both versions. Tracing perturbs this
+quadrature. For a centred difference with a small dz, a *z-asymmetric*
+perturbation of that size is the plausible mechanism family for a large
+derivative error -- but plausible is not demonstrated, and the required
+asymmetry depends on the test's actual dz, which I did not manage to extract.
+
+**Next step, concretely**: pull the real mock (`surfdens`) and the real `dz` out
+of `test_forceAsDeriv_potential`, re-run the same file-swap A/B faithfully, and
+only then attribute. Until that runs, the correct status is **unattributed**,
+not "pre-existing".
+
+Not a CI concern either way: all 8 traced defects pass eager, develop merged
+green at 154/154, and no workflow runs `--jit`.
+
+    gh#1280   2 pass / 149 queued on the new base
+    sweep     test_orbit in flight -- last file
+    follow-up 9fe4a647 local, 8/10 banked
