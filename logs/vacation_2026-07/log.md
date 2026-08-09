@@ -33391,3 +33391,56 @@ does not have to re-derive it.
     gh#1274  READY, awaiting Jo
     follow-up 9fe4a647 local, 8/10 files banked
     sweep    test_potential 1307+ cases, then test_orbit
+
+### 2026-08-09 — sweep 9 of 10: the slow/defect split FIRES — 8 traced defects in test_potential
+
+`test_potential.py`: **1385 cases** (14 `parametrize` decorators), 3692 s traced,
+**0 slow**, **8 defects**. After 490 clean traced tests across 8 files, the
+classifier's slow-vs-defect split finally had something to separate -- and it
+kept all 8 out of the slow-skip list, which is the whole reason it exists.
+
+Three distinct classes:
+
+**A. RotateAndTiltWrapperPotential scalar-only guard -- 5 entries.**
+
+    test_poisson_surfdens_potential[mockRotatedAndTiltedMWP14WrapperPotential]
+    ...wInclination / ...TriaxialLogHalo... / ...OffsetMWP14... / mockOffsetMWP14...
+    TypeError: Methods in RotateAndTiltWrapperPotential do not accept array
+               inputs. Please input scalars
+
+All fail in **0.0-0.1 s** -- they refuse immediately. This is an explicit,
+deliberate opt-out guard, the same shape as the AnyAxisym array opt-out. The
+finding is that **a scalar-only guard is inherently trace-hostile**: tracing
+turns scalars into 0-d traced arrays, so the guard fires on input it was never
+meant to reject. Needs a decision, not a fix-by-reflex.
+
+**B. jax ConcretizationTypeError -- 2 entries.** `test_McMillan17` (17.0 s) and
+`test_Cautun20` (11.9 s): "Abstract tracer value encountered where concrete
+value is expected". Genuine traceability gaps in two composite MW potentials --
+something concrete-only (a `float()`, a Python `if`) on a traced value.
+
+**C. AnyAxisym forceAsDeriv -- 1 entry, and it may be MINE.**
+
+    test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+    fails at (R,Z) = (0.500, 0.000)  --  z = 0 EXACTLY
+    diff = 7.346e+03, rel. diff = inf
+
+z=0 is the razor-thin disk's singular plane. But the magnitude (7346, not a
+rounding-scale discrepancy) and the fact that it is **in no list at all** make
+this a new traced-only failure -- and **gh#1278, which I wrote and merged
+today, changed exactly this quadrature**. Its own comment even flags the case:
+*"ratio is 1 exactly at z==0, where grading is off by construction"* -- i.e. at
+z==0 the geometric ladder degenerates to K identical panels.
+
+I can get no further by reading, and will not guess. **The next action is an
+A/B against pre-gh#1278 develop** (`44b06e31` vs `f963eb42`) on that one test
+traced. If it fails on both, it is pre-existing and traced-only; if only on the
+newer, I introduced it and it needs fixing before anything else.
+
+**None of this is a CI regression.** All 8 pass eager -- develop merged green at
+154/154 -- and no workflow runs `--jit`. It is traced-only exposure, which is
+precisely the blind spot this sweep was run to survey.
+
+    9 of 10 files:  17 eager -> 8 jax-jit -> 11 un-deferred, and now 8 defects
+    gh#1280   2 pass / 149 queued on the new base
+    sweep     test_orbit (245 tests) -- the last file, in flight
