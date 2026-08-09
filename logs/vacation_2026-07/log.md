@@ -33713,3 +33713,25 @@ had swapped a file with itself.
     gh#1280   11 pass / 18 running / 122 queued, no reds
     follow-up 9fe4a647 -> 20e2f86b -> 532f251f -> 1fc19ede -> e0f67aad
     sweep     test_orbit 393 outcomes, 0 failures
+
+### 2026-08-09 — short wake: everything waiting, everything healthy
+
+gh#1280's codecov went red again on its **post-rebase** cycle. Checked the
+counts rather than assuming it was the same phantom:
+
+    base: 86.05% sessions=22      head: 25.84% sessions=1
+
+**1 upload of ~28.** Same artifact, one cycle earlier in its life. (`lines`
+differs by 2 between base and head -- 48422 vs 48420 -- which is just the
+streamdf change replacing five lines with two.) The base is itself still filling
+in from the merge push, at 22. No action.
+
+Sweep verified alive rather than inferred from the log growing: pytest at
+**121% CPU**, 1h02m elapsed, last outcome timestamped 15 s ago. It is in a slow
+region -- ~51 s between consecutive `*_planar_dxdv_c_vs_python` cases -- but
+**0 failures**, so no 300 s cap has fired; these are genuinely slow, not stuck.
+
+    gh#1280   16 pass / 18 running / 117 queued / codecov phantom @ 1-of-22
+    gh#1274   ready, awaiting Jo
+    follow-up e0f67aad local, body drafted, waits on test_orbit
+    sweep     test_orbit 397 outcomes, 0 failures, healthy
