@@ -34604,3 +34604,31 @@ genuinely at ~250 s could be pushed over by contention, and "fairly robust" is
 not a measurement. `test_FDMdynamfric` gets re-run alone before any of this is
 written into the ledger. `central_limit`'s classification is unaffected: a
 `TypeError` at 35.9 s is not a timing judgement.
+
+### 2026-08-09 — torch-fixes branch opened locally (first entry burned)
+
+Third worktree, `/var/tmp/torch-fixes`, branch `backend-jit/torch-sweep-fixes`
+off develop `a45a4f1d` — deliberately **not** the sweep tree and **not** the
+jax-defects branch, so the three concerns stay separable and the frozen tree
+stays frozen.
+
+First fix in: `as_numpy` at the two missed `central_limit` assertion sites
+(`d49f92c3`). The file already imports `as_numpy` and already applies this exact
+fix at lines 113/167/404/436 — 49 and 59 were simply missed, so all four sites
+now read alike. Checked rather than assumed that this cannot touch numpy:
+`as_numpy` on a numpy array returns **the same object** (`b is a` → True), so
+the numpy path is untouched by construction, not merely by tolerance.
+
+**Explicitly not claimed: that it passes.** The 35.9 s `TypeError` is measured,
+from the sweep; re-running the test to confirm the fix needs the CPU the sweep
+holds. The commit message says so too. This is a fix authored against a
+diagnosis, awaiting its gate — which is a different thing from a verified fix,
+and worth keeping labelled as such.
+
+Three branches now held, none opened:
+
+| branch | contents | gate owed |
+|---|---|---|
+| `backend-jit/kd-mass-quadrature` `e1fa8bf9` | 7 of gh#1281's 8 jax traced defects | 5 ledgered tests + numpy regression |
+| `backend-jit/torch-sweep-fixes` `d49f92c3` | torch sweep fixes, 1 so far | re-run `central_limit` traced |
+| — | ledger delta for torch | `test_orbit` + clean `test_FDMdynamfric` re-run |
