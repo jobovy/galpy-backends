@@ -31826,3 +31826,43 @@ Doing nothing. That shard is queued behind develop's push run (11 of 26 done).
     gh#1278  9 pass / 142 pending / 2 codecov reds, both explained by the above
     gh#1274  151 pass / green
     noninertial serial: 24/53 at 59:19 (~2.4 min/test, ~126 min projected, 240 min budget)
+
+### 2026-08-09 — every in-repo PR runs its CI matrix TWICE (workflow-level, for Jo)
+
+Chasing why gh#1278's build jobs had not started after ~2 h, I found the branch
+carries two complete sets of runs for the same commit:
+
+    push          Windows build   id=31286702359
+    pull_request  Windows build   id=31286703157
+    push          Linux/Mac       id=31286702369
+    pull_request  Linux/Mac       id=31286703160
+    push          notebooks       in_progress
+    pull_request  notebooks       queued
+
+`build.yml` triggers on **both** `push:` (path-filtered, no branch filter) and
+`pull_request:`. A branch pushed to the same repo therefore fires the whole
+matrix once for the push and again for the PR — ~52 build jobs where 26 would
+do. On a pool that is visibly the bottleneck (develop's own push run took ~1 h
+to complete 11 of 26), that is roughly a 2x tax on every PR I open.
+
+I cannot fix it and should not paper over it:
+* cancelling the same-SHA **push** run blocks merge
+  ([[cancel-push-run-leaves-cosmetic-red]]);
+* cancelling the **pull_request** run removes the gating checks;
+* editing `.github/workflows/` needs scope I do not have.
+
+So it goes to Jo as a workflow decision. The usual fix is a branch filter on the
+push trigger — e.g. run pushes only for `main` / `feat/backends*`, leaving
+feature branches to the PR event — which would halve CI latency for this whole
+project without reducing what is actually tested (the PR event covers every
+feature branch already).
+
+Worth being precise that this is NOT new and NOT caused by anything I did:
+#1275 and every earlier PR paid the same tax. It only became visible now because
+I looked at run IDs rather than at the aggregated check list, where the two runs
+are indistinguishable.
+
+    gh#1278  12 pass / 139 pending / 2 codecov reds (scheduling, diagnosed)
+             all 26 build jobs of the PR run still queued
+    gh#1274  151 pass / green
+    noninertial serial: 25/53 at 1:04
