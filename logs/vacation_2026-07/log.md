@@ -35068,3 +35068,33 @@ Remaining post-sweep queue:
 1. ~~clean `test_FDMdynamfric`~~ — running
 2. `test_dxdv_3d_c_vs_python[RotateAndTilt…]` on an **unpatched** tree
 3. pytest gates on the two held branches
+
+### 2026-08-09 — torch sweep PR body drafted (CPU deliberately left alone)
+
+Everything remaining needs the CPU, and the CPU is running a **timing**
+measurement (clean `test_FDMdynamfric`), so I did not start the C-extension
+build or the second re-run alongside it. That is the same restraint as last
+wake, and by now it has paid off once already.
+
+Drafted `/var/tmp/torch-sweep-pr-body.md` instead. It states the result as
+**delete 14, add 4, reclassify 1** rather than the tempting headline
+("15 entries were stale"), because the additions are the half that inheritance
+could never produce and dropping them from the summary would misrepresent what
+the measurement bought.
+
+Two things the body is careful about, both because getting them wrong today
+would have been easy:
+
+* **the provenance caveat is in the PR body, not just my notes** — the tree
+  carried the unmerged KD fix, so `McMillan17`/`Cautun20` passing is evidence
+  about *that fix*, not about torch. A reader would otherwise reasonably take it
+  as a torch-vs-jax difference;
+* **the two re-measured rows are named**, so a reviewer can see which numbers
+  came from a clean run and why the others needed one.
+
+It also records the cross-backend result properly: `AnyAxisym` reproduces on
+torch (strengthening gh#1281's single-backend attribution), while
+`RotateAndTilt` does **not** — of jax's 8 traced defects exactly one is shared.
+
+Body is drafted, not opened: two provisional rows are still being re-measured,
+and a PR whose numbers might move is not ready.
