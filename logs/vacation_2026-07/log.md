@@ -36908,3 +36908,38 @@ it went to attempt 2 rather than trusting the silent exit. gh#1285's remaining
 2 reds are codecov at ~35/153 checks — its compare endpoint still returns bare
 SHAs with `totals: null`, so the promised patch-coverage re-check is **not yet
 readable** and stays open rather than being explained away early.
+
+### 2026-08-09 (cont.) — two "blocked/unmeasured" labels checked against the code
+
+**#211(B) `interpRZPotential` vectorisation really is blocked.** The queue note
+said "blocked on gh#1274 (shared call sites)", which is the kind of inherited
+claim that is usually file-level hand-waving. Checked it at hunk level: gh#1274
+(`fix/interprz-units` -> `main`) touches exactly two files, and its hunks land at
+lines **246 / 271 / 296 / 324 / 346 / 368 / 390** — the seven grid-build double
+loops #211(B) would replace. Same hunks, not merely the same file. The blocker
+stands, and it is Jo's to clear by merging gh#1274.
+
+**Correcting my own framing from earlier this wake.** I called
+`test_interp_potential` and `test_FDMdynamfric` the "genuinely unmeasured"
+clusters. They are not unmeasured — the ledger carries times for them:
+
+    test_interpolation_potential_force_c        1311.1 s
+    test_interpolation_potential_secondderivs    989.8 s
+    test_interpolation_potential_secondderivs_c  274   s
+    test_interpolation_potential_c               263   s
+
+What actually makes them worth re-running is **staleness, not absence**: those
+numbers were taken before the adapter work in #1271/#1272/#1273 (planar
+989 -> 5, vertical 1708 -> 244 -> 0 boundary crossings), and the ledger's own
+rationale for the cluster is *"interpRZPotential evaluates a coerced potential
+many times under forced-jax, so each point dispatches its own XLA graph"* —
+i.e. precisely the cost those PRs removed. That is a specific, mechanistic
+reason to expect a change, which is a better basis for spending an hour than
+"nobody has looked".
+
+The same check kills a target I might otherwise have picked: the 12 jax
+`test_potential.py` entries are measured **and** documented in detail
+(`test_DehnenBinney98` ~2641 s, the two AndTilted MWP14 Poisson checks
+~1750-1840 s, `test_Cautun20` ~1440 s). At 5-9x the cap those are not going to
+fall to a stopwatch; they need SCF/Multipole/wrapper vectorisation. Not a
+burndown target — a Track-A work item.
