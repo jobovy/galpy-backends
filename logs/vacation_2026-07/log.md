@@ -36368,3 +36368,30 @@ why 11 went and 8 stayed.
 Queue is now: **gh#1283** (151/153, 0 red, audit done) → **rt-split**
 (10 entries) → **noninertial** (11 entries), with **gh#1284** in flight
 alongside.
+
+### 2026-08-09 (cont.) — gh#1283 MERGED; rt-split opened as gh#1285
+
+gh#1283 reached **154/154, CLEAN, MERGEABLE** and was squash-merged.
+develop **`de0745c5` → `9dc31569`**, branch deleted. Verified by reading the ref
+before and after, not by trusting the merge command's output. Clears
+`test_McMillan17` + `test_Cautun20` and makes `KuijkenDubinski._mass`
+differentiable in R on both backends, numpy byte-identical.
+
+The audit had been done ahead of green, so the merge was immediate rather than a
+scramble — worth keeping as a habit.
+
+With the slot free, `rt-vertical-split` went out as **gh#1285**:
+
+* rebased onto the new develop: clean, **no conflict markers** (full-tree grep),
+  ledger delta re-verified as exactly **−5/+0 against the NEW base** — gh#1283's
+  own 2 xfail removals did not interfere;
+* **re-ran the 6 new tests after the rebase** (6 passed). A clean rebase is not
+  evidence that behaviour survived it, and the branch had just moved onto changed
+  code;
+* head `122af109` matches local exactly; 6 files, base `feat/backends-develop`.
+
+**Pipeline now:** gh#1284 (torch sweep, corrected) and gh#1285 (10 entries) in
+flight; `noninertial-eager-undefer` @ `f795e787` (11 entries) staged behind them;
+gh#1274 still awaiting Jo.
+
+Ledger trajectory once all three land: xfail 21 → 14, slow-skip 118 → 107.
