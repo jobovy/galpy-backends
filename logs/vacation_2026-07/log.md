@@ -37024,3 +37024,53 @@ at line level — so no rebase is needed once gh#1284 lands.
 
 gh#1284 sits at **152/154, zero red**, waiting only on `all-clear` and a queued
 `backend status report` — runner contention, nothing to fix.
+
+### 2026-08-09 — jax interp/FDM re-measurement: REFUTED, 0 of 9 stale
+
+The run finished: 49 tests, 4 failures, **1935.1 s**. Classified by duration.
+
+| s | result | verdict | test |
+|---|---|---|---|
+| 900.0 | F | keep | `test_FDMDynamicalFrictionForce_const_FDMfactor` |
+| 900.0 | F | keep | `test_interpolation_potential_force_c` |
+| 900.0 | F | keep | `test_FDMDynamicalFrictionForce_central_limit` |
+| 900.0 | F | keep | `test_interpolation_potential_secondderivs` |
+| 701.0 | pass | keep | `test_interpolation_potential_force` |
+| 538.1 | pass | keep | `test_interpolation_potential_dens` |
+| 438.6 | pass | keep | `test_interpolation_potential_c` |
+| 395.6 | pass | keep | `test_interpolation_potential_secondderivs_c` |
+| 356.3 | pass | keep | `test_dynamfric_c` |
+
+**drop = 0, keep = 9, defects = 0.** All four F's are
+`Failed: Timeout (>900.0s) from pytest-timeout` — cap-hits, i.e. slow. Reading
+them as defects would have moved four correct entries into the xfail ledger.
+
+**The hypothesis is refuted.** I expected the adapter work
+(#1271/#1272/#1273, planar 989 -> 5 and vertical 1708 -> 244 -> 0 boundary
+crossings) to have gutted the per-point XLA dispatch the ledger names as the
+cause of this cluster. It did not: `test_interpolation_potential_c` was
+ledgered at 263 s and now measures 438.6 s, and the two that were ledgered at
+1311 s / 990 s still run past the 900 s cap. Whatever dominates interpRZ's
+forced-jax cost is not what those PRs removed.
+
+That is worth the ~32 min of box time: the alternative was un-deferring nine
+entries on a plausible-sounding mechanism and putting four timeouts back into
+the jax shard.
+
+**Caveat stated rather than buried:** these are `xdist -n 8` durations, which
+inflate. That is conservative for a *keep* decision, so the verdict is safe —
+but I am not claiming `test_dynamfric_c` (356.3 s) and
+`..._secondderivs_c` (395.6 s) would clear 240 s serially either; they are
+within plausible inflation range of the bar and would need a serial run to say.
+They stay deferred, which needs no such claim.
+
+**This closes the eager-jax burndown.** Combined with the 24 already banked,
+every eager-jax cluster worth a stopwatch has now had one:
+
+    measured stale:   24 of 44  (noninertial 11/19, test_orbit 13/25)
+    measured NOT stale: 9 of 9  (interp_potential 6, FDMdynamfric 3)
+    documented slow, not re-run: 12 jax test_potential (1440-2641 s, 5-9x cap)
+
+The remaining jax ledger is **real slowness**, and the next lever is
+vectorisation (SCF/Multipole/wrapper eval, interpRZ grid build), not
+measurement. Recorded in STATUS.md as the burndown floor.
