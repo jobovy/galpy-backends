@@ -35512,3 +35512,35 @@ Both times the numbers were right and the presentation would have cost a
 reviewer's trust.
 
 gh#1283 still 2/149 — pure CI throughput now, no orphans, nothing to cancel.
+
+### 2026-08-09 — "needs range-aware quadrature" was wrong; the real lead is the SPLIT POINT
+
+Sized the deferred RotateAndTilt follow-up by reading the code rather than
+guessing, and it corrected what I had written into gh#1283's body.
+
+The traced surfdens Poisson path is **already range-aware**:
+
+    # Fixed-order GL over the whole [-z, z] needs an order that grows with the
+    # range (n=100 is only 3.7e-4 at |z|=10). Splitting at z=0 and clustering
+    # nodes toward the split ... so one node count holds at every |z|.
+    inner = _bquad.symmetric_quad(..., absz, n=50)
+
+So "opting it in first requires the quadrature to be range-aware" was false —
+that work is done, from an earlier task of mine. And the observed error is
+**6.8e-2**, two orders worse than the 3.7e-4 that comment quotes for the naive
+case, so the *range* is not the problem.
+
+**The lead, as a hypothesis:** `symmetric_quad` takes `interior_point=0.0` — it
+assumes the integrand's structure sits at z=0 and clusters nodes there. For a
+**tilted** potential the disk plane is inclined, so in the evaluation frame the
+density peak is *not* at z=0: the nodes cluster where the integrand is smooth
+and sample the peak sparsely. That would explain why this family fails where
+others pass, and why it worsens with |Z|.
+
+Marked a hypothesis, not a finding: it follows from the code and fits the
+numbers, but I have not measured it. The test is to pass the wrapper's rotated
+mid-plane as `interior_point` and see whether 6.8e-2 collapses.
+
+Updated gh#1283's body with the correction. A PR body that sends the next reader
+to "make the quadrature range-aware" would have cost them the time it took me to
+find that it already is.
