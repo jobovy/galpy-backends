@@ -31935,3 +31935,45 @@ happened.
     gh#1274  151 pass / green
     noninertial serial: 28/53 at 1:18
     #194 branch: ac2cd27e (rule) + 92cce363 (#171 bars), not yet a PR
+
+### 2026-08-09 — #211(B) shape refined: 7 identical loops, so it is an EXTRACTION
+
+Counted the actual sites rather than working from my earlier "3 call sites"
+description. `interpRZPotential`'s no-C Python fallback contains **seven**
+byte-identical double-loop grid builds:
+
+    potGrid  rforceGrid  zforceGrid  r2derivGrid  z2derivGrid  rzderivGrid  densGrid
+
+each of the form
+
+    G = numpy.zeros((len(rgrid), len(zgrid)))
+    for ii in range(len(rgrid)):
+        for jj in range(len(zgrid)):
+            G[ii, jj] = evaluateFOO(self._origPot, rgrid[ii], zgrid[jj])
+
+So (B) is not "vectorize 3 places" — it is **extract one helper and call it
+seven times**, which removes the duplication instead of multiplying it by seven.
+That materially improves the diff and matches the standing instruction about
+general-ish code living in one place.
+
+Design, for when #1274 unblocks it:
+
+* one module-level helper taking `(evalfn, pot, rgrid, zgrid)`;
+* **capability probe, not try/except**: evaluate `evalfn` once on a 2-element
+  array at construction and record the result, rather than catching `TypeError`
+  per grid. Catching would work but can mask a genuine error inside a potential
+  that *does* accept arrays;
+* fall back to the scalar loop for the two array-rejecting potentials
+  (`AnyAxisym`, `RotateAndTilt`); `DoubleExponentialDisk` opts in already;
+* **byte-identity is the gate**: Jo chose (B) precisely because it keeps the
+  decorated call, so the numpy grid must be bit-identical. sha256 over all
+  seven grids, A/B on one worktree. That needs CPU, so it happens when the
+  serial measurement is done -- not concurrently.
+
+Not written yet on purpose: it must land after #1274 (same call sites), and
+writing it now would mean carrying an unverifiable diff across an unknown number
+of wakes.
+
+    gh#1278  35 pass / 116 pending / project 68.78% -> 69.95%
+    gh#1274  151 pass / green
+    noninertial serial: 29/53 at 1:23
