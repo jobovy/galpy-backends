@@ -36413,3 +36413,31 @@ mechanism is not.
 Checking `ps -eo pcpu,args` for busy workers is the cheap discriminator, and it
 is the *workers* that carry the CPU under xdist — the coordinator sits near 0 %,
 which is exactly what fooled me earlier.
+
+### 2026-08-09 (cont.) — gh#1285's CI cannot prove gh#1285's headline claim; said so in the PR
+
+Realised while watching gh#1285 spin up: **per-PR CI runs the backend shards
+eager**, and all 5 entries this PR clears are `jax-jit`. Eagerly,
+`_quad_needs_backend` sends both surfdens routes to `scipy.integrate.quad`, so
+those 5 tests pass on develop already and would pass on this branch **whether or
+not the fix works**. A green matrix here is not evidence for the headline.
+
+This is not a flaw in the PR, but it is a flaw in how a green tick would be
+read, so I wrote it into the body rather than leaving a reviewer to infer it.
+
+**What CI here does prove is the mechanism** — and only because the 6 new tests
+were deliberately written not to require `--jit`: the plane-crossing solve is
+checked against `_rect_transformed`, the quadrature accuracy by calling
+`symmetric_quad` on numpy with each split point (asserting both arms), and the
+composite delegation structurally. Those 6 are A/B'd, so green *is* real evidence
+— for the mechanism.
+
+**The traced result is local evidence and is labelled as such** in the body:
+1276/0/7-xfail under `--backend jax --jit`, plus 5/5 under torch.
+
+That distinction is the concrete cost of the open `--jit` CI question, and it now
+appears where the maintainer will actually meet it — on the PR — instead of only
+in STATUS.
+
+CI: gh#1284 85/153, gh#1285 2/151, both clean apart from the codecov phantom.
+Traced noninertial measurement at 868 s, 6 workers busy.
