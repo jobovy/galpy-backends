@@ -31587,3 +31587,49 @@ stays" rather than a burndown win.
     #1275  152 pass / 0 RED / the py3.14 backend shard is at 87 min of its
            historical 93 -- normal, no action
     #1274  151 pass / green
+
+### 2026-08-09 — CONTENTION: every --jit timing I have reported may be inflated
+
+Relaunched noninertial alone. Same file, same worktree, same command:
+
+    earlier (4 concurrent jax runs)   16 tests / 35 min   ~132 s/test
+    now     (load average 1.32)       12 tests / 4.2 min   ~21 s/test
+
+A 6x difference with the code identical. XLA's CPU backend sizes its intra-op
+thread pool to the core count, so N concurrent jax processes each try to own all
+72 cores and oversubscribe; wall-clock per test inflates accordingly. `%CPU` per
+process still looked healthy (~100%), which is why nothing looked wrong.
+
+**What this invalidates.** #194's entire decision is per-test wall-clock against
+the 240 s margin, and I ran the two big measurements *concurrently with other
+heavy jax jobs*:
+
+* `st2_jaxjit` (streamTrack) ran alongside `aax2_jax`
+* `sdf_jaxjit` (streamdf) ran alongside `aa2_jax` and `aax2_torch`
+
+So **498 s / 348 s / 243 s are upper bounds, not measurements**, and the
+"2 nodeids stay deferred, 43 un-defer" / "1 stays, 65 un-defer" splits are drawn
+against inflated numbers. The direction of the error is favourable — the real
+times are lower, so *more* would un-defer — but a threshold decision made on
+numbers I cannot reproduce serially is not a decision, it is a guess that
+happens to be conservative.
+
+**What survives.** Pass/fail counts are unaffected by contention:
+streamTrack 45/45 pass, streamdf 65 pass / 14 fail (10 immutability + 4 Torus).
+Those stand.
+
+**What I am retracting.** The claim two wakes ago that noninertial "looks
+genuinely slow under jit too, so this cluster may largely stay deferred". That
+was ~132 s/test measured under contention; alone it is ~21 s/test, projecting
+~19 min for the file rather than ~117. I said at the time it was not a
+conclusion, which is the only reason this is a retracted signal and not a
+retracted result.
+
+**Rule:** timing runs go one at a time. Correctness runs may overlap. I had them
+overlapping because CPU looked free at 72 cores — core count is not the
+resource; the framework's thread pool is.
+
+Serial re-measurement of streamTrack and streamdf queued behind this one.
+
+    #1275  152 pass / 0 RED / py3.14 backend shard still in flight
+    #1274  151 pass / green
