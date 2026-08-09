@@ -32826,3 +32826,45 @@ maintainer rights I do not have.
     gh#1279  110 pass / 11 running / 31 queued / codecov 21-of-28 @ 99.47%
     gh#1280  11 pass / 24 running / 72 queued
     sweep    test_interp_potential in flight, 5 files behind
+
+### 2026-08-09 — gh#1280's codecov/patch red: phantom, and verified without local compute
+
+gh#1280 picked up a **second** red, `codecov/patch`, which is a different signal
+from #1279's project-only red: patch gates on the DIFF's lines, and #1280 adds
+2 executable lines to `galpy/df/streamdf.py`.
+
+Diagnosed, not reacted to:
+
+    gh#1280   base: 99.47% sessions=21      head: 26.28% sessions=2
+
+Head has **2** upload sessions. And because #1280 is *stacked*, its codecov base
+is #1279's head -- which is itself still incomplete at 21 of 28. So the
+comparison is a partial head against a moving, partial base: doubly phantom.
+
+**Confirmed the 2 changed lines are genuinely covered**, using codecov's own data
+rather than a local coverage run that would have perturbed the sweep's timings:
+every line in 2026-2044 on develop reports covered, and the file's 4 real misses
+are at 259/268/412/1984, nowhere near.
+
+**But I nearly shipped that conclusion on an unverified assumption.** I read
+`0 = hit` straight off the response, which is exactly the trap my own note
+`codecov-line-coverage-parse-is-bogus` was written about. Cross-checked instead:
+
+    status distribution over 2100 lines : {0: 2096, 1: 4}
+    file totals                         : lines=2100 hits=2096 misses=4
+
+The zero-count matches `hits` exactly, so the encoding is confirmed *by the
+response's own totals* rather than by my reading of it.
+
+Worth recording precisely, because the old note would have had me discard a
+working tool: **the endpoint is what differs.** `report/?path=` is the broken one
+(0 for every line, no signal). `file_report/<path>?branch=` is reliable. Memory
+updated with the distinction and with "always cross-check the distribution
+against totals first" -- a free check that turns an untrusted endpoint into a
+usable one.
+
+So: still no action on either PR's codecov. Both reds are upload artifacts.
+
+    gh#1279  113 pass / 11 running / 28 queued / codecov 21-of-28 @ 99.47%
+    gh#1280  15 pass / 25 running / 67 queued / codecov 2 sessions, stacked base
+    sweep    test_interp_potential in flight (18 min), 5 files behind
