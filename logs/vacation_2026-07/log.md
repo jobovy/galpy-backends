@@ -36640,3 +36640,22 @@ cost me several retractions for stating numbers ahead of measuring them.
 CI meanwhile: gh#1284 119/153 with codecov healing on schedule (head 26/28
 sessions, 86.05 % climbing to a 99.95 % base); gh#1285 finally picked up its
 first runner.
+
+### 2026-08-09 (cont.) — test_orbit measurement into its slow tail
+
+At 37 % after ~8 min, and progress has visibly slowed. That is the expected
+shape, not a stall: the 25 tests being measured are precisely the ones deferred
+*for being slow*, so they cluster in the tail while the fast majority cleared
+early. Confirmed healthy by the cheap discriminator rather than by assumption —
+**8 workers busy**, log still being written.
+
+That check is worth the two seconds every time now. This morning the same
+surface signal (progress not advancing) led me to kill a healthy 10-minute run
+on an invented elapsed time, and the cost was a wake spent writing up a deadlock
+that never existed.
+
+CI: gh#1284 **124/153**, codecov still the only red and healing; gh#1285 3
+green with 2 running — it has started getting runners now that develop's
+post-merge matrix is draining.
+
+Both merge audits are banked, so whichever finishes first merges immediately.
