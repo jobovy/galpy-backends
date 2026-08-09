@@ -34708,3 +34708,26 @@ Saved as its own trap, because every ledger-vs-log cross-reference in this
 project is exposed to it and the failure is a plausible-looking false negative —
 the same family as the junitxml `find()` truthiness trap. Rule: `grep -F` (or
 Python `find`) for any nodeid match.
+
+### 2026-08-09 — codecov phantom confirmed healing (and my stated test was wrong)
+
+Checked the prediction rather than leaving it asserted. Between the two samples
+CI went 25/153 → 70/153 completed, and:
+
+    coverage  15.03%  ->  67.58%
+    sessions  0       ->  0
+
+The red **is** a phantom and **is** healing, exactly as called. But the
+discriminator I quoted — `sessions=0` — read zero on *both* samples, so it
+distinguished nothing; I cited a test that carried no information and happened
+to reach the right verdict anyway. What actually demonstrates it is the
+**coverage trajectory**: rising monotonically with completed shards, heading for
+the real ~99%. A genuine drop would sit still.
+
+Corrected the memory accordingly: on the v2 *commits* endpoint `report.sessions`
+is simply not populated, so a 0 there means "wrong endpoint", not "no uploads".
+The reliable move is to sample coverage twice a few minutes apart.
+
+Still no action on it — it clears itself; the only thing worth doing is
+re-checking once CI completes, and re-running `all-clear` only if it is still
+red then.
