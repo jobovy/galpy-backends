@@ -36028,3 +36028,43 @@ than partial data. If that happens, next attempt is `-n 4`.
 pre-mock traced whole-file run (1271 passed / 0 failures / 1 xpass).** What is
 NOT yet established is a clean whole-file traced run on the final tree. Not
 claiming it until I have it.
+
+### 2026-08-09 (cont.) — RETRACTION: there was no hang. I killed a healthy run.
+
+The previous entry reports the final traced gate deadlocking. **It did not.**
+Reconstructed from file timestamps and a clock I should have read the first time:
+
+    15:00:13  pre-mock jax sweep finishes
+    15:00:21  numpy subset check finishes
+    ~15:01    final_jax sweep launched
+    15:02     I observe it at 10% and call it hung
+    15:03:03  its log's LAST write -- the teardown errors from my kill
+    15:03:21  serial re-run launched
+
+So at the moment I diagnosed a 50-minute stall, the run was **~2 minutes old and
+its log had been written seconds earlier.** Both pieces of evidence were bad:
+
+1. **"log mtime frozen for >50 min"** -- I never ran `date`. I inferred the
+   current time from how long the *wake* felt, and wakes are not wall-clock
+   hours. The elapsed time was invented.
+2. **"every xdist worker at 0.0% CPU"** -- I read
+   `ps aux | grep '[p]ytest' | head -3`, which matched the **bash wrappers**
+   whose command strings contain "pytest", not the python workers. The real
+   process was the 4th line and I never printed it. Minutes later I hit exactly
+   this trap again (`pkill -f "pytest ..."` matched its own launcher) and
+   *still* did not go back and revise the conclusion.
+
+Cost: a healthy ~10-minute run destroyed, a wake spent on a fictitious deadlock,
+and a log entry asserting a defect that never existed. The
+`pytest-split`-vs-xdist reasoning in that entry is still true but was answering a
+question nobody had asked.
+
+**The fix is mechanical, which is what makes it worth writing down:** `etimes`
+from `ps` is authoritative for "how long has this been running", and `date` is
+authoritative for "what time is it". Neither costs anything. Recorded as
+[[measure-elapsed-time-never-assume-it]].
+
+The serial re-run is healthy and progressing (194% CPU, `etimes` confirms it,
+5-10%), so the gate is coming from it regardless. No conclusions about the
+5-entry clearance change: what is established is still the 5 nodeids in
+isolation, numpy whole-file, and the pre-mock traced whole-file.
