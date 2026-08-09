@@ -33014,3 +33014,50 @@ sweep's remaining runtime.
     gh#1279  123 pass / 10 running / 20 queued / NO REDS
     gh#1280  39 pass / 21 running / 47 queued / codecov stacked phantom
     sweep    test_orbits 29/116, then the three large files
+
+### 2026-08-09 — sweep 7 of 10: the best single-file case, and it CORRECTS my last claim
+
+`test_orbits.py`, 116 tests, 1732 s traced. Its 2 eager entries and its traced
+entries are **not the same set** -- three distinct outcomes in one file:
+
+      11.9s  ChandrasekharDynamicalFrictionForce_constLambda  eager 300s (failed) -> UN-DEFERS
+     300.0s  test_SOS_3D                                      eager 269s          -> KEEP (slower traced)
+     277.1s  test_bruteSOS_3D                                 NOT eager-deferred  -> NEW entry
+
+`test_bruteSOS_3D` is the case inheritance **cannot** produce by construction:
+it was never an eager entry, so nothing to inherit, yet traced it is over the
+margin. And `constantLambda` goes 300 s eager -> 11.9 s traced, a 25x swing in
+the other direction. One file, both directions, plus a keeper.
+
+**Correction to what I wrote last wake.** With 6 files I said the keeper and
+un-deferral populations were "genuinely distinct" and that "nothing has landed in
+the 177-300 s band at all", concluding the 240 s margin "is not doing any
+delicate work". The 7th file falsifies that: **`test_bruteSOS_3D` measures
+277.1 s and passes** -- 15% above the margin, 8% below the cap. Its fate *does*
+depend on where the line sits. The earlier statement was true of the data I had
+and wrong as a generalisation; I should have said "so far" rather than treating
+6 files as the shape of the whole.
+
+Revised: 6 of the 7 keepers hit the cap and are unambiguous; **one sits inside
+the band and is a genuine threshold call.** 240 s is 80% of CI's 300 s per-test
+cap, which is the stated basis, so 277 s defers -- but it is a judgement, not a
+measurement, and it is the first of its kind.
+
+**Running totals, 7 of 10 files:**
+
+    file                    tests   eager  ->  jax-jit   un-deferred
+    test_dynamfric              7     1         1          -
+    test_FDMdynamfric           9     3         2          1
+    test_galpypaper            15     1         0          1
+    test_streamspraydf         38     1         0          1
+    test_interp_potential      40     6         1          5
+    test_qdf                   56     2         1          1
+    test_orbits               116     2         2 (1 new)  1
+                                     ---       ---        ---
+                                      16         7         10
+
+**Zero defect candidates** across 281 traced tests in 7 files.
+
+    gh#1279  135 pass / 13 running / 5 queued / NO REDS  -- close
+    gh#1280  65 pass / 25 running / 18 queued / codecov PATCH CLEARED, project left
+    sweep    test_actionAngle (209 tests) in flight, then potential + orbit
