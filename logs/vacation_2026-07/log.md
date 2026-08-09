@@ -35002,3 +35002,32 @@ about it.
 
 `test_orbit` is at 85%; the remaining tests hold no ledger entries, so the
 un-deferral question is settled even before the file finishes.
+
+### 2026-08-09 — checked the OTHER ledger before asserting completeness
+
+I built `/tmp/torch_orbit_entries.txt` from `backend_slow_skip.txt` only, then
+said things like "all 13 torch `test_orbit` entries". There are **two** ledgers.
+Checking `backend_xfail.txt` as well:
+
+    torch tests/test_orbit.py::test_analytic_ecc_rperi_rap    -> XFAIL
+
+So there is a **14th** torch entry in that file, it did run, and it **XFAILs** —
+correctly deferred, still failing, no action. No surprise hiding in the ledger I
+had not looked at, but I did not know that until I looked.
+
+**Scoping the numbers properly.** The un-deferral question is specifically about
+what gh#1279 changed: `--jit` no longer inherits the *eager slow-skip* list. The
+xfail ledger is a separate mechanism and is untouched by that. So:
+
+* "15 torch eager entries → 1 keeper" is correct **for slow-skip entries**,
+  which is the population the change affects;
+* `test_analytic_ecc_rperi_rap` is an **xfail** entry — a defect deferral, not a
+  performance one — and rightly sits outside that count;
+* stating it as "torch's entries" without the qualifier was looser than the
+  evidence.
+
+Fourth time today the pattern has come up — check one artifact, assert about a
+broader thing. Difference this time: I went looking for it before it bit,
+prompted by noticing my own input file had a single source. The generalisation
+worth keeping is narrow and mechanical: **this project has two ledger files, and
+any completeness claim has to read both.**
