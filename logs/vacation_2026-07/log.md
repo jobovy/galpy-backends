@@ -34767,3 +34767,41 @@ pass is unaffected. **Plausibly is not measured.** So:
 That is now two rows needing a clean re-run before the torch ledger is written:
 this one, and `const_FDMfactor` from the CPU-contaminated `test_FDMdynamfric`.
 Both re-runs are cheap and both go in the same post-sweep batch.
+
+### 2026-08-09 — torch's test_orbit entries are collapsing, and codecov cleared
+
+**codecov/project → SUCCESS** (and `codecov/patch` too). The phantom healed on
+its own exactly as called, with no re-run and no intervention. gh#1281 is
+**109 green, 0 red**, 28 running, 16 queued.
+
+**11 of the 13 torch entries have now run. All PASSED.** Approximate durations
+(stamped-log differencing; junitxml is the authority for the ledger):
+
+| test | traced |
+|---|---|
+| `test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tilted]` | 201.9 s |
+| `test_chandrasekhar_dxdv_phase_volume_law` | 49.7 s |
+| `test_chandrasekhar_dxdv_fd_of_flow_branches[×3]` | **4.9 s** each |
+| `test_fdm_dxdv_fd_of_flow_branches[×6]` | **4.9–5.0 s** each |
+
+Nine of them run in **~5 seconds** against a 240 s deferral margin — deferred by
+a factor of roughly **fifty**. These are not marginal calls; they are stale by
+two orders of magnitude.
+
+**This reverses the straw I flagged earlier.** With n=2 (from `test_dynamfric` /
+`test_FDMdynamfric`) I noted "zero drops, the opposite of jax's 64%" and said
+explicitly it was a straw in the wind, not a result, because `test_orbit` held
+13 of the 15 and would decide. It decided the other way: torch's entries are
+evaporating at least as fast as jax's did. Good that it was labelled — that note
+would have been quoted back as a finding otherwise.
+
+**Why they were deferred at all** is the interesting part and is consistent:
+these entries were measured **eager**, where torch has no compiled kernel and
+grinds; traced, the same work compiles once and runs in seconds. So the eager
+list is not merely *stale* here, it is *systematically wrong in one direction*
+for this family — the inverse of the numpy→eager-slow tip-over recorded earlier
+in this project.
+
+Two of 13 still to come (`test_dissipative_dxdv_python_raises`,
+`test_lyapunov_spectrum_henonheiles_chaotic`), and the two provisional rows
+still need their clean re-runs.
