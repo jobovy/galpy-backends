@@ -31705,3 +31705,40 @@ and pass counts, so the contention retraction genuinely does not touch it.
              the develop push run from #1275's merge (00:40Z). Expected, not stalled.
     gh#1274  151 pass / green
     noninertial serial: 15/53 at 18:21
+
+### 2026-08-09 — the #194 seeding step is unnecessary: CI has no --jit dimension
+
+Before building the "seed the jit list, then prune" migration I described two
+wakes ago, I checked whether the thing it protects against can happen. It
+cannot:
+
+    grep -rniE "\bjit\b|JAX_.*JIT|GALPY.*JIT" .github/workflows/   ->  nothing
+    (all 10 workflow files: build, backend-tests, all-clear, notebooks, wheels, ...)
+
+**No CI job runs `--jit` at all.** So flipping the inheritance rule has *zero*
+CI impact: the ~75 inherited jax entries cannot "all start running at once" in
+CI, because nothing in CI runs traced. They would start running only in local
+`--jit` runs — which are my measurement tool, and where surfacing them is the
+entire point.
+
+So the seed-then-prune plan solved a problem that does not exist. Corrected
+plan for #194: **flip the rule (done, `ac2cd27e`), then add jit slow-skip
+entries only as serial measurement justifies them.** No seeding, no 73 lines of
+duplicated nodeids, no "UNMEASURED" markers to clean up later.
+
+(conftest's own comment mentioning "the always-on jit shard" is what made me
+assume a CI dimension existed. It refers to test files that call `jax.jit`
+internally — e.g. the `assert_jit_matches_eager` adopters — which is a different
+thing from `pytest --jit`. A comment describing the codebase is not evidence
+about CI configuration; the workflow files are.)
+
+**Worth raising with Jo separately:** this means the entire `--jit` dimension —
+the traced ledger, the traced slow-skip list, `assert_jit_matches_eager`'s
+premise — is validated *only* on my dev box. Nothing regressing it would be
+caught by CI. I cannot add the shard myself (no workflow-edit scope), so it is
+a Jo decision, and it belongs on the AWAITING list rather than in a PR.
+
+    gh#1278  26 build jobs still queued; develop's push run has completed 1 of
+             26 in ~1 h, so the pool is small. Not stalled, just slow.
+    gh#1274  151 pass / green
+    noninertial serial: 16/53
