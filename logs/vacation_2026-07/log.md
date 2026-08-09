@@ -36676,3 +36676,25 @@ and it is a trap precisely because it *looks* like diligence.
 
 CI: gh#1284 124/153 with only the healing codecov phantom; gh#1285 climbing now
 that develop's post-merge matrix has drained.
+
+### 2026-08-09 (cont.) — state check: both PRs waiting on backend shards, measurement in tail
+
+gh#1284's remaining 24 checks are **21 backend shards** + 2 ubuntu builds +
+all-clear. Those shards are the eager jax/torch full suites — the slowest jobs in
+the matrix — so "127/153" is further from done than the fraction suggests. Same
+for gh#1285, which is only now getting runners.
+
+`test_orbit` eager at 74 % / 1427 s, 9 workers busy. The tail is doing what the
+tail does.
+
+Nothing actionable in any of the three. Deliberately not re-running anything,
+not cancelling anything, and not starting a fourth workstream: the two-PR cap is
+full, the third branch is staged and audited, and the measurement is the correct
+use of local CPU.
+
+Worth stating plainly for the record, since several wakes have now landed inside
+the same minute: **the right move some wakes is to confirm nothing needs doing
+and stop.** Manufacturing activity against a queue I cannot speed up would add
+risk (mid-flight edits, cancelled runs, contended measurements) for no progress,
+and today already supplied three examples of exactly that kind of self-inflicted
+cost.
