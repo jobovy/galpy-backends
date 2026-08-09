@@ -32714,3 +32714,34 @@ today, so this is a local-run concern only.
     gh#1279  90 pass / 24 running / 38 queued / codecov 17-of-28, rising
     gh#1280  6 pass / 10 running / 91 queued  (started moving)
     sweep    test_streamspraydf in flight, 6 files behind
+
+### 2026-08-09 — sweep 4 of 10: half the eager entries are un-deferring
+
+`test_streamspraydf.py`: 38 tests, **273 s total traced**, 0 slow, 0 defects.
+Its one eager entry, `test_center`, traces in **81.5 s** -- still the slowest
+test in the file, but 3x inside the 240 s margin, so it un-defers.
+
+**Running totals, 4 of 10 files:**
+
+    file                 tests   eager  ->  jax-jit   un-deferred
+    test_dynamfric           7     1          1        -
+    test_FDMdynamfric        9     3          2        test_dynamfric_c (226.6s)
+    test_galpypaper         15     1          0        test_diskdf
+    test_streamspraydf      38     1          0        test_center (81.5s)
+                                  ---        ---
+                                    6          3        3
+
+**Half of the eager deferrals measured so far do not survive contact with a
+traced run.** That is the concrete payload of the gh#1279 argument: inheritance
+was not a conservative default, it was silently deferring tests that trace fine
+-- and, in the FDM file, simultaneously failing to defer two that do not.
+
+Still **zero defect candidates** across 69 traced tests in 4 files. Worth saying
+plainly since I built the slow/defect classifier expecting to need it: so far
+every non-timeout test passes traced. That is a good sign for the migration's
+state, not evidence the classifier was unnecessary -- streamdf's 10 immutability
+failures came out of exactly this kind of run.
+
+    gh#1279  95 pass / 21 running / 36 queued / codecov 18-of-28
+    gh#1280  7 pass / 13 running / 87 queued
+    sweep    test_interp_potential in flight, 5 files behind
