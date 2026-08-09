@@ -33491,3 +33491,47 @@ green at 154/154, and no workflow runs `--jit`.
     gh#1280   2 pass / 149 queued on the new base
     sweep     test_orbit in flight -- last file
     follow-up 9fe4a647 local, 8/10 banked
+
+### 2026-08-09 — AnyAxisym forceAsDeriv ATTRIBUTED: pre-existing, NOT gh#1278
+
+Reproduced the failure exactly, then A/B'd it. Two wrong assumptions in the
+first probe, both fixed:
+
+* the test does `tclass()` -- **default** surfdens, not one I choose;
+* the derivative is **ONE-SIDED**, `(Phi(z) - Phi(z+dz))/dz`. A centred
+  difference across z=0 cancels by symmetry, which is exactly why the first
+  probe read `diff = 0` and reproduced nothing.
+
+Faithful probe, current develop:
+
+    eager  Phi(z=0)   = -1.7599930722150277   Phi(z=1e-8) = -1.7599930722110944
+           one-sided dPhi/dz = -3.93e-04            <- fine
+    jit    Phi(z=0)   = -1.7599195947859025   Phi(z=1e-8) = -1.7599930535685753
+           one-sided dPhi/dz = +7.345878e+03        <- matches the test's 7.345999e+03
+
+**Mechanism**: under tracing, `Phi` at **exactly z=0** is wrong by ~7.3e-5
+relative to `Phi` at z=1e-8. Eager has the two agreeing to 11 digits. Dividing
+that inconsistency by dz=1e-8 is what manufactures 7346.
+
+**A/B, same probe, pre-gh#1278 file swapped in (it touches only 2 files):**
+
+    pre-#1278  jit Phi(z=0) = -1.7599195947859025   dPhi/dz = 7.345878e+03
+    post-#1278 jit Phi(z=0) = -1.7599195947859025   dPhi/dz = 7.345878e+03
+
+**Identical. gh#1278 did NOT cause this -- it is pre-existing and traced-only.**
+The only difference gh#1278 makes anywhere in the probe is the last digit of the
+traced `Phi(z=1e-8)` (`...5753` vs `...5750`), ~2e-16 relative: noise.
+
+So my merged change is cleared -- and cleared by a probe that **reproduces** the
+failure, which is the only kind of clearance worth anything. The previous
+wake's probe returned `diff = 0` and I explicitly refused to read that as
+exoneration; that refusal was right.
+
+**What remains is a real defect, just not mine**: AnyAxisym's traced potential
+is wrong at exactly the disk plane. It belongs in the jax-jit ledger with this
+diagnosis, and the fix is the z==0 degenerate-grading path -- which my own
+gh#1278 comment already names ("ratio is 1 exactly at z==0, where grading is off
+by construction"), inherited from the dyadic version rather than introduced.
+
+    gh#1280   on the new base, CI running
+    sweep     test_orbit -- last file
