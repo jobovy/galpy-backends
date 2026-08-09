@@ -37285,3 +37285,54 @@ against 28 queued. Nothing further to drive; not a blocker (work resumes on its
 own), so no phone ping. This is, however, concrete evidence for the
 `concurrency:` group Jo needs to add — superseded SHAs kept three runners busy
 for three hours, and I only found it by looking.
+
+### 2026-08-09 — boundary census on the surfdens path: the eager lever is scipy's scalar quadrature
+
+CI is starved (1 in-progress run repo-wide), so I took the vectorisation
+prerequisite: found the existing tool, `appendices/boundary_census.py`, rather
+than writing one. Its docstring already records the last sweep — *"residual:
+interpRZPotential only (task #211)"* — but its workload list does **not** cover
+the surfdens/SCF tests that dominate the remaining jax ledger. So I censused
+those directly, reusing its spy.
+
+**Result 1 — the 1440-2641 s test_potential entries are NOT one problem, they
+are two.** Same hot caller, wildly different economics:
+
+    MWP14 surfdens        2779 crossings    2.23 s     ~0.8 ms/crossing
+    McMillan17 surfdens   3703 crossings   56.91 s    ~15   ms/crossing
+
+Same `CompositePotential.py:<genexpr>` at x2772 in both. MWP14 is
+**boundary-bound**; McMillan17 is **compute-bound** — its SCF/DiskSCF components
+cost ~20x more per evaluation, and no amount of crossing elimination touches
+that. Treating "the slow potential tests" as one vectorisation target would have
+been wrong.
+
+**Result 2 — gh#1285 already removes that hot spot, and I had not noticed.**
+Censused the same workload on the fix branch:
+
+    develop  9dc31569   MWP14 surfdens (density)   2779 crossings
+    gh#1285  a2d24422   MWP14 surfdens (density)     19 crossings
+
+**146x fewer.** The mechanism is the delegation itself: instead of scipy's
+scalar quadrature calling a summed integrand ~924 times (3 components x 924),
+each component runs **one vectorized `symmetric_quad`** over a node array.
+
+**What I am NOT claiming:** a speedup. Wall time went 2.23 s -> 3.62 s in this
+micro-measurement, and the two numbers come from *different trees*, one call
+each, with jax dispatch warmup included. The crossing count is the robust
+signal; the timing is not, and I am not going to dress a 146x crossing
+reduction up as a performance win it did not demonstrate.
+
+**Result 3 — the actionable lever, stated as a hypothesis not a plan.** The
+poisson route on the fix branch still shows **2299 crossings**, attributed to
+`Potential.py:<lambda>:810/811` — the poisson integrand, called scalar-wise by
+`scipy.integrate.quad`. That path is taken because `_quad_needs_backend`
+returns False under a **forced-but-untraced** backend, so eager forced-jax gets
+scipy's scalar loop while traced jax gets the vectorized backend quadrature.
+That is precisely the shape of the eager-jax slowness in these tests.
+
+So the candidate next PR is: let the backend quadrature serve the eager forced
+path too, leaving numpy on scipy. It would be numpy-byte-identical by
+construction. **Unverified** — I have not checked whether accuracy holds at the
+extremes (the GL-vs-adaptive floor is a known trap here), nor what it does to
+the 12 ledgered entries. That is the next wake's measurement, not a conclusion.
