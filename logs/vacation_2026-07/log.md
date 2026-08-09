@@ -32566,3 +32566,39 @@ is: **check that the artifact exists, rather than that the option was passed.**
     gh#1279  46 pass / 23 running / 83 queued / codecov-project phantom
     gh#1280  2 pass / 105 queued
     sweep    v3 running, test_dynamfric
+
+### 2026-08-09 (cont.) — sweep v3 VALIDATED; first measured result
+
+The rebuilt sweep produces the artifact. Checked the file exists rather than
+that the flag was passed -- the discipline the last two attempts lacked:
+
+    -rw-rw-r-- 1 bovy 15404 Aug  9 01:53 /var/tmp/jitsweep/test_dynamfric.xml
+
+**Result 1 of 10 -- `test_dynamfric.py --backend jax --jit`** (7 tests, 344 s):
+
+       300.0s  FAIL  test_dynamfric_c            <- hit the cap, jax-jit entry
+        11.9s  pass  ChandrasekharDynFric_varLambda
+        11.9s  pass  ChandrasekharDynFric_constLambda
+         3.9s  pass  ChandrasekharDynFric_pickling
+         2.9s  pass  test_dynamfric_c_minr_warning
+         2.2s  pass  test_dynamfric_c_minr
+         0.0s  pass  ChandrasekharDynFric_evaloutsideminrmaxr
+
+`signal` interrupted it cleanly at exactly 300.0 s and the session still
+finished, so the method choice is confirmed on real work, not just in principle.
+
+Reading: this file's single eager `jax` entry is `test_dynamfric_c`, and traced
+it is *also* over the margin -- so here inheritance would have given the right
+answer. That is not an argument for inheritance; it is one file out of ten, and
+streamdf already showed the opposite (whole file deferred eager, 0 entries
+needed traced). The point is that both are now **measured** rather than assumed
+in either direction. The other six tests clear the margin by a factor of 25.
+
+Running tally of jax-jit slow-skip entries this sweep will add:
+
+    test_dynamfric            1   (test_dynamfric_c, 300 s cap)
+    test_galpypaper           in flight
+    (8 files behind)
+
+    gh#1279  49 pass / 23 running / 80 queued / codecov-project phantom
+    gh#1280  2 pass / 105 queued
