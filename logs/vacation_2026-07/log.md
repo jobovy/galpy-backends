@@ -35162,3 +35162,39 @@ Two consecutive arithmetic slips in one summary is a signal about the format,
 not just the instance: prose totals sitting next to a table drift from it. The
 fix I will actually use is to derive the totals from the table
 programmatically before writing them down, which is how both were caught.
+
+### 2026-08-09 11:45 — gh#1281 MERGED. develop `a45a4f1d` → `de0745c5`
+
+    154/154 green, mergeStateStatus=CLEAN
+    state=MERGED  commit=de0745c50  remote branch deleted
+
+The audit was done ahead of green (ledger-only diff, +15/+8/−1 arithmetic
+closes, no duplicate entries, the single deletion verified as the StaeckelGrid
+entry measured XPASSing traced), so the merge was immediate rather than a wake
+later. `gh pr merge` printed a `git` error afterwards — that was only the local
+`--delete-branch` step colliding with the `feat/backends-develop` worktree; the
+merge itself landed and the remote branch is gone. Checked rather than assumed:
+`state=MERGED` from the API and the new develop tip.
+
+**Post-merge script ran clean:**
+
+    Successfully rebased and updated detached HEAD.
+    ledger lines: 338 -> 331  (expected -7: 7)
+    tests/backend_xfail.txt | 7 -------
+
+Exactly 7, whole-line fixed-string matched, with the abort-guards unused. The
+held branch now sits on top of the merge as
+`dbb584cb` (KD `_mass`) + `2aea9647` (RotateAndTilt) + the ledger drop.
+
+**C extension:** the new worktree could not load `libgalpy`, and the reason is
+worth writing down — `load_libgalpy` searches `sys.path` **plus the repo root**,
+and the `.so` lives at the *worktree root*, not under `galpy/`. That is why
+`ls galpy/*.so` looked empty in a tree that loads the extension fine. Building
+properly in `defects-edit` rather than copying port207's: the C sources are
+provably identical (the branch diff vs `de0745c5` is two `.py` files), so a copy
+would work — but a built `.so` has unambiguous provenance and the build is
+minutes.
+
+Next: build finishes → verify `galpy.__file__` → pytest gate (5 ledgered
+`poisson_surfdens` + numpy regression) → open with
+`/var/tmp/defects-pr-body.md`.
