@@ -31866,3 +31866,44 @@ are indistinguishable.
              all 26 build jobs of the PR run still queued
     gh#1274  151 pass / green
     noninertial serial: 25/53 at 1:04
+
+### 2026-08-09 — #171 tolerance change written (grouped into the #194 branch)
+
+Jo's granularity preference is less-atomic PRs with disjoint files, and #171 and
+#194 are both Jo-approved test-side changes touching different files
+(`test_actionAngle.py` vs `conftest.py` + `test_backend_ledger.py` +
+`backend_slow_skip.txt`). Grouping them into `feat/jit-slow-skip-own-list`
+rather than opening a second PR.
+
+The backend-aware hook is `name_of_namespace(resolve_namespace())`, which
+reports the ACTIVE backend rather than an argument's namespace:
+
+    default             -> "numpy"
+    use("jax", force)   -> "jax"
+
+Applied at the call site, not in `check_actionAngle_linear_angles` — that helper
+is shared by many tests, so a bar changed inside it would loosen all of them:
+
+    lin = -7.0 if name_of_namespace(resolve_namespace()) == "numpy" else -6.5
+
+numpy keeps `-7.0` **exactly**; only the non-numpy arms move. Measured
+1.67707e-07 (jax) and 1.77912e-07 (torch) against `1e-7` — a factor 1.7-1.8,
+which is reassociation of the accumulated angle sum, not a wrong answer.
+`-6.5` = 3.16e-7 clears both with ~1.8x margin, tight enough that anything
+genuinely broken still fails.
+
+Deliberately NOT verified under jax/torch yet: the serial noninertial
+measurement is still running and a forced-backend run would contend with it,
+which is exactly what invalidated the earlier timings. The numpy arm is being
+checked now (it must still pass the unchanged -7.0). Backend verification, and
+the A/B that it un-ledgers both entries, happen before the PR opens.
+
+Still outstanding for #171: the third tolerance entry,
+`test_actionAngleStaeckelGrid_basicAndConserved_actions` (torch, 1.5305e-10 vs
+an ABSOLUTE 1e-16 on a physically-zero circular-orbit eccentricity). Different
+call site, same treatment.
+
+    gh#1278  16 pass / 135 pending / project 51.64% -> 54.37%, patch still
+             0.00% (covering shard queued)
+    gh#1274  151 pass / green
+    noninertial serial: 26/53 at 1:08
