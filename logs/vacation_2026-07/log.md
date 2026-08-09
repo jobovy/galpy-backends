@@ -32951,3 +32951,35 @@ path), backend/interpolate.py (numpy-constructed weights) and now streamgapdf
     gh#1279  120 pass / 12 running / 21 queued / NO REDS
     gh#1280  28 pass / 23 running / 56 queued / codecov stacked phantom
     sweep    test_qdf in flight, 4 files behind
+
+### 2026-08-09 — sweep 6 of 10
+
+`test_qdf.py`: 56 tests, 660 s traced. Its 2 eager entries split cleanly:
+
+      22.0s  UN-DEFERS  test_meanjz_noaac_issue300
+     300.0s  KEEP       test_sampleV_interpolate
+
+**Running totals, 6 of 10 files:**
+
+    file                    tests   eager  ->  jax-jit   un-deferred
+    test_dynamfric              7     1         1          -
+    test_FDMdynamfric           9     3         2          1
+    test_galpypaper            15     1         0          1
+    test_streamspraydf         38     1         0          1
+    test_interp_potential      40     6         1          5
+    test_qdf                   56     2         1          1
+                                     ---       ---        ---
+                                      14         5          9
+
+The clean separation holds at 6 files: **every keeper hit the 300 s cap; the
+slowest un-deferral is 177 s.** Nothing has landed in the 177-300 s band at all,
+so the 240 s margin is not doing any delicate work -- the two populations are
+genuinely distinct, and no entry's fate turns on where exactly the line sits.
+
+**Zero defect candidates** across 165 traced tests in 6 files.
+
+Remaining: `test_orbits` (116 tests, in flight), then `test_actionAngle` (209),
+`test_potential` (221), `test_orbit` (245) -- the three large ones, hours each.
+
+    gh#1279  122 pass / 10 running / 21 queued / NO REDS
+    gh#1280  33 pass / 23 running / 51 queued / codecov stacked phantom
