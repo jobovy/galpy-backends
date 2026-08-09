@@ -34172,3 +34172,66 @@ Same harness as the jax sweep for the same reasons (per-test `--timeout=300
 One caveat recorded in the script header: the tree under test carries the
 unmerged KD `_mass` fix (`56e179e5`), so `test_McMillan17`/`test_Cautun20` are
 expected to pass here — that is the fix, not a torch-vs-jax difference.
+
+### 2026-08-09 — RotateAndTilt: measured, half-fixable, REVERTED. Not a one-liner.
+
+Last wake I said the empirical question could not be probed from outside the
+guard. Wrong: the guard reads `getattr(self, "_backend_accepts_arrays", False)`,
+so setting it on a **throwaway instance** admits backend arrays without touching
+any code. Did that, and got the measurement.
+
+**It does not broadcast.** `RotateAndTiltWrapperPotential.py:180`:
+
+    xyzp = xp.stack([x, y, z])
+    ValueError: Cannot stack arrays with different numbers of dimensions:
+                got (), (), (3,)
+
+With a trailing node axis only `z` carries it, so the stack mixes rank 0 and 1.
+One line fixes that — `x, y, z = xp.broadcast_arrays(x, y, z)` — and the rotation
+then works for free, because `(3,3) @ (3,N)` is the same matmul as `(3,3) @ (3,)`.
+Measured, not assumed: `_evaluate/_Rforce/_zforce/_dens`, two geometries, array
+call vs scalar loop → **max rel 0.000e+00** (bit-identical), result is a real
+backend array (`ArrayImpl`, not a numpy fallback), `jax.grad` through it works,
+and numpy `_Rforce` is byte-identical (sha `04e57c75…` both sides).
+
+**But that is not the failing path.** The 5 ledgered tests are
+`test_poisson_surfdens_potential`, which drives the **second derivatives**:
+
+    deriv2p = stack([stack([x2,xy,xz]), ...])        # (3,3), or (3,3,N)
+    return inv_rot @ (deriv2p @ inv_rot_T)
+    TypeError: dot_general requires contracting dimensions to have the same
+               shape, got (50,) and (3,)
+
+`(3,3,N) @ (3,3)` contracts the node axis against 3. So the Hessian rotation has
+to be restructured too. I tried the obvious `xp.einsum("ia,ab...,jb->ij...")` —
+it broadcasts perfectly (`_R2deriv/_z2deriv/_Rzderiv` all 0.000e+00) but it is
+**not numpy byte-identical**: `507263c4…` vs stock `433a5731…`. einsum picks a
+different contraction order than two chained matmuls.
+
+So I **reverted the whole RotateAndTilt change.** Byte-identity is the standing
+constraint and I will not trade it for a ledger entry. The KD `_mass` fix
+(`56e179e5`) is untouched and still committed.
+
+**What it would actually take** (for whoever picks this up, likely me): build
+`deriv2p` with the node axis **leading** — `(N,3,3)` instead of `(3,3,N)` — so
+`inv_rot @ deriv2p @ inv_rot_T` stays a plain chained matmul and the scalar case
+executes the identical operations, preserving the bits, while the array case
+rides numpy/jax batched-matmul semantics. That changes the returned shape, so
+the call sites need checking. Bounded, but not a one-liner, and not something to
+half-land while CI is starved.
+
+**Two counting corrections, both mine.** Mid-wake I "corrected" the count to 3
+RotateAndTilt entries; that was itself wrong. There are **5**, and my `-k
+"RotatedAndTilted or RotateAndTilt"` filter only selected 3 of them because two
+are named `mockRotatedTiltedOffsetMWP14WrapperPotential` and
+`mockOffsetMWP14WrapperPotential` — no matching substring. The original 5 stands.
+
+**Also caught myself contaminating the torch sweep**: I launched a jax `--jit`
+job while `test_FDMdynamfric` was running, which is precisely the CPU
+oversubscription the serial design exists to prevent. Killed my job (not the
+sweep) and flagged that file for re-measurement in
+`/var/tmp/torchsweep/CONTAMINATION_NOTE.txt`. The partial output it did produce
+is **not** being read as a result.
+
+Torch sweep so far: `test_dynamfric` 7 tests, 1 failure — `test_dynamfric_c` at
+the 300 s cap, i.e. torch's single entry there is a genuine traced slow entry.
