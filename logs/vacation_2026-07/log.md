@@ -33103,3 +33103,33 @@ becomes 17 -> 13.
     gh#1279  142 pass / 10 running / 1 queued / NO REDS
     gh#1280  73 pass / 28 running / 7 queued / codecov project only
     sweep    test_actionAngle 72/209
+
+### 2026-08-09 — gh#1274 was a DRAFT the whole time I was asking Jo to merge it
+
+Ran an open-PR census, which I had not done this stretch. 7 open, 5 of them
+Jo's own or the long-lived integration/accumulation PRs. The finding is the 6th:
+
+**gh#1274 was still marked DRAFT.** I have been reporting it as "151 green,
+Jo's to merge" for several wakes -- and a draft PR **cannot be merged**. The
+action I kept putting in front of him was not actually available.
+
+Verified it was genuinely complete before touching it: **151 SUCCESS / 3 SKIPPED
+/ 0 failures**, `MERGEABLE`, 3214-char body, base `main`, and Jo had already
+made the call that decides it ("1274 should target main"). So the only thing
+between it and his merge button was a flag I had left set.
+
+    gh pr ready 1274   ->   isDraft: false
+
+`mergeStateStatus` stays `BLOCKED` with `reviewDecision: ""` and 151/3
+green -- i.e. it is now blocked on **required review**, which is exactly Jo's
+action rather than a defect. That is the correct end state for a PR into `main`.
+
+Lesson worth keeping: I checked that PR's *checks* every wake and never once
+checked its *state*. A green PR that cannot be merged looks identical to a green
+PR that can, if you only ever read the check counts. STATUS.md and the AWAITING
+JO list both said "merge gh#1274" without noticing it was un-mergeable.
+
+    gh#1279  146 pass / 7 running / 0 queued / NO REDS
+    gh#1280  83 pass / 25 running / codecov project only
+    gh#1274  READY (was draft), 151 green, awaiting Jo's review
+    sweep    test_actionAngle 90/209
