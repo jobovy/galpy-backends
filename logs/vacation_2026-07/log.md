@@ -34320,3 +34320,45 @@ PR body drafted at `/var/tmp/defects-pr-body.md`, ready to open the moment
 gh#1281 merges. **Still owed: the pytest gate** (5 ledgered tests + numpy
 regression) — the torch sweep has the CPU and is on `test_potential` now, which
 will incidentally answer the torch half of the KD question authoritatively.
+
+### 2026-08-09 — first torch sweep results: the slow-vs-defect split pays off again
+
+Two files done. The classification matters more than the timings.
+
+| file | tests | result |
+|---|---|---|
+| `test_dynamfric` | 7 | 1 fail: `test_dynamfric_c` at the 300 s cap → genuine slow, **keeper** |
+| `test_FDMdynamfric` | 9 | 2 fails, and they are **different kinds** |
+
+**`test_FDMdynamfric` is wrong in both directions — same as jax found, but for
+different tests.** That file's torch eager slow-skip entry is
+`test_FDMDynamicalFrictionForce_central_limit`, and traced it does not run slow
+at all: it **fails in 35.9 s** with
+
+    assert numpy.amax(numpy.fabs(o.r(t) - r_pred)) / r0 < 0.001
+    TypeError: max() received an invalid combination of arguments
+               - got (out=NoneType, axis=NoneType, )
+
+i.e. a **defect wearing a performance deferral** — precisely the failure mode
+the slow-vs-defect split exists to catch, and the same shape as the 10-test
+streamdf immutability bug that hid behind one. Meanwhile
+`test_FDMDynamicalFrictionForce_const_FDMfactor` **does** hit the 300 s cap and
+was never an eager entry at all, so inheritance could not have reached it.
+
+**The defect is test-side and already has a house fix.** `numpy.amax` on a torch
+Tensor dispatches to `Tensor.max(out=…, axis=…)`, which torch rejects (it takes
+`dim=`). `tests/test_FDMdynamfric.py` **already imports `as_numpy` and already
+uses exactly this pattern** at lines 113, 167, 404 and 436 — lines **49 and 59
+were simply missed**. So it is incomplete adoption, not a new problem, and the
+fix is `as_numpy(o.r(t))` at those two lines.
+
+Not applying it yet: the torch sweep is still running (`test_potential`, then
+`test_orbit`) and will produce more torch findings. Batching them into one
+coherent torch PR beats fragmenting, and it keeps the held branch about the jax
+sweep's defects. Recorded here so it is zero-thought later.
+
+Running tally for the torch un-deferral debt (15 entries, 2 files done):
+
+* `test_dynamfric_c` → stays deferred (genuine 300 s timeout)
+* `central_limit` → **comes off** slow-skip; it is a defect with a known fix
+* `const_FDMfactor` → **new** entry inheritance could never have produced
