@@ -33354,3 +33354,40 @@ it matches the established retarget flow used for the Pdf.2 family PRs.
     gh#1280  rebased ec7e67e2, CI restarting on the new base
     gh#1274  READY, awaiting Jo
     sweep    test_potential 1137+ cases, then test_orbit last
+
+### 2026-08-09 — follow-up branch prepared (8 of 10 files' entries banked)
+
+gh#1280 is on its new base and running a **fresh full CI cycle** (149 queued) --
+expected, since the rebase changed every SHA. Nothing to drive there.
+
+With gh#1279 merged a PR slot is free, so started the sweep follow-up:
+`backend-jit/sweep-measured-entries` off `d2ad93c9`, commit **`9fe4a647`**.
+
+    tests/backend_slow_skip.txt   jax-jit 11 -> 19  (+8 measured)
+    tests/backend_xfail.txt       24 -> 23          (StaeckelGrid un-ledgered)
+
+Created it in a **new worktree**, not by switching branches in `port207` --
+the sweep is still running there and reads the test files it would have been
+swapping under it.
+
+Ledger arithmetic now closes end to end:
+
+    develop pre-#1279   17
+    #1279               +10 streamdf immutability, -3 tolerance   ->  24
+    this follow-up      -1 StaeckelGrid (measured stale)          ->  23
+    #1280               -10 streamdf immutability                 ->  13
+
+i.e. the **17 -> 13** net stated earlier, with every step accounted for rather
+than asserted.
+
+Not pushed / not opened yet: `test_potential` and `test_orbit` are still
+measuring, and opening now would just mean a second push plus a wasted CI cycle
+on an incomplete branch. The commit message already records the method (whole
+files, alone on the machine, per-test signal timeout) so the eventual PR body
+does not have to re-derive it.
+
+    gh#1279  MERGED -> develop d2ad93c9
+    gh#1280  fresh CI on new base: 1 pass / 149 queued
+    gh#1274  READY, awaiting Jo
+    follow-up 9fe4a647 local, 8/10 files banked
+    sweep    test_potential 1307+ cases, then test_orbit
