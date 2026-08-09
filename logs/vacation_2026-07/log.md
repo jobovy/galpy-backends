@@ -34731,3 +34731,39 @@ The reliable move is to sample coverage twice a few minutes apart.
 Still no action on it — it clears itself; the only thing worth doing is
 re-checking once CI completes, and re-running `all-clear` only if it is still
 red then.
+
+### 2026-08-09 — first of the 13 lands, and it falsifies my provenance claim
+
+    test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tilted]  PASSED  ~201.9 s
+
+A torch eager slow-skip entry that **passes traced**, comfortably under the
+300 s cap — so on the sweep's own rule it is a **drop**, the first of the torch
+run. (201.9 s is from differencing the stamped log lines, so it is approximate
+and includes setup; the junitxml time is the number that will go in the ledger.)
+
+**But look at the parametrization.** When I wrote the provenance table I said:
+
+> only `test_orbit` will additionally carry the RotateAndTilt fix — and
+> `test_orbit` does not exercise `RotateAndTiltWrapperPotential` (those tests
+> live in `test_potential`), so the practical impact is nil.
+
+That is **false**, and the very first of the 13 to run is the counterexample:
+this test is *parametrized on* `RotateAndTiltWrapperPotential`. I checked which
+*file* the potential's tests live in and never checked whether other files
+parametrize over it — a weaker check than the claim I made from it.
+
+**What follows, precisely.** All of `test_orbit` ran on the tree carrying my
+RotateAndTilt fix (edit 08:25:12, file started 09:16:55), so this row's verdict
+is measured on patched code. The fix only alters behaviour when a *backend
+array* reaches the wrapper and the new `_backend_accepts_arrays` flag is
+consulted; the dxdv path plausibly never does that, in which case the 201.9 s
+pass is unaffected. **Plausibly is not measured.** So:
+
+* this row is **provisional** until re-measured on an unpatched tree;
+* the other 12 are unaffected — none is parametrized on RotateAndTilt (checked
+  the list, this time by reading all 13 names rather than reasoning about where
+  a class's own tests live).
+
+That is now two rows needing a clean re-run before the torch ledger is written:
+this one, and `const_FDMfactor` from the CPU-contaminated `test_FDMdynamfric`.
+Both re-runs are cheap and both go in the same post-sweep batch.
