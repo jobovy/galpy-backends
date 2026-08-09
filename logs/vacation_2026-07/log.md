@@ -34805,3 +34805,34 @@ in this project.
 Two of 13 still to come (`test_dissipative_dxdv_python_raises`,
 `test_lyapunov_spectrum_henonheiles_chaotic`), and the two provisional rows
 still need their clean re-runs.
+
+### 2026-08-09 — gh#1281 merge audit done ahead of green (123/153, 0 red)
+
+Did the audit now so the merge is immediate when CI finishes rather than a
+wake later. The PR is **ledger-only** — `backend_slow_skip.txt` and
+`backend_xfail.txt`, **no code** — so two of the three things this loop asks me
+to audit are vacuous here:
+
+* **`if` → `xp.where` array-input class** — N/A, no code changed.
+* **helper placement** — N/A, no helpers.
+* **duplication** — checked as *entry* duplication, which is the meaningful
+  reading for a ledger PR: `sort | uniq -d` on both files, **none**.
+
+What actually needed checking for this PR type is that the entries are the ones
+I claim, and the arithmetic closes:
+
+| | before | after | delta | claimed |
+|---|---|---|---|---|
+| `jax-jit` slow-skip | 11 | **26** | +15 | 15 measured entries ✓ |
+| `jax-jit` xfail | 5 | **13** | +8 | 8 diagnosed defects ✓ |
+| deletions | — | — | −1 | 1 un-ledger ✓ |
+
+And the single deletion is exactly the intended one:
+
+    -jax-jit tests/test_actionAngle.py::test_actionAngleStaeckelGrid_basicAndConserved_actions
+
+which is the entry I measured XPASSing traced at 65.1 s — the traced evidence
+gh#1279 said it would not accept from an eager run.
+
+**Verdict: ready to squash-merge the moment CI completes.** Nothing in the diff
+touches the numpy path, because nothing in the diff touches code at all.
