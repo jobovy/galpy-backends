@@ -36441,3 +36441,29 @@ in STATUS.
 
 CI: gh#1284 85/153, gh#1285 2/151, both clean apart from the codecov phantom.
 Traced noninertial measurement at 868 s, 6 workers busy.
+
+### 2026-08-09 (cont.) — sized the eager-jax burndown after noninertial
+
+`test_orbit.py`'s 45 slow-skip entries break down as **25 eager `jax` / 7
+`jax-jit` / 13 `torch`**, and the whole-repo eager-jax population is **75**.
+
+So the shape of the remaining work is now quantified rather than guessed:
+
+| cluster | eager-jax entries | measured? |
+|---|---|---|
+| `test_noninertial` | 19 | **yes, today — 11 stale (58 %)** |
+| `test_orbit` | 25 | **no** |
+| everything else | 31 | partially (#1270 un-deferred 6) |
+
+The traced sweep covered `test_orbit` but that measured **traced**, which is a
+different population from its eager list — the same gap that made noninertial
+worth doing. At noninertial's hit rate, 25 eager `test_orbit` entries might hold
+~14 stale ones, but that is an extrapolation from a single file and I am
+recording it as a *reason to measure*, not as a number.
+
+Not starting it now: the box is running the traced noninertial measurement and
+two PRs are in CI. `test_orbit` eager under jax is also the slowest thing in the
+suite (that is why the entries exist), so it needs a quiet box and a long window
+rather than a spare wake.
+
+CI: gh#1284 94/153, gh#1285 2/151, both clean but for the codecov phantom.
