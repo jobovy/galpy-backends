@@ -33647,3 +33647,35 @@ Follow-up branch: `9fe4a647` -> `20e2f86b` -> `532f251f` -> `1fc19ede`.
 
     gh#1280   3 pass / 10 running / 138 queued
     sweep     test_orbit 290 outcomes, 43 min in -- last file
+
+### 2026-08-09 — follow-up PR body drafted; task list de-staled
+
+Both PRs queue-bound (gh#1280 7 green / 13 running / 131 queued, no reds) and
+`test_orbit` is 52 min in at 383 outcomes with **0 failures**, so this wake went
+to preparation rather than waiting.
+
+**Drafted the follow-up PR body** at `/var/tmp/sweep-pr-body.md` -- everything
+except `test_orbit`'s row, which is the only thing still missing. It leads with
+the *method* rather than the numbers, because the numbers are only worth what
+the method is: whole files (a hand-picked nodeid batch loses module-scoped
+fixture context), alone on the machine (concurrent jax inflates the very timings
+being collected), and `--timeout-method=signal` rather than `thread` (thread
+hard-exits the process and costs the file's junitxml -- a trap I fell into
+twice before getting it right).
+
+It also states plainly what is **not** covered: the torch side has the identical
+gap (15 entries, 13 of them in `test_orbit.py`) and is deliberately unmeasured,
+because `parallel_map` still deadlocks under `torch --jit` and `signal` cannot
+interrupt a wedged fork child -- so that sweep could hang rather than report.
+Better named in the PR than left as a silent hole.
+
+**Task list**: closed `#171` and `#194` -- both were "COMPLETE, in gh#1279
+(open)", and gh#1279 is now merged, so they were describing a state that no
+longer exists. Left the genuinely ancient in-progress items alone rather than
+guess at them; marking things done without verifying is the opposite of the
+standard the rest of this work is held to.
+
+    gh#1280   7 pass / 13 running / 131 queued, no reds
+    gh#1274   ready, awaiting Jo's review
+    follow-up 1fc19ede local, body drafted
+    sweep     test_orbit 383 outcomes, 0 failures -- last file
