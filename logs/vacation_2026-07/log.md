@@ -34932,3 +34932,36 @@ Running torch tally now:
 The shape that keeps repeating: **the eager list is wrong in both directions at
 once** — entries that evaporate traced (11 of 13 here, 9 of them ~50x inside the
 margin) sitting alongside failures nobody had recorded at all.
+
+### 2026-08-09 — torch-jit ledger line prepared (and a probe deliberately not run)
+
+The `test_eccentricity` row needs exactly one new ledger line, and it is fully
+justified without further measurement — the mechanism, the magnitude and the
+un-ledger condition are already written down for `jax-jit`, and torch reproduces
+the same AnyAxisym root cause in `test_potential`:
+
+    torch-jit tests/test_orbit.py::test_eccentricity
+
+It goes in the end-of-sweep torch batch rather than now, so the ledger delta
+lands as one reviewable commit instead of an amend chain.
+
+**A probe I chose not to run.** The tempting confirmation is to execute just
+`test_eccentricity` under `--backend torch --jit` and read the actual
+`e` against the `1e-8` bar — ~15 s including imports, and it would upgrade
+"same mechanism" from inference to measurement. I did not, because `test_orbit`
+still has **2 of its 13 entries pending**, one of them
+`test_lyapunov_spectrum_henonheiles_chaotic`, and those verdicts are *timing*
+judgements against a 300 s cap. Adding load while a timing measurement is in
+flight is the exact mistake I made earlier today and wrote a memory about; the
+rule is worth more than the 15 s of confirmation.
+
+It is queued with the other post-sweep work, which is now:
+
+1. re-run `test_FDMdynamfric` alone (CPU-contaminated `const_FDMfactor` row)
+2. re-run `test_dxdv_3d_c_vs_python[RotateAndTilt…]` on an **unpatched** tree
+3. confirm `test_eccentricity`'s magnitude under torch
+4. the two pytest gates on the held branches (5 ledgered jax tests + numpy
+   regression; `central_limit` under torch)
+
+gh#1281: 143 green, 10 running, 0 red — unchanged this wake; the remainder are
+the heavy `test_orbit` shards.
