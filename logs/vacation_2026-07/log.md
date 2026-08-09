@@ -34441,3 +34441,42 @@ Also swept the rest of the repo for the same waste — compared every
 `in_progress` run's SHA against its branch tip — and found **no other stale-SHA
 runs**. The only one left is develop's `all-clear` on the current tip. So this
 was a one-off caused by my rebase, not an accumulating leak.
+
+### 2026-08-09 — I mutated the sweep's tree mid-run. Provenance, precisely.
+
+The sweep runs from `/var/tmp/port207`, and I spent the last two wakes **editing
+that same checkout**. Caught it from an odd log line and checked mtimes against
+process start rather than guessing:
+
+    test_potential process start          08:24:42
+    KuijkenDubinski... last modified      08:06:02   (before the sweep began, 08:10)
+    RotateAndTilt...  last modified       08:25:12   (30 s AFTER that start)
+
+Python imports at collection, in the first seconds, so the provenance is:
+
+| file | KD `_mass` fix | RotateAndTilt fix |
+|---|---|---|
+| `test_dynamfric`, `test_FDMdynamfric` | present | absent |
+| `test_potential` (running) | present | **absent** (edit landed 30 s late) |
+| `test_orbit` (not started) | present | **present** |
+
+So the script header's claim — "tree carries the KD fix" — is right for every
+file, and only `test_orbit` will additionally carry the RotateAndTilt fix.
+`test_orbit` does not exercise `RotateAndTiltWrapperPotential` (those tests live
+in `test_potential`), so the practical impact is nil. But 30 seconds is a thin
+margin to be relying on, and I would not have known which side of it I was on if
+I had not looked.
+
+**A datum falls out of this.** `test_poisson_surfdens_potential[mockRotatedAndTiltedMWP14WrapperPotential]`
+**PASSED under torch on the unfixed tree**. Under jax the same test fails on the
+`_backend_accepts_arrays` guard. So the RotateAndTilt defect is **jax-specific in
+its manifestation** — the traced torch path evidently does not hand that
+potential an array — unlike the AnyAxisym defect, which reproduced identically
+on both. Worth knowing before I write torch ledger entries for it. Marked
+provisional until confirmed from the finished junitxml.
+
+**Discipline, now enforced rather than intended:** the sweep tree is frozen for
+the rest of the run. Further code edits go in a separate checkout. This is the
+second contamination of this same sweep — first CPU (a concurrent jax job), now
+the tree — and both were self-inflicted while "not idling". Being busy next to a
+long measurement is exactly how you corrupt it.
