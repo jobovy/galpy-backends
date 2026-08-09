@@ -31633,3 +31633,33 @@ Serial re-measurement of streamTrack and streamdf queued behind this one.
 
     #1275  152 pass / 0 RED / py3.14 backend shard still in flight
     #1274  151 pass / green
+
+### 2026-08-09 — #1275 MERGED; #207 opened as gh#1278
+
+    #1275 squash-merged into feat/backends-develop at 00:40:32Z
+    develop  9f3c3166 -> 44b06e31
+
+Merged at head `7b195b5f`, the exact SHA the audit was performed and re-verified
+against — checked immediately before merging rather than assumed, since an audit
+is only valid for the commit it read.
+
+What landed: the `elif`->`if` fix so the interpSphericalPotential
+out-of-range warning fires when a composite also holds an
+`FDMDynamicalFrictionForce` (it was chained to the FDM check and silently never
+fired); NFWPotential's `alpha`/`beta` hoisted so the `conc`/`rmax` paths set them
+at all; and the expired `_NUMPY_1_23` tolerance conditional dropped from
+test_SpiralArmsPotential while keeping `dx=1e-6` for the backend.
+
+**#207 rebased and opened: gh#1278.** Rebase onto `44b06e31` was clean (0
+conflicts, 0 markers, the two files are disjoint from #1275's four), diff
+unchanged at 2 files / +49 / -6, `eee43498 -> 7ebc3f29`.
+
+Deliberately did NOT re-run the local gate before pushing: the serial
+noninertial timing measurement is in flight, and per the rule adopted last wake
+a concurrent jax run would corrupt *its* numbers even though the gate itself is
+a correctness run. CI verifies the same suites without touching local CPU, so
+the cost of waiting was zero and the cost of overlapping was another retraction.
+
+    gh#1278  (#207) open, CI starting
+    gh#1274  151 pass / green / Jo's to merge
+    noninertial serial run: 13/53
