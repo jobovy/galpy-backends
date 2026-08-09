@@ -37172,3 +37172,33 @@ nobody writes it down. The body now names the two entries to re-defer first if a
 jax shard goes long (`test_dxdv_3d_c_vs_python[OblateStaeckel...]` 237.9 s and
 `test_linacc_changingacc_xyz_accellsrframe_vecomegaz` 235.8 s), so the lever is
 identified before it is needed.
+
+### 2026-08-09 — torch --jit A/B COMPLETE: the 5 entries are genuinely cleared
+
+    BASE (clean develop 9dc31569)   5 failed, 1 xfailed   112.3 s
+    FIX  (rt-split a2d24422)        5 passed, 1 xfailed   318.9 s
+
+Both sides ran, the bad side reproduced, the `AnyAxisym` control stayed xfailed
+on **both**. So the follow-up PR's claim — that gh#1285's split fix clears the 5
+`torch-jit poisson_surfdens` entries — now has `torch --jit` evidence, not the
+eager-torch stand-in gh#1285 actually gated. The 2.8x runtime difference is
+itself corroboration: without the fix these die fast at the array guard; with it
+they do the real quadrature.
+
+**The run also surfaced 96 `__array_wrap__` DeprecationWarnings** at
+`RotateAndTiltWrapperPotential.py:201` — `return -num / r22`, a line **this PR
+adds**. `r22` is `self._rot[2, 2]`, a `numpy.float64`; dividing a backend array
+by it hands the op to numpy, which emits the numpy-2.0 deprecation.
+
+My first reaction was that this is the [[test-backend-W-error-deprecation]]
+trap and would fail CI. **I checked instead of acting: it does not.** Run under
+CI's exact flags (`-W error::DeprecationWarning -W error::FutureWarning`), the
+new backend tests pass 9/9 — the warning only fires from the traced
+`test_potential.py` path, and that shard does not use `-W error`. So: no CI red,
+and the alarm was mine, not the code's.
+
+Fixing it anyway, because it is a wart in code I am adding and it costs one
+word: `float(self._rot[2, 2])`. A plain float is also the *right* choice over
+`as_backend_constant` here — it stays a **weak** scalar, so it will not upcast a
+float32 backend array ([[backend-coerce-weak-scalar-trap]]). Verifying by
+warning count on the same selection (96 -> 0 expected) rather than assuming.
