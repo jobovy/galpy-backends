@@ -31977,3 +31977,48 @@ of wakes.
     gh#1278  35 pass / 116 pending / project 68.78% -> 69.95%
     gh#1274  151 pass / green
     noninertial serial: 29/53 at 1:23
+
+### 2026-08-09 — noninertial measured serially: 11 of 19 un-defer, 8 stay, 1 new
+
+First trustworthy `--jit` timing set. `tests/test_noninertial.py --backend jax
+--jit`, C extension present, **alone on the box**:
+
+    53 cases -> 53 PASSED, 0 failed, 0 skipped
+    total 6308 s (105 min)    median 11.1 s    9 of 53 over the 240 s margin
+
+Intersected against the 19 ledgered jax entries:
+
+| outcome | n | detail |
+|---|---|---|
+| **stay deferred** (still slow traced) | 8 | 381 - 615 s |
+| **un-defer** (fast traced) | 11 | 0.2 s - 210.9 s; nine under 20 s |
+| **new `jax-jit` entry** | 1 | `test_python_vs_c_linacc_changingacc_xyz_accellsrframe_scal...` 353.8 s |
+
+Three things worth stating precisely.
+
+**1. The heavy tail is the whole story.** Median 11.1 s, but nine tests at
+381-615 s. Any rate extrapolated from a prefix is meaningless here — which is
+why both my earlier readings were wrong in opposite directions (132 s/test under
+contention, 21 s/test from the first twelve). Only the per-test junitxml answers
+this, and only a run that completes writes one.
+
+**2. The 20th entry.** One test is **not** eager-ledgered yet takes 353.8 s
+traced — tracing made it *slower*. That is the direction nobody looks for, and
+it is only visible because the file actually ran traced. Under the old
+inheritance rule this test ran under `--jit` unguarded and would have been a
+latent timeout.
+
+**3. One un-defer is marginal and I am taking it anyway.**
+`test_linacc_changingacc_xyz_accellsrframe_vecomegaz` is 210.9 s, i.e. 1.14x
+inside the 240 s rule. At the measured CI/local factor of 0.71 that is ~150 s on
+CI, 2x under the 300 s cap. Recording the reasoning rather than the verdict, so
+it can be revisited if that shard ever flakes.
+
+Net for #194's jit slow-skip list from this file: **9 entries** (8 kept + 1 new),
+replacing 19 inherited ones. 11 traced tests start running that never have.
+
+streamTrack serial re-measure launched next (3 h budget, alone), then streamdf.
+
+    gh#1278  64 pass / 87 pending / project 69.95% -> 71.59%, patch still 0.00%
+    gh#1274  151 pass / green
+    #194     ce7b3f48, rebased onto develop 44b06e31
