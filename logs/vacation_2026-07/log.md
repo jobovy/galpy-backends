@@ -33274,3 +33274,42 @@ outlier -- it waits on all other jobs by design.
     gh#1274  READY, awaiting Jo
     sweep    test_potential 664+ cases (14 parametrize decorators expand it well
              past its 221 function count), then test_orbit last
+
+### 2026-08-09 — the slow shard was a RUNNER EVICTION, re-run dispatched
+
+The anomalous shard failed at **08:19:13Z** -- *before* the 08:56Z timeout
+deadline I had computed, so my "it will hit the 90-min backstop" expectation was
+wrong about the mechanism. Read the failure instead of assuming, and it is
+infrastructure, on four independent signatures:
+
+    conclusion=failure   but step 16 "Test with pytest" frozen at IN_PROGRESS
+    steps 17-20          all PENDING -- including "Upload shard JUnit XML",
+                         so the job produced no artifact at all
+    job log              BlobNotFound -- logs never uploaded
+    duration             53m03s, well under timeout-minutes: 90
+
+A real test failure completes the pytest step and uploads its junitxml. A job
+whose step is frozen mid-run, with no artifact and no log blob, was killed under
+it. Same class as the eviction recorded earlier in this project ("The runner has
+received a shutdown signal" after 36 min against 59 min of honest runtime).
+
+So the 3x-normal duration was the *symptom* of a sick runner, not a slow test --
+which also explains why it never reached the timeout.
+
+**Response: targeted re-run of the failed jobs only** (`gh run rerun 31294400216
+--failed`). Not a blanket re-run, and not a polling loop -- that cancels
+in-progress jobs. The shard is running again.
+
+`all-clear` went red purely as a consequence (it fails if any job fails). It
+needs its own re-run **after** the shard goes green, not now -- re-running it
+while its dependency is still running would just re-fail it.
+
+Worth recording as a rule: **a stuck-looking shard is not necessarily slow.**
+The discriminator is whether the step completed and the artifact exists, not the
+elapsed time. Elapsed time only told me something was wrong; it did not tell me
+what, and I guessed the wrong mechanism from it.
+
+    gh#1279  150 pass / 1 running (re-run) / all-clear red pending its re-run
+    gh#1280  106 pass / 3 running / NO REDS
+    gh#1274  READY, awaiting Jo
+    sweep    test_potential still running, test_orbit last
