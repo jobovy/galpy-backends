@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-09 (07:50 EDT)
+# Vacation status snapshot — 2026-08-09 (09:25 EDT)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -14,10 +14,19 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 | **MERGED** | **gh#1280** | streamdf out-of-place LB jacobian; **10 jax-jit ledger entries cleared**. develop `d2ad93c9` → **`a45a4f1d`** |
 | **open, FOR JO** | **gh#1274** → `main` | **151 green.** Targets `main`, so it is yours to merge. It was still marked **draft** until 2026-08-09 — i.e. un-mergeable while I was asking you to merge it; now `ready`, blocked only on required review |
 | **open** | **gh#1281** `backend-jit/sweep-measured-entries` @ `1be681c3` | the completed 10-file sweep: 15 measured jax-jit slow-skip entries, 8 diagnosed traced defects, 1 un-ledger. Rebased onto `a45a4f1d` through two real conflicts |
+| **held local, NOT opened** | `backend-jit/kd-mass-quadrature` @ `e1fa8bf9` | **fixes 7 of gh#1281's 8 traced defects** (KD `_mass` → backend quadrature; RotateAndTilt broadcasts over a node axis). Not opened because it must land *after* gh#1281 — it deletes ledger lines gh#1281 adds — and a 3rd PR would compete for the runners gh#1281 needs |
 | **filed as issues** | gh#1276, gh#1277 | two pre-existing numpy accuracy defects, mpmath-validated |
 
-**CI right now: no reds anywhere.** gh#1280 5 green / 12 running / 134 queued
-on its new base (a rebase changes every SHA, so it restarted a full cycle).
+**CI right now:** gh#1281 29 green / 22 running / 101 queued, and the single
+red is **`codecov/project`, which is an upload phantom** — `coverage=15.03%`
+with `sessions=0` at 25/153 checks, i.e. almost nothing has uploaded yet. It
+self-heals; it is only worth acting on if it is still red once CI completes.
+
+gh#1281 also spent **two hours at 2/151 for a reason worth knowing**: its own
+**pre-rebase SHA's runs were still executing** and holding every runner, while
+the real head sat queued behind them. `gh pr checks` cannot show this — it only
+ever reports the head. Cancelling the orphans moved it to in-progress within
+five minutes. See the two workflow gaps under *Awaiting Jo*.
 
 Every codecov red on both PRs was an **upload phantom** and every one cleared on
 its own — #1279 went 70.83% → 76.12% → 99.47% → **99.95%** as sessions went
@@ -56,6 +65,34 @@ only per-test eager slow-skip entries, never a whole-file one, so the rest of it
 already ran traced *before* #1279 — nobody was looking, because no workflow runs
 `--jit`. All 8 pass eager. This is traced-only exposure being written down.
 
+## Torch sweep — running now
+
+gh#1281's body used to say a torch sweep was blocked on a `parallel_map`
+`--jit` deadlock. **That was stale**: #1266 makes `parallel_map` fall back to a
+serial `map` whenever traced, so it never forks. Verified by running
+(`test_backend_multi.py`, 3 passed, 10.66 s under `--backend torch --jit`), not
+by reading. I had carried that blocker for days and written it into a PR.
+
+Four files (the three carrying torch's 15 eager entries, plus `test_potential`
+because **defects are per-backend** and jax's 8 all lived there). Three done:
+
+| file | result |
+|---|---|
+| `test_dynamfric` | 1 fail: `test_dynamfric_c` at the 300 s cap → genuine slow, **keeper** |
+| `test_FDMdynamfric` | wrong in **both** directions: its eager entry `central_limit` is not slow at all, it **fails in 35.9 s** (`numpy.amax` over a Tensor — the file already applies the `as_numpy` fix at 4 other lines, 49/59 were missed); and `const_FDMfactor` hits the cap but was never an entry |
+| `test_potential` | 1385 tests, **1 slow + 1 defect** (jax: 0 slow, 8 defects) |
+| `test_orbit` | running — 13 of torch's 15 entries live here |
+
+**Of jax's 8 traced defects exactly one reproduces on torch** (`AnyAxisym
+forceAsDeriv` — which is the cross-backend confirmation that it is pre-existing,
+not caused by gh#1278). The 5 RotateAndTilt ones become a *performance* problem
+on torch, not a correctness one. `McMillan17`/`Cautun20` **cannot be compared**:
+that tree carried my KD fix, so them passing is evidence about the fix, not
+about torch.
+
+Backend-specific traced behaviour is the rule, not the exception — which is the
+case for having run this rather than inheriting jax's answers.
+
 ## Awaiting Jo
 
 **One decision:**
@@ -71,11 +108,18 @@ already ran traced *before* #1279 — nobody was looking, because no workflow ru
 `ready` — it had been left as a draft, and therefore un-mergeable, which is why
 this line sat here unactioned for several days.
 
-**One thing worth knowing:** `build.yml` triggers on both `push:` (no branch
-filter) and `pull_request:`, so **every in-repo PR runs ~52 build jobs where 26
-would do**. Observed directly: develop's `f963eb42` carried two complete,
-identical job sets created 3 s apart. A branch filter on the push trigger halves
-the CI bill. Also a workflow edit.
+**Two workflow gaps, both needing scope my token lacks.** Together they cost
+gh#1281 two hours today:
+
+1. **No `concurrency:` group.** After a rebase or force-push the superseded
+   SHA's runs keep executing and hold the runners. `concurrency: {group:
+   <workflow>-<ref>, cancel-in-progress: true}` would auto-cancel them. I did it
+   by hand today; without the fix it needs a human every time.
+2. **`build.yml` triggers on both `push:` (no branch filter) and
+   `pull_request:`**, so every in-repo PR runs ~52 build jobs where 26 would do.
+   On a runner-constrained account this is not just a 2x bill, it is 2x
+   wall-clock. With (1) unfixed it compounded to **four** complete job sets live
+   for one PR.
 
 ## The traced sweep — DONE, and it is gh#1281
 
