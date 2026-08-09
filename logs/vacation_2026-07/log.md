@@ -33887,3 +33887,47 @@ the 300 s cap, and the classifier files those as slow-skip automatically.
 
     gh#1280   82 pass / 35 running / 35 queued / codecov project only
     sweep     test_orbit 532/581 (92%), 2 cap hits, 0 defects
+
+### 2026-08-09 — SWEEP COMPLETE (10/10); opened as gh#1281
+
+    === END   test_orbit rc=1  06:49:53
+    === SWEEP COMPLETE         06:49:53
+
+**10 files, ~2456 traced cases, ~5 h wall.** Final tally:
+
+    42 eager entries  ->  15 measured jax-jit entries  ->  27 un-deferred
+    8 defects (all test_potential), filed separately with mechanisms
+    1 entry un-ledgered on traced evidence (StaeckelGrid XPASSES at 65.1 s)
+
+`test_orbit` closed it out: 581 cases, 7605 s, **0 non-timeout failures**, and
+7 of its 25 eager entries survive. All 6 of its failures were the 300 s cap, so
+the classifier routed every one to slow-skip and none to the ledger.
+
+**Two corrections the full data forced:**
+
+* `test_orbit` runs **opposite to the sweep average**. I have been reporting
+  "two-thirds of eager deferrals do not survive"; that holds across the other
+  nine files, but here most of what was deferred stays deferred. Per-file
+  variation of that size is exactly what a single inheritance rule -- set either
+  way -- cannot express. That is a better argument for #1279 than the average
+  was.
+* The 240-300 s band now holds **3** of the 15 entries (296 s, 277 s, 265 s),
+  not the 1 it held at 8 files. Those three are judgement calls against the
+  margin; the other twelve hit the cap outright. My earlier "only one threshold
+  case" was true then and wrong now.
+
+**Opened as gh#1281** off `d2ad93c9`, 5 commits:
+
+    9fe4a647  8 measured slow-skip + 1 un-ledger
+    20e2f86b  8 traced defects with diagnoses
+    532f251f  RotateAndTilt: name the real trigger (_backend_accepts_arrays)
+    1fc19ede  McMillan17+Cautun20 share one root (mass -> scipy.quad)
+    e0f67aad  correct the AnyAxisym hypothesis (own A/B falsifies it)
+    915ccb57  test_orbit's 7 entries, sweep complete
+
+That is now 2 open PRs (gh#1280, gh#1281) -- at the cap, so nothing new starts
+until one lands.
+
+    gh#1280   100 pass / 30 running / 22 queued / codecov project only
+    gh#1281   just opened
+    gh#1274   ready, awaiting Jo
