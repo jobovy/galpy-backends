@@ -35260,3 +35260,33 @@ owed before opening rather than after. Every prior wake that deferred the PR for
 opting it in requires the traced surfdens quadrature to be range-aware (there is
 already a `surfdens` range-aware mechanism in the tree from earlier work — that
 is the thread to pull), not merely rank-correct.
+
+### 2026-08-09 — KD-only branch passes its gate; and I tripped the `cd`-and-`&` trap
+
+**Gate 2 (reverted branch): `163 passed, 45 skipped, 7 xfailed, 0 failed`.**
+Cross-checked against gate 1 (`164 passed, 4 failed, 2 xfailed`): both total 170
+non-skipped, and xfails go 2 → 7, i.e. exactly the 5 RotateAndTilt entries moved
+back under deferral. The count reconciles, so the revert did precisely what was
+intended and nothing else.
+
+Committed the 2-entry ledger drop (`5c1b9264`).
+
+**Mistake worth recording.** I ran
+
+    cd /var/tmp/defects-edit && nohup pytest ... > log 2>&1 & echo ...; git add -A && git commit ...
+
+`&` backgrounds the **whole** `cd && nohup` compound, so the `cd` happened in a
+subshell and `git add -A` ran in the **main repo** — staging `.claude/`, a stray
+`.nfs*` file, notebooks, and an *embedded git repository*
+(`actionAngleTorus_c_ext/torus`). git warned about the embedded repo, which is
+what made me look.
+
+Nothing was committed (the pre-commit `ruff format` hook rejected it, and the
+`git log` I printed showed the *main* repo's HEAD `dbb09ffc` — a second tell).
+`git reset -q HEAD -- .` restored the main worktree to exactly its prior state.
+
+I have this in memory as *"cd does not survive &"* and still walked into it. The
+durable fix is not vigilance: use **`git -C <path>`** for every git call against
+a worktree, which is what the redone commit does, and stage the **named file**
+rather than `-A`. Both of those make the failure impossible rather than
+unlikely.
