@@ -33171,3 +33171,46 @@ granularity three have a known, already-blessed remedy.
     gh#1280  85 pass / 23 running / codecov project only
     gh#1274  READY, awaiting Jo's review
     sweep    test_actionAngle 123/209
+
+### 2026-08-09 — sweep 8 of 10: PREDICTION CONFIRMED, one ledger entry is stale
+
+`test_actionAngle.py`: 209 tests, 1237 s traced, 1 failure (the 300 s cap), 0
+defects.
+
+**The prediction from two wakes ago holds.**
+`test_actionAngleStaeckelGrid_basicAndConserved_actions` traces in **65.1 s and
+PASSES** -- and since the `jax-jit` entry is still present in the tree under
+test, that is an **XPASS**. So gh#1279's backend-aware bar (`1e-16` -> `1e-9`
+for non-numpy) fixes the traced arm too, and this is *traced* evidence, which is
+exactly the standard the original decision demanded when it refused to
+un-ledger on eager evidence alone.
+
+That entry is now stale and can be removed. **Not** by amending gh#1279: adding
+a commit there restarts 153 checks for hours, and the follow-up PR carrying the
+sweep's slow-skip entries reaches the same end state at no extra cost. So it
+goes in the follow-up, and the pair's net becomes **17 -> 13**.
+
+New slow entry from this file: `test_actionAngleStaeckel_python_c_freqsAngles`
+at the 300 s cap -- and it was **not** eager-deferred, so it is the second
+"tracing cannot inherit this" case after `test_bruteSOS_3D`.
+
+**Running totals, 8 of 10 files:**
+
+    file                    tests   eager  ->  jax-jit   un-deferred
+    test_dynamfric              7     1         1          -
+    test_FDMdynamfric           9     3         2          1
+    test_galpypaper            15     1         0          1
+    test_streamspraydf         38     1         0          1
+    test_interp_potential      40     6         1          5
+    test_qdf                   56     2         1          1
+    test_orbits               116     2         2 (1 new)  1
+    test_actionAngle          209     1         1 (1 new)  1
+                                     ---       ---        ---
+                                      17         8         11
+
+**Zero defect candidates** across 490 traced tests in 8 files. Two of the eight
+entries are new -- neither reachable by inheritance from the eager list.
+
+    gh#1279  148 pass / 5 running / NO REDS
+    gh#1280  91 pass / 17 running / codecov project only
+    sweep    test_potential (221 tests) in flight, then test_orbit (245)
