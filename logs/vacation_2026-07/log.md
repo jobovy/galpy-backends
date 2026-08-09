@@ -36763,3 +36763,40 @@ evidence, which is sound and does not require the run to finish.
 
 CI: gh#1284 **134/153, 0 red** (codecov cleared) — audit banked, merges on green.
 gh#1285 8 green, 14 running, both codecov reds still early-upload.
+
+### 2026-08-09 — test_orbit eager: 13 of 25 stale, and my classifier made the error I had just documented
+
+Run finished: **2 failed, 569 passed, 2819.9 s (47 min)**.
+
+First pass of my classification script printed *"2 defects"*. Both sat at
+**exactly 900.0 s**, and checking the failure text rather than trusting the
+label:
+
+    Failed: Timeout (>900.0s) from pytest-timeout.
+
+They are cap-hits, i.e. **slow**, not defects. My script had tested
+`failed -> defect` **before** the duration check — the precise inversion I wrote
+[[signal-timeout-misses-c-extension]] about this morning, and warned about in
+this very run's dispatch note two hours ago ("classification will be by
+duration, not pass/fail").
+
+Writing the rule down did not make me implement it. What caught it was the
+number looking wrong — 900.0 exactly, twice — not the memory firing.
+
+**Corrected result for the 25 eager-jax `test_orbit` entries:**
+
+| verdict | n | evidence |
+|---|---|---|
+| slow — keep | **12** | 2 cap-hits, then 700.8 / 699.2 / 671.2 / 470.3 / 405.7 / 388.5 / 334.0 / 312.6 / 261.6 / 261.4 s |
+| **fast — DROP** | **13** | 237.9 s down to **38.6 s** |
+| defects | **0** | — |
+
+Ten of the 13 droppables are `test_energy_jacobi_conservation[...]`
+parametrisations running 38-201 s against a 240 s bar. One entry
+(`test_dxdv_3d_c_vs_python[OblateStaeckel...]` at 237.9 s) sits just under the
+bar and is the single judgement call — flagging it rather than burying it.
+
+Cumulative eager-jax burndown now measured: noninertial 11/19 stale,
+test_orbit 13/25 stale — **24 of 44 measured entries (55 %)**, consistent with
+the traced sweep's two-thirds finding and with the same cause: these lists were
+inherited, never measured.
