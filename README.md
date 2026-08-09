@@ -251,7 +251,8 @@ backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). 
 | #1273 | actionAngleVertical backend path -> undecorated linear evaluators (244 -> 0); slow-skip 98 -> 92 | MERGED `9f3c3166` |
 | #1274 | interpRZPotential: keep grids + off-grid fallbacks in internal units (pre-existing numpy bug) | GREEN (151/0) — targets `main`, Jo's to merge |
 | #1275 | SpiralArms tolerance cleanup + interpSpherical range check independent of FDM + NFW alpha/beta on conc/rmax paths | MERGED `44b06e31` |
-| #1278 | AnyAxisym: geometric panel grading so the a=R peak resolves at any \|z\| (K=24 was 95% low at 1e-12) | OPEN — CI running |
+| #1278 | AnyAxisym: geometric panel grading so the a=R peak resolves at any \|z\| (K=24 was 95% low at 1e-12) | MERGED `f963eb42` |
+| #1279 | `--jit` gets its own slow-skip list, populated by measurement; backend-aware actionAngle bars (#171) | OPEN — CI running |
 
 ## Upstream issues filed from this work (numpy-path defects, not backend)
 

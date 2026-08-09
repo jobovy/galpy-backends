@@ -32191,3 +32191,48 @@ files, all under tests/, no galpy/ source. PR body written at
              codecov reds, both downstream of those shards. ~90 min elapsed
              against a 93 min historical baseline -- normal.
     gh#1274  151 pass / green
+
+### 2026-08-09 — gh#1278 MERGED; gh#1279 opened. Jo's four decisions are all landed or in flight.
+
+    #1278 squash-merged 04:21:29Z     develop  44b06e31 -> f963eb42
+    #1279 opened (was #194 + #171)    rebased clean onto f963eb42, 0 conflicts
+
+Merged at head `7ebc3f29`, the audited SHA, re-checked immediately before. The
+audit re-run against the real diff:
+
+    if-dispatch lines added   0     <- outside the if->xp.where array-input class
+    new functions             1     <- a test; no source helper, no placement question
+    duplication               checked vs quadrature.transformed_quad (different
+                                    mechanism AND different reach: node-warping
+                                    bottoms out ~4e-6, panel refinement reaches dmin)
+
+The zero is the substantive one: replacing `xp.maximum(R*2**-k, dmin)` with a
+geometric span adds no data-dependent branching at all, which is why it traces
+without an `xp.where` evaluating both arms.
+
+**Where Jo's 2026-08-08 decisions ended up:**
+
+| decision | outcome |
+|---|---|
+| #1274 -> `main` | green 151/0, Jo's to merge |
+| #207 "fix backend" | MERGED gh#1278 |
+| #203/#206 -> issues | filed gh#1276 / gh#1277 |
+| #171 "backend aware" | 3 ledger entries burned, in gh#1279 |
+| #194 "own list" | gh#1279 |
+
+**What gh#1279 actually establishes**, all measured:
+
+* inheritance is a property of the LIST, not the backend name -- ledger and
+  permanent-skip still inherit, slow-skip does not;
+* ~120 traced tests start running that never have;
+* two things were hiding behind a *performance* deferral: a 10-test jax
+  immutability defect and 4 out-of-scope Torus tests;
+* one entry exists because tracing made a test SLOWER (354 s), which inheritance
+  could not surface by construction.
+
+And the discipline paid concretely: streamdf's slowest test read 242.6 s
+contended (1% over the margin -> a needless deferral) and 197.5 s alone.
+
+    gh#1279  2 pass / 149 pending / 0 red
+    gh#1274  151 pass / green
+    develop  f963eb42, push run in flight
