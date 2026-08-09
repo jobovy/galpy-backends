@@ -35031,3 +35031,40 @@ broader thing. Difference this time: I went looking for it before it bit,
 prompted by noticing my own input file had a single source. The generalisation
 worth keeping is narrow and mechanical: **this project has two ledger files, and
 any completeness claim has to read both.**
+
+### 2026-08-09 11:00 — TORCH SWEEP COMPLETE (~1982 traced cases, 6 failures)
+
+    test_orbit TORCH: tests=581 failures=1 skipped=9 time=6225s (1h44m)
+       test_eccentricity  0.1s  AssertionError: Eccentricity of a circular orbit is not equal to zero
+
+Full torch sweep:
+
+| file | tests | failures | kind |
+|---|---|---|---|
+| `test_dynamfric` | 7 | 1 | slow (300 s cap) — the one genuine keeper |
+| `test_FDMdynamfric` | 9 | 2 | 1 defect (35.9 s `TypeError`), 1 slow — **re-running clean now** |
+| `test_potential` | 1385 | 2 | 1 slow, 1 defect (AnyAxisym) |
+| `test_orbit` | 581 | 1 | 1 defect (AnyAxisym, via eccentricity) |
+| **total** | **1982** | **6** | |
+
+**The junitxml handed me the confirmation I had declined to run a probe for.**
+Last wake I chose not to execute `test_eccentricity` under torch to check the
+magnitude, because two timing-sensitive entries were still pending. The failure
+message settles it anyway:
+
+    AssertionError: Eccentricity of a circular orbit is not equal to zero
+
+which is exactly the `jax-jit` ledger comment's account — traced GL forces carry
+~1e-6 error, so a circular orbit returns `e≈5e-6` against a `1e-8` bar. Same
+mechanism, now on evidence rather than inference, at zero cost to the sweep.
+Worth noting because the patient option turned out to be strictly better here,
+not merely safer.
+
+**CPU is free.** Launched the first owed re-run immediately: `test_FDMdynamfric`
+alone, to replace the row I contaminated with a concurrent jax job.
+
+Remaining post-sweep queue:
+
+1. ~~clean `test_FDMdynamfric`~~ — running
+2. `test_dxdv_3d_c_vs_python[RotateAndTilt…]` on an **unpatched** tree
+3. pytest gates on the two held branches
