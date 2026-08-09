@@ -32632,3 +32632,40 @@ gh#1280 returns no codecov data at all yet (2 of 107 checks done), as expected.
     gh#1279  54 pass / 25 running / 73 queued / codecov phantom @ 9-of-27 uploads
     gh#1280  2 pass / 105 queued
     sweep    test_galpypaper in flight; 1 jax-jit entry banked so far
+
+### 2026-08-09 (cont.) — sweep→entries classifier, and the split it enforces
+
+codecov is now *confirming* the phantom prediction rather than merely being
+consistent with it: sessions 9 -> 12, coverage 70.83% -> 76.12%, climbing in
+step. No action.
+
+Built `/var/tmp/sweep_to_entries.py` so turning 10 files of sweep junitxml into
+list entries is mechanical rather than a judgement call each time. The point of
+it is one distinction:
+
+    over the 240 s margin / hit the 300 s cap  ->  backend_slow_skip.txt
+    failed for any other reason                ->  backend_xfail.txt
+
+**These must not be conflated, and a script is how I stop myself doing it.** A
+traced run surfaces both at once, and filing a defect as "slow" hides it behind
+a performance deferral -- which is precisely how the 10-test streamdf
+immutability bug stayed invisible, and the reason gh#1279 exists. So the script
+auto-drafts only the SLOW lines; defect candidates are printed with their
+message to be **read**, never auto-filed.
+
+Guarded the junitxml truthiness trap explicitly while writing it:
+
+    bad = fail if fail is not None else err     # NOT `fail or err`
+
+an empty `<failure/>` element is falsy, so the `or` form silently reports
+failures as passes -- a bug that has already cost me one wrong verdict in this
+mission.
+
+Validated on the one finished file; matches the manual read exactly:
+
+    test_dynamfric   tests=7  slow=1  defects=0  wall=344s
+    jax-jit tests/test_dynamfric.py::test_dynamfric_c   # 300 s traced
+
+    gh#1279  60 pass / 25 running / 67 queued / codecov 12-of-27 uploads, rising
+    gh#1280  2 pass / 105 queued
+    sweep    test_galpypaper in flight, 8 files behind
