@@ -37202,3 +37202,33 @@ word: `float(self._rot[2, 2])`. A plain float is also the *right* choice over
 `as_backend_constant` here — it stays a **weak** scalar, so it will not upcast a
 float32 backend array ([[backend-coerce-weak-scalar-trap]]). Verifying by
 warning count on the same selection (96 -> 0 expected) rather than assuming.
+
+### 2026-08-09 — numpy-scalar divisor fixed and VERIFIED by a completed A/B
+
+    before   5 passed, 1 xfailed, 115 warnings   318.9 s
+    after    5 passed, 1 xfailed,  19 warnings   360.8 s
+
+115 - 19 = **96**, exactly the block attributed to
+`RotateAndTiltWrapperPotential.py:201`, and that file no longer appears in the
+warnings summary at all. Pushed as `bcb2172e`; 6 runs on the superseded SHA
+force-cancelled.
+
+Two measurement mistakes I caught mid-flight and did **not** report as results:
+
+1. My first before/after used `grep -c "__array_wrap__"`, which returned
+   **1 vs 0** — pytest prints the message once under an `N warnings` header, so
+   the line count was never the quantity of interest.
+2. The "after" run had not finished when I first read it, so its zero was an
+   unwritten summary, not a result. Comparing a finished run against an
+   unfinished one is [[never-report-partial-run-as-result]] wearing a new hat;
+   the numbers above come from two runs that both printed a summary line.
+
+`float()` over `as_backend_constant` on purpose: a plain float stays a **weak**
+scalar and will not upcast a float32 backend array
+([[backend-coerce-weak-scalar-trap]]). The two `as_backend_constant` calls above
+it are not the same case — those index genuine arrays.
+
+numpy stays byte-identical, checked rather than asserted: the split value is
+**bitwise identical** (struct-packed) for rotated, offset and rotated+offset
+wrappers at two (R, phi) each. Dividing by `float` vs `numpy.float64` is the
+same float64 arithmetic. `test_backend_wrappers.py` 529 passed.
