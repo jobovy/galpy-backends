@@ -249,4 +249,24 @@ backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). 
 | #1271 | planar adapters: forward to the undecorated evaluators (989 -> 5 crossings) | MERGED `f1bb9f83` |
 | #1272 | vertical adapters: forward to the undecorated evaluators (1708 -> 244 crossings) | MERGED `7418aed5` |
 | #1273 | actionAngleVertical backend path -> undecorated linear evaluators (244 -> 0); slow-skip 98 -> 92 | MERGED `9f3c3166` |
-| #1274 | interpRZPotential: keep grids + off-grid fallbacks in internal units (pre-existing numpy bug) | DRAFT — needs Jo |
+| #1274 | interpRZPotential: keep grids + off-grid fallbacks in internal units (pre-existing numpy bug) | GREEN (151/0) — targets `main`, Jo's to merge |
+| #1275 | SpiralArms tolerance cleanup + interpSpherical range check independent of FDM + NFW alpha/beta on conc/rmax paths | MERGED `44b06e31` |
+| #1278 | AnyAxisym: geometric panel grading so the a=R peak resolves at any \|z\| (K=24 was 95% low at 1e-12) | OPEN — CI running |
+
+## Upstream issues filed from this work (numpy-path defects, not backend)
+
+Found while validating backend ports against independent references; both
+reproduce identically on `main`, so they are pre-existing galpy bugs rather than
+migration damage. Filed rather than fixed, per Jo (2026-08-08: "doesn't sound
+urgent, maybe open as an issue").
+
+| issue | defect | worst measured |
+|---|---|---|
+| [#1276](https://github.com/jobovy/galpy/issues/1276) | `RazorThinExponentialDiskPotential` forces lose ~3 digits in a **band** `1e-6 <~ \|z\| <~ 1e-2`. The `\|z\|<1e-6` closed form is accurate; the quadrature branch above it degrades as z->0, so the switch hands over in the wrong direction. | 5.2e-03 rel at R=0.5, z=1e-6 |
+| [#1277](https://github.com/jobovy/galpy/issues/1277) | `AnyAxisymmetricRazorThinDiskPotential.R2deriv` at z=0 carries ~1e-5 relative error at small R, while reaching ~1e-9 at large R. | 9.9e-06 rel at R=0.2 |
+
+Both were checked against an mpmath Hankel reference at 30 digits, and the
+reference itself validated per quantity before use (against galpy's own closed
+form at z=0 for `Rforce`, 3.5e-15; against FD-of-Hankel-`Rforce` for `R2deriv`,
+11 digits). An unvalidated arbiter would have been the third plausible-but-wrong
+number in the pair.
