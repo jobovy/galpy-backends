@@ -35544,3 +35544,33 @@ mid-plane as `interior_point` and see whether 6.8e-2 collapses.
 Updated gh#1283's body with the correction. A PR body that sends the next reader
 to "make the quadrature range-aware" would have cost them the time it took me to
 find that it already is.
+
+### 2026-08-09 — split-point hypothesis MEASURED and REFUTED; fault is the array path
+
+Tested the hypothesis from the previous entry instead of leaving it as a lead,
+since the CPU was free. It is **wrong**:
+
+    integrand |peak| at z = +0.0000      (symmetric_quad splits at 0.0)
+    scipy adaptive reference : 3.5452228457e+00
+    GL(n=50) split at 0      : 3.5452228457e+00   rel.err 1.729e-14
+
+The tilted potential's Poisson integrand peaks **at** z=0, not away from it, and
+the existing split-at-0 quadrature is exact to 1.7e-14 at the exact failing
+point. So both of my quadrature explanations are dead: it is neither the range
+nor the split location.
+
+**What that leaves.** The probe is *eager scalar*; the 6.8e-2 appears only under
+tracing with array input. Since the quadrature and integrand are exact in eager
+scalar, the error has to enter on the **traced/array path of the wrapper
+itself** — i.e. my broadcast change makes the wrapper *run* on node arrays but
+apparently not compute the same thing it computes scalar-wise in that regime.
+
+That is worth stating carefully: the 40/40 bit-identical check I ran earlier
+used a 5-element z at R=1.1, **not** the quadrature's node distribution over
+[-10, 10]. Agreement on one small array is not agreement on all arrays, and I
+treated it as if it were. The next attempt should start by comparing
+array-vs-scalar **at the quadrature's actual nodes**, which is the comparison
+that would have caught this before the PR.
+
+Updated gh#1283's body: it now records both excluded explanations with their
+numbers, rather than sending the next reader at the quadrature twice.
