@@ -35842,3 +35842,49 @@ running the operation on it.
 
 Two PRs now in flight, which is the standing cap: **gh#1283** (KD `_mass`, 57
 green / 57 queued, only the codecov/project phantom red) and **gh#1284**.
+
+### 2026-08-09 (cont.) — composite delegation: the density route is SOLVED, the Poisson route is not
+
+Found why the `_vertical_quad_split` hook was inert, and it is in galpy source,
+not the test mock: **`CompositePotential` defines `_dens` but inherits
+`_surfdens` from `Potential`**, so the quadrature ran once over the summed
+density with `self` = the composite, whose mid-plane is 0.
+
+Fixed by delegating per component on backends (numpy keeps the inherited scipy
+path, byte-identical -- 19 passed / 0 failed on the numpy surfdens tests). With
+that, the hook finally fires, and it is very good. Measured at the failing point:
+
+| mock | split | true density peak | err(split 0) | err(split c) |
+|---|---|---|---|---|
+| RotatedAndTilted   | -0.5000 | -0.4950 | 1.383e-02 | **1.070e-10** |
+| ...wInclination    | -1.0925 | -1.0850 | 4.736e-03 | **1.450e-06** |
+| Offset             | -1.0000 | -1.0000 | 6.366e-02 | **1.176e-10** |
+
+The plane-crossing solve lands within ~1% of the true density peak in every
+case, including the tilted ones, and buys 8 orders.
+
+**The 5 tests still fail.** The roles simply swapped: mockOffset's residual is
+now **1.797e-04**, which is exactly the *Poisson*-branch split error measured
+hours ago. So I split `Potential.surfdens`'s Poisson branch into
+`_surfdens_poisson` and delegated that per component too -- and it changed
+**nothing**, byte-identical numbers.
+
+Reason, one level up from the last one: the test calls
+`surfdens(..., forcepoisson=True)` on **`testMWPotential`**, which defines
+`_surfdens` (so the composite fix reached it) but **not** `_surfdens_poisson`,
+so that route falls through to `Potential`'s with `self` = the mock and the
+quadrature happens there, at split 0. My `CompositePotential` override sits
+below it, unreached.
+
+**What this settles for the pending decision.** The declared-plane approach
+works exactly where the delegation chain is complete, and is essentially exact
+when it does (1e-10). It cannot help a `Potential` subclass that sums displaced
+components internally without delegating -- which is precisely what a user's own
+composite-like class would look like. The hybrid panel rule needs no delegation
+from anyone. That is a real argument for paying its 5x, and it belongs in the
+decision I left for Jo in STATUS.
+
+Two hypotheses tested and refuted along the way: that clamping the split to the
+interval edge caused the tilted regressions (fallback-to-0 gave byte-identical
+results), and that the tilted splits were bad (they match the peak to ~1%).
+Branch `backend-jit/rt-vertical-split`, local, unpushed.
