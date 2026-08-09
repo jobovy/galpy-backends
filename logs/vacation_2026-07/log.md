@@ -36276,3 +36276,38 @@ Also folded in the two operational facts worth having at the top level rather
 than buried: the codecov `sessions` discriminator lives on the **compare**
 endpoint, and `gh run cancel` silently no-ops on a fully-queued run where
 `force-cancel` works.
+
+### 2026-08-09 (cont.) — picked the next burndown target from the ledger, not from memory
+
+gh#1283 at 143/153, 0 red, 10 left (all slow eager shards + all-clear). Rather
+than guess what to do after rt-split, profiled the actual ledger:
+
+    XFAIL (defects)   21   jax-jit 13 | jax 4 | torch 3 | torch-jit 1
+                           test_potential 13, test_orbit 4, test_actionAngle 2, test_qdf 2
+    SLOW-SKIP (perf) 118   jax 75 | jax-jit 26 | torch 15 | torch-jit 2
+                           test_orbit 45, **test_noninertial 28**, test_potential 12, ...
+
+Two things fall out. The 13 `test_potential` defects are already 7/13 spoken
+for (gh#1283 clears 2, rt-split clears 5). And the second-largest single-file
+cluster is **`test_noninertial.py` at 28** — which was **not one of the 10 files
+in the traced sweep**, so it has never been re-measured at all.
+
+Its split is **19 eager `jax` + 9 `jax-jit`**. The eager ones are the
+interesting half: **per-PR CI runs eager** (`--jit` only fires on a
+`workflow_dispatch`), so those 19 are hiding coverage from the gate that
+actually gates. The sweep's headline finding was that ~2/3 of eager deferrals
+do not survive measurement.
+
+Dispatched: fresh worktree at `de0745c5`, C ext built in place, the 19 eager
+entries removed, whole file under `--backend jax` eager with junitxml and a
+per-test 600 s cap (per-test, not per-file — a killed session writes no junitxml
+at all).
+
+Provenance checked *properly* this time, all three commands from
+[[verify-sweep-tree-provenance-completely]]: `log --oneline -1` = de0745c5,
+`status --porcelain` = 0, `log origin/feat/backends-develop..HEAD` = 0 extra
+commits. That memory is one wake old and it already changed what I did.
+
+Classification will be by **duration**, not by timeout-failure — signal-based
+timeouts cannot interrupt a C-bound test, which is how the torch sweep lost 7 of
+8 slow additions.
