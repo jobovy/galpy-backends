@@ -32602,3 +32602,33 @@ Running tally of jax-jit slow-skip entries this sweep will add:
 
     gh#1279  49 pass / 23 running / 80 queued / codecov-project phantom
     gh#1280  2 pass / 105 queued
+
+### 2026-08-09 (cont.) — codecov red QUANTIFIED as an upload phantom (9 of 27 sessions)
+
+I had been calling gh#1279's `codecov/project` red a phantom from reasoning --
+"tests-only diff, xfail tests still execute, so no mechanism for a real drop".
+That is sound but it is an argument, not evidence. The codecov API settles it:
+
+    PR 1279   base: 99.95%  sessions=27      head: 70.83%  sessions=9
+              lines base/head = 48422/48422
+
+**9 of ~27 uploads have landed.** 70.83% is simply what two-thirds of the shards
+not having reported looks like; it will climb back toward 99.95% as the rest
+arrive. And `lines` is *identical* at 48422 on both sides, which independently
+confirms the diff adds no measurable code -- consistent with tests-only.
+
+So: no action, and specifically **do not** "fix" coverage. The correct handling
+is to let the remaining ~18 uploads land and, if `project` is still red once
+sessions reach ~27, re-run all-clear (the phantom self-heals but all-clear can
+latch the stale verdict).
+
+Worth keeping as a technique: `api.codecov.io/api/v2/github/jobovy/repos/galpy/
+pulls/<N>` returns `sessions` for base and head. **The session count is the
+discriminator between a real coverage drop and an incomplete upload** -- far
+faster than reading shard logs, and it turns "probably a phantom" into a number.
+
+gh#1280 returns no codecov data at all yet (2 of 107 checks done), as expected.
+
+    gh#1279  54 pass / 25 running / 73 queued / codecov phantom @ 9-of-27 uploads
+    gh#1280  2 pass / 105 queued
+    sweep    test_galpypaper in flight; 1 jax-jit entry banked so far
