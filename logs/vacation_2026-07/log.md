@@ -38429,3 +38429,29 @@ revert/restore, so rewriting HEAD mid-run would corrupt it.
 
 Also this wake: gh#1285's pre-merge audit posted to the PR, gh#1286's stale
 `108 -> 84` title/body corrected to `109 -> 85`.
+
+### 2026-08-10 — GL gate AFTER side is clean; a second quadrature lead (unverified)
+
+    after exit=0   1278 passed, 102 skipped, 5 xfailed, 241 warnings in 578.05s
+
+Traced jax `test_potential.py` on `backend-jit/gl-order-100` at `4c3470e0`. The
+BEFORE side (same branch, two files reverted to HEAD~1) is running now; only the
+pair is evidence, so no conclusion yet.
+
+Checked the 241 warnings for anything my change introduced, since the coverage
+shard runs `-W error::DeprecationWarning -W error::FutureWarning`
+([[test-backend-W-error-deprecation]]): all pre-existing `RuntimeWarning` /
+`IntegrationWarning` from potentials, no Deprecation/Future, nothing new.
+
+**Lead, deliberately NOT filed yet:** that sweep surfaced
+
+    AdiabaticContractionWrapperPotential.py:122: IntegrationWarning:
+    The maximum number of subdivisions (50) has been achieved.
+
+Same family as gh#1289 (scipy `quad` at default settings) but the *opposite*
+failure mode -- there quad returned immediately because `epsabs` was already
+satisfied; here it exhausted its subdivision budget and gave up. Both are
+default-tolerance problems, but they are different bugs with different fixes. I
+have not verified whether this one produces a wrong value or is just a noisy
+warning on a deliberately hard integrand, so it does not go on the issue until
+I have measured it against mpmath the way gh#1289 was.
