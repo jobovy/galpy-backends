@@ -38948,3 +38948,40 @@ and the traced gate. `backend-jit/gl-order-100` stays push-ready.
 Also: the Windows flake re-run is still refused — `job cannot be rerun` while
 the parent run has 3 jobs in flight (18 completed, 0 queued, 3 in_progress). An
 explicit refusal this time rather than a silent no-op.
+
+### 2026-08-10 — a replacement design for eager-GL that survives the check
+
+Having refuted the declarative design, tested the obvious replacement: a **cheap
+dynamic array probe** — call `_dens` once on a 3-element array, compare against
+the elementwise scalar results, cache the verdict per instance. The question
+that decides it is whether any potential *silently returns something wrong*
+rather than raising, which is the hazard `_quad_needs_backend`'s docstring
+names.
+
+    MiyamotoNagai / Hernquist / NFW / Plummer / DoubleExpDisk / PowerSphwCutoff
+                          accepts, matches elementwise EXACTLY (0.0e+00)
+    Composite(MN, Hern)   accepts, exact
+    DehnenSmooth(MN)      accepts, exact
+    Composite(Any, MN)    RAISES TypeError   (correct — AnyAxisym leaf)
+    RotateAndTilt(Any)    RAISES TypeError   (correct)
+    RotateAndTilt(MN)     RAISES TypeError   <-- wraps an ARRAY-SAFE potential
+    AnyAxisym             no `_dens` at all (razor-thin; `_sdens`)
+
+**No silent wrongness anywhere in the sample.** Where the probe says "accepts",
+it matched to the last bit. Failures are conservative — `RotateAndTilt(MN)`
+raises even though `MiyamotoNagai` is array-safe, so we would simply keep scipy
+there: a performance cost, not a correctness one.
+
+`RotateAndTilt(MN)` is also the sharpest evidence yet that the declarative flag
+is untrustworthy: it declares `_backend_accepts_arrays=True` and is scalar-only
+in fact, in the direction that would have caused a wrong answer.
+
+**Stated carefully:** 12 potentials is a sample, not a proof. The probe also
+evaluates at one (R, z), and a potential could in principle be array-safe there
+and not elsewhere. So the design is *viable and evidence-backed*, not *proven*.
+Any PR built on it needs the probe applied across the full potential registry,
+not this hand-picked dozen.
+
+Net from two wakes of de-risking: one design refuted before it was built, one
+replacement identified and given supporting evidence. No code written on a bad
+premise.
