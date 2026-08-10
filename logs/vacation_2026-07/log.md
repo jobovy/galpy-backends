@@ -40010,3 +40010,28 @@ finite-|z| peak + snap below 1e-9.
 
 NOT opened as a PR: five are already queued and the pool is saturated, so it
 waits for that batch rather than adding ~150 checks. Posted to the issue in full.
+
+### gh#1277 implemented; z2deriv shares the defect (flagged, not fixed)
+
+Implemented the finite-part R2deriv on `fix/anyaxisym-r2deriv-finite-part`
+(committed, deliberately UNPUSHED -- five PRs already queued and the pool is
+saturated; opening a sixth would add ~150 checks to the batch Jo asked me to
+drain). Verified through the real API:
+
+    R       0.1       0.2       0.3       0.5       1.0       2.0
+    before  2.99e-06  9.90e-06  1.60e-06  1.09e-07  1.94e-08  1.99e-09
+    after   1.89e-10  4.29e-10  1.07e-10  2.61e-11  3.92e-13  3.46e-13
+
+and across |z| at R=0.2 the worst row is 2.2e-08 vs 1.9e-05 before. Better
+everywhere, no regression.
+
+**`_z2deriv` shares the defect, ~10x milder** -- 6.47e-07 at R=0.1, 5.06e-07 at
+R=0.2, falling to 3.6e-09 at R=2. Same small-R signature, same integrand
+structure. **Not fixed:** the reparameterisation and symmetrisation carry over
+mechanically, but the singular coefficient C must be re-derived for that
+numerator rather than reused. Flagged on the issue rather than left as a 5e-07
+sitting next to a fixed 4e-10. `_Rzderiv` is odd in z and vanishes at z=0.
+
+One implementation slip caught by the syntax check: the floor constant first
+landed between `@check_potential_inputs_not_arrays` and the `def`. Moved to
+module level.
