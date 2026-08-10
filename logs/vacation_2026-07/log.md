@@ -37619,3 +37619,37 @@ The general point: a stale gate is not just an out-of-date number, it is a claim
 that will be checked at merge time. Refreshing it required knowing *which* tests
 changed state, which is why the junitxml is worth keeping rather than just the
 summary line.
+
+### 2026-08-09 — searched before writing, and it changed the GL-order design
+
+Went to prepare the GL-order branch and found `/var/tmp/glorder` **already
+exists**, on `98c2d5c7 actionAngle: one shared _BACKEND_GL_ORDER, and correct
+its documented floor`. So a named GL-order constant already exists in this
+codebase — exactly the "check existing utilities before creating one" case, and
+I only found it because the worktree name collided.
+
+Confirmed on **current develop** (not just that stale branch):
+
+    galpy/actionAngle/actionAngle.py:26      _BACKEND_GL_ORDER = 50
+    used by actionAngleSpherical (2 sites) and actionAngleVertical (3 sites)
+
+**And the right conclusion is NOT to reuse it.** Two reasons, both checked:
+
+1. **Direction.** It lives in `galpy/actionAngle/`. `Potential.py` imports
+   nothing from `actionAngle` (verified — no such import), and it should not
+   start: potentials are the lower layer. Importing upward to share a number
+   would invert the dependency for no benefit.
+2. **It is a different quadrature.** The AA constant orders a `fixed_quad` over
+   `[0, 1]` on the action radicand; the surfdens rule is a *split, clustered*
+   `symmetric_quad` over `[-|z|, |z|]` on a density/Poisson integrand. They
+   share only the letter `n`. Folding them into one symbol would silently
+   re-order the AA quadratures too — a change I have not measured and that no
+   evidence here supports.
+
+So the surfdens PR should introduce its **own** named order near the quadrature
+it governs, not import the AA one and not hardcode `100` at two call sites. The
+tempting move — "there is already a shared constant, reuse it" — would have been
+a coupling bug dressed up as de-duplication.
+
+Recorded rather than acted on: the two-PR cap still holds, and this is now a
+design note attached to a change whose evidence is already complete.
