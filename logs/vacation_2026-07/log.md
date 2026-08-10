@@ -39095,3 +39095,36 @@ un-deferring them on today's develop would turn CI red.
 
 Queue: gh#1286 (gate pending) -> gh#1285 (flake re-run once its run completes)
 -> tjit-drop (body ready) -> gl-order-100 (push-ready).
+
+### 2026-08-10 — measuring whether gh#1285 also un-defers the 5 eager-jax AndTilted entries
+
+`gh#1286` is now **96 SUCCESS / 0 FAILURE**, MERGEABLE, with `all-clear` still
+pending — waiting on the gate, not on a fix. Checked the gate by name; not
+merging on the aggregate.
+
+Noticed something worth testing while waiting. The slow-skip file carries **5
+eager-jax entries** (lines 142-146) for exactly the same tests whose jit-mode
+rows gh#1285 and tjit-drop clear:
+
+    jax tests/test_potential.py::test_poisson_surfdens_potential[mockOffsetMWP14WrapperPotential]
+    jax ...[mockRotatedAndTiltedMWP14WrapperPotential]
+    jax ...[mockRotatedAndTiltedMWP14WrapperPotentialwInclination]
+    jax ...[mockRotatedAndTiltedTriaxialLogHaloPotentialwInclination]
+    jax ...[mockRotatedTiltedOffsetMWP14WrapperPotential]
+
+Their in-file comment records ~1750-1840 s each against a 240 s bar, and
+STATUS.md lists them under "needs vectorisation, no stopwatch will rescue them".
+**But that measurement predates gh#1285**, which cut the poisson-route boundary
+crossings 5307 -> 2299 (measured, not projected — census on its own tree).
+
+If that halves the wall time they are still over the bar; if it does better,
+these are 5 more entries to un-defer. Either way the ledgered number is now
+stale and worth re-taking. Dispatched on gh#1285's worktree, `-n 5`,
+`--timeout=2400`, `--durations=0`, junitxml for per-test times; runner cwd
+verified.
+
+Caveat recorded up front: this is a `-k` subset, not the whole file, so it is a
+different context from the run that produced the ledgered numbers
+([[handpicked-nodeid-batch-is-not-a-context]]). For a *duration* that matters
+less than for pass/fail attribution, but any un-defer decision needs a
+whole-file confirmation before it goes in a PR.
