@@ -39597,3 +39597,55 @@ result against loop evaluations of **one full row** (nz of nR*nz cells, ~0.4 %
 overhead at the default 251x251) and fall back to the full loop on any mismatch.
 A full row is deterministic over that row rather than a probabilistic sample of
 scattered cells, and it is cheap. Fall back on exception as well.
+
+### Jo's plan change: finish the main-side issues BEFORE the rebase
+
+Jo redirected: merge the open develop PRs, fix the four issues I filed on main
+plus the interpRZ vectorisation, let everything finish, then rebase. I had
+cancelled gh#1291/gh#1292's CI on the opposite assumption -- re-ran all 14
+cancelled runs immediately; both are queued again with no reds.
+
+**gh#1293 (-> main), closes gh#1289.** Both surfdens `integrate.quad` sites get
+`epsabs=0`. A/B vs mpmath at 30 dps:
+
+    R=1 |z|=5   2.463268079e-10 -> 2.463291601e-10   (9.5e-06 -> 1.3e-15)
+    R=1 |z|=8   2.463237100e-10 -> 2.463291601e-10   (2.2e-05 -> 0)
+
+`Potential.mass` checked for the same defect and is NOT exposed (integrals
+1e-4..1e-2, agreeing to <=1.4e-14) -- left alone rather than swept in. Full
+`test_potential.py`: 1328 tests, 0 failures. The new test fails without the fix.
+
+**gh#1294 (-> main), the interpRZ vectorisation.** Seven identical loops -> one
+`_grid_eval`. 17-25x faster. The design needed the lesson from the eager-GL work
+earlier the same day: a `try/except` is NOT sufficient, because
+`AnySphericalPotential` neither raises nor broadcasts correctly -- its array
+force values differ from the cell-by-cell ones in 95 % of cells, silently. So
+the vectorised result is accepted only after reproducing the scalar path bit for
+bit on the first and last rows. Two costs disclosed in the PR rather than
+buried: fall-back potentials get ~15 % slower, and NFW/AnySpherical still differ
+by 1-2 ULP in 1-4 of 2501 cells, so it is not strictly byte-identical -- Jo's
+call.
+
+**gh#1290 fixed (committed, not yet pushed).** The sampled-distance assertion
+used a 1e-8 ABSOLUTE bar on an 11.6 kpc value (~9e-10 relative) while every
+sibling in the block used 1e-5 absolute (~1e-7 relative on their magnitudes).
+Both distance sites now use the sibling pair. Verifying it needs the WHOLE
+`test_quantity.py` -- a single nodeid gives `AttributeError: 'NoneType' object
+has no attribute 'sample'`, the documented fixture-never-ran trap, which I hit
+again. Full-file run in flight.
+
+**gh#1276 reproduced, not yet fixed.** `RazorThinExponentialDiskPotential`
+switches from an exact Bessel closed form to a fixed-order GL rule at
+`|z| = 1e-6`, and the error jumps discontinuously at the handover:
+
+    R     rel. err just above |z|=1e-6
+    0.5   5.2e-03
+    1.0   3.4e-03
+    2.0   8.9e-04
+
+The true z-dependence at |z|=1e-6 is ~1e-11, so essentially all of that is
+quadrature error. Cause: as z->0 the `arcsin(2k/(sqrtp+sqrtm))` argument -> 1 at
+k=R, giving an endpoint square-root singularity; the rule already splits at k=R,
+but GL converges only algebraically against it. NOTE the metric only isolates
+quadrature error for |z| <~ 1e-3; beyond that real z-dependence dominates and a
+proper adaptive reference is needed. That reference is the next step.
