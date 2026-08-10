@@ -40106,3 +40106,34 @@ remaining job is itself queued and had not been picked up.
 attempt" from "wedged and never coming back". Resolve the check's `link` to its
 run id and read `status` + `attempt` + the job-state histogram. A run that is
 `queued` with mostly-cancelled jobs is STUCK, not pending.
+
+### Empty commit -> 99 checks not ~151: build.yml push: is PATH-FILTERED
+
+Jo asked why gh#1291/gh#1292 showed 99 checks when a PR usually has ~151. The
+runs on the new SHAs were **all `pull_request`; the 3 `push`-event runs per
+branch were missing.**
+
+Cause: `build.yml` (and siblings) declare
+
+    on:
+      push:
+        paths: ['**', '!*', '*.py', ...]
+      pull_request:
+        paths-ignore: ['doc/**']
+
+An **empty commit changes no paths**, so the `push` trigger never fires. The
+`pull_request` trigger is `paths-ignore`-based and still matches. Missing ~52
+checks == exactly the push-event build jobs.
+
+**This turns out to be harmless, and arguably better.** `all-clear` is written to
+succeed once every check *that exists on the commit* has finished and passed --
+its own header says it "transitively requires all CI workflows ... without having
+to list any of them". So 99 checks gate on 99. The merged gh#1286 had 154 only
+because it carried BOTH event families, i.e. the same jobs twice -- the duplicate
+push+pull_request matrix I had already flagged to Jo as a workflow-scope wish.
+
+So the empty commit accidentally produced the lean variant: same coverage, ~35 %
+fewer jobs, gate still correct. Worth knowing deliberately rather than by
+accident: **an empty commit re-triggers pull_request workflows only.** Use it
+when you want a clean re-run at lower cost; use a real (path-touching) commit if
+you specifically need the push-event runs.
