@@ -37750,3 +37750,30 @@ does not need a branch until there is a slot to open it in.
 The general habit worth keeping: **periodically diff what exists locally against
 what the summary claims exists.** Everything else this evening has been checking
 measurements against reality; this is the same check applied to my own artifacts.
+
+### 2026-08-09 — checked develop's own health (I had cancelled three of its runs)
+
+Had not looked at develop itself all evening, and I force-cancelled three of its
+runs earlier — worth confirming that did no damage, since a red develop matters
+more than either PR.
+
+develop @ `277bf897` (post-gh#1284):
+
+    Test documentation notebooks   success  (push and pull_request)
+    Windows build                  success  (push and pull_request)
+    Linux/Mac build                in_progress
+    All-backend tests              in_progress / queued
+    all-clear                      in_progress
+
+**No failures.** Healthy so far, rest still running.
+
+The one `cancelled` entry is `all-clear` on **`9dc31569`** — the superseded SHA.
+That is my own cancellation cascading: I killed its two All-backend runs and its
+Linux/Mac build (3 h old, superseded twice), and the all-clear that aggregates
+them went cancelled with them. Harmless, and worth being precise about *why*:
+`9dc31569` is no longer develop's head, and PR checks run against a PR's own
+merge commit rather than the base commit's runs — so nothing consumes that
+all-clear. gh#1285 branches from `9dc31569` and is unaffected.
+
+Holding pattern otherwise: gh#1286 93 green / 18 running, gh#1285 6 green /
+13 running, flaked run still in_progress so the VizieR re-run stays blocked.
