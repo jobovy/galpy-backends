@@ -39883,3 +39883,31 @@ is solid: the reparameterisation and symmetrisation are clearly right (they buy
 The `|z| <~ 1e-11` decade needs its own diagnosis, and for a razor-thin disk it
 may be worth asking whether |z| that small should simply be treated as 0 -- but
 that is a modelling call, not a numerics one, and it is Jo's.
+
+### CI throughput blocker: hung notebook jobs starved the runner pool
+
+Symptom: 70 runs queued, 5 "in_progress", and **nothing completed in 41 minutes**.
+Every in_progress run had the same ~120 min age -- i.e. the pool was full of jobs
+that were not progressing, not a deep-but-moving queue.
+
+`gh run view <id> --json jobs` showed the cause: `run-notebooks (3.1x)` jobs stuck
+on the step **"Run all tutorial notebooks"** for 99-115 min (normal is ~10-20).
+Four such jobs per run, several runs at once -> a dozen hung jobs holding every
+concurrency slot. This is the VizieR-network failure mode, in its HANG form
+rather than its usual fail form.
+
+Cancelled the two clearly-hung runs (31408567759, 31408591820), both on
+`feat/backends-develop` from my own gh#1285/gh#1286 merges. Left alone: the
+`All-backend tests` run (legitimately long -- 31 eager shards) and the newest
+notebook run (10-26 min, may still be progressing). Pool went 5 -> 3 running,
+freeing slots for the 70 queued.
+
+**Choosing what to cancel matters.** [[no-rerun-vizier-notebook-flakes]] says
+never cancel notebook runs because they gate all-clear -- true for a PR you are
+trying to merge. These were post-merge runs on develop plus the long-lived draft
+gh#892, so cancelling gated nothing I need. Verified afterwards that none of
+gh#1291-1295's checks were touched.
+
+Also corrected in that memory: it claimed `run-notebooks` jobs are NOT part of
+the "Test documentation notebooks" workflow. They are -- that workflow's jobs are
+literally named `run-notebooks (3.1x)`.
