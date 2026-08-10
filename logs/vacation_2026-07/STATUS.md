@@ -25,19 +25,23 @@ rebase every open branch after step 3.
 | **gh#1291** `backend-jit/torchjit-poisson-undefer` | develop | xfail **21 → 16**, the 5 torch-jit `poisson_surfdens` rows. Ledger only | queued, **no reds** |
 | **gh#1292** `backend-jit/gl-order-100` | develop | `symmetric_quad` default 50 → `_QUAD_N`, deleting 3 duplicated overrides + a test pinning the DEFAULT | queued, **no reds** |
 | **gh#1293** `fix/quad-tolerances` | **main** | closes **gh#1289** (surfdens `epsabs=0`) **and gh#1290** (streamgapdf distance bar) | queued, **no reds** |
-| **gh#1294** `perf/interprz-vectorized-grids` | **main** | interpRZ grid build vectorised, **17–25x** | queued, **no reds**; **needs Jo's ULP call** |
+| **gh#1294** `perf/interprz-vectorized-grids` | **main** | interpRZ grid build vectorised, **17–25x** | queued, **no reds**; ULP question **ACCEPTED** |
 | **gh#1295** `fix/razorthin-endpoint-substitution` | **main** | closes **gh#1276** (k=R endpoint singularity) | queued, **no reds** |
 
 CI is saturated — 67 queued / 5 running, because these five PRs each fire ~150
 checks. Nothing is wrong; it just has to drain.
 
-## The one open decision, on gh#1294
+## gh#1294 ULP question — ACCEPTED by Jo (2026-08-10)
 
 The vectorised interpRZ grid build is **not strictly byte-identical**: NFW and
 `AnySphericalPotential` differ from the cell-by-cell loop by **1–2 ULP in 1–4
-cells out of 2501**. That is ~10 orders of magnitude below the cubic spline's own
-interpolation error, but it is a numpy-path change. Strict bit-identity would
-require verifying every cell, i.e. no speed-up at all. **Jo's call.**
+cells out of 2501**, ~10 orders of magnitude below the cubic spline's own
+interpolation error. **Jo accepted it**; landing as-is, no code change.
+
+Standing rule, reconfirmed: **always FLAG a non-byte-identical numpy change**
+(size + extent, in the PR body and the status report) — but flagging is not
+blocking. Only QUALITATIVE changes wait for an answer. I over-escalated this one
+into a gate across several wakes when the existing rule already covered it.
 
 Also disclosed there: potentials that fall back build ~15 % slower
 (`DoubleExponentialDiskPotential`), since they pay a failed vectorised attempt
