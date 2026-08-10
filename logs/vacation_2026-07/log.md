@@ -39026,3 +39026,33 @@ in principle be array-safe there and not elsewhere.
 **Also: the gh#1286 Windows flake re-run is away** — `run_attempt` advanced 1 ->
 2 on run 31384148947, confirmed rather than assumed. gh#1285's Windows run is
 still in flight, so its re-run waits.
+
+### 2026-08-10 — gh#1286 pre-audited and one step from merge
+
+The flake re-run worked: **gh#1286's Windows red is gone** (run 31384148947
+attempt=2 supersedes it). It is now 79 green with a single outstanding red, the
+codecov phantom — and that is visibly healing:
+
+    base  28 sessions  99.95 %   lines 48421
+    head  18 sessions  99.82 %   lines 48421
+
+Identical `lines` on both sides (zero source change), so once the remaining ~10
+uploads land it must equal base. Nothing to fix.
+
+**Pre-audited it so the merge is a single step when it clears:**
+
+    files changed: tests/backend_slow_skip.txt only, 0+ / 24-
+    slow_skip 109 -> 85   removed 24, added 0
+    xfail      26 ->  26   untouched
+
+The three audit dimensions (branch-on-coordinate-data, duplication, helper
+placement) are all N/A — there is no source in this diff. The substantive claim,
+that all 24 un-deferred entries genuinely pass, was settled earlier when the
+decisive jax shards (noninertial, and both `test_orbit` halves) came back
+SUCCESS.
+
+gh#1285 still carries its own Windows flake; its run (31384151206) is
+`in_progress`, so that re-run has to wait its turn.
+
+Order once gh#1286 lands: gh#1285 -> then `torchjit-poisson-undefer` (verified
+disjoint, un-defer claim confirmed) -> then `gl-order-100` (push-ready).
