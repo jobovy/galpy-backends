@@ -37499,3 +37499,25 @@ Also confirmed this wake: **gh#1285 is not stuck**, just later in a FIFO queue
 (its runs created 23:40 vs gh#1286's 23:18, all on the correct SHA). The
 temptation was to re-push or cancel-and-retry; either would have cost it its
 place for nothing.
+
+### 2026-08-09 — traced A/B for the GL order: BEFORE side complete
+
+    BEFORE (n=50, rt-split @ bcb2172e)
+    1278 passed, 102 skipped, 5 xfailed   593.58 s   (jax --jit, -n 8)
+
+AFTER side launched with the **identical command on the same tree**, changing
+only `n=50 -> n=100` at the two sites whose rule I actually measured:
+
+    Potential.py:832   poisson integrand over [-|z|, |z|]
+    Potential.py:918   density over [-|z|, |z|]
+
+Both are the split+clustered rule the accuracy grid covered. **Line 790 is left
+at n=50 on purpose** — it integrates to `numpy.inf`, a different rule with a
+different node placement, and I have not measured it. Changing it because it
+looks similar would be exactly the kind of unmeasured edit this A/B exists to
+avoid.
+
+What the comparison can and cannot show: it gates *pass/fail and count parity*
+under tracing. It does **not** by itself prove the accuracy improvement — that
+is the separate GL-vs-adaptive grid already measured (2.6e-05 -> 1.24e-10 at the
+worst corner). Two different questions, two different measurements.
