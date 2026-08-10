@@ -40289,3 +40289,39 @@ nothing. Only the explicit construct/eval split above is valid.
 Action: retarget the post-rebase roadmap from "vectorise SCF eval" to
 "per-call overhead + construction cost", and stop citing vectorisation as the
 remedy for the 1440-2641 s entries.
+
+### Root cause of the 1440-2641 s jax entries: the scan is TRACE-ONLY
+
+Profiled a single scalar `vcirc` on DiskSCF(N=10,L=10) under eager jax
+(10 calls, cProfile, sorted by tottime):
+
+    12290 calls  0.345 s self / 0.441 s cum   jax ufunc_api.__call__
+      300 calls  0.043 s self / 0.844 s cum   galpy .../gegenbauer.py:25
+
+~**1229 jax ufunc dispatches per scalar vcirc call**, funnelled through
+Gegenbauer, which dominates the call tree.
+
+Reading `galpy/backend/special/_fallback/gegenbauer.py`: it ALREADY has a
+`lax.scan` fast path -- but it is gated on `under_jax_trace(x)`. **Eager jax
+takes the Python loop**, running the three-term recurrence N-1 times with several
+`jnp` ops each; SCF stacks that over L orders, hence ~1e3 dispatches per call.
+
+So the slow entries are:
+
+* NOT missing point-vectorisation (SCF's backend eval is already batched),
+* NOT a missing scan (it is written and used under trace),
+* but the scan **only engages under trace**, and the eager suite never traces.
+
+That is consistent with the standing "no internal jit" directive
+([[no-internal-jit]]): galpy is jit-COMPATIBLE, not jit-ing. Under that rule
+these entries are **structurally slow under eager jax**, and no amount of
+vectorisation work changes it.
+
+Honest options, for Jo:
+1. accept them as permanently ledgered (status quo, zero work);
+2. let the EAGER path use the rolled recurrence too -- but a `lax.scan` in eager
+   jax is still a jax call and would change eager numerics/behaviour, and it
+   edges toward internal jit, so it needs Jo's sign-off;
+3. reduce per-dispatch cost generally (task #79) -- helps everything, hardest.
+
+Recorded rather than acted on: option 2 crosses a standing directive.
