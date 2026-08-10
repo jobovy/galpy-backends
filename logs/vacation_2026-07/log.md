@@ -40057,3 +40057,26 @@ and the sign of C. `_Rzderiv` is odd in z and vanishes at z=0, so unaffected.
 
 Branch `fix/anyaxisym-r2deriv-finite-part` now has 2 commits, still UNPUSHED
 pending runner capacity.
+
+### z2deriv verified across the BAND, not just z=0 (gap I had left)
+
+Jo asked whether z2deriv was really fixed. I had only measured it **at z=0** and
+was inheriting its nonzero-|z| behaviour from the shared `_finite_part_quad`
+(sinh branch + 1e-9 snap) on assumption. Closed that gap:
+
+    |z|        0      1e-12    1e-10    1e-08    1e-06    1e-04    1e-02
+    shipped  5.1e-07  9.0e-07  2.1e-07  1.2e-06  7.3e-07  2.5e-10  1.7e-15
+    fixed    3.0e-11  3.2e-11  2.2e-10  3.0e-09  2.5e-12  1.2e-13  5.7e-16
+
+Better at every row; worst case 2.96e-09 vs shipped 1.23e-06. So the shared
+helper's finite-|z| machinery does work for z2deriv -- now measured rather than
+assumed.
+
+Also note the shipped z2deriv was **worse off the mid-plane than on it**
+(9.0e-07 at z=1e-12, 1.2e-06 at z=1e-08 vs 5.1e-07 at z=0): the same band-wide
+defect as R2deriv, not a z=0-only artifact. My earlier "z2deriv shares the
+defect, ~10x milder" was measured at z=0 and understated its extent.
+
+**Lesson:** when a fix is routed through shared machinery, the shared part still
+needs measuring for EACH consumer. Reusing a verified helper does not transfer
+its verification.
