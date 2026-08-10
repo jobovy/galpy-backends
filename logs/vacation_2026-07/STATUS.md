@@ -28,8 +28,28 @@ rebase every open branch after step 3.
 | **gh#1294** `perf/interprz-vectorized-grids` | **main** | interpRZ grid build vectorised, **17–25x** | queued, **no reds**; ULP question **ACCEPTED** |
 | **gh#1295** `fix/razorthin-endpoint-substitution` | **main** | closes **gh#1276** (k=R endpoint singularity) | queued, **no reds** |
 
-CI is saturated — 67 queued / 5 running, because these five PRs each fire ~150
-checks. Nothing is wrong; it just has to drain.
+## !! CI IS SERIALISED — THREE PRs ARE PARKED AND MUST BE RESTARTED !!
+
+The runner pool is only 3–5 concurrent and five PRs x ~150 checks thrashed it
+(70 queued, zero completing). Per Jo, serialised:
+
+* **RUNNING: gh#1291 + gh#1292** (both -> develop, Jo's step 1).
+* **PARKED (runs cancelled on purpose): gh#1293, gh#1294, gh#1295.**
+
+**When gh#1291 and gh#1292 are green and merged, RESTART the parked three:**
+
+    gh run list --limit 200 --json databaseId,status,headBranch \
+      | # pick headBranch in {fix/quad-tolerances,
+        #   perf/interprz-vectorized-grids, fix/razorthin-endpoint-substitution}
+    gh run rerun <id>        # for each cancelled run
+
+or push an empty commit to each branch. **They cannot merge until this is done** —
+their checks are currently `CANCELLED`, which fails all-clear. This is the single
+easiest thing to forget in this whole plan.
+
+Separately: two `Test documentation notebooks` runs on develop were **hung** on
+the "Run all tutorial notebooks" step for 99–115 min (VizieR), holding the pool.
+Cancelled those too — they were post-merge/draft runs, gating nothing.
 
 ## gh#1294 ULP question — ACCEPTED by Jo (2026-08-10)
 

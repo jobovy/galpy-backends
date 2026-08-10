@@ -39911,3 +39911,17 @@ gh#1291-1295's checks were touched.
 Also corrected in that memory: it claimed `run-notebooks` jobs are NOT part of
 the "Test documentation notebooks" workflow. They are -- that workflow's jobs are
 literally named `run-notebooks (3.1x)`.
+
+### CI serialised at Jo's suggestion: 2 PRs run, 3 parked
+
+With a 3–5 slot pool, five PRs x ~150 checks produced 70 queued and zero
+throughput. Jo suggested draining one or two PRs at a time. Done:
+
+* running: **gh#1291 + gh#1292** (both -> develop, Jo's step 1)
+* parked (41 runs cancelled): **gh#1293, gh#1294, gh#1295**
+
+Outstanding went 70 -> 32 (gl-order 8, torchjit 8, develop 11, main 5).
+
+**MUST NOT FORGET: the parked three need their runs re-run (or an empty commit)
+once gh#1291/gh#1292 merge.** Their checks are CANCELLED, which fails all-clear,
+so they cannot merge until restarted. Recorded at the top of STATUS.md too.
