@@ -40035,3 +40035,25 @@ sitting next to a fixed 4e-10. `_Rzderiv` is odd in z and vanishes at z=0.
 One implementation slip caught by the syntax check: the floor constant first
 landed between `@check_potential_inputs_not_arrays` and the `def`. Moved to
 module level.
+
+### z2deriv fixed too, via a shared helper
+
+`_z2deriv` shared R2deriv's defect (6.47e-07 at R=0.1). The derivation fell out
+cleanly: **at z=0 its K term carries a z^2 factor and vanishes entirely**,
+leaving `-a Sigma(a) E(m) / (d^2 (a+R))`, so the singular coefficient is
+`-Sigma(R)/2` -- exactly minus R2deriv's. Verified numerically to 5e-10 BEFORE
+writing any code.
+
+    R       0.1       0.2       0.3       0.5       1.0       2.0
+    before  6.47e-07  5.06e-07  9.32e-08  2.42e-07  5.13e-08  3.62e-09
+    after   4.66e-11  2.97e-11  1.05e-10  8.78e-11  3.37e-12  5.36e-13
+
+~14,000x at R=0.1.
+
+**Applied the gh#1295 audit lesson up front rather than after review:** hoisted
+the quadrature machinery into a shared `_finite_part_quad(integrand_d, R, az, C)`
+instead of copying it. The two derivatives now differ only in their integrand
+and the sign of C. `_Rzderiv` is odd in z and vanishes at z=0, so unaffected.
+
+Branch `fix/anyaxisym-r2deriv-finite-part` now has 2 commits, still UNPUSHED
+pending runner capacity.
