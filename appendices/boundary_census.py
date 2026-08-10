@@ -178,6 +178,7 @@ def _workloads():
     from galpy.df import dehnendf, isotropicHernquistdf, quasiisothermaldf
     from galpy.orbit import Orbit
     from galpy.potential import (
+        evaluateSurfaceDensities,
         HernquistPotential,
         interpRZPotential,
         MiyamotoNagaiPotential,
@@ -238,6 +239,17 @@ def _workloads():
         ("interpRZPot.build(24x16)", lambda: interpRZPotential(
             RZPot=mp, rgrid=(0.5, 1.5, 24), zgrid=(0.0, 0.2, 16),
             interpPot=True, interpDens=True, use_c=False)),
+        # Added 2026-08-09. `Potential.surfdens` above uses a SINGLE
+        # MiyamotoNagai, which has no per-component generator and therefore
+        # scores ~0 -- that is why the composite site below went unmeasured
+        # until the surfdens/SCF ledger entries were investigated directly.
+        # A composite is the case that loops: scipy's scalar quadrature calls
+        # an integrand that sums over components, so crossings are
+        # (quad evaluations) x (components).
+        ("surfdens(MWP14)", lambda: evaluateSurfaceDensities(
+            MWPotential2014, 1.2, 0.3, use_physical=False)),
+        ("surfdens(MWP14,poisson)", lambda: evaluateSurfaceDensities(
+            MWPotential2014, 1.2, 0.3, forcepoisson=True, use_physical=False)),
     ]
 
 
@@ -263,6 +275,32 @@ KNOWN_HOT = {
     # interpDens / interpR2deriv / interpvcirc need the four undecorated inners
     # that do not exist yet, so do NOT start by writing those.
     "interpRZPot.build(24x16)": "galpy task #211: 3 sites use existing inners; dens/2nd-deriv need new ones",
+
+    # Composite surfdens, measured 2026-08-09 on develop 9dc31569 under jax:
+    #   surfdens(MWP14)          2779 crossings  2.23 s   CompositePotential:<genexpr> x2772
+    #   surfdens(MWP14,poisson)  5307 crossings  0.89 s   Potential.py:<lambda>:810/811
+    # Both are scipy's SCALAR quadrature calling a per-component integrand:
+    # (quad evaluations) x (components). The traced path does not pay this --
+    # it uses the vectorized backend quadrature -- so this is an EAGER-only
+    # cost, and it is the mechanism behind the eager-jax surfdens ledger
+    # entries.
+    #
+    # ** The density route is FIXED by galpy gh#1285 **: delegating the
+    # composite per component makes each run one vectorized symmetric_quad
+    # instead of a shared scalar integrand -- measured 2779 -> **19** on that
+    # branch. DELETE the density entry below when gh#1285 merges; that deletion
+    # is how the fix gets locked in.
+    #
+    # The poisson route is IMPROVED but not eliminated by gh#1285:
+    # 5307 -> 2299, because the composite now delegates per component but each
+    # component still runs scipy's scalar quadrature on the eager path.
+    # Routing eager through the backend quadrature would close the rest, but it is a
+    # numerical-behaviour change, not a mechanical one: measured GL n=50 vs
+    # adaptive agrees to ~1e-12 for R >= 0.1 and degrades to 2.6e-05 at
+    # (R=0.01, |z|=50). Note the traced path ALREADY uses GL, so eager and
+    # traced currently disagree at those extremes.
+    "surfdens(MWP14)": "galpy gh#1285 fixes this (2779 -> 19); delete on merge",
+    "surfdens(MWP14,poisson)": "eager-only; gh#1285 takes 5307 -> 2299, rest needs the GL-for-eager decision",
 
     # (aAVertical entries deleted 2026-08-08 when galpy #1272 merged: the vertical
     # adapter fix took them 1708/1722 -> 244/246, below the HOT threshold.
