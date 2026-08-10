@@ -33,8 +33,12 @@ rebase every open branch after step 3.
 The runner pool is only 3–5 concurrent and five PRs x ~150 checks thrashed it
 (70 queued, zero completing). Per Jo, serialised:
 
-* **RUNNING: gh#1291 + gh#1292** (both -> develop, Jo's step 1).
-* **PARKED (runs cancelled on purpose): gh#1293, gh#1294, gh#1295.**
+* **RUNNING: gh#1291, gh#1292** (-> develop) **+ gh#1293** (restarted, -> main).
+* **PARKED (runs cancelled on purpose): gh#1294, gh#1295.**
+
+Jo's rule: **keep restarting as the queue drains — do not leave runners idle.**
+So bring a parked PR back whenever the backlog gets thin, rather than waiting
+for a merge.
 
 **When gh#1291 and gh#1292 are green and merged, RESTART the parked three:**
 
@@ -47,9 +51,12 @@ or push an empty commit to each branch. **They cannot merge until this is done**
 their checks are currently `CANCELLED`, which fails all-clear. This is the single
 easiest thing to forget in this whole plan.
 
-Separately: two `Test documentation notebooks` runs on develop were **hung** on
-the "Run all tutorial notebooks" step for 99–115 min (VizieR), holding the pool.
-Cancelled those too — they were post-merge/draft runs, gating nothing.
+**Do NOT cancel notebook jobs.** I cancelled two develop `Test documentation
+notebooks` runs thinking 99–115 min meant hung; Jo: they sometimes just take
+that long, and they are **required for all-clear**. Re-run (both are back as
+attempt 2). My "starving the pool" reasoning was also wrong — measured at RUN
+level, when the other runs were at 2-of-26 and 3-of-44 jobs active, i.e.
+progressing normally. Use `gh run view <id> --json jobs` for throughput.
 
 ## gh#1294 ULP question — ACCEPTED by Jo (2026-08-10)
 

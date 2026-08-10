@@ -39950,3 +39950,23 @@ hung jobs" was the wrong generalisation from them.
 plus per-job step age. Compare a job's age against its peers on the same workflow,
 not against the run's age. `gh run list --json status` alone cannot distinguish
 "44-job run grinding through" from "wedged".
+
+### Corrections from Jo: don't cancel notebooks; keep runners fed
+
+Two directives, both correcting me:
+
+1. **"Sometimes the notebook jobs just take a long time and they need to wait;
+   they are necessary for all-clear."** So cancelling the two develop notebook
+   runs was wrong. Re-ran both (back as attempt 2, queued). 99-115 min is within
+   what they legitimately do — long is not the same as hung.
+2. **"Start restarting CI as the queue drains, we don't want to leave possible
+   runners idle."** So serialisation is not park-until-merge; it is keep a
+   backlog without thrashing. Restarted gh#1293's 18+2 cancelled runs — it is
+   back to 126 queued / 0 cancelled. gh#1294 and gh#1295 stay parked for now and
+   come back as this drains.
+
+Pool: 45 queued / 5 running.
+
+Memory `no-rerun-vizier-notebook-flakes` updated with both, including that my
+"hung jobs are starving the pool" inference was measured at RUN level and was
+wrong on its own terms.
