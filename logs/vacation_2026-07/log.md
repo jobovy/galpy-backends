@@ -39256,3 +39256,52 @@ attempt, or delete the old artifact at dispatch so a stale read fails loudly.
 
 Run still going at 1108 s with one test through. Gates: gh#1286 114 SUCCESS /
 0 FAILURE, gh#1285 89 / 0, both still `all-clear` pending.
+
+### 2026-08-10 — the Windows "flake" DIAGNOSED: a marginal tolerance, not RNG (gh#1290)
+
+gh#1286's re-run failed on the same test, which finally made me pull the actual
+assertion values instead of re-running again. **My RNG-desync speculation was
+wrong.**
+
+    assert array([4.38726353e-08]) < ((0 * 1e-05) + ((1 - 0) * 1e-08))
+      where 4.38726353e-08 = fabs(11.62525101 - 11.62525097)   # kpc
+
+The two values agree to **8 significant figures**. The bar is 1e-8 **absolute**
+on an 11.6 kpc distance -- ~4e-9 relative -- because
+
+    _NUMPY_1_22 = (V > 1.21)*(V < 1.23) + (V > 1.23)*(V < 1.25)
+
+is 1 only for numpy 1.22/1.24 (a deliberate loosening for those versions) and
+therefore **0** on numpy 2.x, selecting the tight branch. The comparison is
+between two **independently constructed** objects, so their agreement is bounded
+by constructing the stream track twice, not by the kpc round-trip. ~4e-9
+relative is right at that limit, and runner arithmetic decides it.
+
+That fits every observation better than "flake": the same-SHA push/pull_request
+split, failure on a ledger-only PR, one PR's re-run clearing and another's
+failing twice. It is **runner-sensitive**, not 50/50.
+
+Filed as **gh#1290** with the numbers. Deliberately did **not** change it:
+loosening a tolerance on a `main`-lineage test to turn my own PRs green is
+precisely the edit that should be Jo's call, not mine, however good the
+justification. Re-running stays the lever until then.
+
+Corrected [[windows-streamgapdf-sample-flake]], which had recorded the RNG guess
+as "plausible, not yet confirmed" — now replaced with the measured mechanism.
+
+### AndTilted: negative result, the ledger entries STAND
+
+    mockRotatedAndTiltedMWP14...wInclination  1633.3 s
+    mockRotatedTiltedOffsetMWP14              1451.9 s
+    mockRotatedAndTiltedMWP14                 1435.9 s
+    mockOffsetMWP14                           1349.0 s
+    mockRotatedAndTiltedTriaxialLogHalo        411.3 s
+
+All 5 pass, and all 5 remain **far over the 240 s bar** (1.7x to 6.8x). So
+gh#1285's crossing reduction does **not** rescue them: the poisson route only
+halved (5307 -> 2299), unlike the 145x on the direct route, and the wall time
+follows the former. The ledgered ~1750 s becomes ~1350-1633 s — a real but
+modest improvement that changes nothing about the deferral.
+
+**The 5 eager-jax entries stay slow-skipped, and STATUS.md's "needs
+vectorisation" assessment stands.** Worktree restore verified clean.
