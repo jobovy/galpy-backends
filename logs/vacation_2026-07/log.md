@@ -39696,3 +39696,46 @@ would have produced a confident wrong answer:**
 Also mis-set my own pass gate to 1e-9, tighter than mpmath reaches on an
 endpoint-singular integrand, and it reported "arbiter STILL BROKEN" on a
 reference that was fine.
+
+### gh#1277 DIAGNOSED, NOT FIXED: R2deriv is a Hadamard finite-part integral
+
+`AnyAxisymmetricRazorThinDiskPotential.R2deriv(R, 0)` carries ~1e-5 relative
+error at small R, ~1e-9 at large R. Four hypotheses tested, three refuted:
+
+1. **Already fixed on develop by gh#1278's panel grading?** No. main and develop
+   give *identical* values (9.90e-06 at R=0.2 on both), so gh#1278 addressed a
+   different aspect and a real fix is still needed -- and belongs on main, since
+   the rebase will carry it into develop.
+2. **A truncating tolerance, as in gh#1289?** No. `epsabs=0, epsrel=1e-13,
+   limit=2000` reproduces the shipped value to 3 digits. The quadrature is
+   converged; it is converged to the wrong number.
+3. **Catastrophic cancellation in the integrand near a=R?** No. The two
+   numerator terms sum to within 2e-15..1e-10 of mpmath at 40 dps, and
+   `|t1+t2| ~ |t1|` -- no cancellation at all.
+4. **A bad reference (the quadosc arbiter)?** No. I suspected the `zeros=`
+   argument, since the integrand mixes J0 and J1 but the issue passes J1 zeros.
+   Recomputing with J0 zeros gives the *identical* value, so the Hankel
+   reference is robust and galpy is genuinely the one that is off.
+
+**What it actually is.** The integrand diverges as `~1/(a-R)^2` with the SAME
+SIGN on both sides:
+
+    a-R=1e-04:  f(R+d) = 2.5656e+07    f(R-d) = 2.5686e+07
+
+so the two sides add rather than cancel: the integral does not exist as a proper
+integral, only as a **Hadamard finite part**. galpy evaluates it with
+`integrate.quad(..., 0, 2R, points=[R])`, i.e. QUADPACK's QAGP, which is built
+for *integrable* singularities (log, 1/sqrt). The finite number it returns is an
+extrapolation artifact -- accurate to ~1e-5, and better at large R where the
+singularity is relatively weaker. That is exactly the observed R-dependence.
+
+**A correct fix subtracts the `1/(a-R)^2` and `1/(a-R)` parts analytically and
+integrates the smooth remainder.** That is real work, well beyond a tolerance
+tweak, and matches the issue's own "low priority" framing. NOT attempted here.
+
+**One more harness error of mine, for the record:** I "checked the cancellation
+between the half-integrals" by calling `quad` separately on [0,R] and [R,2R].
+That is NOT galpy's computation -- `points=[R]` on a single call selects QAGP,
+and splitting into two calls discards it. My split returned ~1e7 where galpy
+returns 0.6, which is how I caught it. **When reproducing a scipy quadrature,
+reproduce its ARGUMENTS, not just its interval.**
