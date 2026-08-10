@@ -38455,3 +38455,31 @@ default-tolerance problems, but they are different bugs with different fixes. I
 have not verified whether this one produces a wrong value or is just a noisy
 warning on a deliberately hard integrand, so it does not go on the issue until
 I have measured it against mpmath the way gh#1289 was.
+
+### 2026-08-10 — eager-GL control COMPLETED: the route costs exactly one test
+
+Both arms of `test_potential.py -k surfdens` under eager torch now have real
+summary lines (the earlier control was SIGTERM'd with none):
+
+    scipy (today)   19 passed, 0 failed, 45 skipped   1110.5 s
+    GL forced       18 passed, 1 failed, 45 skipped     39.3 s
+
+**The single failure is `AnyAxisymmetricRazorThinDiskPotential`** -- the
+deliberate array opt-out. Nothing else in the suite changes outcome. Combined
+with the earlier finding that the `_backend_accepts_arrays` guard is a general
+facility that fires loudly through composition and wrapping, that settles the
+design: routing eager through GL is viable behind a try/fall-back on that
+declared `TypeError`.
+
+**The timings are not a benchmark and I am not going to quote them as one.** The
+control shared the box with the 8-worker traced gate for part of its run, so
+1110 s is inflated by an unknown amount. The pass/fail counts are what decides
+the design and they are unaffected. A speed number for a PR body needs a fresh
+both-arms run on a quiet box.
+
+Also checked: develop's own CI at `de0bee8e` is still in flight with no reds.
+The `all-clear` FAILURE visible at the previous develop SHA `277bf897` is the
+FDM timeout gh#1288 fixed, so it is expected there and should not recur.
+
+CI on both PRs is still runner-starved (gh#1285 fully queued, gh#1286 one check
+through). Nothing superseded to cancel; not polling further.
