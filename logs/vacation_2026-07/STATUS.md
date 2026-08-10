@@ -152,6 +152,23 @@ and body were corrected from `108 → 84` to `109 → 85`.)
 **Torch eager is essentially finished** — 1 slow-skip + 3 xfail entries left in
 the whole suite. The residual burndown is ~92 % jax.
 
+**Re-measured 2026-08-10, post-gh#1285 — the AndTilted entries STAND.** gh#1285
+cuts the poisson-route boundary crossings 5307 -> 2299, so I re-timed the 5
+eager-jax `poisson_surfdens` entries on its own tree (slow-skip lines removed for
+the run, worktree restored and verified):
+
+    mockRotatedAndTiltedMWP14...wInclination  1633.3 s
+    mockRotatedTiltedOffsetMWP14              1451.9 s
+    mockRotatedAndTiltedMWP14                 1435.9 s
+    mockOffsetMWP14                           1349.0 s
+    mockRotatedAndTiltedTriaxialLogHalo        411.3 s
+
+All 5 pass; all 5 stay **1.7x to 6.8x over the 240 s bar**. The ledgered ~1750 s
+becomes ~1350-1633 s — real but modest, because the poisson route only halved
+where the direct route fell 145x, and wall time follows the former. **No
+un-defer.** This is a negative result that *confirms* the assessment below rather
+than changing it.
+
 **And the jax remainder is mostly real, not stale.** Measured eager-jax
 staleness so far is 24 of 44 (55 %), but what is left is documented slow:
 `test_DehnenBinney98` ~2641 s, the AndTilted MWP14 Poisson checks ~1750–1840 s,
