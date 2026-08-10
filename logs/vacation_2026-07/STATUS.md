@@ -44,7 +44,7 @@ gh#1288 re-defers it. Verified functionally — the entry now reports `s` in 8.5
 | branch | @ | what | status |
 |---|---|---|---|
 | `backend-jit/torchjit-poisson-undefer` | `c4acbf96` | xfail 26 → 21: drops the 5 **torch-jit** `poisson_surfdens` wrapper entries, keeps both AnyAxisym | ready. Re-verified 2026-08-10: disjoint from gh#1285 (which drops the 5 **jax-jit** rows — same tests, different mode prefix), merge-tree clean, 26 → 16 rows combined |
-| `backend-jit/gl-order-100` | `4c3470e0` + test | `symmetric_quad` default 50 → `_QUAD_N` (100); **deletes** 3 duplicated `n=50` overrides rather than adding a constant | gated below; needs a commit-message amendment before push |
+| `backend-jit/gl-order-100` | `2701dd8d` | `symmetric_quad` default 50 → `_QUAD_N` (100), **deleting** 3 duplicated `n=50` overrides rather than adding a constant, + a test that pins the DEFAULT | **push-ready.** Message amended with the corrected site attribution; test A/B'd (default passes, 50 fails); committed state re-verified green (quadrature 62 passed, wrappers 530 passed) |
 
 Both must land **after** gh#1285.
 

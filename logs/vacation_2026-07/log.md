@@ -38882,3 +38882,33 @@ outcome than wasted CPU. It is at 62/72.
 CI unchanged in substance: gh#1286 52 green, gh#1285 22, both still carrying only
 the Windows flake plus self-healing codecov. One Windows parent run is
 `in_progress`, the other still `queued`.
+
+### 2026-08-10 — egate finished and restored; GL-order branch is push-ready
+
+    jax   AFTER 22 passed / BEFORE 22 passed
+    torch AFTER 27 passed / BEFORE 27 passed
+    restored; staged must be empty: []    EGATE DONE
+
+Identical across all four arms, exactly as the vacuity analysis predicted, and
+the restore verified clean (`symmetric_quad` back at `n=_QUAD_N`, empty index).
+Letting the last arm run rather than killing it was the right call — the restore
+step is what runs after it.
+
+`backend-jit/gl-order-100` now has two commits and is push-ready:
+
+* `02fd9484` — the change, with the message rewritten to state the site
+  correctly (`surfdens(R, z=None)`, not `_mass`), to spell out who is affected
+  (numpy untouched at all three sites; eager unaffected at the two finite ones
+  but changed at the whole-line one; traced is the point), and to say plainly
+  that the eager arms are **not** cited because they are null.
+* `2701dd8d` — the discriminating test, with its own account of why the first
+  draft was toothless.
+
+Committed state re-verified rather than assumed: `test_backend_quadrature.py`
+62 passed / 1 skipped, `test_backend_wrappers.py` 530 passed.
+
+**Holding it unpushed.** It must land after gh#1285, and with gh#1285 + gh#1286
+both open and runner-starved a third PR adds queue without adding progress.
+
+CI: gh#1286 54 green, gh#1285 22 — both still only the Windows flake plus
+self-healing codecov.
