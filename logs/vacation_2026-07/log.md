@@ -39231,3 +39231,28 @@ three each exceed that. Consistent with the ledgered ~1750 s and suggesting the
 gh#1285 crossing reduction buys less wall time here than the 145x on the direct
 route might have implied — but that is an impression from one dot, and the
 junitxml numbers are what will decide it.
+
+### 2026-08-10 — nearly read a stale junitxml as the AndTilted result
+
+The AndTilted xml appeared while the run was still going. It looked complete:
+
+    mtime 10:22:29   testcases=5   skipped=5   time="0.000"
+
+It was the **first** attempt's output — the one that skipped everything — sitting
+at the same `--junitxml` path the re-dispatch reuses. The live run had rewritten
+its *log* at 10:33 but had not reached its xml write (junitxml is written at
+session end), so for ~20 minutes that path held a perfectly valid artifact about
+a different experiment. Parsing it would have produced "5 skipped" a second time
+and looked like confirmation.
+
+Caught it by checking the mtime against the run's start and noticing a pytest
+process was still alive for that command — an artifact cannot be the output of a
+process that has not finished.
+
+Folded into [[never-report-partial-run-as-result]] as a distinct variant: worse
+than a *partial* artifact is a **complete** one from the **wrong run**, because
+it has every hallmark of a finished result. Remedy recorded: unique path per
+attempt, or delete the old artifact at dispatch so a stale read fails loudly.
+
+Run still going at 1108 s with one test through. Gates: gh#1286 114 SUCCESS /
+0 FAILURE, gh#1285 89 / 0, both still `all-clear` pending.
