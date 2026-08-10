@@ -39816,3 +39816,39 @@ is why the shipped code lands within 1e-5 instead of diverging.
 
 Remaining: the z-dependent version of the subtraction, so one formulation covers
 the whole band. All three results posted to the issue.
+
+### gh#1277 root cause: the node offsets are not representable
+
+Two more schemes tried for the small-|z| band, **both catastrophically worse**
+below |z| ~ 1e-6 while helping above it:
+
+    |z|      shipped   graded points   tan-substitution
+    1e-10   3.25e-06      3.40e+08         1.70e+08
+    1e-08   1.90e-05      4.85e-02         1.84e-02
+    1e-06   1.15e-05      5.12e-05         8.39e-07
+    1e-04   3.91e-09      2.03e-10         4.48e-10
+
+That shape -- help above, explode below -- is the tell, and it is NOT the
+quadrature. The integrand is parameterised by `a` and recomputes `d = a - R`
+internally. At R=0.2 the float64 spacing is 2.78e-17, so:
+
+    intended d   recovered a-R          rel err     -> in d^2
+    1e-08        9.9999999947364415e-09  5.26e-10    1.05e-09
+    1e-10        1.0000000827403710e-10  8.27e-08    1.65e-07
+    1e-12        1.0000056338554941e-12  5.63e-06    1.13e-05
+
+and `1/(d^2+z^2)^2` amplifies it. **Any scheme placing nodes at R +- eps with
+eps << R is limited by this** -- the node cannot represent its own offset. It
+also explains why the shipped code degrades gracefully instead of exploding:
+QAGP spreads nodes over the whole [0,2R] and never probes d ~ 1e-10, so it never
+touches the cancellation; it just extrapolates and lands ~1e-5 off.
+
+**The complete fix therefore starts with a reparameterisation**, not more
+analysis: express the integrand in `d` as a primary variable (`a = R+d`,
+`a^2-R^2 = d(2R+d)`, `(a-R)^2+z^2 = d^2+z^2`, `(a+R)^2+z^2 = (2R+d)^2+z^2`), so
+the offset is never formed by subtraction. Then symmetrise (kills the odd term,
+no Sigma' needed) and subtract the singular model with its finite part. That one
+formulation covers z=0 and the band together, with no handover discontinuity.
+
+Step 1 is mechanical rather than analytical, which makes the remaining work much
+better defined than it looked. All four results posted to the issue.
