@@ -38746,3 +38746,33 @@ sampling; runner-CPU transcendental differences) are all untestable without a
 Windows environment, and I have enough to act: **re-run the job**. Writing down
 a mechanism I cannot measure would be the [[reproduce-the-assertion-not-a-proxy]]
 failure in narrative form.
+
+### 2026-08-10 — census confirms gh#1285's boundary claim on its own tree
+
+egate torch AFTER also clean: **27 passed, 45 skipped, 0 failed** (1049.5 s). Both
+AFTER arms are green (jax 22/0, torch 27/0); the two BEFORE arms are running.
+
+Used the spare CPU to check a claim of my own rather than take it from the
+`KNOWN_HOT` registry. Boundary census against **gh#1285's own worktree**
+(`PROVENANCE: /var/tmp/rt-split/galpy/__init__.py`, C-ext loaded):
+
+    surfdens(MWP14)            2779 -> 19      no longer HOT
+    surfdens(MWP14,poisson)    5307 -> 2299    still HOT (as predicted)
+
+Both numbers match what the registry predicted, which is the point: the registry
+entry was a *prediction* written when the fix was designed, and it is now a
+*measurement* taken on the branch. The direct route falls out of the HOT band
+(threshold 1000) entirely — ~145x — because per-component delegation lets each
+potential's vertical quadrature run as one broadcast call instead of re-crossing
+the boundary per node.
+
+Posted to gh#1285, since that PR is framed purely as a correctness fix and this
+consequence was unstated.
+
+The 2299 residue is the eager path and is *not* reachable from this PR:
+`_quad_needs_backend` deliberately routes eager to `scipy.integrate.quad`
+node-by-node so scalar-only potentials keep working. It needs the separate
+try-GL/fall-back change.
+
+Largest remaining HOT entry is unchanged: `interpRZPot.build(24x16)` at **3840**,
+which is task #211 — blocked on gh#1274, which is Jo's to merge.
