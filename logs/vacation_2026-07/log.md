@@ -39852,3 +39852,34 @@ formulation covers z=0 and the band together, with no handover discontinuity.
 
 Step 1 is mechanical rather than analytical, which makes the remaining work much
 better defined than it looked. All four results posted to the issue.
+
+### gh#1277 prototype: large win over most of the range, one decade unsolved
+
+Reparameterised the integrand in `d = a-R` (so the offset is never formed by
+subtraction), symmetrised about d=0, and used `d = z*sinh(t)` for the peak
+region -- `tan` fails because `arctan(R/z)` sits within ~5e-10 of pi/2 and is
+quantised there, which is the SAME representability trap one level up.
+
+    |z|      shipped    d-param prototype
+    0       9.90e-06        1.92e-10     <- 51,000x
+    1e-12   1.00e-05        5.85e-04     <- WORSE
+    1e-10   3.25e-06        2.31e-06     <- marginal
+    1e-08   1.90e-05        5.48e-08     <- 350x
+    1e-06   1.15e-05        1.18e-09     <- 10,000x
+    1e-04   3.91e-09        6.06e-12
+    1e-02   2.72e-14        1.78e-15
+
+**Honest state: a large win for z=0 and |z| >= 1e-8, a regression below ~1e-11.**
+
+I hypothesised the residual at z=1e-12 was cancellation of the ~C*pi/z peak mass
+(~1e12) against the rest, and added the analytic model subtraction
+`2C/(u^2+z^2)` whose integral over [0,R] is `(2C/z) arctan(R/z)` -- exactly to
+handle that mass in closed form. **It did not help** (2.48e-04 -> 5.85e-04), so
+that explanation is NOT confirmed and the last decade is still unexplained.
+
+Stopping the hypothesis loop here rather than iterating further on guesses. What
+is solid: the reparameterisation and symmetrisation are clearly right (they buy
+2-4 orders across most of the range), and the z=0 case is essentially solved.
+The `|z| <~ 1e-11` decade needs its own diagnosis, and for a razor-thin disk it
+may be worth asking whether |z| that small should simply be treated as 0 -- but
+that is a modelling call, not a numerics one, and it is Jo's.
