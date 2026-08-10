@@ -39925,3 +39925,28 @@ Outstanding went 70 -> 32 (gl-order 8, torchjit 8, develop 11, main 5).
 **MUST NOT FORGET: the parked three need their runs re-run (or an empty commit)
 once gh#1291/gh#1292 merge.** Their checks are CANCELLED, which fails all-clear,
 so they cannot merge until restarted. Recorded at the top of STATUS.md too.
+
+### CORRECTION: run-level status is not a throughput metric
+
+I reported "nothing completed in 41 minutes, the pool is starved by hung jobs".
+The first half was measured at **RUN** level and is misleading; the second half
+over-generalised.
+
+Inspected the three remaining in_progress runs job-by-job:
+
+    Linux/Mac build        2 active of 26 jobs   (24 done)  36-38m on test_orbit shards
+    All-backend tests      3 active of 44 jobs   (41 done)  13-26m on slow jax shards
+    Test doc notebooks     5 active of  5 jobs              22-31m
+
+They are **progressing normally**. A run with 44 jobs stays `in_progress` for
+hours while steadily completing work, so counting completed *runs* shows zero
+throughput while dozens of *jobs* finish.
+
+The two runs I cancelled WERE genuinely anomalous -- 4/4 jobs stuck 99-115 min on
+one step, vs 22-31 min here -- so that action stands. But "the pool is full of
+hung jobs" was the wrong generalisation from them.
+
+**Metric to use:** `gh run view <id> --json jobs` and count active-vs-total jobs
+plus per-job step age. Compare a job's age against its peers on the same workflow,
+not against the run's age. `gh run list --json status` alone cannot distinguish
+"44-job run grinding through" from "wedged".
