@@ -37858,3 +37858,27 @@ because a mismatched count is exactly the kind of thing that gets waved away as
 
 So the follow-up needs no rebase after gh#1285 lands: disjoint line removals in
 one file, resolved at line level, same as gh#1286 against gh#1284 earlier.
+
+### 2026-08-09 — VizieR flake re-run finally fired (verified by attempt number)
+
+Run `31341562257` reached `completed/failure`, which unblocked the single-job
+re-run I have been carrying as a pickup for roughly an hour. Fired it:
+
+    gh run rerun 31341562257 --job 93316094166   -> silent
+    run 31341562257: queued, attempt=2
+
+**The silent exit is not the confirmation — the attempt number is.** The job
+endpoint still reports `attempt=1` because a re-run creates a *new* job record
+rather than mutating the old one, so querying the original job ID after a
+successful re-run looks exactly like a failed re-run. Checking the *run's*
+`run_attempt` is what distinguishes them.
+
+gh#1286 is now **115 passed, 1 red** (that flake, re-running) with 10 in
+progress and 27 queued. Its two decisive shards — the
+`test_energy_jacobi_conservation or from_name` one carrying 10 of the 13
+test_orbit un-defers, and the qdf/pv2qdf/streamgapdf one carrying all 11
+noninertial un-defers — are among what remains, so the PR's own gate is still
+outstanding even at 115 green.
+
+Worth noting the flake and the decisive shard are the same selection
+(`... or from_name`), so this re-run may deliver both at once.
