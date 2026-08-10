@@ -40207,3 +40207,20 @@ invisible to the whole matrix, not just to one file.
 
 That also means the gold-value test I added is doing real work: it is now the
 ONLY thing in the suite that would fail if AnyAxisym's Rzderiv disappeared.
+
+### gh#1293 codecov/project red = PHANTOM (session count settles it)
+
+First red of the batch, on gh#1293: `codecov/project` FAILURE at 13/130 checks
+complete. Used the documented discriminator rather than guessing:
+
+    base b68c3ec9 : coverage=34.59  sessions=3
+    head 04734315 : coverage=23.87  sessions=1
+
+**Head carries 1 upload against base's 3**, so the 10.7-point "drop" is missing
+data, not a regression -- 107 checks are still queued and have not uploaded. Self
+-heals as they land; if it survives a complete upload set, re-run `all-clear`.
+
+No action taken. Logged so a later wake does not re-investigate it from scratch.
+
+Also this wake: the gh#1277 branch suite came back **1328 / 0** with `_Rzderiv`
+restored and pinned, so that branch is push-ready whenever queue capacity frees.
