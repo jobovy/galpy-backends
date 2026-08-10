@@ -39339,3 +39339,23 @@ No reds anywhere. The remaining six are the usual slow eager-backend shards
 backends). Merge is a single step once `all-clear` flips — gh#1286's diff is
 pre-audited (one file, `0+ / 24-`, xfail untouched) and nothing about it has
 changed since.
+
+### 2026-08-10 — gh#1286: 148 green, two shards from the gate
+
+    gh#1286  148 SUCCESS  0 FAILURE   in-progress: all-clear + 2 backend shards
+    gh#1285  141 SUCCESS  0 FAILURE   10 pending
+
+Checked whether `docs/readthedocs.org` and `pre-commit.ci` — both showing
+NO-STATUS on both PRs — were a stuck-pending blocker, since a lone stalled RTD
+build is a known way for a gate to hang. **They are not:** gh#1288 merged with
+those two in exactly this state, so they are separate commit statuses that do
+not gate `all-clear`. The gate is waiting on the last two eager-backend shards
+and nothing else.
+
+Both queued branches re-confirmed intact and clean this wake:
+
+    tjit-drop  c4acbf96              PR body drafted (40 lines)
+    gl-order   2701dd8d + 02fd9484   message corrected, state re-verified green
+
+Neither has drifted. Their ordering is forced, not chosen: tjit-drop's un-defer
+only holds on top of gh#1285's split fix, and gl-order stacks on the same base.
