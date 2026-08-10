@@ -40185,3 +40185,25 @@ so a future splice through this region fails loudly.
 * after any structural edit, diff the method SET against the base --
   `diff <(git show origin/main:$F | grep -o "def _[a-z_]*" | sort) <(grep ... )`
   is one command and would have caught this immediately rather than an hour later.
+
+### Would the FULL CI have caught the _Rzderiv deletion? Measured: NO
+
+Jo asked. I had generalised from one file ("a green suite is not evidence a
+method still exists"), which was over-broad. Checked properly -- three
+structural reasons, and the answer is still no:
+
+* `test_potential.py`'s generic Rzderiv checks are `hasattr(tp, "_Rzderiv")`
+  guarded (~1505, ~2504) -> deletion becomes a SKIP, not a failure.
+* `test_orbit.py` explicitly EXCLUDES AnyAxisym ("has bad behavior for odeint
+  and isn't really meant for orbit integration", line 263, plus two
+  `rmpots.append`). Verified by deleting the method and running that file's
+  AnyAxisym tests: **2 passed**.
+* `test_quantity.py` only exercises unit handling on `surfdens`.
+
+So the correct, narrower lesson: **`hasattr`-guarded generic tests convert a
+deleted method into a silent skip**, and a potential excluded from the orbit
+suite has unusually thin derivative coverage. Both together make the deletion
+invisible to the whole matrix, not just to one file.
+
+That also means the gold-value test I added is doing real work: it is now the
+ONLY thing in the suite that would fail if AnyAxisym's Rzderiv disappeared.
