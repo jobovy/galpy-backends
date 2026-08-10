@@ -37377,3 +37377,37 @@ Note also what the grid shows about the SPLIT fix itself: at R>=0.1 the
 agreement is 1e-12 to 1e-16 across four decades of |z|, i.e. the clustered-node
 rule is sound where it is used; the failure is specific to R much smaller than
 |z|, not general.
+
+### 2026-08-09 — census gets the surfdens workloads; provenance line earns its keep
+
+Added `surfdens(MWP14)` and `surfdens(MWP14,poisson)` to
+`appendices/boundary_census.py`, both `KNOWN_HOT` with their tracking notes.
+
+**Why they were missing:** the existing `Potential.surfdens` workload uses a
+single `MiyamotoNagaiPotential`, which has no per-component generator and scores
+**4**. A composite is the case that loops. That is the same failure mode the
+tool's own docstring already records twice ("a workload sweep only covers sites
+its workloads reach"), so the fix is to add the workload, not to remember the
+finding.
+
+**The `PROVENANCE:` line caught me.** My first run printed
+`/var/tmp/streamtorch/galpy/__init__.py` — I had invoked the script by absolute
+path, which puts *its* directory on `sys.path` instead of the cwd, so the
+editable install resolved galpy to an unrelated old worktree
+([[galpy-editable-install-import-shadow]]). The tell was in the output:
+`aAVertical.Jz 1708` and `aAAdiabatic 4166`, which are the **pre-#1272/#210**
+numbers the docstring says should now be 0 and 9. Re-ran with
+`PYTHONPATH=<tree>`; those went to 0 and 9, confirming the tree.
+
+**Correction to what I wrote earlier this evening.** I recorded the poisson
+route as "NOT fixed by gh#1285 (2299 on the fix branch too)". Wrong: 2299 was
+the fix branch, and **develop is 5307**. So gh#1285 more than halves that route
+as well — 5307 -> 2299 — it just does not eliminate it, because each component
+still runs scipy's scalar quadrature on the eager path. Corrected in the tool's
+comment and its KNOWN_HOT note.
+
+Net effect: gh#1285 is measurably larger than its description claims —
+**2779 -> 19** on the density route and **5307 -> 2299** on the poisson route,
+neither of which was in the PR body, because I found them after opening it.
+Not amending the PR for this; it is a side effect, the PR's case rests on
+correctness, and the numbers are recorded where the next person will look.
