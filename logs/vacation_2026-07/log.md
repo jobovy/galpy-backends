@@ -37586,3 +37586,36 @@ success, so the attempt number is the check, not the exit code).
 Also confirmed this wake: **the codecov phantom on gh#1286 is healing exactly as
 predicted** — head 1 -> 4 sessions (40.18 % -> 64.05 %), base 18 -> 22. Claim
 checked against observation rather than left as an assertion.
+
+### 2026-08-09 — gh#1285's gate table had drifted; refreshed with a verified explanation
+
+The traced A/B's **before** side is, incidentally, a fresh whole-file traced gate
+on gh#1285's current head. Compared it to the PR body and they disagreed:
+
+    body   1276 passed, 0 failures, 7 xfail
+    head   1278 passed, 0 failures, 5 xfail, 102 skipped   (bcb2172e)
+
+Two commits have landed since that table was written
+([[pr-description-drifts-after-rework]]), so a mismatch was expected — but I did
+not want to *replace* numbers without knowing what moved. The body's own text
+named the suspects: it listed the 7 xfails as "3 AnyAxisym, 2 pickling, and
+`McMillan17`/`Cautun20` **which gh#1283 fixes on a different branch**".
+
+gh#1283 has since merged, and this branch's base contains it. Read the xfail
+names straight out of the junitxml:
+
+    test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+    test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+    test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+    test_pickling_potential_unitful_dens
+    test_pickling_potential_drops_units_wrapper
+
+**McMillan17 and Cautun20 are absent — they now pass.** That is the entire
+1276 -> 1278 / 7 -> 5 delta, and nothing in gh#1285 caused it. Body updated with
+the current numbers *and* that explanation, so the next reader does not have to
+re-derive why a gate moved.
+
+The general point: a stale gate is not just an out-of-date number, it is a claim
+that will be checked at merge time. Refreshing it required knowing *which* tests
+changed state, which is why the junitxml is worth keeping rather than just the
+summary line.
