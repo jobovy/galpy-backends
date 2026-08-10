@@ -38281,3 +38281,59 @@ already shown to be a flake). gh#1286 green but for the inherited FDM red.
 gh#1288 (the re-defer) at 22 green, only the codecov upload phantom outstanding;
 its ledger line verified functionally — the test now reports `s` in 8.5 s
 instead of running past 658 s.
+
+### 2026-08-10 (later) — gh#1288 merged; GL-order prepared as a DRY fix, not a new constant
+
+**gh#1288 merged** (develop `de0bee8e`), and both gh#1285 and gh#1286 were
+updated from base so they actually carry the re-defer -- verified by reading
+`tests/backend_slow_skip.txt` on each remote branch, not by trusting "branch
+updated". Both are now re-running the full matrix; the FDM red that was blocking
+both should be gone.
+
+Ledger on the new develop: **109 slow-skip + 26 xfail**. gh#1286 takes slow-skip
+to 85 when it lands. By file: test_orbit 35, test_noninertial 28, test_potential
+12, test_interp_potential 9, test_FDMdynamfric 7.
+
+`test_interp_potential`'s 9 would fall to task #211 (Jo chose "vectorize"), but
+gh#1274 is still open against `main`, so that stays blocked on Jo.
+
+**GL-order PR prepared** on `backend-jit/gl-order-100` (stacked on gh#1285).
+The plan said "its own named constant"; reading the code first showed that was
+the wrong shape. `galpy/backend/quadrature.py` already owns
+
+    _QUAD_N = 100   # ... High enough that smooth galpy integrands
+                    # (mass/surface-density profiles) reproduce
+                    # scipy.integrate.quad to the suite's tolerances
+
+which is precisely this criterion, and `quad` already defaults to it -- only
+`symmetric_quad` disagreed at 50, with all three production callers *also*
+passing `n=50` explicitly. So the magic number appeared four times and the two
+defaults contradicted each other. The change makes `_QUAD_N` the single source
+of truth and deletes the three overrides: **+5/-5 lines, no new constant.**
+Checking existing utilities first turned "add a constant" into "delete three
+duplicates".
+
+Measured against mpmath at 30 dps, **both** branches of the rule (n flows to
+each, so this also raises the `mass` semi-infinite path -- measured, not
+assumed, since that is a different mapping):
+
+    finite clustered, worst corner (R=0.01,|z|=50)      infinite (`mass`)
+                      n=50      n=100                    n=50      n=100
+    MWP14[0]      3.41e-06   7.29e-12                 2.20e-14   1.81e-15
+    MiyamotoNagai 2.94e-08   1.10e-15                 6.78e-13   9.86e-16
+    NFW           8.05e-07   1.41e-12                 7.85e-16   5.23e-16
+    Hernquist     9.10e-07   1.59e-12                 1.63e-16   4.90e-16
+
+4-7 orders on the finite branch, nothing regressing past machine noise. numpy is
+untouched -- it never reaches this rule.
+
+Traced jax before/after gate dispatched on the branch itself this time (the
+earlier pair could not prove the "after" tree had the change, since that tree had
+been reverted). The job runs AFTER, reverts the two files to HEAD~1, runs BEFORE,
+then restores and asserts the staged diff is empty.
+
+**Caveat I am carrying, not burying:** the eager-GL scipy control is now sharing
+the box with that 8-worker gate, so its *timing* is contaminated
+([[long-measurement-needs-a-quiet-box]]). Only its pass/fail counts will be
+usable; the ~13x speed impression needs a clean re-measure before it appears in
+any PR body.
