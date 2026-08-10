@@ -37653,3 +37653,22 @@ a coupling bug dressed up as de-duplication.
 
 Recorded rather than acted on: the two-PR cap still holds, and this is now a
 design note attached to a change whose evidence is already complete.
+
+### 2026-08-09 — the flaked run is legitimately incomplete, not stuck
+
+Checked rather than waited blindly. Run `31341562257` job states:
+
+    completed 18 · in_progress 7 · queued 1
+
+Still-running jobs include `test_sphericaldf` and `test_streamdf`, which are
+among the slowest in the matrix. So the run is genuinely mid-flight and the
+single-job re-run stays blocked for a while yet — **that is the constraint, not
+a stuck run**, and the distinction matters because "stuck" would justify
+force-cancelling and "incomplete" absolutely does not.
+
+Standing pickup unchanged: when the run completes, re-run job `93316094166`
+(the VizieR `from_name` flake) and confirm `run_attempt` increments.
+
+STATUS refreshed with tonight's two closures: the GL-order change is fully gated
+(0 outcome flips across 1385 traced tests, -0.6 % time), and the
+"do not reuse `_BACKEND_GL_ORDER`" decision with its two reasons.
