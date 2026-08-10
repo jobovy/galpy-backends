@@ -37411,3 +37411,41 @@ Net effect: gh#1285 is measurably larger than its description claims —
 neither of which was in the PR body, because I found them after opening it.
 Not amending the PR for this; it is a side effect, the PR's case rests on
 correctness, and the numbers are recorded where the next person will look.
+
+### 2026-08-09 — the quadrature trade-off DISSOLVES at n=100 (and traced jax has a latent accuracy bug)
+
+Last wake I left the GL-for-eager question as a design trade-off: accept 2.6e-05
+at extreme aspect ratio, or make the node count adapt. Before handing that to Jo
+as a judgement call, I checked whether the second option is hard. **It is not.**
+
+    (R,|z|)          n=50      n=100      n=200      n=400
+    (0.01, 50)   2.57e-05   1.24e-10   2.04e-14   2.84e-14
+    (0.01,  5)   5.88e-10   8.79e-15   2.46e-14   1.48e-14
+    (0.1,  50)   1.81e-09   1.04e-14   3.87e-15   1.60e-14
+    (1.0,  50)   2.12e-11   1.04e-15   6.42e-15   2.77e-14
+
+**n=50 -> n=100 buys five orders at the worst corner; n=200 reaches ~1e-14
+everywhere.** There is no accuracy-vs-speed trade to adjudicate — the rule
+simply converges, and one extra *vectorized* node batch is nothing against
+scipy's ~900 scalar integrand calls.
+
+**The more important consequence, stated plainly: this is a latent accuracy
+defect in the TRACED path that ships today.** Traced jax uses this GL rule at
+n=50 right now, so `surfdens(forcepoisson=True)` on a traced backend is carrying
+**2.6e-05 relative error at (R=0.01, |z|=50)** — not a hypothetical of some
+future change. Eager gets scipy and is right; traced is wrong at that corner and
+nothing tests it. That reframes the work from "an optimisation with a cost" to
+"a correctness fix that also removes 2299-5307 boundary crossings".
+
+**Not acting on it unilaterally, for two reasons that are about scope, not
+nerve:** raising the order changes shipped traced values (tests with tolerances
+near 1e-5 could move, and the 12 jax `test_potential` ledger entries all live on
+this path), and two PRs are already in flight. It is a third PR's worth of work
+with its own gate: numpy byte-identity is free (numpy keeps scipy), but the
+traced-value shift needs the full traced `test_potential.py` before and after.
+
+Queued as the concrete proposal, replacing last wake's open question:
+**raise the surfdens/poisson GL order to 100 (or 200), then route eager through
+it** — one change, fixes a shipped traced inaccuracy, makes eager and traced
+agree, and removes the last big eager boundary hot spot. Numbers above are the
+justification; the gate is a traced before/after.
