@@ -38776,3 +38776,47 @@ try-GL/fall-back change.
 
 Largest remaining HOT entry is unchanged: `interpRZPot.build(24x16)` at **3840**,
 which is task #211 — blocked on gh#1274, which is Jo's to merge.
+
+### 2026-08-10 — the eager gate I built is VACUOUS, and I had the site name wrong
+
+Two corrections, both found by instrumenting instead of re-reading.
+
+**1. It is not the `_mass` site. It is `surfdens(R, z=None)`.** All three
+`symmetric_quad` call sites live in `surfdens` (784), `_surfdens_poisson` (828)
+and `_surfdens` (912) — **none in `mass`**. The `z is None` whole-line branch I
+have been calling "the `_mass` site" in the commit message, `TODO_before_push.md`
+and three log entries is inside `surfdens`, computing
+Sigma(R) = int_{-inf}^{+inf} rho dz'. The substance is unchanged (it is still the
+branch guarded by a plain `if xp is numpy:` rather than `_quad_needs_backend`,
+so eager backends DO reach the GL rule there) but the name was wrong throughout.
+
+Measured, with a spy on `symmetric_quad`:
+
+    eager jax  surfdens(R, z=None)   GL calls=1   <- eager DOES reach the rule
+    eager jax  surfdens(R, z=0.3)    GL calls=0   <- scipy, as intended
+    numpy      surfdens(R, z=None)   GL calls=0   <- scipy; byte-identity holds
+
+**2. The eager arm cannot detect the change it was built to gate.** Grepping
+`tests/test_potential.py`: **no test calls `surfdens` with `z=None`** (the only
+`z=None` matches are `Lz=None` in plotting tests). So the sole site eager
+backends reach is not exercised by the suite at all.
+
+That makes the arms' agreement worthless as evidence:
+
+    jax  AFTER 22 passed / BEFORE 22 passed
+    torch AFTER 27 passed / (BEFORE running)
+
+Identical because **nothing touched the changed line** — the
+[[ab-must-reproduce-before-it-can-clear]] failure, in the form where the sides
+*could not* differ. I built a gate, ran it for ~an hour, and it was null by
+construction. The evidence for the eager path is the direct numerical
+measurement I already have (whole-line branch: 2.20e-14 -> 1.81e-15 on MWP14[0],
+6.78e-13 -> 9.86e-16 on MiyamotoNagai), not this suite run.
+
+**Action:** the PR must carry its own test for the whole-line branch on a
+backend — `surfdens(R, z=None)` under forced jax/torch, against a
+high-accuracy reference. Cannot write it yet: egate is still flipping files in
+that worktree (torch BEFORE). Queued in `TODO_before_push.md`.
+
+`surfdens(z=None)` is a documented, supported spelling ("a STRUCTURAL request"),
+so this is a genuine coverage hole, not an internal edge.
