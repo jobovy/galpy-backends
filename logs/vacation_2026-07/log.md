@@ -39778,3 +39778,41 @@ residual still carries `1/d` and `log|d|/d`. Those are odd about a=R so they
 vanish in principal value, but `scipy.integrate.quad` does not compute a
 principal value, so they need the same treatment. Posted both the diagnosis and
 this derivation to gh#1277 so it is a starting point rather than a dead end.
+
+### gh#1277: z=0 solved (470x), but it must not ship alone
+
+**Second coefficient derived.** Expanding E and K about m->1 with
+`1-m = d^2/s^2` and `L = ln(4s/|d|)`:
+
+    f = C/d^2 + B/d + integrable(incl. log),
+    C = Sigma(R)/2,   B = [2 R Sigma'(R) - Sigma(R)] / (4R)
+
+B verified to 4e-06..5e-05 (residual is the O(1)/log terms leaking in at finite
+d). Notably **no log/d term appears** -- the log enters only at O(1), which is
+integrable.
+
+**Working formulation, and it needs no Sigma'.** Symmetrising about a=R cancels
+the odd B/d term exactly, so only C has to be subtracted:
+
+    int_0^{2R} f da = int_0^R [f(R-u) + f(R+u) - 2C/u^2] du - 2C/R
+
+Measured vs the mpmath Hankel reference: shipped 2.99e-06 -> **6.39e-09** at
+R=0.1, 9.90e-06 -> **2.11e-08** at R=0.2. ~470x at the worst point.
+
+**But it must NOT ship as a `z == 0` branch.** The inaccuracy spans the whole
+band `|z| <~ 1e-5`, not just the mid-plane:
+
+    |z|     0      1e-10    1e-08    1e-06    1e-04    1e-02
+    rel  9.9e-06  3.3e-06  1.9e-05  1.2e-05  3.9e-09  2.7e-14
+
+so a z==0 branch would leave z=1e-8 at 1.9e-05 while z=0 became 1e-08 --
+introducing a discontinuity the size of the bug. Same trap as gh#1276's handover.
+
+**Refuted: peak-aware `points`.** Passing `points=[R +- z, +-3z, +-10z, ...]`
+to tell QUADPACK where the narrow peak sits is CATASTROPHICALLY worse --
+3.40e+08 at z=1e-10, 4.85e-02 at z=1e-08. Fragmenting [0,2R] destroys the
+extrapolation QAGP performs across the singularity, which is doing real work and
+is why the shipped code lands within 1e-5 instead of diverging.
+
+Remaining: the z-dependent version of the subtraction, so one formulation covers
+the whole band. All three results posted to the issue.
