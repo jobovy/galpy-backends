@@ -37996,3 +37996,29 @@ So the CI re-run remains the decisive test, and it is still blocked (run
 `31342463692` is `queued` with jobs outstanding). Position unchanged and
 honestly held: **attribution unknown**, leaning flake on the ledger's own
 documentation of this test, but not asserted.
+
+### 2026-08-09 — the free bisect for the Windows red is gone, and I destroyed it
+
+Wanted to bisect the `test_streamgapdf_sample` red against gh#1285's earlier
+commits using existing CI history — no new runs needed. The history:
+
+    bcb2172e  in_progress / queued     (current head)
+    a2d24422  cancelled, cancelled     <- I cancelled these
+    122af109  cancelled, cancelled     <- and these
+
+**All four are cancelled because I force-cancelled them**, twice, to free
+runners on a starved account. So the question "did this Windows job pass before
+the float-divisor commit?" is now unanswerable from history.
+
+Was the cancelling wrong? At the time: no. Both PRs sat at ~149 queued, the runs
+were on superseded SHAs, and I verified supersession before each cancel. I would
+make the same call again. But the **cost was larger than I priced it**: killing
+superseded runs also destroys the per-commit record that makes a later red
+free to bisect. That is a trade-off I did not see when I made it, and it is
+worth carrying forward rather than rediscovering.
+
+Practical consequence for right now: with local reproduction impossible
+(Windows-only) and history destroyed, the **only** remaining discriminator is
+the re-run of the current job — still blocked, run `31342463692` is `queued`.
+
+gh#1286 meanwhile: **129 passed, 0 failures**, 4 running, 20 queued.
