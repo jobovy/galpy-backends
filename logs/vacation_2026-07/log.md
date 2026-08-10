@@ -37521,3 +37521,40 @@ What the comparison can and cannot show: it gates *pass/fail and count parity*
 under tracing. It does **not** by itself prove the accuracy improvement — that
 is the separate GL-vs-adaptive grid already measured (2.6e-05 -> 1.24e-10 at the
 worst corner). Two different questions, two different measurements.
+
+### 2026-08-09 — traced A/B COMPLETE: n=100 is free
+
+Both sides finished, identical command, same tree, same selection:
+
+    BEFORE  n=50    1278 passed, 102 skipped, 5 xfailed, 241 warnings   593.58 s
+    AFTER   n=100   1278 passed, 102 skipped, 5 xfailed, 241 warnings   566.58 s
+
+Counts match — but **matching counts can hide two tests swapping states**, so I
+compared per-test outcomes from the two junitxml files rather than trusting the
+summary lines:
+
+    tests 1385 vs 1385 · only-in-before 0 · only-in-after 0 · OUTCOME FLIPS 0
+    summed test time  3769.1 s -> 3744.7 s  (-0.6 %, i.e. noise)
+    worst poisson_surfdens per-test delta: +1.0 s of ~64 such tests
+
+**Zero outcome changes, and no measurable cost.** The +1.0 s worst case is one
+test doing twice the node evaluations in a vectorized batch; the suite total
+moved -0.6 %, which is nothing.
+
+So the change is now fully gated on the axis that could have blocked it:
+
+* **accuracy** — 2.57e-05 -> 1.24e-10 at (R=0.01, |z|=50), measured against
+  adaptive on the real integrand (separate measurement, not this run);
+* **traced suite** — bit-for-bit identical outcomes, 1385 tests;
+* **numpy** — untouched by construction (numpy keeps scipy);
+* **cost** — none detectable.
+
+Deliberately scoped: only the two sites whose rule was measured (`Potential.py`
+832 poisson, 918 density, both the split+clustered finite-range rule).
+**Line 790 stays at n=50** — it integrates to `numpy.inf` with different node
+placement, and I have not measured it. It would have been easy to sweep all
+three; that is exactly the unmeasured edit this exercise exists to prevent.
+
+Not opening it yet — the two-PR cap holds (gh#1285, gh#1286), and this wants to
+sit on top of gh#1285 since it touches the same function. The evidence is
+banked; the PR is mechanical when a slot frees.
