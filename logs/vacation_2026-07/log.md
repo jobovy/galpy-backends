@@ -39148,3 +39148,27 @@ matching lines left) before the run started.
 
 Gates still pending: gh#1286 **101 SUCCESS / 0 FAILURE**, gh#1285 67 green with
 its Windows flake and two codecov entries, its Windows run still `in_progress`.
+
+### 2026-08-10 — both flakes re-running, both codecov phantoms healed
+
+    gh#1286  105 SUCCESS   0 FAILURE   all-clear pending
+    gh#1285   75 SUCCESS   1 FAILURE   all-clear pending  (flake re-run away)
+
+gh#1285's Windows run (31384151206) finally completed, so its flake job could be
+re-run — `run_attempt` 1 -> 2, confirmed, same sequence that worked for gh#1286.
+Its two codecov entries healed on their own in the meantime, exactly as the
+session counts predicted, so its FAILURE count went 3 -> 1 without my touching
+anything.
+
+Neither PR has a real defect outstanding. Both are waiting on `all-clear`, which
+is gated on the backend-jax shards still running.
+
+The AndTilted timing run is now genuinely running (251 s and counting, versus the
+11.6 s "5 skipped" artifact), so the ledger-line removal took effect. Result next
+wake.
+
+Worth stating: three separate reds across these two PRs — two codecov phantoms
+and one Windows flake, times two PRs — all resolved without a single source
+change. Every one of them was diagnosed by asking the right instrument (codecov
+`sessions` on the compare endpoint; the same-SHA duplicate run) rather than by
+reading the diff.
