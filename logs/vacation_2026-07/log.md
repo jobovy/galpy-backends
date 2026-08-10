@@ -38855,3 +38855,30 @@ Two near-misses in two wakes from the same root — comparing a quantity against
 reference computed at a *different* level of the API (`_dens` vs `surfdens`,
 node array vs grid array). Worth remembering that the reference has to be built
 at exactly the level the code under test returns.
+
+### 2026-08-10 — corrected the `_mass` misattribution in both artifacts
+
+Propagation control. The wrong site name ("the `_mass` site") had reached
+`TODO_before_push.md` and STATUS.md, and would next have reached the amended
+commit message and the PR body. Both rewritten to say what is actually true:
+
+* the site is **`surfdens(R, z=None)`** — all three `symmetric_quad` calls are in
+  `surfdens`/`_surfdens_poisson`/`_surfdens`, none in `mass`;
+* the eager suite arms are **vacuous** (no test calls `surfdens(z=None)`), so
+  they must not be cited as evidence;
+* the evidence that the eager change is safe is the direct parity measurement
+  plus the mpmath table, both of which are recorded.
+
+The checklist now also marks the optional whole-line coverage test as explicitly
+**not** a gate, so a future me does not present it as one.
+
+**Deliberately letting the vacuous torch BEFORE arm finish** rather than killing
+it. It is ~20 min of CPU for a number I already know is meaningless — but the
+egate script's *restore* step runs after it, and killing mid-run would strand
+`quadrature.py` and `Potential.py` at `HEAD~1` with a staged revert
+([[checkout-ref-file-stages-a-revert]]). A confusing dirty worktree is a worse
+outcome than wasted CPU. It is at 62/72.
+
+CI unchanged in substance: gh#1286 52 green, gh#1285 22, both still carrying only
+the Windows flake plus self-healing codecov. One Windows parent run is
+`in_progress`, the other still `queued`.
