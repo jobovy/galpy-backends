@@ -37449,3 +37449,30 @@ Queued as the concrete proposal, replacing last wake's open question:
 it** — one change, fixes a shipped traced inaccuracy, makes eager and traced
 agree, and removes the last big eager boundary hot spot. Numbers above are the
 justification; the gate is a traced before/after.
+
+### 2026-08-09 — gh#1286 codecov red is a phantom (proved); gh#1285 is queued, not stuck
+
+**gh#1286 `codecov/project` red — phantom, proved not assumed:**
+
+    base  sessions=18   coverage=85.64
+    head  sessions=1    coverage=40.18
+    patch  0 lines / 0 hits / 0 misses
+
+**One upload of ~25.** And `patch: 0 lines` is the corroboration that matters:
+gh#1286 changes `tests/backend_slow_skip.txt` and nothing else, so there is no
+coverable line in the diff and there is nothing a real drop could be measuring.
+Self-heals as uploads land. Note the *base* is also incomplete (18, and 85.64
+against the usual 99.95) because develop's own post-merge runs are still
+queued — so both sides climb.
+
+**gh#1285 stuck at 149 queued for ~50 min — checked, and it is not stuck.** All
+its runs are on the correct SHA `bcb2172e`, created 23:40; gh#1286's were
+created 23:18. FIFO behind a starved runner pool. No action, and specifically
+*not* a re-push or a cancel, either of which would have cost it its place.
+
+**Dispatched the gate the quadrature PR will need**, since the box is otherwise
+idle and this is exactly the "dispatch a jit run" case: traced
+`test_potential.py` on `rt-split` @ `bcb2172e` as the **before** baseline for
+raising the GL order. Next wake applies n=100 and re-runs the same command on
+the same tree, which is the only comparison that means anything — same tree,
+same selection, both sides complete.
