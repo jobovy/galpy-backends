@@ -38382,3 +38382,50 @@ and body corrected; metadata edits do not restart CI.
 Still running: the traced GL gate (AFTER side ~67%) and the eager-GL scipy
 control (61/64 after 670 s -- the GL arm did all 64 in 39 s, but these two are
 sharing the box, so the ratio stays unusable until a clean re-measure).
+
+### 2026-08-10 (cont.) — runner starvation diagnosed; and I mis-stated my own GL commit
+
+**CI is not stuck, it is starved, and the cause is structural.** Both PRs sit at
+149 queued with nothing started. Listing every non-completed run shows why: each
+SHA carries **two full matrices** (the `push` + `pull_request` double-trigger),
+and merging gh#1288 put two more full matrices on `feat/backends-develop` -- for
+a one-line ledger change. The `pull_request` set on develop belongs to gh#1204
+(`feat/backends-develop -> feat/backends`, Jo's integration PR), so it is not
+free to cancel either.
+
+Checked for genuinely superseded SHAs to cancel: there are none -- every queued
+run is on a current head. So I left CI alone. Hand-cancelling duplicates every
+cycle is a treadmill, and I have already paid twice for cancelling
+([[cancelling-superseded-runs-destroys-bisect-history]],
+[[cancel-stale-pr-ci-on-push]]). The double-trigger is the workflow gap already
+flagged for Jo; I cannot edit `.github/workflows`.
+
+**A real error in my own GL-order commit message, found by checking a claim
+instead of restating it.** I wrote:
+
+    numpy is untouched: it never reaches this rule -- `_quad_needs_backend`
+    sends numpy and eager backends to `scipy.integrate.quad`.
+
+The conclusion holds but the reason is wrong at one of the three sites. The
+whole-line branch in `_mass` (`z is None`, `Potential.py` ~773) is guarded by a
+plain `if xp is numpy:`, **not** by `_quad_needs_backend`. So:
+
+* numpy -- untouched at all three sites (two via the gate, one via that explicit
+  branch). The byte-identity constraint holds.
+* **eager jax/torch -- unaffected at the two surfdens sites, but they DO reach
+  the GL rule at the whole-line `_mass` site**, so their values move with the
+  order.
+
+Which means **the traced-only gate I dispatched is not sufficient**: it cannot
+see an eager-path change. The magnitude is benign -- measured earlier at
+<= 7e-13 and strictly toward the mpmath reference -- but "benign" is a
+measurement I have, not one the gate would have caught, and that distinction is
+the whole point. Recorded in `/var/tmp/gl-order/TODO_before_push.md`: amend the
+message, and add an eager arm (`--backend jax` / `--backend torch`,
+`-k "mass or surfdens or surface"`) before/after on a quiet box.
+
+Cannot amend yet -- the running gate script references `HEAD` for its
+revert/restore, so rewriting HEAD mid-run would corrupt it.
+
+Also this wake: gh#1285's pre-merge audit posted to the PR, gh#1286's stale
+`108 -> 84` title/body corrected to `109 -> 85`.
