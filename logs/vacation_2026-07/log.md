@@ -37724,3 +37724,29 @@ the job that exercises `tests/test_backend*.py` under coverage has not uploaded
 yet. The re-check I owe stays open; the three lines I verified locally as
 executed either register when that shard lands or they do not, and if they do
 not the answer is more tests, not a better explanation.
+
+### 2026-08-09 — audited my own unpushed artifacts; deleted a lying branch name
+
+Checked what is sitting locally that STATUS does not mention. Two findings:
+
+**1. `backend-jit/torchjit-poisson-undefer` @ `c4acbf96` was unrecorded.** It is
+a complete, gated PR (xfail 26 -> 21, backed by the two-sided torch --jit A/B)
+held only by the two-PR cap and its dependency on gh#1285. An unpushed branch
+that appears in no summary file is one context-loss away from being redone from
+scratch. Now in STATUS with its SHA, its gate, and *why* it is held.
+
+**2. `backend-jit/surfdens-gl-order` was lying.** I created that branch name
+earlier this evening with a `git checkout -b` inside the pre-existing
+`/var/tmp/glorder` worktree — so it pointed at `98c2d5c7`, the **actionAngle
+`_BACKEND_GL_ORDER` commit**, and contained none of the n=100 work (which was
+only applied in `rt-split`, measured, and reverted).
+
+A branch named for work it does not contain is worse than no branch: the next
+reader — me, tomorrow — would reasonably assume the GL-order change was
+committed and either push it or build on it. Detached the worktree and deleted
+the name. The n=100 change is 2 lines and its evidence is fully recorded; it
+does not need a branch until there is a slot to open it in.
+
+The general habit worth keeping: **periodically diff what exists locally against
+what the summary claims exists.** Everything else this evening has been checking
+measurements against reality; this is the same check applied to my own artifacts.
