@@ -39128,3 +39128,23 @@ different context from the run that produced the ledgered numbers
 ([[handpicked-nodeid-batch-is-not-a-context]]). For a *duration* that matters
 less than for pass/fail attribution, but any un-defer decision needs a
 whole-file confirmation before it goes in a PR.
+
+### 2026-08-10 — first AndTilted timing attempt measured NOTHING (5 skipped in 11.6 s)
+
+    5 skipped in 11.61s
+
+The entries I wanted to time are *in* `backend_slow_skip.txt`, so the harness
+skipped them. Eleven seconds of "measurement" that measured the skip. Same
+family as the FDM artifact — **a test that skips fast is not a fast test** — and
+recognisable instantly from the summary line, which is why it cost nothing.
+
+There is no CLI bypass: `conftest.py` loads the list unconditionally
+(`_load_slow_skip` at 206, applied at 315-323). So the lines have to come out of
+the file for the duration of the run. Re-dispatched with the self-restoring
+script pattern that worked for the traced gate — remove the 5 lines, run,
+`git checkout --` the file, print `git status` — so gh#1285's worktree cannot be
+left dirty even if the run dies. Verified the removal took (5 dropped, 0
+matching lines left) before the run started.
+
+Gates still pending: gh#1286 **101 SUCCESS / 0 FAILURE**, gh#1285 67 green with
+its Windows flake and two codecov entries, its Windows run still `in_progress`.
