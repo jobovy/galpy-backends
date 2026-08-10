@@ -39649,3 +39649,50 @@ k=R, giving an endpoint square-root singularity; the rule already splits at k=R,
 but GL converges only algebraically against it. NOTE the metric only isolates
 quadrature error for |z| <~ 1e-3; beyond that real z-dependence dominates and a
 proper adaptive reference is needed. That reference is the next step.
+
+### gh#1276: the fix is a substitution, not a higher order (measured)
+
+`RazorThinExponentialDiskPotential`'s quadrature integrand contains
+`sqrt(R^2+z^2-k^2+sqrtp*sqrtm)`, which goes to 0 at `k=R` as z->0: a square-root
+singularity sitting exactly on the panel boundary. Fixed-order GL converges only
+algebraically against that, which is why the error jumps discontinuously the
+moment the `|z|<1e-6` handover gives up the exact Bessel closed form.
+
+Arbiter: the exact z=0 closed form, validated against an mpmath (40 dps) quad of
+the same integral at z=1e-9 -- they agree to 2.8e-9 / 1.3e-9 / 2.3e-10, so the
+closed form IS the z->0 limit and is a valid reference at z=1e-6 to ~1e-6, far
+below the errors being measured.
+
+Relative error at z=1e-6:
+
+    R    | n=100 SHIPS   n=300     n=1000    n=3000  | sub n=100  sub n=300
+    0.5  |    5.21e-03  1.67e-03  7.54e-04  1.03e-04 |  5.38e-05   3.09e-06
+    1.0  |    3.38e-03  1.08e-03  3.13e-04  4.02e-05 |  3.14e-05   1.38e-06
+    2.0  |    8.94e-04  2.89e-04  6.43e-05  5.28e-06 |  3.89e-06   2.48e-07
+    4.0  |    1.42e-05  4.63e-06  9.78e-07  9.81e-09 |  6.90e-08   2.57e-09
+
+**The substitution `k = R(1-v^2)` on [0,R] and `k = R+u^2` on [R,10] at n=100
+beats raising the order to n=3000, at the SAME number of integrand
+evaluations.** ~100x accuracy for free. Raising `glorder` is the wrong lever:
+it buys roughly one digit per 10x nodes, because the convergence is algebraic.
+
+Residual after the substitution is 5.4e-05 at R=0.5, so this is a 2-digit
+improvement, not a cure -- at exactly z->0 the integrand also has a jump in
+`(k-R)/sqrtm` that a square substitution does not absorb. `sub n=300` reaches
+3.1e-06 if the default order is ever raised. Both numbers go in the PR.
+
+**Two harness bugs of mine, both caught by validating the arbiter, both of which
+would have produced a confident wrong answer:**
+
+* the first adaptive reference returned `nan` at z=1e-9 and nothing converged to
+  it at z=1e-6 -- that reads as "all methods fail" but meant the REFERENCE was
+  broken.
+* the mpmath rebuild came out exactly 2x off, because **galpy's weights are
+  `(hi-lo)*glw`, twice the standard GL weights**, with the factor absorbed into
+  the `-2*sqrt(2)` prefactor. The clean 0.500000 ratio is what exposed it.
+  Reconstructing a galpy quadrature from scratch: copy its weight convention,
+  do not assume the textbook one.
+
+Also mis-set my own pass gate to 1e-9, tighter than mpmath reaches on an
+endpoint-singular integrand, and it reported "arbiter STILL BROKEN" on a
+reference that was fine.
