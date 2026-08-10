@@ -38162,3 +38162,65 @@ Next wake: let the run finish for the exact number, then open a small PR
 re-adding that single `torch` slow-skip line with both measurements in the body
 (the 6.47 s artifact included, so the next person does not repeat it). It does
 **not** ride along in gh#1286, which has no business touching torch entries.
+
+### 2026-08-09 — gh#1288 opened (the re-defer); gh#1285's Windows red settled by a free replicate
+
+**gh#1288** (`backend-jit/redefer-fdm-central-limit`, one line, no source change)
+re-adds `torch ...::test_FDMDynamicalFrictionForce_central_limit` to
+`backend_slow_skip.txt`. slow_skip 108 -> 109, verified by set difference
+(+1/-0). The measurement reached **>658 s on an idle 72-core box** before I
+stopped waiting — 2.2x the 300 s cap, so the exact figure changes nothing. Body
+carries both numbers including the 6.47 s fail-fast artifact.
+
+Opened as a third PR against the usual two-at-a-time cap: it is remediation of a
+defect I merged, and it is the only thing standing between gh#1286 and green.
+
+**gh#1286 is otherwise DONE.** All three decisive jax shards came back SUCCESS,
+including the noninertial shard and both `test_orbit` halves — so all **24**
+un-deferred entries are CI-verified. Its only reds are this inherited FDM
+timeout and the `all-clear` that aggregates it.
+
+#### The Windows red on gh#1285 was a flake, and the proof was free all along
+
+I had four indirect arguments and no decisive test, having concluded the
+per-commit history was gone. The answer was sitting in the run list:
+
+    31342463692  bcb2172e  push          Windows build  -> FAILURE
+    31342466332  bcb2172e  pull_request  Windows build  -> SUCCESS
+
+Same SHA, same shard string, opposite outcomes. `build.yml` triggers on **both**
+`push` and `pull_request`, so every commit runs the full matrix twice — a free
+same-code replicate. Identical code cannot cause a difference it did not cause.
+
+Two things worth keeping. First: the double-trigger I have been calling a
+runner-wasting workflow defect is simultaneously the best flake discriminator in
+the repo. Second: the PR's own check list shows only **one** of the two
+duplicates, which is precisely why this looked unattributable — the rollup hid
+the evidence. Recorded as [[same-sha-duplicate-run-is-a-free-ab]]; it also
+softens [[cancelling-superseded-runs-destroys-bisect-history]], since the
+replicate is what you are really throwing away.
+
+#### gh#1285 `codecov/patch`: fixed with a test, per the standing commitment
+
+Patch was 50/51 = 98.03 % against `auto` (base 99.95 %). The single missed line
+was `Potential.py:871` — the `xp.where` in `_vertical_quad_interior`, reachable
+only when the mid-plane crossing is nonzero; everything else took the
+`c == 0.0` early return one line above.
+
+Commit `1f791a90` pins the contract rather than touching the line: both arms of
+the `where`, and specifically that the reject arm returns **0.0, not the nearer
+boundary** — clamping to +/-|z| degenerates a panel to zero width and measured
+2-6x worse, and nothing else in the suite would catch a swap to
+`xp.clip(c, -absz, absz)`. Also pins the boundary case and the
+ordinary-potential short-circuit. Verified executed with `trace.Trace` against
+the worktree (`871 executed: True`), not inferred from a percentage
+([[codecov-line-coverage-parse-is-bogus]]). Whole file: 530 passed.
+
+gh#1288's own `codecov/project` red is the known upload phantom — head 2
+sessions vs base 28, identical `lines` on both sides (48421), zero source
+change. Self-heals.
+
+Queue after these three land: `backend-jit/torchjit-poisson-undefer` @
+`c4acbf96` (prepared, merges clean, must follow gh#1285), then the GL-order PR
+(n=50 -> 100 at `Potential.py` 832/918 + route eager through it, own named
+constant), gated on a traced before/after.
