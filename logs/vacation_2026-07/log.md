@@ -37558,3 +37558,31 @@ three; that is exactly the unmeasured edit this exercise exists to prevent.
 Not opening it yet — the two-PR cap holds (gh#1285, gh#1286), and this wants to
 sit on top of gh#1285 since it touches the same function. The evidence is
 banked; the PR is mechanical when a slot frees.
+
+### 2026-08-09 — gh#1286 macOS red is the VizieR flake, not the PR
+
+`build (macos-15-intel, 3.14, tests/test_orbit.py -k 'test_energy_jacobi_conservation or from_name...')`
+went red. Checked the log rather than assuming:
+
+    FAILED tests/test_orbit.py::test_from_name_values
+    pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+**Same external-service flake as the notebook job earlier tonight**, and it
+cannot be caused by gh#1286: that PR changes `tests/backend_slow_skip.txt` and
+nothing else, the ledger only affects *forced-backend* runs, and
+`Orbit.from_name` resolves a name over the network without touching a backend at
+all. Three independent reasons, not one.
+
+**Re-run requested and refused: `job ... cannot be rerun`** because the parent
+run is still `queued` — GitHub only allows a single-job re-run once the run
+completes. Exactly the constraint hit with the notebook job earlier, so it is
+worth stating as a rule rather than rediscovering: *a flaked job in a run that
+still has queued siblings cannot be re-run until the whole run finishes.*
+
+Pickup for next wake: when run `31341562257` reaches `completed`, re-run job
+`93316094166` and verify `run_attempt` increments (the command exits silently on
+success, so the attempt number is the check, not the exit code).
+
+Also confirmed this wake: **the codecov phantom on gh#1286 is healing exactly as
+predicted** — head 1 -> 4 sessions (40.18 % -> 64.05 %), base 18 -> 22. Claim
+checked against observation rather than left as an assertion.
