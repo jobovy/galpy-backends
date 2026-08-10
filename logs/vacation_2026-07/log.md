@@ -40162,3 +40162,26 @@ Recorded as memory `empty-commit-halves-ci`, including the two constraints:
 the empty commit must be its OWN push (a combined push computes `paths` over all
 commits), and you must NOT instead cancel the head SHA's push runs (that leaves
 CANCELLED checks on the head, which fails all-clear -- the original wedge).
+
+### I deleted _Rzderiv and 1327 passing tests did not notice
+
+The z2deriv rewrite spliced `s[index('def _z2deriv'):index('def _surfdens')]`.
+**`_Rzderiv` sits between those two anchors**, so it was silently removed. The
+full `test_potential.py` still passed **1327 / 0** -- nothing in that file
+exercises AnyAxisym's `Rzderiv` -- so it would have gone into the PR invisibly.
+
+It surfaced only because I went to verify a claim I had already asserted TWICE on
+the issue from reasoning alone: "`_Rzderiv` is odd in z and vanishes at z=0, so
+it is unaffected". Instead of a number I got `PotentialError: '_Rzderiv' function
+not implemented`. Checking the "obvious" claim is what caught it.
+
+Restored verbatim from main; it needed no change. Verified against the Hankel
+reference `-2pi Int k^2 J1(kR) exp(-kz) Sigmatilde dk`: 2.4e-11 at z=1e-6 down to
+1.6e-16 at z=1e-1 -- already accurate. The regression test now pins Rzderiv too,
+so a future splice through this region fails loudly.
+
+**Two durable lessons** (memory `def-to-def-splice-deletes-methods`):
+* a green suite is NOT evidence a method still exists;
+* after any structural edit, diff the method SET against the base --
+  `diff <(git show origin/main:$F | grep -o "def _[a-z_]*" | sort) <(grep ... )`
+  is one command and would have caught this immediately rather than an hour later.
