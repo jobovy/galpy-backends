@@ -39438,3 +39438,55 @@ genuine but ~7 % win; the real Lever-1 target is either fewer decorated calls
 Not opening a PR for this — the queue is four deep and CI-starved, and a hot-path
 change to merged `galpy.backend` code deserves its own gate rather than being
 squeezed in. Recorded as groundwork with the numbers attached.
+
+---
+
+## 2026-08-10 — gh#1285 + gh#1286 merged; gh#1291 + gh#1292 opened
+
+Both in-flight PRs reached `all-clear = SUCCESS` (152 checks, zero reds) and were
+squash-merged after re-verifying each diff against the earlier audit:
+
+    5b08b507  slow-skip: un-defer 24 measured-stale eager-jax entries (109 -> 85)  (#1286)
+    fb159ff7  RotateAndTilt surfdens: split the vertical quadrature at the mid-plane (#1285)
+
+develop ledger is now **slow_skip 85, xfail 21**.
+
+### Both queued branches needed surgery, for different reasons
+
+Neither could be pushed as-prepared, and neither failure mode would have been
+caught by "the rebase applied cleanly":
+
+* **`backend-jit/torchjit-poisson-undefer`** was written when `backend_xfail.txt`
+  held 26 rows. gh#1285 removed the five **jax-jit** `poisson_surfdens` rows
+  first, so this PR's claim silently became **21 → 16**, not 26 → 21. Both the
+  title and two places in the body were corrected before opening. Verified after
+  rebase by diffing the row *sets*, not the counts: base 21, head 16, exactly the
+  5 torch-jit rows removed, all `AnyAxisym` rows preserved.
+
+* **`backend-jit/gl-order-100`** sat on `82aa6309`, which is gh#1285's
+  **pre-squash merge commit**. A plain `git rebase develop` would have tried to
+  replay gh#1285's individual commits, which exist in develop only as one
+  squashed SHA. Used `git rebase --onto origin/feat/backends-develop 82aa6309`
+  to replay only my two commits. Resulting diff is exactly the 3 intended files.
+
+Then checked the *hunks*, since gh#1285 rewrote the same function this PR edits:
+all three `n=50` deletions still sit at the three real `symmetric_quad` call
+sites, now carrying gh#1285's `interior_point=` argument alongside — i.e. the two
+changes composed correctly rather than one clobbering the other. `grep` confirms
+`symmetric_quad` has no other callers anywhere in `galpy/`.
+
+### numpy byte-identity for gh#1292, verified at the source
+
+Read all three call sites rather than asserting from the gate: site 1
+(`surfdens(z=None)`) early-returns under an explicit `if xp is numpy:`, sites 2
+and 3 return through `scipy.integrate.quad` when `_quad_needs_backend` is False,
+which it always is for numpy. So numpy cannot reach the changed default. The
+order raise moves values **only on traced backends** — which is precisely where
+the 2.6e-05 error was shipping.
+
+Opened:
+
+    gh#1291  xfail: un-defer the 5 torch-jit poisson_surfdens wrapper entries (21 -> 16)
+    gh#1292  backend quadrature: one GL order for symmetric_quad, matching quad's
+
+Two-PR cap now full.

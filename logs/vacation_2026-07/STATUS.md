@@ -7,26 +7,25 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## PR pipeline
 
-develop is at **`de0bee8e`**.
+develop is at **`5b08b507`**.
 
 | state | PR | effect |
 |---|---|---|
-| **merged** | gh#1279, gh#1280, gh#1281, gh#1283, gh#1284, **gh#1288** | develop → `9dc31569` → `277bf897` → **`de0bee8e`** |
+| **merged** | gh#1279, gh#1280, gh#1281, gh#1283, gh#1284, gh#1288, **gh#1285**, **gh#1286** | develop → `de0bee8e` → `fb159ff7` → **`5b08b507`** |
 | **open, FOR JO** | **gh#1274** → `main` | 151 green, MERGEABLE. Targets `main`, so it is yours. Still the sole blocker on #211(B) |
-| **open, ZERO REDS** | **gh#1285** `backend-jit/rt-vertical-split` @ `82aa6309` | RotateAndTilt vertical-split fix, clears 10 ledger entries. Audited; boundary crossings 2779 → 19 (census, measured on its own tree). **96 green / 0 failing**, waiting only on `all-clear` |
-| **open, ZERO REDS, PRE-AUDITED** | **gh#1286** `backend-jit/eager-undefer-measured` @ `6e56330f` | −24 measured-stale eager-jax entries, `slow_skip` **109 → 85**. **117 green / 0 failing**, waiting only on `all-clear`. Diff re-verified: one file, `0+ / 24-`, xfail untouched — **merge on sight when the gate clears** |
-| **filed as issues** | gh#1276, gh#1277, **gh#1289** | pre-existing numpy accuracy defects, all mpmath/Simpson-validated |
+| **open, CI running** | **gh#1291** `backend-jit/torchjit-poisson-undefer` @ `2d9be8da` | xfail **21 → 16**: the 5 **torch-jit** `poisson_surfdens` wrapper rows. Ledger only, 1 file, `0+ / 5−` |
+| **open, CI running** | **gh#1292** `backend-jit/gl-order-100` @ `dfe8c4f3` | `symmetric_quad` default 50 → `_QUAD_N`, deleting 3 duplicated `n=50` overrides + a test that pins the DEFAULT |
+| **filed as issues** | gh#1276, gh#1277, gh#1289 | pre-existing numpy accuracy defects, all mpmath/Simpson-validated |
 
-### gh#1288 — a merge of mine that had to be undone
+Two-PR cap is full. Nothing else may be pushed until one of these merges.
 
-gh#1284 un-deferred `torch …test_FDMDynamicalFrictionForce_central_limit` on the
-strength of a **6.47 s** measurement. That number was an artifact: the tree
-lacked gh#1284's own `as_numpy` fix, so the test crashed early on the very
-collision it was fixing. *A test that fails fast is not a fast test.* Re-measured
-with the fix applied: **>658 s on an idle 72-core box against a 300 s cap.**
-gh#1288 re-defers it. Verified functionally — the entry now reports `s` in 8.5 s.
+### Both merges this wake, and what they cost
 
-### Every red either PR carried — five in total, one real
+gh#1285 (RotateAndTilt mid-plane split) and gh#1286 (−24 eager-jax slow-skips)
+both reached `all-clear = SUCCESS`, 152 checks, zero reds, and were squash-merged
+after re-verifying each diff against the earlier audit.
+
+Between them they carried **five reds, of which exactly one was real**:
 
     gh#1285  windows streamgapdf flake  -> re-run (flake proven by same-SHA split)
              codecov/patch              -> ONE REAL GAP, fixed with a test
@@ -34,7 +33,7 @@ gh#1288 re-defers it. Verified functionally — the entry now reports `s` in 8.5
     gh#1286  windows streamgapdf flake  -> re-run
              codecov/project            -> upload phantom, self-healed
 
-Four of the five needed **no source change**. Each was diagnosed with the right
+Four of five needed **no source change**. Each was diagnosed with the right
 instrument — codecov's `sessions` count on the compare endpoint to tell an
 incomplete upload from a real drop, and the same-SHA push/pull_request duplicate
 to prove the Windows failure a flake by construction — rather than by hunting in
@@ -42,80 +41,63 @@ the diff, which would have found nothing.
 
 `all-clear` trails **31 eager-backend shards** (18 torch, 13 jax). Nothing is
 hung; that is simply what the gate waits on, and it is why the eager-GL routing
-item is really a CI-throughput item.
+item below is really a CI-throughput item.
 
-### gh#1285's two reds, both resolved
+### Rebasing the two queued branches after a SQUASH merge
 
-* **Windows `test_streamgapdf_sample`** — a **flake, proven by construction**.
-  `build.yml` triggers on both `push` and `pull_request`, so every commit runs
-  the matrix twice. On `bcb2172e` the same shard came back `failure` (push) and
-  `success` (pull_request). Same code, same platform, opposite outcomes. The PR
-  check list surfaces only one of the two, which is why it looked unattributable.
-* **`codecov/patch`** — was 50/51. The missed line was `Potential.py:871`, the
-  `xp.where` in `_vertical_quad_interior`, reachable only when the mid-plane
-  crossing is nonzero. Fixed with a test that pins the *contract* (both arms;
-  the reject arm returns **0.0, not the nearer boundary**), verified executed
-  with `trace.Trace`.
+Both were prepared against pre-merge bases and both needed surgery:
 
-## Prepared locally, NOT pushed (do not lose these)
+* `gh#1291` was written when the ledger read 26; gh#1285 removed the five
+  **jax-jit** rows first, so its claim became **21 → 16**. Title and body
+  corrected before opening — a stale PR description is worse than none.
+* `gh#1292` sat on gh#1285's **pre-squash merge commit** `82aa6309`, so a plain
+  rebase would have replayed commits that are already in develop under a
+  different SHA. Used `git rebase --onto develop 82aa6309` to keep only my two.
 
-| branch | @ | what | status |
-|---|---|---|---|
-| `backend-jit/torchjit-poisson-undefer` | `c4acbf96` | xfail 26 → 21: drops the 5 **torch-jit** `poisson_surfdens` wrapper entries, keeps both AnyAxisym | ready. Re-verified 2026-08-10: disjoint from gh#1285 (which drops the 5 **jax-jit** rows — same tests, different mode prefix), merge-tree clean, 26 → 16 rows combined |
-| `backend-jit/gl-order-100` | `2701dd8d` | `symmetric_quad` default 50 → `_QUAD_N` (100), **deleting** 3 duplicated `n=50` overrides rather than adding a constant, + a test that pins the DEFAULT | **push-ready.** Message amended with the corrected site attribution; test A/B'd (default passes, 50 fails); committed state re-verified green (quadrature 62 passed, wrappers 530 passed) |
+Post-rebase both were re-verified at the hunk level, not by "it applied cleanly":
+gh#1292's three `n=50` deletions still sit at the three real `symmetric_quad`
+call sites, now carrying gh#1285's `interior_point=` argument alongside.
 
-Both must land **after** gh#1285.
+## Where the ledger actually stands
 
-## The GL-order change, and why it became a deletion
+| file | develop (`5b08b507`) | projected |
+|---|---|---|
+| `backend_slow_skip.txt` | **85** | 85 (no PR in flight touches it) |
+| `backend_xfail.txt` | **21** | **16** via gh#1291 |
 
-The plan said "add its own named constant". Reading first showed
-`galpy/backend/quadrature.py` already owns `_QUAD_N = 100`, documented for
-exactly this criterion ("smooth galpy integrands (mass/surface-density
-profiles)"), and that `quad` already defaults to it — only `symmetric_quad`
-disagreed at 50, with all three callers *also* passing `n=50`. So the magic
-number appeared four times and the two defaults contradicted each other. Net
-**+5/−5 lines, no new constant.**
+    slow-skip:  jax 51 | jax-jit 26 | torch-jit 6 | torch 1
 
-Measured against mpmath at 30 dps, both branches of the rule:
+**Torch eager is essentially finished** — 1 slow-skip + 3 xfail entries left in
+the whole suite. The residual burndown is ~92 % jax.
 
-    finite clustered, worst corner (R=0.01,|z|=50)      infinite (`mass`)
-                      n=50      n=100                    n=50      n=100
-    MWP14[0]      3.41e-06   7.29e-12                 2.20e-14   1.81e-15
-    MiyamotoNagai 2.94e-08   1.10e-15                 6.78e-13   9.86e-16
-    NFW           8.05e-07   1.41e-12                 7.85e-16   5.23e-16
+**The eager-jax burndown is CLOSED at the stopwatch.** Cumulative: **24 of 44
+measured stale** (noninertial 11/19, test_orbit 13/25), **0 of 9** for
+interp/FDM, **0 of 5** for the AndTilted Poisson entries, and 12 jax
+`test_potential` entries documented at 1440–2641 s that no re-measurement will
+rescue.
 
-Traced jax gate on the branch: 1385 shared nodeids, **0 outcome flips**, +0.2 %
-time, restore verified. A **new test** now discriminates — it asserts on the
-DEFAULT (no `n=`), so a lowered default fails it; A/B'd (default=`_QUAD_N`
-passes, default=50 fails). The first draft of that test passed `n=_QUAD_N`
-explicitly and would have sailed through the regression it exists to catch.
+The AndTilted re-measurement after gh#1285 is the clearest negative result:
+gh#1285 cut poisson-route boundary crossings 5307 → 2299, and the five entries
+still run **411–1633 s against a 240 s bar** (1.7× to 6.8× over). They pass; they
+are just slow. Wall time follows the *direct* route, which is not what gh#1285
+halved. **The next lever is vectorisation, not measurement.**
 
-**Outstanding before push:** the commit message must be amended. It says numpy
-is untouched *because* `_quad_needs_backend` routes numpy and eager to scipy —
-true for numpy, wrong for eager.
-
-The site is **`surfdens(R, z=None)`**, not `_mass` (all three `symmetric_quad`
-call sites are in `surfdens`/`_surfdens_poisson`/`_surfdens`; none in `mass` —
-earlier notes had this wrong). It is guarded by a plain `if xp is numpy:` rather
-than `_quad_needs_backend`, so eager backends *do* reach the rule there.
-
-The eager suite arms I ran are **vacuous**: no test calls `surfdens` with
-`z=None`, so AFTER==BEFORE means "untested", not "unchanged". The real evidence
-is direct parity on that branch at the current n=50 (MiyamotoNagai 6.7e-13,
-Hernquist 5.7e-16, NFW 1.3e-15, MWP14[0] 2.9e-11) plus the mpmath table showing
-n=100 equal-or-better there everywhere.
-
-## The eager-GL routing question — settled, and it is a separate PR
+## The eager-GL routing question — the real throughput lever, mechanism still open
 
 Both arms of `test_potential.py -k surfdens` under eager torch completed:
 
     scipy (today)   19 passed, 0 failed   1110.5 s
     GL forced       18 passed, 1 failed     39.3 s
 
-The one failure is `AnyAxisym`, the deliberate array opt-out, and the guard does
-fire **loudly** through composition and wrapping (never silently wrong).
+(Timings **contaminated** — the control shared the box with an 8-worker gate.
+The pass/fail counts are what decides the design, and they are unaffected.)
 
-**But the design I proposed on the back of that is refuted.** I claimed
+That ~28× is aimed at exactly the cluster the ledger cannot otherwise clear: the
+AndTilted `poisson_surfdens` entries above are eager-jax surfdens tests. So this
+is not a tidiness item — **it is the vectorisation lever for the largest
+remaining ledger cluster.**
+
+**But the design I proposed on the back of it is refuted.** I claimed
 array-safety "is decidable" via `_backend_accepts_arrays`. Measured 2026-08-10,
 that flag is wrong in *both* directions:
 
@@ -127,126 +109,14 @@ not a clean pre-flight rejection — the `TypeError` arrives *after* an integran
 call, and one path raises `AttributeError` instead. So try-GL/fall-back needs a
 broad catch around a numerical routine, which can mask real defects.
 
-**Do not build the eager-GL routing PR on that design.** It needs a different
-mechanism (an explicit, verified per-potential opt-in, or a cheap array probe).
-Nothing here touches the accuracy case for the order raise, which stands on the
-mpmath table and the traced gate. **Timings above are contaminated** anyway (the
-control shared the box with an 8-worker gate).
+**Do not build the eager-GL routing PR on the declared-flag design.** It needs an
+empirical mechanism: probe the *integrand itself* once with a 2-element array,
+check shape, cache the verdict — decided where the failure actually surfaces
+rather than at a declaration that nothing validates. Prototyping now; it is a
+separate PR and both slots are full.
 
-## Where the ledger actually stands
-
-Projected across all three in-flight PRs (**not** what `develop` shows — with
-PRs in flight, pick targets from the projection):
-
-| file | develop (`de0bee8e`) | projected |
-|---|---|---|
-| `backend_slow_skip.txt` | **109** | **85** via gh#1286 |
-| `backend_xfail.txt` | **26** | **21** after gh#1285, → **16** with the torch-jit follow-up (merge-tree verified) |
-
-(The slow-skip absolute numbers moved twice under gh#1286 — gh#1284, then
-gh#1288 re-adding the torch FDM line. Its **−24 delta** never changed; its title
-and body were corrected from `108 → 84` to `109 → 85`.)
-
-    slow-skip projected:  jax 51 | jax-jit 26 | torch-jit 6 | torch 1
-
-**Torch eager is essentially finished** — 1 slow-skip + 3 xfail entries left in
-the whole suite. The residual burndown is ~92 % jax.
-
-**Re-measured 2026-08-10, post-gh#1285 — the AndTilted entries STAND.** gh#1285
-cuts the poisson-route boundary crossings 5307 -> 2299, so I re-timed the 5
-eager-jax `poisson_surfdens` entries on its own tree (slow-skip lines removed for
-the run, worktree restored and verified):
-
-    mockRotatedAndTiltedMWP14...wInclination  1633.3 s
-    mockRotatedTiltedOffsetMWP14              1451.9 s
-    mockRotatedAndTiltedMWP14                 1435.9 s
-    mockOffsetMWP14                           1349.0 s
-    mockRotatedAndTiltedTriaxialLogHalo        411.3 s
-
-All 5 pass; all 5 stay **1.7x to 6.8x over the 240 s bar**. The ledgered ~1750 s
-becomes ~1350-1633 s — real but modest, because the poisson route only halved
-where the direct route fell 145x, and wall time follows the former. **No
-un-defer.** This is a negative result that *confirms* the assessment below rather
-than changing it.
-
-**And the jax remainder is mostly real, not stale.** Measured eager-jax
-staleness so far is 24 of 44 (55 %), but what is left is documented slow:
-`test_DehnenBinney98` ~2641 s, the AndTilted MWP14 Poisson checks ~1750–1840 s,
-`test_Cautun20` ~1440 s — 5–9× the cap. Those do not fall to a stopwatch; they
-need SCF/Multipole/wrapper vectorisation. **The burndown is near its floor; the
-next real lever is vectorisation.**
-
-**The eager-jax burndown is now CLOSED, and the last measurement refuted my own
-hypothesis.** I re-ran the 9 jax `test_interp_potential` + `test_FDMdynamfric`
-entries expecting the adapter work (#1271/#1272/#1273) to have gutted the
-per-point XLA dispatch the ledger names as their cause. It had not:
-
-    drop = 0    keep = 9    defects = 0        (49 tests, 1935.1 s)
-
-Four hit the 900 s cap (`Failed: Timeout` — *slow*, not defects; reading the
-letter would have moved four correct entries into the xfail ledger), the other
-five ran 356-701 s against a 240 s bar. `test_interpolation_potential_c` was
-ledgered at 263 s and now measures **438.6 s**. So the entries stand.
-
-Cumulative: **24 of 44 measured stale** (noninertial 11/19, test_orbit 13/25),
-**0 of 9** for interp/FDM, and 12 jax `test_potential` entries documented at
-1440-2641 s that no stopwatch will rescue. Every eager-jax cluster worth
-measuring has now been measured.
-
-## What the coverage check found in gh#1285
-
-Asked codecov *which* lines it flagged instead of waiting for the verdict. Two
-real gaps, both in code the PR adds, both of which would have failed the check
-(`codecov.yml` sets no patch target → default `auto` = base **99.95 %**, and
-50/51 = 98.04 %):
-
-* `RotateAndTiltWrapperPotential.py:189` — the early `return 0.0` for a
-  no-rotation, no-offset wrapper. Constructible, verified.
-* `CompositePotential.py:318` / `:352` — the backend branch of **both**
-  delegating surfdens routes, run by **none** of that file's 527 tests. The
-  third of the four links in the fix had no test at all.
-
-Both now covered; whole file 529 passed. Writing the test caught a 54 % error in
-my own reference (the density route applies each component's `_amp`).
-
-**New pre-existing defect, filed not folded in:** a `CompositePotential` holding
-a dissipative force is not backend-compatible, so `@backend_input` skips the
-coercion while `get_namespace` still resolves to the forced backend — `z`
-reaches `xp.abs` as a Python float and torch raises. A/B'd: **identical on clean
-develop**, so it is not from this PR.
-
-## Found: a real accuracy defect in the TRACED path — now fully gated
-
-`surfdens(forcepoisson=True)` on a **traced** backend uses a fixed-order GL rule
-at **n=50** and carries **2.6e-05 relative error at (R=0.01, |z|=50)** today.
-Eager and numpy use `scipy.integrate.quad` and are correct, which is why nothing
-catches it; the traced suite only runs on a `workflow_dispatch`.
-
-Measured against adaptive on the real MWPotential2014 integrand:
-
-    (R,|z|)          n=50      n=100      n=200
-    (0.01, 50)   2.57e-05   1.24e-10   2.04e-14
-    (0.1,  50)   1.81e-09   1.04e-14   3.87e-15
-
-**n=100 fixes it, and the change is free.** Full traced `test_potential.py`
-A/B, identical command and tree:
-
-    BEFORE n=50    1278 passed, 102 skipped, 5 xfailed   593.6 s
-    AFTER  n=100   1278 passed, 102 skipped, 5 xfailed   566.6 s
-
-Compared per-test, not just by count: 1385 tests each, **0 outcome flips**,
-summed time -0.6 %. numpy is untouched by construction (it keeps scipy).
-
-**Design decision, from searching first:** a `_BACKEND_GL_ORDER = 50` already
-exists in `galpy/actionAngle/actionAngle.py` (5 users). **Do not reuse it** —
-`Potential.py` imports nothing from `actionAngle` and should not start
-(wrong direction), and it orders a *different* quadrature (`fixed_quad` over
-[0,1] on the action radicand, vs the split+clustered `symmetric_quad` over
-[-|z|,|z|]). Sharing the symbol would silently re-order the AA quadratures,
-unmeasured. The surfdens PR gets its own named order beside the rule it governs.
-
-Ready to open as one PR (raise the order, then route eager through it) when a
-slot frees; evidence complete, only the two-PR cap holds it.
+Nothing here touches the accuracy case for gh#1292, which stands on the mpmath
+table and the traced gate.
 
 ## Awaiting Jo
 
@@ -266,19 +136,20 @@ cancel` silently no-ops on queued runs), and `build.yml` triggering on both
 
 ## Standing caveats
 
-* **numpy stays byte-identical.** Every deviation is flagged, never quietly shipped.
+* **numpy stays byte-identical.** Every deviation is flagged, never quietly
+  shipped. gh#1292 verified at the source: all three `symmetric_quad` call sites
+  return through `scipy.integrate.quad` before they can reach the rule.
 * **Traced green is asserted by me, not enforced by CI** — see the decision above.
 * `actionAngleVerticalInverse` and `actionAngleTorus` are permanently out of scope.
 * The 98 in-place augmented array writes remain a **watchlist, not a defect list**.
 
 ## Queued next, in order
 
-1. **gh#1285** and **gh#1286** → green, then merge (audit each at merge time).
-2. Follow-up PR: drop the 5 torch-jit `poisson_surfdens` lines — needs a
-   **torch --jit** run to back the claim, which gh#1285 never gated (it gated
-   eager torch). Measurement dispatched.
-3. **Vectorisation, not measurement** — this is now the only lever left on the
-   jax ledger. SCF/Multipole/wrapper eval is where the 1440-2641 s entries live.
+1. **gh#1291** and **gh#1292** → green, then merge (audit each at merge time).
+2. **eager-GL routing**, on an integrand probe rather than the refuted flag —
+   the one change that can move the AndTilted cluster.
+3. **Vectorisation** of SCF/Multipole/wrapper eval, where the 1440–2641 s
+   entries live.
 4. **#211(B)** `interpRZPotential` grid-build vectorisation — blocked on gh#1274.
 5. Follow-up: the dissipative-composite forced-backend coercion defect
    (characterised, deliberately not patched at the symptom site).
