@@ -39539,3 +39539,61 @@ Two measurement bugs of my own, both previously recorded and both repeated:
 * the first convergence script **reconstructed the integral by hand and dropped
   `_amp`**, reproducing the same 33x phantom as before. Redone through the real
   `pot.surfdens` call path with `n` injected into the rule.
+
+### #211(B) prep: is a vectorised interpRZPotential grid build byte-identical?
+
+gh#1274 merged (`b68c3ec9`), unblocking #211(B). Jo is about to rebase
+main -> feat/backends -> feat/backends-develop, so this wake's work on it is
+**measurement only, no PR** — nothing pushed, no CI added.
+
+The seven grid-build loops (lines 246/274/302/333/358/383/408 of
+`interpRZPotential.py` on main) are structurally identical: fill an `(nR, nz)`
+array by calling `evaluateX(origPot, rgrid[ii], zgrid[jj], use_physical=False)`
+one cell at a time. The rewrite is a `meshgrid` + one call. **The question that
+decides the design is whether that is byte-identical**, since this is the numpy
+path.
+
+Measured across a 19-potential zoo x the 7 quantities, `numpy.array_equal(...,
+equal_nan=True)` on a 9x7 grid, worktree at `origin/main`:
+
+    BITEQ   94      <- vectorising is BIT-IDENTICAL wherever it works
+    DIFF     5      <- all AnySphericalPotential
+    RAISED   9      <- DoubleExpDisk (5), RazorThinExp (3), AnySpherical/Pot
+    SHAPE    0
+
+(Non-axisymmetric entries — DehnenBar, SpiralArms, RotateAndTilt — reported
+`loop-err` because my harness called them without `phi=`. They are out of scope
+for interpRZPotential anyway, so those rows carry no information either way.)
+
+**The 9 RAISED are the easy class**: a `try/except` falling back to the loop is
+safe, because the fallback is the *identical* computation, so nothing is masked —
+a genuine error resurfaces in the loop.
+
+**The 5 DIFF are the dangerous class.** `AnySphericalPotential` does not raise on
+array input; it returns different numbers from the loop in **19 of 20 cells
+(95 %)**. A `try/except` would sail straight past that and build the whole
+interpolation grid from wrong values. So #211(B) needs a **value** check, not
+just an exception check — the same conclusion the eager-GL work reached today,
+arrived at independently.
+
+**Correction to my own measurement.** I tried to settle which of loop/vectorised
+is *correct* by comparing against an "analytic Hernquist" arbiter, and the
+arbiter was invalid: I passed `dens=1/(4*pi*r^2*(1+r)^2)`, which is neither
+Hernquist nor NFW, so it described a third profile. It duly showed loop and vec
+*equally* far from it (1.167e+00 both) — i.e. it discriminated nothing.
+
+That does not weaken the finding, because **the arbiter was never needed**:
+byte-identity is defined against today's numpy path, which *is* the loop. So
+`vec != loop` is disqualifying regardless of which is more accurate, and the
+95 %-of-cells disagreement stands on its own. (Which of the two is physically
+right is a separate question about `AnySphericalPotential`, not about #211(B).)
+
+Also worth noting: on the **main** lineage `AnySphericalPotential` sets no
+`_force_accepts_arrays` and none of its methods carry `_galpy_scalar_only` — the
+flag exists only on `feat/backends`. So there is no declared signal at all here.
+
+**Proposed design, to implement after the rebase:** vectorise, then verify the
+result against loop evaluations of **one full row** (nz of nR*nz cells, ~0.4 %
+overhead at the default 251x251) and fall back to the full loop on any mismatch.
+A full row is deterministic over that row rather than a probabilistic sample of
+scattered cells, and it is cheap. Fall back on exception as well.
