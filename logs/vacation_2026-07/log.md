@@ -38561,3 +38561,48 @@ push itself). The amendment is explicitly blocked until `egate.sh` exits, since
 it resolves `HEAD~1` and moving HEAD mid-run would change what "before" means.
 
 gh#1285 still has zero of 149 checks started.
+
+### 2026-08-10 — AdiabaticContraction lead CONFIRMED (and two invalid probes on the way)
+
+Settled the lead I refused to file unverified last wake. It is real, and it is a
+*different* bug from gh#1289's first instance.
+
+`AdiabaticContractionWrapperPotential.__init__` integrates
+`-numpy.interp(r, rgrid, new_rforce)` -- a piecewise-linear interpolant on **302
+nodes** -- with `integrate.quad`. QUADPACK cannot resolve 302 interior kinks
+inside its default `limit=50`, hence the "maximum number of subdivisions"
+warning. Where gh#1289's first case has quad returning *immediately* (default
+`epsabs` already satisfied), this one has quad trying and giving up.
+
+    trapezoid (closed form)   -1.4176059533961423
+    quad (as called today)    -1.4176051147516373   rel 5.9e-07
+    quad (limit=20000, 1e-13)                       rel 5.1e-07
+
+The integral of a piecewise-linear interpolant IS the trapezoid sum on its own
+nodes, so the exact value is free. Validated the arbiter independently rather
+than trusting the algebra -- dense Simpson converges onto the trapezoid value
+(8.1e-11 -> 4.9e-12 -> 3.0e-13), not onto quad's. Posted to gh#1289 as a
+separate instance with its own mechanism and fix. Impact stated plainly: `Phi0`
+is the zero-point, so forces and orbits are untouched and only energies shift.
+
+**Two of my probes on the way there were invalid, and both would have produced a
+confident wrong answer:**
+
+1. First probe rebuilt the integrand from `p._Rforce(r, 0.0)`, which is `nan` at
+   r=0 -- every comparison came back `nan`. Caught because the output was nan
+   rather than plausible.
+2. Second probe picked the interpolation grid out of the closure with
+   `min(arrs, key=lambda x: x[0])`. **Both** closure arrays start at 0.0 (the
+   constructor prepends 0.0 to each), so it grabbed the force array as the grid
+   and produced a "26x disagreement" that looked like a spectacular finding.
+   Caught by disbelieving the magnitude and re-deriving: identify the grid by
+   its ENDPOINT matching the integration limit, not by its start.
+
+The second one is the dangerous class -- a plausible-looking wrong number, not a
+crash ([[reproduce-the-assertion-not-a-proxy]]). Also hit
+[[galpy-class-shadows-submodule]] again: `import
+galpy.potential.AdiabaticContractionWrapperPotential as ACW` binds the CLASS, so
+monkeypatching `ACW.integrate` silently patched nothing; `importlib` fixes it.
+
+Meanwhile: egate ~34/72 through its first of four arms; gh#1286 at 10 SUCCESS +
+the codecov phantom; gh#1285 still zero of 149 started.
