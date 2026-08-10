@@ -40137,3 +40137,28 @@ fewer jobs, gate still correct. Worth knowing deliberately rather than by
 accident: **an empty commit re-triggers pull_request workflows only.** Use it
 when you want a clean re-run at lower cost; use a real (path-touching) commit if
 you specifically need the push-event runs.
+
+### Adopted the empty-commit recipe; gh#1294 restarted on it
+
+Jo endorsed the empty-commit trick as standing practice, so gh#1294 was brought
+back that way rather than by `gh run rerun` on its cancelled runs. Two reasons:
+
+* re-running cancelled runs is what produced the half-cancelled **wedge** on
+  gh#1291/gh#1292 (a run left `queued` with 44/45 jobs cancelled cannot be
+  re-run and never becomes terminal);
+* a fresh SHA gets the lean check set, since `build.yml`'s `push:` trigger is
+  path-filtered and an empty commit matches no paths.
+
+gh#1294: `6444da90 -> 10acf0b7`, 0 cancelled checks. Verified there were no
+prior-SHA runs left to cancel (parking had already stopped them).
+
+Mechanism confirmed on the MERGED gh#1286 rather than assumed: its 154 checks
+were 8 runs on ONE SHA -- `Linux/Mac build`, `Windows build` and
+`Test documentation notebooks` each appearing TWICE (push + pull_request), plus
+`all-clear` and `All-backend tests` which are pull_request-only. So the recipe
+removes exactly the duplicated half.
+
+Recorded as memory `empty-commit-halves-ci`, including the two constraints:
+the empty commit must be its OWN push (a combined push computes `paths` over all
+commits), and you must NOT instead cancel the head SHA's push runs (that leaves
+CANCELLED checks on the head, which fails all-clear -- the original wedge).
