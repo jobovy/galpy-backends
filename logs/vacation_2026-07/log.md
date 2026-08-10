@@ -37672,3 +37672,29 @@ Standing pickup unchanged: when the run completes, re-run job `93316094166`
 STATUS refreshed with tonight's two closures: the GL-order change is fully gated
 (0 outcome flips across 1385 traced tests, -0.6 % time), and the
 "do not reuse `_BACKEND_GL_ORDER`" decision with its two reasons.
+
+### 2026-08-09 — gh#1286's own gate is PARTIAL, and saying so matters
+
+The claim gh#1286 rests on is that the 24 un-deferred tests pass **in CI's
+full-shard context**, not merely in my local measurement. Checked which shards
+actually exercise them:
+
+    SUCCESS x3   backend jax test_orbit/test_orbits -k 'not test_energy_jacobi...'
+    QUEUED  x2   (same shard, remaining split groups)
+    QUEUED       backend jax test_orbit -k 'test_energy_jacobi_conservation or from_name'
+
+**Ten of the thirteen `test_orbit` entries I un-deferred are
+`test_energy_jacobi_conservation[...]` parametrisations, and their shard is
+still QUEUED.** So the three green shards are real but do not cover the majority
+of what this PR changes — the decisive one has not run.
+
+Stating that rather than reading "3 jax shards green" as vindication. The green
+shards are the `-k 'not test_energy_jacobi...'` complement: by construction they
+exclude almost exactly the tests in question. A partial green that specifically
+omits the changed subset is worth less than no signal at all, because it *looks*
+like evidence.
+
+Codecov on the same PR continues to heal on schedule: head **1 -> 4 -> 16**
+sessions (40.18 % -> 64.05 % -> 82.98 %) against base 26 / 86.05 %, patch still
+0 lines. It will clear or it will not, and either way the number to watch is the
+session count, not the percentage.
