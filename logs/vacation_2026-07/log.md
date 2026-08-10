@@ -37777,3 +37777,30 @@ all-clear. gh#1285 branches from `9dc31569` and is unaffected.
 
 Holding pattern otherwise: gh#1286 93 green / 18 running, gh#1285 6 green /
 13 running, flaked run still in_progress so the VizieR re-run stays blocked.
+
+### 2026-08-09 — the codecov phantom cleared itself, end to end
+
+gh#1286's `codecov/project` went green on its own. Full trajectory, recorded
+because it validates the diagnostic rather than just the outcome:
+
+    head  1 session   40.18 %
+          4           64.05 %
+         16           82.98 %
+         22           86.05 %   == base (26 sessions, 86.05 %)  -> PASS
+
+Diagnosed as an upload phantom at **1 of ~25 sessions** and it behaved exactly
+that way, with `patch: 0 lines / 0 misses` corroborating throughout — a
+ledger-only diff has no coverable line for a real drop to measure. No
+intervention at any point; the correct action was to read the session count and
+wait.
+
+Note the base settled at **86.05 %, not 99.95 %**, consistent with the earlier
+correction: gh#1286's base `277bf897` is still filling, and `codecov/project`
+compares head *to that base*, so it passed once head caught up. Had I "fixed"
+anything here I would have been chasing an artifact.
+
+**gh#1286 is now one flake-rerun from green:** 98 passed, 1 red, and that red is
+the VizieR `test_from_name_values` failure. Its parent run is at
+**23 completed / 3 in_progress / 0 queued** — the three stragglers are the
+py3.14 `test_backend*.py` job and two `test_orbit` shards. As soon as the run
+completes, re-run job `93316094166` and confirm `run_attempt` becomes 2.
