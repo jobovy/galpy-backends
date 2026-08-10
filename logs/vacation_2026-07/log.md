@@ -38642,3 +38642,39 @@ is slow. Relaunched detached and confirmed the pytest's cwd is the worktree.)
 
 CI: gh#1285 finally has 1 of 149 through; gh#1286 at 13 SUCCESS + the codecov
 phantom. egate 67/72 through arm 1 of 4.
+
+### 2026-08-10 — the Windows red is a REAL flake, now proven twice over
+
+`tests/test_quantity.py::test_streamgapdf_sample` failed again, this time on
+**gh#1286** — a PR that changes **one line of `tests/backend_slow_skip.txt`** and
+no source whatsoever. It cannot affect streamgapdf sampling. Combined with the
+earlier same-SHA split on gh#1285 (`push` failed, `pull_request` passed on
+`bcb2172e`), the flake is now established two independent ways:
+
+    AssertionError: streamgapdf sample lb does not return a correct Quantity
+    1 failed, 339 passed, 1 skipped in 143.34s   (windows-latest, 3.14)
+
+Read the test before theorising. It is **not** the naive
+compare-two-independent-draws bug — it re-seeds `numpy.random.seed(1)` before
+each of the paired units/no-units samples, and the tolerances are 1e-4
+(angles/velocities) and 1e-5 (distance). The design is sound, which is precisely
+why the failure is intermittent rather than systematic.
+
+A plausible mechanism is that the sampler's rejection loop consumes a
+hardware-dependent number of RNG draws (transcendental differences between
+runner CPUs) and the two twins desynchronise; `l` in degrees also sits near the
+0/360 wrap where a tiny difference becomes ~360. **Recorded as plausible, not as
+fact** -- I have not measured it, and this is exactly the kind of tidy story that
+turns into a wrong conclusion.
+
+Filed as [[windows-streamgapdf-sample-flake]] so the next occurrence costs a
+re-run instead of a diff hunt. Same fragility class as the standing task "Fix
+RNG-fragile `test_impulse_deltav_general_curved`".
+
+Also this wake:
+
+* **`tjit_verify`: 5 passed** (242.5 s) — the 5 torch-jit `poisson_surfdens`
+  tests do pass on gh#1285's current head, confirming `tjit-drop`'s claim.
+* **egate jax AFTER: 22 passed, 0 failed** (919.7 s); torch AFTER now running.
+* Wrote [[read-status-file-before-reconstructing]] after discovering STATUS.md
+  had already recorded the two-sided A/B I spent a wake re-deriving.
