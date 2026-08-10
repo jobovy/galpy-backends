@@ -40080,3 +40080,29 @@ defect, ~10x milder" was measured at z=0 and understated its extent.
 **Lesson:** when a fix is routed through shared machinery, the shared part still
 needs measuring for EACH consumer. Reusing a verified helper does not transfer
 its verification.
+
+### CORRECTION: gh#1291/gh#1292 were WEDGED, not "stale attempt-1 records"
+
+Jo pushed back on my claim that the 44 CANCELLED checks were harmless. They were
+not. Actual state:
+
+    run 31408896025 (gh#1291):  status=queued  attempt=1  jobs: 44 cancelled, 1 queued
+    run 31409010327 (gh#1292):  status=queued  attempt=1  jobs: 44 cancelled, 1 queued
+
+**attempt=1, not attempt 2.** I had conflated these with the two notebook runs I
+re-ran (which genuinely were at attempt 2) and asserted the same of these without
+checking. My earlier "stale attempt-1 records that attempt 2 supersedes" was
+simply wrong, and **both PRs could never have gone green**: my blanket
+cancellation killed 44 of 45 jobs, the 45th stayed queued so the run never
+reached a terminal state, and `gh run rerun` refuses a non-terminal run.
+
+`gh run cancel` did not resolve it either -- the run stayed `queued` because its
+remaining job is itself queued and had not been picked up.
+
+**Fix:** an empty commit on each branch, producing fresh runs on a new SHA
+(gh#1291 -> c1daacb7, gh#1292 -> 823d5041). Respects the no-force-push rule.
+
+**Lesson:** `gh pr checks` state alone cannot distinguish "superseded by a later
+attempt" from "wedged and never coming back". Resolve the check's `link` to its
+run id and read `status` + `attempt` + the job-state histogram. A run that is
+`queued` with mostly-cancelled jobs is STUCK, not pending.
