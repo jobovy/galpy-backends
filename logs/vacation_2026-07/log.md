@@ -39056,3 +39056,42 @@ gh#1285 still carries its own Windows flake; its run (31384151206) is
 
 Order once gh#1286 lands: gh#1285 -> then `torchjit-poisson-undefer` (verified
 disjoint, un-defer claim confirmed) -> then `gl-order-100` (push-ready).
+
+### 2026-08-10 — gh#1286 has ZERO reds; waiting on the gate, not on a fix
+
+    gh#1286   85 SUCCESS   0 FAILURE   66 pending   MERGEABLE
+              codecov/patch SUCCESS, codecov/project SUCCESS  <- phantom healed
+              all-clear: still pending
+
+The codecov phantom resolved itself exactly as the session counts predicted
+(head reached parity with base once the uploads landed), and the Windows flake
+re-run cleared. **Nothing is wrong with this PR; 66 backend-jax shards are
+simply still running.**
+
+Deliberately not merging on the aggregate "0 failures". `all-clear` is the
+actual gate ([[codecov-project-blocks-via-all-clear]]) and it is still pending —
+merging now would bypass it. Checked the gate by name rather than inferring from
+the counts.
+
+Used the wait to draft the **tjit-drop PR body**, since all its evidence is
+already in hand:
+
+* two-sided `torch --jit` A/B with a control — BASE 5 failed / FIX 5 passed, with
+  `AnyAxisym` staying xfailed on both sides so the flip is attributable to the
+  fix and not the run;
+* re-confirmed on gh#1285's *current* head (5 passed, 242.5 s), since that head
+  has moved since the A/B;
+* `git merge-tree` proof that it is disjoint from gh#1285 (jax-jit rows vs
+  torch-jit rows, same tests different mode prefix), 26 -> 16 combined, both
+  AnyAxisym entries preserved.
+
+It also states why it is *not* folded into gh#1285: that PR only gated eager
+torch, so folding these rows in would un-defer them on the strength of a run
+that never exercised the traced torch path.
+
+Strict ordering confirmed by its own logic: tjit-drop **cannot** be pushed
+before gh#1285 merges — those tests only pass because of gh#1285's split fix, so
+un-deferring them on today's develop would turn CI red.
+
+Queue: gh#1286 (gate pending) -> gh#1285 (flake re-run once its run completes)
+-> tjit-drop (body ready) -> gl-order-100 (push-ready).
