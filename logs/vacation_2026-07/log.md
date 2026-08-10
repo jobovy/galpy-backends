@@ -38070,3 +38070,26 @@ mistaken for 24/24 verification.
 Current: gh#1286 **131 passed, 0 failures**, 7 running, 15 queued.
 gh#1285 **95 passed**, 21 running, its Windows red still unattributed and its
 run still `in_progress` so the re-run stays blocked.
+
+### 2026-08-09 — codecov API is 503; the gh#1285 patch re-check is DEFERRED, not answered
+
+Went to honour the standing commitment — re-read gh#1285's patch coverage now
+that ~102 of its checks are in, to see whether the three lines I covered
+register once the `test_backend*.py` coverage job uploads. The API is down:
+
+    HTTP 503
+    "upstream connect error or disconnect/reset before headers"
+
+Twice, 20 s apart. That is codecov's service, not a data state.
+
+Recording it as **deferred**, explicitly, because the failure mode here is
+subtle: an empty/unparseable response is easy to read as "no data yet" or to
+quietly skip, and either would silently retire a commitment I made. The check is
+still owed and still says the same thing: **if those three lines do not register
+once the coverage shard uploads, the answer is more tests, not a better
+explanation.**
+
+Unchanged otherwise: gh#1285 102 passed with the Windows red still
+unattributed (its run `in_progress`, so the re-run remains blocked); gh#1286
+132 passed / 0 failures with the noninertial shard — its last real gate — still
+running.
