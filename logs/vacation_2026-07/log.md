@@ -39305,3 +39305,25 @@ modest improvement that changes nothing about the deferral.
 
 **The 5 eager-jax entries stay slow-skipped, and STATUS.md's "needs
 vectorisation" assessment stands.** Worktree restore verified clean.
+
+### 2026-08-10 — gh#1286's third re-run PASSED; both PRs clean, 18 checks from the gate
+
+    gh#1286 windows run attempt=3  completed/SUCCESS
+    gh#1286  133 SUCCESS  0 FAILURE  18 pending
+    gh#1285  121 SUCCESS  0 FAILURE  30 pending
+
+Attempt 1 failed, 2 failed, 3 passed — which is exactly what a **runner-sensitive
+marginal tolerance** predicts, and not what a deterministic failure would do. The
+gh#1290 diagnosis holds up against the retry pattern as well as against the
+numbers.
+
+gh#1286's remaining 18 are 15 eager-backend shards plus `all-clear`, readthedocs
+and pre-commit.ci. Nothing outstanding that needs me.
+
+**On not fixing gh#1290 myself.** The diagnosis makes the fix look trivial —
+loosen a 1e-8 absolute bar that demands ~4e-9 relative agreement between two
+independently constructed objects. I am deliberately leaving it. "I diagnosed a
+tolerance as too tight, then loosened it, and my own PRs went green" is a shape
+that needs Jo's sign-off even when the arithmetic is unarguable, and the
+measurement in the issue stands on its own without the edit. Re-running is
+slower but it is not a judgement call.
