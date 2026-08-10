@@ -40224,3 +40224,32 @@ No action taken. Logged so a later wake does not re-investigate it from scratch.
 
 Also this wake: the gh#1277 branch suite came back **1328 / 0** with `_Rzderiv`
 restored and pinned, so that branch is push-ready whenever queue capacity frees.
+
+### Sized the hasattr-guard blind spot: 6 potentials, 17 (potential, method) pairs
+
+Follow-up to the `_Rzderiv` deletion. Measured across 54 `Potential` subclasses.
+
+Raw absence counts are **misleading** and I nearly reported them: 35 lack
+`_phi2deriv`, 37 lack `_Rphideriv`. Those are legitimately absent for
+axisymmetric potentials -- precisely what the `hasattr` guard exists for. Not a
+gap.
+
+The real blind spot is potentials that **implement** a second derivative AND are
+excluded from `test_orbit.py`'s generic lists (so nothing else exercises it):
+
+    AnyAxisymmetricRazorThinDiskPotential   R2deriv, z2deriv, Rzderiv
+    DoubleExponentialDiskPotential          R2deriv, z2deriv, Rzderiv
+    RazorThinExponentialDiskPotential       R2deriv, z2deriv
+    RingPotential                           R2deriv, z2deriv, Rzderiv
+    SoftenedNeedleBarPotential              R2deriv, z2deriv, Rzderiv
+    SphericalShellPotential                 R2deriv, z2deriv, Rzderiv
+
+**17 pairs, exactly the six `rmpots.append(...)` exclusions.** For every other
+potential a deleted second derivative breaks orbit integration and is caught.
+
+Would have overstated this ~16x by quoting the raw totals.
+
+**Not acting on it now** -- a registry test pinning the expected method set per
+potential is a separate PR, and Jo's plan is finish-then-rebase. Recorded as a
+sized, concrete follow-up rather than a vague worry. The gold-value test I added
+already covers the AnyAxisym row.
