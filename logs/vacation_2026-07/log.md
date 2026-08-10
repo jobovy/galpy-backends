@@ -38052,3 +38052,21 @@ which is still blocked (run `31342463692` now `in_progress`).
 
 What changed this wake is the quality of the evidence, not the conclusion: I
 replaced a broken A/B with a valid one and got a real answer from it.
+
+### 2026-08-09 — gh#1286's last gate is running
+
+`backend jax test_qdf/test_pv2qdf/test_streamgapdf.../test_noninertial` moved to
+**IN_PROGRESS**. That is the shard carrying the 11 noninertial un-defers, i.e.
+the remaining half of gh#1286's own evidence (the other 13 were verified when
+the `energy_jacobi` jax shard went green).
+
+Everything else still outstanding on the PR is **torch** shards plus a few
+unrelated jax ones. Those do not bear on this PR's claim: all 24 un-deferred
+entries are `jax`-mode ledger lines, so torch shards run the same tests but
+under a backend whose ledger this PR does not touch. Green or red there says
+nothing about the un-defers — worth stating so a full-green rollup is not
+mistaken for 24/24 verification.
+
+Current: gh#1286 **131 passed, 0 failures**, 7 running, 15 queued.
+gh#1285 **95 passed**, 21 running, its Windows red still unattributed and its
+run still `in_progress` so the re-run stays blocked.
