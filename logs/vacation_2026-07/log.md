@@ -39327,3 +39327,15 @@ tolerance as too tight, then loosened it, and my own PRs went green" is a shape
 that needs Jo's sign-off even when the arithmetic is unarguable, and the
 measurement in the issue stands on its own without the edit. Re-running is
 slower but it is not a judgement call.
+
+### 2026-08-10 — gh#1286 down to 6 shards + the gate
+
+    gh#1286  144 SUCCESS  0 FAILURE  7 pending  (all-clear, 6 backend shards,
+                                                 readthedocs, pre-commit.ci)
+    gh#1285  128 SUCCESS  0 FAILURE  23 pending
+
+No reds anywhere. The remaining six are the usual slow eager-backend shards
+(`test_potential --splits`, `test_orbit`/`test_orbits`, `test_qdf` on both
+backends). Merge is a single step once `all-clear` flips — gh#1286's diff is
+pre-audited (one file, `0+ / 24-`, xfail untouched) and nothing about it has
+changed since.
