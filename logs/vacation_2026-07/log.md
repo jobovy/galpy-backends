@@ -37476,3 +37476,26 @@ idle and this is exactly the "dispatch a jit run" case: traced
 raising the GL order. Next wake applies n=100 and re-runs the same command on
 the same tree, which is the only comparison that means anything — same tree,
 same selection, both sides complete.
+
+### 2026-08-09 — traced baseline relaunched with xdist (my dispatch was serial)
+
+Caught my own mistake early rather than after 78 minutes: I dispatched the
+traced `test_potential.py` baseline **without `-n 8`**. At 5 % after 233 s that
+projects to ~78 min per side, i.e. ~2.6 h for the A/B. Killed and relaunched
+with `-n 8`.
+
+Safe to parallelise here specifically: `test_potential` is not in the
+xdist-shared-state set ([[xdist-shared-state-artifacts]] names test_diskdf /
+test_quantity / test_sphericaldf / test_qdf as the serial-only files). And the
+comparison stays valid because **both sides will use the identical command** —
+the A/B is before-vs-after the GL order, not against an absolute time.
+
+Verified the relaunch rather than assuming: 8 workers, all with `ppid` = the new
+coordinator, 143-192 % CPU each. The other idle `python -u -c` processes on the
+box are orphans from runs 9.6 days old at **0.0 %** CPU — not mine, not
+consuming anything, left alone rather than killed on suspicion.
+
+Also confirmed this wake: **gh#1285 is not stuck**, just later in a FIFO queue
+(its runs created 23:40 vs gh#1286's 23:18, all on the correct SHA). The
+temptation was to re-push or cancel-and-retry; either would have cost it its
+place for nothing.
