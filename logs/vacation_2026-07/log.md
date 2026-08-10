@@ -39397,3 +39397,44 @@ Two consequences for the roadmap:
   path cheap enough that 1325 crossings stop mattering.
 
 Recorded because it converts "needs vectorisation" from a label into a target.
+
+### 2026-08-10 — Lever 1 quantified, and cProfile's 28% was inflated
+
+Followed the profile into numbers. Instrumented `coerce_coords` over one
+`RotateAndTilt(MWP14)._surfdens_poisson`:
+
+    coerce_coords calls        5300
+    coordinates seen           5300
+      already backend + right dtype + right device   5172   (97.6 %)
+      plain python scalar                             128
+      numpy / None                                      0
+
+**97.6 % of the coercion work is redundant** — those coordinates are already jax
+arrays of the target dtype on the target device, and `coerce_coords` calls
+`asarray_on_device` on them anyway. An early-exit is obviously available.
+
+But I then measured what it would actually buy, instead of quoting the profile:
+
+    asarray_on_device(already-correct array)   18.65 us
+    early-exit dtype check                      0.54 us   (35x cheaper)
+    5172 x 18.65 us                            96.5 ms of a ~1400 ms call = ~7 %
+
+**So the cProfile reading of "coerce_coords = 28 % of total" was inflated by
+profiler overhead** (cProfile charges per-call bookkeeping to a hot, tiny
+function). The avoidable part is ~7 %, not ~28 %. Worth having the correction on
+record before anyone plans work around the bigger number — including me, who
+quoted it last wake.
+
+The arithmetic points somewhere else anyway:
+
+    1400 ms / 1325 decorated calls = ~1.06 ms per decorated call
+    of which coerce_coords is ~60 us  =  ~6 %
+
+**The dominant cost is the decorator machinery itself** (`physical_conversion` +
+`backend_input` wrappers), not the coercion inside it. A coercion early-exit is a
+genuine but ~7 % win; the real Lever-1 target is either fewer decorated calls
+(batch the component fan-out) or a cheaper wrapper path.
+
+Not opening a PR for this — the queue is four deep and CI-starved, and a hot-path
+change to merged `galpy.backend` code deserves its own gate rather than being
+squeezed in. Recorded as groundwork with the numbers attached.
