@@ -37804,3 +37804,30 @@ the VizieR `test_from_name_values` failure. Its parent run is at
 **23 completed / 3 in_progress / 0 queued** — the three stragglers are the
 py3.14 `test_backend*.py` job and two `test_orbit` shards. As soon as the run
 completes, re-run job `93316094166` and confirm `run_attempt` becomes 2.
+
+### 2026-08-09 — gh#1286 at 102 green, and NONE of it covers what the PR changes
+
+Located both shards that actually exercise the 24 un-deferred entries:
+
+    QUEUED   backend jax test_orbit -k 'test_energy_jacobi_conservation or from_name'
+             -> carries 10 of the 13 test_orbit un-defers
+    QUEUED   backend jax test_qdf/test_pv2qdf/test_streamgapdf.../test_noninertial
+             -> carries all 11 noninertial un-defers
+
+**Both still queued.** So gh#1286 reads 102 passed / 1 red, and *none* of those
+102 touch a single test this PR un-defers. The four green
+`test_orbit`/`test_orbits` shards are the `-k 'not test_energy_jacobi...'`
+complement — by construction the tests they run are precisely the ones the PR
+does not change.
+
+Recording it again because the number is seductive: "102 green, 1 flake" reads
+like a PR that is essentially validated, and it is not validated at all on its
+own axis. The new fact this wake is *where* the noninertial entries live — the
+`qdf/pv2qdf/streamgapdf` shard, not an obviously-named one — which is why the
+first search for them came up empty.
+
+The single red is still the VizieR `test_from_name_values` flake, and its parent
+run is still `in_progress`, so the job re-run remains blocked. Note the two are
+the same shard: `test_energy_jacobi_conservation **or from_name**`. So when that
+shard finally runs, it both delivers the decisive evidence and re-decides the
+flake.
