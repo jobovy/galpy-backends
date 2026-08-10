@@ -37902,3 +37902,28 @@ the change.
 
 gh#1285 is climbing steadily — 46 green, 28 running, only its two early-upload
 codecov entries red at 1 of 27 head sessions.
+
+### 2026-08-09 — gh#1286's decisive jax shard PASSED: 13 of 24 un-defers now CI-verified
+
+    SUCCESS   backend jax test_orbit -k 'test_energy_jacobi_conservation or from_name'
+    QUEUED    backend jax test_qdf/test_pv2qdf/test_streamgapdf.../test_noninertial
+
+The green one is the shard I have been calling decisive: it carries the **10
+`test_energy_jacobi_conservation[...]` parametrisations** that make up the bulk
+of the 13 `test_orbit` un-defers. The other 3 `test_orbit` un-defers live in the
+`-k 'not test_energy_jacobi...'` complement shards, which went green earlier.
+
+So **13 of the 24 un-deferred entries are now verified in CI's full-shard
+context**, which is the claim gh#1286 rests on and the thing my local
+measurement could only suggest. The remaining **11 noninertial** entries sit in
+the still-queued `qdf/pv2qdf/streamgapdf` shard.
+
+Stating the split rather than rounding up to "verified": half the PR's evidence
+has arrived, not all of it. gh#1286 now reads **122 passed, 0 failures**, 7
+running, 24 queued — red-free, but the merge gate is the noninertial shard, not
+the failure count.
+
+Also green now: the same `-k 'energy_jacobi or from_name'` selection across the
+numpy build matrix (3.10-3.14, ubuntu + both macOS runners), including the
+macOS job whose VizieR flake I re-ran. That flake is conclusively gone rather
+than merely absent.
