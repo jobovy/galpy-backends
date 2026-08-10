@@ -38606,3 +38606,39 @@ monkeypatching `ACW.integrate` silently patched nothing; `importlib` fixes it.
 
 Meanwhile: egate ~34/72 through its first of four arms; gh#1286 at 10 SUCCESS +
 the codecov phantom; gh#1285 still zero of 149 started.
+
+### 2026-08-10 — tjit-drop verified disjoint from gh#1285 (the interesting part is WHY I checked)
+
+`backend-jit/torchjit-poisson-undefer` @ `c4acbf96` has been sitting prepared.
+Re-checked it rather than trusting the earlier "merges clean" note, because
+develop has moved three times since.
+
+Merging it against **develop** is clean -- but that was the wrong question. It
+has to land after gh#1285, and *both* delete `poisson_surfdens` rows from the
+same ledger file, which is exactly the shape that looks like a conflict. Checked
+what each side actually removes:
+
+    gh#1285     removes the 5  jax-jit  ...poisson_surfdens[mock*]  rows
+    tjit-drop   removes the 5 torch-jit ...poisson_surfdens[mock*]  rows
+
+Same tests, different **mode prefix** -- disjoint. `git merge-tree` against
+gh#1285's head confirms: no conflict, 26 -> 16 non-comment rows (26-5-5), and
+crucially both `AnyAxisymmetricRazorThinDiskPotential` entries survive, which is
+the property that must hold since AnyAxisym deliberately opts out of array input
+and genuinely cannot pass.
+
+**But a clean merge is not the claim.** tjit-drop asserts those 5 torch-jit
+tests now PASS, and they only pass because of gh#1285's split/broadcast fix --
+the two are coupled. So the un-defer is only valid *on top of* gh#1285, and that
+is what needs verifying, not the textual merge. Running those 5 under
+`--backend torch --jit` in gh#1285's own worktree now.
+
+Deliberately not in `/var/tmp/gl-order`: egate is flipping files in that tree
+with `git checkout`, so a concurrent test run there would be measuring a moving
+target.
+
+(First attempt died at the 2-minute foreground cap -- torch `--jit` compilation
+is slow. Relaunched detached and confirmed the pytest's cwd is the worktree.)
+
+CI: gh#1285 finally has 1 of 149 through; gh#1286 at 13 SUCCESS + the codecov
+phantom. egate 67/72 through arm 1 of 4.
