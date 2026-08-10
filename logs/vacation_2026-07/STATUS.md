@@ -26,6 +26,23 @@ un-rebased branch merges cleanly (0 conflicts), so those 5 lines become their ow
 follow-up, which also lets them get the **torch --jit** evidence the drop
 actually requires (gh#1285 only gated eager torch).
 
+## Prepared locally, NOT pushed (do not lose these)
+
+| branch | @ | what | why it is held |
+|---|---|---|---|
+| `backend-jit/torchjit-poisson-undefer` | `c4acbf96` | xfail **26 -> 21**: drops the 5 torch-jit `poisson_surfdens` wrapper entries, keeps both AnyAxisym | two-PR cap **and** it must land *after* gh#1285 — those entries only pass because of that PR's split fix |
+| *(GL order n=50 -> 100)* | not committed | the 2-line change at `Potential.py` 832/918 | evidence complete (0 outcome flips, 1385 traced tests); needs its own named constant, see below |
+
+The torch-jit drop is backed by a **two-sided** `torch --jit` A/B: BASE (clean
+develop) 5 failed / 1 xfailed, FIX (gh#1285) 5 passed / 1 xfailed, with
+`AnyAxisym` held as a control that stayed xfailed on both sides.
+
+**Deleted a misleading branch name:** `backend-jit/surfdens-gl-order` existed
+locally but pointed at `98c2d5c7`, the *pre-existing* actionAngle
+`_BACKEND_GL_ORDER` commit — not the n=100 work, which was only ever applied,
+measured and reverted. A branch whose name implies work it does not contain is
+worse than no branch, so it is gone.
+
 ## Where the ledger actually stands
 
 Projected across all three in-flight PRs (**not** what `develop` shows — with
