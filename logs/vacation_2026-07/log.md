@@ -37831,3 +37831,30 @@ run is still `in_progress`, so the job re-run remains blocked. Note the two are
 the same shard: `test_energy_jacobi_conservation **or from_name**`. So when that
 shard finally runs, it both delivers the decisive evidence and re-decides the
 flake.
+
+### 2026-08-09 — the follow-up merges cleanly onto gh#1285 (simulated, both drop-sets checked)
+
+`torchjit-poisson-undefer` (`c4acbf96`) and gh#1285 (`bcb2172e`) both edit
+`tests/backend_xfail.txt` — gh#1285 removes 5 **jax-jit** poisson lines, the
+follow-up removes 5 **torch-jit** ones. That is the shape that usually
+conflicts, so I simulated it rather than finding out at push time:
+
+    git merge-tree --write-tree bcb2172e c4acbf96   ->  0 conflicts
+
+And checked the *merged tree's* file rather than trusting the exit code, because
+"no conflict" does not mean "both edits survived":
+
+    jax-jit  poisson mock entries   0   (gh#1285's drops survived)
+    torch-jit poisson mock entries  0   (the follow-up's drops survived)
+    AnyAxisym entries               7   (preserved)
+
+**Correction to my own check:** I wrote "expect 2" for the AnyAxisym count and
+got 7. The expectation was wrong, not the result — I was thinking of the two
+torch-jit AnyAxisym entries while the grep counts every mode (jax-jit has three
+of its own, plus eager). The entries are preserved, which is the property that
+mattered; the number I predicted was simply mis-specified. Worth writing down
+because a mismatched count is exactly the kind of thing that gets waved away as
+"probably fine" when the honest reading is "my expectation was sloppy".
+
+So the follow-up needs no rebase after gh#1285 lands: disjoint line removals in
+one file, resolved at line level, same as gh#1286 against gh#1284 earlier.
