@@ -87,6 +87,29 @@ coercion while `get_namespace` still resolves to the forced backend — `z`
 reaches `xp.abs` as a Python float and torch raises. A/B'd: **identical on clean
 develop**, so it is not from this PR.
 
+## Found: a real accuracy defect in the TRACED path (not a blocker)
+
+`surfdens(forcepoisson=True)` on a **traced** backend uses a fixed-order GL rule
+at **n=50**, and carries **2.6e-05 relative error at (R=0.01, |z|=50)** today.
+Eager and numpy use `scipy.integrate.quad` and are correct, which is why nothing
+catches it — and the traced suite only runs on a `workflow_dispatch`.
+
+Measured against adaptive, on the real MWPotential2014 integrand:
+
+    (R,|z|)          n=50      n=100      n=200
+    (0.01, 50)   2.57e-05   1.24e-10   2.04e-14
+    (0.1,  50)   1.81e-09   1.04e-14   3.87e-15
+
+**n=100 fixes it**, so there is no accuracy-vs-speed trade to adjudicate. And
+the same change makes it safe to route the **eager** path through the backend
+quadrature, which removes the last big eager hot spot (5307 crossings/call on
+develop, 2299 after gh#1285).
+
+Queued as one PR — raise the order *and* route eager through it — gated on a
+full traced `test_potential.py` before/after, because it moves shipped traced
+values and the 12 jax `test_potential` ledger entries all live on this path.
+numpy is untouched (it keeps scipy), so byte-identity is free.
+
 ## Awaiting Jo
 
 **One action:** merge **gh#1274** (151 green, `MERGEABLE`, targets `main`). It
