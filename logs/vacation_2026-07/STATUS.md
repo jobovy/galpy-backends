@@ -87,28 +87,38 @@ coercion while `get_namespace` still resolves to the forced backend — `z`
 reaches `xp.abs` as a Python float and torch raises. A/B'd: **identical on clean
 develop**, so it is not from this PR.
 
-## Found: a real accuracy defect in the TRACED path (not a blocker)
+## Found: a real accuracy defect in the TRACED path — now fully gated
 
 `surfdens(forcepoisson=True)` on a **traced** backend uses a fixed-order GL rule
-at **n=50**, and carries **2.6e-05 relative error at (R=0.01, |z|=50)** today.
+at **n=50** and carries **2.6e-05 relative error at (R=0.01, |z|=50)** today.
 Eager and numpy use `scipy.integrate.quad` and are correct, which is why nothing
-catches it — and the traced suite only runs on a `workflow_dispatch`.
+catches it; the traced suite only runs on a `workflow_dispatch`.
 
-Measured against adaptive, on the real MWPotential2014 integrand:
+Measured against adaptive on the real MWPotential2014 integrand:
 
     (R,|z|)          n=50      n=100      n=200
     (0.01, 50)   2.57e-05   1.24e-10   2.04e-14
     (0.1,  50)   1.81e-09   1.04e-14   3.87e-15
 
-**n=100 fixes it**, so there is no accuracy-vs-speed trade to adjudicate. And
-the same change makes it safe to route the **eager** path through the backend
-quadrature, which removes the last big eager hot spot (5307 crossings/call on
-develop, 2299 after gh#1285).
+**n=100 fixes it, and the change is free.** Full traced `test_potential.py`
+A/B, identical command and tree:
 
-Queued as one PR — raise the order *and* route eager through it — gated on a
-full traced `test_potential.py` before/after, because it moves shipped traced
-values and the 12 jax `test_potential` ledger entries all live on this path.
-numpy is untouched (it keeps scipy), so byte-identity is free.
+    BEFORE n=50    1278 passed, 102 skipped, 5 xfailed   593.6 s
+    AFTER  n=100   1278 passed, 102 skipped, 5 xfailed   566.6 s
+
+Compared per-test, not just by count: 1385 tests each, **0 outcome flips**,
+summed time -0.6 %. numpy is untouched by construction (it keeps scipy).
+
+**Design decision, from searching first:** a `_BACKEND_GL_ORDER = 50` already
+exists in `galpy/actionAngle/actionAngle.py` (5 users). **Do not reuse it** —
+`Potential.py` imports nothing from `actionAngle` and should not start
+(wrong direction), and it orders a *different* quadrature (`fixed_quad` over
+[0,1] on the action radicand, vs the split+clustered `symmetric_quad` over
+[-|z|,|z|]). Sharing the symbol would silently re-order the AA quadratures,
+unmeasured. The surfdens PR gets its own named order beside the rule it governs.
+
+Ready to open as one PR (raise the order, then route eager through it) when a
+slot frees; evidence complete, only the two-PR cap holds it.
 
 ## Awaiting Jo
 
