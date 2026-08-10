@@ -38129,3 +38129,36 @@ Next: this needs a re-defer of that single torch entry, in its own small PR
 one re-run to confirm it is load-marginal rather than consistently over — if it
 passes on re-run, the entry is genuinely borderline and the re-defer should say
 so with both numbers.
+
+### 2026-08-09 — measured it properly: gh#1284's un-defer is WRONG, and my first number was off by 50x
+
+Two measurements of `torch test_FDMDynamicalFrictionForce_central_limit`:
+
+    tree WITHOUT gh#1284's as_numpy fix   6.47 s   FAILED (TypeError)
+    tree WITH the fix applied             >349 s   still running, idle box
+
+**The 6.47 s was worthless and I nearly used it.** My measurement tree sits at
+`9dc31569`, i.e. *before* gh#1284, so the assertion still reads
+`numpy.amax(numpy.fabs(o.r(t) - r_pred))` and dies immediately on the
+numpy-on-Tensor collision:
+
+    TypeError: max() received an invalid combination of arguments
+
+6.47 s is the cost of crashing early, not of doing the work. Exactly the
+[[verify-sweep-tree-provenance-completely]] failure that produced the port207
+mis-ledgering — *a test that fails fast is not a fast test* — and I walked into
+it again, on the same class of entry, hours later.
+
+Patched the tree with gh#1284's own `as_numpy` change and re-ran: **>349 s and
+counting on a quiet box, against a 300 s per-test cap.**
+
+**Conclusion, and it is about my own merge:** gh#1284 un-deferred this entry, its
+CI happened to pass, and the entry is genuinely over the cap. This is not
+load-marginal — an idle 72-core box blows the budget. It must be re-deferred.
+gh#1284's green was not evidence the un-defer was right; it was one sample of a
+test that sits past the limit.
+
+Next wake: let the run finish for the exact number, then open a small PR
+re-adding that single `torch` slow-skip line with both measurements in the body
+(the 6.47 s artifact included, so the next person does not repeat it). It does
+**not** ride along in gh#1286, which has no business touching torch entries.
