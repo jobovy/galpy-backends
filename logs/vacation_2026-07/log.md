@@ -39359,3 +39359,41 @@ Both queued branches re-confirmed intact and clean this wake:
 
 Neither has drifted. Their ordering is forced, not chosen: tjit-drop's un-defer
 only holds on top of gh#1285's split fix, and gl-order stacks on the same base.
+
+### 2026-08-10 — profiled the AndTilted cost: it is Lever 1, with numbers
+
+The AndTilted null result said "these need vectorisation". That is only
+actionable if I know *what* to vectorise, so I profiled one representative call
+(`RotateAndTilt(MWPotential2014)._surfdens_poisson` under eager jax):
+
+    1 call = 2.054 s, 1,665,601 Python function calls
+
+    scipy _qagse                 2.033 s   <- but only 21 integrand evaluations
+    per integrand evaluation     ~97 ms
+    conversion.py:1069 wrapper   1325 calls  (physical_conversion)
+    _input.py:153 wrapper        1325 calls  (backend_input)
+    coerce_coords                6175 calls, 0.579 s = 28 % of total
+    RotateAndTilt _2ndderiv      42 calls, 1.488 s cumulative
+    phi2deriv / R2deriv          189/42 each
+
+**The cost is not the number of quadrature nodes — it is per-call overhead times
+fan-out.** 21 integrand evaluations become 1325 decorated calls and 6175
+coercions, because RotateAndTilt dispatches to 3 MWPotential2014 components and
+each needs `R2deriv`/`z2deriv`/`phi2deriv`/`Rzderiv`, and every one of those pays
+the decorator + coercion tax.
+
+That is **Lever 1** (standing task: "eager-backend per-call overhead is ~5 ms
+FLAT, 186x on a scalar call") — now confirmed as the dominant cost for the
+largest remaining ledger cluster, with a concrete multiplier attached. 1325
+decorated calls at ~1.5 ms is ~2 s, which is the whole measurement.
+
+Two consequences for the roadmap:
+
+* Raising or lowering the GL order cannot touch this. Neither can the eager-GL
+  routing on its own — that removes the *scipy node-by-node* path, which would
+  help, but the fan-out tax is paid per component-derivative regardless.
+* The real lever is either batching the component fan-out (one call carrying all
+  four derivatives, or all three components) or making the decorator/coercion
+  path cheap enough that 1325 crossings stop mattering.
+
+Recorded because it converts "needs vectorisation" from a label into a target.
