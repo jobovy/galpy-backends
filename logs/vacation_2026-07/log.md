@@ -38722,3 +38722,27 @@ wrapper, killing the command chain). Verified the process state with
 `ps -eo pid,comm | awk '$2=="python"'` instead, which cannot match a shell.
 
 egate torch AFTER still running.
+
+### 2026-08-10 — low-yield wake, recorded as such
+
+Everything is blocked on things I do not control, and I am not going to
+manufacture activity to disguise that.
+
+* **Both PRs**: still runner-starved (gh#1285 7/149 done, gh#1286 23/149). The
+  only real red on either is the Windows flake; the codecov reds are confirmed
+  upload phantoms.
+* **Re-run still not possible**: both Windows parent runs (`31384148947`,
+  `31384151206`) report `queued` — a job-level re-run exits silently while the
+  parent has queued siblings, so it has to wait for them to finish.
+* **egate**: jax AFTER done (22 passed, 0 failed); torch AFTER ~61/72; two
+  BEFORE arms after that.
+
+Spent a little effort reading `streamgapdf` for the flake mechanism:
+`streamgapdf` inherits `sample` from `streamdf` (`streamdf.py:4532`) and
+contains **no RNG of its own**, so there is nothing locally nondeterministic to
+point at. I stopped there rather than build a story. The plausible sources left
+(construction differences between the units/no-units twins amplified through
+sampling; runner-CPU transcendental differences) are all untestable without a
+Windows environment, and I have enough to act: **re-run the job**. Writing down
+a mechanism I cannot measure would be the [[reproduce-the-assertion-not-a-proxy]]
+failure in narrative form.
