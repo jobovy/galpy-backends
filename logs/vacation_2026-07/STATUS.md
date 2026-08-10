@@ -72,10 +72,20 @@ DEFAULT (no `n=`), so a lowered default fails it; A/B'd (default=`_QUAD_N`
 passes, default=50 fails). The first draft of that test passed `n=_QUAD_N`
 explicitly and would have sailed through the regression it exists to catch.
 
-**Outstanding before push:** an eager arm is running. The whole-line `_mass`
-site is guarded by a plain `if xp is numpy:`, **not** `_quad_needs_backend`, so
-eager backends *do* reach the rule there — the commit message currently states
-this wrongly and must be amended.
+**Outstanding before push:** the commit message must be amended. It says numpy
+is untouched *because* `_quad_needs_backend` routes numpy and eager to scipy —
+true for numpy, wrong for eager.
+
+The site is **`surfdens(R, z=None)`**, not `_mass` (all three `symmetric_quad`
+call sites are in `surfdens`/`_surfdens_poisson`/`_surfdens`; none in `mass` —
+earlier notes had this wrong). It is guarded by a plain `if xp is numpy:` rather
+than `_quad_needs_backend`, so eager backends *do* reach the rule there.
+
+The eager suite arms I ran are **vacuous**: no test calls `surfdens` with
+`z=None`, so AFTER==BEFORE means "untested", not "unchanged". The real evidence
+is direct parity on that branch at the current n=50 (MiyamotoNagai 6.7e-13,
+Hernquist 5.7e-16, NFW 1.3e-15, MWP14[0] 2.9e-11) plus the mpmath table showing
+n=100 equal-or-better there everywhere.
 
 ## The eager-GL routing question — settled, and it is a separate PR
 
