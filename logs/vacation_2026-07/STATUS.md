@@ -109,21 +109,42 @@ not a clean pre-flight rejection — the `TypeError` arrives *after* an integran
 call, and one path raises `AttributeError` instead. So try-GL/fall-back needs a
 broad catch around a numerical routine, which can mask real defects.
 
-**Do not build the eager-GL routing PR on the declared-flag design.** It needs an
-empirical mechanism: probe the *integrand itself* once with a 2-element array,
-check shape, cache the verdict — decided where the failure actually surfaces
-rather than at a declaration that nothing validates. Prototyping now; it is a
-separate PR and both slots are full.
+**Prototyped the successor design 2026-08-10 (`backend-jit/eager-gl-probe`, local
+only) and it is ALSO refuted — this route is now closed.**
+
+The probe works for what it measures: `integrand_accepts_nodes` evaluates the
+node-wise integrand at two points, compares against two scalar evaluations, and
+correctly routes `RotateAndTilt(Any)` to scipy — the exact case the declared flag
+calls array-safe. But array-safety is **necessary, not sufficient**:
+
+    Composite(Any, MN).surfdens(0.8, 0.2)     numpy 0.1110    GL 0.1805   = 62% wrong
+
+No exception, no shape error — the probe passes and the answer is wrong. The
+obvious repair, an n-vs-2n convergence check, **also fails**:
+
+    case                numpy(scipy)     GL50     GL100    GL200   |100-50| |200-100|  err
+    Composite(Any,MN)   1.110079e-01   1.8049e-01 1.8049e-01 1.8049e-01  1.4e-15  2.6e-15  6.26e-01
+
+GL50/100/200 agree with *each other* to 1e-15 while all three are 62 % off. **The
+rule converges to the wrong answer**, so self-consistency cannot detect it — a
+razor-thin disk's vertical density is a spike at the mid-plane and every order
+with the same node distribution misses it identically. That is the classic
+aliasing failure of fixed-node quadrature, and it kills the check.
+
+So the ~28x is **not reachable** by any mechanism I have, and the AndTilted
+ledger cluster is not reachable this way. Getting it would need an adaptive
+backend rule or a human-verified per-potential opt-in. Reprioritised below.
 
 Nothing here touches the accuracy case for gh#1292, which stands on the mpmath
 table and the traced gate.
 
 ## Awaiting Jo
 
-**One action:** merge **gh#1274** (151 green, `MERGEABLE`, targets `main`). It
-now blocks more than itself: its hunks land at lines 246/271/296/324/346/368/390
-of `interpRZPotential.py`, which are exactly the seven grid-build loops
-**#211(B)** would vectorise. Verified at hunk level, not guessed.
+**gh#1274 is MERGED** (2026-08-10, `b68c3ec9`), which unblocks #211(B). Jo is
+doing the big rebase next: `main` -> `feat/backends` -> `feat/backends-develop`.
+I have **nothing targeting `main`** — my only open PRs are gh#1291/gh#1292, both
+into `feat/backends-develop`, and both touch files disjoint from gh#1274
+(`interpRZPotential.py`, `test_interp_potential.py`), so no conflict either way.
 
 **One decision:** should CI gain a `--jit` dimension? `--jit` is set only by a
 `workflow_dispatch` with `jit=true`, so the traced ledger is validated on the dev
@@ -146,10 +167,11 @@ cancel` silently no-ops on queued runs), and `build.yml` triggering on both
 ## Queued next, in order
 
 1. **gh#1291** and **gh#1292** → green, then merge (audit each at merge time).
-2. **eager-GL routing**, on an integrand probe rather than the refuted flag —
-   the one change that can move the AndTilted cluster.
-3. **Vectorisation** of SCF/Multipole/wrapper eval, where the 1440–2641 s
-   entries live.
-4. **#211(B)** `interpRZPotential` grid-build vectorisation — blocked on gh#1274.
+2. **Vectorisation** of SCF/Multipole/wrapper eval, where the 1440–2641 s
+   entries live. Now the *only* live lever on the jax ledger, since eager-GL
+   routing is closed.
+3. **#211(B)** `interpRZPotential` grid-build vectorisation — **unblocked**:
+   gh#1274 merged 2026-08-10 (`b68c3ec9`). Waits on Jo's main->feat/backends->
+   feat/backends-develop rebase.
 5. Follow-up: the dissipative-composite forced-backend coercion defect
    (characterised, deliberately not patched at the symptom site).

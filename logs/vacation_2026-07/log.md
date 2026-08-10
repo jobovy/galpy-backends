@@ -39490,3 +39490,52 @@ Opened:
     gh#1292  backend quadrature: one GL order for symmetric_quad, matching quad's
 
 Two-PR cap now full.
+
+### Eager-GL routing: prototyped, and REFUTED a second and third time
+
+Built the successor to the refuted declared-flag design on a local branch
+(`backend-jit/eager-gl-probe`, worktree `/var/tmp/eager-probe`, never pushed).
+
+`integrand_accepts_nodes(xp, integrand, a, b)` in `galpy/backend/quadrature.py`
+evaluates the node-wise integrand at two distinct points and compares against two
+scalar evaluations — so it is not a bare `except` around a numerical routine, it
+is a verified equivalence. `_quad_needs_backend` gained a third regime: numpy
+always scipy (byte-identity untouched), traced always GL, eager decided by probe.
+
+**It works for what it measures.** Routing table, both backends, x64:
+
+    MiyamotoNagai / MWP14[0] / Composite(MN,NFW)   -> GL     3e-15 .. 9e-12 vs numpy
+    RotateAndTilt(Any)                             -> scipy  (the flag says True)
+
+That last row is the case the declared flag gets backwards, and the probe gets it
+right. But **array-safety is necessary, not sufficient**:
+
+    Composite(Any, MN).surfdens(0.8, 0.2)   numpy 0.1110   GL 0.1805   = 62% WRONG
+
+The probe passes cleanly and the answer is wrong — no exception, no shape error.
+So I tried the obvious repair, an n-vs-2n convergence check, and **it fails too**:
+
+    case                numpy(scipy)      GL50       GL100      GL200   |100-50| |200-100|   err
+    MiyamotoNagai       2.220158e-01  2.220158e-01  ...        ...      2.1e-15  4.3e-15   0.00e+00
+    Composite(Any,MN)   1.110079e-01  1.804913e-01 1.804913e-01 1.804913e-01  1.4e-15  2.6e-15  6.26e-01
+
+GL50, GL100 and GL200 agree with **each other** to 1e-15 while all three are 62 %
+off. The rule converges to the wrong answer. A razor-thin disk's vertical density
+is a spike at the mid-plane; every order with the same node distribution misses
+it identically, so self-consistency is blind to it — the classic aliasing failure
+of fixed-node quadrature.
+
+**Conclusion: the eager-GL route is closed on all three mechanisms.** The ~28x
+would need an adaptive backend rule or a human-verified per-potential opt-in.
+The AndTilted ledger cluster is not reachable this way, so vectorisation is now
+the only live lever on the jax ledger.
+
+Two measurement bugs of my own, both previously recorded and both repeated:
+
+* the probe built its node array from a **Python list**, which is float32 under
+  torch and float64 under jax-x64. The f32-vs-f64 gap alone made torch and jax
+  disagree on the same potential (1.5e-7 relative) and read exactly like a
+  broadcasting defect. Fixed by handing `asarray_on_device` a typed numpy array.
+* the first convergence script **reconstructed the integral by hand and dropped
+  `_amp`**, reproducing the same 33x phantom as before. Redone through the real
+  `pot.surfdens` call path with `n` injected into the rule.
