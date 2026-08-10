@@ -39970,3 +39970,22 @@ Pool: 45 queued / 5 running.
 Memory `no-rerun-vizier-notebook-flakes` updated with both, including that my
 "hung jobs are starving the pool" inference was measured at RUN level and was
 wrong on its own terms.
+
+### Stale attempt-1 CANCELLED entries are not a blocker
+
+gh#1291/gh#1292 each showed **44 CANCELLED checks**, and I read that as "these
+cannot go green until re-run". Wrong on two counts:
+
+* `gh run list --json conclusion` showed **zero** cancelled runs on those
+  branches -- because the cancelled entries belong to a run whose OVERALL
+  conclusion is not `cancelled`. Resolving the check `link` back to its run id
+  showed all 44 came from a single `All-backend tests` run.
+* Those runs are already at **attempt 2, queued**. `gh run rerun` refuses with
+  "This workflow is already running". The 44 entries are attempt-1 records that
+  attempt 2 supersedes.
+
+**How to read this:** a `CANCELLED` state in `gh pr checks` is per-attempt, not
+per-check-name. Map the check's `link` to its run id and inspect
+`gh run view <id> --json status,conclusion,attempt` before concluding anything
+needs a restart -- consistent with the existing note that `run_attempt` is the
+only reliable confirmation.
