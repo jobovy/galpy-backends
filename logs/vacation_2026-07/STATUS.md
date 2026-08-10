@@ -13,8 +13,8 @@ develop is at **`de0bee8e`**.
 |---|---|---|
 | **merged** | gh#1279, gh#1280, gh#1281, gh#1283, gh#1284, **gh#1288** | develop → `9dc31569` → `277bf897` → **`de0bee8e`** |
 | **open, FOR JO** | **gh#1274** → `main` | 151 green, MERGEABLE. Targets `main`, so it is yours. Still the sole blocker on #211(B) |
-| **open** | **gh#1285** `backend-jit/rt-vertical-split` @ `82aa6309` | RotateAndTilt vertical-split fix, clears 10 ledger entries. Audited (see below). CI **runner-starved: 1 of 149 started** |
-| **open** | **gh#1286** `backend-jit/eager-undefer-measured` @ `6e56330f` | −24 measured-stale eager-jax entries, `slow_skip` **109 → 85**. 13 green + the codecov upload phantom |
+| **open, ZERO REDS** | **gh#1285** `backend-jit/rt-vertical-split` @ `82aa6309` | RotateAndTilt vertical-split fix, clears 10 ledger entries. Audited; boundary crossings 2779 → 19 (census, measured on its own tree). **96 green / 0 failing**, waiting only on `all-clear` |
+| **open, ZERO REDS, PRE-AUDITED** | **gh#1286** `backend-jit/eager-undefer-measured` @ `6e56330f` | −24 measured-stale eager-jax entries, `slow_skip` **109 → 85**. **117 green / 0 failing**, waiting only on `all-clear`. Diff re-verified: one file, `0+ / 24-`, xfail untouched — **merge on sight when the gate clears** |
 | **filed as issues** | gh#1276, gh#1277, **gh#1289** | pre-existing numpy accuracy defects, all mpmath/Simpson-validated |
 
 ### gh#1288 — a merge of mine that had to be undone
@@ -25,6 +25,24 @@ lacked gh#1284's own `as_numpy` fix, so the test crashed early on the very
 collision it was fixing. *A test that fails fast is not a fast test.* Re-measured
 with the fix applied: **>658 s on an idle 72-core box against a 300 s cap.**
 gh#1288 re-defers it. Verified functionally — the entry now reports `s` in 8.5 s.
+
+### Every red either PR carried — five in total, one real
+
+    gh#1285  windows streamgapdf flake  -> re-run (flake proven by same-SHA split)
+             codecov/patch              -> ONE REAL GAP, fixed with a test
+             codecov/project            -> upload phantom, self-healed
+    gh#1286  windows streamgapdf flake  -> re-run
+             codecov/project            -> upload phantom, self-healed
+
+Four of the five needed **no source change**. Each was diagnosed with the right
+instrument — codecov's `sessions` count on the compare endpoint to tell an
+incomplete upload from a real drop, and the same-SHA push/pull_request duplicate
+to prove the Windows failure a flake by construction — rather than by hunting in
+the diff, which would have found nothing.
+
+`all-clear` trails **31 eager-backend shards** (18 torch, 13 jax). Nothing is
+hung; that is simply what the gate waits on, and it is why the eager-GL routing
+item is really a CI-throughput item.
 
 ### gh#1285's two reds, both resolved
 
