@@ -13,11 +13,22 @@ develop is at **`5b08b507`**.
 |---|---|---|
 | **merged** | gh#1279, gh#1280, gh#1281, gh#1283, gh#1284, gh#1288, **gh#1285**, **gh#1286** | develop → `de0bee8e` → `fb159ff7` → **`5b08b507`** |
 | **open, FOR JO** | **gh#1274** → `main` | 151 green, MERGEABLE. Targets `main`, so it is yours. Still the sole blocker on #211(B) |
-| **open, CI running** | **gh#1291** `backend-jit/torchjit-poisson-undefer` @ `2d9be8da` | xfail **21 → 16**: the 5 **torch-jit** `poisson_surfdens` wrapper rows. Ledger only, 1 file, `0+ / 5−` |
-| **open, CI running** | **gh#1292** `backend-jit/gl-order-100` @ `dfe8c4f3` | `symmetric_quad` default 50 → `_QUAD_N`, deleting 3 duplicated `n=50` overrides + a test that pins the DEFAULT |
+| **open, CI CANCELLED on purpose** | **gh#1291** `backend-jit/torchjit-poisson-undefer` @ `2d9be8da` | xfail **21 → 16**: the 5 **torch-jit** `poisson_surfdens` wrapper rows. Ledger only, 1 file, `0+ / 5−` |
+| **open, CI CANCELLED on purpose** | **gh#1292** `backend-jit/gl-order-100` @ `dfe8c4f3` | `symmetric_quad` default 50 → `_QUAD_N`, deleting 3 duplicated `n=50` overrides + a test that pins the DEFAULT |
 | **filed as issues** | gh#1276, gh#1277, gh#1289 | pre-existing numpy accuracy defects, all mpmath/Simpson-validated |
 
 Two-PR cap is full. Nothing else may be pushed until one of these merges.
+
+**HOLD: Jo is doing the big rebase** (`main` -> `feat/backends` ->
+`feat/backends-develop`) and wants the repo quiet first. So:
+
+* **Push nothing.** Both PRs stay as they are until the rebase lands, then I
+  rebase both onto the new develop and their CI re-runs from scratch.
+* I cancelled their 16 outstanding runs deliberately — a rebase invalidates
+  those results anyway, so they were wasted work, and cancelling them took the
+  repo from 38 outstanding runs to 24. What remains is develop's own post-merge
+  runs (17) and main's (5), which are legitimate and must drain on their own.
+* Local work in this window is **measurement only, no commits to galpy**.
 
 ### Both merges this wake, and what they cost
 
