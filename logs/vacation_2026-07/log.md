@@ -39172,3 +39172,30 @@ and one Windows flake, times two PRs — all resolved without a single source
 change. Every one of them was diagnosed by asking the right instrument (codecov
 `sessions` on the compare endpoint; the same-SHA duplicate run) rather than by
 reading the diff.
+
+### 2026-08-10 — BOTH PRs now have zero failures
+
+    gh#1286  108 SUCCESS  0 FAILURE   all-clear pending
+    gh#1285   77 SUCCESS  0 FAILURE   all-clear pending
+
+gh#1285's Windows flake re-run cleared it, exactly as gh#1286's did. Both PRs
+are now clean and waiting solely on the `all-clear` gate, which trails the
+backend-jax shards.
+
+Every red either PR ever carried has now been resolved, and **not one of them
+required a source change**:
+
+    gh#1285  windows streamgapdf flake  -> re-run (proven flake by same-SHA split)
+             codecov/patch              -> one real gap, fixed with a test
+             codecov/project            -> upload phantom, self-healed
+    gh#1286  windows streamgapdf flake  -> re-run
+             codecov/project            -> upload phantom, self-healed
+
+The one genuine defect in that list — gh#1285's patch-coverage gap — was found
+by asking codecov *which line*, not by waiting for the verdict, and fixed with a
+test that pins the contract rather than touching the line.
+
+AndTilted timing still running (536 s, first test through). Waiting for the
+junitxml per-test durations rather than inferring a conclusion from one dot —
+the whole point of the exercise is a number, and "one test finished around 500 s"
+is not one.
