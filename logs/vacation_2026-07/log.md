@@ -39739,3 +39739,42 @@ That is NOT galpy's computation -- `points=[R]` on a single call selects QAGP,
 and splitting into two calls discards it. My split returned ~1e7 where galpy
 returns 0.6, which is how I caught it. **When reproducing a scipy quadrature,
 reproduce its ARGUMENTS, not just its interval.**
+
+### gh#1295 audit follow-up + gh#1277 leading coefficient derived
+
+**Audit of my own main-side PRs**, the check Jo asks for at merge time:
+
+* **gh#1294 clean** -- `_grid_eval` covers all 7 sites, no residual grid loops
+  anywhere in `galpy/potential/*.py`, one helper, no duplication.
+* **gh#1295 had duplication I introduced** -- the substituted node/weight
+  construction was verbatim in both `_Rforce` and `_zforce`. Hoisted to
+  `_inner_nodes` / `_outer_nodes` (net -4 lines) so the rationale lives once.
+  Gate: full `test_potential.py` **1328 tests, 0 failures**, then pushed.
+* **No `if`->`xp.where` array-input issues** in any of the five: gh#1293/gh#1295
+  are numpy-only paths on main, and gh#1294's only branch is structural
+  (try/except + shape check on Python objects, not values).
+
+**gh#1277: derived the leading singular coefficient analytically.** Writing
+`d = a-R`, `s = a+R`, at z=0 `a^2-R^2 = d*s`, so the numerator factors:
+
+    N = d^2 s^2 [ (2R^2 - 2Rd - d^2) E(m) + d^2 K(m) ]
+
+and with `D = 2R^2 d^4 s^3` the whole integrand collapses to
+
+    f(a) = a Sigma(a) [ (2R^2 - 2Rd - d^2) E + d^2 K ] / (2 R^2 d^2 s)
+
+`d^2 K -> 0` (K is only log-divergent) and `E -> 1`, so as `d -> 0`
+
+    f -> R Sigma(R) 2R^2 / (2 R^2 d^2 2R) = Sigma(R) / (2 d^2)
+
+**The singular part is `C/(a-R)^2` with `C = Sigma(R)/2`** -- half the surface
+density at the evaluation radius, no elliptic integrals left. Verified by
+averaging the two sides at d=1e-5 (cancels the odd 1/d term): agreement 1.7e-08
+at R=0.2 down to 8.2e-10 at R=2.
+
+What remains is the *second* expansion: after subtracting `C/d^2` and adding
+back its Hadamard finite part over the symmetric panel (`C * (-2/R)`), the
+residual still carries `1/d` and `log|d|/d`. Those are odd about a=R so they
+vanish in principal value, but `scipy.integrate.quad` does not compute a
+principal value, so they need the same treatment. Posted both the diagnosis and
+this derivation to gh#1277 so it is a starting point rather than a dead end.
