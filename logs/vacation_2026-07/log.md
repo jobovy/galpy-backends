@@ -39989,3 +39989,24 @@ per-check-name. Map the check's `link` to its run id and inspect
 `gh run view <id> --json status,conclusion,attempt` before concluding anything
 needs a restart -- consistent with the existing note that `run_attempt` is the
 only reliable confirmation.
+
+### gh#1277 SOLVED end-to-end
+
+The missing piece was not more analysis -- it was measuring whether the last bad
+decade is physically distinguishable from z=0. It is not: the mpmath reference
+moves only **5.94e-09** between z=0 and z=1e-10, and ~1e-11 by z=1e-12. So
+snapping |z| < 1e-9 to the z=0 branch is legitimate, with a bounded ~6e-9 error,
+~3 orders below the 1.9e-05 defect.
+
+Final scheme = reparameterise in d (kills the representability cap) + symmetrise
+about d=0 (kills the odd B/d term, so no Sigma' needed) + `d = z*sinh(t)` for the
+finite-|z| peak + snap below 1e-9.
+
+    |z|        0      1e-12    1e-10    1e-08    1e-06    1e-04    1e-02
+    shipped  9.9e-06  1.0e-05  3.3e-06  1.9e-05  1.2e-05  3.9e-09  2.7e-14
+    new      1.9e-10  1.3e-10  5.7e-09  5.5e-08  1.2e-09  6.1e-12  1.8e-15
+
+**Better everywhere, worst case 5.5e-08 vs 1.9e-05.** No regression at any row.
+
+NOT opened as a PR: five are already queued and the pool is saturated, so it
+waits for that batch rather than adding ~150 checks. Posted to the issue in full.
