@@ -38678,3 +38678,47 @@ Also this wake:
 * **egate jax AFTER: 22 passed, 0 failed** (919.7 s); torch AFTER now running.
 * Wrote [[read-status-file-before-reconstructing]] after discovering STATUS.md
   had already recorded the two-sided A/B I spent a wake re-deriving.
+
+### 2026-08-10 — codecov reds are phantoms; and I walked into a documented trap twice in one wake
+
+**Both PRs' codecov reds confirmed phantom by session count, not assumed:**
+
+    gh#1285  base 26 sessions / 86.05 %   head 1 session  / 15.51 %   patch 17.64 %
+    gh#1286  base 24 sessions / 86.05 %   head 2 sessions / 40.54 %
+
+Same `lines` on both sides of gh#1286 (48421, zero source change). These heal as
+uploads land.
+
+**The Windows `streamgapdf_sample` flake has now hit gh#1285 as well** — third
+occurrence, across two PRs. Both parent runs are still `queued` with sibling
+jobs, so a job-level re-run would exit silently; that has to wait for the runs to
+finish.
+
+**Then I repeated a mistake this log already records.** I tried to reproduce the
+flake locally with a single hand-picked nodeid and got
+
+    AttributeError: 'NoneType' object has no attribute 'sample'
+
+which is exactly the invalid-invocation signature from
+[[handpicked-nodeid-batch-is-not-a-context]] — the module-level fixture never
+ran, so `sdf_sanders15` is `None`. I have hit this before **on this same test**.
+Worse, my "fix" was `-k streamgapdf`, and re-reading that memory shows it says in
+so many words that a `-k` subset has the same problem; only the whole file
+matches CI. So I killed the run rather than bank an invalid data point.
+
+Sharpened the memory's description to lead with the **symptom** rather than the
+concept, since the concept-level wording did not trigger recall when I was
+staring at the exception.
+
+**And the decision that matters: I am not chasing a local repro at all.** The
+flake is already established two independent ways from CI evidence (same-SHA
+split; failure on a ledger-only PR). A Linux run cannot inform a Windows-observed
+flake, and the only faithful context is the full `test_quantity.py` +
+`test_coords.py` shard. The action is a targeted re-run once the parent runs
+complete — nothing else.
+
+Also hit the `pkill -f` self-match trap again (the pattern matched my own bash
+wrapper, killing the command chain). Verified the process state with
+`ps -eo pid,comm | awk '$2=="python"'` instead, which cannot match a shell.
+
+egate torch AFTER still running.
