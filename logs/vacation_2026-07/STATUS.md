@@ -94,15 +94,26 @@ Both arms of `test_potential.py -k surfdens` under eager torch completed:
     scipy (today)   19 passed, 0 failed   1110.5 s
     GL forced       18 passed, 1 failed     39.3 s
 
-The one failure is `AnyAxisym`, the deliberate array opt-out. The guard at
-`Potential.py:88-95` is a **general facility** — every potential either sets
-`_backend_accepts_arrays` or raises — and it fires **loudly through composition
-and wrapping** (verified on bare / `Composite([Any, MN])` / `RotateAndTilt(Any)`;
-none silently wrong). So array-safety *is* decidable; what is not decidable is
-the composite's top-level type, which is all `_quad_needs_backend`'s docstring
-actually establishes. A safe eager route is try-GL / fall back on that declared
-`TypeError`. **Timings above are contaminated** (the control shared the box with
-an 8-worker gate) — counts decide the design, a speed claim needs a quiet box.
+The one failure is `AnyAxisym`, the deliberate array opt-out, and the guard does
+fire **loudly** through composition and wrapping (never silently wrong).
+
+**But the design I proposed on the back of that is refuted.** I claimed
+array-safety "is decidable" via `_backend_accepts_arrays`. Measured 2026-08-10,
+that flag is wrong in *both* directions:
+
+    MiyamotoNagai        declares False  -- but works fine with arrays
+    RotateAndTilt(Any)   declares TRUE   -- while WRAPPING a scalar-only potential
+
+which is exactly `_quad_needs_backend`'s documented point. The failure is also
+not a clean pre-flight rejection — the `TypeError` arrives *after* an integrand
+call, and one path raises `AttributeError` instead. So try-GL/fall-back needs a
+broad catch around a numerical routine, which can mask real defects.
+
+**Do not build the eager-GL routing PR on that design.** It needs a different
+mechanism (an explicit, verified per-potential opt-in, or a cheap array probe).
+Nothing here touches the accuracy case for the order raise, which stands on the
+mpmath table and the traced gate. **Timings above are contaminated** anyway (the
+control shared the box with an 8-worker gate).
 
 ## Where the ledger actually stands
 

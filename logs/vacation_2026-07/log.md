@@ -38912,3 +38912,39 @@ both open and runner-starved a third PR adds queue without adding progress.
 
 CI: gh#1286 54 green, gh#1285 22 — both still only the Windows flake plus
 self-healing codecov.
+
+### 2026-08-10 — de-risked the eager-GL design and it FAILED the check
+
+Before building the eager-GL routing PR I probed its central assumption. It does
+not hold, and I would have built the PR on it.
+
+I had concluded: "the `_backend_accepts_arrays` guard is a general facility, so
+array-safety **is** decidable; eager can try-GL and fall back on the declared
+`TypeError`." Measured:
+
+    MiyamotoNagai        declares False  -- but works fine with arrays
+    AnyAxisym            declares False  -- correctly opts out
+    Composite(Any, MN)   declares False  -- components [False, False]
+    RotateAndTilt(Any)   declares TRUE   -- while WRAPPING a scalar-only potential
+
+Unreliable in **both** directions. A wrapper forwards through its own
+undecorated `_Rforce` and so *looks* array-safe — which is precisely what
+`_quad_needs_backend`'s docstring says, and which I had dismissed as applying
+only to the composite's top-level type. **The docstring was right; I was wrong.**
+
+Second problem: the rejection is not pre-flight. The `TypeError` arrives **after
+one integrand call**, and reaching `symmetric_quad` directly on a bare AnyAxisym
+raises `AttributeError` instead. So a try/except route needs a broad catch
+around a numerical routine — the kind that masks real defects.
+
+Corrected both [[traced-surfdens-gl-order-too-low]] and STATUS.md, which
+recorded the wrong conclusion as settled. The eager-GL PR now needs a different
+mechanism (verified per-potential opt-in, or a cheap array probe) and should not
+be built on "catch the declared TypeError".
+
+**None of this touches the order raise**, whose case rests on the mpmath table
+and the traced gate. `backend-jit/gl-order-100` stays push-ready.
+
+Also: the Windows flake re-run is still refused — `job cannot be rerun` while
+the parent run has 3 jobs in flight (18 completed, 0 queued, 3 in_progress). An
+explicit refusal this time rather than a silent no-op.
