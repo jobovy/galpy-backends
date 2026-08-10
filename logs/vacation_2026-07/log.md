@@ -38532,3 +38532,32 @@ runner's cwd is the worktree before trusting it.
 
 Not amending the commit until that finishes: the script references `HEAD~1`, and
 moving HEAD would change what "before" means mid-run.
+
+### 2026-08-10 — gh#1286 codecov red is the phantom; new test survives forced backends
+
+**gh#1286's `codecov/project` FAILURE is the upload phantom**, confirmed by the
+session counts rather than assumed from the PR being ledger-only:
+
+    base (de0bee8e)  24 sessions  86.05 %  lines 48421  misses  6752
+    head (6e56330f)   2 sessions  40.54 %  lines 48421  misses 28787
+
+Identical `lines` on both sides -- zero source change, as a ledger PR should
+have -- and the 40.54 % is simply 2 of ~24 uploads landed. Self-heals; no action.
+(Worth noting the base here reads 86.05 % where gh#1285's base read 99.95 %:
+different base commits sit at different upload completeness, which is exactly
+the artifact I nearly mis-read as a coverage drop earlier
+[[codecov-session-count-discriminates-phantom]].)
+
+Ran the new quadrature test under forced `--backend jax` and `--backend torch`:
+both pass. Its file carries `pytestmark = pytest.mark.backend_managed`, so it
+does run on the backend shards, and a test that only works on numpy would have
+turned into a shard red rather than a local one
+([[forced-backend-gate-before-push]]).
+
+`TODO_before_push.md` updated to separate what is done (traced gate, the
+discriminating test and its A/B, whole-file green, forced-backend green) from
+what is not (the eager arm, now running; the commit-message amendment; the
+push itself). The amendment is explicitly blocked until `egate.sh` exits, since
+it resolves `HEAD~1` and moving HEAD mid-run would change what "before" means.
+
+gh#1285 still has zero of 149 checks started.
