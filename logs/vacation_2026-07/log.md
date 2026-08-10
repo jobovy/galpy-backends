@@ -40253,3 +40253,39 @@ Would have overstated this ~16x by quoting the raw totals.
 potential is a separate PR, and Jo's plan is finish-then-rebase. Recorded as a
 sized, concrete follow-up rather than a vague worry. The gold-value test I added
 already covers the AnyAxisym row.
+
+### The "vectorise SCF/Multipole eval" roadmap item is MIS-AIMED
+
+STATUS.md has listed "vectorisation of SCF/Multipole/wrapper eval, where the
+1440-2641 s entries live" as the only live lever on the jax ledger. Checked it
+before the rebase, and it is aimed at the wrong thing.
+
+**1. SCF's backend eval is ALREADY vectorised.** `_evaluate_expansion`'s backend
+branch says so explicitly: "flatten the broadcast coords to 1-D and evaluate ALL
+points in one batched `_compute_at_point` call (no per-point Python loop, so no
+O(P) unrolled XLA graph / per-call retrace)". Only the numpy branch still uses
+`numpy.ndindex`, and that is byte-identity-constrained anyway.
+
+**2. The slow tests are not multi-point evaluations.** `test_Cautun20` and
+`test_DehnenBinney98` build `mwpotentials` models (DehnenBinney98 builds FOUR)
+and call `vcirc` at single radii. Measured, DiskSCF(N=10,L=10):
+
+           construct        20x vcirc
+    numpy    0.269 s          0.030 s
+    jax      7.309 s          5.348 s
+    ratio      27x             178x
+
+**0.267 s per scalar `vcirc` call.** Vectorisation across points cannot help a
+sequence of separate SCALAR calls -- the batching never engages. So the real
+lever for these entries is **per-call overhead**, which is already tracked as
+task #79 ("eager-backend per-call overhead is ~5 ms FLAT, 186x on a scalar
+call"), plus a 27x construction cost that no eval change touches at all.
+
+**Harness flaw in my own measurement, stated so it is not reused:** the
+`import mwpotentials` row (numpy 52.3 s vs jax 0.000 s) is meaningless -- the
+module was already imported and cached by the numpy pass, so the jax arm timed
+nothing. Only the explicit construct/eval split above is valid.
+
+Action: retarget the post-rebase roadmap from "vectorise SCF eval" to
+"per-call overhead + construction cost", and stop citing vectorisation as the
+remedy for the 1440-2641 s entries.
