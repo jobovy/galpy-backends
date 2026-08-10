@@ -38985,3 +38985,44 @@ not this hand-picked dozen.
 Net from two wakes of de-risking: one design refuted before it was built, one
 replacement identified and given supporting evidence. No code written on a bad
 premise.
+
+### 2026-08-10 — full-registry probe sweep: 0 silently wrong (and my metric cried wolf 4 times)
+
+Closed the "12 potentials is a sample, not a proof" gap by probing **every
+constructible potential** in `galpy.potential`:
+
+    constructible potentials probed: 46   (unconstructible skipped: 8)
+      accepts array + matches elementwise : 39
+      raises (conservative, keeps scipy)  :  1
+      no usable _dens                     :  6
+      SILENTLY WRONG                      :  0
+
+The first pass reported **4 silently wrong** — `CompositePotential`,
+`KeplerPotential`, `NullPotential`, `SphericalShellPotential`. All four were
+artifacts of my own comparison, and I checked instead of reporting:
+
+* `Kepler` / `SphericalShell` return the correct `[0., 0., 0.]`; their density is
+  zero away from the origin/shell, so my **relative** error was 0/0 -> `nan`,
+  which my threshold read as a failure.
+* empty `CompositePotential()` and `NullPotential` return a **0-d** `array(0.)`
+  rather than shape (3,) — the value is right and broadcasts equal.
+
+Same failure class as the earlier near-misses: a *proxy* metric (relative error)
+that breaks exactly where the quantity is zero. Verified by comparing values
+directly with `array_equal(..., equal_nan=True)` after broadcasting.
+
+Two things this hands the future eager-GL PR:
+
+1. The probe design is now backed by a **full-registry** sweep, not a sample —
+   0 silent-wrongness in 46 potentials.
+2. A concrete requirement: the probe must **accept a 0-d return as valid** (an
+   identically-zero density legitimately returns a scalar) rather than demanding
+   an exact shape match. Demanding shape equality would have mis-classified
+   `NullPotential` and the empty composite as unsafe.
+
+Residual caveat, unchanged: the probe evaluates at one (R, z). A potential could
+in principle be array-safe there and not elsewhere.
+
+**Also: the gh#1286 Windows flake re-run is away** — `run_attempt` advanced 1 ->
+2 on run 31384148947, confirmed rather than assumed. gh#1285's Windows run is
+still in flight, so its re-run waits.
