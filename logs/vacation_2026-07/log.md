@@ -38337,3 +38337,48 @@ the box with that 8-worker gate, so its *timing* is contaminated
 ([[long-measurement-needs-a-quiet-box]]). Only its pass/fail counts will be
 usable; the ~13x speed impression needs a clean re-measure before it appears in
 any PR body.
+
+### 2026-08-10 (cont.) — gh#1285 pre-merge audit; gh#1286 description drift caught
+
+Both PRs are runner-bound (149 checks queued each, nothing started), so this
+wake was audit and hygiene.
+
+**gh#1285 audited on Jo's three dimensions, posted to the PR** so the reasoning
+is on the record rather than only in this log:
+
+1. *Branch-on-coordinate-data.* Clean. Every new `if` keys off the namespace
+   (`xp is numpy`), off construction-time config (`_norot`, `_offset`, `_rot`),
+   or off **tracedness** (`_quad_needs_backend` asks `under_trace`, explicitly
+   not a concreteness probe). The single place data can appear --
+   `c = _vertical_quad_split(...)` -- is guarded by `isinstance(c, float)`, so a
+   tracer short-circuits to the `xp.where`.
+2. *Helper placement.* Clean. The two new hooks sit on the base `Potential`, the
+   override in `RotateAndTiltWrapperPotential`, the summations in
+   `CompositePotential`. No new quadrature helper -- the existing
+   `galpy.backend.quadrature` entry points are reused.
+3. *Duplication.* One instance, kept deliberately. `CompositePotential._surfdens`
+   and `._surfdens_poisson` share a four-line shape but differ load-bearingly:
+   the first delegates to the **public** `pot.surfdens(...)` so each component
+   picks its own route and its `_amp` is applied; the second delegates to the
+   **private** `pot._surfdens_poisson(...)` to force that route, and must not
+   apply `_amp` (it derives from forces, which already include it). Factoring
+   them through a callable would hide exactly that distinction.
+
+   Verified the bookkeeping empirically rather than by reading: composite `_amp`
+   is 1.0, `composite.surfdens` matches the component sum to 3.09e-16, and the
+   Poisson route matches **exactly**.
+
+Chose not to push a clarifying comment for the asymmetry: it would re-queue ~150
+checks on a starved account for no behavioural change. Recorded in the PR thread
+instead.
+
+**gh#1286's title and body had drifted.** They claimed `108 -> 84`; the real
+counts are now `109 -> 85`, because develop moved twice underneath (gh#1284,
+then gh#1288 re-adding the torch FDM line). The **-24 delta is unchanged** and
+is the actual claim, but the absolute numbers were wrong, and a stale
+description is worse than none ([[pr-description-drifts-after-rework]]). Title
+and body corrected; metadata edits do not restart CI.
+
+Still running: the traced GL gate (AFTER side ~67%) and the eager-GL scipy
+control (61/64 after 670 s -- the GL arm did all 64 in 39 s, but these two are
+sharing the box, so the ratio stays unusable until a clean re-measure).
