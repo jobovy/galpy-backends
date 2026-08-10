@@ -38820,3 +38820,38 @@ that worktree (torch BEFORE). Queued in `TODO_before_push.md`.
 
 `surfdens(z=None)` is a documented, supported spelling ("a STRUCTURAL request"),
 so this is a genuine coverage hole, not an internal edge.
+
+### 2026-08-10 — premise check: the whole-line test is COVERAGE, not a gate (and a 33x scare that was my own bug)
+
+Before writing the whole-line test I queued last wake, checked whether it would
+actually discriminate the order change. **It would not.** Backend-vs-numpy parity
+on `surfdens(R, z=None)` measured at the CURRENT default (n=50):
+
+    MiyamotoNagai  6.73e-13     Hernquist  5.65e-16
+    NFW            1.27e-15     MWP14[0]   2.92e-11
+
+All far inside any sane tolerance, so a parity test passes at n=50 **and** at
+n=100. So last wake's "the PR must carry its own test for the whole-line branch"
+was overstated: it is worthwhile **coverage** for a documented public spelling
+that the suite never exercises, but it is not a gate for the order raise. The
+order raise's real gate stays what it was — the traced 0-flip run, the
+discriminating unit test that fails at n=50, and the mpmath table.
+
+**And a scare I nearly reported as a finding.** `MWP14[0]`'s whole-line surfdens
+reads `7.316e-14`, which is below scipy's default `epsabs`, so I suspected a
+third gh#1289 instance. Integrating `_dens` with mpmath gave `2.439e-12` — a
+factor **33** off. That looked like a serious defect for about a minute. It was
+my own omission: `surfdens` returns `self._amp * integral`, and I had integrated
+`_dens` without the amp. 2.439e-12 x amp = 7.316e-14. No defect.
+
+What is left after correcting for that is real but mild: scipy's default-tolerance
+whole-line integral is off by **2.9e-11** where `epsabs=0` gives 5e-16 — the same
+mechanism as gh#1289 at low amplitude, and it explains the 2.92e-11 GL-vs-numpy
+gap above as **scipy** being the outlier, not GL. Not filing it: one mild
+instance adds nothing to an issue that already documents the mechanism with a
+9.55e-6 case.
+
+Two near-misses in two wakes from the same root — comparing a quantity against a
+reference computed at a *different* level of the API (`_dens` vs `surfdens`,
+node array vs grid array). Worth remembering that the reference has to be built
+at exactly the level the code under test returns.
