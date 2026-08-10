@@ -70,10 +70,28 @@ built for *integrable* singularities, and its finite answer is an extrapolation
 artifact — accurate to ~1e-5, better at large R where the singularity is
 relatively weaker. That is exactly the observed R-dependence.
 
-**A correct fix subtracts the `1/(a-R)^2` and `1/(a-R)` parts analytically.** A
-numerical dodge does not exist: because both sides are positive, the divergence
-must be *removed*, not paired away. Left undone deliberately — real analysis, and
-the issue itself marks it low priority.
+**Both singular coefficients are now derived and verified**: `C = Sigma(R)/2`
+(to 1e-8) and `B = [2R Sigma'(R) - Sigma(R)]/(4R)` (to ~1e-5). Symmetrising about
+`a=R` cancels the odd `B/d` term, so **no `Sigma'` is needed** — only C.
+
+**Root cause of the small-|z| band is representability, not quadrature.** The
+integrand recomputes `d = a-R`; at R=0.2 the float64 spacing is 2.78e-17, so an
+offset of 1e-10 carries 8.3e-8 relative error, amplified by `1/(d^2+z^2)^2`. Any
+scheme placing nodes at `R +- eps` with `eps << R` is capped by this — which is
+why graded `points` (3.4e+08 at z=1e-10) and a tan-substitution (1.7e+08) both
+EXPLODE below |z| ~ 1e-6 while helping above it.
+
+**Prototype** (d-parameterised + symmetrised + `d = z*sinh(t)`), measured:
+
+    |z|        0      1e-12    1e-10    1e-08    1e-06    1e-04
+    shipped  9.9e-06  1.0e-05  3.3e-06  1.9e-05  1.2e-05  3.9e-09
+    proto    1.9e-10  5.9e-04  2.3e-06  5.5e-08  1.2e-09  6.1e-12
+
+A large win at z=0 and |z| >= 1e-8; a **regression below ~1e-11**, which I could
+not explain — the analytic `2C/(u^2+z^2)` model subtraction, added specifically
+to handle the ~C*pi/z peak mass, did NOT help. Hypothesis unconfirmed; stopped
+there rather than iterating on guesses. Nothing shipped; all four results are on
+the issue.
 
 ## Where the ledger stands
 
@@ -106,7 +124,8 @@ AndTilted cluster is not reachable by routing.
 
 * **numpy byte-identity**: every deviation is flagged, never quietly shipped.
   gh#1293 and gh#1295 move numpy values *deliberately* (both are accuracy fixes
-  on `main`); gh#1294's 1–2 ULP is the open question above.
+  on `main`); gh#1294's 1–2 ULP was flagged and **accepted**. Flag always; block
+  only on qualitative changes.
 * Traced green is asserted by me, not enforced by CI — the `--jit` CI dimension
   still needs `workflow` scope, which my token lacks.
 * `actionAngleVerticalInverse` and `actionAngleTorus` are permanently out of scope.
