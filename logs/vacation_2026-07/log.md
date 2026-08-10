@@ -37698,3 +37698,29 @@ Codecov on the same PR continues to heal on schedule: head **1 -> 4 -> 16**
 sessions (40.18 % -> 64.05 % -> 82.98 %) against base 26 / 86.05 %, patch still
 0 lines. It will clear or it will not, and either way the number to watch is the
 session count, not the percentage.
+
+### 2026-08-09 — correcting my own codecov reading: the base was not "plateaued"
+
+Earlier I noted gh#1286's base sitting at 86.05 % across 22 -> 26 sessions and
+described it as having plateaued below the usual 99.95 %. That reading was
+wrong, and gh#1285 shows why:
+
+    gh#1285  base = 9dc31569   sessions=27   coverage=99.95   (complete)
+    gh#1286  base = 277bf897   sessions=26   coverage=86.05   (still filling)
+
+**The two PRs have different base commits.** gh#1285 branched from `9dc31569`,
+which has had hours to finish uploading; gh#1286 branched from `277bf897`, the
+post-gh#1284 develop head whose own CI is still running. So 86.05 % is not a
+plateau, it is a base mid-upload — and 99.95 % is the target it will reach.
+
+Worth having the rule explicit, because I nearly drew a real conclusion ("base
+coverage dropped") from an artifact: **when comparing codecov numbers between
+two PRs, check they share a base commit first.** They usually do not, and the
+base side is as upload-sensitive as the head side.
+
+gh#1285's own patch number is still `17.64 % (51 lines, 42 misses)` at **1 of
+27** head sessions — unchanged from before I added the coverage tests, because
+the job that exercises `tests/test_backend*.py` under coverage has not uploaded
+yet. The re-check I owe stays open; the three lines I verified locally as
+executed either register when that shard lands or they do not, and if they do
+not the answer is more tests, not a better explanation.
