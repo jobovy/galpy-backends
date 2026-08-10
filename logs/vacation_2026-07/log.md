@@ -37927,3 +37927,36 @@ Also green now: the same `-k 'energy_jacobi or from_name'` selection across the
 numpy build matrix (3.10-3.14, ubuntu + both macOS runners), including the
 macOS job whose VizieR flake I re-ran. That flake is conclusively gone rather
 than merely absent.
+
+### 2026-08-09 — gh#1285 Windows red: evidence is MIXED, not yet attributable
+
+    FAILED tests/test_quantity.py::test_streamgapdf_sample
+    "streamgapdf sample lb does not return a correct Quantity"
+    assert array([4.38726353e-08]) < 1e-08          (windows-latest, 3.14)
+
+A ~4x tolerance miss on a physical-vs-natural Quantity comparison. Two pieces of
+evidence pointing opposite ways, and I am not going to pick the convenient one:
+
+**For "flake":** the xfail ledger documents this exact test as
+environment-sensitive — *"a local clean-CPU regen had env-specific false
+failures, e.g. `test_streamgapdf_sample`, that CI passes"*. And the mechanism
+fits: a 1e-8 relative comparison on a sampled quantity is exactly what drifts
+with platform float behaviour.
+
+**For "caused by gh#1285":** the same `windows / test_quantity` job is
+**SUCCESS on gh#1286**, which changes no source at all.
+
+**Why that comparison is weaker than it looks:** the two PRs have *different
+bases* (gh#1285 from `9dc31569`, gh#1286 from `277bf897`) and different runner
+instances, so it is not a controlled A/B. And mechanically, gh#1285's source
+changes should not reach this test: `streamgapdf` sampling does not call
+`surfdens`, and the `CompositePotential` overrides fall through to the inherited
+path on numpy by construction. The Windows job is a pure-numpy job.
+
+**Deliberately not concluding yet.** The decisive cheap test is a re-run of that
+job, which is blocked: its run is at 12 completed / 4 in_progress / 5 queued, so
+single-job re-run is unavailable until it finishes. Pickup: when run
+`31342463692` completes, re-run job `93318380961` and check `run_attempt`.
+
+If it passes on re-run, it is the documented env flake. If it fails again, I
+will bisect it properly against the base rather than assume either story.
