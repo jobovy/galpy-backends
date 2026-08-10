@@ -39199,3 +39199,35 @@ AndTilted timing still running (536 s, first test through). Waiting for the
 junitxml per-test durations rather than inferring a conclusion from one dot —
 the whole point of the exercise is a number, and "one test finished around 500 s"
 is not one.
+
+### 2026-08-10 — what `all-clear` is actually waiting on (and why it matters for the roadmap)
+
+Both PRs have been zero-failure for several wakes with `all-clear` pending, so I
+checked what it is gated on rather than assuming a stuck job:
+
+    18  backend torch shards
+    13  backend jax shards
+     7  build jobs
+     1  pre-commit.ci, 1 readthedocs, 1 all-clear itself
+
+Nothing is hung. `all-clear` trails **31 eager-backend shards**, and eager
+backends are simply slow — the same slowness I measured directly this week
+(`test_potential.py -k surfdens` under eager torch: **1110 s** via scipy
+node-by-node, versus **39 s** through the GL rule).
+
+That reframes the eager-GL routing work. I had been treating it as a
+nice-to-have performance item behind the accuracy fix. It is really a **CI
+throughput** item: those 31 shards are the merge latency on every PR I open, and
+the surfdens paths are a measurable part of them. The reason to want it is not
+elegance, it is that the queue I keep waiting on is made of exactly this.
+
+It does **not** change the sequencing — the design still needs a mechanism other
+than the refuted "catch the declared TypeError", and the array-probe replacement
+still needs applying across the registry inside a real PR rather than a probe
+script. But it moves the item up the priority list once the current stack lands.
+
+AndTilted timing still running at 821 s with one test through, so the remaining
+three each exceed that. Consistent with the ledgered ~1750 s and suggesting the
+gh#1285 crossing reduction buys less wall time here than the 145x on the direct
+route might have implied — but that is an impression from one dot, and the
+junitxml numbers are what will decide it.
