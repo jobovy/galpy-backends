@@ -38483,3 +38483,52 @@ FDM timeout gh#1288 fixed, so it is expected there and should not recur.
 
 CI on both PRs is still runner-starved (gh#1285 fully queued, gh#1286 one check
 through). Nothing superseded to cancel; not polling further.
+
+### 2026-08-10 — GL traced gate: 0 flips, +0.2%; and the test I first wrote was toothless
+
+Gate finished and restored cleanly (`staged: []`, `symmetric_quad` back at
+`n=_QUAD_N`, worktree clean):
+
+    AFTER  (n=100)  1278 passed, 102 skipped, 5 xfailed   578.1 s
+    BEFORE (n=50)   1278 passed, 102 skipped, 5 xfailed   562.7 s
+
+Nodeid-level: 1385 shared, **0 outcome flips**, total time **+0.2 %**. Confirmed
+the two xmls are genuinely different runs (distinct md5s; the 93/1385 identical
+durations are just fast tests rounding to the same value).
+
+**But 0 flips only shows no regression, and it confirms the blind spot:** the
+suite cannot tell n=50 from n=100 anywhere. The PR had no test that would fail
+without the fix. So I wrote one --
+`test_symmetric_quad_default_order_resolves_extreme_aspect_ratio` in
+`tests/test_backend_quadrature.py`, on the real `MWPotential2014[0]` integrand at
+R=0.01, |z|=50, with all three arms asserted:
+
+    reference (scipy, epsabs=0, epsrel=1e-13)   134.67284381146072
+    n=200   rel 5.1e-15   <- validates the ARBITER, not the rule
+    default rel 7.3e-12   <- the contract
+    n=50    rel 3.4e-06   <- must FAIL the bar, or the test does not discriminate
+
+`epsabs=0` deliberately: scipy's default absolute tolerance is the gh#1289 trap,
+and the reference must not depend on that not biting here.
+
+**The first version of this test was toothless and I caught it before
+committing.** It asserted `rel(_QUAD_N) < 1e-9` -- passing the order explicitly.
+That pins "order 100 is accurate", which is true regardless of what the default
+is, so it would have sailed through exactly the regression it exists to catch.
+Rewritten to call `symmetric_quad` with **no `n=`** so it asserts on the default.
+
+A/B verified, not assumed:
+
+    default = _QUAD_N  ->  PASSES
+    default = 50       ->  FAILS at the default-order assertion
+
+Whole file: 62 passed, 1 skipped.
+
+Eager arm dispatched (`--backend jax` and `--backend torch`,
+`-k "mass or surfdens or surface"`, before/after) -- required because the
+whole-line `_mass` site is guarded by `if xp is numpy:` rather than
+`_quad_needs_backend`, so eager backends DO reach the rule there. Verified the
+runner's cwd is the worktree before trusting it.
+
+Not amending the commit until that finishes: the script references `HEAD~1`, and
+moving HEAD would change what "before" means mid-run.
