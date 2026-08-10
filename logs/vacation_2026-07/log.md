@@ -38022,3 +38022,33 @@ Practical consequence for right now: with local reproduction impossible
 the re-run of the current job — still blocked, run `31342463692` is `queued`.
 
 gh#1286 meanwhile: **129 passed, 0 failures**, 4 running, 20 queued.
+
+### 2026-08-09 — redid the A/B correctly: both sides pass, flake hypothesis strengthened (not proved)
+
+The earlier attempt was invalid because a hand-picked nodeid left the module
+fixture `None`. The fixture is built by an earlier test in the same file
+(`test_quantity.py:18964`), so `-k streamgapdf` pulls it in. Redone that way,
+same command on both trees:
+
+    torch-orbit-m  9dc31569 (base, no gh#1285)   6 passed   32.6 s
+    rt-split       bcb2172e (with gh#1285)       6 passed   29.4 s
+
+`test_streamgapdf_sample` is among those 6 and **passes on the fix side**.
+
+Where that leaves attribution — four independent things now point at flake:
+
+1. the fix side passes the test locally, with real module context;
+2. Linux CI passes it on **both** PRs;
+3. the xfail ledger already documents this exact test as env-sensitive
+   ("false failures ... that CI passes");
+4. mechanically, `streamgapdf` sampling never calls `surfdens`, and the
+   `CompositePotential` overrides fall through to the inherited path on numpy.
+
+**Still not proved, and I am not going to write that it is.** Every one of those
+four is a Linux or code-reading argument, and the failure is *Windows-only* —
+a 1e-8 comparison on a seeded sample is exactly where platform float behaviour
+diverges. Confidence is high; the discriminator remains the Windows re-run,
+which is still blocked (run `31342463692` now `in_progress`).
+
+What changed this wake is the quality of the evidence, not the conclusion: I
+replaced a broken A/B with a valid one and got a real answer from it.
