@@ -38224,3 +38224,60 @@ Queue after these three land: `backend-jit/torchjit-poisson-undefer` @
 `c4acbf96` (prepared, merges clean, must follow gh#1285), then the GL-order PR
 (n=50 -> 100 at `Potential.py` 832/918 + route eager through it, own named
 constant), gated on a traced before/after.
+
+### 2026-08-10 — the eager-GL question, and a pre-existing numpy quadrature bug (gh#1289)
+
+Two of my own queued plans were wrong, in opposite directions, and measuring
+settled both.
+
+**1. "Route eager through the GL rule" — I first had it as one PR with the order
+raise, then dropped it entirely after reading `_quad_needs_backend`'s docstring
+("scipy ... calls the integrand node-by-node so scalar-only potentials keep
+working"; array-safety "NOT decidable"). Both readings were wrong.**
+
+Forcing the GL route on eager torch over `test_potential.py -k surfdens`:
+**39 s, 18 passed, 1 failed**. The one failure is `AnyAxisymmetricRazorThinDisk`,
+which deliberately does not opt in. The decisive part is that the guard at
+`Potential.py:88-95` is a **general facility** — every potential either sets
+`_backend_accepts_arrays` or raises `TypeError: Methods in X do not accept array
+inputs` — and I verified it fires **loudly through composition and wrapping**
+(bare / `Composite([Any, MN])` / `RotateAndTilt(Any)` all raise; none silently
+wrong). So array-safety *is* decidable; what is undecidable is only the
+composite's *top-level type*, which is all the docstring actually establishes.
+A safe eager route is try-GL/fall-back-on-that-TypeError. Separate PR, gated on
+the full eager suite.
+
+The scipy control was SIGTERM'd at 508 s with no summary line, so `control >
+508 s` is a lower bound and its counts are unknown — relaunched detached. Noting
+it because the harness-backgrounded run was killed while the `nohup`'d one
+survived, and because a killed run yields ZERO junitxml.
+
+**2. A GL-vs-scipy table said `MWP14[0]` at (R=1,|z|=5) had 9.55e-06 error at
+n=50 AND at n=100 — identical.** An error that does not move with order means
+the rule has converged and the *reference* is the outlier. mpmath at 30 dps:
+
+    mpmath                8.21245101525039e-09
+    scipy quad (default)  rel 9.549e-06     <-- galpy's actual call
+    scipy quad (tight)    rel 1.209e-15
+    GL n=50               rel 1.225e-13
+    GL n=100              rel 0.000e+00
+
+`scipy.integrate.quad` defaults to `epsabs=1.49e-8`, which is **larger than this
+integral's value (8.2e-09)**, so the absolute test passes on the first crude
+estimate and quad returns success. Scanned: every |z| >= 5 for that potential is
+wrong by 9.55e-06, while MiyamotoNagai and NFW (integrals ~5e-2) are at 1e-15.
+The trigger is the integral's magnitude, not the potential or the geometry,
+which is why no test catches it.
+
+Filed as **gh#1289** — pre-existing, on the plain numpy path, so it is Jo's call
+(numpy values are contractually byte-identical here). Same handling as gh#1276 /
+gh#1277.
+
+It also independently justifies the order raise: at |z|=20 GL n=50 degrades to
+1.38e-08 where n=100 holds 2.01e-16.
+
+**PRs:** gh#1285 re-running on `1f791a90` (patch-coverage test added; Windows red
+already shown to be a flake). gh#1286 green but for the inherited FDM red.
+gh#1288 (the re-defer) at 22 green, only the codecov upload phantom outstanding;
+its ledger line verified functionally — the test now reports `s` in 8.5 s
+instead of running past 658 s.
