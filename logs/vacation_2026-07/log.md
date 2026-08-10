@@ -37882,3 +37882,23 @@ outstanding even at 115 green.
 
 Worth noting the flake and the decisive shard are the same selection
 (`... or from_name`), so this re-run may deliver both at once.
+
+### 2026-08-09 — gh#1286 is red-free: 117 passed, 0 failures
+
+The VizieR re-run cleared the macOS job and gh#1286's rollup now reads
+
+    117 SUCCESS · 10 in_progress · 26 queued · **0 FAILURE**
+
+Both of its reds are resolved and neither needed a code change: the
+`codecov/project` one healed as uploads landed (1 -> 22 sessions), and the
+macOS one was an external-service flake that a targeted re-run fixed. Two reds,
+zero fixes, which is the correct outcome when both diagnoses were "not the PR".
+
+**Still not merge-ready, and the reason is the one I have been tracking:** the
+two shards that actually exercise the 24 un-deferred entries are in the
+remaining 36. 117 green checks still include none of the tests this PR changes.
+Merging on "0 failures" here would be merging on a number that does not measure
+the change.
+
+gh#1285 is climbing steadily — 46 green, 28 running, only its two early-upload
+codecov entries red at 1 of 27 head sessions.
