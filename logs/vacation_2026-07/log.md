@@ -37960,3 +37960,39 @@ single-job re-run is unavailable until it finishes. Pickup: when run
 
 If it passes on re-run, it is the documented env flake. If it fails again, I
 will bisect it properly against the base rather than assume either story.
+
+### 2026-08-09 — my local A/B of the Windows red was INVALID; saying so instead of using it
+
+Tried to settle attribution locally, with a properly controlled pair this time:
+same base `9dc31569`, one tree carrying gh#1285 and one not, identical command.
+
+    rt-split      (gh#1285)   FAILED  AttributeError
+    torch-orbit-m (base)      FAILED  AttributeError
+
+Symmetric result — and **worthless**, for two reasons I would rather state than
+quietly lean on:
+
+1. **Wrong failure mode.** CI failed on a *tolerance* assertion
+   (`4.39e-08 < 1e-08`). Locally both sides die with
+   `AttributeError: 'NoneType' object has no attribute 'sample'`. A bad side
+   that does not reproduce the symptom cannot clear or convict anything
+   ([[ab-must-reproduce-before-it-can-clear]]).
+2. **Invalid invocation.** That AttributeError is the hand-picked-nodeid trap:
+   `test_streamgapdf_sample` depends on module-level setup in
+   `test_quantity.py`, so running it alone leaves the fixture `None`. The test
+   never really ran on either side.
+
+Two independent reasons the "both fail identically, therefore pre-existing"
+reading is unavailable. It is exactly the shape of evidence that would have
+been convenient.
+
+**And a third point that settles the approach:** the CI failure is
+**Windows-only** — Linux CI passes this test on both PRs. I have no Windows, so
+a local Linux reproduction was never going to show it even done correctly.
+Running the whole 19k-line `test_quantity.py` serially here would burn
+significant time to answer a question the platform makes unanswerable.
+
+So the CI re-run remains the decisive test, and it is still blocked (run
+`31342463692` is `queued` with jobs outstanding). Position unchanged and
+honestly held: **attribution unknown**, leaning flake on the ledger's own
+documentation of this test, but not asserted.
