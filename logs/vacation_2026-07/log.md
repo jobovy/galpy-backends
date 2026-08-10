@@ -38093,3 +38093,39 @@ Unchanged otherwise: gh#1285 102 passed with the Windows red still
 unattributed (its run `in_progress`, so the re-run remains blocked); gh#1286
 132 passed / 0 failures with the noninertial shard — its last real gate — still
 running.
+
+### 2026-08-09 — gh#1286 red is inherited from gh#1284, which I merged
+
+    tests/test_FDMdynamfric.py::test_FDMDynamicalFrictionForce_central_limit FAILED
+    Failed: Timeout (>300.0s) from pytest-timeout
+    Backend torch: 19 passed, 1 deferred, 1 FAILED (NOT in ledger)
+
+**Not caused by gh#1286.** That PR removes 24 ledger lines, all `jax`-mode; this
+is a **torch** shard. The entry involved,
+`torch tests/test_FDMdynamfric.py::test_FDMDynamicalFrictionForce_central_limit`,
+was **un-deferred by gh#1284** — which I audited and merged earlier tonight.
+
+So the honest description: **I merged an un-defer that does not hold under
+load.** gh#1284's own CI ran that test green (154/154), which is exactly the
+signature of a marginal-duration entry — it passes in a fast run and times out
+when the runner is busy, and a signal-based timeout records it as `FAILED`
+rather than as slow.
+
+Two things I got wrong and one I got right:
+
+* **Wrong:** I treated gh#1284's green as sufficient evidence for its
+  un-defers. For *timeout*-class entries a single green run is weak evidence;
+  the whole point of the duration-based classification I have been careful
+  about elsewhere is that these entries live near the cap.
+* **Wrong:** my own PR-body warning for gh#1286 named the two entries to
+  re-defer first if a shard went long — I applied that reasoning to *my* PR's
+  entries and not to the one I had just merged.
+* **Right:** the ledger census in the shard output makes the attribution
+  immediate — "1 FAILED (NOT in ledger)" plus the test name is enough to trace
+  it to gh#1284 without guessing.
+
+Next: this needs a re-defer of that single torch entry, in its own small PR
+(gh#1286 must not grow a torch change it has no business making). Before that,
+one re-run to confirm it is load-marginal rather than consistently over — if it
+passes on re-run, the entry is genuinely borderline and the re-defer should say
+so with both numbers.
