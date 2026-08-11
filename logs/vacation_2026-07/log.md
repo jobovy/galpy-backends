@@ -40325,3 +40325,1136 @@ Honest options, for Jo:
 3. reduce per-dispatch cost generally (task #79) -- helps everything, hardest.
 
 Recorded rather than acted on: option 2 crosses a standing directive.
+
+---
+
+## 2026-08-10 ~20:00Z — STATUS.md was stale on gh#1277; corrected
+
+CI check across the five PRs (19:54Z): gh#1291 99 checks (97 queued), gh#1292 99
+(97 queued), gh#1293 130 (23 SUCCESS / 11 IN_PROGRESS / 96 queued), gh#1294 77,
+gh#1295 77. Pool 47 queued / 5 in_progress. **Zero reds anywhere.** Nothing to
+drive, nothing merge-ready — so, local work.
+
+**The find this wake was in my own notes, not the code.** STATUS.md still listed
+gh#1277 as "**DIAGNOSED, NOT FIXED**" in the main-side items table. It is fixed.
+`fix/anyaxisym-r2deriv-finite-part` has 4 commits on `main` `b68c3ec9`, green at
+1328 passed / 0 failed, 2 files (+153/-39), no conflict markers, and is
+**local-only — `git ls-remote --heads origin` returns 0 rows.**
+
+That is the worst combination a stale snapshot can describe: a future wake reading
+the row would either redo an investigation that is already finished, or never learn
+that finished work is sitting unpushed on a branch nobody else can see. Corrected
+STATUS.md: the pipeline table now carries the branch as a row, the item is marked
+FIXED with the measured before/after (R2deriv 9.90e-06 -> 4.29e-10, z2deriv
+5.06e-07 -> 2.97e-11, better at *every* |z|), and the old "regression below ~1e-11
+which I could not explain" paragraph now records how it was resolved — it is below
+the float64 representability floor for `d = a - R`, so no quadrature recovers it;
+the fix snaps |z| < `_R2DERIV_ZFLOOR` = 1e-9 to the exact z=0 branch.
+
+**Deliberately NOT pushing it yet.** Jo's rule is "restart as the queue drains,
+don't leave runners idle" — but the queue is at 47, so it is not draining, and a
+sixth PR adds 77-150 checks to a backlog rather than filling an idle runner. Push
+the moment capacity frees; it is now item **0** in "queued next", ahead of the
+rebase, because it is the most losable thing in the plan.
+
+Also folded the gegenbauer root-cause into STATUS.md as its own section (it was
+only in this log), restated as a decision for Jo rather than a task for me:
+option 2 (let eager jax use the rolled `lax.scan` recurrence) crosses the standing
+"no internal jit" directive, so it waits for sign-off. Task #79 updated with the
+profile numbers; task #211 (interpRZ vectorisation) closed — that shipped as
+gh#1294.
+
+**Same wake, Jo replied on the SCF item:** shelf it until after the rebase — it is
+a future PR and we are driving to a stopping point. Also corrected my framing:
+option 1 is off the table ("it should be either 2 or 3"), and **option 2 is not
+blocked** — *"there is nothing really wrong with 2, it's not internal jit"* — I had
+wrongly filed rolling a recurrence as internal jit. The real constraint is
+*"ideally we would remain more backend agnostic"*, which points at doing 3's
+mechanism at 2's scale: one array op over all L orders, helping numpy and torch
+too, instead of un-gating a jax-only `lax.scan`. Written into STATUS.md as a
+decided direction, not an open question, so post-rebase me does not re-litigate it.
+
+**20:00Z — gh#1293 went red on `codecov/project`. Phantom, confirmed, no action.**
+Discriminated by session count rather than assumed (the standing recipe):
+
+    side   sessions  coverage  lines   hits
+    base      6       75.09    39188   29429
+    head      5       57.34    39188   22471   -> -17.75 pp
+
+**Identical total lines with 6,958 fewer hits is a missing upload, not a code
+effect** — and a 15-line diff cannot move project coverage 17.75 pp. Patch/diff
+coverage is `100`. 87 checks were still queued on the PR, so coverage-uploading
+shards are outstanding. Expect it to self-heal as they land; **then re-run
+all-clear**, which does not retry on its own. Not touching anything.
+
+## 2026-08-10 ~20:02Z — stopping-point audit: nothing orphaned
+
+CI unchanged from the previous check (gh#1293 29 SUCCESS / 14 IN_PROGRESS /
+87 queued + the known codecov phantom; the other four still pinned behind it;
+pool 45 queued / 6 running). So: audit rather than idle. Two things I had been
+*assuming* rather than checking, both now settled.
+
+**1. "The four issues" is exactly four, and all four are covered.** Confirmed
+against the API, not memory:
+
+    #1289 surfdens epsabs          -> gh#1293
+    #1290 streamgapdf tolerance    -> gh#1293
+    #1276 RazorThin band           -> gh#1295
+    #1277 AnyAxisym R2deriv        -> fix/anyaxisym-r2deriv-finite-part (UNPUSHED)
+
+The only other open issue in the repo is **#1198**, which is **Jo's own**
+(df per-call ro=/vo= override ignored) and not part of this plan.
+
+**2. gh#1278 and gh#1280 were missing from the open-PR list — because both
+MERGED.** My task list still carried them as live, which briefly looked like two
+lost PRs. Actual state: gh#1278 (AnyAxisym geometric panel grading) merged
+2026-08-09T04:21Z, gh#1279 (--jit slow-skip own list) 08:39Z, gh#1280 (streamdf
+out-of-place LB jacobian, 10 jax-jit entries) 11:45Z — all into
+`feat/backends-develop`. Nothing orphaned.
+
+Also closed a stale task that had been sitting as "FOR JO / pending": the
+interpRZPotential units bug is **already fixed and merged** — it is `main`
+`b68c3ec9` itself (gh#1274, "keep grids and fallbacks in internal units",
++125/-37 plus 51 test lines). Jo merged it; I never marked it done.
+
+**Snapshot verified rather than asserted**, since I had just rewritten it:
+`main` `b68c3ec9`, `develop` `5b08b507`, `slow_skip` 85, `xfail` 21 — all four
+match what STATUS.md claims.
+
+Net: the plan has no hidden work left in it. The only uncommitted-to-remote thing
+in the whole tree is the gh#1277 branch, waiting on runner capacity.
+
+## 2026-08-10 ~20:05Z — Jo asked "no old commits on open PRs I hope?" — there were
+
+**Yes, and it was the whole bottleneck.** Enumerating the pool by head SHA and
+diffing against each PR's current head found two superseded commits still holding
+runs:
+
+    37eacbf2  fix/quad-tolerances (gh#1293, head 04734315)   123 unfinished jobs
+    fb159ff7  feat/backends-develop (head 5b08b507)            7 unfinished jobs
+
+Both verified superseded with `git merge-base --is-ancestor <old> <head>` before
+touching anything. `37eacbf2` is a real follow-up commit's leftover, not an empty
+one. That single dead SHA was **starving the other four PRs at 2 checks each.**
+
+Cancelled all 10 runs. Effect was immediate: gh#1293 went 14 -> 25 in_progress and
+87 -> 69 queued within seconds. **No live-head check was touched** (the only PR
+flag remains the codecov phantom). The two `fb159ff7` runs survived a reported-
+successful `gh run cancel` — the documented silent no-op on never-started jobs —
+and needed `force-cancel`. Pool is now **100 % live-head, zero stale SHAs.**
+
+Answering the rest of Jo's question: `main` holds 2-3 runs on its own tip
+`b68c3ec9` (post-merge CI, legitimate) and develop 6 on `5b08b507` (its push run
+plus the gh#1204 draft PR). Neither was the problem.
+
+**Jo's rule, now durable:** *"the 'push an empty commit' speed-up only works if
+you actually cancel the old CI, so let's make sure that they are always done in
+tandem!"* I had done the push half on gh#1291/1292 without the cancel half.
+Two changes so it cannot recur:
+
+* Memory `empty-commit-halves-ci` rewritten — the cancel is no longer step 3 of a
+  recipe but the point of the exercise, with the 123-job measurement, the note
+  that skipping it is *worse* than not pushing the empty commit (you then pay ~1.5
+  matrices), and the generalisation that **any** push supersedes, not just empty ones.
+* New `/var/tmp/push_ci.sh [-n] [branch]` makes the two inseparable: pushes, then
+  optionally a separate empty commit, then ancestor-verifies and cancels every
+  superseded SHA, re-checks, and force-cancels survivors. Refuses to run on
+  main/feat/backends/feat/backends-develop.
+
+## 2026-08-10 ~20:12Z — pre-merge audit of gh#1291 + gh#1292 (done ahead of green)
+
+gh#1293 at 46 SUCCESS / 21 in_progress / 63 queued (was 36 three minutes earlier —
+the freed runners went straight to it). The other four sit behind it. Rather than
+idle, did the audit step the loop requires before squash-merging, so the merge is
+instant when CI clears.
+
+**gh#1291 — ledger only, 5 deletions from `tests/backend_xfail.txt`.** Nothing to
+audit structurally. Note the verification is CI itself and not a claim of mine:
+un-deferring an xfail means the 5 torch-jit `poisson_surfdens` tests now run for
+real, so if they do not pass the backend shard goes red. Nothing to A/B by hand.
+
+**gh#1292 — clean on all three audit axes.**
+
+* *if -> xp.where array-input class*: **no new conditionals.** The pre-existing
+  guard `_quad_needs_backend` dispatches on **tracedness**, a structural property,
+  never on a value — and its docstring explains why the value-based alternative was
+  rejected (`_force_accepts_arrays` sees only the top-level type, so a wrapper
+  around a scalar-only potential looks array-safe). That is the correct pattern.
+* *duplication*: the PR **removes** it — three sites in `Potential.py` each
+  hardcoded `n=50`; they now inherit one default.
+* *helper placement*: `_QUAD_N = 100` is a module constant in
+  `galpy/backend/quadrature.py`, already shared by `quad` and
+  `fixed_quad_semiinfinite`. General constant in the general module, not smuggled
+  into a potential file. Defined at line 56, well before `symmetric_quad` at 477,
+  so the def-time default resolves.
+
+**numpy byte-identity: UNTOUCHED, and proven rather than assumed.** I checked all
+three call sites rather than trusting the "numpy keeps scipy (byte-identical)"
+comment. Site 1 has an explicit `if xp is numpy:`; sites 2 and 3 gate on
+`_quad_needs_backend`, whose first line is `if xp is numpy: return False`. numpy
+can never reach `symmetric_quad` from `Potential`. The blast radius is in fact
+narrower than "the backend": since `under_trace` is False for eager jax/torch too,
+**only traced execution changes.**
+
+Also verified `symmetric_quad` threads `n=n` into *both* branches (the
+semi-infinite pair and `transformed_quad`), so the finite path is not silently
+left at 50. `transformed_quad`/`nested_quad` keep their own `n=50` defaults for
+direct callers — deliberate scope, not an oversight.
+
+**The new test is the kind Jo asked for.** It uses a real integrand
+(`PowerSphericalPotentialwCutoff` at R=0.01, |z|=50, a 5000:1 aspect ratio),
+and asserts three arms: n=200 vs scipy at 1e-12 to **validate the arbiter**, the
+bare default at 1e-9 as the contract, and **n=50 must FAIL at >1e-7** — so the
+test still discriminates if someone lowers the default back. It also uses
+`epsabs=0` on the reference, consuming gh#1289's lesson. Tight bars, no
+finite-and-nonzero nonsense, and a negative case that actually reproduces.
+
+**Verdict: both approved for squash-merge into `feat/backends-develop` the moment
+CI is green.** No changes requested.
+
+## 2026-08-10 ~20:20Z — found a real defect in MY OWN gh#1277 branch
+
+Drafting the gh#1277 PR body meant re-reading the diff rather than my notes about
+it, and the diff contained a line I did not intend:
+
+    -    @check_potential_inputs_not_arrays
+         def _Rzderiv(self, R, z, phi=0.0, t=0.0):
+
+**My "restore `_Rzderiv`" commit (6c069b00) put the method body back but dropped
+its decorator.** Confirmed by counting the guard across the file: base `main` has
+**6**, my branch had **5**.
+
+This is the *second* instalment of the same mistake. The first was the def-to-def
+splice deleting the method; I "fixed" it and added a gold-value pinning test — but
+that test calls `Rzderiv` with **scalars**, so it passes whether or not the guard
+is attached. I pinned the method's existence and its numbers, and never its
+contract.
+
+**A/B, both directions measured:**
+
+    decorator PRESENT  -> new test PASSES
+    decorator ABSENT   -> new test FAILS: "ValueError: The truth value of an
+                          array with more than one element is ambiguous",
+                          raised from inside the integrand at line 59
+    decorator ABSENT   -> the gold-value test still PASSES  <-- the blind spot
+
+That ValueError is exactly what the decorator exists to prevent: without it an
+array call dies deep in the quadrature instead of raising a clean TypeError.
+
+**Fix + the test that would have caught it** (commit `cb4ae823`): restore the
+decorator, and pin the **contract across the whole set** rather than one
+decorator's presence — each of `__call__/Rforce/zforce/R2deriv/z2deriv/Rzderiv`
+must work on a scalar (so a deleted method cannot masquerade as the TypeError we
+want) and must raise `TypeError` for an array in either R or z. Guard count is
+back to 6 = 6 vs base; all 12 AnyAxisym tests pass; full `test_potential.py`
+re-running now.
+
+**Lesson worth carrying:** when a method is restored or spliced, diff the
+**decorator set**, not just the method set. `git show --stat` and a green suite
+both show nothing. Extends [[def-to-def-splice-deletes-methods]].
+
+**~20:19Z — swept the decorator audit across every in-flight branch.** Having lost
+one decorator silently, the obvious question is whether I lost others. Compared
+the full `^\s*@decorator` multiset, per changed file, head vs base:
+
+    gh#1291   no galpy/*.py changes (ledger only)
+    gh#1292   identical across 2 files
+    gh#1293   identical across 1 file
+    gh#1294   identical across 1 file
+    gh#1295   identical across 1 file
+    gh#1277   identical across 1 file   <- now, after cb4ae823
+
+**Isolated to gh#1277, and fixed.** The gh#1277 row also serves as an independent
+confirmation of the fix at the set level, separate from the contract test. Worth
+keeping as a standing pre-push check: it is one command and it catches a class
+that neither `git show --stat` nor a green suite reports.
+
+## 2026-08-10 ~20:23Z — the gh#1293 codecov phantom self-healed, as predicted
+
+No action was taken and none was needed. Session counts confirm the mechanism was
+exactly the diagnosed one (incomplete uploads, not a coverage regression):
+
+    time     head sessions  head cov   base sessions  base cov   delta
+    20:00Z         5          57.34          6         75.09    -17.75 pp
+    20:23Z        10          82.68          8         77.05     +5.63 pp
+
+`codecov/project` **SUCCESS**, `codecov/patch` **SUCCESS**. Total lines were
+39188 on both sides at both times — which is what made this diagnosable up front:
+a coverage delta with an unchanged line count is an upload artifact, and a 15-line
+diff cannot move project coverage 17.75 pp.
+
+**And no all-clear re-run is needed**: all-clear is `IN_PROGRESS`, not failed, so
+it will evaluate normally once the remaining checks land. The "re-run all-clear
+after a phantom heals" step in the playbook applies when all-clear has already
+FAILED on the phantom — here it had not yet run.
+
+gh#1293 now **68 SUCCESS / 23 in_progress / 40 queued, zero reds.** gh#1291 has
+picked up runners (8 in_progress) and gh#1294 its first. Full `test_potential.py`
+on the gh#1277 branch still running (~54 %).
+
+**~20:28Z — gh#1291 went red on `codecov/project` too. Also a phantom, confirmed.**
+
+    side   sessions  coverage  hits    lines
+    base      27      99.95    48440   48460
+    head       1      25.84    12523   48460   -> -74.11 pp
+
+**head has 1 of 27 uploads in.** And this PR's entire diff is 5 deleted lines from
+`tests/backend_xfail.txt` — codecov itself reports the only changed file as that
+ledger. Zero Python source lines changed, so a 74 pp project move is not a thing
+that can happen. No action; it heals as the remaining 85 checks upload, exactly as
+gh#1293's did minutes earlier.
+
+Two phantoms in half an hour is not a coincidence — it is what serialised CI looks
+like from codecov's side: the check fires on the first upload of a matrix that
+eventually lands ~27 of them, so *every* PR here will flash red on
+`codecov/project` early and clear later. Worth treating a codecov red as
+"unresolved until the matrix finishes" by default on this queue, and reaching for
+the session-count discriminator rather than investigating coverage.
+
+(Note the base line counts differ between PRs — 48460 for develop-targeting
+gh#1291 vs 39188 for main-targeting gh#1293. That is the two base branches, not an
+anomaly.)
+
+**~20:31Z — full `test_potential.py` on the fixed gh#1277 branch: CLEAN.**
+Counts from the junitxml, not the progress bar:
+
+    tests 1329 | failures 0 | errors 0 | skipped 102 | 709.6 s
+
+1227 passed + 102 skipped = 1329, exactly one more than the branch's previous
+1328 — that one is the new decorator-contract test. So **restoring
+`@check_potential_inputs_not_arrays` on `_Rzderiv` broke nothing**, which was the
+open question: the guard makes the method stricter, so it could in principle have
+tripped some caller passing arrays. It does not; base `main` carries the same
+guard, so anything that would break was already broken there.
+
+`fix/anyaxisym-r2deriv-finite-part` is now at `cb4ae823`, 5 commits, green, and
+still **local-only** — waiting on runner capacity, not on any remaining work.
+
+**~20:34Z — gh#1291's phantom is visibly accumulating**: head sessions **1 -> 2**
+of base's 27, line counts still identical at 48460 both sides. That is the
+mechanism confirmed live rather than inferred; it clears when the matrix finishes.
+
+Refreshed STATUS.md this wake (it is the file a future wake reads first, and it
+had gone stale):
+
+* gh#1277 branch row: 4 commits / "green 1328/0" -> **5 commits @ `cb4ae823`,
+  green 1329 tests / 0 failures / 0 errors** from the junitxml.
+* The gh#1277 "scars" section now records **both** instalments of the same
+  mistake — the splice that deleted `_Rzderiv`, and the restore that dropped its
+  decorator — plus the measurement showing the gold-value test passes either way,
+  and the fleet-wide decorator sweep that found the loss isolated.
+* New standing caveat: **a `codecov/project` red on this queue is the default, not
+  a signal**, with the session-count one-liner and the rule that `all-clear` only
+  needs a re-run if it already FAILED on the phantom. Two PRs burned this pattern
+  inside half an hour; the note should stop a third wake re-deriving it.
+
+## 2026-08-10 ~20:39Z — gh#1292's narrow scope VERIFIED complete (was an assumption)
+
+In the pre-merge audit I noted that `transformed_quad` and `nested_quad` keep
+`n=50` while `symmetric_quad` moves to `_QUAD_N=100`, and called it "deliberate
+scope, not an oversight". That was a reasonable guess, not a check. Checked it.
+
+**Every backend quadrature call site in galpy passes `n` explicitly**, so those
+`n=50` defaults are unreachable from galpy's own code — they are API defaults for
+external callers only:
+
+* `transformed_quad` — **zero external callers.** Only `symmetric_quad` calls it,
+  and it threads `n=n` through, so the finite branch already gets 100.
+* `nested_quad` — 6 call sites (osipkovmerrittdf, diskdf x3, sphericaldf x2), all
+  passing `n=_QUAD_N_VMOM2D` or `n=_NQUAD`.
+* `fixed_quad` — swept every call with a paren-matching scan rather than a line
+  grep (most are multi-line). Two apparent hits, both false positives:
+  `constantbetadf.py:550` is a **comment**, and `galpy/util/quadpack.py:128` is
+  **scipy's** `fixed_quad` (`from scipy.integrate import fixed_quad, quad`),
+  passing n positionally as scipy's 5th argument.
+
+So `symmetric_quad` was the *only* one of the four whose default was actually
+reachable — from `Potential.py`'s three sites, which is exactly what gh#1292
+changes. **The PR's scope is complete, not merely narrow**, and there is no latent
+"other quadrature still at 50" follow-up hiding behind it.
+
+Worth noting the distinction that made this checkable: reaching a low default is
+not itself a defect — it only matters if that integrand needs more. What the sweep
+establishes is *reachability*, which is the part that could have hidden a second
+instance of the gh#1289/gh#1292 accuracy class.
+
+## 2026-08-10 ~20:43Z — projected the ledger to its POST-merge state (restart prep)
+
+Per the standing rule that develop's ledger is not the one you are about to have,
+counted the files directly rather than trusting the snapshot — and the snapshot
+was wrong in one place: it recorded slow-skip `torch 1`, it is **torch 2**. The
+85 total was right. Fixed in STATUS.md.
+
+Actual, on develop `5b08b507`:
+
+    slow-skip (85):  jax 51 | jax-jit 26 | torch-jit 6 | torch 2
+    xfail     (21):  torch-jit 8 | jax-jit 6 | jax 4 | torch 3
+
+gh#1291 deletes exactly 5 rows, all `torch-jit test_poisson_surfdens_potential`
+(the RotatedAndTilted / RotatedTiltedOffset / Offset / wInclination x2 wrappers),
+so **xfail 21 -> 16 and total deferrals 106 -> 101**:
+
+    family        slow-skip   xfail   total
+    jax eager        51          4      55
+    jax-jit          26          6      32
+    torch-jit         6          3       9
+    torch eager       2          3       5
+                                       ---
+                                       101
+
+**86 % of what remains is the jax family; torch is down to 14 rows across both
+modes.** Worth stating plainly for the restart: the 55-row eager-jax block is
+mostly *genuinely slow*, not defective — the stopwatch pass found 24 of 44
+measured stale, 0 of 9 for interp/FDM, 0 of 5 for AndTilted. So it is a
+performance target, not a burndown target, and the thing that actually moves it
+is the shelved gegenbauer/dispatch-count work. That reframing is the useful
+output here: "burn down the jax ledger" and "make eager jax dispatch fewer ops"
+are the same task, and only the second one is real.
+
+**~20:48Z — gh#1277 PR body written and staged** at `/var/tmp/aafix/PR_BODY_1277.md`,
+so opening it is one command once capacity frees:
+
+    /var/tmp/push_ci.sh fix/anyaxisym-r2deriv-finite-part   # push + cancel stale, in tandem
+    gh pr create --base main --head fix/anyaxisym-r2deriv-finite-part \
+      --title "AnyAxisymmetricRazorThinDisk: evaluate the second derivatives as finite-part integrals" \
+      --body-file /var/tmp/aafix/PR_BODY_1277.md
+
+The body states the four mechanism changes separately (reparameterise in `d`,
+symmetrise to kill the odd term, subtract the singular model, `sinh` substitution),
+the measured before/after table, the `_R2DERIV_ZFLOOR` rationale, and **discloses
+the numpy change explicitly** — this is an accuracy fix on `main`, so moving numpy
+values is the point, but the standing rule is to state size and extent regardless.
+
+It also records the `_Rzderiv` splice + dropped-decorator story and *why the suite
+missed both*, since a reviewer seeing an unrelated method restored in this diff
+would otherwise have to ask.
+
+gh#1291's phantom keeps filling in as predicted: head sessions **1 -> 2 -> 5** of
+base's 27 across three checks. gh#1293 is at **97/132** with 18 queued.
+
+**~20:53Z — gh#1293 is converging, and gh#1277 now has a testable trigger.**
+
+gh#1293: **102 SUCCESS / 13 in_progress / 16 queued / 1 skipped, zero failures.**
+Everything left is orbit, actionAngle, streamgapdf, quantity and notebook shards
+still executing. `mergeable=MERGEABLE`, `mergeStateStatus=BLOCKED` — blocked only
+because `all-clear` is itself still `IN_PROGRESS`, which is the normal end state
+until the last shard reports. It targets `main`, so it is Jo's to merge.
+
+Replaced my vague "push gh#1277 when capacity frees" with a condition that can
+actually be evaluated, because it had cost several wakes of re-deliberating the
+same judgement call:
+
+> **push gh#1277 as soon as gh#1293 reaches all-clear (or is merged)** — that
+> slots it into a finishing PR's place rather than adding a sixth to the backlog.
+> Explicitly do NOT wait for the whole queue to drain; it will not drain until
+> PRs land.
+
+Recorded in STATUS.md next to the two commands that do it. The point of writing it
+as a trigger rather than a preference: a future wake should act on it without
+re-litigating whether now is the right moment.
+
+## 2026-08-10 ~20:57Z — gh#1293's check count went UP; I had been misreading progress
+
+gh#1293 jumped **132 -> 152 checks** with queued going *up* 16 -> 33. Investigated
+rather than assumed a new push: **head SHA unchanged at `04734315`, still 2
+commits.** Nobody pushed anything.
+
+**Cause: GitHub materialises check entries as runs are SCHEDULED, not upfront.**
+gh#1293 had 4 runs still `queued` (push Linux/Mac, push Windows, pull_request
+Linux/Mac, pull_request Wheel builder); as they start, their jobs appear as new
+checks. The denominator was growing the whole time.
+
+So every "102 of 132, nearly done" I reported this session was optimistic against
+a moving total — the real figure was ~154 from the start, and gh#1293 is at
+106/152, i.e. **70 %, not the 77 % I last quoted.** The percentage went *backwards*
+while genuine progress was made, which is exactly the trap.
+
+**Fix for how I report: count RUNS not yet completed, not checks passed/total.**
+
+Same command incidentally confirmed the empty-commit recipe on live PRs rather
+than one merged example:
+
+    PR        runs on head   checks   why
+    gh#1291        5           101    empty commit -> pull_request only
+    gh#1292        5            99    empty commit -> pull_request only
+    gh#1293        9           152    real commit -> push + pull_request
+
+gh#1293 never got an empty follow-up because I pushed it before adopting the
+recipe. That is a ~35 % check reduction, matching the memory's claim.
+
+Folded both into the `empty-commit-halves-ci` memory as a corollary — same
+mechanism (runs -> checks), so it belongs there rather than in a new note.
+
+**gh#1277 trigger unchanged** (push when gh#1293 hits all-clear), but it is
+further off than I implied last wake: all-clear is still `IN_PROGRESS` with 4 runs
+not yet started.
+
+## 2026-08-10 ~21:21Z — first report using the corrected metric; merges pre-verified
+
+Switched to counting **runs**, per the correction two entries up. The honest
+picture, 24 min after the last check:
+
+    PR        runs  done  running  queued
+    gh#1291     5     1      2       2
+    gh#1292     5     0      1       4
+    gh#1293     9     4      2       3
+    gh#1294     6     0      0       6
+    gh#1295     6     0      0       6
+                                    ---
+    total      31     5      5      21
+
+gh#1293 is **4 of 9 runs done** — materially less finished than "102 of 132
+checks" implied. The runs metric is the one to quote.
+
+Only red anywhere is gh#1291's `codecov/project`, the confirmed phantom.
+
+**Pre-verified both merges I will perform** rather than discovering a conflict at
+merge time — `git merge-tree` settles it in about a second:
+
+    gh#1291 (c1daacb7) onto develop 5b08b507 -> CLEAN
+    gh#1292 (823d5041) onto develop 5b08b507 -> CLEAN
+    common files between the two PRs         -> NONE
+
+File-disjoint, so merge order does not matter and landing one cannot disturb the
+other's mergeability. Both are already audited and approved, so the only thing
+still gating them is CI.
+
+## 2026-08-10 ~21:27Z — self-audit of the gh#1277 fix found a mis-stated bound
+
+CI unchanged in the 4 min since the last check (gh#1291 1/5 runs done, gh#1292
+0/5, gh#1293 4/9, gh#1294 and gh#1295 not started). **gh#1292 has now also gone
+red on `codecov/project`** — third phantom, discriminated per the playbook rather
+than investigated: head sessions **1** vs base **28**, identical 48460 lines. No
+action.
+
+So: audited my own unopened PR. `_R2DERIV_ZFLOOR` is *named* for R2deriv but is
+used at **both** line 268 (`_R2deriv`) and 313 (`_z2deriv`), while its comment
+justified the value with an R2deriv-only measurement. Two things worth checking,
+because the two derivatives do not behave alike near z=0 — for z2deriv the
+first-order correction integral `int k^3 J0 Sigmatilde dk` does not converge, so
+its z-dependence is not linear a priori.
+
+Measured against the mpmath Hankel reference (relative movement of the TRUE value,
+z=0 -> z=1e-9):
+
+    R      R2deriv    z2deriv
+    0.2    5.9e-08    1.9e-09
+    1.0    2.4e-09    4.5e-09
+
+**Finding 1 — the floor IS safe for z2deriv**, in fact safer: it moves less across
+the floor than R2deriv does. My concern was unfounded, but it was worth the check
+and is now documented rather than left to be inferred.
+
+**Finding 2 — the comment understated its own bound by 10x.** It measured the
+movement between z=0 and **z=1e-10** and concluded "snapping costs ~6e-9". The
+floor is at **1e-9**, and the movement is ~linear in z, so the worst case is
+~6e-8. The 5.9e-09 number was not wrong — it was quoted at the wrong point. (It
+also cross-validates: my 5.937e-08 at 1e-9 is exactly 10x the comment's 5.9e-09 at
+1e-10, so both measurements agree.)
+
+Fixed in `3655d816` (comment only, no behaviour change; 12 AnyAxisym tests still
+pass). Branch now **6 commits @ 3655d816**.
+
+The general point: a justification measured at one point and applied at another is
+the kind of error that survives review precisely because the number is real.
+
+**~21:31Z — the PR body carried the same mis-stated bound; fixed.**
+
+Having corrected the code comment in `3655d816`, checked whether the staged PR
+body repeated it. It did — line 47: *"moves by only 5.9e-09 between z=0 and
+z=1e-10, so snapping costs ~6e-9"*, the identical error, quoting the cost at
+1e-10 for a floor at 1e-9.
+
+Rewrote that section to carry the same table as the code, state the bound as
+**~6e-8 worst case**, note that the constant gates *both* derivatives, and record
+why `z2deriv` needed measuring rather than assuming (its first-order correction
+integral does not converge, so linearity in z was not a given).
+
+Point worth keeping: **fixing a wrong claim in code does not fix it in the
+description written from that code.** The PR is not yet open, so this cost
+nothing — had it been open, the body would have been the stale one a reviewer
+read. Grep the description for any number you correct.
+
+## 2026-08-10 ~21:36Z — swept the SIBLING numeric claims; found a second, verified the third
+
+CI: gh#1291 2/5 runs done, gh#1292 0/5 (3 running), gh#1293 4/9, gh#1294 has
+started its first run, gh#1295 not started. **No real reds** — only the three
+known codecov phantoms.
+
+Having found one number quoted at a point it was not measured at, checked the
+other quantitative claims in the diff rather than assuming that one was isolated.
+Three claims; all three now settled.
+
+**1. `C = -Sigma(R)/2` for z2deriv — CONFIRMED, and more strongly than the
+comment's single residual.** Re-derived analytically (at z=0 the K term carries a
+z^2 factor and drops, leaving `-a Sig(a) E(m) / (d^2 (2R+d))`, so
+`d^2 * integrand -> -R Sig(R) / (2R)`), then checked numerically:
+
+    R=0.2   d=1e-4 -> 8.31e-05     d=1e-5 -> 8.33e-06
+            d=1e-6 -> 8.33e-07     d=1e-7 -> 8.33e-08
+
+**exactly 10x per decade** — clean first-order convergence to the target, which is
+the signature of a correct leading coefficient. Stronger evidence than a
+single-point "verified to 5e-10".
+
+**2. "~1e-11 by z=1e-12" — WRONG by 6x, and it was an extrapolation.** Measured:
+**5.937e-11.** The comment had rounded a ~6 down to a ~1 while extrapolating from
+the 1e-10 figure. Fixed in `fac7be63`, in both the code and the PR body.
+
+The measurement also settles the *shape* instead of assuming it: R=0.2 R2deriv
+gives 5.937e-08, 5.937e-09, 5.937e-11 at z = 1e-9, 1e-10, 1e-12 — exactly linear
+over three decades. The comment now says "measured, not extrapolated".
+
+**3. The `d`-representability claim (8e-8 at d=1e-10, R=0.2)** is arithmetic on
+the float64 spacing, not a measurement, and checks out: spacing 2.8e-17 / 1e-10
+= 2.8e-7 worst case, same order.
+
+Branch now **7 commits @ fac7be63**, 12 AnyAxisym tests green.
+
+**The pattern worth naming: two of three claims were real numbers attached to the
+wrong point.** Neither was a wrong measurement — which is exactly why they survive
+review. Finding one is a reason to sweep the siblings, not to fix it and move on.
+
+## 2026-08-10 ~21:40Z — run counts identical to 5 min ago; job level shows it is NOT stalled
+
+Every run count was byte-identical to the 21:35 check (gh#1291 2/5, gh#1292 0/5,
+gh#1293 4/9, gh#1294 0/6, gh#1295 0/6). Rather than read that as a stall or wave
+it off, applied the job-level diagnostic:
+
+    gh#1293  Linux/Mac build            jobs 24/25 done
+    gh#1293  Linux/Mac build            jobs 23/25 done
+    gh#1292  Windows build              jobs 16/21 done
+    gh#1292  Test documentation notebooks jobs 2/5 done
+
+**Progressing normally.** gh#1293's two Linux/Mac runs are one and two jobs from
+finishing, which will move it 4/9 -> 6/9 in one step.
+
+**So the "runs" metric I adopted two entries ago is itself too coarse** — it hid
+two runs sitting at 96 % and 92 %. The honest hierarchy for this queue:
+
+* **checks passed / total** — worst: the denominator grows as runs get scheduled,
+  so the percentage can go *backwards* while work is being done.
+* **runs completed** — better, but quantised: a 25-job run reads 0 until its last
+  job lands, so a PR can look frozen for an hour while ~50 jobs finish.
+* **jobs within started runs, plus a count of not-yet-started runs** — the honest
+  one. Queued runs genuinely have no job count yet, so report them separately
+  rather than pretending a single percentage exists.
+
+That is the third time this session the metric has been the thing that was wrong
+rather than the state. Worth carrying into how these status lines get written.
+
+No real reds anywhere; the only failures remain the three codecov phantoms.
+
+## 2026-08-10 ~21:45Z — the two gh#1293 stragglers are NORMAL (measured against peers)
+
+gh#1293 sat at 24/25 jobs on both Linux/Mac runs across two checks, i.e. one job
+each refusing to finish. Rather than assume hung or assume fine, identified them
+and compared against peers — the diagnostic the notebook-hang incident taught.
+
+In flight:
+
+    all-clear                                          86m   (the aggregate gate:
+                                                              it waits on everything, long by design)
+    build (ubuntu-latest, 3.11, test_orbit + test_orbits)  19m
+    build (ubuntu-latest, 3.12, test_orbit + test_orbits)  34m
+
+Completed instances of the **same shard on the same SHA**:
+
+    windows-latest    29-33 m
+    ubuntu-latest     35-42 m
+    macos-15-intel    41-58 m
+
+**Both stragglers are below the ubuntu median (~38 m).** Nothing is stuck; these
+shards simply take half an hour. Expect them to land in ~5-20 min, after which
+all-clear can finally resolve — and that is the gh#1277 push trigger.
+
+Worth keeping as the general shape: "one job left for a while" is not evidence of
+a hang. The comparison that settles it is **the same job name on other platforms
+at the same SHA**, which is available for free and takes one query.
+
+## 2026-08-10 ~21:50Z — checked the BASE branches for the first time this session
+
+gh#1293 advanced 4/9 -> 5/9 runs (a Linux/Mac build landed, as the peer-duration
+comparison predicted); gh#1294 now has 2 runs executing. No real reds.
+
+Closed a gap in my own monitoring: I have been watching the five PRs all session
+and never once checked the health of the branches they merge INTO.
+
+    develop 5b08b507   Linux/Mac build  SUCCESS (push + pull_request)
+                       Windows build    SUCCESS (push + pull_request)
+                       notebooks        SUCCESS (push + pull_request)
+                       All-backend tests  in_progress / queued
+                       all-clear          in_progress
+
+    main    b68c3ec9   Linux/Mac, Windows, notebooks, pyodide/wasm  ALL SUCCESS
+                       Wheel builder      queued
+                       (Close stale issues queued = unrelated scheduled job)
+
+**Both bases are green on every build workflow that has reported.** That matters
+as a diagnostic baseline rather than as news: it means any red appearing on one of
+the five PRs is attributable to that PR, not inherited from its base. Without
+this, a base-caused failure would have looked like a PR regression and cost an
+investigation — the mirror of the Windows streamgapdf flake, which was only
+settled by proving it was not PR-caused.
+
+Still outstanding on develop: `All-backend tests`, the ledger-gated backend matrix
+and the one that actually matters for this work, has not reported yet on
+5b08b507. Worth watching, since gh#1291 and gh#1292 both land on top of it.
+
+## 2026-08-10 ~21:54Z — develop's backend matrix IS green (44/45, 0 failures)
+
+Followed up the item flagged last wake. develop's `All-backend tests` had appeared
+to move *backwards* — `in_progress` at 21:50, `queued` at 21:54. It did not:
+
+    run 31408596394 (pull_request)  jobs: 45 total | 44 done | 0 running | 1 queued
+    run 31408591801 (push)          jobs: 45 total | 44 done | 0 running | 1 queued
+
+    conclusions, BOTH runs:  success 44,  pending 1
+    the pending job, both:   "backend status report"
+
+**44 of 44 finished shards passed; zero failures.** The single outstanding job is
+the aggregation step that runs after the shards and posts the sticky census
+comment — it is queued waiting for a runner, not failing.
+
+So **develop's backend baseline is clean**, which is what gh#1291 and gh#1292 need:
+both land on a verified-green base, and the merge simulation already showed both
+apply cleanly and are file-disjoint. Nothing about those two merges is unknown now
+except the PRs' own CI.
+
+**Fourth instance of the metric trap, and a new variant:** a run whose only
+non-terminal job is *queued* reports `queued` at run level — so a run that is
+97.8 % complete is indistinguishable from one that never started, and can even
+appear to regress from `in_progress`. Add to the hierarchy already recorded: run
+status is not monotonic, so never infer direction of travel from it. Only job
+counts are honest.
+
+## 2026-08-10 21:59Z — job-level baseline (for rate estimation next wake)
+
+First snapshot using the honest metric throughout: **jobs completed within started
+runs, plus a separate count of runs that have not started** (whose job counts do
+not exist yet, so they cannot be folded into a percentage).
+
+    PR        jobs done   %     unstarted runs
+    gh#1293   124/148    84 %        2
+    gh#1291    63/97     65 %        1
+    gh#1292    48/97     49 %        2
+    gh#1294    36/97     37 %        3
+    gh#1295     3/76      4 %        5
+
+    TOTAL     274/515    53 %       13 runs not yet started
+
+No real reds anywhere; the only failures remain the three codecov phantoms, all
+discriminated by session count and all expected to clear as their matrices finish.
+
+Recorded with a timestamp specifically so the next wake can **difference against
+it and get a jobs/minute rate**, instead of re-deriving the same state and
+guessing at "nearly done". Given the ordering, gh#1293 should reach all-clear
+first — which is the gh#1277 push trigger.
+
+Everything that can be settled without CI has been: both develop-targeting PRs are
+audited, merge-simulated clean and file-disjoint; develop's own backend matrix is
+44/44 green; main is green; gh#1277 is 7 commits with a written, fact-checked body.
+The pipeline is purely runner-bound.
+
+## 2026-08-11 ~01:50Z — LOOP HAD DIED; merged gh#1291+gh#1292; reworked gh#1294
+
+**The loop stopped.** `CronList` returned "No scheduled jobs" — the cron was gone,
+so nothing fired between 21:59Z and 01:43Z (~4 h) and two PRs sat green and
+unmerged. Jo noticed before I did, which is the failure mode that matters: the
+loop cannot detect its own death.
+
+Restarted as job `673881f0`, hourly at :13, **created 2026-08-11, so it expires
+~2026-08-18**. The prompt now carries a step (5) KEEP-ALIVE as the FIRST action of
+every wake: run `CronList`, and if there is no job or the job is >~6 days old,
+immediately re-create it. Treat a missing cron as P0.
+
+**Merged into feat/backends-develop** (both 102/102 green, both audited earlier,
+both merge-simulated clean and file-disjoint):
+
+    81756b38  gh#1291  xfail 21 -> 16 (5 torch-jit poisson_surfdens rows)
+    37c8430a  gh#1292  one GL order for symmetric_quad
+
+Ledger is now **slow_skip 85 / xfail 16**, i.e. 101 deferrals, exactly the
+projection made earlier.
+
+### gh#1294, Jo's two review points
+
+**"All CompositePotentials fall back onto the loop" -- REFUTED, measured.** All 56
+pairwise composites of 8 individually-vectorisable potentials, in both spellings
+(plain list and `CompositePotential`), take the vectorised path and are
+bit-identical to the loop; so does `MWPotential2014`. A composite broadcasts iff
+its components do, since the evaluator just sums them. **No special case is
+needed, and adding one would be dead code.** Only a composite *containing* an
+array-unsafe component falls back, which is correct.
+
+What invited the misreading was my own docstring: it described the fallback as
+"`AnySphericalPotential`, and anything composing or wrapping one" — which scans as
+"composites" if the qualifier is dropped. Now stated explicitly with the sweep
+behind it. Worth noting the general shape: **the report was wrong but the
+complaint was well-founded** — the documentation really did imply the thing Jo
+objected to.
+
+**"The rows check seems wasteful" -- CORRECT, fixed.** Two full rows is `2*nz`
+scalar evaluations, 502 at the default 251x251, and on an expensive potential that
+IS the overhead: measured **0.251 s vs 0.008 s, 31x**, for
+`DoubleExponentialDiskPotential`. That is the ~15 % build slowdown disclosed in
+the PR.
+
+Replaced with `_spot_check_cells`: a 3x5 lattice (both R edges, both z edges, four
+corners, interior) plus both diagonals to break lattice alignment so a
+stride-periodic disagreement cannot hide between samples. **19 cells at any grid
+size.** Stated the trade honestly in the docstring: now probabilistic for a
+*sparse* disagreement where two rows were not, but not for the failure actually
+being guarded against — a broadcasting bug is whole-array, and the one real
+instance disagrees in 95 % of cells, which 19 samples miss with probability 5e-25.
+
+Verified: AnySpherical still falls back to the exact loop; list / Composite /
+MWPotential2014 all still bit-identical on the fast path;
+`tests/test_interp_potential.py` 42 passed. Pushed `10acf0b7 -> 130f1fe9`.
+
+**~02:05Z — I broke the tandem rule one commit after writing it.** Pushed the
+degenerate-grid guard with a bare `git push` instead of `push_ci.sh`, leaving 7
+superseded runs on `130f1fe9` burning runners. Jo caught it.
+
+Recovered with the full recipe (`push_ci.sh -n`), which also supersedes the head
+that had just started:
+
+    cancelled 9 runs on 47bb7aea  (the previous head)
+    cancelled 7 runs on 130f1fe9  (already stale)
+    new head 3d1c752f: 6 runs, ALL pull_request, 0 push -> 76 checks not ~117
+
+**The lesson is about the form of the habit, not the principle.** I had written
+the principle into memory hours earlier and still got it wrong, because "remember
+to cancel after pushing" is two steps a human forgets. Rewrote the memory to make
+it mechanical instead: *if the branch has an open PR, the push command is
+`push_ci.sh` — never `git push`.* The script cannot forget step 3.
+
+gh#1294 is now 4 commits past the original: sparse spot check + degenerate guard,
+head `3d1c752f`, running a pull_request-only matrix.
+
+## 2026-08-11 ~02:20Z — gh#1277 OPENED as gh#1296, before the rebase (Jo's call)
+
+I had proposed landing gh#1277 *after* the rebase. **Jo pointed out that inverts
+the plan**, and is right: Jo's own sequencing is "fix open issues on main" THEN
+"I rebase". Landing after would leave main ahead of feat/backends again and need a
+second sync; landing before means the conflict is resolved once, inside the rebase
+Jo is already doing. Reversed.
+
+**Rebased onto the new main first** (`b68c3ec9` -> `e8f485c1`; Jo merged gh#1293
+and gh#1295 while I worked). That conflicted in `tests/test_potential.py` —
+gh#1295's razorthin handover test and my AnyAxisym gold-value test both append
+there, and the two blocks shared a trailing `)` / `return None`. Resolved by
+keeping both blocks with the shared tail duplicated, not by hand-editing markers.
+
+Post-rebase verification, all before pushing:
+
+    conflict markers, whole tree     : none
+    @check_potential_inputs_not_arrays : 6 (matches base)
+    the 3 tests spanning the conflict : passed
+
+**Opened as gh#1296** (7 commits + empty commit, base `main`). `push_ci.sh -n`
+cancelled the 9 double-triggered runs on `20ba87b1` so the head `d63a827f` carries
+a pull_request-only matrix.
+
+**Also measured and worth carrying into the rebase:** develop's
+`_R2deriv_numpy` has the SAME defect (same `points=[R]` QAGP call, same
+`IntegrationWarning`, 9.90e-06 at R=0.2 — bit-for-bit gh#1277's number). And
+develop splits every method into `_X_numpy` / `_X_gl`, so **after the rebase
+carries this fix into the numpy half, `_R2deriv_gl` / `_z2deriv_gl` will still
+have the old formulation** — a silent numpy-vs-backend divergence. Porting the
+finite-part treatment into the `_gl` paths is genuine backend work and does not
+exist yet; queued for after the rebase.
+
+## 2026-08-11 ~02:35Z — Jo: backend precision must MATCH numpy/scipy precision
+
+Jo, on discovering that `_bk_dispatch` reuses scipy for plain concrete backend
+values: *"this seems fine, although I didn't realize it and I'd rather in general
+that backend accuracy/precision matches non-backend (numpy, scipy) precision."*
+
+**New standing directive**, saved as memory `backend-precision-must-match-numpy`:
+a GL path materially worse than scipy on the same input is a **defect to fix**,
+not an acceptable price for differentiability. Do not ledger such a gap as
+"backend is approximate".
+
+**Measured the current gap for AnyAxisym**, both paths against an mpmath Hankel
+reference (not against each other):
+
+    regime            scipy            GL(backend)
+    z != 0            1e-15 .. 5e-14   1e-16 .. 5e-15   <- GL EQUAL OR BETTER
+    z == 0 exactly    1e-8  .. 1e-5    2.8e+03 .. 3.4e+05
+
+**So the directive is already satisfied everywhere off the plane** — the GL rule
+is at machine precision and often beats scipy. The single violation is at exactly
+z=0, where GL is not imprecise but WRONG by 3-5 orders of magnitude. That is the
+existing ledger entry `jax-jit test_2ndDeriv_potential[AnyAxisym]`, whose own
+comment reads "the TRACED potential is wrong at exactly the disk plane".
+
+And it is the same mathematics gh#1296 fixes on the scipy side: at z=0 the
+integrand is a Hadamard finite part (`C/d^2`, same sign both sides). So the
+`_gl` port is now well-specified rather than vague — apply the finite-part
+treatment (reparameterise in `d`, symmetrise, subtract `2C/d^2`, add back
+`-2C/R`) to `_R2deriv_gl` / `_z2deriv_gl`.
+
+### Three probe errors of mine along the way, all self-inflicted
+
+1. **float32.** First probe omitted `JAX_ENABLE_X64=1`; jax silently ran f32 and a
+   near-singular quadrature returned inf/nan that looked like a galpy bug.
+2. **`is_backend_array(output)` proved nothing.** It returned True while the work
+   ran through scipy — the numpy branch casts its result back to a backend array
+   on exit. Had to instrument which `_X_numpy`/`_X_gl` method actually executes.
+3. **`TracerArrayConversionError` was MY callable.** I reported that `_gl` "raises
+   under jit"; it was my `lambda R: numpy.exp(-R/0.3)` surfdens, which cannot take
+   a tracer. With `get_namespace(R).exp(...)` both jit and grad work fine.
+
+That third one surfaced a real constraint worth documenting: for potentials built
+from a **user-supplied callable**, the differentiable path is only as
+backend-agnostic as that callable. Not a galpy defect, but it means any probe must
+pass an agnostic function or it measures its own mistake.
+
+Verified the dispatch does what it claims — jax.grad, jax.jit and torch
+`requires_grad` all take `_R2deriv_gl`; plain values take `_R2deriv_numpy`; and
+both autodiff grads match a finite-difference reference to all printed digits
+(+8.335430e-01).
+
+## 2026-08-11 ~03:30Z — covered the guard I added without a test
+
+Cron `673881f0` alive (created 2026-08-11 ~01:45Z, expires ~2026-08-18). CI:
+gh#1294 37/97 jobs, gh#1296 9/76, both progressing.
+
+gh#1294 showed `codecov/patch` red as well as `codecov/project`. Session count
+says **2 of 13** — so patch is phantom-prone here too, not just project.
+**Refines my earlier note**: I had characterised only `codecov/project` as the
+phantom; while uploads are partial, `patch` is equally unreliable, because the
+uploads covering the new lines may simply not have landed. Same discriminator,
+same "unresolved until the matrix finishes" reading.
+
+**But it pointed at something real that codecov could not have told me**: the
+degenerate-grid guard I added yesterday (`if nR < 1 or nz < 1: return []`) had
+**no test**. I added it in response to Jo's "does it work for any grid size?"
+and never covered it.
+
+Added `test_grid_spot_check_cells_covers_every_grid_size`, pinning five
+properties rather than one: in-bounds/duplicate-free from 1x1 to 1001x1001; the
+degenerate grid samples nothing; small grids are covered EXHAUSTIVELY; the sample
+SATURATES rather than growing; and both R and both z edges are always sampled.
+
+**A/B'd rather than assumed** — with the guard disabled the test fails at the
+degenerate assertion; restored, 43 passed.
+
+Two process notes worth keeping:
+
+* **pre-commit rejected the first commit** (`codespell`: "pre-empt" -> "preempt")
+  and the SHA did not move. Caught it by checking, per the standing rule; the
+  subsequent `push_ci.sh` had pushed nothing, and `HEAD == remote` confirmed no
+  damage. Re-committed clean: `3d1c752f -> 5ad7b0f9`.
+* `push_ci.sh -n` then cancelled 5 superseded runs, of which **3 needed
+  force-cancel** and 1 is still draining — the documented silent no-op again.
+  The script now handles that automatically, which is why it is the only way I
+  push to an open PR.
+
+## 2026-08-11 ~03:45Z — NEW DEFECT: three potentials lose float64 under torch's default f32
+
+Found while running a backend census across all potentials (numpy-first control on
+each, per the standing rule). Three potentials return a **float64 tensor whose
+VALUE is float32-contaminated**, given explicit float64 inputs:
+
+    potential                        rel err vs numpy
+    EinastoPotential                     2.78e-08
+    PowerSphericalPotentialwCutoff       6.27e-08
+    TwoPowerSphericalPotential           5.09e-08
+    NFWPotential          (control)      0.00e+00
+    MiyamotoNagaiPotential(control)      0.00e+00
+
+**Diagnosis is exact**: with `torch.set_default_dtype(torch.float64)` all three
+become exact (0, 2.2e-16, 3.9e-14). So an internal constant/intermediate is being
+created at torch's *default* dtype rather than at the input's, losing ~7 digits.
+Output dtype is correctly float64 throughout, which is why nothing catches it.
+
+All three share `galpy.backend.special` imports (`gamma`, `gammainc`/`gammaincc`,
+`hyp2f1`) — the likely common cause is a constant materialised inside a special
+function's fallback. NFW/MiyamotoNagai, which use no special functions, are exact.
+
+**This is a direct violation of Jo's new precision directive**
+([[backend-precision-must-match-numpy]]) and is NOT ledgered — nothing tests it,
+because the suite runs with torch's default dtype set to float64.
+
+Filed as a follow-up rather than fixed inline: it wants a root-cause fix in the
+special-function layer, not three per-potential patches.
+
+## 2026-08-11 ~04:15Z — REAL DEFECT: backend hyp2f1 silently wrong for 0 < z < 1
+
+Jo asked for more develop PRs and pointed at "the smaller issues". Chasing the
+torch f32 lead (logged above) led somewhere bigger.
+
+**`galpy.backend.special.hyp2f1` returns a badly wrong answer for every z > 0**,
+on BOTH jax and torch (both route to `hyp2f1_fallback`; jax via
+`_NATIVE_UNRELIABLE`, torch via `_NATIVE_MISSING`). Measured against scipy:
+
+    z      -2.0    -0.5     0.1      0.4      0.8      0.95
+    rel   7e-15   6e-15   5.1e-03  8.6e-02  3.9e-01  6.4e-01
+
+20 of 30 sampled (a,b,c,z) wrong; **every** z<0 point exact, **every** z>0 point
+wrong. The returned value is exactly `1 + (ab/c)z` -- the first-order Taylor
+series. The fallback's own docstring says **"2F1(a, b; c; z) for real z <= 0"**,
+so this is a documented domain restriction being *silently violated* rather than
+broken code.
+
+**Severity: latent, not active.** Instrumented `TwoPowerSphericalPotential`: galpy
+only ever passes z in [-15.8, -0.06]. Nothing in-tree is affected -- which is
+exactly why no test catches it, and exactly why it is a landmine for the next
+caller.
+
+**Fix (in progress, worktree /var/tmp/nogl):** enter through Pfaff,
+`2F1(a,b;c;z) = (1-z)^{-a} 2F1(a, c-b; c; z/(z-1))`, which maps 0<z<1 onto the
+z<=0 domain the existing three routes are built for. Both branches are evaluated
+at a z valid FOR THAT BRANCH (never the raw z) so `xp.where`'s eager dead side
+cannot feed a nan back through a gradient. Verified per parameter set:
+
+    0 < z < 1 : 6.7e-15 .. 9.9e-07   (was 5.1e-03 .. 6.4e-01)
+    z <= 0    : 4.17e-06 UNCHANGED   (pre-existing, at (1.5,0.5,3.0,-15.0))
+
+### Three measurement errors of mine tonight, all documented traps
+
+1. **`python3 /scratch/script.py` imported the WRONG galpy** -- the script's dir
+   goes on sys.path, not cwd. My whole A/B compared two runs of an unrelated
+   install, which is why baseline and fix looked identical. Heredocs (cwd on
+   path) were right all along. Use `PYTHONPATH=` or a heredoc.
+2. **Reporting only the max over a grid** hid that 7 of 8 parameter sets were
+   already fixed; the one bad number came from the wrong-galpy import.
+3. **Comparing A/B on different grids** -- I widened the parameter set between
+   the two arms and read the difference as a regression.
+
+Nothing pushed yet: `tests/test_backend_special.py` still running.
+
+**~03:55Z — gh#1296 red is INFRASTRUCTURE, not code.** `build (macos-15-intel,
+3.14, test_orbit + test_orbits)` failed after 40 s. Went to the failed STEP via
+the API rather than guessing from the job name:
+
+    FAILED STEP: Run actions/checkout@v7      (03:34:13 -> 03:34:53)
+
+So the checkout never completed; no test ran. `gh run rerun --failed` currently
+refuses ("This workflow is already running") because sibling jobs are still
+going, so it must wait for the run to finish. **Queued for the next wake: re-run
+run 31451600028 --failed once it completes.** Do not treat this as a PR defect.
+
+Worth noting the diagnostic: `gh run view --job <id> --log` returned nothing
+(logs not retained/available for that job), but
+`gh api repos/.../actions/jobs/<id>` gives the per-STEP conclusions, which named
+the real failure immediately. That is the better first query for a red job.
+
+**hyp2f1 PR state at end of session:** fix + test written and A/B'd in
+/var/tmp/nogl, NOT yet committed. `test_backend_special.py` was 174 passed before
+the change; the full run with fix + new test was still in flight. Recorded as
+task #214 with the full diagnosis, measurements and file locations so it can be
+picked up cold.
+
+## 2026-08-11 ~04:25Z — gh#1297 OPENED; gh#1296's 3 reds all triaged ENVIRONMENTAL
+
+Cron `673881f0` alive (created 2026-08-11 ~01:45Z, expires ~2026-08-18).
+
+**gh#1297 opened** -> feat/backends-develop: the hyp2f1 positive-z Pfaff fix.
+Verified on a branch cut from CURRENT develop `37c8430a` (the worktree I
+developed in was stale at `69c2fd29`): **197 passed**, vs 192 on the old base --
+MORE, which is the control proving the missing C extension in the fresh worktree
+skipped nothing. New test confirmed running there (18 passed / 179 deselected).
+`push_ci.sh -n` cancelled 7 superseded runs (1 needed force-cancel); the race fix
+added earlier caught the late arrival.
+
+**gh#1296 has 3 reds and NONE is PR-caused.** Diagnosed by failed STEP via
+`gh api repos/.../actions/jobs/<id>` (the `gh run view --job --log` route returns
+nothing for these jobs):
+
+    build (macos-15-intel, 3.14, orbit)   FAILED STEP: Run actions/checkout@v7
+    Test Python 3.14 wheels on macos      FAILED STEP: Run actions/checkout@v7
+    build (windows-latest, 3.14, orbit)   FAILED STEP: Test with pytest
+
+The windows one is the only real test failure, and its cause is external:
+
+    tests/test_orbit.py::test_from_name_values   FAILED
+    tests/test_orbit.py::test_from_name_errors   FAILED
+    tests/test_orbits.py::test_from_name_values  FAILED
+    pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+i.e. `Orbit.from_name` querying SIMBAD/VizieR during an outage -- the documented
+flake class. **Re-run, never cancel.**
+
+**BLOCKED ON TIMING ONLY:** all three owning runs (31451600028, 31451600034,
+31451600068) still have sibling jobs executing, and `gh run rerun --failed`
+refuses with "This workflow is already running". **Next wake: retry those three
+re-runs.** Nothing to fix in the PR.
+
+## 2026-08-11 ~05:26Z — VizieR/SIMBAD outage is hitting BOTH main-targeting PRs
+
+Cron `673881f0` alive. Retried the queued gh#1296 re-runs: all three owning runs
+had completed, so `gh run rerun --failed` was accepted and **all three are live
+again** (Linux/Mac build, Wheel builder, Windows build).
+
+**gh#1294 then showed a real red it did not have before** -- and it is the same
+external cause, not a regression:
+
+    gh#1294  build (windows-latest, 3.10, orbit)  STEP: Test with pytest
+      FAILED tests/test_orbits.py::test_from_name_values
+      pyvo.dal.exceptions.DALFormatError: ConnectionError:
+        ('Connection aborted.', RemoteDisconnected(...))
+
+    gh#1296  build (windows-latest, 3.14, orbit)  STEP: Test with pytest
+      pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+Two different pyvo exception types, same root cause: **SIMBAD/VizieR is
+intermittently down right now**, and it lands on whichever shard runs
+`Orbit.from_name`. Re-ran gh#1294's too.
+
+**Both PRs are now clean of PR-caused failures**; every red seen tonight was
+`actions/checkout@v7` (x2) or an external astronomical data service (x2).
+
+Worth recording as a pattern: when the SAME test name fails on two unrelated PRs
+within an hour, check the exception type before the diff -- two distinct pyvo
+errors pointing at one outage is much likelier than two PRs independently
+breaking `from_name`. Diagnose via
+`gh api repos/.../actions/jobs/<id>/logs`, since `gh run view --job --log`
+returns nothing for these jobs.
+
+## 2026-08-11 -- codecov: two reds, one real and one phantom
+
+Both gh#1294 and gh#1297 went red on `codecov/patch` in the same window. They
+are NOT the same problem, and the discriminator is worth writing down because I
+got the first one wrong.
+
+**Read the check-run TITLE, not the compare API.** I pulled the compare
+endpoint on gh#1294, saw `patch/diff: [1, 15, 15, 0, 0, '100', ...]`, and called
+it a phantom. That `'100'` is the BASE side of the totals object -- not head
+patch coverage. codecov's own title said the opposite and was right:
+
+    codecov/patch:   91.89% of diff hit (target 99.93%)
+    codecov/project: 99.93% (-0.01%) compared to b68c3ec
+
+**gh#1294 -- REAL.** `_grid_eval` has three fallbacks and only two were
+reachable from the potential zoo: the try/except (AnySphericalPotential raises
+on an array) and the bit-for-bit spot check (the non-broadcasting potential).
+The third, `grid.shape != (nR, nz)` -- a vectorised call that SUCCEEDS with the
+wrong shape -- has no potential in the zoo that does it, so it was dead code as
+far as the suite was concerned. Covered with a synthetic evaluator that returns
+a bad shape for array input and behaves normally for scalars; the test asserts
+the vectorised call happens exactly once, the result is the cell-by-cell answer,
+and it is not the zeros the bad call returned. A/B'd: fails with the guard
+disabled. Pushed as 735ca0f3 (+ empty commit e64f9a4d, superseded runs
+cancelled in tandem).
+
+**gh#1297 -- PHANTOM, and provably so.** `codecov/patch 16.66%`,
+`codecov/project 86.01% (-13.95%)`. A ~14-point project drop from a 20-line
+change to one special function is not physically possible. The mechanism is
+visible in the job list rather than guessed at: the entire patch lives in
+`galpy/backend/special/_fallback/hyp2f1.py`, which is exercised ONLY by
+`tests/test_backend_special.py`, and the shard running that file
+(`build (ubuntu-latest, 3.14, tests/test_backend*.py, ...)`) was still
+in_progress when codecov scored the commit. The coverage for the patch had
+simply not been uploaded yet. Expect it to self-heal; re-run all-clear after.
+
+That is the general rule for separating the two: a phantom has a MISSING
+UPLOAD you can point at (a shard still running, or a head/base session-count
+split), a real drop has uncovered LINES you can name. Don't classify on the
+size of the number alone -- but do let an impossible-looking magnitude prompt
+the check.
+
+**Keep-alive:** cron `673881f0` confirmed alive (created 2026-08-10, hourly at
+:13, session-only -> expires ~2026-08-17).
