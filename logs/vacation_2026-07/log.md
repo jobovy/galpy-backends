@@ -41819,3 +41819,52 @@ defined and referenced.
     skipped=102, 655 s;
   * `test_quantity.py` + `test_orbits.py` (the other main-touched test files)
     running now.
+
+## 2026-08-11 16:2x -- the 30 "rebase" failures were MY testing error
+
+Retracting the alarm from the previous entry. **The rebase introduces nothing.**
+
+    tree                              invocation                 result
+    origin/feat/backends (baseline)   test_orbits alone          115 passed, 0 fail
+    feat/backends-develop             test_orbits alone          116 passed, 0 fail
+    rebased 982b1781                  test_orbits alone          116 passed, 0 fail
+    rebased 982b1781                  test_quantity + test_orbits 30 fail  <-- artifact
+    origin/feat/backends (baseline)   test_quantity + test_orbits 30 fail  <-- SAME
+
+Failing test-name sets on the last two rows are **byte identical**: zero
+regressions, zero fixes.
+
+Two compounding errors, both mine:
+
+  1. **Wrong baseline branch.** I first A/B'd against `/var/tmp/glorder`, which
+     is feat/backends-DEVELOP -- 80 commits AHEAD of the branch I rebased. A
+     descendant is not a baseline.
+  2. **Arms with different invocations.** Rebased ran two files in one process
+     (test_quantity first); the baselines ran test_orbits alone. `test_quantity`
+     leaves astropy units enabled process-wide, so `Orbit.phi()` returns a `deg`
+     Quantity and `phi() + numpy.pi` raises UnitConversionError.
+
+Recorded as memory `ab-arms-must-differ-in-one-thing`. The durable rule: confirm
+the refs differ only by the change under test, run the byte-identical command in
+both arms, and compare failing NAME SETS rather than counts. A "regression" that
+disappears when the test runs alone is state pollution, not a defect.
+
+**Incidental real finding:** `test_quantity.py` + `test_orbits.py` in one process
+fails 30 tests on EVERY branch. CI never sees it because the shards split those
+files apart. Worth a test-isolation fix eventually; not now.
+
+### Rebase verification, final
+
+    branch rebase/backends-onto-main-20260811   sha 982b1781
+    225 commits onto main 87256016, 0 merge commits, main is an ancestor
+    no conflict markers; main's content present (epsabs=0.0, _spot_check_cells,
+      _finite_part_quad, _inner_nodes)
+    C extension builds and LOADS (dop853_c, R(1)=8.1111274292)
+    test_potential.py        1331 tests, 0 failures, 0 errors
+    test_interp_potential.py 45 passed
+    test_orbits.py           116 passed, 0 failures
+    2 conflicts, both resolved (RazorThinExpDisk namespace-aware node helpers;
+      AnyAxisym keep-both)
+
+Still needs Jo to push: my PAT lacks `workflow` scope and a rebase recreates
+commits touching .github/workflows.
