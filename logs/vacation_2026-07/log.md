@@ -41535,3 +41535,45 @@ had no trigger in the zoo -- same hole as the wrong-shape arm.
 All three fallbacks are now pinned by tests:
     raises -> try/except | silently wrong -> spot check | wrong shape -> shape guard
 each A/B'd by disabling its guard. Pushed bdf4f243 (+ empty 1dd19ee9).
+
+## 2026-08-11 09:2x -- the surfdens GL-order defect was ALREADY FIXED
+
+Both open PRs target main and are Jo's to merge, so I spent the window on the
+next queued precision item: the traced `surfdens(forcepoisson=True)` GL order,
+characterised on 2026-08-09 as shipping 2.57e-05 at (R,|z|) = (0.01, 50) because
+`symmetric_quad` used n=50. It squarely matches Jo's "backend precision should
+match numpy/scipy" directive.
+
+**It is already fixed, by gh#1292 -- which I merged myself last week.** Found
+before writing any code, by grepping the constant on the current branch
+(`_QUAD_N = 100`) and then A/B-ing across the suspect merge:
+
+    37c8430a^   _QUAD_N = 100   symmetric_quad(..., n=50)
+    37c8430a    _QUAD_N = 100   symmetric_quad(..., n=_QUAD_N)   <-- gh#1292
+
+Verified empirically through the public path rather than trusting the constant
+-- `evaluateSurfaceDensities(..., forcepoisson=True)` under `jax.jit` vs scipy:
+
+    (0.01, 50)  1.24e-10   <-- was 2.57e-05
+    (0.01,  5)  6.88e-15
+    (0.1,  50)  1.02e-14
+    (1.0,  50)  1.13e-15
+
+which reproduces the predicted n=100 column to the digit.
+
+Lesson recorded in the memory: **a characterised-but-unfixed defect can be
+closed by a later PR, and the note describing it will not know.** Check before
+building -- grep the constant, then A/B across the merge. A minute of checking
+against a duplicate PR. (The memory is retitled FIXED but retained, because its
+refuted eager-GL-routing analysis is still live guidance: fixed-node quadrature
+converges to the WRONG answer, so an n-vs-2n self-consistency check cannot see
+the error.)
+
+Also cleaned up: `/var/tmp/glorder` held an orphan detached-HEAD commit
+(`98c2d5c7`, the shared `_BACKEND_GL_ORDER` refactor). It had already landed on
+develop via squash, so nothing was at risk; branch removed.
+
+**gh#1294**: `codecov/patch` is now **100.00% of diff hit** -- the two
+`except Exception` lines were the last gap. `codecov/project` reads -0.51% with
+25 jobs still running, the same incomplete-upload pattern as gh#1297; expect it
+to settle when they finish.
