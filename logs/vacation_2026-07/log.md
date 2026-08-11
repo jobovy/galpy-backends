@@ -41703,3 +41703,60 @@ matrix rather than spending another hour per file locally:
 
 That yields the per-file x backend census across the whole suite, which is the
 number worth having for the post-rebase restart. Results next wake.
+
+## 2026-08-11 13:2x -- FIRST FULL TRACED CENSUS (run 31491212928)
+
+The dispatched `jit=true` matrix finished: **39/45 jobs green, 6 failed**. All 44
+test shards produced JUnit artifacts (the 45th job is `report`), so there is no
+silently-missing shard behind these numbers.
+
+    backend   tests   failures   skipped   pass-rate
+    jax        3705         33       175      94.4 %
+    torch      3705          9       152      95.7 %
+
+### jax: all 33 failures are ONE boundary, not 33 defects
+
+Every jax failure is in the single `test_quantity`/`test_coords` shard, and 31
+are the same error:
+
+    jax.errors.TracerArrayConversionError: __array__() was called on traced array
+
+plus `TypeError: ... 'DynamicJaxprTracer' and 'PrefixUnit'` and one kingdf units
+assertion -- the same wall in three spellings. Failing names are
+`test_potential_method_returntype` / `_returnunit` / `_value` and their
+planar/linear twins.
+
+An astropy `Quantity` must hold a CONCRETE array; constructing one calls
+`__array__`, which a tracer refuses by construction. **Units and tracing are
+mutually exclusive at the astropy boundary** -- no amount of backend work fixes
+it. This is the "not-traceable by design (units)" category I had previously
+inferred from two tests; it is now measured at full scale.
+
+They are currently UNLEDGERED: the jit ledger holds just 2 `test_quantity`
+entries, so these re-report every traced run.
+
+**I am not writing 33 ledger entries for one systemic cause** -- that is exactly
+the duplication Jo asked me to avoid. The right shape is a harness-level rule:
+under `--jit`, skip the units-returning tests as a class, so the jit ledger stays
+a list of REAL traced gaps. That is a design call about what the ledger means,
+so it goes to Jo rather than being decided unilaterally. Recorded as memory
+`units-quantity-not-traceable`.
+
+### torch: 9 failures, a different and smaller story
+
+    4 x Timeout (>300 s)                          -- slow-skip class
+    4 x InternalTorchDynamoError: RecursionError: maximum recursion depth
+    1 x InternalTorchDynamoError: NotImplementedError: argument of type <class 'type'>
+
+These are torch.compile limitations, not galpy semantics, and not the units
+boundary.
+
+### Reading
+
+Outside the astropy-units wall and torch.compile's own limits, **the suite
+traces**. That is the headline for the post-rebase restart: the remaining traced
+work is a policy decision (units) plus dynamo internals, not a backlog of galpy
+defects.
+
+State: no PRs of mine open; rebase still pending (feat/backends 15 commits
+behind main); cron 673881f0 alive.
