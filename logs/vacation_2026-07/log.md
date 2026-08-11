@@ -41458,3 +41458,35 @@ the check.
 
 **Keep-alive:** cron `673881f0` confirmed alive (created 2026-08-10, hourly at
 :13, session-only -> expires ~2026-08-17).
+
+### 07:28 UTC -- gh#1297 MERGED (f306b389)
+
+The codecov phantom self-healed exactly as diagnosed once the `test_backend*`
+shard uploaded: `patch 16.66% -> 100.00%`, `project 86.01% (-13.95%) ->
+99.95% (+0.00%)`. That is the confirmation the diagnosis was mechanical rather
+than hopeful -- the missing upload was named in advance, and its arrival moved
+the number to exactly where it should be.
+
+Audit before merge, on Jo's three criteria:
+  * **if -> xp.where array-input class**: the Pfaff entry branches on `z` with
+    `xp.where` and the double-where guard (each side evaluated at a z valid FOR
+    THAT SIDE). The remaining `if`s test `a, b, c` -- scalar potential
+    parameters, jit-static -- which is the correct thing to branch on.
+  * **duplication**: `_hyp2f1_nonpositive` is a pure extraction of the existing
+    three-route body, reused by both the direct and Pfaff-mapped calls.
+  * **helper placement**: 2F1-specific, so it stays in the 2F1 fallback module;
+    the general machinery (`gauss_legendre_01`, `asarray_on_device`,
+    `device_of`) already comes from shared locations and was not re-created.
+  * **numpy byte-identity**: the router's routing sets are keyed "jax"/"torch"
+    only, so numpy uses scipy and never reaches this fallback. Untouched.
+
+### Remaining in flight
+
+  * **gh#1296** (AnyAxisym finite part): all 101 checks green, `all-clear` was
+    stale-red from the VizieR outage -> re-run submitted, 1 running, 0 red.
+  * **gh#1294** (interpRZ vectorised grids): `Build Python 3.13 Pyodide/wasm
+    wheels` failed on a GSL cache miss followed by `ftp.gnu.org` connection
+    timeout ("Network is unreachable") -- environmental, unrelated to the diff.
+    Re-run submitted. codecov still red with 4 jobs outstanding; whether that is
+    the same upload-timing artifact or a residual real gap is decided when they
+    finish, not before.
