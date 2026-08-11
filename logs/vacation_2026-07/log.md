@@ -41577,3 +41577,37 @@ develop via squash, so nothing was at risk; branch removed.
 `except Exception` lines were the last gap. `codecov/project` reads -0.51% with
 25 jobs still running, the same incomplete-upload pattern as gh#1297; expect it
 to settle when they finish.
+
+## 2026-08-11 10:2x -- both PRs green and parked; traced measurement launched
+
+**gh#1294 and gh#1296 are both fully green** (101 checks each, 0 running, 0 red).
+gh#1294's `codecov/project` self-healed once its remaining jobs uploaded, as
+predicted -- the same incomplete-upload artifact as gh#1297, not a real drop.
+Both target main, so both now wait on Jo. Nothing else of mine is open:
+`gh pr list` shows only these two plus long-standing drafts (#1204, #892, #872,
+#748).
+
+So the loop's fallback applies: dispatch a jit run to measure traced progress.
+
+**The `--jit` dimension still is not in CI.** `backend-tests.yml`'s
+`workflow_dispatch` exposes exactly one input, `regen` -- there is no jit
+toggle, which confirms the traced dimension remains something only Jo can add
+(I cannot edit `.github/workflows`). So the measurement has to be local, and the
+box is quiet now that both PRs are done -- the right condition for it
+([[long-measurement-needs-a-quiet-box]]).
+
+Setup, with the traps handled rather than hoped past:
+  * fresh worktree at develop head f306b389;
+  * **built the C extension there** and verified it actually LOADS (ran a
+    `dop853_c` integration, R(1)=8.111127) -- a missing .so silently fakes
+    passes, and `galpy.__file__` alone does not catch it;
+  * whole file, not a hand-picked nodeid batch; `--timeout=600` as a PER-TEST
+    cap so a hang still yields junitxml rather than zero data;
+  * `CUDA_VISIBLE_DEVICES=""`, `JAX_PLATFORMS=cpu`, `JAX_ENABLE_X64=1` (jax
+    defaults to GPU, and float32 silently produces inf/nan that reads as a galpy
+    bug).
+
+Launched 10:29 UTC, detached:
+    pytest tests/test_potential.py --backend jax --jit
+Results next wake. Counts will be read from the junitxml, not from the tail of
+the log, and I will not report a partial run as the result.
