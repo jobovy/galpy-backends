@@ -41656,3 +41656,50 @@ zforce boundary terms. Recorded, not acted on.
 
 Also: did NOT edit /var/tmp/glorder while the sweep runs out of it -- used a
 throwaway main worktree instead, then removed it.
+
+## 2026-08-11 12:2x -- both PRs MERGED; traced test_potential is clean; jit CI dispatched
+
+**Jo merged both**: gh#1294 at 11:29 UTC, gh#1296 at 11:30. main is now 87256016.
+No PRs of mine are open. The rebase has NOT happened yet -- `feat/backends` is
+15 commits behind main.
+
+### Local traced result (test_potential.py, --backend jax --jit)
+
+Counts from the junitxml, not the log tail:
+
+    tests=1385   failures=0   errors=0   skipped=107   time=3674s (1:01)
+
+i.e. **the whole potential suite traces clean on jax**. Stated honestly: the 107
+covers ledgered slow-skips plus 5 xfails, so this is green MODULO the ledger,
+not green in an absolute sense. The C extension was built and verified to LOAD
+in that worktree first (dop853_c integration, R(1)=8.111127), so these are real
+passes and not the missing-.so kind.
+
+### CORRECTION: the jit CI dimension already exists
+
+Last wake I reported that `backend-tests.yml` has no jit toggle and that the
+traced dimension was still something only Jo could add. **That was wrong.** I
+read the copy in my LOCAL feat/backends checkout, which sits at dbb09ffc while
+origin is at 3e1137b1 -- Jo's "ci: run the all-backend suite on
+feat/backends-develop + jit dispatch (#1203)", dated 2026-07-26. The input is
+present on BOTH feat/backends and feat/backends-develop:
+
+    jit: 'Run the whole suite TRACED (jax.jit / torch.compile at every galpy
+          entry point); burndown lists are keyed "<backend>-jit"'
+
+Generalising the same error I made twice yesterday about source files: **do not
+read branch state from a working tree.** `git show origin/<branch>:<path>` costs
+nothing and cannot be stale. My local checkouts drift, and every one of these
+misreads has pointed the same direction -- concluding work was needed when it
+was already done.
+
+### Dispatched
+
+With no PRs in flight the runners are free, so I dispatched the full traced
+matrix rather than spending another hour per file locally:
+
+    gh workflow run backend-tests.yml --ref feat/backends-develop -f jit=true
+    -> run 31491212928 (queued 12:26 UTC)
+
+That yields the per-file x backend census across the whole suite, which is the
+number worth having for the post-rebase restart. Results next wake.
