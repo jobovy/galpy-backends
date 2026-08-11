@@ -41760,3 +41760,62 @@ defects.
 
 State: no PRs of mine open; rebase still pending (feat/backends 15 commits
 behind main); cron 673881f0 alive.
+
+## 2026-08-11 ~14:00 UTC -- REBASE feat/backends onto main: DONE locally, CANNOT PUSH
+
+Jo asked for the rebase done locally and pushed to a temp branch for review.
+Rebase is complete and verified; **the push is blocked and Jo must do it.**
+
+    branch  rebase/backends-onto-main-20260811   sha 982b1781
+    225 commits replayed onto main 87256016, 0 merge commits, main is an ancestor
+
+### The push blocker
+
+    ! [remote rejected] refusing to allow a Personal Access Token to create or
+      update workflow `.github/workflows/build.yml` without `workflow` scope
+
+A rebase RECREATES every replayed commit, and several touch `.github/workflows`
+(main updated 8 workflow files in these 15 commits; feat/backends' own commits
+touch backend-tests.yml). So the missing `workflow` scope blocks the entire
+push, not just one file. This is the same constraint as "cannot edit workflows",
+surfacing in a place I had not anticipated -- it applies to REBASES too, because
+replaying an untouched workflow file still creates a new commit object for it.
+
+**The branch is already in Jo's repo**: worktrees share the git dir, so from
+`/home/bovy/Repos/galpy` the ref `rebase/backends-onto-main-20260811` resolves.
+Jo can review with plain git and push it. A bundle is also written to the
+session scratchpad as a portable fallback.
+
+### Only 2 conflicts in 225 commits
+
+**1. RazorThinExponentialDiskPotential** -- main's gh#1295 replaced inline node
+construction with `_inner_nodes`/`_outer_nodes` (the k=R substitution); the
+backend commit had swapped `numpy.` -> `xp.`. Kept main's helpers AND the
+backend namespace.
+
+  *This one is a real behavioural adaptation, not a mechanical merge.* Taking
+  main's helpers verbatim would have shipped a torch bug: they compute
+  `R * (numpy array)` and `numpy.sqrt(kmax - R)`, and the backend's own comment
+  a few lines below says a torch tensor times a numpy array trips numpy's
+  `__array_wrap__`. So both helpers now resolve their namespace from R and
+  `xp.asarray` the GL nodes first (a no-op on numpy, byte-identical).
+
+**2. AnyAxisymmetricRazorThinDiskPotential** -- a FALSE conflict: main added the
+`_quad_apeak`/`_finite_part_quad` block and the backend added
+`_default_surfdens`, at the same location. Kept both; verified all three are
+defined and referenced.
+
+### Verification
+
+  * no conflict markers (the two `=======` hits are RST heading underlines in
+    AUTHORS.txt and dfking.rst, both byte-identical to main);
+  * main's content survived: `epsabs=0.0`, `_spot_check_cells`,
+    `_finite_part_quad`, `_inner_nodes` all present;
+  * files differing vs old feat/backends = exactly main's 15-commit file set;
+  * C extension builds and LOADS in the rebased tree (dop853_c, R(1)=8.1111274292
+    -- identical to develop);
+  * `test_interp_potential.py` 45 passed;
+  * `test_potential.py` from junitxml: **tests=1331 failures=0 errors=0**
+    skipped=102, 655 s;
+  * `test_quantity.py` + `test_orbits.py` (the other main-touched test files)
+    running now.
