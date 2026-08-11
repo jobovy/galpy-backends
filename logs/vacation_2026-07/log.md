@@ -41490,3 +41490,48 @@ Audit before merge, on Jo's three criteria:
     Re-run submitted. codecov still red with 4 jobs outstanding; whether that is
     the same upload-timing artifact or a residual real gap is decided when they
     finish, not before.
+
+## 2026-08-11 08:xx -- gh#1296 green (Jo's to merge) + gh#1294 patch closed
+
+**gh#1296 is fully green and I cannot merge it.** All 101 checks pass, all-clear
+success, combined status success, `required_approving_review_count=0`, squash an
+allowed merge method -- and `gh pr merge` still returns "the base branch policy
+prohibits the merge", `mergeStateStatus=BLOCKED`. Cause: `jobovy-agent` has
+push+triage but NOT admin/maintain, and main's ruleset bypass is Jo's.
+gh#1295/gh#1293 confirm it: `mergedBy=jobovy`.
+
+I briefly mis-read this as precedent for merging main myself, because b68c3ec9
+and 80a10d66 are AUTHORED by jobovy-agent. Authorship is not mergership -- Jo
+merged them. Recorded as memory `main-prs-are-jos-to-merge` so the next wake
+does not re-diagnose a CI problem that isn't one. A green unmerged main PR is
+the expected end state, not a blocker.
+
+Audit of gh#1296 done anyway (it is ready for Jo):
+  * one new module-level helper, `_finite_part_quad`; method set otherwise
+    unchanged vs base (the extra `def sym` in the diff is NESTED inside it), and
+    all 6 `@check_potential_inputs_not_arrays` decorators still present -- the
+    def-to-def splice check that caught the earlier `_Rzderiv` loss.
+  * NOT a duplicate of the backend's `symmetric_quad` (#1292, on develop): that
+    is a GL routine for `int_{-|b|}^{|b|}` with no finite-part handling, no
+    singular-model subtraction and no sinh peak substitution. The overlap is the
+    trivial `f(u)+f(-u)`. The `-2C/R` finite part and the `-4` prefactor encode
+    THIS potential's kernel, so module-local placement is right.
+  * numpy values change ON PURPOSE (it is a correctness fix); flagged in the
+    squash body rather than left implicit.
+
+**gh#1294 patch coverage closed, without guessing which lines.** The patch has
+37 statements, so `91.89% = 34 hit (3 missed)` and `94.59% = 35 hit (2 missed)`
+-- the arithmetic names the count exactly, and local `coverage` (with
+`--rcfile=/dev/null`; the repo `.coveragerc` filters the file out and yields a
+misleading "No data to report") named the lines: `except Exception: return
+_loop()`.
+
+I had asserted that arm was already exercised because AnySphericalPotential
+"rejects an array outright". It does not. `_grid_eval`'s own docstring records
+the opposite: AnySpherical neither raises nor broadcasts, it returns silently
+wrong values in 95% of cells and is caught by the SPOT CHECK. So the raising arm
+had no trigger in the zoo -- same hole as the wrong-shape arm.
+
+All three fallbacks are now pinned by tests:
+    raises -> try/except | silently wrong -> spot check | wrong shape -> shape guard
+each A/B'd by disabling its guard. Pushed bdf4f243 (+ empty 1dd19ee9).
