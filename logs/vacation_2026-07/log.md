@@ -41611,3 +41611,48 @@ Launched 10:29 UTC, detached:
     pytest tests/test_potential.py --backend jax --jit
 Results next wake. Counts will be read from the junitxml, not from the tail of
 the log, and I will not report a partial run as the result.
+
+## 2026-08-11 11:2x -- second "already fixed", by a DIFFERENT mechanism
+
+Both PRs still green and unmerged (Jo's). The traced run is at ~93%, so I kept
+to CPU-light read-only work rather than starting anything that would contend
+with it.
+
+Applied last wake's lesson to the next characterised precision defect:
+`scipy.integrate.quad`'s default `epsabs=1.49e-8` is ABSOLUTE, so a vertical
+surfdens integral whose own value is ~1e-10 passes the absolute test on the
+first crude estimate and returns ~1e-5 wrong.
+
+Reproduced it on develop through the public path, against a 30-dps mpmath gold:
+
+    |z|      gold           galpy surfdens    rel err
+      2   2.463291601e-10   2.463291602e-10   2.75e-10
+      5   2.463291601e-10   2.463268079e-10   9.55e-06
+     40   2.463291601e-10   2.463268079e-10   9.55e-06
+
+matching the old table to the digit. Measured the fix too: `epsabs=0` (pure
+relative) takes it to 1.2e-15 for ~20 % more integrand evaluations; adding
+`epsrel=1e-12` buys nothing and costs more. Also checked `epsabs=0` against an
+identically-zero and a 1e-300 integrand -- correct, no warnings.
+
+**Then found it is already fixed on main, at BOTH quad sites, by gh#1293 --
+which I wrote.** develop simply has not consumed it. So this is not a defect to
+fix; it is one more thing Jo's pending rebase closes. Fixing it on develop would
+have collided with that rebase.
+
+Two "already fixed" findings on consecutive wakes, by DIFFERENT mechanisms:
+  * gh#1292 -- a later PR on the SAME branch closed it;
+  * gh#1293 -- fixed on MAIN, not yet on develop.
+The second is the nastier one, because the defect genuinely still reproduces on
+the branch you are standing on. A reproduction on develop alone proves nothing
+about whether work is needed. Memory updated: grep the fix on the branch you
+measured **and** on main, before writing code.
+
+One real datum did come out of it: on main the `forcepoisson=True` route sits at
+**4.4e-09** while the direct route is ~1e-15. That is NOT a tolerance artifact
+-- both sites already have `epsabs=0.0`. It is the intrinsic accuracy of the
+Poisson route, whose integrand carries Rforce/R2deriv/phi2deriv error plus the
+zforce boundary terms. Recorded, not acted on.
+
+Also: did NOT edit /var/tmp/glorder while the sweep runs out of it -- used a
+throwaway main worktree instead, then removed it.
