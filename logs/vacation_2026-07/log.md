@@ -41968,3 +41968,42 @@ it. Asked Jo which they prefer; my preference is a follow-up PR into develop.
 the known units boundary by design; the other three are running under forced
 torch + jax now, to find whether this class is 1 test or several before fixing
 anything.
+
+## 2026-08-12 07:2x -- gh#1298 nearly green; both prior anomalies were mine
+
+Cron `6a357c84` alive. **The rebase chain has LANDED** (Jo force-pushed):
+main 87256016 -> feat/backends 982b1781 -> feat/backends-develop 817e1333,
+79 commits, both ancestors verified. STATUS.md rewritten accordingly -- it had
+still said "awaiting Jo's force-push", which is exactly the kind of stale
+handoff text that misleads a post-restart wake.
+
+### Both anomalies from the previous wake were MY errors, not defects
+
+**1. "8 failures" on the fix branch.** The fresh worktree had **no `.so`**.
+galpy warned "C extension module not loaded" and every one of the 8 was
+C-dependent (`test_dehnen_bar_python_c_consistency` -> ZeroDivisionError because
+it compares C against Python; the mockInterpSnapshotRZPotential trio;
+`_series_c`; RotateAndTilt integration; InterpSnapshot pickling). Built the
+extension: **1288 passed, 0 failed**. Same collected total (1288+102=1390).
+
+This is [[worktree-missing-c-ext-fakes-passes]] in MIRROR IMAGE: the note warns a
+missing .so fakes PASSES (tests silently skip the C path). Here it faked
+FAILURES, which reads far more alarmingly and cost a cycle of suspicion aimed at
+my own fix. Same root cause, opposite symptom -- build the extension in EVERY
+fresh worktree before believing any result from it.
+
+**2. "1 jax sweep failure."** `test_orbits::test_bruteSOS_3D`, Timeout >900s.
+It is ALREADY LEDGERED: `jax-jit tests/test_orbits.py::test_bruteSOS_3D # 277s
+traced`. My sweep ran with a stricter per-test cap than the entry contemplates,
+so this was an artifact of my own invocation. Check the ledger before treating a
+timeout as a finding.
+
+### gh#1298 status
+
+    codecov/patch    SUCCESS  100.00% of diff hit
+    codecov/project  failure  84.86% (-15.10%)   <- 90 shards still running
+
+A 15-point project drop from a 4-line TEST-ONLY change is not physically
+possible; this is the incomplete-upload phantom, same signature as gh#1297's
+-13.95pp which self-healed once its shards uploaded. Not chasing it. Everything
+else: no reds.
