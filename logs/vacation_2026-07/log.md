@@ -41868,3 +41868,35 @@ files apart. Worth a test-isolation fix eventually; not now.
 
 Still needs Jo to push: my PAT lacks `workflow` scope and a rebase recreates
 commits touching .github/workflows.
+
+## 2026-08-11 -- CRON RE-CREATED (2nd death) + both rebases done
+
+**Loop cron re-created: job `6a357c84`, hourly at :13, created 2026-08-11 ->
+expires ~2026-08-18.** Note that date; the next re-creation is due before then.
+
+This is the loop's SECOND death:
+  * 2026-08-10 -- 7-day auto-expiry; ~4h of no wakes, two PRs sat green+unmerged;
+  * 2026-08-11 -- lost to session restarts (cron is in-memory, not on disk).
+
+The two causes are different and only one is time-based. Expiry is predictable
+and step (5) now carries the created-at date so it can be pre-empted; a session
+restart is NOT predictable, which is why step (5) says run CronList FIRST every
+wake rather than only when the date looks old. The re-created prompt records both
+deaths so the reason for the check survives.
+
+### Both rebases are done
+
+    main 87256016
+      -> feat/backends 982b1781            (225 commits, PUSHED by Jo)
+        -> rebase/develop-onto-backends-20260811  817e1333  (79 commits, pushed by me)
+
+I could push the develop one myself: none of its 79 commits touch
+`.github/workflows`, so the PAT scope that blocked the feat/backends push did not
+apply. Worth remembering -- the block is per-CONTENT, not per-branch.
+
+Develop rebase: 4 conflicts, all "main's numerics vs develop's vectorisation",
+all resolved keeping BOTH. One commit correctly dropped (#1275, a pre-rebase
+cherry-pick of main fixes; verified 0 diff lines against the rebased tree, so 79
+not 80 is right). Verification: test_potential 1390/0 failures,
+test_interp_potential 45 passed, C ext loads (R(1)=8.1111274292), ledger 16/85
+matching develop exactly.
