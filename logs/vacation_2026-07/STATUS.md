@@ -47,6 +47,12 @@ torch.
     before then; it has already died twice.
   * develop's `-inf, inf` quad in `surfdens` has **no `epsabs`** — plausibly the
     same latent bug main fixed elsewhere. A follow-up PR, not a rebase edit.
+  * **`galpy-jax` cannot push.** `origin` (`jobovy/galpy-jax`) answers
+    `Repository not found`; `origin/main` last moved **2026-07-25** and there
+    are **975 unpushed commits**. Pre-existing, unrelated to any PR. The logs
+    are intact in the working tree, so nothing is lost — but they exist ONLY on
+    this box. Worth Jo re-granting access (private repo / token scope) at some
+    point; not a work blocker, so not worth a page.
 
 ## Queue after gh#1299
 
