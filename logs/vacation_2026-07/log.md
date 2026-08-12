@@ -41926,3 +41926,45 @@ number lands at ~1e-6/1e-7, suspect the probe's dtype before the library
 Also running: full `test_potential.py` under forced jax and forced torch, which
 exercises the surfdens resolutions (`_surfdens_poisson` + main's epsabs) on the
 paths numpy does not reach.
+
+## 2026-08-12 04:2x -- forced-backend gate on the rebased develop: 1 inherited red
+
+Cron `6a357c84` alive. Branch CI on 817e1333: notebooks green, Windows green,
+Linux/Mac still running. develop still at f306b389 (Jo's force-push pending).
+
+**Forced-backend results on the rebased develop:**
+
+    forced-jax   test_potential.py   1276 passed, 114 skipped, 0 failed
+    forced-torch test_potential.py   1287 passed, 102 skipped, 1 FAILED
+
+The one failure is `test_anyaxisymrazorthin_smallz_limit`:
+
+    TypeError: all() received an invalid combination of arguments -
+               got (out=NoneType, axis=NoneType, ...)
+
+i.e. `numpy.all(...)` called on a torch **Tensor** -- numpy forwards `axis=`/`out=`
+that torch rejects. The test asserts with
+`numpy.all(numpy.fabs(fz / limit - 1.0) < 3e-4)` and under a forced backend `fz`
+is a Tensor. Not ledgered.
+
+**A/B: it fails on `feat/backends` (982b1781) TOO** -- same nodeid, same command,
+both exit 1. So it is INHERITED, not caused by the develop rebase, and it is live
+on feat/backends right now. Cause: it is one of MAIN's new tests (from gh#1296),
+and main's tests were never written to be backend-aware; this is the first time
+one has met the forced-backend harness.
+
+(The feat/backends arm prints only `F` with no summary line -- the conftest
+force-exit quirk, [[forced-backend-log-has-no-summary]]. Read the exit code, not
+the missing summary.)
+
+Fix is the established pattern: `as_numpy` at the assertion sites, no source
+change. Deliberately NOT slipped into the rebase branch -- that would turn "a
+pure rebase" into "a rebase plus an edit" exactly as Jo is about to force-push
+it. Asked Jo which they prefer; my preference is a follow-up PR into develop.
+
+**Scope sweep running:** main touched 5 test files
+(`test_potential`, `test_orbits`, `test_quantity`, `test_SpiralArmsPotential`,
+`test_interp_potential`). test_potential is measured (1 red); test_quantity is
+the known units boundary by design; the other three are running under forced
+torch + jax now, to find whether this class is 1 test or several before fixing
+anything.
