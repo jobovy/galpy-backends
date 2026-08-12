@@ -42173,3 +42173,44 @@ Incidental: `git stash push -- <paths>` from a worktree is still repo-wide.
 Used it for the A/B and it popped cleanly, but verified afterwards that the main
 worktree's uncommitted `coords.py` was untouched. Two worktrees remain the safe
 way to A/B.
+
+---
+
+## 2026-08-12: gh#1299 MERGED (develop d76d683b); gh#1300 opened
+
+**gh#1299 merged** — 154/154 green. The codecov phantom healed exactly as the
+session-count diagnosis predicted: **11 -> 27 sessions, 72.13% -> 99.95%
+(+0.00%)**. No action was ever needed on it; the discipline that paid off was
+proving it was an upload artefact (missing sessions, identical `lines`) instead
+of treating a -27.83pp number on a test-only diff as a real drop.
+
+Audit before merge, all four points clean:
+  * **test-only** — 0 `galpy/` files touched, so the numpy path is untouched by
+    construction;
+  * **if -> xp.where array-input class** — N/A, no compute code;
+  * **duplication** — the one other AST user in tests/ is
+    `test_backend_input.py`, which walks for *decorator declarations*, a
+    different question; the only overlap is the two-line
+    `ast.parse(read_text())` stdlib idiom, not a helper worth sharing;
+  * **placement** — static source analysis belongs in the test file, not in
+    `galpy/backend/` (which holds runtime helpers).
+
+Registry now 15 -> **50 modules**. Task #36 closed; follow-up #215 filed
+(`COMPUTE_METHODS` is still a hand-list; 100 namespace-aware defs sit outside
+it, measured at 0 unguarded sites, and the obvious widening rule would pull in
+`__init__`, which is numpy-by-design).
+
+**gh#1300 opened** (task #49): one device anchor per CALL. Rebased cleanly onto
+d76d683b, 138 passed on the rebased tree. Details in the previous entry; the
+short version is that `@backend_input` gave each coordinate its own anchor, so a
+numpy sibling landed on CPU while a CUDA one stayed on the GPU, and
+MiyamotoNagai handed back a **CPU result for a CUDA input** — losing the GPU
+silently rather than erroring.
+
+Also cleaned up a wasted local run: I had started `tests/test_backend*.py`
+locally to check "the exact CI shard context", but that glob runs **numpy**
+locally while the CI shards in question run `--backend jax/torch`. Not the same
+context, so it could not settle anything CI would not settle sooner, and it sat
+at 1% after 25 minutes. Killed it. (The `pkill` pattern also failed because the
+shell had already expanded the glob into 80 filenames, and `pgrep -af pytest`
+matched the bash wrapper too — killed by PID.)
