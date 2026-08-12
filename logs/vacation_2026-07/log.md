@@ -41900,3 +41900,29 @@ cherry-pick of main fixes; verified 0 diff lines against the rebased tree, so 79
 not 80 is right). Verification: test_potential 1390/0 failures,
 test_interp_potential 45 passed, C ext loads (R(1)=8.1111274292), ledger 16/85
 matching develop exactly.
+
+## 2026-08-12 02:2x -- backend verification of the develop-rebase conflict resolutions
+
+Cron `6a357c84` alive (created 2026-08-11 -> expires ~2026-08-18). CI on
+`rebase/develop-onto-backends-20260811` (817e1333) is queued, so: local work.
+
+**Closed a real gap in my own verification.** I had checked the RazorThin
+conflict resolution was numpy BIT-IDENTICAL (12/12) -- but that conflict was
+fundamentally about develop's VECTORISATION meeting main's substituted nodes, and
+numpy cannot see a mistake in the backend path. Probed all three:
+
+    path            agreement vs numpy    vectorised call
+    numpy           bit-identical (12/12) --
+    jax             1.95e-16              shape (5,), values match
+    torch float64   2.68e-16              shape (5,), values match
+
+The first torch number I got was 1.16e-06, which looks exactly like a float32
+result -- and it was: `torch.asarray(0.8)` defaults to float32, so that was MY
+PROBE, not the code. Re-ran with an explicit dtype to separate the two before
+reporting it as anything. Worth remembering as a probe-design rule: when a torch
+number lands at ~1e-6/1e-7, suspect the probe's dtype before the library
+([[backend-coerce-weak-scalar-trap]] is the same family).
+
+Also running: full `test_potential.py` under forced jax and forced torch, which
+exercises the surfdens resolutions (`_surfdens_poisson` + main's epsabs) on the
+paths numpy does not reach.
