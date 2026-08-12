@@ -1,32 +1,28 @@
-# Vacation status snapshot — 2026-08-12
+# Vacation status snapshot — 2026-08-12 (rebase LANDED)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
 
 ---
 
-## THE ONE THING BLOCKED ON JO
+## Nothing is blocked on Jo
 
-`rebase/develop-onto-backends-20260811` (**817e1333**) is the rebased
-`feat/backends-develop`. Jo has authorised force-pushing it, **but I cannot**:
-`feat/backends-develop` carries a `non_fast_forward` rule and I have `push` only
-(no `admin`/`maintain`, so no bypass). Confirmed non-FF: `f306b389` is not an
-ancestor of `817e1333`.
+Both rebases have LANDED. Jo force-pushed `feat/backends-develop` = 817e1333 on
+2026-08-12; verified: 79 commits ahead of feat/backends, and BOTH feat/backends
+and main are ancestors.
 
-Jo asked to be **pinged on the phone** when it is green and verified. So:
-drive CI green -> finish the checks below -> ATTEMPT the push anyway (the rule
-reading could be wrong, it costs nothing to find out) -> then `PushNotification`
-either way.
+## Active PR
 
-The command for Jo:
+**gh#1298** `fix/anyaxisym-smallz-backend-assertions` -> feat/backends-develop.
+One test-side fix: `test_anyaxisymrazorthin_smallz_limit` read its forces
+through `as_numpy`, because under forced torch `fz` is a Tensor and
+`numpy.all(...)` then forwards axis=/out= that torch rejects. Inherited from
+main (gh#1296), NOT a rebase defect -- the identical nodeid fails on
+feat/backends too. Scope measured first: this is a class of exactly ONE
+(the other main-touched test files are 180 passed / 0 failed under forced torch;
+test_quantity is the units boundary by design). Mine to merge when green.
 
-```bash
-cd /home/bovy/Repos/galpy && git fetch origin
-git push --force-with-lease=feat/backends-develop:f306b389 \
-    origin rebase/develop-onto-backends-20260811:feat/backends-develop
-```
-
-## Branch state (both rebases DONE)
+## Branch state
 
     main                    87256016
       feat/backends         982b1781   225 commits onto main   (Jo force-pushed, LANDED)
