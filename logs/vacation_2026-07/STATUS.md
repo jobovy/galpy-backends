@@ -25,10 +25,11 @@ test_quantity is the units boundary by design). Mine to merge when green.
 ## Branch state
 
     main                    87256016
-      feat/backends         982b1781   225 commits onto main   (Jo force-pushed, LANDED)
-        rebase/develop-...  817e1333    79 commits onto that   (I pushed; awaiting Jo's force-push)
+      feat/backends         982b1781   225 commits onto main   (LANDED)
+        feat/backends-develop 817e1333  79 commits onto that   (LANDED 2026-08-12)
 
-`feat/backends-develop` itself is still at the OLD `f306b389` until Jo pushes.
+Both force-pushes are done. Work now happens ON `feat/backends-develop` again,
+with PRs targeting it (those are mine to squash-merge).
 
 ## Verification of 817e1333
 
