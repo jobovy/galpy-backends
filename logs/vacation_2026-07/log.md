@@ -42279,3 +42279,54 @@ before the category.
 Committed 9204e778 on `backend-jit/units-jit-boundary`, held until gh#1300
 merges (one PR at a time). galpy-jax push access restored by Jo, 977 commits
 pushed.
+
+---
+
+## 2026-08-12: gh#1300 caused a 180x perf regression — found only by durations
+
+The forced-jax orbit group-5 shard on gh#1300 failed with two TIMEOUTS. Not
+marginal:
+
+    test_orbits.py::test_integration_dxdv_2d            develop 1.7 s -> 300 s
+    test_orbits.py::test_integration_dxdv_2d_rectInOut  develop 1.7 s -> 300 s
+
+Neither is ledgered anywhere, so both normally pass. Measured by pulling the
+junit artifacts for the SAME shard from develop run 31601434841 and PR run
+31601564919 and comparing `time=` per testcase.
+
+**Cause.** gh#1300 computes one shared device anchor and hands it to every
+coordinate's coercion. Correct for mixed devices — but a numpy/python coordinate
+that previously got `device=None` now gets an EXPLICIT device, and naming a
+device commits the array instead of letting the backend place it:
+
+    asarray_on_device(..., device=None)  : 134.3 us/call
+    asarray_on_device(..., device=<dev>) : 397.6 us/call   (3.0x)
+
+My first guess was that `jnp.asarray(device=...)` was RAISING and hitting the
+documented fallback path. It does not raise — it is purely cost. Worth checking,
+because the fix differs.
+
+**Fix (pushed, e9df1561):** ask the namespace once (cached) what device it places
+a new array on, and drop the keyword when the anchor equals it. CPU-only runs go
+back to the `device=None` fast path; a CUDA sibling on a CPU-default run still
+gets the explicit anchor, so the mixed-device bug stays fixed. `default_device`
+lives in `_namespaces.py` beside `device_of`/`asarray_on_device`.
+
+**Could not validate locally.** Those two tests take >10 min on this box under
+forced jax in BOTH arms — a ~350x discrepancy against CI's 1.7 s — so local
+timing is not a valid instrument for them. I checked the obvious suspect and it
+was WRONG: `_ext_loaded: True` in both worktrees, so it is not a missing C
+extension (the .so files just are not at `galpy/*.so`). Verification therefore
+goes back to CI, which is the instrument that produced the original numbers.
+
+**The lesson worth keeping.** Every VALUE stayed correct here; only the time
+changed. I had verified gh#1300 against numpy/torch/jax value suites and a CUDA
+probe, and all of them passed. No value assertion can catch this class — it took
+a duration comparison against the baseline shard. That is a concrete argument for
+treating the perf/timeout shards as part of the gate rather than noise.
+
+Also this wake: gh#1302 (an as_numpy fix applied directly to feat/backends) was
+CLOSED at Jo's direction — fixes do not go to feat/backends; the eventual
+develop->feat/backends merge (gh#1204, currently draft) resolves those reds. A
+red there whose fix already exists on develop is EXPECTED state, not a task.
+Recorded as memory `no-direct-fixes-to-feat-backends`.
