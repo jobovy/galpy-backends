@@ -42039,3 +42039,72 @@ Leaving the tests as-is. They are proven flaky by a same-SHA re-run (2 failed ->
 speculative "robustness" change without a measured mechanism is exactly the kind
 of edit that makes a delicate test worse. Recorded so the next person does not
 re-derive the refuted hypothesis.
+
+---
+
+## 2026-08-12 -- gh#1298 merged; gh#1299 conventions registry (task #36)
+
+**gh#1298 merged** into `feat/backends-develop` as **bf520538** after a clean
+audit (no new conditionals, `as_numpy` is the existing shared helper, already
+imported; plus an incidental `ruff format` reflow of one `integrate.quad(...)`
+line, called out in the squash message).
+
+Cron `6a357c84` alive, created 2026-08-11 -> **expires ~2026-08-18**.
+
+### Task #36: the conventions registry had drifted 15 / 48
+
+`tests/test_backend_conventions.py` enforces "no bare numpy in a migrated
+potential's compute methods". It was gated on a hand-maintained `MIGRATED`
+allowlist holding **15** classes, while **48** potential modules declare
+`_backend_compatible = True`. The other 33 were entirely unchecked.
+
+Registering them was not possible as-is: the visitor flagged **64 sites across
+10 classes**. I triaged all 64 before writing anything, and **every one is a
+false positive**, in exactly two classes:
+
+  * **31 scalar constants** -- `numpy.pi` (bit-for-bit `math.pi`), `numpy.e`,
+    `numpy.inf`, `numpy.nan`, `numpy.newaxis` (which IS `None`). No array
+    semantics; correct under every backend. The visitor flagged any
+    `numpy.<attr>` and could not tell a constant from an array op.
+  * **33 uses in a numpy-guarded branch** of a dual-path method: the `else` of
+    `if is_backend_array(r):`, the body of `if xp is numpy:`, the tail after an
+    `if xp is not numpy: return ...`, and the numpy side of a
+    `... if xp is numpy else xp....` ternary. All four dual-path modules
+    (AnySpherical, interpSpherical, MultipoleExpansion, Potential) use the
+    documented pattern correctly.
+
+**Zero real defects.** So the fix was the checker, not the potentials -- gh#1299
+touches no `galpy/` source at all.
+
+What landed in the PR: a self-policing `SAFE_NUMPY_ATTRS` allowlist (a test
+asserts each entry is a float/None, so an array function can never be slipped in
+to blind the check); a visitor that tracks backend-reachability through `if`
+guards and ternaries; and `CHECKED_MODULES` **derived** from
+`self._backend_compatible = True` rather than hand-listed, so a newly migrated
+potential is covered the day it lands. **15 -> 50 modules**, with all 15
+previously-registered classes verified still covered.
+
+### The A/B that mattered
+
+An exemption is only safe if it is not over-broad, so I injected a bare
+`numpy.*` call on the **backend** side of each dual-path module. First run:
+three CAUGHT, `Potential.py` **MISSED**. That looked like a hole in the branch
+logic. It was not -- line 816 is inside `_surfdens_poisson`, which is not in
+`COMPUTE_METHODS`, so the visitor never looked at it. Re-injected at the real
+`_surfdens` site (line 913): caught. All four now caught, and each of the six
+guard forms ships as a *paired* case -- numpy-side exempt AND backend-side
+flagged.
+
+Worth keeping: a "missed" injection can mean the checker is blind, or it can
+mean you injected somewhere the checker was never asked to look. Those are very
+different bugs and only reading the enclosing `def` distinguishes them.
+
+### Measured, deliberately not in scope
+
+`COMPUTE_METHODS` is still a hand-list of 16 names. Across the 50 checked
+modules, **100 further method defs (75 distinct names)** call `get_namespace()`
+and are namespace-aware but unchecked. Measured them under the new visitor:
+**0 unguarded sites**, so nothing is hiding there today. Not folded in, because
+the obvious criterion ("any method calling `get_namespace`") pulls in
+`__init__`, which is numpy-by-design and which the suite explicitly asserts must
+stay unchecked. Filed as task #215.
