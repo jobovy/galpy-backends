@@ -42108,3 +42108,68 @@ and are namespace-aware but unchecked. Measured them under the new visitor:
 the obvious criterion ("any method calling `get_namespace`") pulls in
 `__init__`, which is numpy-by-design and which the suite explicitly asserts must
 stay unchecked. Filed as task #215.
+
+---
+
+## 2026-08-12 (later): gh#1299 in CI; task #49 fixed + A/B'd
+
+### gh#1299 codecov: phantom, confirmed by session count (not assumed)
+
+`codecov/project` went red at **-27.83pp** on a PR that touches ONE test file.
+`codecov/patch` said "Coverage not affected" -- correct, the diff has zero
+`galpy/` lines. Confirmed phantom via the upload-session discriminator:
+
+    base bf520538: sessions=27  coverage=99.95
+    head d6898535: sessions=11  coverage=72.13   <- 16 shards not yet uploaded
+
+Same `lines=48510` on both sides, so the "drop" is purely missing uploads. Then
+watched it heal in place: **11 -> 26 sessions, 72.13 -> 86.02%**, with two
+py3.14 `test_backend*.py` shards still to upload. No action needed beyond
+re-running `all-clear` once it settles.
+
+Note for next time: the session count lives at `totals.sessions`, NOT
+`report.sessions` -- my first probe read the wrong key and returned 0 for both
+sides, which would have told me nothing. Reading the wrong field looks exactly
+like "the discriminator doesn't apply here".
+
+### Task #49: one device anchor per CALL, not per coordinate
+
+`@backend_input` coerced each declared coordinate separately, so `device_of()`
+saw one value at a time. A numpy/python coordinate has no device -> anchors to
+None -> lands on the backend default device (CPU for torch), while a CUDA
+sibling stays on the GPU. Reproduced on the TITAN Xp with a spy on `_Rforce`:
+
+    R numpy 1-D + z cuda 1-D  ->  evaluator sees R=cpu,    z=cuda:0  (result CPU!)
+    R cuda  1-D + z numpy 1-D ->  evaluator sees R=cuda:0, z=cpu
+
+Not a crash for MiyamotoNagai -- something resolves it -- but the result comes
+back on the CPU, i.e. the GPU is silently lost. Whether a potential crashes or
+quietly transfers depends on its arithmetic; both are wrong.
+
+Fix: compute the anchor ONCE over all declared coordinates (the wrapper already
+collects them in `probe`) and thread it into `coerce_coords(..., device=)`.
+
+**Why the existing CUDA test missed it.** `test_mixed_coords_cross_device_cuda`
+already covered "mixed scalar/array coords" -- but with SCALAR R,z. torch
+accepts a 0-dim CPU tensor in a binary op with a CUDA one, so a per-coordinate
+anchor sails straight through. Only a **non-0-dim** numpy sibling exposes the
+split. Extended that test with array siblings in both orders.
+
+**A CI-runnable regression test without a GPU:** torch's `meta` device works as
+a second device. `device_of(meta tensor)` = meta; a numpy sibling coerced with a
+meta anchor lands on meta, and without one lands on cpu. So the property is
+checked on every runner, not only where a GPU exists.
+
+Both tests verified to FAIL without the source change:
+  * `split anchor: R=meta, z=cpu, phi=cpu`
+  * `assert 'cpu' == 'cuda'`
+
+Gates (all complete, from finished runs): numpy `test_potential.py` **1324
+passed**, forced torch **1288 passed**, forced jax **1276 passed** (57 min),
+CUDA device test passed. Committed locally as 51a8def9 on
+`backend-jit/coerce-device-anchor`; opens as a PR once gh#1299 lands.
+
+Incidental: `git stash push -- <paths>` from a worktree is still repo-wide.
+Used it for the A/B and it popped cleanly, but verified afterwards that the main
+worktree's uncommitted `coords.py` was untouched. Two worktrees remain the safe
+way to A/B.
