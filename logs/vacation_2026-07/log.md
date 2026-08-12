@@ -42007,3 +42007,35 @@ A 15-point project drop from a 4-line TEST-ONLY change is not physically
 possible; this is the incomplete-upload phantom, same signature as gh#1297's
 -13.95pp which self-healed once its shards uploaded. Not chasing it. Everything
 else: no reds.
+
+## 2026-08-12 08:2x -- codecov self-healed; stream-track flake hypothesis REFUTED
+
+**gh#1298**: `codecov/project` went -15.10pp -> **99.95% (+0.00%)** once its shards
+uploaded, exactly as predicted; `codecov/patch` 100.00%. No reds, 3 checks left,
+BLOCKED only because `all-clear` has not finished. Merge when it does.
+
+### Stream-track flakiness: my mechanism was WRONG
+
+I proposed that the two flaky stream-track gradient tests fail because the FD arm
+evaluates `q0 +- h` through an ADAPTIVE diffrax solve, so a step-sequence
+difference between the two perturbed solves leaks into the finite difference. The
+fix would have been to pin `rtol`/`atol`.
+
+**Refuted before writing any code.** The driver already defaults to
+`rtol = atol = 1e-12` (`Orbits.py:2173`, "matching galpy's C integrators
+(_parse_tol)"). Step-size noise at that tolerance is ~1e-12/(2e-4) ~ 5e-9 --
+NINE orders below the 3e-3 bar the test asserts. Solver tolerance cannot be the
+mechanism, and pinning it would have been a speculative edit to a delicate test
+that fixed nothing while looking like a fix.
+
+Remaining candidates, none measured, so none acted on:
+  * the two arms use DIFFERENT `max_steps` (20000 direct vs 200000 recursive) and
+    different adjoints -- they are not the same solve;
+  * `_determine_stream_track_backend()` contains an eigendecomposition
+    (`_meandO`/`_dsigomeanProgDirection`) whose branch/sign could flip.
+
+Leaving the tests as-is. They are proven flaky by a same-SHA re-run (2 failed ->
+6302 passed), so the operational answer -- re-run first -- already works, and a
+speculative "robustness" change without a measured mechanism is exactly the kind
+of edit that makes a delicate test worse. Recorded so the next person does not
+re-derive the refuted hypothesis.
