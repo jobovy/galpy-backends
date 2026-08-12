@@ -42214,3 +42214,68 @@ context, so it could not settle anything CI would not settle sooner, and it sat
 at 1% after 25 minutes. Killed it. (The `pkill` pattern also failed because the
 shell had already expanded the glob into 80 filenames, and `pgrep -af pytest`
 matched the bash wrapper too — killed by PID.)
+
+---
+
+## 2026-08-12: the units/--jit "policy" was a bug — 33 -> 8
+
+Jo asked what the units/`--jit` harness-skip policy was. Answering it properly
+meant checking the premise, and the premise was wrong.
+
+**I had recorded these 33 jax --jit failures as "astropy Quantity cannot be
+traced; units and tracing are mutually exclusive by construction; this is not a
+galpy defect and no amount of backend work fixes it."** I inferred that from the
+error text on 2026-08-11 and never tested it.
+
+The real cause is decorator ORDER. Decorators apply bottom-up, so:
+
+    @potential_physical_input      1. strip INPUT units
+    @backend_input("R","z",...)    2. <- jit boundary
+    @physical_conversion("force")  3. <- builds the Quantity, INSIDE the trace
+    def Rforce(...)                4. body
+
+`Quantity.__new__` calls `__array__`, which a tracer refuses. Traceback proves
+the nesting: `traced_call` -> `_jit.py:159 shim` -> `conversion.py:1015 wrapped`
+-> `astropy/units/quantity.py:526`.
+
+**The A/B that settled it before any real work:** swapping the pair in
+`Potential.py` ONLY moved the failure — `pot(1.1,0.1)` and `pot.Rforce(...)`
+went from failing to PASSING, and it then failed at `pot.rforce(...)`, a method
+in a file I had not swapped. Units attach fine once they attach after the trace
+returns a concrete array.
+
+**Fix:** 75 sites, 7 files, every one in the wrong order (Potential 49,
+planarPotential 14, linearPotential 4, DissipativeForce 3, sphericaldf 2,
+planarDissipativeForce 2, Force 1). Diff verified a PURE reordering: 75 added,
+75 removed, identical as multisets.
+
+**Measured (finished runs, not partial):**
+
+    jax --jit test_quantity+test_coords :  33 failures ->  8
+    numpy test_quantity                 : 244 passed, 0 failed
+    numpy test_potential                : 1288 passed, 0 failed
+
+**Structural invariant** added to `test_backend_conventions.py` (where the other
+source-structure checks live, so no new home and no duplication): for any method
+carrying both decorators, the units decorator must be the OUTER one. A/B'd —
+reverting the source makes it fail on exactly the 7 files, naming the methods.
+Covers all four `physical_conversion*` spellings; widening from 2 to 4 found no
+further violations, confirming 75 was the complete set. Carries a glob guard so
+an empty file list cannot make it vacuous.
+
+**The residual 8 are a different mechanism** (task #217): `sphericaldf`'s
+`vmomentdensity` and friends carry `@backend_input` but NO `@physical_conversion`
+— they build the Quantity INLINE in the body,
+`units.Quantity(as_numpy(out) * fac, unit=u)`, and `as_numpy` on a tracer is the
+`__array__` call. No decorator to reorder, which is precisely why the invariant
+cannot see them. Needs restructuring, not reordering.
+
+**Lesson, now in memory:** "impossible by design" is a claim that needs a test
+like any other. I was one step from ledgering 33 tests as permanently
+unfixable — writing a policy for them — on the strength of reading an error
+message. A five-minute decorator swap refuted it. Reach for the experiment
+before the category.
+
+Committed 9204e778 on `backend-jit/units-jit-boundary`, held until gh#1300
+merges (one PR at a time). galpy-jax push access restored by Jo, 977 commits
+pushed.
