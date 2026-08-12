@@ -42330,3 +42330,92 @@ CLOSED at Jo's direction — fixes do not go to feat/backends; the eventual
 develop->feat/backends merge (gh#1204, currently draft) resolves those reds. A
 red there whose fix already exists on develop is EXPECTED state, not a task.
 Recorded as memory `no-direct-fixes-to-feat-backends`.
+
+---
+
+## 2026-08-12 (evening): real GitHub stack; units arc closes 33 -> 2
+
+### Stack #1304 is a REAL GitHub stack now
+
+Jo: *"1303 doesn't show as a real stack"* — correct. Setting `--base <branch>` is
+the OLD manual convention; GitHub has a native feature with its own extension:
+
+    gh extension install github/gh-stack
+    gh stack init --base feat/backends-develop <lower> <upper>   # adopts existing branches
+    gh stack submit --auto                                       # -> "stack #1304"
+
+`init` adopted both branches WITHOUT rewriting them (SHAs verified unchanged
+before/after) and `submit` reported "up to date" rather than force-pushing, so
+it is safe against the no-force-push rule — but check the SHAs anyway, because
+submit pushes every branch and a rewrite would silently become a force-push of
+an open PR.
+
+gh#1300 deliberately stays OUT of the stack: independent files, so stacking it
+would invent an ordering constraint that does not exist.
+
+Jo also asked about merge cost: merging the bottom retargets the upper PR and a
+cascading rebase changes its SHA, so it pays a FULL fresh CI run. N layers
+merged one-at-a-time costs ~N^2/2 runs. Plan: let the stack reach 3-4 layers,
+merge bottom-up in one sitting, one `gh stack sync` at the end.
+
+### gh#1300: a 180x perf regression that no value assertion could catch
+
+Covered in the previous entry; the fix (`default_device`, skip the device
+keyword when it cannot change placement) is CONFIRMED by CI:
+**300 s timeout -> 3.4 s / 3.5 s pass**. Residual ~2x vs develop's 1.7 s, which
+is real and stated in the PR rather than glossed.
+
+Then CI found a SECOND thing on the same PR, and this one was mine: adding a
+keyword-only `device=` to `coerce_coords` broke two tests that monkeypatch it
+with a positional-only `spy(xp, *coords)`. I have a memory that says to grep
+tests/ for the changed symbol; I did not run it. Running it afterwards found a
+SECOND spy that CI had not reached yet — so fixing only what CI reported would
+have left a red for the next run.
+
+### The units arc: 33 -> 2, and cause B is not a defect
+
+gh#1301 (decorator order, 75 sites) took it 33 -> 8. gh#1303 (hoist the input
+parse outside the boundary for sigmar/sigmat/beta/vmomentdensity) took it 8 -> 2.
+
+Two of my own classifications were wrong along the way, both from reading error
+text instead of reading the code:
+
+  * I drafted gh#1301 believing its swap made df methods silently wrong under
+    jit. **Develop is already wrong** (0.04439 vs the correct 0.14091,
+    identical) — the swap is neutral and the bug predates it. Never measured
+    the baseline before asserting causation.
+  * I filed the kingdf `nan` as an independent numerical defect (cause C). It
+    was downstream of the same cross-backend cached state as cause A. One
+    mechanism, not two.
+
+And cause B, twice mis-filed ("astropy is untraceable", then "units on stored
+parameters"), is actually: **AnyAxisymmetricRazorThinDiskPotential is DEFINED BY
+a user-supplied callable**, evaluated inside the traced region, and the tests
+pass numpy/units lambdas:
+
+    surfdens=lambda R: numpy.exp(-R / (1 * units.kpc)) * units.Msun / units.kpc**2
+
+`numpy.exp(tracer)` calls `__array__`; `tracer * PrefixUnit` is meaningless. No
+backend work fixes an arbitrary numpy callback. PROVEN by construction: the same
+potential with an agnostic callable traces cleanly and matches numpy to 1e-12.
+=> ledger material (user callback), not work.
+
+Reading the test took thirty seconds and settled what two rounds of reading
+error messages got wrong.
+
+### Also corrected: #215 is not a cheap layer
+
+I proposed widening COMPUTE_METHODS as a quick stack layer on a "0 violations"
+measurement. That was a LOOSER criterion (methods calling get_namespace) on the
+pre-gh#1301 tree. The implementable rule (private, non-dunder, namespace-aware)
+gives **84 candidate defs and 14 violations**, including
+`SCFPotential._gaussianQuadrature` with 9 sites that are plausibly
+numpy-by-design. Real work needing per-site judgment.
+
+### Sustained GitHub infra outage
+
+Every build failure across all three PRs for several hours:
+`ERROR 503: Service Unavailable` (exit 8) and one `wget ... lcov-1.15.tar.gz`
+retrying 20 times then "Giving up" (exit 4). Different symptoms, same class.
+Checked EVERY signature rather than pattern-matching "py3.14 again" — which
+mattered, because one apparent repeat was the real spy breakage above.
