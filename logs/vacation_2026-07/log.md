@@ -43834,3 +43834,40 @@ flake re-ran clean). Re-ran all-clear only.
 
 Two reds this wake, zero code changes, both settled by a check that costs one API
 call. The twin should stay the first move on every red.
+
+### 2026-08-14 — gh#1311 MERGED (develop c208c6b2); skip block characterised: 112 in scope
+
+gh#1311 merged after audit (one new test file, no galpy/ source, no xp.where hits).
+
+**Characterised the 20 in-scope `skip` entries — they are just TWO families:**
+
+* **12 x `test_from_name_*`** (6 jax + 6 torch, across test_orbit/test_orbits) —
+  `Orbit.from_name`, the SIMBAD/VizieR network lookups.
+* **8 x `test_bovy14_useTM*`** (4 torch + 4 jax-jit, test_streamdf) — streamdf with
+  `useTM=True`. **`useTM` IS actionAngleTorus** — verified in the docstring: "If
+  set to an actionAngleTorus instance, use this to speed up calculations." So
+  these are OUT OF SCOPE, and my earlier literal `torus|verticalinverse` regex
+  missed them because the nodeid only says `useTM`.
+
+**Revised denominator again: 112 in scope, not 120.**
+
+    xfail       15   real defects
+    slow-skip   85   performance-gated on jax eager
+    skip        12   Orbit.from_name (network)
+    TOTAL      112
+
+That is the second time the out-of-scope count moved because a name did not match
+a regex (48 -> 56 excluded). Worth stating as a rule: **classify ledger entries by
+what the test DOES, not by whether its nodeid contains a keyword.** Both misses
+were in the conservative direction (overstating remaining work), but a
+keyword-matched denominator is not a measured one.
+
+The 12 `from_name` entries are one coherent family with a mundane likely cause
+(network access / numpy return under a forced backend) rather than 12 separate
+problems. That makes the whole in-scope skip block a single small investigation,
+not a campaign.
+
+**Endgame now fully mapped:**
+1. 85 slow-skip -> jax eager vectorization (the big one, tasks #74/#79)
+2. 15 xfail -> individual defect fixes
+3. 12 skip -> one from_name investigation
