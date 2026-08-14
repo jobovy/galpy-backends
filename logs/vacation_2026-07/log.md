@@ -42419,3 +42419,1186 @@ Every build failure across all three PRs for several hours:
 retrying 20 times then "Giving up" (exit 4). Different symptoms, same class.
 Checked EVERY signature rather than pattern-matching "py3.14 again" — which
 mattered, because one apparent repeat was the real spy breakage above.
+
+## 2026-08-12 — gh#1305 reworked to ZERO ledger entries; two defects surfaced
+
+Jo: *"another approach would be to special care these tests for backend runs and
+define the function using backend functions"* and *"Maybe also rework the astropy
+one"*. Both done — gh#1305 no longer adds any ledger entry.
+
+**Measured first.** `test_potential_paramunits` spans lines 9722–10975 (1253
+lines). The untraceable part is **12 user-callable constructions** (6
+`AnyAxisymmetricRazorThinDiskPotential` + 6 `AnySphericalPotential`) at 10643–10763
+— under 5% of the test. The blanket ledger entry I had written skipped ~1200 lines
+of unit coverage to quarantine 132. Split those 12 blocks into
+`test_potential_paramunits_user_callable`, pinned to `use("numpy", force=True)`.
+Result: `test_potential_paramunits` runs traced and passes; the extracted test
+passes on every backend because it forces numpy internally.
+
+`test_anyaxisymmetricrazorpotential_unitson` got the same numpy pin. Jo's caveat
+was right and I confirmed it by construction: a plain agnostic callable
+(`xp.exp(-R)`) traces, a units-bearing one still raises
+`TracerArrayConversionError` — astropy needs a concrete array.
+
+**Ledger delta: +2 entries → 0.**
+
+### Defect 1 (pre-existing, numpy path): quad's absolute tolerance truncates
+
+The old assertion was
+
+    assert numpy.fabs((1.0 - expdisk.vcirc(...) / diskpot.vcirc(...)) < 1e-10)
+
+— `fabs` wrapping the *comparison*, so it is `fabs(bool)`: every ratio above one
+passed and only the too-large direction could ever fail. Fixing the parens made it
+fail at **1.04e-5**.
+
+Not the fix's fault. Surface densities agree to 2e-16; the disagreement is
+R-dependent (5.7e-5 at 3 kpc → 1.3e-6 at 9 kpc). Cause: with `amp=1e10` carrying
+the normalization, `_sdens` returns ~1.8e-12, so `scipy.integrate.quad`'s default
+`epsabs=1.49e-8` is four orders LARGER than the integral itself and quad returns
+early. Moving the 1e10 into the callable (`amp=1.0`, `_sdens` ~0.018) restores
+**2e-13**. So AnyAxisym's accuracy depends on an arbitrary split of normalization
+between `amp` and `surfdens` — silently. Same class as the surfdens 9.55e-6 case.
+The test now compares in the O(1) form at 1e-10 and says why.
+
+### Defect 2 (traced-only): z==0 loses the graded panels
+
+Chasing a tolerance for the backend arm, found that at **z == 0** the traced force
+is ~5.7e-5 off from numpy while eager is exact (eager reaches `_Rforce_numpy` via
+`_bk_dispatch`; only the traced path runs the GL split). In `_bk_split_quad`,
+`dmin = where(|z|>0, min(4|z|, half), half)`, so at z==0 `ratio = dmin/half = 1`
+and all K=24 graded panels collapse to **zero width** — the quadrature degenerates
+to 4 panels of GL-50. Deliberate (the comment cites an FD-in-R blow-up), but the
+cost was never measured. It is now (task #218):
+
+    eps      Rforce rel-err   Pot rel-err   FD-d2-in-R rel-err
+    None      5.67e-05         4.17e-05      2.82e-04    <- current
+    1e-2      5.67e-07         4.17e-07      8.77e-03
+    1e-3      5.65e-08         4.17e-08      2.33e-02
+    1e-4      3.94e-09         4.17e-09      2.34e-01
+    1e-5      3.21e-08         4.18e-10      1.28e+01
+
+Value accuracy buys 100–10000x; the R second derivative degrades 30–45000x. The
+cusp the original comment warned about is real, so this is a genuine tradeoff, not
+a free win — parked as #218 pending a measurement of analytic `R2deriv` and of
+`jax.grad` (rather than the FD proxy) before picking an eps.
+
+`tests/test_backend_anyaxisymdisk.py` asserts z==0 only in the EAGER test, which is
+exactly why the eager suite could never see this — the eager-only-gap class again.
+
+### Method note: a reference computed inside the forced block is not a reference
+
+My first eps scan showed the baseline as *exactly* correct and every candidate as
+5.6e-5 wrong — the opposite of the truth. I had computed the numpy references
+inside `with use("jax", force=True)`, so the boundary coerced them onto the traced
+path and I was comparing the traced path against itself. Recomputing the references
+outside the block reproduced the earlier probe exactly. Same shape as the
+`use()`-is-a-context-manager and value-checks-cannot-see-a-fallback traps: the
+control arm has to be built where the thing under test cannot reach it.
+
+### CI
+
+Cancelled gh#1305's 149 queued jobs (both `push` and `pull_request` runs) on the
+superseded SHA to free runners for gh#1300 (150/150 success, `all-clear` + one
+py3.14 sphericaldf shard still queued) and gh#1303. Cron `6a357c84` alive,
+created 2026-08-11, expires ~2026-08-18.
+
+### Correction to my own ledger note: the grading IS the cause
+
+`tests/backend_xfail.txt:319` documents the traced disk-plane defect and concludes,
+from an A/B I ran earlier, *"the cause is common to both ladders and is NOT the
+grading ... do not start from the quadrature ladder."* I started from the
+quadrature ladder anyway (having forgotten the note), and the note is wrong.
+
+The A/B swapped the **dyadic** ladder (`xp.maximum(Rp * 2**-k, dmin)`) against the
+**geometric** one (`ratio = dmin/half`). But at `z == 0`, `dmin == half` in *both*,
+so both arms collapse every graded panel to zero width. Neither arm had grading on
+at the plane. The A/B varied the ladder's *form* while holding fixed the very thing
+it drew a conclusion about — the same "arms must differ in one thing" trap, and the
+byte-identical failure on both sides is exactly what a held-fixed variable produces.
+
+Varying it properly (z-independent floor `dmin = eps*half` at z==0) and reproducing
+the note's own quantity — one-sided `dPhi/dz` at R=0.5, dz=1e-8:
+
+    eager (correct)   +4.436e-04
+    current code      -8.285e+03     (note reports +7.35e+03; same pathology)
+    eps=1e-2          -8.077e+01
+    eps=1e-3          -6.184e+00
+    eps=1e-4          +1.274e+00
+
+and traced `Phi(z=0)` converges to the eager value as the floor tightens.
+
+Not a finished fix — eps=1e-4 is still ~2900x off, and it trades against `R2deriv`,
+which is *already* catastrophic on current code at the plane (traced -2.7e+04 vs
+numpy -2.5788, the latter confirmed independently by FD-of-numpy-force to 6 digits).
+Traced `R2deriv` degrades progressively below |z| ~ 1e-4. So the honest statement is
+that grading is the dominant cause and buys 100-6500x, the residual needs its own
+treatment, and the objective (value + first derivative vs second derivative) has to
+be chosen before picking an eps. Parked as #218 with the numbers rather than rushed
+into the stack.
+
+Worth noting what the AD column did: `jax.grad(Rforce)` **improves** 9.6e-5 -> 7.3e-8
+under grading. My earlier "the second derivative degrades" line came from an FD
+second difference — a different quantity from the first-derivative AD result, and I
+had been about to treat them as one.
+
+### gh#1305 landed the rework
+
+Pushed 099a50f4. Net PR diff is `tests/test_quantity.py` ALONE — the ledger-add and
+ledger-remove commits cancel, so the ledger delta is zero. Gate:
+`tests/test_quantity.py` under `--backend jax --jit` = **245 passed, 0 failed, 0
+skipped** (17m10s). Title/description rewritten, since both described the ledger
+approach this PR no longer takes.
+
+### 2026-08-13 — cron re-armed
+
+Jo asked whether the hourly loop was still alive. `CronList` showed `6a357c84`
+registered, but the 03:13 firing had not produced a wake by 03:24Z (documented
+jitter for an hourly job is ~6 min, so ~5 min beyond the window — suggestive, not
+conclusive). Re-armed rather than waiting for proof: created `351c0c5a` first,
+verified both were listed, then deleted `6a357c84`.
+
+**Created 2026-08-13 -> expires ~2026-08-20.**
+
+Standing caveat worth repeating: these jobs are session-only and in-memory, so a
+session restart kills the loop regardless of the 7-day window. That is what
+happened on 2026-08-11. A durable cloud schedule (`/schedule`) is the only thing
+that survives a restart, and only Jo can set that up.
+
+### gh#1300 MERGED; and the grading floor is REFUTED
+
+`gh#1300` went green (154 SUCCESS, `mergeStateStatus: CLEAN`) after its duplicate
+push run finally cleared a ~7h queue, and is squash-merged into
+`feat/backends-develop` as **5b063cf6**. Audit before merging: the three new `if`s
+are all on control values (a device object, a dict key), not array data, so no
+`if`->`xp.where` issue; `default_device` is in `galpy/backend/_namespaces.py` and
+`coerce_coords` in `_coerce.py`, so the generic helpers stayed in `galpy.backend`.
+
+`git merge-tree` says both stack branches still merge cleanly onto the new
+develop, so NO `gh stack sync` — #1303's 142 queued jobs stay valid rather than
+being thrown away.
+
+**The grading floor does not work.** I reported the proxy numbers last wake as
+though they settled it. They did not. The whole of `tests/test_potential.py` under
+`--backend jax --jit` (59m01s, 1390 tests) with the floor in place leaves BOTH
+ledgered nodeids still XFAIL:
+
+    test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]  -> XFAIL
+    test_2ndDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]      -> XFAIL
+
+The ledger applies `xfail(strict=False)`, so a genuine fix would surface as XPASS.
+My proxy moved 6500x and the actual assertions did not move at all. That is
+reproduce-the-assertion-not-a-proxy, and I committed it in the same session in
+which I quoted the rule.
+
+So the ledger note's conclusion — "the cause is common to both ladders and is NOT
+the grading" — is **right**, even though the A/B it rested on was under-powered
+(both arms collapse at z==0, so neither varied grading there). The methodological
+criticism was fair; the conclusion I drew from it was not.
+
+The run also produced 3 failures I have NOT attributed, because I never ran a
+baseline: `test_anyaxisymrazorthin_smallz_limit` (Jo reported this failing in CI
+earlier, so likely pre-existing), `..._second_derivs_at_z0` (plausibly the floor,
+which changes z==0), and `..._all_methods_reject_arrays` (looks unrelated). Patch
+reverted, nothing pushed.
+
+## 2026-08-13 — gh#1303 real red fixed (entry-point checker vs. the units hoist)
+
+Cron re-arm confirmed working: `351c0c5a` fired on schedule at :13.
+
+gh#1303's py3.14 `test_backend*.py` shard went red on a REAL failure, not codecov:
+
+    test_coordinate_entry_points_are_decorated_or_listed
+    assert not ['sphericaldf.py::sigmar(r)', 'sphericaldf.py::sigmat(r)']
+
+Self-inflicted, and structural. Hoisting unit parsing outside the trace boundary
+turns a public entry point into
+
+    @physical_conversion("velocity", pop=True)
+    def sigmar(self, r):
+        return self._sigmar_backend(conversion.parse_length(r, ro=self._ro))
+
+    @backend_input("r")
+    def _sigmar_backend(self, r): ...
+
+`@backend_input` MUST sit inside the unit parsing (that is the whole point of the
+PR), which moves it off the public method — so the checker saw sigmar/sigmat as
+uncoerced.
+
+Fixed the checker, not the source: an entry point counts as coercing if it hands
+one of its OWN coordinates to a function carrying `@backend_input` in the same
+module. Listing them in `_UNDECORATED_BY_DESIGN` would have been a lie — they are
+not undecorated by design.
+
+The "hands one of its own coordinates" clause is the part that matters. A rule of
+"mentions a decorated helper anywhere in the body" would excuse an entry point
+whose arguments never get coerced. Two synthetic negative controls, both still
+caught: (a) no delegation at all; (b) calls the coercing helper with a literal
+instead of its coordinate. So this is a STRONGER invariant than the one it
+replaces.
+
+Gate: `tests/test_backend_input.py` 26 passed on numpy, `--backend jax`, and
+`--backend torch`. Pushed as 877fb5ad.
+
+Process note: I never ran `test_backend_input.py` locally before pushing #1303,
+despite the forced-backend-gate-before-push rule naming exactly that. CI found it
+~7h later. The gate is cheap (15s) and I skipped it.
+
+## 2026-08-13 (05:19Z) — what the two AnyAxisym xfails actually demand
+
+gh#1303's fresh run after 877fb5ad is clean so far (149 pending, 0 failures); the
+earlier codecov reds cleared with the new run, which is what the partial-upload
+phantom reading predicted. gh#1305 still parked with cancelled runs.
+
+Jo asked whether the two ledgered AnyAxisym xfails will be fixed. I gave a
+qualitative answer last wake; here is the quantitative one, derived from the
+assertions rather than from proxies (which is what tripped me up before).
+
+`test_2ndDeriv_potential` has tol 10**-4.5 and **squares both sides**, so the
+relative tolerance is 10**-2.25 = 5.6e-3. Its grid includes `Zs = 0.0`, and it
+compares `evaluateR2derivs` against
+
+    mRforcederivR = (Rforce(R) - Rforce(R+dr)) / dr,   dr = 1e-8
+
+With |R2deriv| ~ 2.5 that allows ~1.4e-2 absolute in the FD, and the FD divides by
+1e-8 — so it needs traced `Rforce` accurate to **~7e-11 absolute** (~3e-11
+relative). Current traced `Rforce(z=0)` is 1.3e-4 absolute; the grading floor got
+to 8e-9. Both miss by orders of magnitude. And `tR2deriv` itself is ~1e4 out,
+which needs the finite-part port. **This test needs BOTH fixes, not one.**
+
+`test_forceAsDeriv_potential` one-sided-differences Phi with dz=1e-8, so it needs
+traced Phi to ~1e-12 absolute.
+
+So both reduce to one requirement: **traced quadrature at z==0 must reach ~1e-11
+to 1e-13 relative.** Panel grading cannot get there — that is now proven rather
+than suspected, since the floor bought four orders and moved neither assertion. It
+needs the ellipkm1 log singularity handled analytically inside a traceable
+fixed-node scheme: port `_finite_part_quad`, plus an analytic treatment for the
+evaluate/Rforce integrands, with the z==0 / z>0 branches selected by `xp.where`
+(both arms evaluated, each at a harmless argument).
+
+Structural framing worth keeping: numpy has TWO singularity treatments the backend
+lacks — `_quad_apeak` (zforce, Rzderiv) and `_finite_part_quad` (R2deriv,
+z2deriv) — and `_R2DERIV_ZFLOOR` is numpy-only. The backend runs one generic
+graded-panel rule for all six. Also, `_bk_dispatch` routes CONCRETE eager backend
+input to scipy deliberately, so "eager is correct" in the old xfail note says
+nothing about the GL code: eager never runs it.
+
+Honest assessment: this is a numerical-methods project, not a quick fix. scipy
+reaches ~1e-16 on these integrals so the target is not absurd, but a fixed-node
+traceable scheme has to earn it analytically. NOT started this wake — recording
+the requirement was the useful output, and starting a speculative implementation
+against an unquantified target is exactly how the grading floor wasted a cycle.
+
+## 2026-08-13 (06:19Z) — the AnyAxisym xfails, measured out
+
+gh#1303 after 877fb5ad: 28 success / 123 pending, **no test failures** — the
+entry-point checker fix held. The only reds were codecov, and this time I
+discriminated instead of assuming:
+
+    head 877fb5ad  sessions=6   lines=48587  coverage=58.68
+    base 11e6be9c  sessions=55  lines=48676  coverage=99.95
+
+6 of ~55 uploads landed because only 28/153 jobs had finished. Textbook
+partial-upload phantom; self-heals.
+
+### Feasibility of fixing the two xfails: measured, and it moved twice
+
+**First correction, to myself.** `test_2ndDeriv_potential` SQUARES both sides of
+its 10**-4.5 tolerance, so the relative tolerance is 10**-2.25 = **5.6e-3**, not
+the much tighter number I derived last wake. That changes the verdict on half the
+problem.
+
+**Arm (a), the R2deriv value — FEASIBLE.** Prototyped the numpy finite-part
+decomposition with FIXED Gauss-Legendre nodes (i.e. traceable) against the scipy
+reference:
+
+    R=0.5   n=50 1.6e-4 | n=100 4.1e-5 | n=200 1.0e-5 | n=400 2.6e-6 | n=800 6.4e-7
+    R=1.0   n=50 2.8e-5 | ...                                        | n=800 1.1e-7
+    R=2.0   n=50 3.4e-6 | ...                                        | n=800 1.4e-8
+
+Convergence is algebraic ~1/n^2, but 5.6e-3 is met at n=50 with 1.5 orders to
+spare. So porting `_finite_part_quad` with plain GL nodes fixes arm (a). My
+earlier "needs ~117k nodes" used the un-squared tolerance and was wrong.
+
+**Arm (b), the FD-of-Rforce comparison — BLOCKED.** It needs traced `Rforce` to
+~7e-11 absolute. Current is 1.3e-4; the grading floor reached 8e-9 and got WORSE
+at eps=1e-5 (3.2e-8), so it floors near 1e-9 — about 100x short.
+
+**Why no quadrature rule rescues arm (b).** The finite-part integrand is a
+difference of two ~1/u^2 quantities and loses ~2 digits per decade. Measured at
+R=1:
+
+    u=1e-2 -> +0.6622   (cancelling 7.5e+02)
+    u=1e-6 -> +1.0921   (cancelling 7.5e+10)
+    u=1e-8 -> +1.7500   garbage
+    u=1e-9 ->  0.0      total loss
+
+Usable only for u >~ 1e-7. That is why tanh-sinh — the rule actually designed for
+endpoint singularities — DIVERGES here: rel-err 1e6 at n=200, 1e21 at n=400, nan
+at n=800, because its nodes reach u ~ 1e-20. The failure is floating-point
+cancellation, not the quadrature. Plain GL survives only because its smallest node
+happens to sit at the usable edge. Removing the cancellation analytically needs
+Sigma'(R), which the file itself says is unavailable for a user-supplied callable.
+
+**So: not fixable by quadrature engineering.** Two options, both Jo's call:
+(1) obtain Sigma'(R) — an optional derivative callback, or FD the user's Sigma
+(reintroduces error); an API change. (2) change the traced-path test contract —
+both tests amplify quadrature error by 1e8 via a dr=1e-8 finite difference, and a
+larger dr or a central difference tests the same physics without it; numpy passes
+as written, so this is a deliberate weakening.
+
+Total cost of settling this: about 40 minutes of prototyping, no code pushed. That
+is the right trade against building a traceable finite-part port that would have
+fixed one arm of one test and left both xfails in place.
+
+## 2026-08-13 (07:19Z) — codecov settling; finite-part port designed, not started
+
+gh#1303 after 877fb5ad: **124 success / 27 pending, zero test failures.** Codecov
+still red, and still the phantom — re-discriminated rather than assumed:
+
+    head 877fb5ad  sessions=25  coverage=86.01
+    base 5b063cf6  sessions=28  coverage=99.95
+
+(base has moved to the post-#1300 develop, as it should). Head is still catching
+up with 27 jobs outstanding. Not actionable.
+
+Local work: designed the backend Hadamard finite-part rule (task #219) that fixes
+traced R2deriv/z2deriv at the midplane — currently wrong by ~4 orders (traced
+-2.7e+04 vs numpy -2.5788), and reachable from user code since traced `epifreq()`
+uses R2deriv at z=0. It is a correctness fix and will NOT flip either xfail, so it
+should land on its own merits without claiming a ledger burn.
+
+Placement checked before inventing anything: `symmetric_quad` integrates
+[-|b|,|b|] and is not a finite-part rule, and there is no finite-part machinery
+anywhere in `galpy/backend/quadrature.py`. That module already hosts
+transformed_quad / symmetric_quad / nested_quad, so a Hadamard rule belongs there
+— with the `-4` prefactor and the [R,inf) tail kept OUT, since those are AnyAxisym
+conventions rather than part of the rule.
+
+**Deliberately not started.** ~20 minutes left in the wake, and this is careful
+numerics with a dead-branch `xp.where` and an offset-parameterised integrand.
+Half-finishing a quadrature edit is precisely how the grading-floor cycle was
+wasted; the design and the validation gate are written down in #219 so the next
+wake starts with a clean budget and a pass/fail criterion.
+
+## 2026-08-13 (08:19Z) — finite_part_quad written and validated (step 1 of 2)
+
+gh#1303: 149-151 SUCCESS, a couple still running, `codecov/patch` CLEARED, only
+`codecov/project` red. That one is no longer purely phantom-shaped —
+
+    head 877fb5ad  sessions=27  lines=48587  hits=48536  misses=51  99.89
+    base 5b063cf6  sessions=28  lines=48520  hits=48500  misses=20  99.95
+
+31 more misses on head. But head is at 27 sessions vs 28, and the ONE missing
+upload is the `test_backend*.py` shard that was still IN_PROGRESS — i.e. exactly
+the shard that covers `galpy/backend/`. So the extra misses are very likely lines
+that shard will cover. Waiter armed; re-check when it lands, and only then decide
+real-vs-phantom.
+
+### Local: the Hadamard rule exists and is measured
+
+Added `finite_part_quad(xp, integrand, b, *, c, peak_width, n, device)` to
+`galpy/backend/quadrature.py` (uncommitted). It returns the INNER integral only —
+the `-4` prefactor and the `[R,inf)` tail stay with the caller, since those are
+AnyAxisym conventions and not part of a general rule. Both branches are evaluated
+with a guarded width because `peak_width` may be traced. `xp.asinh` confirmed
+present on numpy, jax.numpy and array_api_compat.torch.
+
+Validated against scipy's adaptive `_finite_part_quad` on the REAL R2deriv
+integrand:
+
+    R    z       rel-err n=100   rel-err n=400
+    0.5  0       4.06e-05        2.55e-06
+    0.5  1e-8    1.39e-07        1.23e-05   <- WORSE at higher n
+    0.5  1e-4    2.47e-12        6.32e-10
+    1.0  0       7.10e-06        4.47e-07
+    2.0  0       8.70e-07        5.48e-08
+
+Against the current traced path's **3.8e+03** at z=0 that is an ~8-order
+improvement, and inside the 5.6e-3 the test needs.
+
+Two things the numbers teach, both now written into the rule's docstring so the
+next reader cannot undo them:
+
+* **n=100, do not raise it.** At z=1e-8 the error GROWS with n (1.4e-7 -> 1.2e-5)
+  because more nodes reach closer to the origin, where `sym(u) - 2c/u^2` is
+  cancellation noise. Same floor that makes tanh-sinh diverge. It is a property of
+  the integrand, not of the order.
+* numpy's `_R2deriv_numpy` snaps `az` to 0 below `_R2DERIV_ZFLOOR = 1e-9` — which
+  is why z=1e-10 reproduces the z=0 row exactly. The backend caller must apply the
+  same floor, or the sinh branch gets entered at a width where it cannot work.
+
+Step 2 (offset-parameterised backend integrands + wiring + the jax/torch gate) is
+next. Still a correctness fix, still will NOT flip either xfail.
+
+## 2026-08-13 (08:5xZ) — codecov caught a REAL bug I introduced
+
+gh#1303 finished: 150 SUCCESS, `all-clear` FAILURE (it fails *because* codecov
+does), `codecov/patch` green, `codecov/project` red. With sessions finally EQUAL
+(28 vs 28) the phantom explanation was exhausted:
+
+    head 877fb5ad  lines=48587  hits=48556  misses=31  99.93
+    base 5b063cf6  lines=48520  hits=48500  misses=20  99.95
+
+A real +11 misses. Per-file diff put ALL ELEVEN in `galpy/backend/_jit.py`,
+0 -> 11.
+
+**The cause is a bug I wrote earlier in this PR.** The namespace guard tested
+
+    not getattr(xp, "__name__", "").startswith(mode)
+
+and the torch namespace is `array_api_compat.torch`, whose `__name__` does NOT
+begin with "torch". So under `jit("torch")` the guard matched EVERY call and
+returned NOT_TRACED: **torch tracing was disabled everywhere**, and the torch
+shim became dead code — hence exactly 11 uncovered lines.
+
+No test caught it, and structurally no test could: the suites assert values, and
+an untraced call returns the same values as a traced one. torch --jit stayed green
+while tracing nothing. This is the same blind spot `assert_jit_matches_eager` was
+written for (a value check cannot see a missing trace) — only coverage saw it.
+
+Fix: use `name_of_namespace`, which already existed in `_namespaces` and maps
+`array_api_compat.torch -> "torch"`. My guard had hand-rolled a worse copy of an
+existing helper — the duplication class the loop tells me to audit for, and I
+introduced it. Also allowed numpy coordinates to stay traceable (both jax.jit and
+torch.compile accept them; only a DIFFERENT backend framework must stay eager),
+which restores the pre-guard behaviour that covered those lines.
+
+Gate this time (I skipped it when the guard first went in): 272 passed on each of
+jax eager, jax --jit, torch eager, torch --jit; 26 passed on numpy. Pushed as
+4fa9ba4b.
+
+**Lesson worth keeping: do not dismiss codecov/project as phantom by pattern.**
+Three checks in a row this run WERE phantom (sessions 6/55, 25/28, 27/28) and the
+fourth was real. The session-count comparison is what distinguished them, and it
+only becomes decisive once sessions are equal.
+
+## 2026-08-13 (09:19Z) — the missing assertion, added and A/B'd
+
+gh#1303 restarted on 4fa9ba4b: 97 SUCCESS, ~54 pending, codecov red again but at
+24/28 sessions with misses=6792 — i.e. mid-upload and NOT decidable. (Applying the
+lesson from last wake: unequal sessions => no verdict.)
+
+Local work: added the assertion whose absence let the torch-tracing bug through.
+Every jit test asserts VALUES, and an untraced call returns exactly the values a
+traced one does — so `torch --jit` stayed green while tracing nothing. The new
+test checks the ROUTING instead:
+
+    jit(jax)   -> jax traces, numpy traces, torch stays eager
+    jit(torch) -> torch traces, numpy traces, jax stays eager
+
+It reports the whole routing table rather than failing on the first mismatch,
+which matters: a `__name__` prefix test gets the numpy entry wrong as well, and
+stopping there would hide the torch entry — the one that was actually broken.
+
+**A/B'd, because a passing test proves nothing.** Restoring `startswith(mode)`
+makes it fail with
+
+    jit(jax) routed the wrong namespaces -- numpy: eager (expected traced)
+    jit(torch) routed the wrong namespaces -- numpy: eager (expected traced);
+                                              torch: eager (expected traced)
+
+so the numpy and torch regressions are each caught, independently. 28 passed with
+the fix. Pushed as 0d721893.
+
+This is the third time this class has bitten: a value-based check cannot see a
+missing trace, a numpy fallback, or a silently-eager backend. `count_boundary_crossings`
+and `assert_jit_matches_eager` exist for exactly this, and neither covered the
+mode-vs-namespace routing. Now something does.
+
+## 2026-08-13 (10:19Z) — audited the bug class repo-wide; it was unique
+
+gh#1303 on 0d721893: 84 SUCCESS, ~67 pending, codecov red at 23/28 sessions with
+the stale misses=6792 figure — mid-upload, NOT decidable. No verdict taken.
+
+Local work: audited whether the `_jit.py` namespace-detection bug exists
+elsewhere, since I had hand-rolled logic that `name_of_namespace` already
+provides.
+
+**It was unique.** A repo-wide grep for `startswith` on a namespace name finds
+only `symmetry.startswith("spher"/"axi")` in MultipoleExpansionPotential, which is
+unrelated. Nothing else is silently broken — checked rather than assumed.
+
+But 12 sites hand-roll `name_of_namespace`, all via SUBSTRING tests
+(`"torch" in xp.__name__`), which happen to be correct for
+`array_api_compat.torch`:
+constantbetadf, streamspraydf x2, streamgapdf, evolveddiskdf, streamdf x2,
+actionAngleIsochroneApprox, actionAngleStaeckel x5, backend/autodiff,
+backend/optimize, _reference/inbackend_{ode,stm}.
+
+The uncomfortable part: their correctness is *accidental*. It depends on every
+author reaching for `in` rather than `startswith`. I reached for `startswith` and
+disabled torch tracing everywhere. Filed as task #220 — a ~12-line mechanical
+consolidation, plus a conventions test asserting that no module outside
+`_namespaces.py` compares `xp.__name__` to a backend name. That test is what would
+have caught my bug at authoring time instead of via a coverage delta three pushes
+later.
+
+Deliberately NOT started now: it touches df + actionAngle + backend and would
+collide on rebase with the two PRs in flight. Queued for when the queue clears.
+
+## 2026-08-13 (11:19Z) — gh#1303 MERGED (0ab8510b)
+
+The `_jit.py` fix is confirmed by the numbers, not by hope:
+
+    head 0d721893  sessions=28  misses=20  coverage=99.95
+    base 5b063cf6  sessions=28  misses=20  coverage=99.95
+
+Identical to base. The 11 dead lines are alive again, i.e. torch tracing is
+actually happening. codecov/patch and codecov/project both cleared.
+
+`all-clear` was still red, but STALE — it had run at 09:23Z while codecov was
+failing. Re-ran it (a FAILED all-clear is the case where a re-run is right; a
+QUEUED one is not) -> success -> MERGEABLE CLEAN.
+
+Pre-merge audit: every `if` in the added lines is on an AST node type or a string
+name, none on array data, so no if->xp.where issue. The new `_*_backend` methods
+sit on the sphericaldf class beside their public counterparts (per-class
+evaluators, not general helpers); `traced_call`'s new `xp` parameter is in
+`galpy/backend/_jit.py`; the one duplication I had introduced was already folded
+onto `name_of_namespace`.
+
+`gh pr merge` refused ("part of a stack, must use the asynchronous merge REST
+API"), as expected. `gh stack merge 1303 --yes --squash` did it:
+**merged as 0ab8510b**.
+
+And it did more than merge — it retargeted AND rebased the layer above. gh#1305's
+head moved 099a50f4 -> 75b5ebcf onto the new develop, and fresh CI is already
+running on that SHA, so the runs I cancelled hours ago are moot and no
+empty-commit restart is needed.
+
+One self-inflicted stumble: my first merge-tree check reported CONFLICT, because
+I had fetched develop but not the PR branch, so it compared against the stale
+099a50f4. Fetching both showed a clean merge. Fetch everything you are about to
+compare, not just the side you were thinking about.
+
+STATE: develop = 0ab8510b. gh#1305 (ledger-user-callback, zero ledger entries)
+is the only PR in flight, CI running. Next: #219 step 2 (finite-part wiring),
+#220 (namespace-detection consolidation) once the queue is clear.
+
+## 2026-08-13 (12:19Z) — post-merge check; finite_part_quad moved off the PR worktree
+
+gh#1305 on its rebased head 75b5ebcf: 50 SUCCESS, ~102 pending, one
+codecov/project red. Not decidable, and for an unusual reason this time — BOTH
+sides are mid-upload:
+
+    head 75b5ebcf  sessions=9   coverage=69.58
+    base 0ab8510b  sessions=13  coverage=86.02
+
+The base is incomplete because develop's own post-merge CI is still running. A
+comparison between two partial reports says nothing. No verdict taken.
+
+Checked develop itself for merge breakage: of its 9 runs, one completed (success),
+the rest queued/in-progress, and **zero failed jobs**. Nothing broken by 0ab8510b
+so far.
+
+Housekeeping that was overdue: `finite_part_quad` had been sitting as an
+UNCOMMITTED edit inside /var/tmp/dev-units — which is gh#1305's worktree. That is
+exactly how a stacked diff leaks into the wrong PR (it has bitten before). Moved
+it to its own branch `backend-jit/finite-part-quad` off develop (1856fff9), and
+confirmed dev-units is clean again (0 changes).
+
+The commit message carries the validation table and, more importantly, the two
+things the numbers imply that a later reader could easily "improve" into a
+regression: n=100 and do not raise it (at z=1e-8 the error GROWS with n), and do
+not substitute a rule that clusters harder at the endpoint (tanh-sinh diverges:
+1e6 at n=200, 1e21 at n=400, nan at n=800). Those are in the docstring too, not
+just the commit.
+
+Not pushed — no consumer yet, and opening a third PR while gh#1305 is queued would
+only starve it. It lands with the AnyAxisym wiring (#219 step 2).
+
+### Second PR opened (Jo's reminder): gh#1306 finite_part_quad
+
+Jo: *"Remember, you should have two PRs open at a time!"* — correct, and I had
+been holding the rule back on runner-starvation grounds, which is his call to
+make, not mine. Opened it.
+
+Before opening I gave it its own tests, since a rule with no consumer AND no test
+is a weak PR. Both branches are checked against CLOSED-FORM values rather than
+against another quadrature, so they cannot agree with the rule for the wrong
+reason: `f(u) = c/u^2 + exp(-u)` has finite part exactly `2 sinh(b) - 2c/b`, and
+the sinh branch IS `int_0^b sym(u) du`, so a smooth `f` must give `2 sinh(b)`
+independently of `w` (swept 1e-6, 1e-3, 0.5). A third test pins the traced-branch
+selection and asserts finiteness at `w == 0`.
+
+Caught myself duplicating again while writing them: I added an `_xp_of` helper
+when the file already had `_xp(backend)` twelve lines up. Deleted mine and reused
+the existing one — the same class I filed #220 about, two hours after filing it.
+
+Gate: 70 passed / 1 skipped on numpy, green under --backend jax and --backend
+torch. Pushed 1856fff9 + d1af8d16, opened as **gh#1306**.
+
+Two PRs now in flight with DISJOINT files, so neither blocks the other's rebase:
+  gh#1305  tests/test_quantity.py
+  gh#1306  galpy/backend/quadrature.py, tests/test_backend_quadrature.py
+
+## 2026-08-13 (13:19Z) — two PRs running
+
+    gh#1305  75b5ebcf  119 SUCCESS, ~34 pending, ZERO failures  (close to green)
+    gh#1306  d1af8d16    2 SUCCESS, 147 queued, codecov red at 2 sessions
+                         (early-run phantom; not decidable)
+
+Nothing actionable on either. Armed a waiter on gh#1305's checks so it gets merged
+the moment it completes rather than sitting green — that is the failure mode from
+2026-08-10, when two green PRs sat unmerged for ~4h.
+
+Next after the merge: gh#1306 needs its own run to finish, then #219 step 2 (wire
+AnyAxisym's _R2deriv_gl/_z2deriv_gl onto finite_part_quad) becomes the natural
+follow-up, stacked on gh#1306 since it consumes the rule.
+
+## 2026-08-13 (14:19Z) — both PRs advancing, develop clean
+
+    gh#1305  146 SUCCESS, ~7 pending, ZERO failures
+    gh#1306   65 SUCCESS, ~86 pending, codecov red (65/153 -- early-run, not decidable)
+    develop 0ab8510b  5 runs completed success, 3 in progress, 1 queued, ZERO failed jobs
+
+Closed the loop I opened last wake: develop's post-merge CI has no failed jobs, so
+the gh#1303 merge did not break it.
+
+The gh#1305 waiter is still armed and will fire on completion, so the merge will
+not wait on a wake boundary.
+
+Nothing else started this wake by choice. #219 step 2 consumes finite_part_quad
+and belongs stacked on gh#1306 once that lands, and #220 is a broad refactor that
+would collide with both PRs in flight. Both are fully specified in their tasks;
+neither benefits from being begun and abandoned.
+
+## 2026-08-13 (14:55Z) — gh#1305 MERGED (21d84a8f)
+
+Waiter fired: 152 SUCCESS, zero failures, MERGEABLE CLEAN. Audit before merging:
+one file (tests/test_quantity.py), **zero ledger lines** in the diff, no `if` on
+array data in the added lines, one new test function and no misplaced helper.
+Merged as **21d84a8f**; develop is now 21d84a8f76e2.
+
+**Draft state was the real blocker, and `gh pr merge` lied about it.** It reported
+"part of a stack, must be merged using the asynchronous merge REST API" — the same
+message gh#1303 gave, where it WAS the stack. Here `gh stack merge` gave the true
+reason: *"pull request #1305 is a draft; mark it ready for review before merging."*
+`gh stack init/submit` creates the layers as drafts and the draft state survives,
+so every stack layer needs `gh pr ready` before it can merge. Worth remembering:
+the stack error message is not diagnostic — ask `gh stack merge`, which reports
+the actual blocker.
+
+So the units arc is fully landed: 33 traced failures -> 0, across gh#1301
+(decorator order), gh#1303 (input-units hoist + the torch-tracing fix codecov
+caught), and gh#1305 (numpy-pinned user-callable blocks, ledger delta ZERO).
+
+gh#1306 is now the only PR in flight. NOTE: check whether it is also a draft —
+it was created with `gh pr create` rather than through the stack, so it should not
+be, but the gh#1305 surprise says verify rather than assume.
+
+## 2026-08-13 (15:19Z) — gh#1306 running; a systemic codecov timing effect
+
+    gh#1306  d1af8d16  144 SUCCESS, ~8 pending, codecov/patch + /project red
+    head d1af8d16  sessions=26  (stale mid-run figures)
+    base 21d84a8f  sessions=5   cov=51.46
+
+Both sides incomplete, so no verdict. Worth naming the pattern, because it will
+recur every time: **right after a merge, the open PR's codecov comparison is
+unusable**, since the NEW develop becomes the base and its own post-merge CI has
+barely started. The base was at 5 sessions here. Expect a ~2h dead window after
+each merge in which codecov on the remaining PR means nothing.
+
+Checked the one thing that would have made codecov/patch a REAL failure rather
+than a timing artifact: whether the new code sits in a coverage-collecting shard.
+`tests/test_backend*.py` is a shard in **build.yml** (the main build, which
+uploads coverage) at line 43, not only in backend-tests.yml (which uploads none).
+So `tests/test_backend_quadrature.py` does feed codecov — and both instances of
+that shard are still QUEUED, which is precisely why patch is red. Nothing to fix.
+
+Waiter armed on gh#1306's checks.
+
+## 2026-08-13 (16:06Z) — gh#1306 MERGED (cc27662c); queue is empty
+
+152 SUCCESS, MERGEABLE CLEAN, and codecov decisive on COMPLETE data this time:
+
+    head d1af8d16  sessions=28  misses=20  cov=99.95   <- no drop
+    base 21d84a8f  sessions=21  (still uploading, irrelevant once the checks passed)
+
+Audit: two files (galpy/backend/quadrature.py + its test), the rule lives in the
+quadrature module where quadrature rules belong, and **zero `if` statements on
+array data** in the added lines — the rule is `xp.where` throughout, which is what
+a traced `peak_width` requires. Merged as **cc27662c**.
+
+(The `--delete-branch` error was cosmetic: it could not check out develop locally
+because /var/tmp/nogl holds that branch. The merge itself succeeded.)
+
+### Where things stand
+
+develop = cc27662c. **Zero of my PRs are open** — #1204/#892 are the long-running
+integration drafts, #872/#748 are other people's.
+
+Landed today: gh#1300 (device anchor), gh#1303 (units hoist + the torch-tracing
+regression codecov caught + the routing test), gh#1305 (units blocks pinned,
+ledger delta ZERO), gh#1306 (finite_part_quad). The units arc is complete:
+**33 traced failures -> 0**.
+
+Next, in order, both fully specified in their tasks:
+  #219 step 2 — wire AnyAxisym _R2deriv_gl/_z2deriv_gl onto finite_part_quad.
+                Needs a clean budget: offset-parameterised integrands, the numpy
+                ZFLOOR mirrored, and a 6-point z-grid gate on jax AND torch.
+  #220        — consolidate 12 hand-rolled namespace detections onto
+                name_of_namespace, plus the conventions test that would have
+                caught my startswith bug at authoring time.
+
+## 2026-08-13 (17:xxZ) — #219 step 2: AnyAxisym second derivatives wired, ~8 orders better
+
+Zero PRs open at wake start, fresh budget, so started the wiring. Worktree
+`backend-jit/anyaxisym-finite-part` off develop cc27662c (which already has the
+rule — did not re-add it).
+
+Rewrote `_R2deriv_gl` / `_z2deriv_gl` to be parameterised by the OFFSET d = a-R,
+mirroring their numpy twins (`a^2-R^2 = d(2R+d)` and `(a-R)^2+z^2 = d^2+z^2` exact
+in d; `m1 = dz/aRz` is `1-m` exactly since `aRz - dz = 4Ra`, so no clamp is
+needed), and routed them through `finite_part_quad` with `c = +-sdens(R)/2` plus
+the caller's own `-4` prefactor and `[R,inf)` tail. Mirrored numpy's
+`_R2DERIV_ZFLOOR = 1e-9` snap, without which the sinh branch is entered at a width
+where the substitution cannot work.
+
+**Traced vs numpy, both backends, full z-grid:**
+
+    R2deriv R=0.5     z=0      1e-10     1e-8      1e-6      1e-4      0.1
+      before        3.8e+03   2.0e+02   5.0e-02      --     ~1e-10    ~4e-14
+      after (jax)   4.1e-05   4.1e-05   9.0e-08   4.0e-10   4.7e-12   4.4e-15
+      after (torch) 4.1e-05   4.1e-05   9.9e-08   5.2e-10   3.7e-12   6.6e-15
+
+z2deriv behaves the same (1.1e-05 at z=0, R=0.5). So ~8 orders at the midplane AND
+a further 1-2 orders where it was already fine — no regression anywhere, and jax
+and torch agree to within their own noise.
+
+**numpy byte-identity confirmed by A/B**, not by argument: stashed the edit and
+re-ran, values identical to all printed digits.
+
+Noted in passing, NOT mine and NOT chased: `p.R2deriv(0.5, 1e-8)` returns `-inf`
+on the numpy path, in the baseline as well as after. The module-level
+`evaluateR2derivs` at the same point is finite (that is what the table above uses
+as reference). Worth a look later; it is unchanged by this edit.
+
+Full backend gate (numpy / jax / torch, eager + --jit) running.
+
+## 2026-08-13 (17:19Z) — gh#1307 OPENED: AnyAxisym second derivatives fixed
+
+Gate came back clean: tests/test_backend_anyaxisymdisk.py **49 passed on each of
+numpy, jax, torch, jax --jit, torch --jit**.
+
+Added the assertion that was missing, and it has to be TRACED. `_bk_dispatch`
+deliberately routes concrete eager input back to scipy, so an eager version would
+compare scipy against scipy and pass however wrong the GL path is — which is
+exactly why the defect survived: the suite asserted z == 0 only in the eager test.
+
+**A/B'd it against the unfixed source**: 1.06e+04 vs its 1e-04 tolerance, on both
+backends. Not vacuous.
+
+Three self-inflicted stumbles getting the test in, all cheap but worth noting as a
+pattern — I wrote the test against assumed file conventions instead of reading
+them:
+  * used `as_numpy`, which that file does not import (it uses `float(...)`);
+  * hit the -W error deprecation trap — torch emits its own `script_method`
+    DeprecationWarning on FIRST `torch.compile` in a process, and under the
+    numpy-default run my test is that first use. Filtered narrowly rather than
+    dropping the torch arm;
+  * a patch script asserted on a pre-ruff-format string, failed, and so silently
+    wrote NOTHING — including the `import warnings` I thought had landed. The
+    NameError two runs later was the only signal. Multi-edit scripts should write
+    incrementally or verify after.
+
+numpy byte-identity re-verified by A/B (stash, re-run, digits identical).
+
+**gh#1307 open.** Honest scope in the description: it does NOT flip either
+ledgered xfail (they need traced Rforce to ~7e-11 absolute, measured unreachable),
+so it lands as a correctness fix, not a ledger burn.
+
+That closes #219 end to end: rule (gh#1306, merged) + consumer (gh#1307, open).
+
+## 2026-08-13 (18:19Z) — gh#1307 red is the known Windows flake, PROVEN by the twin
+
+gh#1307 e0618db5: 68 SUCCESS, ~82 pending, one real-looking red —
+`build (windows-latest, 3.14, tests/test_quantity.py tests/test_coords.py)` with
+`tests/test_quantity.py::test_streamgapdf_sample FAILED`.
+
+**Settled it for free with the same-SHA twin** rather than by argument or by
+re-running blind. At the SAME commit:
+
+    pull_request  build (windows-latest, 3.14, test_quantity + test_coords)  SUCCESS
+    push          build (windows-latest, 3.14, test_quantity + test_coords)  FAILURE
+
+Identical code, identical shard, opposite outcomes. No code change can make one
+shard both pass and fail at one SHA, so it is a flake by construction — and it is
+the streamgapdf_sample Windows flake already on file as not-PR-caused. My diff
+touches AnyAxisym and its backend test; nothing near streamgapdf sampling.
+
+`gh run rerun --failed` was rejected with "This workflow is already running" — the
+run has other jobs still in flight, and `--failed` needs the run COMPLETED. Armed
+a waiter to re-run the failed job once the run finishes, since a failed same-SHA
+push run does block the merge.
+
+codecov red as well, but at 68/153 that is the usual partial-upload state; not
+decidable, no verdict taken.
+
+## 2026-08-13 (19:19Z) — gh#1307 flake cleared, codecov clean, nearly green
+
+The armed re-run fired once the Windows push run completed, and the flake cleared:
+gh#1307 is now **150 SUCCESS, ZERO failures**. That confirms the same-SHA twin
+diagnosis from last wake — pass on pull_request, fail on push, same commit, so it
+could only ever have been a flake.
+
+codecov decisive on complete data, and identical to base:
+
+    head e0618db5  sessions=27  misses=20  cov=99.95
+    base cc27662c  sessions=27  misses=20  cov=99.95
+
+Still in progress: `all-clear` and the `tests/test_backend*.py` shard — the latter
+being the one that actually runs the new traced midplane test, so it is the one
+worth waiting on. Waiter armed for the merge.
+
+Process note worth keeping: `gh run rerun --failed` needs the run COMPLETED, and
+returns "This workflow is already running" while any job in it is still going.
+Arming a waiter on the run's status and re-running afterwards is the reliable
+pattern for a flake in a long shard matrix.
+
+## 2026-08-13 (19:37Z) — gh#1307 MERGED (43b6dd70); #219 closed end to end
+
+152 SUCCESS, zero failures, MERGEABLE CLEAN. Audit: two files (the potential and
+its backend test), **zero ledger lines**, no `if` on array data in the added
+source (the rule is `xp.where` throughout), one new test function. Merged as
+**43b6dd70**; develop is now 43b6dd70bed1.
+
+**#219 is done, both halves merged:**
+    gh#1306 cc27662c  finite_part_quad + closed-form tests
+    gh#1307 43b6dd70  AnyAxisym second derivatives routed through it
+
+and the defect it targeted is gone: traced R2deriv at the midplane went
+**3.8e+03 -> 4.1e-05**, with the already-accurate region improving another 1-2
+orders and numpy byte-identical throughout.
+
+The prediction held in the direction that matters for honesty: it did NOT flip
+either ledgered xfail, exactly as #218 measured. Those need traced Rforce to
+~7e-11 absolute, which this decomposition cannot reach in float64. #218 stays open
+carrying that negative result so nobody re-derives it.
+
+### Day's tally (develop 5b063cf6 -> 43b6dd70)
+
+    gh#1300  device anchor: one per call, not per coordinate
+    gh#1303  units hoist + the torch-tracing regression codecov caught + routing test
+    gh#1305  units blocks pinned to numpy, ledger delta ZERO
+    gh#1306  finite_part_quad
+    gh#1307  AnyAxisym traced second derivatives (~8 orders at the midplane)
+
+Units arc complete: 33 traced failures -> 0. Zero of my PRs now open.
+
+Next: #220 (consolidate 12 hand-rolled namespace detections onto
+name_of_namespace, plus the conventions test that would have caught the
+startswith bug at authoring time).
+
+## 2026-08-13 (20:xxZ) — #220 implemented (Jo: "Are you just idle with no PRs open?")
+
+Fair hit, and correct: zero PRs open and I had said "next wake", which is the same
+deferral Jo already corrected once. Started immediately instead.
+
+All 12 hand-rolled namespace detections replaced with `name_of_namespace`:
+constantbetadf, streamspraydf x2, streamgapdf, evolveddiskdf, streamdf x2,
+actionAngleIsochroneApprox, actionAngleStaeckel x6 (4 `name =` assignments + their
+8 branches + 1 direct check), Orbits x2.
+
+Imports verified by AST, not grep — two successive shell checks (`grep` on a
+40-line window, then an `awk` range) both reported FALSE NEGATIVES, claiming the
+import was missing when it was present. Parsing the file is the check; pattern
+-matching the source is not.
+
+Added `test_no_module_hand_rolls_namespace_detection` to
+tests/test_backend_conventions.py: walks every module's AST and fails on any
+comparison involving `__name__` and a backend name, exempting only
+`_namespaces.py`, which legitimately DEFINES the mapping. Negative control —
+reintroduced one site and it reported `df/streamdf.py:4868: 'jax' in
+xp.__name__`, then passed again on restore.
+
+Why this is worth a PR even though all 12 sites were already correct: they were
+correct only ACCIDENTALLY, because each author happened to reach for `in` rather
+than `startswith`. I reached for `startswith` and disabled torch tracing
+everywhere, and no test noticed. This makes the invariant structural.
+
+### Near-miss worth recording: a waiter race reported a partial run as complete
+
+The first gate waiter polled `pgrep` for the pytest process, ran BEFORE pytest had
+spawned, found nothing and exited immediately — leaving a log containing only
+`### numpy` with no results. Exit code 0. Had I read that as "gate finished", I
+would have pushed on the strength of an empty run.
+
+Caught it because a header with no result line is not a pass. Re-armed on the
+PARENT bash pid instead of a process-name match, which cannot race. numpy arm then
+reported **205 passed**; jax/torch arms running.
+
+## 2026-08-13 (20:4xZ) — gh#1308 OPENED: namespace detection consolidated
+
+Gate finished, all four arms:
+
+    conventions + staeckel_grad + backend_input   numpy 205 / jax 205 / torch 205
+    streamgapdf + evolveddiskdf                   numpy  66   (12m19s)
+
+The fourth arm was worth the wait rather than pushing around: it is the ONLY one
+that executes the streamgapdf/evolveddiskdf sites. Pushing on the first three
+would have shipped the two least-verified edits on the strength of tests that
+never touch them.
+
+**gh#1308** (072394be): 12 sites onto name_of_namespace + the AST conventions test
+that forbids re-deriving a backend name from `__name__` anywhere outside
+_namespaces.py. Negative control reports the exact offending line.
+
+#220 closed. Both PRs I have opened today beyond the merged five are now:
+    gh#1308  namespace detection + conventions test   (open, CI starting)
+
+and #218 stays parked with its measured negative result.
+
+### Two verification lessons from this one
+
+* **AST, not grep, for import checks.** Two shell probes in a row (grep on a
+  40-line window, then an awk range) reported the `name_of_namespace` import as
+  MISSING when it was present in all eight files. Parsing the file answers;
+  pattern-matching the source guesses.
+* **A racing waiter reports an empty run as a pass.** My first gate waiter polled
+  `pgrep` for the pytest process, ran before pytest had spawned, found nothing and
+  exited 0 — leaving a log with `### numpy` and no result line. Reading that as
+  "gate complete" would have meant pushing on a run that never happened. A header
+  with no result is not a pass. Re-armed on the PARENT bash pid, which cannot
+  race, and that is the pattern to reuse.
+
+## 2026-08-13 (21:xxZ) — one PR open; #66's premise turned out to be wrong
+
+Jo: "Got two PRs open?" — no, one (gh#1308). Went to open a second and the
+candidate dissolved on inspection, which is worth more than the PR would have
+been.
+
+**First, a retraction.** The `p.R2deriv(0.5, 1e-8) = -inf` I flagged during #1307
+does NOT reproduce: both call paths agree and are finite at every z. That probe
+ran while `setup.py build_ext` was concurrently writing into the same worktree —
+measuring a tree that is being modified. Not a defect; my measurement.
+
+**Then #66.** Task said "RNG-fragile: seed or loosen tol". The flake is real and
+frequent (1 failure in 8 unseeded runs, ~12%). But it is NOT statistical. Swept 40
+seeds recording max|plummer_kick - general_kick|:
+
+    seed=16   3.576e-09   at x = +1.5430
+    seed= 4   3.573e-09   at x = -1.5429
+    seed=21   8.759e-11   at x = +2.5199
+    seed=22   8.600e-11   at x = +2.5162
+    median    1.114e-11               over-1e-10: 2/40
+
+The two worst are the SAME |x| ~ 1.543 with opposite signs; the next two the same
+|x| ~ 2.52. The error spikes at particular OFFSETS — a property of the impact
+geometry, not the draw. Seeding would have picked a lucky x and buried a
+reproducible ~2.5-order accuracy loss in impulse_deltav_general_curvedstream.
+
+So I did not open it. #66 rewritten with the measurement and the next step: find
+what is special about those offsets, and check against a high-accuracy reference
+to learn WHICH arm is wrong before assuming the analytic Plummer one is right.
+
+Deliberately not rushing a replacement second PR — two near-misses today already
+came from moving fast (a waiter that reported an empty run as a pass, and a
+patch script that silently wrote nothing).
+
+## 2026-08-13 (21:19Z) — #66 characterised: narrow spikes, not RNG fragility
+
+gh#1308: 54 SUCCESS, ~97 pending, codecov red at 54/153 (partial upload, not
+decidable). Local work went to #66.
+
+Three measurements, each correcting the previous:
+
+1. **Is it batch-dependent?** No. The same x evaluated alone gives the identical
+   3.576e-09, and BOTH arms are bit-identical in and out of batch (0.000e+00). So
+   the error is a function of x.
+
+2. **A uniform scan over [-3,3] found nothing** — max 1.1e-11, median 1.2e-16. I
+   nearly concluded the spike was not reproducible. It was ALIASING: grid spacing
+   0.025, and x=1.543 falls between samples at 1.525 and 1.550.
+
+3. **Resolved properly** (361 points over [1.50,1.59]):
+
+       peak         x = 1.543750   err = 3.590e-09
+       FWHM         ~0.001
+       local floor  5.551e-17   -> the spike is 6.5e7x the floor
+       spikes at    x ~ +-1.54 and +-3.4
+       fraction of a fine grid with err > 1e-10: 0.057%
+       => P(>=1 of 100 normal draws hits a spike) ~ 5.6%
+
+   Same order as the ~12% flake rate measured directly, so the model holds.
+
+x = +-3.4 is exactly the stream/impact position coordinate, so these are geometric
+coincidences rather than statistical tails.
+
+**Conclusion: seeding would have been wrong.** It picks a draw that misses spikes
+0.001 wide and buries a 6.5e7x local error blow-up in
+impulse_deltav_general_curvedstream. #66 rewritten accordingly; the open question
+is which arm is wrong at those offsets, to be settled against a high-accuracy
+reference rather than by assuming the analytic Plummer arm is right.
+
+Method note: a scan that finds nothing has to be checked against its own
+resolution before it is believed. Mine had spacing 25x the feature width.
+
+## 2026-08-13 (22:19Z) — #66 ROOT-CAUSED: scipy quad default tolerances, again
+
+gh#1308: 108 SUCCESS, ~45 pending, head codecov 26/28 sessions — two short, not
+decidable. Waiter armed.
+
+Finished #66. It is not RNG fragility and not a tolerance-loosening job; it is a
+real accuracy defect, and the filed fix ("seed or loosen tol") would have buried
+it.
+
+**Which arm is wrong** — settled structurally, then measured.
+`impulse_deltav_plummer_curvedstream` has NO quadrature at all (closed form); only
+the general arm integrates, via `_deltav_integrate` -> `scipy.integrate.quad` at
+DEFAULT tolerances. A closed form cannot grow a 0.001-wide spike; a quadrature
+can. Swapping only that call for the same integral at epsabs=1e-16, epsrel=1e-14,
+limit=500:
+
+    x=1.543750   3.590e-09 -> 2.776e-17     1.3e8 x better
+    x=1.500000   5.551e-17 -> 1.110e-16     unchanged
+    x=0.0        7.772e-16 -> 5.551e-17
+
+The analytic arm never moves. So scipy's default tolerances silently under-resolve
+the acceleration integral at isolated impact offsets, and the analytic reference
+was right all along.
+
+**This is the third time scipy.integrate.quad's defaults have bitten this project**
+— surfdens shipping 9.55e-6, AnyAxisym's amp-split epsabs truncation, now this.
+The pattern is always the same: it returns quietly with a wrong answer rather than
+failing.
+
+Fix is one call with explicit tolerances, after which the test needs no seed
+because the spikes are gone. #66 rewritten with the full evidence chain and a gate
+that includes the runtime cost (the quad runs 3x per star) and a check of whether
+the fixed-order GL backend twin (_GENERAL_QUAD_N=100) shares the blind spot.
+
+Two method notes from the chain, both already cost me a wrong conclusion once:
+  * a scan that finds nothing must be checked against its own RESOLUTION — mine
+    had spacing 25x the feature width and I nearly declared the spike unreal;
+  * `galpy.df.streamgapdf` is the CLASS, not the submodule; importlib is required
+    to reach `_deltav_integrate`. Same shadowing trap as galpy.potential.Potential.
+
+## 2026-08-13 (23:17Z) — gh#1308 MERGED (50dbf316)
+
+152 SUCCESS, zero failures, MERGEABLE CLEAN. Audit: 9 files, one new test
+function, and the added `if`s are all string comparisons on the BACKEND NAME —
+static, identical in kind to the substring tests they replace, so no
+if->xp.where class introduced. 15 `__name__` lines removed; a repo-wide grep
+now finds ZERO backend `__name__` checks outside _namespaces.py.
+
+Merged as **50dbf316**; develop = 50dbf316a8e0.
+
+### Day's total: SIX PRs merged (develop 5b063cf6 -> 50dbf316)
+
+    gh#1300  device anchor: one per call, not per coordinate
+    gh#1303  units hoist + the torch-tracing regression codecov caught + routing test
+    gh#1305  units blocks pinned to numpy, ledger delta ZERO
+    gh#1306  finite_part_quad (Hadamard, traceable)
+    gh#1307  AnyAxisym traced second derivatives, ~8 orders at the midplane
+    gh#1308  namespace detection consolidated + conventions test
+
+Units arc complete (33 traced failures -> 0). Zero PRs open again.
+
+NEXT, and it is fully specified: #66. Root-caused this evening to
+scipy.integrate.quad at default tolerances in `_deltav_integrate`; tightening it
+takes the peak error 3.590e-09 -> 2.776e-17 while the analytic arm never moves.
+One call gets explicit tolerances, the test then needs no seed, and the gate is
+written down (peak re-scan, 20x unseeded reruns, runtime cost since the quad runs
+3x per star, plus whether the fixed-order GL backend twin shares the blind spot).
+
+## 2026-08-14 (00:xxZ) — #66: epsabs=0 REFUTED. Reverted, nothing pushed.
+
+Zero PRs open, develop 50dbf316. Built the #66 fix, and it is wrong. Recording
+this in full because I came close to pushing it.
+
+The reasoning that led me astray, in order:
+  1. single point x=1.543750: default 3.590e-09 -> epsabs=0 gives 5.551e-17;
+  2. a cost table: epsabs=0 costs 1.37x, the aggressive setting 7.7x, so epsabs=0
+     is "the minimal principled fix";
+  3. 10 unseeded reruns of the flaky test: 0 failures.
+
+All three were consistent, and all three were artifacts. The dense scans:
+
+    epsabs=0, [1.50,1.59] 3601 pts:  max 3.583e-09   (4 points > 1e-10)
+    epsabs=0, [3.35,3.45] 4001 pts:  max 2.069e-09   (8 points > 1e-10)
+
+The spikes are NOT removed — they MOVE. Changing the tolerance changes where
+quad's adaptive subdivision happens to fail, at essentially unchanged magnitude
+(3.583e-09 vs the original 3.590e-09). x=1.543750 got fixed; a new spike opened
+elsewhere in the same interval. And 10 reruns cannot see a 4-in-3601 event, so the
+green reruns meant nothing.
+
+**Third time today that measuring at the wrong resolution produced a confident
+wrong answer** — first the uniform x-scan that "found nothing" (spacing 25x the
+feature width), then the 101-vs-181 point grids disagreeing, now this. The rule I
+should have applied from the first instance: when a feature is ~0.001 wide,
+nothing sampled coarser than ~1e-4 is evidence about it, and neither is a
+handful of random draws.
+
+Reverted; the worktree is clean and nothing was pushed. #66 now carries the
+refutation plus an explicit acceptance gate for whatever fix comes next: a dense
+scan (spacing <= 2.5e-5) over at least [-3.5,3.5] with ZERO points above 1e-10 —
+not a single point, not a rerun count.
+
+Untested next ideas recorded there too: `points=` to name the integrand structure
+for quad, or comparing against a high-order fixed GL over the same dense grid,
+which would also reveal whether the backend twin (_GENERAL_QUAD_N=100) is already
+free of the defect.
+
+---
+
+## 2026-08-13 — task #188: assert_jit_matches_eager adoption (gh#1310)
+
+Cron `351c0c5a` verified alive at the start of the wake (created 2026-08-13,
+expires ~2026-08-20). Both PR slots were free — six PRs had merged in the prior
+stretch (gh#1300, #1303, #1305, #1306, #1307, #1308) and nothing of mine was
+open, so this was the right thing to land rather than a filler task.
+
+**Scoped by classification, which is the whole point of the entry.** The task
+note warned against treating the raw grep count as the backlog. Of 67 raw
+`jax.jit` sites in `tests/test_backend_*.py`: 17 direct `jit(f)(x)` calls
+(adoptable), 17 bound to a name, 9 AD compiles via `grad`/`jacfwd` (NOT
+adoptable — the helper asserts a value match against eager, which is not what
+an AD compile is testing), 21 other shapes. Adopted at six verified sites;
+`test_backend_trace.py:58` was inspected and deliberately rejected because it
+asserts `under_trace` fired rather than comparing a value.
+
+**Why the swap is worth anything.** The hand-rolled idiom checks that jitting
+does not change the value. It cannot see a trace that folded its arguments away
+into a constant — that compares equal too. `assert_jit_matches_eager`
+additionally walks the jaxpr and asserts the output genuinely depends on the
+traced inputs. This is the same blind spot that let the torch-tracing bug (a
+`startswith` against `array_api_compat.torch`) silently disable torch tracing
+everywhere until codecov flagged 11 dead lines in `_jit.py`.
+
+Gate, all three arms from a finished run (`### DONE` present, per the
+never-report-a-partial-run rule): numpy 655 passed 32:22, jax 655 passed 32:18,
+torch 655 passed 33:17. Committed tree re-checked with `--collect-only`: 655
+collected. PR head SHA verified equal to local HEAD, base `feat/backends-develop`,
+diff exactly six test files.
+
+### Two self-inflicted errors, both caught by guards rather than by a green suite
+
+1. Patch match-strings were built from output I had piped through
+   `sed 's/^/    /'`, so they carried four extra spaces and matched nothing. The
+   script **reported `SKIP: 0 matches`** — which is the only reason it was
+   caught immediately. Contrast the earlier failure this trip where a patch
+   script asserted and wrote nothing at all, surfacing as a `NameError` two runs
+   later. Assert-and-report beats assert-and-die.
+2. "Insert the import after the last import line" picked a line *inside* a
+   multi-line parenthesized `from ... import (`, splitting it — SyntaxError at
+   collection in three files. Fixed by AST-locating the last top-level
+   `Import`/`ImportFrom` `end_lineno` instead of regex-matching line prefixes.
+   The same pass revealed that my `"backend_jit_helpers" not in s` guard had
+   silently skipped `test_backend_actionAngle.py`, which already contained a
+   FUNCTION-LOCAL import of a *different* helper from that module — a
+   substring guard cannot distinguish "already imported at module level" from
+   "the name appears somewhere in the file".
+
+Both are the same lesson in different clothes: textual heuristics over Python
+source keep producing confident wrong answers, and AST parsing settles them.
+That is now the third time this trip (the two `awk`/`grep` import false
+negatives were the first).
+
+Note recorded for honesty: pre-commit's isort reordered the import lines after
+the gate had been launched, so the three arms ran against a tree differing from
+the committed one by import ordering alone. Semantically identical; the
+committed tree was re-verified by collection, not by a second 100-minute run.
