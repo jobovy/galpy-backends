@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-12 (gh#1300 in CI)
+# Vacation status snapshot — 2026-08-13 (no PR open; #188 gating locally)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -7,61 +7,72 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## Nothing is blocked on Jo
 
-## Active PR
+## Open PRs: NONE of mine
 
-**gh#1300** `backend-jit/coerce-device-anchor` -> feat/backends-develop.
+`gh pr list` shows only #1309 (Jo's actionAngleVerticalInverse, -> main), the
+standing integration PR #1204, and two unrelated old WIPs (#872, #748). Both of
+my two PR slots are free. Six PRs merged in the previous stretch: gh#1300,
+gh#1303, gh#1305, gh#1306, gh#1307, gh#1308.
 
-`@backend_input` coerced each declared coordinate separately, so each derived
-its own device anchor. A numpy sibling anchored to `None` -> the backend default
-device (CPU) while a CUDA coordinate stayed on the GPU, and the evaluator got a
-**split-device** coordinate set — a mixed-device error in some potentials, a
-silent GPU→CPU transfer in others (MiyamotoNagai returned a CPU result for a
-CUDA input). Fix: compute the anchor ONCE over all declared coordinates and
-thread it into `coerce_coords(..., device=)`.
+`feat/backends-develop` is at `50dbf316`.
 
-Numpy path unreachable from the change (`device_of` only runs inside the
-`xp is not numpy` branch), so byte-identical by construction.
+## In flight locally: task #188 (assert_jit_matches_eager adoption)
 
-Gates, all from finished runs: numpy 1324 passed, forced torch 1288, forced jax
-1276 (57 min), CUDA test on the TITAN Xp, 138 on the rebased tree. Both new
-tests verified to FAIL without the fix. Mine to merge when green.
+Worktree `/var/tmp/fpwire`, branch `fix/impulse-quad-tolerances` (name is
+vestigial — reset hard onto develop `50dbf316`; rename before pushing).
 
-## Branch state
+Six test files swapped from the hand-rolled
 
-    main                    87256016
-      feat/backends         982b1781   225 commits onto main
-        feat/backends-develop d76d683b  81 commits (gh#1298, gh#1299)
-          gh#1300             62ab8ed3  device anchor (CI running)
+    eager = ...; jitted = ...; assert_allclose(jitted, eager)
 
-## Live traps
+onto `assert_jit_matches_eager`, which additionally inspects the jaxpr to
+confirm the trace actually CONSUMES its arguments. That is the blind spot the
+value comparison cannot see, and it is the same class of blind spot that let
+the torch-tracing bug (`startswith` on `array_api_compat.torch`) survive
+undetected until codecov flagged 11 dead lines.
 
-  * `rerere` replays my resolutions, including ones recorded during an
-    ABANDONED cherry-pick. Verify anything it auto-stages.
-  * The 2 stream-track gradient tests are **FLAKY**, proven by a same-SHA re-run
-    (2 failed -> 6302 passed). Re-run before investigating. The
-    adaptive-solver-tolerance mechanism I proposed is **REFUTED** (defaults
-    already 1e-12; FD noise ~5e-9 vs a 3e-3 bar) — do not re-derive it.
-  * codecov `sessions` lives at **`totals.sessions`**, not `report.sessions`.
-    Reading the wrong key returns 0 for both sides, which looks exactly like
-    "the phantom discriminator doesn't apply here". Base-vs-head session count
-    with identical `lines` is the proof.
-  * A local `tests/test_backend*.py` run is **numpy**; the CI shards of that
-    name run `--backend jax/torch`. Not the same context — don't run it locally
-    expecting to mirror them.
-  * **`galpy-jax` cannot push.** `origin` answers `Repository not found`;
-    `origin/main` last moved 2026-07-25, ~977 unpushed commits. Logs are intact
-    in the working tree but exist only on this box. Worth Jo re-granting access;
-    not a work blocker.
-  * Cron `6a357c84` created 2026-08-11 -> **expires ~2026-08-18**. Re-create
-    before then; it has already died twice.
+Sites adopted: `test_backend_interpolate.py`, `_evolveddiskdf.py`,
+`_anyaxisymdisk.py` (via `ref=`), `_constantbetadf.py`, `_dynamfric.py` (via
+`ref=`), `_actionAngle.py`.
 
-## Queue after gh#1300
+**Classification first, per the task note** — of 67 raw `jax.jit` sites:
+17 direct `jit(f)(x)` CANDIDATES, 17 bound-to-a-name, 9 AD-compile (grad/jac,
+NOT adoptable), 21 other. Only the candidates are adoptable; the raw 67 is not
+the backlog. `test_backend_trace.py:58` inspected and explicitly REJECTED (it
+asserts `under_trace` fired, not a value match).
 
-  * **Needs Jo**: the units/`--jit` harness-skip policy (33 jax traced failures
-    = ONE astropy boundary). Proposed a harness-level skip over 33 ledger
-    entries; not yet ruled on.
-  * task #215 — widen `COMPUTE_METHODS` (100 namespace-aware defs outside it,
-    measured 0 unguarded sites; needs a curated criterion since the obvious one
-    pulls in `__init__`).
-  * task #66 (RNG-fragile `test_impulse_deltav_general_curved`), #130, #150.
-  * the torch dynamo 5.
+Gate running: 6 files x {numpy, jax, torch}, log
+`scratchpad/jit188b.log`. Not yet committed or pushed.
+
+### Two self-inflicted errors already caught in this task (both by guards)
+
+1. Patch strings built from `sed` output I had piped through `sed 's/^/    /'`
+   carried 4 extra spaces -> 0 matches. The script REPORTED `SKIP`, so it was
+   caught immediately — unlike the earlier silent-write failure, where an
+   assert failed and the script wrote nothing at all.
+2. The "insert after the last import" heuristic picked a line inside a
+   multi-line parenthesized `from ... import (`, splitting it -> SyntaxError at
+   collection in 3 files. Fixed by AST-locating the last top-level
+   Import/ImportFrom `end_lineno`. Also: the `"backend_jit_helpers" not in s`
+   guard silently skipped `test_backend_actionAngle.py`, which already had a
+   FUNCTION-LOCAL import of a different helper from that module.
+
+## Cron
+
+`351c0c5a`, hourly at :13, recurring, session-only. Created 2026-08-13 ->
+**expires ~2026-08-20**. Verified alive this wake.
+
+## Next up (queue, in rough priority order)
+
+* **#66** impulse quadrature: `epsabs=0` REFUTED with a dense scan (spikes MOVE,
+  they do not vanish). Acceptance gate for any future fix: dense scan, spacing
+  <= 2.5e-5, over at least [-3.5,3.5], ZERO points above 1e-10. Untested leads:
+  `points=` to name the integrand structure; compare against a high-order fixed
+  GL over the same grid (also reveals whether the backend twin
+  `_GENERAL_QUAD_N=100` shares the defect).
+* **#215** COMPUTE_METHODS widening — 84 candidates, 14 violations, needs
+  per-site judgment.
+* **#217** residual 8 jax `--jit` units failures: `Quantity` built INLINE in the
+  method body.
+* **#218** PARKED with a measured negative result (needs traced Rforce ~7e-11
+  absolute; unreachable).
