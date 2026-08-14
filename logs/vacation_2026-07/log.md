@@ -44280,3 +44280,42 @@ decision.
 Also noted while checking: an old stash from `feat/native-grid-spline` says
 "interpRZ regression + jax 95s" — a previous run at this same area. Worth reading
 before the next attempt rather than rediscovering it a third time.
+
+### 2026-08-14 (cont) — gh#1316 ready; but the "generalises widely" claim is REFUTED
+
+gh#1316 is ready for review, head `9def8d2e`, both files present:
+
+* `galpy/potential/interpRZPotential.py` — backend-aware guard tolerance
+* `tests/test_interp_potential.py` — `_grid_tol` extended to backend-built grids
+
+Decision made (mine, and I had over-deferred it): **keep the fix**. The 1e-14
+bound is 7.0 ULP; the vectorised jax grid lands at 11.2 ULP. That bound held only
+because both paths summed a 3-component composite in identical scalar order — an
+implementation detail, not physics. 58x is worth more than 7-vs-11 ULP. numpy
+keeps the original bound exactly, gated on the active namespace, and the widening
+reuses the EXISTING `_grid_tol` helper (which already does this for traced mode
+at 30x) rather than adding a second mechanism.
+
+**Now the correction.** I claimed this "plausibly accounts for a large share of
+the 85 slow-skip entries". Checked:
+
+    _grid_eval  -> 7 call sites, ALL inside interpRZPotential.py
+    array_equal -> appears in NO other galpy module
+
+So the pattern is **confined to interpRZPotential**. It covers that file's 7 grid
+quantities (pot, Rforce, zforce, R2deriv, z2deriv, Rzderiv, dens) and therefore
+the 6 test_interp_potential slow-skip entries — not the other 79. The fix is
+still a genuine 58x on a real defect, but it is a 6-entry fix, not a campaign-wide
+one, and I should not have projected from one instance without grepping for the
+second.
+
+That is the third time this trip I have generalised from a single case before
+checking the population (67 jit sites; 5 AnyAxisym entries; now this). The check
+costs one grep.
+
+**Process failure to record:** pre-commit's ruff rejected the tolerance commit and
+I ran `gh pr ready` anyway — the PR was briefly marked ready-for-review with the
+known failure still in it, because `gh pr ready` succeeds regardless of what is
+pushed. Caught only by checking the SHA afterwards.
+[[verify-pr-content-not-push-success]], written two wakes ago, applies to
+`gh pr ready` as much as to `git push`.
