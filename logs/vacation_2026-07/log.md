@@ -44134,3 +44134,31 @@ LOOP because the loop is what the test's body shows. The expensive line was the
 constructor call three lines above it, which I read past every time. When a test
 is slow, time its SETUP before theorising about its body — setup does not appear
 in the assertion you are staring at.
+
+### 2026-08-14 (cont) — FOUND IT: the jax constructor is 1643x slower than numpy
+
+    constructor numpy:   0.1 s
+    constructor jax  : 136.7 s      <-- 1643x
+    share of the 645 s test:  21 %
+
+First hard quantitative defect of the campaign, and it is precisely what the
+slow-skip reason string always said ("unrunnable until the backend port is
+vectorized"). I spent four wakes theorising about the test's LOOP because that is
+what the test body shows; the cost was in the constructor three lines above.
+
+**Honest accounting: this explains 21 %, not 100 %.** Constructor 136.7 s + loop
+~5 s = ~142 s of 645 s. ~79 % is still unattributed and I am not claiming
+otherwise. (Candidates: the test file builds more than one interpolator; the
+other quantities; per-test fixture cost.)
+
+**The sharp lead.** `_grid_eval` makes ONE vectorised call over 40401 points —
+measured, 0 fallbacks. One vectorised call should be well under a second.
+136.7 s is ~3.4 ms/point, i.e. the flat per-call overhead NOT being amortised.
+So the outer call is batched but something INSIDE the evaluation is still
+per-point. That is a concrete, findable defect rather than a vague "eager is
+slow", and it is plausibly shared by every table-backed potential that builds a
+grid — which would make it worth far more than these 6 entries.
+
+Next: profile the single vectorised `evaluateRforces(MWPotential, Rmesh, zmesh)`
+call on jax (40401 points) and find what iterates. Check MWPotential's three
+components separately — a composite is only as vectorised as its worst term.
