@@ -43670,3 +43670,33 @@ sites" over-count: the grep population was never the real population.
 **Real target, restated honestly:** 85 slow-skip + 68 skip. No artifact
 shortcut; each needs a timed run. That is the next campaign, and it is
 measurement-bound, not insight-bound.
+
+### 2026-08-14 — gh#1310 MERGED (develop 0ae40c60); burndown opened as gh#1312
+
+**codecov phantoms resolved themselves, exactly as diagnosed.** Both PRs' project
+checks went red while uploads were partial (gh#1311 bottomed at sessions=2,
+cov=40.55) and cleared on their own once complete (28 / 26 sessions, 99.95%).
+Nothing needed fixing. Had I treated them as real drops I would have burned a
+wake "fixing" coverage on two PRs that touch no source at all. The session-count
+discrimination is what made waiting the correct call rather than a gamble.
+
+gh#1310 audited before merge — tests/ only, zero xp.where/array-input hits, no
+galpy/ source — then squash-merged. Note the diff is +34/-22, net POSITIVE: the
+duplication removed is six copies of the comparison LOGIC, while each call site
+gained an explanatory comment. Worth stating precisely rather than claiming a
+line-count win that isn't there.
+
+**Tooling slip:** `gh pr merge --squash --delete-branch --yes` printed help and
+merged NOTHING — `--yes` belongs to `gh stack merge`, not `gh pr merge`. The PR
+stayed OPEN and only the follow-up state check caught it. Same family as
+[[verify-pr-content-not-push-success]]: a command that "ran" is not a command
+that did the thing. Always re-read state after a merge/push.
+
+gh#1312 opened with **ledger delta 169 -> 168** stated in the title body, per the
+new standing rule. Restored `backend_slow_skip.txt` in the worktree BEFORE
+pushing — it had been locally emptied of the 6 test_interp_potential jax entries
+for a timing measurement, and would otherwise have silently ridden along in the
+burndown PR.
+
+Timing measurement of those 6 entries still running; it is the pilot for the real
+target (85 slow-skip + 68 skip), which no artifact can validate.
