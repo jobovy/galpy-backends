@@ -43739,3 +43739,33 @@ So the honest roadmap to "no slow skip" runs through jax eager performance, not
 through ledger archaeology. That is a much bigger piece of work than I implied
 over the last several wakes, and it is worth Jo knowing the shape of it rather
 than watching the counter sit at 168.
+
+### 2026-08-14 — the ledger denominator was wrong: 120 in scope, not 168
+
+Characterised the 68 `skip` entries (the one segment never probed). **48 of them
+are `actionAngleVerticalInverse` / `Torus` — which Jo's own goal statement
+permanently excludes** ("no xfail, no slow skip, no defer *aside from
+verticalInverse and Torus*").
+
+    file                total  out-of-scope   IN SCOPE
+    backend_xfail          15             0         15
+    backend_slow_skip      85             0         85
+    backend_skip           68            48         20
+    TOTAL                 168            48        120
+
+So the real target is **120**, and I have been quoting 168/169 for weeks without
+ever separating the excluded classes. That is a reporting error in my own favour's
+opposite direction — I made the remaining work look 40% larger than it is.
+
+**The in-scope 120 decomposes into three genuinely different kinds of work:**
+
+* **15 xfail** — real defects. Verified clean of staleness (whole-matrix artifact
+  sweep, 0 stale). These need individual fixes; they are the "hard truth" residue.
+* **85 slow-skip** — NOT defects and NOT stale. Performance-gated on the jax eager
+  path (measured: 6 entries took 276-1079s each). Falls only to vectorization
+  (tasks #74/#79), never to re-measurement.
+* **20 skip** — the only genuinely uncharacterised block left. Next thing to probe.
+
+That is the honest shape of the endgame: one big performance campaign (85), one
+list of individual defects (15), and 20 unknowns. It is not 168 pieces of ledger
+archaeology.
