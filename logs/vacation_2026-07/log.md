@@ -43796,3 +43796,41 @@ than the plausibility argument. Re-ran the failed run only.
 Lesson to carry: **read which check is failing now; do not infer it from which
 check was failing before.** [[same-sha-duplicate-run-is-a-free-ab]] is the cheap
 discriminator and should be the FIRST thing checked on any red, before any rerun.
+
+### 2026-08-14 — both reds are flakes; the same-SHA twin proved it BOTH times
+
+Applied last wake's lesson (read which check fails NOW; check the twin FIRST) and
+it paid off immediately on both PRs.
+
+**gh#1312** showed `build (ubuntu-latest, 3.14, tests/test_backend*.py)` FAILED.
+The real failure, dug out of the job log (`--log-failed` showed only post-job
+cleanup, so it had to come from the raw job log):
+
+    FAILED test_backend_streamdf.py::test_determine_stream_track_differentiable_potential
+      q  AD=5.571560e+00  best|AD-ownFD|=6.12e-01     (11% vs a 0.3% tolerance)
+    FAILED test_backend_streamdf.py::test_determine_stream_track_differentiable_progenitor
+      R0 AD=1.525512e+00  best|AD-ownFD|=1.18e+00     (77% off)
+    2 failed, 6736 passed
+
+gh#1312 deletes ONE line from `backend_xfail.txt`, for a `test_potential.py`
+nodeid. It cannot reach streamdf gradients. The twin confirmed it at head
+`14edb38a`:
+
+    pull_request  Linux/Mac build   success
+    push          Linux/Mac build   failure
+
+Same SHA, opposite outcomes -> flake. (The PR check list aggregates BOTH events'
+runs, which is why a push-run failure shows up as a red on the PR.) develop's own
+runs at `0ae40c60` are green.
+
+These are the stream-track AD-vs-own-FD tests, which [[stream-track-two-gradients]]
+already flags as needing h-convergence rather than a fixed step — a 77% miss is
+the signature of FD step choice, not of a wrong gradient. Worth a proper look
+later: a test that flakes this wide is under-specified, even when the code is
+right. Filed as a follow-up rather than fixed inside a 1-line ledger PR.
+
+**gh#1311**: everything green except all-clear itself (the macos-intel 60-minute
+flake re-ran clean). Re-ran all-clear only.
+
+Two reds this wake, zero code changes, both settled by a check that costs one API
+call. The twin should stay the first move on every red.
