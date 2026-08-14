@@ -43871,3 +43871,40 @@ not a campaign.
 1. 85 slow-skip -> jax eager vectorization (the big one, tasks #74/#79)
 2. 15 xfail -> individual defect fixes
 3. 12 skip -> one from_name investigation
+
+### 2026-08-14 — the ledger file explained itself; in scope is 100, and I should have read it first
+
+Went to investigate the 12 `from_name` skips and found `backend_skip.txt`'s own
+header already answers it:
+
+    These are a PERMANENT exclusion, NOT pending work, so they are not part of
+    any burndown. numpy still runs them.
+
+    from_name() looks up objects over the network (SIMBAD sim-tap) and raises
+    pyvo DALServiceError when the service is unreachable. Its backend-relevant
+    part (the coordinate transforms) is covered by the coords/from_vxvv tests.
+
+The three files have three DIFFERENT contracts, stated right there:
+
+* `backend_slow_skip.txt` — "the backend port's vectorization -- a burndown that
+  shrinks to zero"
+* `backend_xfail.txt` — "known-failing, to be fixed"
+* `backend_skip.txt` — **permanent exclusion, not pending work**
+
+**So the in-scope ledger is 100, not 112, not 120, not 168:**
+
+    xfail       15   real defects, to be fixed
+    slow-skip   85   performance-gated on jax eager
+    skip         0   permanent exclusion BY DESIGN
+    IN SCOPE   100
+
+**The process failure is the point.** I spent three separate wakes narrowing this
+denominator by regex — 168 -> 120 (literal "torus") -> 112 (useTM) -> 100 — when
+the file's own header states the contract in the first ten lines. That is exactly
+[[read-code-docs-before-classifying]], which I have on file and did not apply.
+Read the artifact's documentation BEFORE measuring it; a ledger that explains its
+own semantics is not something to reverse-engineer from nodeid strings.
+
+Endgame, finally on firm ground: **100 entries, two kinds of work.**
+1. 85 slow-skip -> jax eager vectorization (tasks #74/#79)
+2. 15 xfail -> individual defect fixes
