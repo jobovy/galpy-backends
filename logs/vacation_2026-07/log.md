@@ -44195,3 +44195,46 @@ re-suspect it next wake.
 I have not explained the rest and am not going to guess at it; the next
 measurement is a phase-by-phase instrumentation of `__init__` under jax, which
 will settle candidate (1) vs (2) and may also reveal the missing 500 s.
+
+### 2026-08-14 (cont) — ROOT CAUSE: the bit-for-bit guard makes jax fall back ALWAYS
+
+cProfile of the jax constructor:
+
+    2 calls   _grid_eval    233.494 s
+    2 calls   _loop         230.531 s     <-- the fallback IS taken
+    80838     evaluateRforces + evaluatezforces   (= 40401 x 2 SCALAR calls)
+
+Then confirmed WHY, directly:
+
+    spot-check cells differing bit-for-bit under jax: 2/9
+    worst relative difference: 1.639e-15   (~7 ULP at float64)
+
+`_grid_eval` accepts the vectorised result only if it reproduces the scalar path
+**bit for bit**. That holds on numpy. Under jax, vectorised and scalar reductions
+associate differently, so the check fails on ~2 in 9 cells over a 1.6e-15
+difference — and the fallback to 40401 scalar calls per quantity is therefore
+UNCONDITIONAL on jax. That is the whole 1643x.
+
+**I have to own the wasted wakes here.** My "3 vectorised, 0 fell back" probe ran
+on NUMPY (never wrapped in `use("jax")`) and on MWPotential2014, not the test's
+MWPotential. I measured the wrong path, published "the grid build vectorises
+cleanly", and then spent four wakes hunting elsewhere — through the numpy-island
+theory and the test-batching theory — because I had wrongly eliminated the one
+place the time actually was. [[value-checks-cannot-see-numpy-fallback]] applies
+to SPEED probes too: assert which path you are on before believing a timing.
+
+**The fix, and why it is not a tolerance-weakening.** The guard's purpose is to
+catch `AnySphericalPotential`, which mis-broadcasts in **95 % of cells**. A
+relative tolerance of, say, 1e-12 still catches that by ~13 orders of magnitude
+while accepting ULP-level reassociation. So:
+
+* numpy: keep bit-for-bit exactly as now (the strict guarantee is preserved, and
+  the numpy path stays byte-identical);
+* jax/torch: tight relative tolerance.
+
+This is backend-aware, not laxer. Per [[backend-precision-must-match-numpy]] the
+numpy path must not move, and it does not.
+
+**Scope: this is much bigger than 6 entries.** Any table-backed potential that
+builds a grid under a forced backend hits the same unconditional fallback. It is
+a plausible common cause across a large fraction of the 85 slow-skip entries.
