@@ -43769,3 +43769,30 @@ opposite direction — I made the remaining work look 40% larger than it is.
 That is the honest shape of the endgame: one big performance campaign (85), one
 list of individual defects (15), and 20 unknowns. It is not 168 pieces of ledger
 archaeology.
+
+### 2026-08-14 — gh#1311 all-clear: I misdiagnosed it, the same-SHA twin settled it
+
+Last wake I attributed gh#1311's all-clear failure to a transient codecov red and
+re-ran it. **That was wrong** — it failed again, and reading the check list
+properly showed the actual culprit:
+
+    build (macos-15-intel, 3.14, test_orbit.py test_orbits.py ...)  FAIL  1h0m3s
+
+1h0m3s is a 60-minute job timeout, not a test failure. codecov was in fact green
+by then (28 sessions, 99.95%). I had reasoned from "codecov was red earlier,
+therefore codecov is the failing check" instead of just listing which check was
+failing NOW. Re-running on a guess cost an hour.
+
+**The same-SHA twin then settled flake-vs-real for free.** At head `8ed29e26`:
+
+    push          Linux/Mac build   success
+    pull_request  Linux/Mac build   failure
+
+Identical SHA, identical workflow, opposite outcomes — so the macos-intel timeout
+is a flake and not PR-caused. gh#1311 adds one 10-test file that runs in 9s and
+cannot slow test_orbit on macOS, which agreed, but the twin is the proof rather
+than the plausibility argument. Re-ran the failed run only.
+
+Lesson to carry: **read which check is failing now; do not infer it from which
+check was failing before.** [[same-sha-duplicate-run-is-a-free-ab]] is the cheap
+discriminator and should be the FIRST thing checked on any red, before any rerun.
