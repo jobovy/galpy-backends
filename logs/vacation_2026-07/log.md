@@ -43984,3 +43984,43 @@ sample points. Two cautions for the implementation:
 If this holds it un-defers entries by making the TEST cheap, which is legitimate:
 the deferral exists because the test costs 18 minutes, and the 18 minutes are
 avoidable without weakening a single assertion.
+
+### 2026-08-14 — my own speed probe was measuring a NUMPY FALLBACK; batching plan retracted
+
+Went to implement last wake's plan (batch the 861-point scalar loop in
+`test_interpolation_potential_force`). Verified array support first: both
+`rz.Rforce` and `evaluateRforces` accept the meshgrid and are **bit-identical**
+to the scalar path (max|d| = 0.0). Good.
+
+Then timed it under `use("jax", force=True)` and got **0.1 ms/call** and a
+projected total of ~0 s — against a MEASURED 645 s for that test. A 3-4 order
+discrepancy is not a speed-up, it is a broken measurement, so I checked what the
+call actually returns:
+
+    interp Rforce  -> float64    is_backend_array: False   <-- NUMPY FALLBACK
+    exact  Rforces -> ArrayImpl  is_backend_array: True
+
+`interpRZPotential.Rforce` never reaches the backend under a forced backend.
+[[value-checks-cannot-see-numpy-fallback]] — `force=True` alone does NOT put you
+on the backend — caught exactly as written. My probe also lacked
+`JAX_ENABLE_X64` (the float32 truncation warning gave it away), so it was not the
+test environment either.
+
+**Retracting the batching plan.** It was derived from a measurement of the wrong
+code path. Batching a loop that is already running on numpy at 0.1 ms/call would
+have bought nothing, and I would have shipped a test refactor with a speed
+claim I could not substantiate.
+
+**The real question this exposes**, which matters more: is
+`interpRZPotential.Rforce` a **numpy island**? Task #112 records the family as
+backend-MIGRATED and task #150 is the standing "eliminate numpy islands, do not
+quarantine" directive. A migrated potential returning plain float64 under a
+forced backend is either an incomplete migration or a deliberate scipy-spline
+boundary — and which one it is decides whether the 6 slow entries are a
+performance problem at all.
+
+Next wake, in order, with x64 set and identity asserted at every step:
+1. re-probe with `JAX_ENABLE_X64=1` in the harness' own configuration;
+2. determine whether the fallback is the scipy spline evaluation or the
+   accessor wrapper;
+3. only then decide between island elimination (source) and test batching.
