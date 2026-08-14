@@ -44162,3 +44162,36 @@ grid — which would make it worth far more than these 6 entries.
 Next: profile the single vectorised `evaluateRforces(MWPotential, Rmesh, zmesh)`
 call on jax (40401 points) and find what iterates. Check MWPotential's three
 components separately — a composite is only as vectorised as its worst term.
+
+### 2026-08-14 (cont) — the potential evaluation is FINE; ~136s of the ctor is elsewhere
+
+Timed each MWPotential component over the full 201x201 = 40401-point mesh:
+
+    MiyamotoNagai     numpy 0.022s   jax 0.88s   (first call, includes warmup)
+    NFW               numpy 0.004s   jax 0.53s
+    Hernquist         numpy 0.003s   jax 0.00s
+    MWPotential(all)  numpy 0.009s   jax 0.19s   <-- ONE batched call, whole mesh
+
+**The constructor builds two such grids. That is ~0.4 s of its 136.7 s.**
+~136 s — 99.7 % of the constructor — is NOT potential evaluation.
+
+This overturns the framing I have been carrying all campaign. "jax eager is slow"
+is WRONG for this path: the evaluation vectorises properly and is sub-second over
+40k points. Something else in `interpRZPotential.__init__` is pathological under
+a forced backend.
+
+Remaining candidates inside the constructor, in order of suspicion:
+
+1. `RectBivariateSpline` construction fed jax arrays — scipy would have to
+   convert, possibly element-wise;
+2. grid assembly / `numpy.asarray` round-trips per row or per cell;
+3. `_spot_check_cells` — ~19 SCALAR evaluator calls per quantity, but that is
+   ~0.07 s at the measured 1.84 ms/call, so it cannot be the cause.
+
+Note (3) is already excluded by arithmetic — worth writing down so I do not
+re-suspect it next wake.
+
+**Also still open: ~79 % of the 645 s test.** Constructor 136.7 + loop ~5 = ~142 s.
+I have not explained the rest and am not going to guess at it; the next
+measurement is a phase-by-phase instrumentation of `__init__` under jax, which
+will settle candidate (1) vs (2) and may also reveal the missing 500 s.
