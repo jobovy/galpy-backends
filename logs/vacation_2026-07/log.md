@@ -44319,3 +44319,41 @@ known failure still in it, because `gh pr ready` succeeds regardless of what is
 pushed. Caught only by checking the SHA afterwards.
 [[verify-pr-content-not-push-success]], written two wakes ago, applies to
 `gh pr ready` as much as to `git push`.
+
+### 2026-08-14 (cont) — Jo: the loop is a KEEP-ALIVE, not a pause. And gh#1316 reaches further than I thought
+
+Jo: *"not to go to sleep until a problem is solved and a PR is open. The loop is
+just to make sure you don't permanently fall asleep, not to make you pause all
+the time"*. Recorded as [[loop-is-keepalive-not-pause]]. I had been ending a turn
+after each probe — one measurement per wake — which stretched a few hours of real
+work across ~10 hours of wakes.
+
+**Characterised the next cluster (12 jax slow-skips in test_potential.py) —
+THREE distinct causes, not one:**
+
+* 1 x `test_2ndDeriv_potential[mockInterpRZPotentialwSecondDerivs]` —
+  **interpRZPotential**, i.e. the thing gh#1316 fixes
+* 4 x MW mass models (`Cautun20`, `McMillan17`, `DehnenBinney98`,
+  `diskscf_overflow`) — heavy DiskSCF/SCF setup, a DIFFERENT cause (task #75)
+* 5 x `test_poisson_surfdens_potential[...Wrapper...]` — wrapper potentials
+* 2 x no obvious heavy setup (`MultipoleExpansion_deepcopy`,
+  `MovingObject_2ndderivs_fd`)
+
+So the 79 remaining slow-skips are not one problem. Good: it means gh#1316's
+reach is measurable rather than assumed, and the rest need their own causes.
+
+**A/B on the mock (151x151 grid, 6 interpolated quantities):**
+
+    numpy ctor           :   0.04 s
+    jax ctor WITH fix    :   4.54 s
+    jax ctor PRE-fix     : 409 s      (measured at 31x31, scaled x24 by point count)
+
+**90x.** The extrapolation is sound because the pre-fix cost is per-point scalar
+calls (136806 of them at 151x151), which scale linearly in grid points. A ~7
+minute construction becomes 4.5 s.
+
+So gh#1316 plausibly un-defers this entry too — which would take its ledger delta
+from 0 to a real burn. Running the un-skip probe (whole test_potential.py under
+`--backend jax`, junitxml) to confirm it actually PASSES and is fast, rather than
+inferring it from the constructor time. Measure, then un-ledger, then extend the
+PR — not the other order.
