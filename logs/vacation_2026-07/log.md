@@ -43700,3 +43700,42 @@ burndown PR.
 
 Timing measurement of those 6 entries still running; it is the pilot for the real
 target (85 slow-skip + 68 skip), which no artifact can validate.
+
+### 2026-08-14 — slow-skip pilot: 0 stale, and the strategy was wrong
+
+Un-skipped the 6 `jax` slow-skip entries in `test_interp_potential.py` and timed
+them. **All 6 RAN and PASSED — and all 6 are genuinely slow:**
+
+    test_interpolation_potential_force_c          1078.8s
+    test_interpolation_potential_secondderivs     1062.9s
+    test_interpolation_potential_force             645.9s
+    test_interpolation_potential_dens              514.1s
+    test_interpolation_potential_secondderivs_c    359.0s
+    test_interpolation_potential_c                 276.0s
+                                          total   3936.6s
+
+66 of the run's 86 minutes, for six tests. **0 stale.** They are correctly
+deferred, exactly as the slow-skip reason string says ("unrunnable under the
+backend until the backend port is vectorized").
+
+**This kills the re-measurement strategy, which is the useful part.** I had been
+treating the 85 slow-skip entries as a pool of possibly-stale deferrals to be
+burned by measuring. They are not. They are slow because the jax EAGER path is
+slow — the ~5 ms flat per-call overhead ([[lever-1]] / task #79) multiplied over
+interpolation grids. `ae6df922` burned 24 entries because prior optimizations had
+made those fast; what remains is the hard core that no amount of re-measuring
+will move.
+
+Two consequences:
+
+1. **Burning slow-skip entries is CODE work (vectorization, task #74), not
+   measurement work.** The ledger number will not fall until the eager path gets
+   faster.
+2. **Blanket re-measurement is actively a bad plan on cost grounds**: 86 minutes
+   bought 6 data points, all negative. 85 entries at that rate is ~20 hours of
+   box time to most likely learn the same thing.
+
+So the honest roadmap to "no slow skip" runs through jax eager performance, not
+through ledger archaeology. That is a much bigger piece of work than I implied
+over the last several wakes, and it is worth Jo knowing the shape of it rather
+than watching the counter sit at 168.
