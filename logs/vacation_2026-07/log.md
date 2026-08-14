@@ -44238,3 +44238,45 @@ numpy path must not move, and it does not.
 **Scope: this is much bigger than 6 entries.** Any table-backed potential that
 builds a grid under a forced backend hits the same unconditional fallback. It is
 a plausible common cause across a large fraction of the 85 slow-skip entries.
+
+### 2026-08-14 (cont) — fix WORKS (58x) but trips a shipped 1e-14 assertion; NEEDS JO
+
+Gate on the touched suites:
+
+    numpy   79 passed, 1 skipped
+    torch   79 passed, 1 skipped
+    jax     1 FAILED, 72 passed  <-- test_interpolation_potential_use_c
+
+    AssertionError: grid calculated with use_c does not agree with python,
+      max diff = 1.5987e-14      (test threshold 1e-14)
+
+**Caused by my change, not a flake.** That test compares the C-built grid against
+the Python-built one at 1e-14. Previously the jax Python grid came from the
+SCALAR loop and matched C tightly; now it is the vectorised result, which
+reassociates to 1.6e-14 — 60 % over the threshold. The magnitude matches the
+1.3e-13 max I measured on the 201x201 grid, so it is the same effect.
+
+**The fork, stated plainly:**
+
+* KEEP the fix -> jax grid builds go 136.7 s -> 2.34 s (58x), plausibly across a
+  large share of the 85 slow-skip entries — but a shipped 1e-14 accuracy
+  assertion on the jax use_c path must be made backend-aware (numpy keeps 1e-14).
+* DROP the fix -> that assertion stays untouched, and every backend grid build
+  keeps paying an unconditional full scalar fallback.
+
+Per [[torch-tolerance-loosening-ok]] tolerance loosening is pre-approved for
+TORCH ONLY and with approval; this is jax and it is a shipped numerical
+assertion, so it is Jo's call, not mine. Not phoning — this is a decision, not an
+emergency.
+
+Numbers for the decision: guard tolerance 1e-12 vs observed spot difference
+1.6e-15 (600x margin) and vs AnySphericalPotential's 95 %-of-cells disagreement
+(~13 orders). numpy path byte-identical (rtol 0.0, unchanged `array_equal`).
+AnySpherical still falls back, 2/2.
+
+Commit `8f2bbae0` on `backend-jit/gridwave-tolerance`, NOT pushed pending the
+decision.
+
+Also noted while checking: an old stash from `feat/native-grid-spline` says
+"interpRZ regression + jax 95s" — a previous run at this same area. Worth reading
+before the next attempt rather than rediscovering it a third time.
