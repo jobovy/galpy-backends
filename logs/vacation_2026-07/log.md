@@ -44103,3 +44103,34 @@ That is the remaining candidate and the only one still standing. Next
 measurement, with `is_backend_array` asserted at the call site so it cannot be a
 fallback again: time `evaluateRforces(MWPotential, float, float)` under forced
 jax, x2500, and compare against 645 s.
+
+### 2026-08-14 (cont) — third hypothesis refuted; the constructor is the remaining suspect
+
+Timed the surviving candidate with `is_backend_array` ASSERTED at the call site
+first, so it could not be another fallback measurement:
+
+    jax float-input evaluateRforces: 1.84 ms/call  (backend membership confirmed)
+    ~2500 such calls in the test          ->    5 s
+    measured test runtime                       645 s
+    explained fraction                            1 %
+
+**Refuted.** All three hypotheses are now dead:
+
+1. grid-build falls back to the cell loop — NO (0 fallbacks, measured)
+2. interpRZPotential is a numpy island — NO (correct leaf data-guard, measured)
+3. per-point `evaluateRforces` in the test loop — NO (1 % of runtime, measured)
+
+Note 1.84 ms/call, not the ~5 ms of [[lever-1]]: the flat overhead is real but
+smaller here, and 2500 calls of it is simply not 645 s. Arithmetic settles this
+without any further theory.
+
+**What I had never actually timed: the CONSTRUCTOR.** The test builds a 201x201
+grid (40401 points) x {Rforce, zforce} before the loop even starts. A 2-minute
+probe TIMED OUT on it, which is itself the strongest signal yet — construction
+alone exceeds 120 s. Re-running in background with a real budget.
+
+**Method note for the campaign.** I burned four wakes on hypotheses about the
+LOOP because the loop is what the test's body shows. The expensive line was the
+constructor call three lines above it, which I read past every time. When a test
+is slow, time its SETUP before theorising about its body — setup does not appear
+in the assertion you are staring at.
