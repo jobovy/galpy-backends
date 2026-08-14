@@ -43602,3 +43602,37 @@ Note recorded for honesty: pre-commit's isort reordered the import lines after
 the gate had been launched, so the three arms ran against a tree differing from
 the committed one by import ordering alone. Semantically identical; the
 committed tree was re-verified by collection, not by a second 100-minute run.
+
+### Same wake — gh#1311, the second PR: nothing was testing the test helper
+
+While gh#1310's CI ran, I checked a claim I had just made in its description:
+that the jaxpr dependence check adds signal a value comparison cannot. Passing
+at six sites only proves the check DETECTED dependence; it does not prove it
+would CATCH a folded trace. A/B'd it directly — a constant function returns
+`depends_on_inputs = False` and `assert_jit_matches_eager` raises. So the claim
+holds.
+
+That prompted the real find: **22 test modules import `backend_jit_helpers`, and
+nothing tests it.** `jit_output_depends_on_inputs` is never asserted outside its
+own module. If it started returning True unconditionally — a jax release
+reshaping `jaxpr.invars`/`eqns` would do it — all 22 adopters would quietly
+degrade to plain value comparisons and CI would stay green. Textbook hollow
+green, and squarely the class the mission is supposed to eliminate.
+
+gh#1311 adds `tests/test_backend_jit_helpers.py`: 10 tests that each assert the
+helper REJECTS something (constant trace, wrong `ref=`, out-of-tolerance from
+both sides at 1e-8 vs 1e-12, `err_msg` on both failure paths, elementwise array
+comparison so an all-but-one match still fails). Two boundaries recorded on
+purpose: the check is "consumes ANY declared argument" (a partially-used
+signature passes), and it is structural not numerical (`x * 0.0` still consumes
+`x`). Gate: 10 passed on each of numpy / jax / torch.
+
+Branched off develop `50dbf316`, file-disjoint from gh#1310 (verified with
+`comm` over both PRs' file lists, not by eyeballing). Two PRs now open, which is
+the standing directive.
+
+A method note worth keeping: the grep that was supposed to tell me whether a
+self-test existed returned nothing AND its `|| echo` fallback never fired,
+because `head` was last in the pipe and its exit status masked grep's. I nearly
+read that silence as "no self-test" without checking — the same shape as the
+junitxml `find()` truthiness trap. Pipelines report the LAST command's status.
