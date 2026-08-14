@@ -43944,3 +43944,43 @@ Two notes worth keeping:
 Next probe: count evaluator calls during one slow test (not the grid build) to
 confirm the per-sample-point loop, then decide whether the fix is test-side
 batching or a source-side vectorized accessor.
+
+### 2026-08-14 — gh#1312 MERGED (develop c54fcb8f); FOUND the slow-skip cost driver
+
+Ledger **169 -> 168**, in scope **100** (15 xfail + 85 slow-skip). Both slots free.
+
+**The 276-1079s is a scalar double loop IN THE TEST, not in the backend port.**
+`test_interpolation_potential_force`:
+
+    rs = linspace(0.01, 2.0, 21); zs = linspace(-0.2, 0.2, 41)   # 861 points
+    for r in rs:
+      for z in zs:
+        rzpot.Rforce(r, z)                            # scalar
+        evaluateRforces(MWPotential, r, z)            # TWICE (numerator + denominator)
+        rzpot.zforce(r, z)                            # scalar
+        evaluateRforces(MWPotential, r, z)            # AGAIN in the next assert
+
+~5 scalar backend calls x 861 points = ~4-5k calls, and the exact force is
+recomputed 2-3x per iteration for the SAME (R,z). MWPotential is a 3-component
+list so each call fans out further. ~5 ms flat per-call overhead
+([[lever-1]] / #79) x ~5000 = the measured runtime.
+
+**This changes the shape of the 85-entry campaign.** The slow-skip reason string
+says "unrunnable until the backend port is vectorized", and I had taken that at
+face value for weeks. The port is fine here — `_grid_eval` is already vectorised
+(measured last wake: 3 vectorised, 0 fallbacks). The scalar loop is test-side.
+
+Fix is safe and mechanical: evaluate all 861 points in ONE array call per
+quantity (4 calls replacing ~5000), keep the identical tolerance and identical
+sample points. Two cautions for the implementation:
+
+* assert ELEMENTWISE and report the worst offender —
+  [[assertion-comparison-outside-reducer]]: `all(fabs(d)) < tol` passes when
+  wrong. Use max|rel| < tol with the argmax in the message.
+* verify `interpRZPotential.Rforce` accepts arrays before assuming it (the module
+  has scalar-wrapping code at its top), and confirm the vectorised values are
+  bit-identical to the scalar ones, not merely within tolerance.
+
+If this holds it un-defers entries by making the TEST cheap, which is legitimate:
+the deferral exists because the test costs 18 minutes, and the 18 minutes are
+avoidable without weakening a single assertion.
