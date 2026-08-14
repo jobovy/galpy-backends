@@ -44064,3 +44064,42 @@ if evaluation becomes native, the per-call cost question changes completely, and
 the earlier "batch the test loop" idea may become unnecessary rather than merely
 unproven. Do NOT re-open the batching plan until this lands and the timings are
 re-measured with `is_backend_array` asserted at the call site.
+
+### 2026-08-14 (cont) — RETRACTING the island claim too; it is a correct data-guard
+
+`_Rforce` already dispatches:
+
+    if is_backend_array(R) or is_backend_array(z):
+        return self._eval_grid_backend("rforce", R, z)
+
+My probe passed Python floats `(1.0, 0.1)`, which are not backend arrays, so it
+correctly took the numpy branch. Verified with real backend arrays:
+
+    jax ARRAY input -> ArrayImpl   is_backend_array: True
+    value bit-identical to the numpy path: True
+
+So `interpRZPotential` is a **correct leaf data-guard**
+([[leaf-migration-data-guard]]), NOT a numpy island. Task #112's "migrated" is
+accurate. My grep for `from galpy.backend` missed it because the guard imports
+`is_backend_array` differently than I searched for — I concluded "no backend
+import whatsoever" from a single negative grep, which is the same
+absence-of-evidence error as the junitxml `<skipped>` mistake.
+
+**Two retractions in one investigation, both caught before any code was written.**
+That is the verification working, but the pattern is expensive: I probed with the
+WRONG INPUT TYPE and then built an architectural conclusion on it. For a
+data-guarded leaf, the input type IS the dispatch — probing with a float tells
+you nothing about the backend path.
+
+**Where the 645s actually goes — still open, but narrowed.** In the test loop,
+`rs`/`zs` are numpy linspaces, so `r`, `z` are `numpy.float64`:
+
+* `rzpot.Rforce(r, z)` -> numpy branch (fast, measured 0.10 s for 861 pts)
+* `evaluateRforces(MWPotential, r, z)` -> **ArrayImpl even for float input**
+  (measured earlier), i.e. the exact force IS coerced onto jax by the
+  `@backend_input` boundary, ~2-3 calls per iteration x 861 = ~2500 backend calls
+
+That is the remaining candidate and the only one still standing. Next
+measurement, with `is_backend_array` asserted at the call site so it cannot be a
+fallback again: time `evaluateRforces(MWPotential, float, float)` under forced
+jax, x2500, and compare against 645 s.
