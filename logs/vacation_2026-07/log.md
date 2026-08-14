@@ -44024,3 +44024,43 @@ Next wake, in order, with x64 set and identity asserted at every step:
 2. determine whether the fallback is the scipy spline evaluation or the
    accessor wrapper;
 3. only then decide between island elimination (source) and test batching.
+
+### 2026-08-14 (cont) — interpRZPotential IS a numpy island; the fix helper already exists
+
+Re-probed with `JAX_ENABLE_X64=1`. Same answer, now trustworthy:
+
+    interp Rforce -> float64    is_backend_array: False
+    _rforceInterp: RectBivariateSpline   (scipy)
+    _rforceGrid:   ndarray
+    exact Rforces -> ArrayImpl  is_backend_array: True
+
+**`interpRZPotential` has NO backend import whatsoever.** Every accessor
+evaluates through scipy: 7x `RectBivariateSpline` (pot, Rforce, zforce, R2deriv,
+z2deriv, Rzderiv, dens) and 3+ `InterpolatedUnivariateSpline` (vcirc, dvcircdr,
+epifreq). The evaluation path is numpy end to end, which is exactly why a forced
+jax backend still returns `float64`.
+
+This resolves the ambiguity from the retraction: it is an **incomplete migration**,
+not a deliberate scipy boundary. Task #112 marks the family "backend-migrated" —
+that must have covered construction/coercion, not spline EVALUATION.
+
+**The fix needs no new utility.** `galpy/backend/interpolate.py` already ships the
+exact pair:
+
+    rect_bivariate_to_ppoly(spl)                      # scipy spline -> ppoly coeffs
+    eval_rect_ppoly(xp, xbr, ybr, c, X, Y, ...)       # namespace-aware evaluation
+
+i.e. build with scipy (numpy path untouched, byte-identical by construction),
+convert the coefficients once at setup, evaluate through the active namespace.
+1D has `cubic_spline_coeffs` / `eval_cubic` / `spline_to_ppoly` for the
+UnivariateSpline accessors.
+
+That satisfies [[audit-placement-and-duplication]] (reuse existing backend
+utilities, do not invent) and [[no-numpy-islands-eliminate-fast]].
+
+**Sequencing note:** this is a real source migration across ~10 accessors, so it
+is a PR of its own, not a bolt-on. It also likely subsumes the 6 slow entries —
+if evaluation becomes native, the per-call cost question changes completely, and
+the earlier "batch the test loop" idea may become unnecessary rather than merely
+unproven. Do NOT re-open the batching plan until this lands and the timings are
+re-measured with `is_backend_array` asserted at the call site.
