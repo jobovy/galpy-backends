@@ -43636,3 +43636,37 @@ self-test existed returned nothing AND its `|| echo` fallback never fired,
 because `head` was last in the pipe and its exit status masked grep's. I nearly
 read that silence as "no self-test" without checking — the same shape as the
 junitxml `find()` truthiness trap. Pipelines report the LAST command's status.
+
+### 2026-08-14 — the artifact sweep REFUTES my own "lots more stale" claim
+
+Downloaded all 44 `backend-junit-*` artifacts from the completed
+`feat/backends-develop` @ `50dbf316` run and cross-referenced against the
+ledger. Result: **0 stale** among the checkable entries.
+
+Two facts I had wrong:
+
+1. The 15 xfail LINES are only **9 unique nodeids** — several tests are ledgered
+   under two backend tags, so line count overstates test count. 4 of the 9 carry
+   an eager tag; all 4 correctly XFAIL. The other 5 are jit-tagged and this run
+   ships **no jit shards**.
+2. **slow-skip/skip entries cannot be validated from CI artifacts at all.** They
+   are skipped, so junit records `skipped` regardless of whether they would now
+   pass or run fast. 153 of the 169 entries are in that category. The only way
+   to burn them is to RUN them and measure — which is what `ae6df922` (24
+   un-deferred) actually did.
+
+So gh#1300 / gh#1303 / gh#1297 left NO uncollected xfail entries. gh#1307's was
+the exception, not the tip of a pile. My "the sweep is where the burndown is"
+from the previous wake is refuted.
+
+**Near-miss worth recording.** My first torch parser labelled every testcase
+with no `skipped` child as "XPASS, STALE" and flagged 8 — but a test that was
+never ledgered also has no `skipped` child. Those 8 were ordinary passing tests.
+Trusting that output would have produced a fabricated 8-entry burndown. The
+correct check JOINS junitxml against the ledger and considers only nodeids
+ledgered *for the backend actually being run*. Same shape as the "67 raw jit
+sites" over-count: the grep population was never the real population.
+
+**Real target, restated honestly:** 85 slow-skip + 68 skip. No artifact
+shortcut; each needs a timed run. That is the next campaign, and it is
+measurement-bound, not insight-bound.
