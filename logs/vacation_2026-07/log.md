@@ -43908,3 +43908,39 @@ own semantics is not something to reverse-engineer from nodeid strings.
 Endgame, finally on firm ground: **100 entries, two kinds of work.**
 1. 85 slow-skip -> jax eager vectorization (tasks #74/#79)
 2. 15 xfail -> individual defect fixes
+
+### 2026-08-14 — vectorization campaign STARTED; first hypothesis refuted in one probe
+
+Jo: *"Why not start now? You can make progress faster!"* — correct, gh#1312 was
+not blocking anything and the slot was free.
+
+Entry point chosen from evidence, not taste: memory #211 records Jo already CHOSE
+"(B) vectorize the interpRZPotential grid build", and the 6 entries I timed at
+276-1079s are exactly `test_interp_potential.py`. So: is the grid build falling
+back to its cell-by-cell loop (nR*nz calls x ~5ms = ~51s per quantity, which
+would match)?
+
+**Measured: NO.** Instrumented `_grid_eval` over an MWPotential2014 build ->
+**3 vectorised, 0 fell back**. `_grid_eval` is already carefully vectorised, with
+a bit-for-bit spot-check guard against potentials that silently mis-broadcast.
+The obvious candidate is eliminated.
+
+Where it actually is, on the evidence of the test NAMES
+(`test_interpolation_potential_force`, `_force_c`, `_secondderivs`, `_dens`):
+these are interpolation-ACCURACY tests that evaluate interpolated-vs-exact over
+many sample points. The cost is the per-sample-point evaluation loop meeting the
+~5 ms flat per-call backend overhead (task #79), i.e. TEST-side iteration, not
+grid construction.
+
+Two notes worth keeping:
+
+* `galpy.potential.interpRZPotential` is the CLASS; `_grid_eval` needs
+  `importlib.import_module` ([[galpy-class-shadows-submodule]] — hit it again).
+* `AnySphericalPotential` IS used in this test file, and per `_grid_eval`'s own
+  docstring it is the one potential that mis-broadcasts and correctly falls back.
+  So a fallback DOES occur somewhere here — just not on the path that dominates
+  the runtime.
+
+Next probe: count evaluator calls during one slow test (not the grid build) to
+confirm the per-sample-point loop, then decide whether the fix is test-side
+batching or a source-side vectorized accessor.
