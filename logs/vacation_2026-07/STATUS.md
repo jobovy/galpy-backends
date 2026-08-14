@@ -76,3 +76,48 @@ Gate running: 6 files x {numpy, jax, torch}, log
   method body.
 * **#218** PARKED with a measured negative result (needs traced Rforce ~7e-11
   absolute; unreachable).
+
+---
+
+# SUPERSEDING UPDATE — 2026-08-13 later: Jo flagged loss of focus, and was right
+
+## The metric, measured
+
+Ledger **flat at 169 for 12 consecutive develop commits** (16 xfail / 85
+slow-skip / 68 skip). Last real burn was `c7710cd0` (174->169). My last dozen
+merged PRs burned ZERO entries.
+
+**The specific failure:** gh#1307 fixed AnyAxisym traced 2nd derivs (~8 orders
+at the midplane) and I never removed the corresponding ledger entries. Five sit
+in `backend_xfail.txt` right now — lines 239, 240, 241, 340, 344 — including the
+exact two Jo asked about earlier this session. The ledger uses
+`xfail(strict=False)`, so a fix shows as **XPASS**: CI stays green and says
+nothing. That is how a paid-for fix goes uncollected.
+
+**Standing correction to the loop: every PR states its ledger delta, and a
+delta-zero PR needs an explicit reason.** Infrastructure is sometimes genuinely
+prerequisite (the Hadamard rule had to exist before AnyAxisym could be fixed),
+but a RUN of twelve zero-delta merges means prerequisites became the work.
+
+## In flight
+
+`test_potential.py --backend jax --jit` running in /var/tmp/fpwire to check
+whether those 5 AnyAxisym entries now XPASS -> would be 169 -> 164. Log
+`scratchpad/anyaxi_xpass.log`, junit `.xml` (written only at session END — a
+killed run yields ZERO data). Was at 82% at last check.
+
+Next after that: sweep the SAME stale-XPASS pattern across the other recent
+fixes (device anchor gh#1300, torch-tracing gh#1303, hyp2f1 gh#1297) — the
+silent mechanism applies to all of them equally.
+
+## Both PRs: all test jobs PASS, codecov/project red = PHANTOM (verified)
+
+* **gh#1310** (helper adoption, 6 files): sessions=16, coverage=80.92 —
+  complete. But base `50dbf316` has **no codecov data at all** -> stale-base
+  phantom, comparing against nothing.
+* **gh#1311** (helper self-test, 1 new file): sessions=**2**, coverage=40.55 —
+  uploads still landing; 40% is nonsense.
+
+Neither is a real drop — both PRs touch only `tests/`, no `galpy/` source.
+Remedy: let uploads settle, then **re-run the all-clear** (do NOT re-run a
+QUEUED all-clear). Each PR has exactly 1 pending check (the all-clear itself).
