@@ -44450,3 +44450,48 @@ exactly what my earlier evidence held fixed.
 measurement is running with the corrected `--timeout-method=signal` (thread
 KILLS the session before junitxml is written -- that cost two multi-hour runs).
 Ledger burndown does not wait on the interpRZ design.
+
+### 2026-08-15 — AnySphericalPotential: UPSTREAM numpy bug confirmed on main, two sites
+
+**Verified on `origin/main`, not inferred from the docstring** (which misled me once
+already on this same class). Two `quad` calls collapse an array `r`:
+
+    line  86  _rawmass:   integrate.quad(a^2*rho, 0, numpy.atleast_1d(r).flatten()[0])
+    line 129  _revaluate: integrate.quad(rho*a, numpy.atleast_1d(r).flatten()[0], inf)
+
+The docstring's "byte-identical to the historical closure -- an array ``r``
+collapses to ``r[0]``" is accurate: this is PRE-EXISTING galpy behaviour that the
+backend migration faithfully preserved. It is not a regression.
+
+**Asymmetry that matters for the fix and the test:**
+
+* `_rforce = -self._rawmass(r) / r**2` -> the collapsed SCALAR mass is divided by
+  an ARRAY r^2, which broadcasts fine and returns **silently wrong forces**.
+  Measured: max rel err **0.943**, 76/77 cells wrong on the CI's logR 11x7 grid.
+* `_revaluate` is guarded by `if r == 0:` -> a multi-element array **RAISES**
+  (ambiguous truth value) rather than returning garbage.
+
+So the forces are the dangerous half. A test that only checked the potential
+would have found nothing.
+
+**Backend path is correct** (measured 1.3e-15 vs numpy cell-by-cell truth on two
+grids) because it routes to in-backend GL quadrature node-by-node. So
+`_grid_eval`'s guard is protecting the NUMPY path from a numpy defect, and on jax
+it is pure cost -- the 1643x is paid to guard a path that was already right.
+That inverts the diagnosis I started with.
+
+**Fix design (PR -> main, then cherry-pick per Jo so it drops on rebase):**
+`quad` needs a scalar limit, so the numpy path must evaluate per element and
+reshape, at BOTH sites:
+
+    rr  = numpy.atleast_1d(r)
+    out = numpy.array([quad(..., 0, float(x))[0] for x in rr.flat])
+    return out.reshape(numpy.shape(r)) if numpy.ndim(r) else out[0]
+
+This DELIBERATELY changes numpy output for array input -- which is precisely why
+it belongs in main as an upstream decision rather than inside the backend work,
+where [[backend-precision-must-match-numpy]] would otherwise forbid it.
+
+Test: whole-array vs per-element on NUMPY across several grid geometries. Must
+cover forces (the silent half), not just the potential. This is the first
+instance of the `_BROADCAST_POTS` check Jo asked for.
