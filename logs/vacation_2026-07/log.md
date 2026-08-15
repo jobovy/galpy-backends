@@ -44400,3 +44400,53 @@ attributes both to one author. Recorded as
 [[concurrent-agent-session-shares-identity]]. I have NOT touched them — merging
 another session's stack on a misidentification is exactly the irreversible
 action not to take on a guess.
+
+### 2026-08-15 — Jo's design call on gh#1316: move the guard from RUNTIME to TEST TIME
+
+Jo: *"fixing anyspherical and deleting the guard can work, but we have to make
+sure to then test always for ALL potentials so we don't silently introduce a bug
+on a new potential. So an approach similar to the test grids of potentials in
+test_potential might be necessary? Regardless, please also work in parallel on
+other ledger burndown so this doesn't fully block other progress."*
+
+**This is a better architecture than what I proposed** and I want the reasoning
+recorded, not just the instruction. `_grid_eval`'s spot check pays a cost on
+EVERY grid build, forever, on EVERY potential, to catch a bug in ONE. That is a
+runtime workaround for something a test should assert once. Moving it to a
+parametrized all-potentials test:
+
+* removes the 1643x fallback entirely (no tolerance, no discriminator, no
+  numpy-vs-backend asymmetry, and LESS code);
+* makes new potentials covered automatically, which the runtime guard only did
+  probabilistically (~19 spot cells, and I proved that sampling is
+  grid-geometry dependent).
+
+`test_potential.py` already has the pattern: named lists (`_NORMALIZE_POTS`,
+`_PICKLE_POTS`, `_FORCEASDERIV_POTS`, `_2NDDERIV_POTS`) fed to
+`@pytest.mark.parametrize("potname", ...)`. The new one is `_BROADCAST_POTS`
+with the same shape.
+
+**Test design, corrected for the error that invalidated my first survey.** My
+zoo survey compared jax-vectorised against jax-SCALAR with exact inequality —
+which measures reassociation, the very thing I had already proven is
+indistinguishable from a mis-broadcast by magnitude. It "found" 18 of 46
+offenders including MiyamotoNagai, Hernquist, NFW and Isochrone, which
+obviously broadcast fine. It also silently DROPPED `AnySphericalPotential`,
+because it needs a `dens=` argument and both no-arg constructions failed.
+
+The correct assertion compares against a KNOWN-GOOD reference:
+
+    ref  = numpy, cell-by-cell          # ground truth
+    got  = backend, whole-mesh
+    assert allclose(got, ref, rtol=1e-10)
+
+Reassociation lands ~1e-15; a real mis-broadcast lands ~1e-1. Those separate
+cleanly BECAUSE the comparison is against truth rather than another same-backend
+path. Must construct AnySpherical explicitly with a `dens=` callable, and sweep
+several grid geometries (linear / logR / wide incl. z<0) since geometry is
+exactly what my earlier evidence held fixed.
+
+**Parallel track, per the same instruction:** the `test_orbit.py` cluster
+measurement is running with the corrected `--timeout-method=signal` (thread
+KILLS the session before junitxml is written -- that cost two multi-hour runs).
+Ledger burndown does not wait on the interpRZ design.
