@@ -44616,3 +44616,57 @@ exactly this entry. Stopped rather than manufacture a third proxy — the correc
 instrument is the (ledgered AND passed) sweep over `backend-junit-*` artifacts
 from a completed matrix run, which gh#1322's CI is producing now.
 
+
+## 2026-08-15 (later still) — ledger staleness sweep built, and it says ZERO
+
+Built the (ledgered AND passed) sweep over `backend-junit-*` artifacts
+(`scratchpad/ledger_sweep.py`) and ran it against gh#1322's matrix.
+
+**First run reported 12 "candidate stale" entries. All 12 were bugs in my own
+sweep.** Both found by verifying a specific claim instead of believing the
+output:
+
+1. **Bare test name collides across files.** `test_SOS_3D` exists in *both*
+   `test_orbit.py` (not ledgered, PASSES) and `test_orbits.py` (ledgered,
+   SKIPPED). Keying on `name` alone let the unledgered twin mask the ledgered
+   one as stale. Fixed by rebuilding the full nodeid from junit's `classname`.
+2. **`-jit` entries evaluated against eager artifacts.** The `--jit` shards only
+   run via `workflow_dispatch(jit=true)`, never on a PR. An entry ledgered as
+   failing *traced* trivially passes *eagerly*, so 8 of the 12 were pure
+   category error. Now skipped explicitly, with a count printed
+   (**40 entries not evaluable from a non-jit run**).
+
+After both fixes: **0 candidate stale.** The eager jax/torch ledger is honest.
+
+### The Track-E xfail cluster is NOT stale — settled
+
+Last wake I suspected `test_analytic_ecc_rperi_rap` / `test_analytic_zmax` were
+stale because their stated blocker (Track E) has landed, and I burned two failed
+dev-box probes trying to check. The artifacts answer it directly:
+
+    jax    xfail  XFAIL  tests/test_orbit.py::test_analytic_ecc_rperi_rap
+    jax    xfail  XFAIL  tests/test_orbit.py::test_analytic_zmax
+    torch  xfail  XFAIL  tests/test_orbit.py::test_analytic_ecc_rperi_rap
+    jax    xfail  XFAIL  tests/test_qdf.py::test_call_diffinoutputs
+
+They still genuinely fail in the real py3.14 sharded CI context. **My suspicion
+was wrong**, and the ledger comment stands. Worth the record: the ledger's own
+warning ("do NOT re-measure on a dev box") was correct, and the artifact sweep
+is the only instrument that answers this class of question.
+
+### codecov phantom confirmed and self-healed
+
+gh#1322 sat on a red `codecov/project`. Discriminated by session count per
+[[codecov-session-count-discriminates-phantom]]:
+
+    BASE 07e569e8   coverage 99.95   sessions 28   lines 48549
+    HEAD 90303ab0   coverage 85.98   sessions 26   lines 48549
+
+Identical line count, two missing upload sessions, and the PR changes **zero
+source lines** -- a real drop is impossible. Left it alone; it has since gone
+green on its own (126 pass, 0 fail). Do not "fix" this class of red.
+
+Follow-up worth doing: the sweep belongs in the repo next to
+`tests/backend_status_report.py`, not in a scratchpad. Deferred -- at the
+two-PR limit.
+
