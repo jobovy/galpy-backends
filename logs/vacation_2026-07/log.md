@@ -44357,3 +44357,46 @@ from 0 to a real burn. Running the un-skip probe (whole test_potential.py under
 `--backend jax`, junitxml) to confirm it actually PASSES and is fast, rather than
 inferring it from the constructor time. Measure, then un-ledger, then extend the
 PR — not the other order.
+
+### 2026-08-15 — gh#1319 MERGED (165/97); gh#1316 parked; a SECOND session is on this repo
+
+**gh#1319 merged** — develop `07e569e8`. Ledger verified from the merged tree:
+xfail 15 + slow-skip 82 + skip 68 = **165 total, 97 in scope** (was 168/100).
+
+**gh#1316 drafted after CI caught a real failure my gate missed.**
+`test_interp_potential` asserts a non-broadcasting potential must fall back, so
+the grid must be BIT-IDENTICAL to the cell-by-cell reference. My rtol=1e-12
+accepted a wrong vectorised result on a **log-R 11x7** grid. My local evidence
+("AnySpherical falls back 2/2") was measured on a linear 41x41 grid — grid-
+specific, and I generalised it to the guard's whole domain.
+
+Three approaches now refuted BY MEASUREMENT, all recorded on the PR:
+
+| approach | why it fails |
+|---|---|
+| rtol 1e-12 | mis-broadcast and reassociation error populations OVERLAP |
+| 1x1-mesh reference | identical differ-counts to scalar; no discrimination |
+| row-wise fallback | breaks bit-identity for good potentials; only ~1.3x |
+
+The measurement that kills the whole family: AnySpherical (the BAD one) matched
+scalar at 0/9 sampled cells while MWPotential (the GOOD one) differed at 2/9.
+The populations overlap, so no threshold works. Needs a structural signal (a
+"does this potential broadcast" capability flag), not a looser comparison.
+
+**Second failed measurement, my error again.** `--timeout-method=thread` KILLS
+the process on expiry, so pytest never reaches session end and junitxml is never
+written — exit 1, zero data, again. I had "fixed" the previous outer-`timeout`
+loss by adding a per-test cap and then picked the method that also kills the
+session. `signal` is correct HERE (these tests are slow, not hung in C, so they
+can be interrupted and recorded); the C-extension caveat in my notes does not
+apply to this measurement. Two multi-hour runs lost to the same class of error.
+
+**A SECOND CLAUDE SESSION IS WORKING THIS REPO.** `gh pr list --author @me`
+showed 5 PRs; 4 (#1313/#1314/#1317/#1318, a stacked `aainv-spherical-*` chain)
+are NOT mine. Proof from the commit trailers: `Co-Authored-By: Claude Fable 5`,
+`Claude-Session: .../session_01N2Jm4Y1A9eQRXMEaHaqwwJ` vs my
+`session_01MgPfLBMhm6aEYwVtaQ7jMm`. Same `jobovy-agent` git identity, so GitHub
+attributes both to one author. Recorded as
+[[concurrent-agent-session-shares-identity]]. I have NOT touched them — merging
+another session's stack on a misidentification is exactly the irreversible
+action not to take on a guess.
