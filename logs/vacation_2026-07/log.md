@@ -44495,3 +44495,65 @@ where [[backend-precision-must-match-numpy]] would otherwise forbid it.
 Test: whole-array vs per-element on NUMPY across several grid geometries. Must
 cover forces (the silent half), not just the potential. This is the first
 instance of the `_BROADCAST_POTS` check Jo asked for.
+
+---
+
+## 2026-08-15 — orbit cluster measured (gh#1322) + the AnySpherical test already existed
+
+### The 12-entry jax `test_orbit.py` cluster, in one run
+
+Fourth attempt finally produced junitxml (the first three died to an outer
+`timeout` kill, `--timeout-method=thread`, and too small a budget — see
+[[per-test-cap-not-per-file-timeout]]). Whole file, `--backend jax`, all 12
+un-skipped, 420 s per-test cap with `--timeout-method=signal`:
+**4 h 11 m, 566 passed / 5 failed.**
+
+**8 of 12 pass.** Un-deferred the 6 with margin (212–408 s) → **gh#1322**,
+ledger 167 → 161, in scope 99 → 93. The 4 real failures are all pure timeouts,
+and the 2 heavy passers (662 s, 1535 s) stay deferred with honest notes.
+
+Two things worth keeping:
+
+* **Every one of the 12 was annotated `# 300s (failed)`.** That conflated "too
+  slow" with "broken", and was flatly wrong for the two that pass — one of them
+  recorded as "620s" is actually 1535 s. Ledger notes decay; measure before
+  trusting one.
+* **`tests/.test_orbit_durations` records `0.05` for a skipped test.** Un-defer
+  without updating it and pytest-split treats the test as free — which is
+  exactly how the ledger's own note "jax orbit group 3 timed out" happened.
+  Un-deferring is a *two-file* edit. Also: my join against the ledger initially
+  matched 1/12 because the entries carry trailing `# …` comments and I split on
+  `::` without stripping them.
+
+Also spotted: `test_lyapunov_spectrum_integrable` is **not** ledgered but timed
+out (>420 s) while the durations file claims 116.1 s. CI has no per-test
+timeout so it is not a red. Noted in gh#1322, not chased.
+
+### AnySphericalPotential: the all-potentials test Jo asked for already exists
+
+Jo asked for "an approach similar to the test grids of potentials in
+test_potential" so a new potential cannot silently regress. Searching first
+(per [[audit-placement-and-duplication]]) found **`test_potential_array_input`
+already does exactly that** — whole-array vs cell-by-cell at 1e-10 for
+`__call__`, `Rforce`, `zforce`, `phitorque`, `R2deriv`, `z2deriv`, `phi2deriv`,
+`Rzderiv`, across all discovered potentials.
+
+`AnySphericalPotential` is on its **exclusion list**. That is why the bug was
+invisible. So the fix is: repair the potential, then *delete the exclusion* —
+no new test machinery at all.
+
+Probing all 7 physics exclusions against that contract also caught **my own
+first fix being incomplete**: I had replaced `_revaluate`'s collapsing
+`quad` limit with `float(r)`, which turns a silently-wrong array answer into a
+raise. `_revaluate` has three array-hostile constructs, not one — `if r == 0`,
+`numpy.isinf(r)`, and the quad limit. Fixed elementwise; all 7 methods now
+0.000e+00 against cell-by-cell, and the scalar path is **bit-identical** to
+main's formulas at six radii.
+
+The `quad`-with-array-limits helper went to `galpy/util/quadpack.py`
+("variations on scipy's quadpack/quad"), not into the potential file.
+
+The other 6 exclusions are all genuinely broken for array input on main
+(`ValueError`/`TypeError` from scalar `if` branching — the if→where class).
+Measured, recorded, not in scope for this PR.
+
