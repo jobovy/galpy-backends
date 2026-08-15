@@ -44746,3 +44746,37 @@ if->where array-input fixes for `SphericalShellPotential` and
 `HomogeneousSpherePotential`, plus the two `numpy.infty` -> `numpy.inf` sites.
 A slot freed when gh#1322 merged, so this is back within the two-PR budget.
 
+
+## 2026-08-15 (night) — flake rate measured; traced run dispatched
+
+**gh#1323's re-run cleared it**: 147 SUCCESS, 0 failures. The symplectic
+bit-identity flake did not reproduce, as predicted by the same-SHA twin.
+
+**gh#1324 then hit the identical flake** — verified from its own log, not
+assumed: `test_symplectic_dxdv_base_bit_identity`, `leapfrog_c`,
+`max|diff|=5.55112e-16`, in a PR touching only two potential files. Re-ran.
+
+### Measured the flake rate instead of trusting "intermittent"
+
+Two consecutive hits looked like it might have become systematic, so I counted
+rather than reacted: over the **25 most recent completed `build.yml` runs**, that
+py3.14 job failed **once**. Including tonight's two, roughly **4-10 %**.
+
+The one failure in that sample is on branch `aainv-spherical-interp` — the other
+session's stack, which I do not own and which touches
+`actionAngleSphericalInverse`. **Independent confirmation the flake is
+environmental, not PR-specific**: it lands on branches with no relationship to
+each other or to symplectic integration.
+
+So [[symplectic-bitidentity-intermittent]] stands as written; two in a row was
+bad luck, not a regime change. Worth having the number attached to it now.
+
+### Traced run dispatched
+
+The ledger sweep can only evaluate what a run actually exercises, and **40 of the
+~90 entries are `-jit`**, reachable only via `workflow_dispatch(jit=true)`. With
+gh#1322 merged and CI load light, dispatched the full traced matrix on
+`feat/backends-develop`: **run 31914531334**. When it lands, `ledger_sweep.py`
+can evaluate those 40 for the first time this trip -- the largest unmeasured
+block left in the ledger.
+
