@@ -44714,3 +44714,35 @@ intermittently bit-non-identical at ~5e-16
 `gh run rerun --job <id>` refuses while the run is in progress ("cannot be
 rerun") -- so the re-run has to wait for run completion, then `--failed`.
 
+
+## 2026-08-15 (late) — gh#1322 MERGED; gh#1324 opened; flake re-run fired
+
+**gh#1322 squash-merged** into `feat/backends-develop` (`ccfe583b`).
+Ledger **167 -> 161**, in scope **99 -> 93**, verified by recount on the merged
+branch. Merged only after the pre-merge audit (2 files, **0 source files**, 0
+`.github/`, 0 conflict markers) and after confirming 6/6 un-deferred entries
+PASS in the PR's own CI artifacts.
+
+(`gh pr merge` printed `failed to run git: 'feat/backends-develop' is already
+used by worktree at /var/tmp/nogl` — that is only the local branch cleanup,
+after the merge. The merge itself landed; verified by fetching and reading the
+develop tip, not by trusting the exit status.)
+
+**gh#1323's red confirmed as the known flake, from the actual log:**
+
+    FAILED tests/test_symplectic_dxdv.py::test_symplectic_dxdv_base_bit_identity
+    AssertionError: symplectic dxdv base orbit not bit-identical to plain
+    integrate for leapfrog_c: max|diff|=5.55112e-16
+
+Same magnitude to the digit as [[symplectic-bitidentity-intermittent]], and in a
+PR that touches only `AnySphericalPotential` + `quadpack`. Waited for the run to
+complete (`gh run rerun --job` refuses mid-run: "cannot be rerun"), then
+`gh run rerun --failed`. Note the discipline that mattered: the same-SHA twin
+already proved *flake vs real* before I could read the log, but I still read the
+log before asserting *which* test and *why*.
+
+**gh#1324 opened** (`fix/potential-array-input-where`, stacked on gh#1323): the
+if->where array-input fixes for `SphericalShellPotential` and
+`HomogeneousSpherePotential`, plus the two `numpy.infty` -> `numpy.inf` sites.
+A slot freed when gh#1322 merged, so this is back within the two-PR budget.
+
