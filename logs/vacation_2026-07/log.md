@@ -44557,3 +44557,62 @@ The other 6 exclusions are all genuinely broken for array input on main
 (`ValueError`/`TypeError` from scalar `if` branching — the if→where class).
 Measured, recorded, not in scope for this PR.
 
+
+## 2026-08-15 (later) — the if->where class, measured across the exclusion list
+
+Both PRs still in CI (gh#1322 81 pending, gh#1323 110 pending), so this wake
+went to the follow-up gh#1323 surfaced.
+
+**Mapped every potential on `test_potential_array_input`'s exclusion list to a
+cause**, by catching the exception and reporting the raising line:
+
+* **if->where class (real, fixable)** — `SphericalShellPotential`
+  (`if r <= self.a`), `HomogeneousSpherePotential` (`if r2 < self._R2`),
+  `RazorThinExponentialDiskPotential` (`if numpy.fabs(z) < 1e-6`).
+* **by design, not a defect** — `DoubleExponentialDiskPotential` and
+  `AnyAxisymmetricRazorThinDiskPotential` raise `TypeError` from an explicit
+  scalar-only input decorator in `Potential.py`. Consistent with
+  [[anyaxisym-array-optout-is-deliberate]]. These stay excluded.
+* **structural** — `FerrersPotential` keys a `hashlib.md5` cache on the
+  coordinates themselves; scalar-only by construction.
+
+Fixed the first two (branch `fix/potential-array-input-where`, `a07ce379`,
+pushed, PR **not** opened — two-PR limit). Left RazorThin alone: its `|z|<1e-6`
+branch is entangled with the accuracy issue in gh#1276.
+
+Shape of the fix worth keeping: **keep the scalar path literally unchanged
+behind `numpy.ndim(x) > 0`** rather than letting `numpy.where` handle scalars
+too. `numpy.where(True, 1.0, 2.0)` returns a 0-d *ndarray*, not a float, so a
+pure-where rewrite silently changes the scalar return type across the whole
+potential API. The guard keeps scalars bit-identical *and* type-identical, and
+matches the existing `numpy.ndim(R) == 0` split in `EllipsoidalPotential`.
+
+Second thing: `where()` evaluates the dead branch, which here divides by the
+radius while the origin sits in the *other* branch. Guarded the divisor and
+verified with `RuntimeWarning` promoted to an error that no new warning appears
+anywhere on the domain, including exactly at the shell radius. (The `r=0` raise
+that surfaced is `SphericalPotential._Rforce` doing `_rforce(r)*R/r` — checked
+the scalar call raises identically, so pre-existing.)
+
+Drive-by: **`numpy.infty` was removed in numpy 2.0** and the repo tests against
+2.4.3, so `SphericalShellPotential._rdens` and
+`RazorThinExponentialDiskPotential._z2deriv` both held a live `AttributeError`.
+Invisible because both sit in `# pragma: no cover` branches — a reminder that
+`no cover` hides *breakage*, not just untested lines.
+
+### Xfail cluster: probe abandoned, deliberately
+
+Tried to test the ledger's claim that `test_analytic_ecc_rperi_rap` /
+`_zmax` are blocked on "Track E not yet migrated" (Track E has since landed).
+Two probes in a row failed to reproduce the test context:
+
+1. plain-float ICs -> `is_backend_array` **False** everywhere; the probe ran on
+   numpy ([[value-checks-cannot-see-numpy-fallback]]);
+2. backend ICs -> integration defaulted to `symplec4_c`, a C integrator, so it
+   still never entered jax; and `jax_enable_x64` is **off** outside pytest.
+
+The ledger itself warns that a local py3.13 unsplit run disagreed with CI on
+exactly this entry. Stopped rather than manufacture a third proxy — the correct
+instrument is the (ledgered AND passed) sweep over `backend-junit-*` artifacts
+from a completed matrix run, which gh#1322's CI is producing now.
+
