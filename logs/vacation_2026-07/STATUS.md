@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-14 late (gh#1316 in CI)
+# Vacation status snapshot — 2026-08-15, two PRs open
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -9,87 +9,72 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## Branch state
 
-`feat/backends-develop` = `c54fcb8f`. Merged since 08-13: gh#1303, #1305, #1306,
-#1307, #1308, #1310, #1311, #1312 (8 PRs in ~36h).
+`feat/backends-develop` = `07e569e8`. Merged 08-14/15: gh#1310, #1311, #1312,
+#1319.
 
 ## The ledger, honestly
 
     xfail        15   real defects, individually
-    slow-skip    85   performance-gated
-    skip         68   PERMANENT exclusion by design (backend_skip.txt says so)
+    slow-skip    84   performance-gated       -> 78 with gh#1322
+    skip         68   PERMANENT by design (backend_skip.txt says so)
     ---------------
-    TOTAL       168      IN SCOPE = 100  (skip is not pending work)
+    TOTAL       167      IN SCOPE = 99  (skip is not pending work)
 
-Of the 68 skips: 48 are VerticalInverse/Torus (`useTM` IS actionAngleTorus), 12
-are `Orbit.from_name` SIMBAD network lookups, 8 other. All excluded BY DESIGN —
-the file's own header states the contract. I narrowed this denominator by regex
-across three wakes before reading that header; do not repeat that.
+With gh#1322 merged: **161 total / 93 in scope.**
 
-## Open PR: gh#1316 (the only one)
+Note: STATUS previously said 165/100. Both were wrong — I recounted from the
+files themselves (`grep -vc '^#\|^$'` over the three ledgers) against
+`origin/feat/backends-develop`. Trust the recount, not the old numbers.
 
-`backend-jit/gridwave-tolerance`, head `dc1a4cfc`, 3 commits, **ledger delta
-168 -> 167**:
+## Open PRs — both mine, both awaiting CI
 
-1. `galpy/potential/interpRZPotential.py` — `_grid_eval`'s bit-for-bit guard made
-   EVERY backend grid build fall back to a cell-by-cell loop, because jax
-   reassociates a whole-mesh reduction vs a scalar one (2/9 spot cells differ by
-   1.6e-15). Now backend-aware: numpy keeps exact via `allclose(rtol=0, atol=0)`
-   (verified identical to `array_equal` over nan/+-inf/-0.0/denormals, so no
-   backend-only branch for codecov to flag); backends get rtol 1e-12, ~600x the
-   observed difference and ~13 orders below AnySphericalPotential's 95 %-of-cells
-   mis-broadcast, which still correctly falls back (2/2).
-2. `tests/test_interp_potential.py` — extends the EXISTING `_grid_tol` helper
-   (already 30x for traced mode) to backend-built grids at 5x. numpy keeps its
-   original 7.0-ULP bound exactly.
-3. `tests/backend_slow_skip.txt` — un-defers
-   `test_2ndDeriv_potential[mockInterpRZPotentialwSecondDerivs]`.
+**gh#1322 → `feat/backends-develop`** `backend-jit/orbit-cluster-burndown`,
+head `90303ab0`. Un-defers 6 measured jax `test_orbit.py` entries, 167 → 161.
+Also updates `tests/.test_orbit_durations` (four of the six were recorded at
+`0.05` — pytest-split's value for a *skipped* test — so un-deferring without
+that edit could pack them all into one group). CI queued.
 
-Measured: jax constructor **136.7 s -> 2.34 s (58x)** on a 201x201 MWPotential
-build; **409 s -> 4.54 s (90x)** on the 151x151 6-quantity mock; the un-deferred
-entry **PASSES in 3.4 s** (whole file, `--backend jax`, 1277 passed).
+**gh#1323 → `main`** `fix/anyspherical-array-mass`, head `2cecf431`. The
+upstream numpy bug: `quad` takes scalar limits, `AnySphericalPotential` passed
+`atleast_1d(r).flatten()[0]` at two sites → **forces silently wrong by 87.7 %**
+away from `r[0]`, and `_revaluate` raised on arrays outright. Fixed via new
+`galpy.util.quadpack.quad_over_limits`. Scalar path bit-identical.
 
-Three-arm gate on the head: numpy 45 / jax 39+6skip / torch 79. CI queued (149).
+**gh#1316** stays a parked draft — see next.
 
-## In flight
+## The next move: rework gh#1316 as the cherry-pick
 
-Whole-cluster measurement running in `/var/tmp/fpwire`: ALL remaining jax
-`test_potential.py` slow-skips un-skipped, one `--backend jax` pass with
-junitxml, to get per-entry pass/fail AND runtime in a single ~45 min run instead
-of five. Output `scratchpad/cluster.{log,xml}`.
+Jo: *"you'll need a pr to main to fix the numpy bug and cherry pick it here (so
+it can easily be dropped in a subsequent rebase)"*. That cherry-pick and the
+`_grid_eval` guard removal belong in **one** PR, and gh#1316 already is that PR
+— so rework it rather than opening a third:
 
-**The worktree's `tests/backend_slow_skip.txt` is stripped for that measurement.**
-Backup at `scratchpad/ss.bak`. RESTORE IT before pushing anything from that
-branch — this bit me once already and was caught only by `git status`.
+1. cherry-pick `2cecf431` (drops cleanly on a later rebase onto main);
+2. delete `_grid_eval`'s bit-for-bit guard entirely. Its job was catching
+   mis-broadcast potentials; `test_potential_array_input` now does that
+   properly, and under backends too. The guard cannot survive on jax anyway —
+   whole-mesh vs scalar reassociation differs at ~1e-15, so it falls back for
+   *every* potential, which is the 1643x;
+3. drop gh#1316's current tolerance commits — they were the wrong fix and CI
+   refuted them.
 
-## What the remaining 79 slow-skips actually are (measured so far)
+## What I learned this session (don't repeat)
 
-Not one problem. The 12-entry `test_potential.py` cluster splits three ways:
-
-* 1 interpRZPotential — **fixed**, gh#1316
-* 4 MW mass models (Cautun20/McMillan17/DehnenBinney98/diskscf_overflow) — heavy
-  DiskSCF/SCF setup, task #75 territory
-* 5 wrapper `poisson_surfdens` — `surfdens` calls `integrate.quad`; measured
-  37 ms numpy vs 189 ms jax, i.e. **5x genuine eager overhead, not a fallback
-  bug**. Expect these to stay deferred.
-* 2 unprobed (`MultipoleExpansion_deepcopy`, `MovingObject_2ndderivs_fd`)
-
-So do NOT expect many more 90x wins: interpRZ was a real defect, not a
-representative sample.
-
-## Standing corrections to how I work
-
-* **The hourly loop is a KEEP-ALIVE, not a checkpoint.** Work until a PR is open;
-  do not end a turn on a finished measurement or a refuted hypothesis.
-* **Assert `is_backend_array` at the call site before believing any timing.** A
-  probe that ran on numpy cost ~4 wakes by "eliminating" the exact place the bug
-  was.
-* **Never project scope from one instance without the grep that would refute it.**
-  Three times this trip (67 jit sites, 5 AnyAxisym entries, "_grid_eval is
-  everywhere" — it is in ONE file).
-* **Verify content, not command success** — `gh pr ready` succeeds even when the
-  fix was never pushed.
+* **The all-potentials array test already existed.** `test_potential_array_input`
+  covers all 8 methods at 1e-10 for every discovered potential;
+  `AnySphericalPotential` was on its *exclusion list*. Search before building.
+* **Never mutate the worktree while a run is in flight.** I did the A/B
+  file-swap during a background gate and it reported a false failure. Re-ran
+  clean: 1280 passed.
+* **`git checkout <ref> -- <file>` also stages.** Copy the file aside first.
+* **Ledger notes decay.** All 12 orbit entries said `# 300s (failed)`; two of
+  them actually *pass* (one at 1535s, recorded as 620s).
+* **Un-deferring is a two-file edit** — the ledger *and*
+  `.test_orbit_durations`.
+* **`test_quantity` must run serial**; under `-n 16` it reports ~106 phantom
+  failures across the whole library.
 
 ## Cron
 
-`351c0c5a`, hourly at :13, session-only, created 2026-08-13 -> **expires
-~2026-08-20**. Verified alive.
+`351c0c5a`, hourly at :13, session-only, created 2026-08-13 → **expires
+~2026-08-20**. Verified alive this wake.
