@@ -44670,3 +44670,47 @@ Follow-up worth doing: the sweep belongs in the repo next to
 `tests/backend_status_report.py`, not in a scratchpad. Deferred -- at the
 two-PR limit.
 
+
+## 2026-08-15 (evening) — gh#1322 validated from its own CI; gh#1323 red is a flake
+
+### gh#1322: the un-defer claim confirmed by the PR's own CI run
+
+Downloaded the 42 `backend-junit-*` artifacts and looked up the 6 un-deferred
+entries directly. **6/6 PASSED**, with real CI timings:
+
+    PASSED   81.5s  (local 212.3s, CI/local 0.38)  test_interprz_dxdv_3d
+    PASSED  173.0s  (local 242.6s, CI/local 0.71)  test_energy_jacobi[BurkertNoC]
+    PASSED  114.5s  (local 262.4s, CI/local 0.44)  test_dxdv_3d_c_vs_python[..offset]
+    PASSED  184.9s  (local 283.5s, CI/local 0.65)  test_zmax
+    PASSED  130.7s  (local 299.8s, CI/local 0.44)  test_dxdv_3d_c_vs_python[..norot]
+    PASSED  276.8s  (local 407.9s, CI/local 0.68)  test_integrate_negative_time
+
+Slowest is 277 s against the shard's 4500 s cap. **The CI/local ratio is 0.38 --
+0.71, not the flat 0.71 I have been assuming** ([[ci-faster-than-devbox-for-jax-shards]]);
+my projections were conservative in the safe direction, but the spread is wide
+enough that a single ratio should not be trusted for a marginal call.
+
+Pre-merge audit: 2 files, **0 source files**, 0 `.github/`, 0 conflict markers --
+so the if->xp.where / duplication / helper-placement checks are vacuous here.
+MERGEABLE, blocked only on all-clear + 2 backend jobs still running.
+
+### gh#1323's red is a flake, established two ways
+
+`build (ubuntu-latest, 3.14, test_orbit + test_orbits + test_symplectic_dxdv)`
+failed. Rather than guess:
+
+* **Same-SHA twin.** At the identical SHA `2cecf431` the *identical job name*
+  ran under both events: `push` run 31902202445 **success**, `pull_request` run
+  31902219926 **failure**. A pass/fail split at one SHA is a flake
+  ([[same-sha-duplicate-run-is-a-free-ab]]).
+* **Ruled out the obvious alternative.** A PR run tests the *merge* of head into
+  base, so a moved base would be a real cause -- but `origin/main` is still
+  `3762e73e`, exactly my branch point. Merge == head. Refuted.
+
+The job contains `tests/test_symplectic_dxdv.py`, which is on record as
+intermittently bit-non-identical at ~5e-16
+([[symplectic-bitidentity-intermittent]]). Consistent.
+
+`gh run rerun --job <id>` refuses while the run is in progress ("cannot be
+rerun") -- so the re-run has to wait for run completion, then `--failed`.
+
