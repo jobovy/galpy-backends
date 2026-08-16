@@ -76,10 +76,37 @@ it. scipy's adaptive quad reaches 1e-10 on the same integrand, so the float64
 cancellation floor the helper's docstring describes is real but is not what is
 binding here.
 
+**The fix is prototyped and validated** (numpy, against the mpmath gold, at the
+current default n=100 — no extra nodes):
+
+                   current          with log subtraction
+    R2deriv        2.0e-4..6.7e-4   5.6e-12..6.8e-11
+    z2deriv        2.0e-7..1.4e-5   8.1e-12..8.2e-11
+
+Subtract `h(u) = -Λ ln(u/b)`, integrate `g - h` with the existing rule, add back
+the exact `∫h = Λb`. Λ comes from a least-squares slope of `g` against `-ln u`
+over five points `u = b·10^-k`, `k = 3…5` — plain arithmetic on integrand
+evaluations, so traceable and differentiable. Λ must not be hand-derived: it
+runs from 44.78 (R=0.1) to 0.0002 (R=2.0) for one potential, both `ellipe` and
+`ellipkm1` feed it, and my derivation of the `ellipkm1` term alone gave 6.42
+against a measured 8.02. The `k=3…5` window is measured, not guessed:
+`k=2…4` and `k=4…6` both degrade to ~1e-8 (above, the `O(u)` term biases the
+slope; below, the `c/u²` cancellation noise does).
+
+Remaining: implement in `galpy/backend/quadrature.py` (the estimate must not
+NaN-poison the sinh branch, evaluated unconditionally under trace), torch
+parity, tests. Next PR.
+
 **Measurement trap worth recording:** the obvious probe (build the potential
 under `use("jax", force=True)`, pass `jnp.asarray(R)`) reports ~1e-10 and looks
 fine. That is the numpy fallback — `_bk_dispatch` hands a *concrete* backend
 scalar to scipy. Only a real `jax.jit` reaches the GL path.
+
+**Prototype fidelity:** transcribe integrands from the source, never re-derive
+them. My first z2deriv prototype was order-unity wrong on *both* arms because I
+wrote it from memory; the corrected one reproduces the independently measured
+traced errors (1.07e-5 / 8.40e-6 / 2.03e-7) to three digits, and that agreement
+is the only real evidence the prototype is faithful.
 
 ## Traced state (from the one dispatched jit run, 31914531334)
 
