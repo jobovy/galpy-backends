@@ -45364,3 +45364,44 @@ forced torch. Traced still shows 3 failures on this branch, of which 2 are
 gh#1328's fixture (not in this branch) and 1 is the `smallz_limit` scope note
 above.
 
+
+### 2026-08-16 — gh#1328 went red on torch; my regression, my skipped gate
+
+CI caught a real failure on `backend torch tests/test_potential.py --splits 5
+--group 5`:
+
+    TypeError: exp(): argument 'input' (position 1) must be Tensor, not float
+
+The fixture I "fixed" last wake, `surfdens=lambda R: get_namespace(R).exp(...)`,
+is wrong on torch. Two things combine:
+
+* Under a **forced** backend, `get_namespace` returns that backend's namespace
+  even when handed a plain Python float (no array input to follow, so it falls
+  through to the context).
+* **`torch.exp` rejects a Python float; `jax.numpy.exp` accepts one.** So this
+  whole class of bug is invisible on jax and only torch reports it.
+
+The float gets there because AnyAxisym's concrete-scalar branch deliberately
+routes to scipy's adaptive quad -- it calls the user's `surfdens` with ordinary
+floats, by design.
+
+The fix is the codebase's own idiom, and this is the part that stings:
+`AnyAxisymmetricRazorThinDiskPotential._default_surfdens`, in the file I was
+editing against, carries the comment **"Dispatch on is_backend_array (NOT
+get_namespace)"**. It was written down, in the same module, and I used the wrong
+one anyway. Adopted it, hoisted to a single module-level `_anyaxisym_surfdens`
+rather than repeating the guard in two lambdas.
+
+**How it escaped me: I skipped my own pre-push gate.** For that commit I ran
+numpy and traced jax and stopped there. [[forced-backend-gate-before-push]]
+says run the touched suites under forced torch AND jax, and the whole reason
+that rule exists is that the two disagree -- a jax-only gate is structurally
+incapable of catching a torch-rejects-float bug. Cheap check, skipped, cost a
+red CI cycle.
+
+Re-gated properly this time: `-k anyaxisym` is 13 passed / 1 skipped on numpy,
+forced torch, AND forced jax (torch was 2 FAILED before). Traced jax unchanged
+at 2 failed / 9 passed -- the two remaining are the accuracy failures this PR
+never claimed to fix. Pushed as `66ece1e4`; the exact CI shard is also running
+locally as a belt-and-braces check.
+
