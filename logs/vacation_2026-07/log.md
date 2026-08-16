@@ -45676,3 +45676,43 @@ fresh context rather than the tail of a long session. Mechanism B (large R,
 cancellation against an exponentially small Sigma, fails identically on numpy at
 1.206e+04) stays out of scope regardless -- no floor addresses it.
 
+
+### 2026-08-16 — zforce relative floor implemented: smallz_limit passes
+
+gh#1330's codecov reds are the usual phantom, confirmed by the discriminator:
+head has **2 sessions** against base's 22 (and base is itself mid-upload, since
+`da11a1a8` only just merged). 20.55% coverage from two uploads. Nothing to act
+on.
+
+So I implemented the zforce floor, now that the onset law is measured rather
+than argued. Branch `backend-jit/zforce-relative-floor`, head `e371100c`, pushed
+and held -- gh#1330 is the active PR.
+
+Implementation is a **clamp, not a branch**: `az = max(|z|, 1e-8 R)`, evaluate
+the quadrature there, and return `-4 sign(z) az I(az)`. Because the integral
+goes as `1/|z|` the product is the constant limit, and above the floor it is
+unchanged. Clamping removes a hazard rather than adding one -- no second
+`xp.where` arm holding a divergent integral that could NaN-poison a gradient.
+
+**Measured on this branch** (which does NOT contain gh#1330):
+
+    traced -k anyaxisym    1 failed, 10 passed    (was 2 failed, 9 passed)
+
+`smallz_limit` passes. I then checked WHICH assertion the remaining failure hits,
+because "still one failure" is exactly where a regression would hide: it is
+**R2deriv at 2.0036e-4**, the precise pre-gh#1330 number, i.e. the log-subtraction
+target. `Rzderiv`, which lives in the same test and would have been the tell if
+the clamp had leaked into the other derivatives, is unaffected.
+
+Gates: numpy `-k anyaxisym` 13 passed / 1 skipped, unchanged, and identical
+under **forced torch AND forced jax** -- the arm I skipped on gh#1328 and got a
+red CI cycle for. Not skipping it again.
+
+No new test: the existing `smallz_limit` IS the forcing test, and it flips.
+
+The two AnyAxisym fixes are cleanly orthogonal -- gh#1330 closes
+`second_derivs_at_z0` (R2deriv/z2deriv, `finite_part_quad`), this one closes
+`smallz_limit` (`_zforce_gl`, `_bk_split_quad`). Together they take traced
+AnyAxisym to **zero** failures. Mechanism B (large R, cancellation, fails
+identically on numpy at 1.206e+04) remains out of scope and unledgered.
+
