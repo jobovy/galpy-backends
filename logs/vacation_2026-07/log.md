@@ -45405,3 +45405,8 @@ at 2 failed / 9 passed -- the two remaining are the accuracy failures this PR
 never claimed to fix. Pushed as `66ece1e4`; the exact CI shard is also running
 locally as a belt-and-braces check.
 
+**Local shard result (finished):** `--backend torch --splits 5 --group 5` gives
+**266 passed, 12 skipped, 0 FAILED** in 5:14. That reconciles exactly with CI's
+pre-fix `264 passed, 2 FAILED` -- same shard, same two tests, now passing. CI
+has restarted from scratch on `66ece1e4` and is fully queued.
+
