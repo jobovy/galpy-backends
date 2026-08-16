@@ -45521,3 +45521,54 @@ have the exact onset law, and B needs separating out before any of this is
 written down as a fix. Not implementing at the end of a long wake on a mechanism
 I have just had to correct once.
 
+
+### 2026-08-16 — the codecov phantom cleared, and then showed a REAL +3
+
+The `codecov/project` red on gh#1328 self-healed exactly as the session count
+predicted: 24 -> 26 -> 28 sessions against base's 28, and both codecov contexts
+went SUCCESS. `all-clear` then went red as its downstream consequence (it had
+run while codecov was still red) and needs a re-run.
+
+But checking the raw numbers rather than trusting the green:
+
+    base 24500321   coverage=99.96  misses=15  sessions=28
+    head 66ece1e4   coverage=99.96  misses=18  sessions=28
+
+**+3 misses with matching session counts** -- i.e. not an upload artifact this
+time. codecov/project called it SUCCESS (threshold), but Jo's bar is "never
+decrease coverage even by one line", so SUCCESS is not the test. Pulled the
+per-file, then per-line detail:
+
+    galpy/actionAngle/actionAngleStaeckel.py                    base []      head [2635]
+    galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py    base []      head [345, 346]
+
+gh#1328 touches ONLY `tests/test_potential.py`, so three misses in two untouched
+source files made no sense -- until I read those lines in the worktree. AnyAxisym
+343-346 still held the dead `try/except Exception: pass`, and
+actionAngleStaeckel still named `DoubleExponentialDisk` in the comment. **Both
+are things gh#1327 fixed.** This branch was cut before gh#1327 landed, so codecov
+was scoring a behind-base head against a develop tip that already had them:
+
+* AnyAxisym 345/346 -- the dead `except` gh#1327 **deleted** (you cannot fail to
+  cover code that no longer exists).
+* actionAngleStaeckel 2635 -- the fallback gh#1327's new test **covers**.
+
+All three are gh#1327's own deltas. Not a regression from this PR, and a
+squash-merge would have been safe regardless (disjoint files, nothing reverts).
+But a PR should not *display* a coverage decrease it did not cause, especially
+against a one-line standard.
+
+Synced with a **merge, not a rebase**: force-push on an open PR is off-limits
+([[no-force-push-open-prs]]), and the squash-merge collapses the merge commit
+anyway, so the "no merge commits" rule for long-lived branches is not in play.
+Verified after merging that both changesets coexist -- gh#1327's dead code gone,
+its corrected comment present, my `_anyaxisym_surfdens` intact -- and grepped
+the tree for conflict markers. Pushed `c2f32993`; the fresh run re-runs
+all-clear on its own.
+
+**Worth keeping:** [[dont-reflexively-rebase-disjoint-prs]] says a stale base is
+harmless without a conflict. That is true for *correctness* and false for
+*coverage reporting* -- a behind-base head is credited with none of the base's
+newer coverage. When the standard is "not one line", sync before believing the
+delta.
+
