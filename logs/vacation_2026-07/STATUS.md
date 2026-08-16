@@ -43,22 +43,38 @@ array input (if→where, scalar path bit-identical behind `numpy.ndim`);
 
 **gh#1327 → `feat/backends-develop`** `backend-jit/coverage-fallbacks`, head
 `59a60f9a`. **Mine to merge.** The develop coverage regression, all five lines,
-20 → 15 misses. codecov red with ~86 checks still queued, i.e. not yet judged.
+20 → 15 misses. **0 failures / 148 SUCCESS, and `codecov/patch` +
+`codecov/project` both green** — the earlier red was the not-yet-judged state.
+3 jobs still running.
 
-## Verified and queued, deliberately NOT a 4th PR
+## Pushed, gated, deliberately NOT a 4th PR
 
-`surfdens=lambda R: get_namespace(R).exp(-R / 0.3)` in
-`test_potential.py:14297` fixes **2 of the 7 unledgered traced failures**.
-Measured: numpy value identical (`5.588879573` vs gold `5.5888795714e+00`), and
-`jax.grad` / `jax.jit` both succeed. Goes in after gh#1327.
+`backend-jit/traced-surfdens-fixture`, head `8771458a`. Both AnyAxisym
+`surfdens=lambda R: numpy.exp(-R / 0.3)` fixtures (`test_potential.py:14297`
+and `:14345`) dispatch on `get_namespace(R)` instead. Opens after gh#1327.
+
+**Corrected number.** I first wrote here that this "fixes 2 of the 7 traced
+failures". The full-file gate says otherwise:
+
+    before   1 accuracy failure + 2 TracerArrayConversionError
+    after    2 accuracy failures + 0 tracer errors
+
+It fixes **one** test and *unmasks* a second — the tracer error in
+`..._second_derivs_at_z0` was hiding a pre-existing accuracy failure
+(`Fz/limit` → 2.7e13 at the smallest z), which is task #218's singularity gap,
+not a traceability problem. Unmasking is still the right outcome: a tracer error
+that hides a numerical one is the worse of the two. numpy path byte-unchanged
+(13 passed, 1 skipped, identical), value `5.588879573` vs gold `5.5888795714e+00`.
 
 ## Traced state (from the one dispatched jit run, 31914531334)
 
 7 failures, none of them new library defects:
 
-* **2 test-side** — the numpy-only `surfdens` fixture above. I first reported
-  these as genuine tracer leaks; that was wrong, corrected in the log.
-* **2 known AnyAxisym singularity accuracy** — task #218.
+* **2 test-side tracer errors** — the numpy-only `surfdens` fixture above; both
+  now gone, 1 as a pass and 1 revealing the accuracy failure below. I first
+  reported these as genuine tracer leaks; that was wrong, corrected in the log.
+* **2 → 3 known AnyAxisym singularity accuracy** — task #218 (the unmasked one
+  joins them).
 * **3 torch traced timeouts** — slow-skip material.
 
 ## Standing corrections to how I work

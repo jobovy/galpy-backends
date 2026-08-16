@@ -45145,3 +45145,44 @@ stated scope is the coverage regression.
 Remaining traced failures after that fix would be 5: 2 known AnyAxisym
 singularity accuracy ([[#218]]) and 3 torch timeouts (slow-skip material).
 
+
+### 2026-08-16 — the surfdens fixture fixes ONE test, not two (correction)
+
+I committed the fixture change (`backend-jit/traced-surfdens-fixture`,
+`8771458a`) only after running the *whole* `-k anyaxisym` selection traced,
+rather than the two tests I had been reasoning about. The result contradicts
+what I told Jo and what I had already written into `STATUS.md`:
+
+    before   1 accuracy failure + 2 TracerArrayConversionError
+    after    2 accuracy failures + 0 tracer errors
+
+`grep -c TracerArrayConversionError` on the new log returns 1, and that one hit
+is the comment I added — so the tracer errors really are gone, both of them.
+But only one of them was a *test*: `..._all_methods_reject_a` now passes.
+The other, `..._second_derivs_at_z0`, was raising the tracer error *before* it
+could reach its own assertion, and with the fixture fixed it gets there and
+fails on accuracy:
+
+    Fz/limit = [9.99990899e-01 ... 2.65046238e+03 2.67711334e+13]
+
+That is task #218 — the backend GL path lacking both of numpy's singularity
+treatments as z->0 — surfacing where it had been hidden. Net traced count is
+7 -> 6, not 7 -> 5.
+
+**Why I got it wrong.** I had A/B'd the *mechanism* (numpy.exp on a tracer
+raises; an arithmetic surfdens does not) and then predicted the *count* from
+it. The mechanism was right and the count was wrong, because a test can have
+more than one thing wrong with it and the first failure masks the rest. This is
+the same shape as [[reproduce-the-assertion-not-a-proxy]]: a verified mechanism
+licenses no claim about magnitude or count. The rule I am adding is narrower and
+easier to apply -- **when a fix removes an exception, the count of tests it
+fixes is not knowable until they are re-run, because the exception may have been
+short-circuiting a later failure.**
+
+Unmasking is still worth landing on its own: a tracer error sitting in front of
+a numerical error means the numerical one can never be seen, and #218's real
+size was being under-reported by exactly this test.
+
+The commit message carries the measured before/after rather than my estimate,
+and STATUS.md's "Verified and queued" section has been rewritten.
+
