@@ -44984,3 +44984,35 @@ remote-vs-local SHA comparison caught it
 `reset --hard` + `cherry-pick`, no force-push. **Check `git branch --show-current`
 before committing in a multi-branch worktree**; "up-to-date" is not success.
 
+
+### The develop +5, pinpointed
+
+All five located with `/report/?sha=<FULL sha>&path=<file>`, filtering
+`v != 0`:
+
+    galpy/df/jeans.py                             181   called_surfdens = 2.0 * fixed_quad_semiinfinite(
+    galpy/actionAngle/actionAngleStaeckel.py     2630   except (TypeError, RuntimeError):
+                                                 2635   delta2 = xp.stack([_delta2(R[ii], z[ii]) ...])
+    galpy/potential/AnyAxisymmetricRazorThin*    345   except Exception:  # tracer: in-backend GL
+                                                 346       pass
+
+**Every one is a fallback / `except` branch on the backend path** -- the same
+shape as gh#1323's `_grid_eval` fallback. None of them is newly-added untested
+code; the compare API confirms no *diff* line lost coverage in any of the three
+files (`change_summary` shows the loss, but the per-line `lines` payload spans
+only diff hunks and is empty of misses). They are pre-existing lines that
+stopped being reachable.
+
+That is the real pattern, and it is worth stating plainly: **backend migration
+loses coverage by making defensive branches unreachable, not by adding
+untested code.** Those branches exist for conditions the happy path never
+creates, so they need a forcing test in the same PR that introduces them.
+
+### Correction: codecov `line_coverage` is NOT bogus
+
+I had recorded that field as unusable. Wrong -- my filter was inverted. Entries
+are `[line, value]` with **`value == 0` meaning HIT**. Validated both ways:
+`jeans.py` (1 miss) yields exactly `[181]`; `HomogeneousSpherePotential.py`
+(0 misses) yields `[]`. Two real gotchas remain: the endpoint needs the **full**
+40-char SHA, and `/compare/` only carries diff-hunk lines. Memory corrected.
+
