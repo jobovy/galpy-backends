@@ -45016,3 +45016,46 @@ are `[line, value]` with **`value == 0` meaning HIT**. Validated both ways:
 (0 misses) yields `[]`. Two real gotchas remain: the endpoint needs the **full**
 40-char SHA, and `/compare/` only carries diff-hunk lines. Memory corrected.
 
+
+## 2026-08-16 — CORRECTION: the AnyAxisym "tracer leaks" are test-side
+
+I reported that the traced run found **2 genuine traceability defects** in
+`AnyAxisymmetricRazorThinDiskPotential` (`TracerArrayConversionError:
+__array__() called on traced array`). **That was wrong.** Chasing the third
+coverage line put me in the same code, and the traceback lands not in the
+dispatch but inside the differentiable GL integrand:
+
+    _bk_dispatch -> _Rforce_gl -> _bk_split_quad -> fixed_quad -> rforceint
+    rforceint calls sdens(a)  <- the USER-SUPPLIED surfdens callable
+
+A/B that settles it:
+
+    surfdens = lambda R: (1.0 + R) ** -3.0     value ok, jax.grad ok (0.408866)
+    surfdens = lambda R: numpy.exp(-R / 0.3)   value ok, jax.grad RAISES
+
+And the failing CI tests pass exactly the second form:
+`tests/test_potential.py:14297  surfdens=lambda R: numpy.exp(-R / 0.3)`.
+
+So the potential **is** differentiable and traceable when handed a
+backend-agnostic surfdens; `numpy.exp` on a tracer is the caller's problem, and
+for a class whose entire contract is "you supply the callable" that is the only
+sensible behaviour. These are **test-side**, not library defects. The traced
+tally is therefore: 2 test-side fixtures, 2 known AnyAxisym singularity
+accuracy, 3 torch timeouts -- **zero new library defects**, which is a better
+result than I reported and a worse one for my confidence in that report.
+
+Lesson: I classified by exception *type* (`TracerArrayConversionError` -> "code
+converts a tracer") without reading far enough down the traceback to see whose
+code did the converting. Read to the innermost frame before naming a culprit.
+
+### Third coverage line: probably dead, deliberately not rushed
+
+`AnyAxisymmetricRazorThinDiskPotential.py:345/346` (`except Exception: pass`)
+is not reached by the concrete, `jax.grad` or `jax.jit` paths -- `under_trace` /
+`requires_grad` divert tracers before the `float()` probe, and array input is
+rejected upstream by `check_potential_inputs_not_arrays`. It looks genuinely
+unreachable, in which case the right move is to delete it rather than contrive a
+test ([[no-hiding-uncovered-code]] cuts both ways). Deleting a defensive branch
+is a behaviour change, so it wants a caller audit rather than a quick edit; not
+done this wake.
+
