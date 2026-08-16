@@ -45087,3 +45087,30 @@ there.
 `gh run rerun --failed` refuses while the run is still going, so the re-run waits
 for completion, as before.
 
+
+## 2026-08-16 (later) — gh#1323: two reds, both known flakes; codecov cleared
+
+    macos-15-intel  from_name        SIMBAD DALServiceError   (network)
+    ubuntu-latest   symplectic dxdv  max|diff|=5.55112e-16    (1 ULP)
+
+Both read from the actual logs, neither is the PR. `codecov/project` has gone
+green on its own as uploads completed -- so gh#1323's coverage fix did its job
+and the earlier patch/project reds are fully resolved.
+
+### My flake-rate measurement was biased low
+
+Earlier I sampled 25 recent `build.yml` runs, found 1 failure of the symplectic
+job, and reported "~4-10 %". **That method undercounts by construction**: the
+runs/jobs APIs report each job's *final* conclusion, and a re-run overwrites a
+failure with success -- so every flake anyone already re-ran is invisible. The
+direct observation is 3 hits across my own two PRs inside a day.
+
+To measure it honestly you have to walk each run's **attempts**
+(`/runs/<id>/attempts/<n>/jobs`), not current conclusions. Memory corrected;
+I should not have quoted a sampled figure as the incidence.
+
+Worth Jo's attention at some point (not a phone-ping, re-runs clear it): the
+test asserts *exact* bit-identity, and `leapfrog_c` is only reproducible to
+about 1 ULP. An exact-equality assertion on a 1-ULP-reproducible quantity will
+keep costing re-runs indefinitely.
+
