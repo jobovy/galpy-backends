@@ -45630,3 +45630,49 @@ be sure the result survived the sync -- **1 failed, 10 passed**, i.e.
 Traced AnyAxisym is now 3 -> 1 failures across the two PRs, the remaining one
 being `smallz_limit` (the `_zforce_gl` half, two mechanisms, tracked separately).
 
+
+### 2026-08-16 — smallz onset law pinned: scale-free at ~tens of eps
+
+gh#1330 is queued (151 checks, nothing reported), and it holds the runners, so
+no competing jit dispatch this wake. Local CPU work instead: pinning the onset
+law I said had to come before designing any floor.
+
+Half-decade scan of the traced zforce against the -2 pi Sigma(R) limit:
+
+        R      onset z/R    in eps
+     0.05      3.16e-15      14
+     0.20      3.16e-15      14
+     0.50      1.00e-14      45
+     2.00      1.00e-14      45
+
+Those two values are ADJACENT grid points, so within resolution the onset is
+**constant in z/R over a 40x range of R** -- scale-free, at a few tens of
+machine epsilon. That is the signature of a relative-precision effect, which is
+what the panel construction (`Rp +/- d`, plus `(a - R)` formed by subtraction)
+would produce. It also kills the absolute-floor option: an absolute floor is
+wrong at small R for exactly the reason this is relative.
+
+Note this REPLACES my earlier "half an ulp of R, ~1e-17" claim, which was three
+orders low and derived rather than measured. The corrected number is ~45 eps,
+measured, and consistent across R.
+
+**Design now fully specified by measurement:**
+
+* floor at `|z| < 1e-8 * R` (relative, scale-free)
+* below it the answer is the exact analytic limit `-2 pi Sigma(R) * sign(z)`
+* clean separation: the floor sits **6 orders above** the 1e-14 onset, so the
+  quadrature is only ever used where it is accurate, and the limit's own error
+  there is `O(z/R) ~ 1e-8`, four orders inside the test's 3e-4 tolerance.
+
+Implementation sketch that avoids a dead branch entirely: clamp `az` from below
+to `max(|z|, 1e-8 R)` and evaluate `Fz = sign(z) * (-4 * az_clamped *
+I(az_clamped))`. Because `I ~ 1/z`, the product is the constant limit, and above
+the floor it is bit-identical to today -- no `xp.where` arm that can NaN-poison
+a gradient. Needs care around the existing exact-`z == 0` guard.
+
+Deliberately NOT implemented this wake. The design is settled but this is the
+third time I have had to correct my own account of this failure, and it deserves
+fresh context rather than the tail of a long session. Mechanism B (large R,
+cancellation against an exponentially small Sigma, fails identically on numpy at
+1.206e+04) stays out of scope regardless -- no floor addresses it.
+
