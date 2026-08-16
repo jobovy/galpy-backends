@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-16, three PRs open
+# Vacation status snapshot — 2026-08-16, gh#1327 merged
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -13,7 +13,7 @@ end state, not a blocker.
 ## Branch state
 
     main                   54c0324a   (gh#1320 landed since my branch point)
-    feat/backends-develop  ccfe583b   (gh#1322 merged)
+    feat/backends-develop  24500321   (gh#1327 merged 2026-08-16)
 
 ## The ledger, verified on develop
 
@@ -41,30 +41,45 @@ array input (if→where, scalar path bit-identical behind `numpy.ndim`);
 `numpy.infty` → `numpy.inf` at two live-`AttributeError` sites. Retargets to
 `main` automatically when gh#1323 lands.
 
-**gh#1327 → `feat/backends-develop`** `backend-jit/coverage-fallbacks`, head
-`59a60f9a`. **Mine to merge.** The develop coverage regression, all five lines,
-20 → 15 misses. **0 failures / 148 SUCCESS, and `codecov/patch` +
-`codecov/project` both green** — the earlier red was the not-yet-judged state.
-3 jobs still running.
+**gh#1328 → `feat/backends-develop`** `backend-jit/traced-surfdens-fixture`,
+head `8771458a`. **Mine to merge.** Both AnyAxisym `surfdens` fixtures dispatch
+on `get_namespace(R)` instead of `numpy.exp`. Just opened.
 
-## Pushed, gated, deliberately NOT a 4th PR
+## Merged this wake
 
-`backend-jit/traced-surfdens-fixture`, head `8771458a`. Both AnyAxisym
-`surfdens=lambda R: numpy.exp(-R / 0.3)` fixtures (`test_potential.py:14297`
-and `:14345`) dispatch on `get_namespace(R)` instead. Opens after gh#1327.
+**gh#1327** → develop `24500321`. The develop coverage regression, all five
+lines, 20 → 15 misses. Ended 152 SUCCESS / 0 failures, `codecov/patch` and
+`codecov/project` both green, `mergeStateStatus=CLEAN`. Audited before merging:
+no if→`where` array-input issues, no duplication, no misplaced helpers; the one
+source change removes a dead `try/except` whose tracer cases (grad, jit, vmap,
+vmap-of-grad, torch.compile) were each verified to be diverted upstream.
 
-**Corrected number.** I first wrote here that this "fixes 2 of the 7 traced
-failures". The full-file gate says otherwise:
+## #218 is now measured, and it is not what its title says
 
-    before   1 accuracy failure + 2 TracerArrayConversionError
-    after    2 accuracy failures + 0 tracer errors
+The title says the backend GL path "lacks BOTH numpy singularity treatments".
+It does not — `_R2deriv_gl` already calls `_bquad.finite_part_quad` (#219
+landed). The traced error at z=0, against the mpmath gold:
 
-It fixes **one** test and *unmasks* a second — the tracer error in
-`..._second_derivs_at_z0` was hiding a pre-existing accuracy failure
-(`Fz/limit` → 2.7e13 at the smallest z), which is task #218's singularity gap,
-not a traceability problem. Unmasking is still the right outcome: a tracer error
-that hides a numerical one is the worse of the two. numpy path byte-unchanged
-(13 passed, 1 skipped, identical), value `5.588879573` vs gold `5.5888795714e+00`.
+        R      R2deriv      z2deriv
+      0.1     2.00e-04     1.08e-05
+      0.2     6.65e-04     8.40e-06
+      2.0     5.57e-07     2.03e-07
+
+Two facts settle the diagnosis. The semi-infinite tail contributes **nothing**
+(n=400 vs n=800 agree to 3 digits), and the finite-part error is exactly
+`1/n^2`: 6.65e-4 → 1.67e-4 → 4.18e-5 → 1.05e-5 for n = 100/200/400/800.
+Gauss-Legendre is exponential on a smooth integrand, so algebraic `1/n^2` means
+a **residual non-smoothness left after the `2c/u^2` subtraction** — most likely
+the `log` in `ellipkm1` as `m -> 1`. Reaching 1e-8 by order alone would need
+~25 000 nodes; the fix has to remove the residual singularity, not out-resolve
+it. scipy's adaptive quad reaches 1e-10 on the same integrand, so the float64
+cancellation floor the helper's docstring describes is real but is not what is
+binding here.
+
+**Measurement trap worth recording:** the obvious probe (build the potential
+under `use("jax", force=True)`, pass `jnp.asarray(R)`) reports ~1e-10 and looks
+fine. That is the numpy fallback — `_bk_dispatch` hands a *concrete* backend
+scalar to scipy. Only a real `jax.jit` reaches the GL path.
 
 ## Traced state (from the one dispatched jit run, 31914531334)
 
