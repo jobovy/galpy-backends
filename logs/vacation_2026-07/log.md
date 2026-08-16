@@ -45610,3 +45610,23 @@ synced onto develop and its PR body can claim the test-level result rather than
 probe numbers. Throwaway branch deleted; `finite-part-log` is back at 67702d93,
 unmodified.
 
+
+### 2026-08-16 — gh#1328 MERGED (develop da11a1a8), gh#1330 opened
+
+gh#1328 went CLEAN (152 SUCCESS / 0 fail, both codecov contexts green, RTD and
+pre-commit reporting SUCCESS via the old status API). Coverage verified the
+strict way before merging: **misses 15 vs base 15**, and with 27 of 28 sessions
+uploaded the last one can only ADD coverage, so a decrease was not possible even
+in principle. Diff was 29+/3- in `tests/test_potential.py` alone -- no
+if->xp.where array-input class, no duplication, one hoisted helper rather than
+two copies of the guard. Squash-merged: develop `24500321` -> **`da11a1a8`**.
+
+Then synced `backend-jit/finite-part-log` onto the new develop (merge, not
+rebase, same reasoning as before), re-ran the traced gate on the synced tree to
+be sure the result survived the sync -- **1 failed, 10 passed**, i.e.
+`..._second_derivs_at_z0` still passes under `--jit` -- and opened it as
+**gh#1330** with the test-level result in the body rather than probe numbers.
+
+Traced AnyAxisym is now 3 -> 1 failures across the two PRs, the remaining one
+being `smallz_limit` (the `_zforce_gl` half, two mechanisms, tracked separately).
+
