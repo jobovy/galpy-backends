@@ -45114,3 +45114,34 @@ test asserts *exact* bit-identity, and `leapfrog_c` is only reproducible to
 about 1 ULP. An exact-equality assertion on a 1-ULP-reproducible quantity will
 keep costing re-runs indefinitely.
 
+
+## 2026-08-16 — gh#1323 flakes cleared; coverage PR open; traced fix verified
+
+**gh#1323's re-run cleared both flakes**: 147 SUCCESS, 0 failures (SIMBAD and
+the 1-ULP symplectic both passed second time). Blocked only on 2 non-required
+queued checks. Jo's to merge.
+
+**gh#1327 open** -- the develop coverage regression, all 5 lines, 20 -> 15
+misses. Its codecov reds have **147 checks still queued**, i.e. the incomplete-
+upload shape; not judged yet.
+
+### Verified fix for 2 of the 7 traced failures (next PR)
+
+The two AnyAxisym `TracerArrayConversionError`s are the test fixture's
+`surfdens=lambda R: numpy.exp(-R / 0.3)`. The gold values in that test come from
+mpmath for exactly `Sigma(R)=exp(-R/0.3)`, so the profile cannot change -- but
+the *namespace* can:
+
+    surfdens = lambda R: get_namespace(R).exp(-R / 0.3)
+
+Measured: numpy value **identical** (`5.588879573`, matching the gold
+`5.5888795714e+00`), and `jax.grad` and `jax.jit` both now succeed. Zero
+numerical change on the numpy path, two traced failures gone.
+
+Not opened as a PR: three are already in flight (gh#1323, gh#1324 with Jo;
+gh#1327 mine). Queued behind gh#1327 rather than mixing it into a PR whose
+stated scope is the coverage regression.
+
+Remaining traced failures after that fix would be 5: 2 known AnyAxisym
+singularity accuracy ([[#218]]) and 3 torch timeouts (slow-skip material).
+
