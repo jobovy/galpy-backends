@@ -45059,3 +45059,31 @@ test ([[no-hiding-uncovered-code]] cuts both ways). Deleting a defensive branch
 is a behaviour change, so it wants a caller audit rather than a quick edit; not
 done this wake.
 
+
+## 2026-08-16 — gh#1323's macOS red is a SIMBAD outage
+
+`build (macos-15-intel, 3.14, test_orbit.py -k 'test_energy_jacobi_conservation
+or from_name')` went red on gh#1323. The job name leads with
+`test_energy_jacobi_conservation`, which is parametrized over potentials
+*including AnySphericalPotential* -- so on name alone this looked like my change.
+It is not:
+
+    FAILED tests/test_orbit.py::test_from_name_values
+    FAILED tests/test_orbit.py::test_from_name_errors
+    pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint
+
+SIMBAD was unreachable. Same family as the VizieR notebook flakes; re-run.
+
+**The same-SHA twin was NOT a clean A/B this time,** and I nearly used it as one.
+push=success / pull_request=failure at SHA `95cb7127` looks decisive, but `main`
+has since moved to `54c0324a` (gh#1320 landed), so the PR arm tests my head
+*merged with* new main while the push arm tests my head alone -- two different
+trees. The check that actually cleared it was: main at `54c0324a` is **green** on
+that same job, and my head alone is green, so the only remaining explanations
+were a cross-module interaction or a flake -- and then the log named the flake.
+[[same-sha-duplicate-run-is-a-free-ab]] silently assumes an unmoved base; noted
+there.
+
+`gh run rerun --failed` refuses while the run is still going, so the re-run waits
+for completion, as before.
+
