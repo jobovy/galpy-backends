@@ -44886,3 +44886,50 @@ needs the completed run plus `ledger_sweep.py --jit`; gathering from a
 part-finished run is the mistake [[triage-gather-misses-timed-out-shards]]
 records.
 
+
+## 2026-08-16 — the traced run paid off: 7 unledgered traced failures
+
+Run 31914531334 completed (41 success / 4 failed jobs). Ran
+`ledger_sweep.py --jit` over its 44 artifacts -- the first time this trip the 40
+`-jit` ledger entries have been evaluated at all.
+
+**Ledger side: 39 of 40 correctly ledgered, 1 candidate stale**
+(`torch-jit xfail tests/test_orbit.py::test_eccentricity` PASSED). Note the
+asymmetry: the *jax*-jit twin still XFAILs. Not acted on yet -- one entry, one
+run.
+
+**The real find: 7 traced test failures that are in NO ledger.** Because `--jit`
+only runs on manual dispatch, nothing in normal CI ever sees these. Classified
+by reading each message rather than by the test name:
+
+* **2 genuine traceability defects (jax)** --
+  `jax.errors.TracerArrayConversionError: __array__() was called on traced
+  array` in `test_anyaxisymmetricrazorthindisk_second_derivs_at_z0` (shape
+  `float64[]`) and `..._all_methods_reject_a` (shape `float64[50,50]`).
+  Something converts a tracer to numpy. This is a real, fixable bug in exactly
+  the thing the mission is about, and it is **new information** -- these
+  AnyAxisym tests postdate the last traced measurement.
+* **2 the known AnyAxisym singularity story** ([[#218]] territory):
+  `smallz_limit` -- `Fz/limit` blows to **2.67e13** at the smallest z; and
+  torch's `second_derivs_at_z0` -- `R2deriv(0.1,0)` is **2.0e-4** relative from
+  the Hankel reference, message says "the finite part at a=R is not being
+  taken". The traced GL path lacks the numpy singularity treatments.
+* **3 torch traced timeouts** (>300 s): `test_dynamfric_c`,
+  `test_FDMDynamicalFrictionForce_central_limit`,
+  `test_energy_conservation_linear[AnyAxisymmetricRazorThin...]`. Performance,
+  i.e. slow-skip material, not defects.
+
+So "all jittable" is further away than the ledger implied: the traced suite is
+not green, and the gap was invisible because the ledger only records what
+someone once measured.
+
+**Caught myself in my own memorized trap** writing the throwaway classifier:
+`f = tc.find("failure") or tc.find("error")` -- an `Element` with no children is
+falsy, so the `or` picks the wrong branch
+([[junitxml-find-truthiness-trap]]). The sweep script gets this right; the
+ad-hoc probe did not. A DeprecationWarning surfaced it. Ad-hoc probes deserve
+the same care as the tool.
+
+Next: the 2 tracer leaks are the highest-value item (real defect, on-mission,
+small). Queued behind gh#1323/gh#1324 rather than opening a third PR.
+
