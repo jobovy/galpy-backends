@@ -45410,3 +45410,56 @@ locally as a belt-and-braces check.
 pre-fix `264 passed, 2 FAILED` -- same shard, same two tests, now passing. CI
 has restarted from scratch on `66ece1e4` and is fully queued.
 
+
+### 2026-08-16 — #218's OTHER half diagnosed: panel edges collapse in float64
+
+gh#1328's torch red is fixed and confirmed in CI (group 5 SUCCESS). The only
+remaining red is `codecov/project`, and it is a phantom by the session test:
+head has **24 sessions vs base's 28**, reporting 6837 misses against 15 and
+85.94% against 99.96% -- an impossible 14-point drop from a change that touches
+only `tests/test_potential.py`. 46 uploads still outstanding; it self-heals.
+`codecov/patch` is already green.
+
+So I took the half of #218 I had explicitly scoped OUT of the quadrature PR:
+`test_anyaxisymrazorthin_smallz_limit`. Measured, R=0.5, Fz/limit:
+
+    z         1e-5      1e-6      1e-8   1e-12     1e-20      1e-30
+    numpy   0.999991  0.999999   1.0    0.999936  0.999936   0.999936
+    traced  0.999991  0.999999   1.0    1.0       2650.46    2.68e+13
+
+**Mechanism.** `_bk_split_quad` grades dyadic panels toward the a=R peak with
+`dmin = min(4|z|, R/2)` and builds the edges as `Rp - d` / `Rp + d` -- in
+ABSOLUTE terms. At R=0.5 the float64 spacing is 1.11e-16, so for `4|z|` below
+about half an ulp (|z| ~ 1e-17) `0.5 - 4e-20` rounds to exactly `0.5`: the
+innermost panels collapse to zero width and the `1/((a-R)^2+z^2)` pole is then
+sampled at `a == R`, giving ~1/z^2. That is precisely the 1e-12-fine /
+1e-20-broken boundary the table shows.
+
+numpy avoids it two ways: `_quad_apeak` splits with scipy's `points=[R]` (which
+stays finite), and `_zforce_numpy`'s integrand takes `d2` as a SEPARATE argument
+computed from the offset, so `(a - R)` is never formed by subtraction. numpy
+still stops resolving below 1e-12 -- it saturates at 0.999936 -- but it saturates
+INSIDE the 3e-4 tolerance instead of diverging.
+
+Note `_R2deriv_gl` / `_z2deriv_gl` already dodge this: their integrands are
+parameterised by the offset `d`, and they carry `_R2DERIV_ZFLOOR = 1e-9` below
+which |z| is snapped to 0. `_zforce_gl` has neither -- its integrand takes `a`,
+and there is no floor.
+
+**Two candidate fixes**, not yet implemented:
+
+1. *Small.* Give `_zforce_gl` the same floor treatment. The z->0+ limit is
+   analytically exactly `-2 pi Sigma(R)`, so below the floor return that
+   (times sign(z)) rather than a quadrature that cannot resolve the peak. Error
+   at the floor is O(z/R), far inside 3e-4. Backend-only, so no numpy
+   byte-identity risk.
+2. *Structural.* Parameterise `zforceint` by the offset and build the panels in
+   offset space, as `_R2deriv_gl` already does. Fixes the cause rather than
+   masking it, but changes `_bk_split_quad`'s contract and so touches
+   `_evaluate_gl` and `_Rforce_gl` too.
+
+(1) is what the sibling methods already do and is the honest match to the
+tolerance; (2) is the better engineering. Leaning (1) now with (2) noted, but
+this is a decision worth making deliberately rather than at the end of a long
+wake.
+
