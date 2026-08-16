@@ -45261,3 +45261,57 @@ Not attempted this wake -- gh#1328 is open and this is a separate, larger PR.
 What changed is that #218 is now a well-posed numerical problem with a measured
 target, instead of a title that misdescribes the code.
 
+
+### 2026-08-16 (later) — #218: the log subtraction works, validated for both callers
+
+Prototyped the fix in numpy against the mpmath gold. Subtracting the residual
+log the same way `2c/u^2` is already subtracted -- take
+`h(u) = -Lambda ln(u/b)`, integrate `g - h` by the existing GL rule, add back
+the exact `int_0^b h = Lambda*b` -- gives, at the CURRENT default n=100:
+
+               current          with log subtraction
+    R2deriv    2.0e-4..6.7e-4   5.6e-12..6.8e-11
+    z2deriv    2.0e-7..1.4e-5   8.1e-12..8.2e-11
+
+Seven orders on R2deriv, and no extra quadrature nodes: the whole gain is from
+making the integrand smooth, which is the point -- GL was already exponential,
+it just had a singularity to chew on.
+
+**Lambda is estimated numerically, not derived.** A least-squares slope of `g`
+against `-ln u` over five points `u = b*10^-k`, `k = 3, 3.5, 4, 4.5, 5`. This
+matters because Lambda is not a nice closed form: it ranges over 44.78 (R=0.1)
+to 0.0002 (R=2.0) for the same potential, both `ellipe` and `ellipkm1` feed it,
+and it has to be right for an arbitrary user-supplied `Sigma`. It is plain
+arithmetic on integrand evaluations, so it stays traceable and differentiable.
+
+**The window is not arbitrary and not a knife-edge.** Measured against three
+alternatives:
+
+    window          R2deriv worst   z2deriv worst
+    k=3..5   (5pt)      6.8e-11         8.2e-11
+    k=2..4   (5pt)      1.3e-08         2.4e-09
+    k=4..6   (5pt)      1.4e-08         3.8e-09
+    k=2.5..5.5 (7pt)    1.0e-09         3.5e-10
+
+Both failure directions are explained: above `k~3` the `O(u)` term in
+`g = -Lambda ln u + A + O(u)` biases the slope; below `k~5` the `c/u^2`
+cancellation noise does (the same floor the helper's docstring already
+documents, measured earlier at `u = 1e-9`). `k=3..5` sits between them with
+~100x margin under the 1e-8 test tolerance.
+
+**A transcription error worth recording.** My first z2deriv prototype gave
+errors of order *unity* on both arms. That was not the method failing -- I had
+written the z2 integrand from memory instead of copying `_z2deriv_gl`. Copying
+it (at z=0 the `ellipkm1` term carries a `z^2` factor and drops out, leaving
+`-a Sigma(a) E(1-m1) / (d^2 (2R+d))`) made the "current" column reproduce the
+independently measured traced errors --- 1.07e-5, 8.40e-6, 2.03e-7 --- to three
+digits. That agreement is the real check that the prototype is faithful, and it
+only exists because there was an independent measurement to hit.
+[[reproduce-a-quadrature-exactly]] again: copy the integrand, do not re-derive
+it.
+
+Not implemented yet. The remaining work is `galpy/backend/quadrature.py`
+(the estimate must not NaN-poison the sinh branch, which is evaluated
+unconditionally under trace), torch parity, and tests. Next PR; gh#1328 is
+still in flight.
+
