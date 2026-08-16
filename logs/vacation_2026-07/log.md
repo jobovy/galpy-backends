@@ -45463,3 +45463,61 @@ tolerance; (2) is the better engineering. Leaning (1) now with (2) noted, but
 this is a decision worth making deliberately rather than at the end of a long
 wake.
 
+
+### 2026-08-16 — CORRECTION: the smallz story is two mechanisms, and I overclaimed one
+
+Before implementing the zforce floor I measured the collapse threshold across R,
+to choose between an absolute and a relative floor. The measurement refuted the
+tidy account I wrote earlier this session.
+
+    R        first bad z/R (traced, rel err > 3e-4)
+    0.01     1e-14
+    0.1      1e-15
+    0.5      1e-14
+    2.0      1e-14
+    10.0     1e-6      <-- eight orders earlier
+
+R <= 2 is scale-free at `z/R ~ 1e-14`. R = 10 is not, so it cannot be one
+mechanism. Checked the second one against numpy:
+
+    R      -2 pi Sigma(R)    |Fz| numpy      numpy rel err
+    0.5     -1.8646e+00     -1.8646e+00        4.55e-07
+    2.0     -2.0714e-02     -2.0715e-02        1.55e-05
+    10.0    -7.8199e-13     -9.4298e-09        1.206e+04
+
+**numpy fails identically at R=10 -- the same 1.206e+04.** So that arm is not a
+backend defect: `Sigma(10) = 7.8e-13` sits about four orders below the
+quadrature's own noise floor, and the rule returns 9.4e-9 where the answer is
+7.8e-13. Both paths cancel away the same digits. Identical failure numbers on
+two independent implementations is the evidence that it is the formulation, not
+the migration.
+
+So:
+
+* **Mechanism A (R <~ 2, traced only, z/R <~ 1e-14):** a real backend gap --
+  numpy is accurate to 4.5e-7 exactly where traced diverges. This is what
+  `test_anyaxisymrazorthin_smallz_limit` (R=0.5) exercises.
+* **Mechanism B (large R, BOTH paths):** cancellation against an exponentially
+  small local `Sigma`. Pre-existing, not mine, and no floor fixes it -- it fails
+  at `z/R = 1e-6`, far ABOVE any floor worth setting.
+
+**What I got wrong.** Last wake I wrote that the cause was panel edges `Rp +/- d`
+rounding away below half an ulp of R, and gave `|z| ~ 1e-17` for R=0.5. The
+measured onset is `~1e-14`, three orders higher, and that account says nothing
+about R=10. The direction is probably right -- the innermost panels of the
+geometric ladder degenerate before the very last one does, which would land
+above the naive half-ulp figure -- but I stated a specific threshold the data
+does not support, and I was one step from designing a floor on top of it.
+
+The lesson is the one I keep relearning in this file: a mechanism that explains
+the case in front of you is not thereby the mechanism. Varying the OTHER
+parameter (here R, not z) is what separated a real backend gap from a
+pre-existing numerical limit that was never mine to fix.
+
+**Fix deferred deliberately.** A relative floor `|z| < 1e-8 R` would cover
+mechanism A with ~6 orders of margin over the measured 1e-14 onset, and is
+scale-free where an absolute floor would misbehave at small R. But I do not yet
+have the exact onset law, and B needs separating out before any of this is
+written down as a fix. Not implementing at the end of a long wake on a mechanism
+I have just had to correct once.
+
