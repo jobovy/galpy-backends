@@ -45572,3 +45572,41 @@ harmless without a conflict. That is true for *correctness* and false for
 newer coverage. When the standard is "not one line", sync before believing the
 delta.
 
+
+### 2026-08-16 — end-to-end proof: the two fixes together take AnyAxisym traced to 1 failure
+
+codecov went red again on gh#1328's new head `c2f32993`, with 30 jobs still
+running. The sessions discriminator was unavailable (codecov's API was
+rate-limiting), so I did not classify it this wake -- but the shape matches the
+phantom verified on this same PR an hour earlier. Re-check next wake rather than
+guess.
+
+Instead I ran the check I had not been able to run: **do the quadrature fix and
+the fixture fix, together, actually make the traced test pass?** Merged
+`backend-jit/traced-surfdens-fixture` into a throwaway branch off
+`backend-jit/finite-part-log` and ran the traced selection:
+
+    1 failed, 10 passed, 1 skipped, 2 xfailed
+
+`test_anyaxisymmetricrazorthindisk_second_derivs_at_z0` **PASSES under --jit**.
+That is the test-level confirmation the log subtraction was missing -- until now
+I only had my own probe numbers (4.9e-10 etc.), which is a proxy for the
+assertion, not the assertion.
+
+The progression, all measured:
+
+    baseline (neither fix)     3 failed   = 1 accuracy + 2 TracerArrayConversionError
+    + gh#1328 (fixture)        2 failed   = 2 accuracy, 0 tracer
+    + #218-A (log subtraction) 1 failed   = smallz_limit only
+
+The one remaining failure is `test_anyaxisymrazorthin_smallz_limit`, i.e. the
+`_zforce_gl` / `_bk_split_quad` half -- exactly the piece I scoped out of the
+quadrature PR and diagnosed separately (two mechanisms: a real backend gap at
+R <~ 2, and a pre-existing cancellation at large R that fails on numpy too).
+Nothing here contradicts that split; it confirms it.
+
+Practical consequence: when gh#1328 lands, `backend-jit/finite-part-log` can be
+synced onto develop and its PR body can claim the test-level result rather than
+probe numbers. Throwaway branch deleted; `finite-part-log` is back at 67702d93,
+unmodified.
+
