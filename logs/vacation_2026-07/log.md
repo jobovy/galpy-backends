@@ -44829,3 +44829,60 @@ quadrature refactor, not an if->where, so it is correctly out of gh#1324's
 scope) -- but I published the reasoning before checking it, which is the thing
 to not repeat.
 
+
+## 2026-08-16 — not every codecov red is a phantom
+
+gh#1324's `all-clear` went red. Read its log instead of assuming, and the
+verdict was precise:
+
+    ##[error]0 failing check run(s) and 2 failing commit status(es).
+    {"context":"codecov/patch","state":"failure"}
+    {"context":"codecov/project","state":"failure"}
+
+**Every test job passed.** So this was purely codecov -- but unlike gh#1322's,
+it was **real**, and the discriminator is simple: gh#1322 changed *zero source
+lines*, so a coverage drop was impossible; gh#1324 adds new branches, so it is
+entirely possible. Do not carry "codecov red = phantom" forward as a rule; the
+question is always whether the PR could have moved coverage at all.
+
+Per-file totals (not the API's `line_coverage` field, which is unusable --
+[[codecov-line-coverage-parse-is-bogus]] again: it listed 40 "missed" lines for
+a file reporting **100 %**):
+
+    HomogeneousSpherePotential.py   100.00 %   77 lines, 0 missed
+    SphericalShellPotential.py       92.45 %   53 lines, 4 missed
+
+Cause: `test_potential_array_input` exercises the potential, the three forces
+and the second derivatives -- **never `dens` or `surfdens`**. So the array
+branches I added to `_rdens`/`_surfdens` had no coverage at all. A real gap I
+introduced, so it gets a test, not a pragma
+([[no-hiding-uncovered-code]]).
+
+Two things the new test had to get right:
+
+* `dens` is sampled *at* the shell radius (the singular point, and no division
+  involved) -- that is the interesting case.
+* `surfdens` deliberately does **not** sample `R == a`. There `h -> 0` and
+  `1/(2*pi*a*h)` divides by zero -- **in the scalar branch too**, so it is
+  pre-existing and not something the vectorisation introduced -- but shipping a
+  test that emits `RuntimeWarning` is a liability under the `-W error` shards
+  ([[test-backend-W-error-deprecation]]). Straddling the radius covers the same
+  branch; the `z` values are picked so both the zero and the non-zero result are
+  *selected*, not merely evaluated by `where`. Confirmed clean under
+  `-W error::RuntimeWarning`.
+
+Gate 1238 passed / 0 failed; pushed as `69db2249` (new commit, plain push --
+[[no-force-push-open-prs]]).
+
+Aside: `pytest --cov` is unusable in this env -- it dies at collection with
+`ImportError: cannot load module more than once per process` from numpy's
+`_pocketfft_umath`. Per-file totals from the codecov API are the practical route.
+
+### Traced run
+
+31914531334 still in progress: 38 success, 4 failure (jax + torch
+`test_potential` group 5, torch orbit, torch jeans/dynamfric). Classifying those
+needs the completed run plus `ledger_sweep.py --jit`; gathering from a
+part-finished run is the mistake [[triage-gather-misses-timed-out-shards]]
+records.
+
