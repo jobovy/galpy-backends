@@ -45186,3 +45186,78 @@ size was being under-reported by exactly this test.
 The commit message carries the measured before/after rather than my estimate,
 and STATUS.md's "Verified and queued" section has been rewritten.
 
+
+### 2026-08-16 — #218 diagnosed: a LOG endpoint singularity, not a missing treatment
+
+Merged gh#1327 (develop `24500321`) and opened gh#1328 for the surfdens
+fixture, then spent the rest of the wake measuring #218 properly. Its title is
+wrong and should be rewritten: the backend GL path does **not** lack the numpy
+singularity treatments. `_R2deriv_gl` already calls `_bquad.finite_part_quad`
+(#219 landed). What it lacks is accuracy, and now I know why.
+
+**Traced error at z=0** (mpmath gold, `jax.jit`):
+
+        R      R2deriv      z2deriv
+      0.1     2.00e-04     1.08e-05
+      0.2     6.65e-04     8.40e-06
+      2.0     5.57e-07     2.03e-07
+
+**Two measurements localise it.** The semi-infinite tail contributes nothing
+(n=400 and n=800 agree to three digits), so all the error is in the finite
+part. And the finite-part error is exactly `1/n^2`:
+
+    n     100        200        400        800
+    err   6.65e-4    1.67e-4    4.18e-5    1.05e-5
+
+Gauss-Legendre is *exponential* on a smooth integrand. Algebraic `1/n^2` is the
+signature of a singularity the rule can still see. Reaching 1e-8 by order alone
+would need ~25 000 nodes.
+
+**What the singularity is.** After subtracting the `2c/u^2` model, the residual
+`g(u) = sym(u) - 2c/u^2` grows by a *constant* 18.47 per decade of u:
+
+         u       g          delta
+     1e-03    4.947e+01
+     1e-04    6.794e+01    18.47
+     1e-05    8.641e+01    18.47
+     1e-06    1.049e+02    18.47
+     1e-07    1.234e+02    18.47
+     1e-09    6.400e+01    (cancellation floor -- as the docstring warns)
+
+That is `g = -Lambda ln u + const` with `Lambda = 18.47/ln 10 = 8.02`. So the
+`c/u^2` subtraction removes the pole and leaves a **logarithm**, which is
+precisely what makes GL algebraic.
+
+**I mis-derived Lambda before measuring it,** and the error is instructive. I
+predicted `Sigma(R)/(2R^2) = 6.42` by taking the log from `ellipkm1(m1)` as
+`m1 -> 0`. Measured 8.02. The gap is `ellipe(1-m1)`, which is *not* smooth here
+either: its expansion carries an `m1 ln m1` term, and `m1 ~ d^2/4R^2` multiplied
+by the `2R^2/d^2` pole in front of it promotes that to an O(1) log. Both special
+functions contribute. Deriving the coefficient by hand is exactly the kind of
+step where a missed term is invisible; the constant-per-decade table is not.
+
+**Why this does not have an easy fix.** The obvious moves are both blocked by
+the float64 cancellation floor the helper's docstring documents:
+
+* An exponential substitution (`u = b e^-t`) or tanh-sinh makes the log smooth,
+  but drives nodes to `u ~ 1e-17 b`. `g` is a difference of two `~c/u^2`
+  quantities, so its *absolute* noise is `~eps c/u^2`; weighted by `du ~ u` that
+  contribution grows like `1/u`. This is the same mechanism that made tanh-sinh
+  diverge (measured previously: 1e6 at n=200, nan at n=800).
+* Pure geometric panel grading stopping safely at `u ~ 1e-7 b` leaves the last
+  panel unresolved, worth `~Lambda * 1e-7 * b * ln(...)`, i.e. ~4e-6 relative at
+  R=0.2 -- better than today but still short of 1e-8.
+
+So the fix has to *remove* the log analytically, the way `2c/u^2` is removed:
+subtract `Lambda (-ln u)` and add back its exact integral `Lambda b(1 - ln b)`.
+The open design question is where `Lambda` comes from. Deriving it per caller is
+what I just got wrong by 25 %, and it would have to be right for an arbitrary
+user-supplied `Sigma`. Estimating it numerically from `g` at two probe points in
+the safe band (`1e-5 b` to `1e-3 b`, where the table above is clean to 4 digits)
+needs no analytic input, stays traceable and differentiable, and is the
+direction I would take.
+
+Not attempted this wake -- gh#1328 is open and this is a separate, larger PR.
+What changed is that #218 is now a well-posed numerical problem with a measured
+target, instead of a title that misdescribes the code.
+
