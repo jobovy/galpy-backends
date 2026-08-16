@@ -44780,3 +44780,52 @@ gh#1322 merged and CI load light, dispatched the full traced matrix on
 can evaluate those 40 for the first time this trip -- the largest unmeasured
 block left in the ledger.
 
+
+## 2026-08-16 (early) — caught a sweep bug before the jit run landed
+
+Both PRs are clean of real failures: gh#1323 149 SUCCESS / 0 fail (Jo's to merge
+on main), gh#1324's flake re-run cleared it. The dispatched traced run
+(31914531334) is still fully queued -- 44 jobs, runners saturated by the two PRs.
+That is a real cost of dispatching it now, and it was a deliberate trade.
+
+### The sweep could not have read the run it was dispatched for
+
+Checked the workflow before the artifacts land rather than after: artifacts are
+named
+
+    backend-junit-${BACKEND}-${SHARD_ID}      # BACKEND is just jax|torch
+
+**jit mode is not encoded in the artifact name at all** -- `SHARD_ID` comes from
+`backend_status_report.py --id`, which is derived from TEST_FILES. So a traced
+run's artifacts are byte-indistinguishable *by name* from an eager run's.
+
+My `jit_run = any("jit" in b for b in seen)` detection would therefore have been
+**False for the jit run**, and the sweep would have skipped all 40 `-jit`
+entries while holding exactly the data needed to evaluate them -- reporting "not
+evaluable" over a run that cost 44 jobs. Silent, and it would have looked like a
+correct result.
+
+Fixed: `--jit` is now an explicit argv flag, and the mode gates *both*
+directions -- an eager run cannot speak to a `-jit` entry, and a traced run
+cannot speak to a plain one. `probe` strips the `-jit` suffix so `jax-jit`
+entries look up `jax`-named artifacts. Regression-checked both ways:
+
+    eager artifacts, no flag : 40 not evaluable, 0 stale   (unchanged)
+    eager artifacts, --jit   : 51 not evaluable, 18 "stale"  <- MEANINGLESS
+
+That second run is a deliberate misuse to prove the wiring; its 18 hits are the
+exact category error the flag prevents. **The flag must match the data**; nothing
+in the artifacts will tell you if you get it wrong.
+
+### Also corrected a claim I had already published
+
+Wrote in gh#1324's body that RazorThin's quadrature branch "would silently
+return a scalar rather than raise" for array input. Then measured it: it raises
+`ValueError: operands could not be broadcast together with shapes (100,) (11,)`
+-- 100 GL nodes against 11 coordinates do not broadcast. It would only collapse
+silently in the degenerate case where the coordinate count equals the node
+count. Body corrected. The substantive point stands (it is a coordinate x node
+quadrature refactor, not an if->where, so it is correctly out of gh#1324's
+scope) -- but I published the reasoning before checking it, which is the thing
+to not repeat.
+
