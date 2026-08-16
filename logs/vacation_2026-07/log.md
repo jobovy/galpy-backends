@@ -45716,3 +45716,44 @@ The two AnyAxisym fixes are cleanly orthogonal -- gh#1330 closes
 AnyAxisym to **zero** failures. Mechanism B (large R, cancellation, fails
 identically on numpy at 1.206e+04) remains out of scope and unledgered.
 
+
+### 2026-08-16 — traced AnyAxisym reaches ZERO failures (measured, not projected)
+
+gh#1330 picked up a real-looking red: `build (macos-15, 3.14, test_orbit ...)`.
+Read it rather than assumed — `test_from_name_values`, i.e.
+`pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities
+endpoint`. The SIMBAD network flake, the same one that hit gh#1323 and cleared
+on re-run. Not PR-caused.
+
+Tried to re-run just that job and got `403: This workflow is already running` —
+failed-job re-runs are refused while 50 jobs of the run are still pending. So
+the re-run has to wait for the run to finish. Worth remembering: a targeted
+re-run is not available mid-run, only after.
+
+codecov still mid-upload on BOTH sides (base 25 sessions, head 21, both showing
+~86% against a true 99.96%), so still phantom.
+
+**Then I checked the claim I made last wake instead of leaving it as a
+projection.** I had written that gh#1330 + the zforce floor "together take
+traced AnyAxisym to zero failures". Merged `backend-jit/finite-part-log` into a
+throwaway off `backend-jit/zforce-relative-floor` and ran it:
+
+    11 passed, 1 skipped, 1376 deselected, 2 xfailed    -- 0 FAILED
+
+So it is now measured. The full arc, every step of it a measurement:
+
+    baseline                        3 failed  (1 accuracy + 2 tracer errors)
+    + gh#1328 (fixture)             2 failed
+    + gh#1330 (log subtraction)     1 failed
+    + zforce relative floor         0 failed
+
+The 2 xfails report `x`, not `X`, so they are still failing as ledgered — no
+hidden XPASS and no ledger delta to claim.
+
+That closes AnyAxisym as a traced problem, which is the thing that has occupied
+most of this session. What remains in that family is the large-R cancellation,
+and it fails **identically on numpy** (1.206e+04 on both paths at R=10), so it
+is not a backend gap and no floor or quadrature change reaches it.
+
+Throwaway branch deleted; `zforce-relative-floor` back at `e371100c` unmodified.
+
