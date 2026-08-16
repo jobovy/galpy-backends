@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-16, gh#1327 merged
+# Vacation status snapshot — 2026-08-16, gh#1328 ready to merge
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -42,8 +42,17 @@ array input (if→where, scalar path bit-identical behind `numpy.ndim`);
 `main` automatically when gh#1323 lands.
 
 **gh#1328 → `feat/backends-develop`** `backend-jit/traced-surfdens-fixture`,
-head `8771458a`. **Mine to merge.** Both AnyAxisym `surfdens` fixtures dispatch
-on `get_namespace(R)` instead of `numpy.exp`. Just opened.
+head `c2f32993`. **Mine to merge, and ready.** 0 failures / 150 SUCCESS; both
+codecov contexts green; `all-clear` + 1 build + RTD + pre-commit still running.
+
+**Coverage verified clean, the hard way.** It briefly showed +3 misses with
+MATCHING session counts (so not an upload phantom): `actionAngleStaeckel 2635`
+and `AnyAxisym 345/346`, in files this PR does not touch. They were gh#1327's
+own deltas — the branch predated it, and a behind-base head is credited with
+none of the base's newer coverage. Synced by **merge, not rebase**
+(force-push is off-limits on an open PR; the squash collapses the merge commit).
+Now **misses 15 vs base 15**, and with 27 of 28 sessions in, the last upload can
+only add coverage — so no decrease is possible.
 
 ## Merged this wake
 
