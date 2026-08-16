@@ -93,9 +93,19 @@ against a measured 8.02. The `k=3…5` window is measured, not guessed:
 `k=2…4` and `k=4…6` both degrade to ~1e-8 (above, the `O(u)` term biases the
 slope; below, the `c/u²` cancellation noise does).
 
-Remaining: implement in `galpy/backend/quadrature.py` (the estimate must not
-NaN-poison the sinh branch, evaluated unconditionally under trace), torch
-parity, tests. Next PR.
+**IMPLEMENTED** on `backend-jit/finite-part-log`, head `67702d93`, pushed but
+deliberately not a 4th PR — it wants to sit on top of gh#1328. Measured end to
+end under `jax.jit`: `R2deriv` 2.0e-4 → **4.9e-10** against the numpy path's
+2.0e-10, `z2deriv` 1.1e-5 → **1.2e-10** — a ~1e6 gap closed to ~4x, at the same
+n=100. The tail is not the limiter (n=100/200/400 identical). New test builds a
+known-log integrand with a closed-form finite part; A/B flips 1.45e-5 → rtol
+1e-9 on all three backends. Gates: quadrature 74 passed, numpy `-k anyaxisym`
+13/1 unchanged, same forced-jax and forced-torch. No ledger delta (these traced
+failures were never ledgered).
+
+**#218 was two problems under one title.** This fixes the R2deriv/z2deriv half
+only. `test_anyaxisymrazorthin_smallz_limit` is `_zforce_gl` → `_bk_split_quad`,
+which never calls `finite_part_quad`, so it is untouched and still fails.
 
 **Measurement trap worth recording:** the obvious probe (build the potential
 under `use("jax", force=True)`, pass `jnp.asarray(R)`) reports ~1e-10 and looks
