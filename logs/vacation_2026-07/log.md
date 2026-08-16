@@ -44933,3 +44933,54 @@ the same care as the tool.
 Next: the 2 tracer leaks are the highest-value item (real defect, on-mission,
 small). Queued behind gh#1323/gh#1324 rather than opening a third PR.
 
+
+## 2026-08-16 — Jo: never decrease coverage, even by one line
+
+**gh#1323's -1 line was not in any file gh#1323 touches.** Both changed source
+files are 100 % on head (AnySpherical 61 lines/0 missed, quadpack 74/0; patch
+coverage 7/7 and 8/8). The compare API localises it exactly:
+
+    galpy/potential/interpRZPotential.py   misses 0 -> 1   (lines 517 -> 517)
+
+Unchanged line count, file untouched. The cause is causal, not coincidental:
+`_grid_eval` accepts the vectorised whole-mesh result only if it reproduces the
+scalar path bit for bit, else falls back to the cell-by-cell loop -- and **the
+only thing that ever triggered that fallback was `AnySphericalPotential`
+mis-broadcasting**. The docstring says so in as many words. Fix the potential,
+and the branch dies.
+
+So the guard never had a test; it was covered incidentally by another component
+staying buggy. Replaced with a synthetic mis-broadcaster
+([[pvar-negative-example-fragility]]: use a forced synthetic, not a real
+potential) that neither raises nor returns the wrong shape. The test asserts the
+guard rejected the vectorised answer *and* separately that the vectorised answer
+really differed, so it cannot pass vacuously. Four docstring claims this PR
+falsifies were corrected to past tense.
+
+### Correcting the premise on the branch stack
+
+Jo said develop "picked up some now-not-covered lines from feat/backends".
+Measured, it is the other way round:
+
+    gh#892   feat/backends      -> main    misses 24 -> 15   0 files worse
+    gh#1204  feat/backends-dev  -> f/b     misses 15 -> 20   3 files worse
+
+feat/backends **improves** on main. The +5 is entirely develop's, i.e. mine:
+
+    galpy/potential/AnyAxisymmetricRazorThinDiskPotential.py   0 -> 2
+    galpy/actionAngle/actionAngleStaeckel.py                   0 -> 2
+    galpy/df/jeans.py                                          0 -> 1
+
+Five lines, three files, all my own landings. Next coverage PR is scoped.
+
+### Process failure worth recording
+
+Committed the fix onto **gh#1324's** branch, because this worktree was still on
+`fix/potential-array-input-where` from creating the stack -- and
+`git push origin fix/anyspherical-array-mass` answered **"Everything
+up-to-date"**, because it pushed a branch that had not moved. Only the
+remote-vs-local SHA comparison caught it
+([[verify-pr-content-not-push-success]]). Unpushed, so the repair was a plain
+`reset --hard` + `cherry-pick`, no force-push. **Check `git branch --show-current`
+before committing in a multi-branch worktree**; "up-to-date" is not success.
+
