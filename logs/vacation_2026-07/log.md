@@ -45315,3 +45315,52 @@ Not implemented yet. The remaining work is `galpy/backend/quadrature.py`
 unconditionally under trace), torch parity, and tests. Next PR; gh#1328 is
 still in flight.
 
+
+### 2026-08-16 (later still) — #218 implemented: `backend-jit/finite-part-log` 67702d93
+
+Implemented the log subtraction in `galpy/backend/quadrature.py`. Pushed as a
+branch, NOT opened as a PR: gh#1323, gh#1324 and gh#1328 are already open, and
+this one wants to sit on top of gh#1328 anyway.
+
+**End to end, real library under `jax.jit`:**
+
+                  before     after      numpy path
+        R2deriv   2.0e-4     4.9e-10    2.0e-10
+        z2deriv   1.1e-5     1.2e-10    5.8e-11
+
+A ~1e6 backend-vs-numpy accuracy gap closed to ~4x, at the *same* n=100. Also
+established the tail is not the limiter: n=100/200/400 on
+`fixed_quad_semiinfinite` give bit-identical results, while n=100->200 on the
+finite part still improves things, so the finite part is what remains.
+
+**Scope, stated because it is easy to overclaim.** This fixes the
+R2deriv/z2deriv half of #218 and NOT `test_anyaxisymrazorthin_smallz_limit`.
+That test is `_zforce_gl`, which goes through `_bk_split_quad` and never calls
+`finite_part_quad` at all, so the fix cannot touch it. #218 was really two
+problems sharing a title.
+
+**The new test checks against algebra, not another quadrature.** Constructed
+`f(u) = c/u^2 - L ln|u| + exp(-u)`, whose finite part is
+`-2L(b ln b - b) + 2 sinh b - 2c/b` in closed form. A/B: **1.45e-5 relative
+without the change, passing at rtol=1e-9 with it**, on all three backends. So
+the test genuinely flips rather than merely being green.
+
+**No ledger delta.** These AnyAxisym traced failures were never ledgered -- they
+are part of the unledgered residue from the dispatched jit run. This removes one
+of them; it does not un-defer anything.
+
+**Process slip, recorded because I already had the rule.** For the A/B I ran
+`git stash -- galpy/backend/quadrature.py` to get the "before" arm, which is
+exactly what [[git-stash-is-repo-wide-not-worktree]] says not to do -- the rule
+is two worktrees, never stash. It took my fix into `stash@{0}`, and I only
+noticed because a system reminder showed the file reverted to `_QUAD_N = 100`
+with nothing after it. Recovered with `git stash pop`; the two pre-existing
+stashes from other branches were untouched. The rule exists because the failure
+mode is silent: the tests still run, they just run the wrong code.
+
+Gates: quadrature suite 74 passed (71 + 3 new). `test_potential.py -k anyaxisym`
+13 passed / 1 skipped on numpy -- unchanged -- and the same under forced jax and
+forced torch. Traced still shows 3 failures on this branch, of which 2 are
+gh#1328's fixture (not in this branch) and 1 is the `smallz_limit` scope note
+above.
+
