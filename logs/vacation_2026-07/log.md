@@ -45821,3 +45821,52 @@ of the comparison is settled. The usual discriminator ("do the session counts
 match?") needs care here: they don't match, but the base is ALSO incomplete, so
 "head < base" carries no information at all yet. Re-check once both settle.
 
+
+### 2026-08-17 — gh#1330 flake cleared; gh#1324's +2 is in a file it never touches
+
+**gh#1330:** the macOS SIMBAD flake CLEARED on re-run — 151 SUCCESS. Only
+`all-clear` is red, and it is STALE: it completed at 00:39:50Z, i.e. before the
+macOS re-run finished, so it judged a failure that no longer exists. Tried to
+re-run it and got `403: This workflow run cannot be retried` — a re-run of a
+re-run is refused. It will need a fresh push or Jo's hand; noting rather than
+forcing it.
+
+**gh#1324's codecov** is the more interesting one, and worth writing down
+because the naive reading is wrong twice over.
+
+    base  342a2dac (main)   coverage=99.93  misses=24  sessions=13
+    head  ef37f197          coverage=99.93  misses=26  sessions=26
+
+Head has MORE sessions than base, so the usual "head incomplete → phantom"
+story does not apply. And +2 misses against Jo's not-one-line standard demands
+an answer. Per-file, every file is identical between the two EXCEPT:
+
+    galpy/orbit/Orbits.py    base: absent    head: 2
+
+gh#1324 touches `SphericalShellPotential`, `HomogeneousSpherePotential`,
+`RazorThinExponentialDiskPotential` and `test_potential.py`. It does not touch
+`Orbits.py`. Pulled the line numbers: **2991-2992**, the
+`except (ValueError, TypeError, IndexError)` per-element fallback inside
+`Orbits.E()` for `phasedim() == 3`. A defensive branch, in planar-orbit energy
+evaluation, with no path from anything this PR changes.
+
+Two session-count subtleties combine here:
+
+1. **base is a PUSH run, head is a PR run.** `push:` is path-filtered, so the
+   two legitimately have different job counts — 13 vs 26 does NOT by itself mean
+   base is incomplete relative to head. Comparing session counts across event
+   types is not meaningful.
+2. A file whose covering shard has not uploaded can be **absent** from the
+   report rather than counted as missed. That makes an incomplete base look
+   BETTER than a complete one, which is the opposite of the usual direction and
+   is exactly the trap here.
+
+So the honest position: not actionable, and specifically NOT caused by gh#1324.
+Re-compare once main's own push run finishes uploading; expectation is base also
+shows 2 in `Orbits.py` and the delta is zero.
+
+**Rule refined:** "misses up while sessions match → real" is too coarse. It
+holds only when both sides are the SAME event type and both complete. Otherwise
+go straight to per-file, and ask whether the PR could reach the file at all
+before believing the number.
+
