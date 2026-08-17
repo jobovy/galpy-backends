@@ -46368,3 +46368,39 @@ AnySpherical's actual vectorised-vs-scalar disagreement is the next step.
 
 gh#1316 should go back to draft until this is resolved.
 
+
+### 2026-08-17 — traced run swept; gh#1332 opened (ledger burndown)
+
+The dispatched traced run (32025928130) completed, so I ran the
+(ledgered AND passed) sweep over its 44 JUnit artifacts.
+
+    ledger entries 91   |  not evaluable in traced mode 51  (eager entries)
+    still correctly ledgered 39   |   CANDIDATE STALE 1   |   unaccounted 0
+
+The one stale entry: **`torch-jit tests/test_orbit.py::test_eccentricity`**.
+Verified against the raw artifact, not just the sweep verdict —
+
+    torch shard: testcase test_eccentricity  time=2.951  children=[]        PASSED
+    jax   shard: testcase test_eccentricity  time=0.781  children=[skipped]
+
+Its own ledger comment says why it was there: "same AnyAxisym root cause seen
+through an orbit (e=5.4e-6 vs 1e-8)". That is exactly what gh#1330 and gh#1331
+fixed, so this is a burndown *attributable to landed work* rather than a
+measurement drift.
+
+**Kept the jax-jit twin.** It still reports `skipped` in the same run, so the
+shared root cause is not uniformly resolved; removing both because "the cause is
+fixed" would be precisely the tidy-story error I have had to retract twice this
+week. One line out, not two.
+
+Opened as **gh#1332**. Ledger delta: xfail 15 -> 14, in-scope 91 -> 90.
+
+**Also worth recording: the sweep is now the cheap instrument.** 51 of 91
+entries cannot be judged from a traced run at all (they are eager entries), and
+that number is only knowable because the script takes an explicit `--jit` flag
+rather than guessing from artifact names — the artifacts are named identically
+either way. Without it the sweep silently scores the wrong half.
+
+Open PRs: gh#1332 (develop, mine), gh#1316 (develop, mine, rtol 1e-14 under CI
+adjudication), gh#1324 (main, Jo's, 0 failures).
+
