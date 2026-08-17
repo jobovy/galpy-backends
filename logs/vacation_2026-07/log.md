@@ -46702,3 +46702,33 @@ re-runs I fired at ~18:20 by two hours.
 touches no source, do not reach for the session-count comparison first — check
 whether the status was COMPUTED BEFORE the uploads it is missing. A `Set up job`
 failure and a phantom coverage drop are the same event seen twice.
+
+### 2026-08-17 — gh#1332 refreshed to clear the stale codecov (and a near-miss)
+
+codecov never re-posted: still stamped `16:29:31Z` hours after the re-run
+shards uploaded at 18:25-18:50, so its stored head report is permanently
+missing those four uploads. All 151 build jobs were green with 0 pending, and
+`codecov/patch` said "Coverage not affected", but rather than merge past a red
+I refreshed the PR: merged `feat/backends-develop` (b4a21907) INTO the branch —
+not a rebase, per the no-force-push rule; the squash collapses the merge commit
+anyway — and pushed `77497f93`. That starts a fresh full run in which every
+shard uploads, against the current base.
+
+Verified after merging that the PR's own delta is still exactly the two xfail
+lines and nothing else (`git diff base...HEAD` = `tests/backend_xfail.txt |
+2 --`). No conflict: develop had only touched `backend_slow_skip.txt`.
+
+**Near-miss worth recording.** I wrote
+`git worktree add /var/tmp/gh1332 <branch>; cd /var/tmp/gh1332 && ...; git merge
+origin/feat/backends-develop`. The `worktree add` failed — the branch was
+already checked out at `/var/tmp/ledgprune` — so the `cd` failed, and because
+the tail was chained with `;` instead of `&&`, **the `git merge` ran in the MAIN
+repo** and tried to merge develop into `feat/backends`. It aborted only because
+of the pre-existing uncommitted `galpy/util/coords.py`. Verified afterwards:
+main repo still on `feat/backends` at `dbb09ffc`, no `MERGE_HEAD`, working tree
+unchanged.
+
+This is the [[cd-does-not-survive-ampersand]] family WITHOUT an `&`: any failed
+`cd` followed by `;` runs the rest of the line in the previous cwd, and in this
+project "branch already used by another worktree" is a routine way for `cd` to
+fail. Memory updated. The fix stays mechanical: `git -C <path>` always.
