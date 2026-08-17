@@ -46079,3 +46079,44 @@ finally accepted. That was the symplectic bit-identity flake (5.55112e-16), and
 `all-clear` was red only downstream of it. The wheel/conda flake already cleared
 on its own earlier re-run. Nothing in gh#1324 is PR-caused.
 
+
+### 2026-08-17 — gh#1324's symplectic red: I nearly convicted my own commit
+
+gh#1324's orbit shard failed, I re-ran it, and it failed AGAIN with the identical
+`max|diff|=5.55112e-16`. Two identical consecutive failures undercut the "known
+intermittent flake" reading, so I investigated properly instead of re-running a
+third time.
+
+**Two dead ends, both instructive:**
+
+1. *"My coverage-test commit is implicated."* I compared the PR's two heads:
+   `ef37f197` (before) succeeded, `651e75ed` (after) failed. Looked damning.
+   **Wrong** — I collapsed each SHA to "did any run fail", ignoring that every
+   SHA has TWO runs (push + pull_request). Separated:
+
+        ef37f197   pull_request success   push success
+        651e75ed   pull_request SUCCESS   push failure
+
+   A pass/fail split at ONE SHA is the definition of a flake
+   ([[same-sha-duplicate-run-is-a-free-ab]]). `ef37f197` having both arms pass
+   is a 2-sample coincidence, not evidence of a regression.
+
+2. *Local reproduction.* Running my test then the symplectic test locally DID
+   fail — but so did the symplectic test **alone**, with nothing before it. This
+   worktree has no C extension built, so `leapfrog_c` never ran as C at all
+   ([[worktree-missing-c-ext-fakes-passes]] — here it fakes a FAILURE rather
+   than a pass). The reproduction was measuring nothing.
+
+Also checked the causal question the right way, having just learned that
+"doesn't touch the file" proves nothing: `test_symplectic_dxdv_base_bit_identity`
+uses **MiyamotoNagaiPotential only** — none of the three potentials this PR
+changes. So there is no path from the diff to that test's numerics.
+
+Requested attempt 3 on the push run. The pull_request arm — the one the merge
+gate actually reads — is already green at this SHA.
+
+**Lesson, and it is the third time this week a "free A/B" has misled me:** an
+A/B is only valid if the arms differ in ONE thing. Here the arms differed in
+commit AND in event type, and the event type was the confound. Before believing
+any pass/fail split, enumerate what ELSE differs between the two samples.
+
