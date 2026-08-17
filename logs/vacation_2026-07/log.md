@@ -46224,3 +46224,27 @@ guessing. Add that to the triage sequence before re-running anything.
 
 Next: let the run finish, re-run the two infra failures, then un-draft.
 
+
+### 2026-08-17 — gh#1316 un-drafted (Jo: "No new pr up?")
+
+Fair challenge: gh#1324 is Jo's to merge, so gh#1316 sitting as a DRAFT meant I
+had nothing of my own actually up for review on develop. It had been a draft for
+one reason only — a maintainer decision about loosening a shipped 1e-14
+assertion — and that reason is measurably gone on the current base.
+
+Marked **ready for review**, and rewrote the body first: it still described the
+blocking trade-off as live, which is exactly the stale-description failure mode
+([[pr-description-drifts-after-rework]]) — worse than no description, because a
+reviewer would have looked for a decision that no longer exists. The body now
+carries the re-measurement (`39 passed, 6 skipped, 0 FAILED` under forced jax,
+with `test_interpolation_potential_use_c` PASSING) and states plainly that **no
+shipped assertion is modified**.
+
+Also documented the three remaining reds inline so a reviewer does not have to
+re-derive them: windows streamgapdf flake, a `Upload shard JUnit XML` step
+failure sitting on top of 129 passed tests, and a codecov mid-upload phantom.
+
+Standing lesson: "waiting for CI before un-drafting" turned into the PR simply
+not being up. If the blocker is gone, mark it ready and let CI run against a
+non-draft — the draft flag was never load-bearing.
+
