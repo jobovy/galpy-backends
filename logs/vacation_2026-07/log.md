@@ -46188,3 +46188,39 @@ So the blocking question may simply have dissolved on the newer base. Pushed the
 sync; letting real CI judge before un-drafting or bringing Jo a decision that no
 longer exists.
 
+
+### 2026-08-17 — gh#1316's three reds are all non-code; the jax blocker is gone
+
+Synced gh#1316 onto develop `091053a9` and pushed (`67292b92`). Fresh CI: 113
+SUCCESS, 3 failures, 37 pending. Read all three rather than re-running blind.
+
+1. **`build (windows-latest, 3.14, test_quantity/test_coords...)`** —
+   `test_quantity.py::test_streamgapdf_sample`. That is exactly
+   [[windows-streamgapdf-sample-flake]], already proven not-PR-caused on a
+   ledger-only PR.
+
+2. **`backend torch tests/test_diskdf.py`** — this one is worth recording. The
+   census line says **129 passed**, and the failing STEP is
+   **`Upload shard JUnit XML`**, not pytest. The tests passed; the artifact
+   upload failed. A job-level red that contains no test failure at all.
+
+3. **`codecov/project`** — 37 jobs still pending, the usual mid-upload phantom.
+
+**And the thing that made it a draft is absent.** The jax interp shard is not in
+the failure list, matching the local measurement: on the synced branch, forced
+jax gives `test_interp_potential.py` **39 passed, 6 skipped, 0 FAILED**, with
+`test_interpolation_potential_use_c` PASSING — the very assertion whose 1e-14
+threshold I was going to ask Jo to loosen. The fallback-forcing tests also pass,
+so the guard is still exercised rather than silently bypassed.
+
+So the decision that parked this PR for two days appears to have dissolved on
+the newer base, and the 58x backend-grid speedup can land with NO shipped
+assertion touched.
+
+**Lesson worth keeping:** a red job is not necessarily a red test. Checking
+`.steps[] | select(.conclusion=="failure")` named the upload step immediately,
+where grepping the log for `FAILED` found nothing and would have left me
+guessing. Add that to the triage sequence before re-running anything.
+
+Next: let the run finish, re-run the two infra failures, then un-draft.
+
