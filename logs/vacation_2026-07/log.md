@@ -45981,3 +45981,42 @@ class works at a distance, by making someone else's `except` unreachable. The
 right question is not "does the PR touch that file" but "could the PR change
 whether that branch is ENTERED".
 
+
+### 2026-08-17 — a false "deleted function" alarm, and the tool that caused it
+
+Both PRs are early in their runs (gh#1331 11/151, gh#1324 restarted), codecov
+red on gh#1331 is the mid-upload phantom. So: local work.
+
+Corrected the MEMORY that carried yesterday's wrong rule
+([[dont-reflexively-rebase-disjoint-prs]]). It said "check whether the PR could
+reach the file at all before believing the number", which I acted on twice and
+which is false — file locality is not causal locality. Replaced with the right
+question: *could the PR change whether that branch is ENTERED* (does it stop
+something raising, stop a guard firing, make a slow path fast). Also recorded
+that `main` is a path-filtered PUSH run while a PR is a pull_request run, so
+session counts across the two are not comparable.
+
+Then ran my own [[def-to-def-splice-deletes-methods]] check on the programmatic
+splice I made into `tests/test_orbit.py` — and it reported a function DELETED
+(`test_orbitint_planar_dynamfric_pythonfallback`). Chased it:
+
+    grep -oP '^def \K\w+' | wc -l   ->  278    <- silently short by one
+    grep -cP '^def '                ->  279
+    git diff --stat                 ->  48 insertions, 0 DELETIONS
+    ast.parse FunctionDef names     ->  279    <- correct
+
+**Nothing was deleted.** `grep -oP` dropped one line, and because my splice
+ADDED one name, the counts matched at 278/278 — so the count check would have
+missed it and the set check produced a false positive instead. The function
+extracts fine from that line in isolation, so it is a whole-file grep artifact,
+not a property of the line.
+
+Two lessons, both recorded in memory:
+
+* Do the structural set-diff with **`ast.parse`**, never grep.
+* `git diff --stat`'s deletion count was authoritative and disagreed with the
+  grep from the first moment. I should have trusted it before spending four
+  probes on the discrepancy.
+
+The splice itself is clean: 278 -> 279 functions, exactly one added, none lost.
+
