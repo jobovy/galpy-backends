@@ -46732,3 +46732,43 @@ This is the [[cd-does-not-survive-ampersand]] family WITHOUT an `&`: any failed
 `cd` followed by `;` runs the rest of the line in the previous cwd, and in this
 project "branch already used by another worktree" is a routine way for `cd` to
 fail. Memory updated. The fix stays mechanical: `git -C <path>` always.
+
+### 2026-08-17 — the gh#1323 "cherry-pick" is really a live bug on develop
+
+Now that gh#1316 has merged, I looked at what porting gh#1323 actually means.
+**It is not a cherry-pick.** The two branches solved the same problem in
+different ways and develop's answer is the weaker one:
+
+    main    galpy/potential/AnySphericalPotential.py
+              _rawmass / _revaluate tail use `quad_over_limits` (2 sites)
+              -> array r integrates ELEMENT-WISE, correctly
+
+    develop same file, fully backend-migrated instead
+              _rawmass still `integrate.quad` with a SCALAR upper limit
+              + `self._force_accepts_arrays = False` as the workaround
+
+develop's own source comment states the defect outright: *"_rawmass closes over
+scipy.integrate.quad with a SCALAR upper limit (r[0] of an array), so the force
+is scalar-only -- an array input silently collapses to its first element."*
+
+The workaround only governs how `Potential.mass` DRIVES the quadrature
+(`vectorized=False`, node-by-node). It does not protect a direct
+`evaluateRforces(pot, Rmesh, zmesh)`, which is why the measurement came back
+**76 of 77 cells differing, max rel 9.4e-01** on develop and **0 of 77** on
+main. So develop currently returns silently wrong numbers for array input to
+this potential, and has since before the backend migration.
+
+**Plan (not started — 2 develop PRs already open):** adopt `quad_over_limits` at
+develop's equivalents of main's two sites, then drop `_force_accepts_arrays =
+False` if the array path is genuinely correct afterwards. Gate on the same
+whole-mesh-vs-cell-by-cell measurement, on numpy AND on both backends, plus
+`test_potential_array_input`. Cross-check against gh#1316's freshly-landed
+`test_interpRZPotential_grid_matches_the_cell_by_cell_path`: once AnySpherical
+broadcasts correctly on develop, that test stops exercising a numpy FALLBACK and
+starts exercising the accepted-vectorised arm — still valid, but for a different
+reason, and its docstring says so explicitly and will need updating.
+
+*Method note:* the structural signals (quadpack.py present, matching symbol
+counts) said "already ported"; the behavioural measurement said the opposite.
+The source comment was the tiebreaker and it had been sitting there all along —
+[[read-code-docs-before-classifying]].
