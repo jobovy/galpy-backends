@@ -45897,3 +45897,45 @@ tree via develop rather than via a throwaway merge. The arc, every step measured
 
 Two PRs open: gh#1324 (main, Jo's) and gh#1331 (develop, mine).
 
+
+### 2026-08-17 — gh#1324's +2 is REAL (I was wrong last wake), cause still unresolved
+
+Last wake I told Jo the +2 was "not caused by gh#1324" because the lines live in
+`Orbits.py`, which it does not touch, and because base looked incomplete.
+**That reasoning was wrong on both counts.** The full comparison:
+
+    gh#1323 head  95cb7127   misses=24  sessions=26   Orbits.py: covered
+    gh#1324 head  69db2249   misses=26  sessions=26   Orbits.py: 2991-2992 missed
+    gh#1324 head  ef37f197   misses=26  sessions=26   Orbits.py: 2991-2992 missed
+
+All three are PR runs at 26 sessions -- same event type, all complete. So this is
+apples-to-apples and the delta is REAL. It also predates my merge commit
+entirely (both gh#1324 heads show it), so the merge is not implicated.
+
+What made me wrong: I reached for "the PR cannot touch that file" as if
+file-locality implied causal locality. It does not. The whole *point* of the
+coverage class Jo flagged is that an array-safety change makes a DEFENSIVE
+BRANCH SOMEWHERE ELSE unreachable -- the caller stops raising, so the `except`
+stops being taken. Locality of the diff says nothing about locality of the
+coverage effect. (`main` being a path-filtered push run with 13 sessions is a
+real confound, but it was a distraction here: the right baseline was gh#1323's
+own PR run, which is directly comparable.)
+
+**Hypothesis, and it is NOT confirmed.** Lines 2991-2992 are the
+`except (ValueError, TypeError, IndexError)` per-element fallback in
+`Orbits.E()` for `phasedim() == 3`, entered when the vectorised
+`evaluateplanarPotentials(pot, thiso[0], t=tile(...))` raises. gh#1324 makes
+`SphericalShellPotential` and `HomogeneousSpherePotential` accept array input,
+which would stop exactly such a call raising.
+
+I tried to reproduce it and **failed**: traced `Orbits.E()` with
+HomogeneousSphere, RazorThinExpDisk and MiyamotoNagai, single-orbit and
+multi-orbit, planar -- the except branch was taken in NONE of them. So I cannot
+demonstrate the mechanism, and cannot demonstrate what covers those lines on
+gh#1323's run either. A shard-assignment difference between two runs stays a
+live alternative.
+
+Reported to Jo as: delta real, reproducible, predates my merge, mechanism
+unresolved. Not going to assert the tidy story a third time when I have already
+had to retract it once this wake.
+
