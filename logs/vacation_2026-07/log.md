@@ -46495,3 +46495,62 @@ three times as evidence my new tolerance was wrong, when it was evidence the
 assertion predates the tolerance. The tell was there from the first run and I
 walked past it: the guard and the test were computing the *same comparison*, so
 the test could never have been measuring the guard.
+
+### 2026-08-17 — the 4 AnyAxisym `-jit` ledger entries: traced Phi is wrong AT z=0
+
+Ran the ledgered `test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]`
+with its xfail line temporarily lifted (ledger byte-restored afterwards, `git
+status` clean). The assertion:
+
+    fails at (R,Z) = (0.500,0.000); diff = 7.345999e+03, rel. diff = inf
+
+`rel. diff = inf` because `tzforce` is exactly 0 there — the test's z=0 branch
+asserts the one-sided FD `(Phi(R,0) - Phi(R,dz))/dz` is also ~0, with dz=1e-8.
+
+**It is not the test being invalid at a razor-thin disk's midplane**, which was
+my first guess. Measured Phi(R=0.5, z) three ways:
+
+    numpy   z=0     -1.984938989103
+    numpy   z=1e-8  -1.984938989098     (+5e-12 from z=0)
+    traced  z=0     -1.984856120473     <- off by 8.3e-5
+    traced  z=1e-8  -1.984938968073     (+2.10e-8 from numpy's z=0)
+
+The disk has Sigma(0.5)=0.3347, so 2*pi*Sigma = **2.10295**, and galpy's own
+`zforce(0.5, 1e-8)` returns **-2.102952**. The true Phi therefore rises linearly
+off the midplane as `Phi(0) + 2.103*z`, which is exactly what
+`Phi(1e-4)-Phi(0) = 2.10e-4` confirms.
+
+So the two paths are wrong in DIFFERENT places:
+
+* **1e-10 <= z <= 1e-6: traced is RIGHT, numpy is WRONG.** The traced-vs-numpy
+  relative difference is `1.06e-10, 1.06e-8, 1.06e-6` at `z = 1e-10, 1e-8,
+  1e-6` — dead proportional to z, with coefficient `2.103/|Phi| `, i.e. exactly
+  the cusp slope. numpy's Phi stays FLAT across the |z| cusp at these scales;
+  traced resolves it.
+* **z exactly 0: traced is WRONG**, by 3-4e-5 relative:
+
+        R      rel err (traced vs numpy, z=0)
+        0.20   2.97e-05
+        0.50   4.17e-05
+        1.00   3.18e-05
+        2.00   6.66e-06
+        5.00   1.31e-08
+
+  and by z=1e-4 and beyond the two agree to 1e-13.
+
+The test then divides that 8.3e-5 by dz=1e-8 and gets 8.3e3. **The ledger
+entries are legitimate and they name a real traced defect** — the same z=0
+endpoint-singularity family gh#1330 fixed for R2deriv/z2deriv, but one level
+down, in `Phi` itself. Eager escapes it because `_bk_dispatch` routes concrete
+backend scalars to scipy; only a genuine `jax.jit`/`grad` trace reaches the GL
+path.
+
+Per the standing rule that a less accurate GL path is a DEFECT and not a
+tradeoff, this is burnable, and it is the natural sequel to gh#1330 — same
+technique (subtract the analytically-known singular part before the GL rule).
+Not started: two PRs are already open. Queued as the next code PR.
+
+*Method note:* the numbers above are `float()` of the same expression on three
+paths, not a proxy — and the discriminator that settled which side was wrong was
+galpy's OWN `zforce` and the far-field `Phi(1e-4)`, i.e. two independent
+references rather than my expectation of what a razor-thin disk should do.
