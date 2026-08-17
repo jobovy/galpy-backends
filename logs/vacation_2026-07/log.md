@@ -46661,3 +46661,44 @@ believed it -- it reported 0.000e+00 rel err for every quantity at every z,
 because eager jax hands CONCRETE scalars to scipy via `_bk_dispatch`, so the GL
 path was never entered. The probe has to be inside `jax.jit` to reach it. A
 column of exact zeros should have been the tell, not the reassurance.
+
+### 2026-08-17 — gh#1316 MERGED (develop b4a21907); gh#1334 opened
+
+**gh#1316 squash-merged into `feat/backends-develop`** at 152 SUCCESS / 0
+failures / 0 pending, `mergeStateStatus=CLEAN`. Pre-merge audit per the loop's
+step 2:
+
+* **if -> xp.where array-input class:** none introduced. The one new branch is
+  `rtol = 0.0 if not is_backend_array(raw) else 1e-14` — a dispatch on KIND, at
+  grid-build time, on a value already through `numpy.asarray`. Not a traced
+  branch and not a data-guard.
+* **duplication:** none. The new test reuses `_spot_check_cells` and follows the
+  two sibling fallback tests already in the file.
+* **helper placement:** no new module-level helpers in `galpy/`. The only new
+  defs are the two test functions and a `_make` closure local to one of them;
+  `_NUDGE` is a local.
+
+Ledger delta: one slow-skip line removed
+(`jax tests/test_potential.py::test_2ndDeriv_potential[mockInterpRZPotentialwSecondDerivs]`).
+
+**gh#1334 opened** → `feat/backends-develop`, the traced-Phi accuracy fix
+(3e-5 -> 1e-12 at z=0). Ledger delta: NONE, stated in the PR.
+
+### 2026-08-17 — gh#1332's codecov red is stale by TWO HOURS, not a real drop
+
+`codecov/project: 99.83% (-0.14%)` on a **ledger-only** PR that changes no
+`galpy/` code, while `codecov/patch` says "Coverage not affected". The
+discriminator was the timestamp, not the percentage:
+
+    codecov/project recorded   2026-08-17T16:29:31Z
+    re-run build jobs done     2026-08-17T18:25:35Z .. 18:50:32Z
+
+gh#1332 is precisely the PR whose 4 jobs died at `Set up job` during the GitHub
+outage — they never ran, so they never uploaded coverage, and codecov scored the
+project against a head that was missing four shards. The verdict predates the
+re-runs I fired at ~18:20 by two hours.
+
+*Generalisation worth keeping:* when a coverage delta appears on a PR that
+touches no source, do not reach for the session-count comparison first — check
+whether the status was COMPUTED BEFORE the uploads it is missing. A `Set up job`
+failure and a phantom coverage drop are the same event seen twice.
