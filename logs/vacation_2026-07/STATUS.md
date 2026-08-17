@@ -38,7 +38,7 @@ both resolved:
   at ZERO failures on develop.
 * **gh#1323** → main `342a2dac` (Jo).
 
-## Traced AnyAxisym is CLOSED
+## Traced AnyAxisym: unledgered failures CLOSED, 4 ledgered entries REMAIN
 
 Every step measured on `-k anyaxisym --backend jax --jit`, not projected:
 
@@ -49,6 +49,22 @@ Every step measured on `-k anyaxisym --backend jax --jit`, not projected:
 
 Last row verified on the synced branch: **11 passed, 1 skipped, 2 xfailed, 0
 FAILED**. The xfails report `x`, not `X` — no hidden XPASS, no ledger delta.
+
+**That "0 FAILED" is about UNLEDGERED failures only, and I have been saying
+"closed" too loosely.** Four `-jit` ledger entries for AnyAxisym survive, and
+still fail on re-measurement against develop `091053a9`:
+
+    jax-jit / torch-jit  test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+    jax-jit / torch-jit  test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+
+They are PRE-EXISTING (added in gh#1281/gh#1284, well before gh#1331), so not a
+regression from the zforce floor — checked with `git log -S` on the ledger files
+rather than assumed. `forceAsDeriv` fails at exactly **(R,Z) = (0.500, 0.000)**
+with `diff = 7.35e+03, rel. diff = inf`, i.e. against a true value of zero: the
+vertical force as a vertical DERIVATIVE of Phi, evaluated at the one point where
+a razor-thin disk's `Fz` is genuinely discontinuous. Eager passes and only
+`-jit` is ledgered, so there is a real traced-vs-eager difference to explain
+before this can be called by-design.
 
 **Out of scope, and NOT a backend gap:** the large-R arm of the same family.
 `Sigma(10) = 7.8e-13` sits ~4 orders below the quadrature's own noise and it

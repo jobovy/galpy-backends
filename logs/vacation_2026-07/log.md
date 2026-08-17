@@ -46279,3 +46279,45 @@ What it buys, concretely:
 
 Queued now; results next wake.
 
+
+### 2026-08-17 — correcting "traced AnyAxisym is closed": 4 ledgered entries remain
+
+Working the ledger rather than waiting on the dispatched run. Broke the ~40
+`-jit` entries down by file:
+
+    test_orbit 12   test_noninertial 9   test_potential 6   interp 3   FDMdynamfric 3
+    streamTrack 2   test_orbits 2   qdf/dynamfric/actionAngle 1 each
+
+Two things fell out.
+
+**1. The units category is already handled.** I was about to start on "units
+under --jit" (#216/#217) and found **zero** quantity/units entries in the
+ledger — that was ledgered at the harness, not per test. Checking before
+starting saved the whole excursion.
+
+**2. I have been overclaiming "traced AnyAxisym is CLOSED".** Four of the six
+`test_potential` `-jit` entries are AnyAxisym:
+
+    jax-jit / torch-jit   test_poisson_surfdens_potential[AnyAxisym...]
+    jax-jit / torch-jit   test_forceAsDeriv_potential[AnyAxisym...]
+
+I hypothesised they were stale after gh#1330 + gh#1331 and measured: **still
+xfail** on jax. Not stale. So "0 FAILED" was true of the UNLEDGERED failures and
+I let it stand for the whole family, which it never was. STATUS corrected.
+
+They are **pre-existing**, not a regression from my zforce floor — verified with
+`git log -S` on the ledger files: added in gh#1281/gh#1284, long before gh#1331
+(`091053a9`). Worth checking rather than assuming, given the floor changed
+exactly the z->0 behaviour these tests probe.
+
+`forceAsDeriv` fails at **(R,Z) = (0.500, 0.000)**, `diff = 7.35e+03,
+rel. diff = inf` — an infinite relative difference means the reference is zero,
+so this is `Fz` as a vertical DERIVATIVE of Phi at precisely the point where a
+razor-thin disk's `Fz` jumps discontinuously (`-2 pi Sigma` above the plane,
+`+2 pi Sigma` below). Formally `dPhi/dz` does not exist there
+([[nonsmooth-potential-grad-undefined]]).
+
+But that alone does NOT license calling it by-design: only `-jit` is ledgered, so
+**eager passes and traced does not**, and that difference is real and unexplained.
+Next step is the eager-vs-traced comparison at that point, not a by-design label.
+
