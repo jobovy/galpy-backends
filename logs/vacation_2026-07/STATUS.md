@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-16, gh#1328 ready to merge
+# Vacation status snapshot — 2026-08-16, traced AnyAxisym CLOSED
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -13,7 +13,7 @@ end state, not a blocker.
 ## Branch state
 
     main                   54c0324a   (gh#1320 landed since my branch point)
-    feat/backends-develop  24500321   (gh#1327 merged 2026-08-16)
+    feat/backends-develop  da11a1a8   (gh#1327, gh#1328 merged 2026-08-16)
 
 ## The ledger, verified on develop
 
@@ -41,18 +41,26 @@ array input (if→where, scalar path bit-identical behind `numpy.ndim`);
 `numpy.infty` → `numpy.inf` at two live-`AttributeError` sites. Retargets to
 `main` automatically when gh#1323 lands.
 
-**gh#1328 → `feat/backends-develop`** `backend-jit/traced-surfdens-fixture`,
-head `c2f32993`. **Mine to merge, and ready.** 0 failures / 150 SUCCESS; both
-codecov contexts green; `all-clear` + 1 build + RTD + pre-commit still running.
+**gh#1330 → `feat/backends-develop`** `backend-jit/finite-part-log`, head
+`d791ac87`. **Mine to merge.** The `finite_part_quad` log subtraction. 147
+SUCCESS, codecov cleared (mid-upload phantom — 2 sessions against 22 at the
+time). One red left: `build (macos-15, 3.14, test_orbit)` =
+`test_from_name_values`, the SIMBAD `DALServiceError` network flake, NOT
+PR-caused. Re-run blocked until the run finishes — GitHub refuses
+`rerun-failed-jobs` with `403 already running` while any job is still pending.
 
-**Coverage verified clean, the hard way.** It briefly showed +3 misses with
-MATCHING session counts (so not an upload phantom): `actionAngleStaeckel 2635`
-and `AnyAxisym 345/346`, in files this PR does not touch. They were gh#1327's
-own deltas — the branch predated it, and a behind-base head is credited with
-none of the base's newer coverage. Synced by **merge, not rebase**
-(force-push is off-limits on an open PR; the squash collapses the merge commit).
-Now **misses 15 vs base 15**, and with 27 of 28 sessions in, the last upload can
-only add coverage — so no decrease is possible.
+**HELD, not yet a PR:** `backend-jit/zforce-relative-floor`, head `e371100c`,
+pushed. Floors `|z|` relative to R in the traced zforce. Opens after gh#1330.
+
+## Merged this wake
+
+**gh#1327** → `24500321`, then **gh#1328** → **`da11a1a8`**. The second one's
+coverage was verified at **15 misses vs base 15**. It first showed +3 with
+MATCHING session counts (so not an upload phantom); the lines were
+`actionAngleStaeckel 2635` and `AnyAxisym 345/346`, in files gh#1328 does not
+touch — they were gh#1327's own deltas, and a behind-base head is credited with
+none of the base's newer coverage. Fixed by merging develop in (not rebasing:
+force-push is off-limits on an open PR, and the squash collapses the merge).
 
 ## Merged this wake
 
@@ -127,16 +135,32 @@ wrote it from memory; the corrected one reproduces the independently measured
 traced errors (1.07e-5 / 8.40e-6 / 2.03e-7) to three digits, and that agreement
 is the only real evidence the prototype is faithful.
 
-## Traced state (from the one dispatched jit run, 31914531334)
+## Traced state — AnyAxisym is CLOSED
 
-7 failures, none of them new library defects:
+The old snapshot here said "7 failures, from the one dispatched jit run
+31914531334". Four of those seven are now fixed, so that framing is retired.
+Where it actually stands, every step MEASURED on the traced `-k anyaxisym`
+selection rather than inferred:
 
-* **2 test-side tracer errors** — the numpy-only `surfdens` fixture above; both
-  now gone, 1 as a pass and 1 revealing the accuracy failure below. I first
-  reported these as genuine tracer leaks; that was wrong, corrected in the log.
-* **2 → 3 known AnyAxisym singularity accuracy** — task #218 (the unmasked one
-  joins them).
-* **3 torch traced timeouts** — slow-skip material.
+    baseline                       3 failed   (1 accuracy + 2 tracer errors)
+    + gh#1328 (fixture)            2 failed
+    + gh#1330 (log subtraction)    1 failed
+    + zforce relative floor        0 failed
+
+The last row was measured by merging both branches into a throwaway and running
+it: **11 passed, 1 skipped, 2 xfailed, 0 FAILED**. The 2 xfails report `x`, not
+`X`, so nothing is hiding as an XPASS and there is no ledger delta to claim.
+
+Residue from that original 7, once both land: **3 torch traced timeouts**,
+slow-skip material, not defects. Those want a fresh dispatched jit run to
+re-measure — deliberately NOT dispatched while a PR run holds the runners.
+
+**Out of scope, and not a backend gap:** the large-R arm of the same AnyAxisym
+family. `Sigma(10) = 7.8e-13` sits ~4 orders below the quadrature's own noise,
+and it fails **identically on numpy** — both paths return 1.206e+04 relative at
+R=10, z/R=1e-6. Two independent implementations giving the same wrong number is
+the evidence that it is the formulation, not the migration. No floor or
+quadrature change reaches it.
 
 ## Standing corrections to how I work
 
