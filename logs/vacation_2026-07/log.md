@@ -46630,3 +46630,34 @@ in one commit because neither is correct without the other.
 
 NOT byte-identical on the numpy path, deliberately, and flagged to Jo before
 doing it.
+
+### 2026-08-17 — the ladder must stay: clustering collapses on zforce's pole
+
+I had proposed replacing `_bk_split_quad`'s 24-panel geometric ladder wholesale
+with `transformed_quad(interior_point=R)`, on the strength of Phi at z=0 going
+3e-5 -> 1e-12. **Measured on zforce under jit, that is wrong:**
+
+    R=0.5      ladder      transformed_quad
+    z=1e-2     6.394e-15   7.673e-15
+    z=1e-4     1.309e-14   7.595e-12
+    z=1e-6     8.221e-13   1.054e-05
+    z=1e-8     3.801e-10   1.703e-02
+
+The two integrands are not the same problem. Phi's peak at a=R is
+LOGARITHMIC; zforce's is a 1/((a-R)^2+z^2) POLE of width ~|z|. The `X = xi^k`
+(k=3) map clusters nodes polynomially, so its closest node to the peak is
+~(1/n)^3 * R ~ 5e-7 at n=100 -- fine for a log, hopeless for a pole at
+z=1e-8. The geometric ladder marches panel edges to `dmin = 4|z|` EXACTLY,
+which is the whole reason it exists.
+
+So the change is targeted, not wholesale: `transformed_quad` in `_evaluate_gl`
+only, where the singularity is logarithmic and the ladder's grading is switched
+off at z=0 anyway; `_bk_split_quad` untouched for Rforce/zforce. Phi under
+transformed_quad also matches the ladder at every z>0 sampled (1e-8, 1e-4,
+1e-2, 0.1, 1.0), so nothing regresses.
+
+*Method note:* my first attempt at this comparison was invalid and I nearly
+believed it -- it reported 0.000e+00 rel err for every quantity at every z,
+because eager jax hands CONCRETE scalars to scipy via `_bk_dispatch`, so the GL
+path was never entered. The probe has to be inside `jax.jit` to reach it. A
+column of exact zeros should have been the tell, not the reassurance.
