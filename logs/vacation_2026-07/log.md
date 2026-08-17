@@ -46404,3 +46404,32 @@ either way. Without it the sweep silently scores the wrong half.
 Open PRs: gh#1332 (develop, mine), gh#1316 (develop, mine, rtol 1e-14 under CI
 adjudication), gh#1324 (main, Jo's, 0 failures).
 
+
+### 2026-08-17 — gh#1332's macOS reds are runner infra ("Set up job")
+
+gh#1332 (the one-line ledger prune) came back with 2 failures on
+`macos-15-intel`. A ledger-line deletion touching only
+`tests/backend_xfail.txt` cannot affect the numpy matrix at all — those jobs do
+not read the backend ledger — so I checked HOW they failed rather than what
+failed:
+
+    job 95402134606   failing step: "Set up job"
+    job 95402134518   failing step: "Set up job"
+
+Neither job ever reached pytest. That is runner/image provisioning on the
+macos-15-intel image, not code. Re-run is refused for now (`status=queued`,
+i.e. the run has jobs pending); will fire once it completes.
+
+This is the **third distinct shape of "red job, no red test"** I have hit today,
+and it is worth keeping them together because the triage move is the same for
+all three and takes one API call:
+
+    step "Upload shard JUnit XML"  -> tests passed, artifact upload failed
+    step "Set up job"              -> job never started; runner/image problem
+    step "Re-fail on un-ledgered"  -> a REAL test failure, look at the log
+
+`gh api .../jobs/<id> -q '.steps[]|select(.conclusion=="failure")|.name'` names
+which one immediately. Grepping the log for `FAILED` distinguishes none of them
+— for the first two it finds nothing and leaves you guessing, or worse, invites
+a pointless re-run of a job whose tests were green.
+
