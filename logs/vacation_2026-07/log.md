@@ -46020,3 +46020,38 @@ Two lessons, both recorded in memory:
 
 The splice itself is clean: 278 -> 279 functions, exactly one added, none lost.
 
+
+### 2026-08-17 — gh#1324's two reds are BOTH infra; gh#1331 clean
+
+**gh#1331** is clean: 137 SUCCESS, 0 failures, 16 pending, codecov cleared (it
+was the mid-upload phantom, 21 sessions vs base 27 at the time). On track.
+
+**gh#1324** showed two failures. Read both rather than assuming, and neither is
+PR-caused — importantly, the first is in the shard containing MY new test, so
+the obvious guess was that I had broken something:
+
+1. `build (ubuntu-latest, 3.14, test_orbit/test_orbits/...)` — died on
+   `tests/test_symplectic_dxdv.py::test_symplectic_dxdv_base_bit_identity`,
+   `max|diff|=5.55112e-16` for leapfrog_c. That is the known intermittent
+   symplectic bit-identity flake, at EXACTLY the value
+   [[symplectic-bitidentity-intermittent]] records. My new test passed
+   (`test_actionsFreqsAngles_RuntimeError_1d PASSED [93%]`, symplectic failed at
+   96%).
+2. `Build wheel for cp314-macosx-x86_64` —
+   `CondaHTTPError: HTTP 000 CONNECTION FAILED` fetching conda-forge's osx-64
+   `repodata.json`. A network flake; the log itself says "HTTP errors are often
+   intermittent, and a simple retry will get you on your way."
+
+**They are in DIFFERENT workflow runs**, which turned out to matter:
+
+    job 95274988374  ->  run 31991202683  "Linux/Mac build"              in_progress
+    job 95274992345  ->  run 31991204123  "Wheel builder and uploader"   completed
+
+So the wheel one was re-runnable NOW even though the other was not. Re-ran it;
+gh#1324 dropped 2 failures -> 1. The orbit shard has to wait for its run to
+finish (`rerun-failed-jobs` is refused while any job is pending).
+
+Worth keeping: **a PR's failures are not necessarily in one run.** Checking
+`.run_id` per failing job, rather than assuming a single run, recovered a
+re-run that would otherwise have waited a full cycle.
+
