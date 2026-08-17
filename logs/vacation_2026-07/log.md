@@ -46772,3 +46772,54 @@ reason, and its docstring says so explicitly and will need updating.
 counts) said "already ported"; the behavioural measurement said the opposite.
 The source comment was the tiebreaker and it had been sitting there all along —
 [[read-code-docs-before-classifying]].
+
+### 2026-08-17 — AnySpherical array-input fix built (b9e0f105, unpushed)
+
+The gh#1323 port is done locally on `backend/anyspherical-array-mass`. It is a
+real bug fix, not a sync:
+
+    Rforce, 11x7 grid, whole-mesh vs point-by-point
+      before   76 of 77 cells differ, max rel 9.4e-01
+      after     0 of 77
+    Potential
+      before   raised (`if r == 0` on an array)
+      after     0 of 77
+
+Three parts, because `quad_over_limits` **was absent from this branch entirely**
+-- `galpy/util/quadpack.py` here predates #1323. I found that only when the
+import raised: my earlier structural check had reported "quadpack.py PRESENT on
+all three branches", which is true of the FILE and false of the FUNCTION. That
+is the third time in this same investigation that presence-vs-content has
+misled me, and I had already written the lesson down. The import error caught it
+in seconds, which is the argument for making the change and letting it fail
+rather than reasoning about whether it would.
+
+* `quad_over_limits` brought over verbatim from main.
+* `_rawmass`'s numpy arm routes through it (was integrating to
+  `numpy.atleast_1d(r).flatten()[0]`). Backend arm untouched.
+* `_revaluate` splits into `_revaluate_scalar` + per-element loop, matching main.
+
+**numpy byte-identity verified, not assumed:** Rforce and Potential at
+r = 0.05, 0.3, 1.0, 2.5, 5.0 match unmodified develop to the last digit
+(-3.80952380952380878e+01, -6.08904487544687623e+00, ...). `quad_over_limits`
+is documented as scalar-in/scalar-out through the same `quad` call, but that is
+a claim about the helper, not about this call site.
+
+Gate: numpy 52 passed / 1 skipped, jax 52 / 1, torch 52 / 1, re-run on numpy
+after ruff reformatted the file. No ledger delta.
+
+`_force_accepts_arrays = False` KEPT; only its comment corrected. It was
+justified as a guard against exactly this collapse and is now purely a
+driving/performance choice. Flipping it is a separate decision, not smuggled in.
+
+Held unpushed: two develop PRs (gh#1332, gh#1334) are already open.
+
+### 2026-08-17 — CI snapshot
+
+    gh#1333 -> main      148 success, 0 fail, all-clear re-run queued
+    gh#1334 -> develop   129 success, codecov/patch now PASSES, project
+                         -0.03% and still converging (-54 -> -24.7 -> -13.9
+                         -> -0.03 as uploads land). Base is 091053a, i.e.
+                         behind gh#1316, so a stale-base component is likely
+                         too. Not acting until the run completes.
+    gh#1332 -> develop   149 queued behind the other two (runner-saturated)
