@@ -55,9 +55,9 @@ the test aims at the backend arm. Local gate: 45 numpy / 40+6skip jax / 45 torch
 0 failures (the one `_secondderivs_c` red is this worktree's missing C
 extension, verified via `load_libgalpy() -> False`, and it predates the change).
 
-**gh#1324 → `main`** `fix/potential-array-input-where`, head `651e75ed`.
-**0 failures / 151 SUCCESS**, `mergeStateStatus=BLOCKED` — that is the normal
-end state for a main PR, which only Jo can merge.
+**gh#1324 → `main`** — **MERGED by Jo 2026-08-17 16:22Z, merge commit `de8e63c0`.**
+Array-input `if -> xp.where` for SphericalShell + HomogeneousSphere, plus the
+`numpy.infty` -> `numpy.inf` fixes, are now on main.
 **Jo's to merge.** SphericalShell + HomogeneousSphere accept array input
 (if→where, scalar path bit-identical behind `numpy.ndim`); `numpy.infty` →
 `numpy.inf` at two live-`AttributeError` sites. Two things happened to it today,

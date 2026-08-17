@@ -46554,3 +46554,79 @@ Not started: two PRs are already open. Queued as the next code PR.
 paths, not a proxy — and the discriminator that settled which side was wrong was
 galpy's OWN `zforce` and the far-field `Phi(1e-4)`, i.e. two independent
 references rather than my expectation of what a razor-thin disk should do.
+
+### 2026-08-17 — gh#1323 was never cherry-picked, and the structural check lied
+
+Jo asked whether 1323/1324 had been cherry-picked into the backend branches.
+**They had not**, and the way I nearly got this wrong is the point.
+
+The structural signals all said "present": `galpy/util/quadpack.py` (added by
+1323) exists on main, feat/backends AND feat/backends-develop, and
+`AnySphericalPotential.py` has the same ndim/atleast_1d hit count on main and
+develop. Only `git merge-base --is-ancestor` disagreed (NO for both 342a2dac
+and de8e63c0), which is easy to wave away because the backend branches are
+REBASED onto main rather than merged.
+
+The behavioural check settled it. AnySpherical `Rforce`, whole-mesh vs
+cell-by-cell on the same 11x7 grid:
+
+    main                    0 of 77 cells differ    max rel 0.0
+    feat/backends-develop  76 of 77 cells differ    max rel 9.4e-01
+
+So 1323's element-wise-for-array-r fix is **behaviourally absent** from develop.
+1324 is milder: develop already accepts arrays (verified by calling `__call__`
+and `Rforce` with arrays on both potentials) because the backend migration got
+there by another route, and `numpy.infty` is clean on both branches; only its
+tests are missing.
+
+**Consequence for gh#1316:** 1323 also edits `interpRZPotential.py`, the file
+gh#1316 touches, and once it lands on develop AnySpherical broadcasts correctly
+there -- which removes the numpy fallback that gh#1316's real-potential test
+currently relies on. So the cherry-pick has to come AFTER gh#1316 merges, and
+that test's premise needs re-checking against the new reality.
+
+*Lesson:* file presence and symbol counts are not behaviour. For "did this fix
+land", run the measurement the fix changes.
+
+### 2026-08-17 — numpy Phi misses the midplane cusp (main PR, 07549c0a)
+
+`_evaluate` integrated with plain `points=[R]`, so for |z| << R quad stepped
+over the O(|z|)-wide peak at a=R and Phi came back FLAT off the midplane:
+
+    Phi(z) - Phi(0) at R=0.5      before        after       expected
+      z = 1e-8                  +4.436e-12   +1.876e-08   +2.103e-08
+      z = 1e-6                  -9.637e-11   +2.103e-06   +2.103e-06
+      z = 1e-4                  +2.1029e-04  +2.1029e-04  +2.1030e-04
+
+The missing term is exactly 2*pi*Sigma(R)*|z|, i.e. the vertical force: Phi and
+galpy's own zforce (-2.102952 at z=1e-8) contradicted each other below
+|z| ~ 1e-5.
+
+**Two hypotheses tested and REFUTED before the right one:**
+
+1. *scipy epsabs truncation.* Tightening to epsabs=1e-14 does not move Phi(dz)
+   at all (-4.9e-12) and returns NaN at z=0. Not tolerance-limited: the nodes
+   never land in the peak, so the error estimate stays small and quad returns
+   confidently wrong.
+2. *ellipk(m) rounding alone.* Switching to the stable complement + ellipkm1
+   WITHOUT resolving the peak still gives +8.2e-13 at z=1e-8. The complement is
+   necessary (it makes the peak evaluable at all -- panelling the old integrand
+   returns nan/-inf because m rounds to exactly 1.0 at a=R) but not sufficient.
+
+**The fix was already in the file.** `_quad_apeak` does exactly this via the
+substitution a = R + |z|t, and its own comment describes the identical failure
+for zforce ("came back +1.9e-8 instead of -1.86"). It was wired into zforce and
+Rzderiv and simply never into Phi. I had already written a NEW `peak_points`
+helper into `galpy/util/quadpack.py` and wired it up before finding this;
+reverted it. Search the file you are editing before adding a mechanism to it.
+
+**And the test was passing on two cancelling errors.**
+`test_forceAsDeriv_potential` probes the midplane with a ONE-SIDED difference.
+Phi has a |z| kink there, so the one-sided slope is +2*pi*Sigma(R), not
+dPhi/dz; the assertion `Fz=0 => dPhi/dz=0` only held because Phi was flat. With
+Phi fixed it reads -1.876. Changed to a CENTRED difference at z == 0 only: 0
+for a kink, -Fz for a smooth potential, O(dz^2) instead of O(dz). Both changes
+in one commit because neither is correct without the other.
+
+NOT byte-identical on the numpy path, deliberately, and flagged to Jo before
+doing it.
