@@ -45757,3 +45757,46 @@ is not a backend gap and no floor or quadrature change reaches it.
 
 Throwaway branch deleted; `zforce-relative-floor` back at `e371100c` unmodified.
 
+
+### 2026-08-17 — gh#1323 MERGED to main; unblocked gh#1324's stacked-squash conflict
+
+Jo merged **gh#1323** (main `342a2dac`). gh#1324 auto-retargeted from gh#1323 to
+`main` and immediately went **DIRTY**.
+
+That is the expected consequence of a *squash* merge under a stacked PR: this
+branch carries gh#1323's commits, main now has the same CONTENT under a
+different commit, and git cannot line the two up.
+
+One conflict, in `tests/test_potential.py`, exactly where the two PRs touch the
+same structure -- `_make_pots_potential_array_input`'s `rmpots`. main already has
+`AnySphericalPotential` removed (gh#1323's own change) and still lists
+`SphericalShellPotential` + `HomogeneousSpherePotential`; removing those two is
+what gh#1324 exists to do. Resolved to HEAD.
+
+Merged rather than rebased -- force-push is off-limits on an open PR
+([[no-force-push-open-prs]]) and the squash collapses the merge commit anyway,
+so nothing extra reaches main. Same technique as gh#1328's sync.
+
+**Verified rather than assumed**, four ways:
+
+* no conflict markers anywhere in `galpy/` or `tests/`
+* gh#1323's content arrived through the merge (`quad_over_limits` in both
+  `util/quadpack.py` and `AnySphericalPotential.py`)
+* gh#1324's own change intact (`numpy.ndim` guards in both potentials)
+* `-k "array_input or shell_sphere or anyspherical"`: **55 passed, 1 skipped**
+
+And the one that actually proves the resolution was right: **the PR diff vs main
+is now scoped to gh#1324's files alone** --
+
+    56+  0-  galpy/potential/HomogeneousSpherePotential.py
+     1+  1-  galpy/potential/RazorThinExponentialDiskPotential.py
+    24+  1-  galpy/potential/SphericalShellPotential.py
+    44+  2-  tests/test_potential.py
+
+gh#1323's four files have dropped out of the diff entirely, which is what says
+the merge absorbed them instead of re-proposing them. Pushed `ef37f197`; DIRTY
+-> BLOCKED, CI running.
+
+gh#1330 unchanged: still the lone macOS SIMBAD flake, run still in progress so
+the targeted re-run is still refused.
+
