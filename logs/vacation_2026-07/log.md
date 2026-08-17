@@ -46147,3 +46147,44 @@ threads are (a) gh#1316, my own DRAFT on develop from 08-15 (interpRZPotential
 grid guard) that I had lost track of, and (b) the 3 torch traced timeouts, which
 want a dispatched jit run now that the runners are free.
 
+
+### 2026-08-17 — gh#1316: the decision I never asked, and it may have dissolved
+
+gh#1324 is at **0 failures / 149 SUCCESS** — Jo's to merge on main. So I picked
+up gh#1316, the DRAFT of mine on develop from 08-15 that I had lost track of
+until it appeared in `gh pr list`.
+
+**What it is:** `interpRZPotential._grid_eval` accepts its vectorised whole-mesh
+result only if it matches the scalar path BIT FOR BIT. That holds on numpy, but
+on jax/torch a whole-mesh reduction associates differently, so the guard rejects
+a **1.6e-15** difference and falls back to a cell-by-cell scalar loop on EVERY
+backend grid build. Measured: 201x201 MWPotential constructor **0.09 s numpy vs
+136.70 s jax (1643x)**, with 80838 scalar evaluator calls. The fix makes the
+guard backend-aware (numpy keeps `array_equal`; backend arrays get rtol 1e-12,
+~600x the observed difference) → **136.70 s -> 2.34 s, 58x**.
+
+**Why it was a draft:** it left one jax failure — `test_interpolation_potential_use_c`
+at 1.5987e-14 against a shipped 1e-14 threshold — and fixing that means loosening
+a shipped numerical assertion. Tolerance loosening is pre-approved for TORCH
+only; this is jax. So it was Jo's call.
+
+**And I never asked him.** It sat two days. That is the real miss here: a 58x
+speedup parked on a question I raised in a PR body and never surfaced.
+
+**But the premise had gone stale.** CI's last run (08-15) shows the failing test
+is `test_interpRZPotential_grid_falls_back_for_nonbroadcasting_potential`, NOT
+the `use_c` one the body describes. So I synced the branch onto current develop
+(`091053a9`) and measured instead of asking on a two-day-old story:
+
+    forced jax, tests/test_interp_potential.py:   39 passed, 6 skipped, 0 FAILED
+    including test_interpolation_potential_use_c  PASSED
+    and the fallback-forcing tests               PASSED (guard still exercised)
+
+numpy and torch show one failure, `test_interpolation_potential_secondderivs_c`
+— but that fails on **develop alone** too (A/B'd, both arms run this time). It is
+the missing-C-extension artifact these worktrees produce, not the branch.
+
+So the blocking question may simply have dissolved on the newer base. Pushed the
+sync; letting real CI judge before un-drafting or bringing Jo a decision that no
+longer exists.
+
