@@ -46321,3 +46321,50 @@ But that alone does NOT license calling it by-design: only `-jit` is ledgered, s
 **eager passes and traced does not**, and that difference is real and unexplained.
 Next step is the eager-vs-traced comparison at that point, not a by-design label.
 
+
+### 2026-08-17 — RETRACTION: gh#1316's jax blocker is NOT gone, and I un-drafted on a bad measurement
+
+I told Jo the jax failure was resolved on the current base, and un-drafted
+gh#1316 on that basis. **CI says otherwise**, and CI is right.
+
+The jax shard finished after my earlier status check and failed on
+`test_interpRZPotential_grid_falls_back_for_nonbroadcasting_potential` — the
+same test as the 08-15 run. My local run of that file passed. CI and local
+disagree, and I trusted local.
+
+**What the assertion actually says.** It asserts
+`array_equal(got._rforceGrid, ref._rforceGrid)`, i.e. that the built grid MATCHES
+the cell-by-cell reference — which is only true if the guard FELL BACK. The
+message spells it out: "the vectorised path was accepted when it should have
+fallen back". The two arrays print identically, so the disagreement is at ULP
+level: on CI, `AnySphericalPotential`'s vectorised whole-mesh result agrees with
+the scalar path closely enough that **my rtol=1e-12 accepts it**, and the
+fallback never fires.
+
+**So the PR's own premise needs re-checking.** Its body claims
+"`AnySphericalPotential` still falls back: 2/2 grids", measured when AnySpherical
+**mis-broadcast in 95% of cells**. gh#1323 fixed exactly that broadcasting. If
+AnySpherical now agrees to ULP, then either
+
+  (a) it still mis-broadcasts somewhere and rtol=1e-12 is too loose to catch it
+      — my guard is wrong; or
+  (b) it is genuinely fixed, and the TEST's premise ("this potential must force
+      a fallback") is stale — the test needs a different non-broadcasting
+      potential, not a looser guard.
+
+Those need different fixes and I do not yet know which holds. Measuring
+AnySpherical's actual vectorised-vs-scalar disagreement is the next step.
+
+**Two process failures here, both mine:**
+
+1. **I un-drafted on a local measurement that CI contradicts.** The local
+   worktree has no C extension and runs py3.13 against CI's py3.14; for a
+   ULP-level guard that is not a valid environment. I have been bitten by the
+   missing-C-extension worktree three times today and still used it as the
+   basis for a claim to Jo.
+2. **I reported "0 failures" from a partially-finished run.** The jax shard was
+   among the 37 pending when I looked. [[never-report-partial-run-as-result]]
+   exists for exactly this, and I wrote it.
+
+gh#1316 should go back to draft until this is resolved.
+
