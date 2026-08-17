@@ -46120,3 +46120,30 @@ A/B is only valid if the arms differ in ONE thing. Here the arms differed in
 commit AND in event type, and the event type was the confound. Before believing
 any pass/fail split, enumerate what ELSE differs between the two samples.
 
+
+### 2026-08-17 — gh#1324 driven to green; the flake reading was right after all
+
+Attempt 3 of the push run **succeeded** — the symplectic bit-identity test
+passed. That confirms the same-SHA-duplicate diagnosis from the previous wake:
+the failure was intermittent, not my coverage-test commit. The sequence was
+push-run attempt 1 fail, attempt 2 fail, attempt 3 pass, with the pull_request
+arm green at that SHA throughout.
+
+Two failures in a row at an identical value is what made me doubt the flake
+reading, and that instinct was reasonable — it just was not decisive. What WAS
+decisive is the pass/fail split across the two same-SHA runs, plus the fact that
+the test uses `MiyamotoNagaiPotential` alone, which this PR does not touch.
+
+`all-clear` was then the last red, purely downstream: it had judged while the
+shard was still failing. It lives in its OWN workflow run (`all-clear`,
+event=pull_request, attempt 1), so `rerun-failed-jobs` was accepted — unlike a
+re-run of a re-run. Re-ran it; gh#1324 is now **0 failures / 148 SUCCESS**, with
+all-clear + RTD + pre-commit finishing.
+
+gh#1324 is Jo's to merge on `main`. Nothing further from me on it.
+
+**Loop state:** everything of mine on develop is merged (`091053a9`). Remaining
+threads are (a) gh#1316, my own DRAFT on develop from 08-15 (interpRZPotential
+grid guard) that I had lost track of, and (b) the 3 torch traced timeouts, which
+want a dispatched jit run now that the runners are free.
+
