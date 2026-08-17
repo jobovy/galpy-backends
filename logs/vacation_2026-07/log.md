@@ -45800,3 +45800,24 @@ the merge absorbed them instead of re-proposing them. Pushed `ef37f197`; DIRTY
 gh#1330 unchanged: still the lone macOS SIMBAD flake, run still in progress so
 the targeted re-run is still refused.
 
+
+### 2026-08-17 — gh#1330 flake re-run fired at last; gh#1324 codecov is a double phantom
+
+gh#1330's run finally reached `status=completed`, so
+`rerun-failed-jobs` was accepted (it had been refused with `403 already running`
+across three wakes while jobs were pending). Re-running the macOS SIMBAD flake
+plus `all-clear`, which had gone red only downstream of it. 150 SUCCESS behind
+them.
+
+gh#1324's `codecov/project` red is a phantom on BOTH sides, which is a variant
+worth naming:
+
+    base  342a2dac (main)  coverage=97.64  sessions=12
+    head  ef37f197         coverage=77.62  sessions= 8
+
+main was merged minutes ago so its OWN push run is still uploading -- 97.64%
+against a true 99.96% -- and gh#1324 has 66 jobs still queued. So neither side
+of the comparison is settled. The usual discriminator ("do the session counts
+match?") needs care here: they don't match, but the base is ALSO incomplete, so
+"head < base" carries no information at all yet. Re-check once both settle.
+
