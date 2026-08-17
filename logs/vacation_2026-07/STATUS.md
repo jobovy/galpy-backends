@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-17 (gh#1331 merged)
+# Vacation status snapshot — 2026-08-17 (gh#1331 merged; gh#1316 diagnosis)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -14,7 +14,50 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## Open PRs
 
+**gh#1332 → `feat/backends-develop`** ledger prune (2 stale `torch-jit
+test_eccentricity` lines). Head `bb9a17e3`. **All 4 build reds are `Set up job`**
+— the jobs never ran a single test, on both ubuntu and macos, including a
+same-SHA push/pull_request twin pair that BOTH failed. GitHub was returning
+HTTP 503 on the API at the same time; this is platform infra, not the PR.
+Re-run is blocked until the run's remaining jobs finish (`rerun-failed-jobs`
+is refused while any job is pending).
+
+**gh#1316 → `feat/backends-develop`** interpRZPotential grid spot-check guard,
+head **`033684e1`** (pushed 2026-08-17, CI running). **DIAGNOSED AND FIXED — the
+tolerance was never the problem.**
+
+The failing `test_..._falls_back_for_nonbroadcasting_potential` asserted
+`numpy.array_equal` against the cell-by-cell path, i.e. exactly the
+bit-exactness this PR deliberately stops requiring. No value of `rtol` could
+have satisfied it, and I spent two rounds (1e-12 -> 1e-14) tightening against
+it. It was stable on develop only because the guard ALSO compared with
+`array_equal` — guard-criterion and test-criterion were the same predicate, so
+any ULP difference forced a fallback and a fallback is cell-by-cell by
+construction. The test could not fail, and could not measure the guard either.
+
+    AnySphericalPotential, whole-mesh vs cell-by-cell, on the test's own grid
+      numpy   76 of 77 cells differ, worst 9.4e-01   <- non-broadcasting
+      jax      0 of 77 cells differ                  <- broadcasts CORRECTLY
+
+Fixed by giving the spot-check fallback a synthetic-evaluator test (matching its
+two siblings in the same file) that injects 1e-13 relative — 10x above the
+allowance, ~60x above the 1.6e-15 noise it exists to tolerate — in two shapes,
+one of them a single cell at a location `_spot_check_cells` is known to visit.
+The real-potential test now asserts the contract that holds: bit for bit on
+numpy, within 1e-14 on a backend.
+
+    A/B          numpy   jax    torch
+    rtol 1e-14   pass    pass   pass
+    rtol 1e-12   pass    FAIL   FAIL
+
+numpy passing both arms is the point — it takes `rtol=0` regardless, confirming
+the test aims at the backend arm. Local gate: 45 numpy / 40+6skip jax / 45 torch,
+0 failures (the one `_secondderivs_c` red is this worktree's missing C
+extension, verified via `load_libgalpy() -> False`, and it predates the change).
+
 **gh#1324 → `main`** `fix/potential-array-input-where`, head `651e75ed`.
+**0 failures / 151 SUCCESS**, `mergeStateStatus=BLOCKED` — that is the normal
+end state for a main PR, which only Jo can merge.
 **Jo's to merge.** SphericalShell + HomogeneousSphere accept array input
 (if→where, scalar path bit-identical behind `numpy.ndim`); `numpy.infty` →
 `numpy.inf` at two live-`AttributeError` sites. Two things happened to it today,

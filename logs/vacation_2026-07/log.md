@@ -46433,3 +46433,65 @@ which one immediately. Grepping the log for `FAILED` distinguishes none of them
 — for the first two it finds nothing and leaves you guessing, or worse, invites
 a pointless re-run of a job whose tests were green.
 
+
+### 2026-08-17 — gh#1316: the test encoded the contract the PR exists to change
+
+The `test_interpRZPotential_grid_falls_back_for_nonbroadcasting_potential`
+failure on the jax shard is not a tolerance that is still too loose. It is a
+**necessary consequence of the change**, and I spent two rounds tightening
+`rtol` (1e-12 -> 1e-14) against a test that no value of `rtol` can satisfy.
+
+The mechanism, once measured on both sides:
+
+    AnySphericalPotential, whole-mesh vs cell-by-cell, on the test's own grid
+      numpy   76 of 77 cells differ, worst 9.4e-01   <- genuinely non-broadcasting
+      jax      0 of 77 cells differ                  <- broadcasts CORRECTLY
+
+So the potential the test is named after is only non-broadcasting on numpy.
+On develop the guard compared with `numpy.array_equal`, which made the guard's
+criterion and the test's criterion **the same predicate**: any ULP difference
+forced a fallback, and a fallback returns the cell-by-cell loop by construction,
+so the test's `array_equal` could not fail. That coupling — not the potential —
+is what made it stable.
+
+This PR deliberately breaks that coupling. It gives the guard a 1e-14
+reassociation allowance, whose entire purpose is that a *correct* vectorised
+result differing by ~1.6e-15 is ACCEPTED instead of triggering a 1643x fallback
+on a 201x201 MWPotential build. Once a sub-allowance difference is accepted, the
+shipped grid is no longer bit-identical to the scalar path, and a test demanding
+`array_equal` fails. numpy keeps `rtol=0`, so it never sees this; only the
+backend shards do. Passing in isolation and failing in the shard was CI's
+floating point differing from my box's, nothing more.
+
+Fix, in two parts:
+
+* the fallback BRANCH now has a synthetic-evaluator test, matching how its two
+  sibling fallbacks (bad shape, raises) are already tested in this file. It
+  injects a 1e-13 relative error — 10x above the allowance so it must be caught,
+  ~60x above the 1.6e-15 noise the allowance exists to tolerate — in two shapes:
+  a whole-array offset, and a single wrong cell at a location
+  `_spot_check_cells` is known to visit, which pins the sample/guard coupling
+  rather than the guard alone. It multiplies by a **namespace-matched** mask:
+  returning numpy here would send the guard down its `rtol=0` branch and quietly
+  stop testing the tolerance arm at all.
+* the real-potential test now asserts the contract that actually holds — the
+  shipped grid does not deviate from the scalar path by more than the guard
+  permits: bit for bit on numpy, within 1e-14 on a backend.
+
+A/B, which is the only reason I believe any of this:
+
+    guard rtol      numpy      jax        torch
+    1e-14 (PR)      pass       pass       pass
+    1e-12 (broken)  pass       FAIL       FAIL
+
+numpy passing on both arms is the point, not a gap: it takes the `rtol=0` path
+regardless, which confirms the new test is aimed at the backend arm. The old
+test could not have produced that table — it was insensitive to `rtol` in the
+direction that mattered and oversensitive in the direction that did not.
+
+**The lesson worth keeping:** when a PR changes a contract, the test that
+encodes the OLD contract does not "fail" — it disagrees. I read a red shard
+three times as evidence my new tolerance was wrong, when it was evidence the
+assertion predates the tolerance. The tell was there from the first run and I
+walked past it: the guard and the test were computing the *same comparison*, so
+the test could never have been measuring the guard.
