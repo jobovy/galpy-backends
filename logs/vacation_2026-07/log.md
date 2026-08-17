@@ -45870,3 +45870,30 @@ holds only when both sides are the SAME event type and both complete. Otherwise
 go straight to per-file, and ask whether the PR could reach the file at all
 before believing the number.
 
+
+### 2026-08-17 — gh#1330 MERGED (develop acfc7d88); gh#1331 opened
+
+Jo re-ran gh#1330's stale `all-clear` and it passed, which was the one thing I
+could not clear myself (`403: this workflow run cannot be retried` — a re-run of
+a re-run is refused).
+
+**gh#1330 merged**: 152 SUCCESS / 0 failures, both codecov contexts green, and
+coverage **15 misses vs base 15** with head on the MORE complete side (28
+sessions vs 26), so no decrease was possible. Audited the diff before merging —
+44+/2- in `galpy/backend/quadrature.py` and 24+ in its test; no if→`xp.where`
+array-input issues, no duplication, the constants (`_LOG_K`/`_LOG_U`/`_LOG_W`)
+sit at module scope next to `_QUAD_N` where the other quadrature constants live.
+develop `da11a1a8` -> **`acfc7d88`**.
+
+**gh#1331 opened** for the zforce relative floor, synced onto the new develop
+first and re-gated on the synced tree rather than trusting the pre-sync run:
+
+    -k anyaxisym --backend jax --jit  ->  11 passed, 1 skipped, 2 xfailed, 0 FAILED
+
+That is traced AnyAxisym at **zero failures**, now with both fixes in the same
+tree via develop rather than via a throwaway merge. The arc, every step measured:
+
+    baseline 3  ->  +gh#1328 2  ->  +gh#1330 1  ->  +gh#1331 0
+
+Two PRs open: gh#1324 (main, Jo's) and gh#1331 (develop, mine).
+
