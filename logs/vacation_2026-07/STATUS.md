@@ -1,168 +1,112 @@
-# Vacation status snapshot — 2026-08-17 (gh#1331 merged; gh#1316 diagnosis)
+# Vacation status snapshot — 2026-08-17 (gh#1333 opened; GitHub outage)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
 
 ---
 
-## Nothing is blocked on Jo
+## Nothing is blocked on Jo except merging main PRs
 
 ## Branch state
 
-    main                   342a2dac   (gh#1323 merged 2026-08-17)
+    main                   bea36ff1   (gh#1323 342a2dac, gh#1324 de8e63c0, both merged)
     feat/backends-develop  091053a9   (gh#1327/1328/1330/1331 merged)
 
 ## Open PRs
 
-**gh#1332 → `feat/backends-develop`** ledger prune (2 stale `torch-jit
-test_eccentricity` lines). Head `bb9a17e3`. **All 4 build reds are `Set up job`**
-— the jobs never ran a single test, on both ubuntu and macos, including a
-same-SHA push/pull_request twin pair that BOTH failed. GitHub was returning
-HTTP 503 on the API at the same time; this is platform infra, not the PR.
-Re-run is blocked until the run's remaining jobs finish (`rerun-failed-jobs`
-is refused while any job is pending).
+**gh#1333 → `main`** `fix/anyaxis-numpy-midplane-cusp`, head `07549c0a`.
+**NEW today. Jo's to merge.** Two changes that cannot be separated:
 
-**gh#1316 → `feat/backends-develop`** interpRZPotential grid spot-check guard,
-head **`033684e1`** (pushed 2026-08-17, CI running). **DIAGNOSED AND FIXED — the
-tolerance was never the problem.**
+* `AnyAxisym._evaluate` routed through the existing `_quad_apeak`, so Phi stops
+  missing the `2*pi*Sigma(R)*|z|` midplane cusp for `|z| << R`. Before/after at
+  R=0.5, against `2*pi*Sigma = 2.102952` and galpy's own
+  `zforce(0.5,1e-8) = -2.102952`:
 
-The failing `test_..._falls_back_for_nonbroadcasting_potential` asserted
-`numpy.array_equal` against the cell-by-cell path, i.e. exactly the
-bit-exactness this PR deliberately stops requiring. No value of `rtol` could
-have satisfied it, and I spent two rounds (1e-12 -> 1e-14) tightening against
-it. It was stable on develop only because the guard ALSO compared with
-`array_equal` — guard-criterion and test-criterion were the same predicate, so
-any ULP difference forced a fallback and a fallback is cell-by-cell by
-construction. The test could not fail, and could not measure the guard either.
+        Phi(z)-Phi(0)   before        after        expected
+          z=1e-8      +4.436e-12   +1.876e-08   +2.103e-08
+          z=1e-6      -9.637e-11   +2.103e-06   +2.103e-06
 
-    AnySphericalPotential, whole-mesh vs cell-by-cell, on the test's own grid
-      numpy   76 of 77 cells differ, worst 9.4e-01   <- non-broadcasting
-      jax      0 of 77 cells differ                  <- broadcasts CORRECTLY
+* `test_forceAsDeriv_potential` midplane probe one-sided -> CENTRED, at z==0
+  only. The old assertion only passed because Phi was flat: two cancelling
+  errors. With Phi fixed the one-sided FD reads -1.876 and it fails.
 
-Fixed by giving the spot-check fallback a synthetic-evaluator test (matching its
-two siblings in the same file) that injects 1e-13 relative — 10x above the
-allowance, ~60x above the 1.6e-15 noise it exists to tolerate — in two shapes,
-one of them a single cell at a location `_spot_check_cells` is known to visit.
-The real-potential test now asserts the contract that holds: bit for bit on
-numpy, within 1e-14 on a backend.
+**NOT byte-identical on the numpy path** — deliberate, flagged to Jo first.
+Gate: full `test_potential.py` 8 failed / 1225 passed / 102 skipped on BOTH this
+branch and pristine main, identical failing sets (all environmental here: no C
+extension, no pynbody).
 
-    A/B          numpy   jax    torch
-    rtol 1e-14   pass    pass   pass
-    rtol 1e-12   pass    FAIL   FAIL
+**gh#1316 → `feat/backends-develop`** interpRZPotential grid guard, head
+`033684e1`. Reds are 6 x `Set up job` (infra) + the known Windows
+`test_streamgapdf_sample` flake + codecov. Re-runs FIRED 2026-08-17 once the
+GitHub outage cleared.
 
-numpy passing both arms is the point — it takes `rtol=0` regardless, confirming
-the test aims at the backend arm. Local gate: 45 numpy / 40+6skip jax / 45 torch,
-0 failures (the one `_secondderivs_c` red is this worktree's missing C
-extension, verified via `load_libgalpy() -> False`, and it predates the change).
+**gh#1332 → `feat/backends-develop`** ledger prune. Reds were 4 x `Set up job`
++ codecov. Re-runs FIRED.
 
-**gh#1324 → `main`** — **MERGED by Jo 2026-08-17 16:22Z, merge commit `de8e63c0`.**
-Array-input `if -> xp.where` for SphericalShell + HomogeneousSphere, plus the
-`numpy.infty` -> `numpy.inf` fixes, are now on main.
-**Jo's to merge.** SphericalShell + HomogeneousSphere accept array input
-(if→where, scalar path bit-identical behind `numpy.ndim`); `numpy.infty` →
-`numpy.inf` at two live-`AttributeError` sites. Two things happened to it today,
-both resolved:
+## Committed, not yet pushed
 
-* It went **DIRTY** when gh#1323 squash-merged (stacked PR: same content on main
-  under a different commit). Resolved by merging `main` in — one conflict, in the
-  `rmpots` list both PRs edit. Diff vs main is now scoped to its own 4 files.
-* It genuinely **cost 2 lines of coverage** (26 vs gh#1323's 24). Fixed — see
-  "the coverage lesson" below.
+**`851510e3`** on `backend-jit/anyaxis-traced-phi` (off develop `091053a9`):
+traced Phi's a=R log singularity at z=0, `_evaluate_gl` -> `transformed_quad`.
 
-## Merged since the last snapshot
+    R      before      after
+    0.2    2.97e-05    1.86e-12
+    0.5    4.18e-05    1.05e-12
+    1.0    3.18e-05    2.54e-14
 
-* **gh#1327** → `24500321` — the develop coverage regression, 20 → 15 misses.
-* **gh#1328** → `da11a1a8` — AnyAxisym surfdens fixtures dispatch on
-  `is_backend_array`, not `get_namespace`. Coverage 15 vs base 15.
-* **gh#1330** → **`acfc7d88`** — the `finite_part_quad` log subtraction.
-  152 SUCCESS, coverage 15 vs 15 with head on the *more* complete side.
-* **gh#1331** → **`091053a9`** — the zforce relative floor. 152 SUCCESS,
-  coverage 15 vs base 15, both sides at 28 sessions. Traced AnyAxisym is now
-  at ZERO failures on develop.
-* **gh#1323** → main `342a2dac` (Jo).
+z>0 unchanged; numpy untouched (13 passed / 0 failed on `-k anyaxisym`).
+**LEDGER DELTA: none** — 11 passed, 2 xfailed, both still `x` not `X`.
 
-## Traced AnyAxisym: unledgered failures CLOSED, 4 ledgered entries REMAIN
+Held back only to keep PR count at two-into-develop. It is DISJOINT from
+gh#1316 (AnyAxisym*.py vs interpRZPotential.py), so it can open as soon as a
+slot frees.
 
-Every step measured on `-k anyaxisym --backend jax --jit`, not projected:
+## The cherry-pick backlog (found 2026-08-17, Jo asked)
 
-    baseline                       3 failed   (1 accuracy + 2 tracer errors)
-    + gh#1328 (fixture)            2 failed
-    + gh#1330 (log subtraction)    1 failed
-    + gh#1331 (zforce floor)       0 failed   <- MERGED, on develop
+**gh#1323 was never cherry-picked into the backend branches and it matters.**
+Structural checks all said "present" (`galpy/util/quadpack.py` on all three
+branches, matching symbol counts); the behavioural check disagreed:
 
-Last row verified on the synced branch: **11 passed, 1 skipped, 2 xfailed, 0
-FAILED**. The xfails report `x`, not `X` — no hidden XPASS, no ledger delta.
+    AnySpherical Rforce, whole-mesh vs cell-by-cell
+      main                    0 of 77 cells differ
+      feat/backends-develop  76 of 77 cells differ, max rel 9.4e-01
 
-**That "0 FAILED" is about UNLEDGERED failures only, and I have been saying
-"closed" too loosely.** Four `-jit` ledger entries for AnyAxisym survive, and
-still fail on re-measurement against develop `091053a9`:
+gh#1324 is milder — develop already accepts arrays via the backend migration
+(verified by calling `__call__`/`Rforce` with arrays), `numpy.infty` clean on
+both; only its tests are missing.
 
-    jax-jit / torch-jit  test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
-    jax-jit / torch-jit  test_forceAsDeriv_potential[AnyAxisymmetricRazorThinDiskPotential]
+**Ordering:** gh#1323 also edits `interpRZPotential.py`, which gh#1316 touches,
+and once it lands AnySpherical broadcasts correctly on develop — removing the
+numpy fallback gh#1316's real-potential test relies on. So cherry-pick AFTER
+gh#1316 merges, then re-check that test's premise.
 
-They are PRE-EXISTING (added in gh#1281/gh#1284, well before gh#1331), so not a
-regression from the zforce floor — checked with `git log -S` on the ledger files
-rather than assumed. `forceAsDeriv` fails at exactly **(R,Z) = (0.500, 0.000)**
-with `diff = 7.35e+03, rel. diff = inf`, i.e. against a true value of zero: the
-vertical force as a vertical DERIVATIVE of Phi, evaluated at the one point where
-a razor-thin disk's `Fz` is genuinely discontinuous. Eager passes and only
-`-jit` is ledgered, so there is a real traced-vs-eager difference to explain
-before this can be called by-design.
+## Remaining AnyAxisym `-jit` ledger entries: 4, none burnable yet
 
-**Out of scope, and NOT a backend gap:** the large-R arm of the same family.
-`Sigma(10) = 7.8e-13` sits ~4 orders below the quadrature's own noise and it
-fails **identically on numpy** — both paths return 1.206e+04 relative at R=10,
-z/R=1e-6. Two independent implementations giving the same wrong number is the
-evidence that it is the formulation, not the migration.
+    jax-jit / torch-jit  test_poisson_surfdens_potential[AnyAxisym...]
+    jax-jit / torch-jit  test_forceAsDeriv_potential[AnyAxisym...]
 
-Residue from the original dispatched-jit 7: **3 torch traced timeouts**,
-slow-skip material, wanting a fresh dispatched run. Deliberately not dispatched
-while PR runs hold the runners.
-
-## The coverage lesson of the week
-
-gh#1324 lost 2 lines in **`galpy/orbit/Orbits.py`** — a file it does not touch.
-I twice argued it therefore could not be responsible. **That was wrong.** Proven
-by tracing lines 2991-2992 on both trees:
-
-    potential              base (gh#1323)   gh#1324
-    SphericalShell              hits         NO LONGER hits
-    HomogeneousSphere           hits         NO LONGER hits
-    AnyAxisymRazorThin          hits         hits
-
-Those two potentials were the only live coverers of the
-`except (ValueError, TypeError, IndexError)` per-element fallback in
-`Orbits.E()`; making them accept arrays stops the vectorised call raising, so
-nothing enters the branch. Fixed with a forcing test using
-`AnyAxisymmetricRazorThinDiskPotential`, which still rejects arrays — and which
-checks the fallback's VALUES against a per-element reference, not merely that
-the line executes.
-
-**File locality is not causal locality.** The right question is never "does the
-PR touch that file" but "could the PR change whether that branch is ENTERED".
+`forceAsDeriv` needs gh#1333's centred-FD change to reach the backend branch;
+fixing traced Phi alone moves the FD from 8.3e3 to the PHYSICALLY CORRECT
+-2.105 (= -2*pi*Sigma), which the old assertion still rejects.
+`poisson_surfdens` is a separate, uninvestigated cause.
 
 ## Standing corrections to how I work
 
-* **Never decrease coverage, not even one line** (Jo). The loss is always a
-  defensive branch going unreachable, never new untested code — so a fallback
-  needs its forcing test in the PR that makes it unreachable.
-* **codecov: discriminate before believing.** `sessions` base-vs-head separates
-  mid-upload phantoms from real deltas — but only when both sides are the SAME
-  event type. `main` is a path-filtered *push* run; a PR is a *pull_request*
-  run; their session counts are not comparable. Compare against the predecessor
-  PR's own run.
-* **Structural set-diffs with `ast.parse`, never grep.** `grep -oP '^def \K\w+'`
-  silently returned 278 names where `grep -cP '^def '` counted 279, producing a
-  false "function deleted" alarm. `git diff --stat`'s deletion count was
-  authoritative and disagreed from the start.
-* **An A/B needs BOTH arms actually run.** I "could not reproduce" the Orbits.E
-  mechanism because I only ever traced the *after* tree.
-* **Removing an exception ≠ fixing N tests.** It may unmask a later failure.
-* **Run the forced-torch gate before pushing.** jax accepts Python floats where
-  torch rejects them, so a jax-only gate is structurally blind to that class.
-* **GitHub re-run rules:** `rerun-failed-jobs` is refused while ANY job in the
-  run is still pending (`403 already running`), and a re-run of a re-run is
-  refused outright (`cannot be retried`).
+* **Never decrease coverage, not even one line** (Jo).
+* **File presence is not behaviour.** For "did this fix land", run the
+  measurement the fix changes, not a symbol grep.
+* **A test whose predicate duplicates the guard it tests measures nothing.**
+* **Different singularity, different rule.** xi^3 clustering fixes Phi's LOG
+  (3e-5 -> 1e-12) and destroys zforce's POLE (1.7e-02 at z=1e-8 vs the
+  ladder's 3.8e-10). Measure per-quantity before generalising.
+* **Probe inside `jax.jit`.** Eager hands concrete scalars to scipy via
+  `_bk_dispatch`, so an eager probe never enters the GL path — it returns a
+  column of exact 0.000e+00 that looks like agreement.
+* **Don't pipe a gate through `tail`.** It silently truncated a FAILED list to
+  7 of 8 and nearly produced a false A/B mismatch.
+* **`ps` on a shell pipeline measures the WRAPPER.** 0.0% CPU there meant
+  nothing; the real pytest was at 103%.
+* **Pre-commit rejects the first commit** when ruff reformats. Verify the SHA
+  moved.
 
 ## Cron
 
