@@ -46248,3 +46248,34 @@ Standing lesson: "waiting for CI before un-drafting" turned into the PR simply
 not being up. If the blocker is gone, mark it ready and let CI run against a
 non-draft — the draft flag was never load-bearing.
 
+
+### 2026-08-17 — traced jit run dispatched on develop (run 32025928130)
+
+Jo: "Anything else to work on?" Grounded the answer in the current ledger rather
+than the task list:
+
+    develop 091053a9    xfail 15   slow-skip 76   skip 68 (permanent by design)
+                        IN SCOPE = 91,  ~40 of the slow-skips are "-jit" entries
+
+So the largest single body of remaining work is the jit-mode ledger, and the
+last full traced measurement is run **31914531334 from 2026-08-15** — before
+gh#1327, gh#1328, gh#1330 and gh#1331 all landed. Every -jit entry is being
+judged against a two-day-old picture.
+
+Dispatched a fresh traced run (`workflow_dispatch`, `jit=true`) on
+feat/backends-develop: **run 32025928130**. Runner load was light (4 runs in
+flight), which is why now and not during the earlier PR crunch.
+
+What it buys, concretely:
+
+* the current traced failure set on develop, replacing the stale "7 failures"
+  picture (4 of which I have since fixed);
+* a (ledgered AND passed) sweep over its artifacts to find **stale -jit
+  entries** — the same sweep that found 6 un-deferrable entries last time, and
+  which CANNOT be run against a normal PR run because `--jit` shards only exist
+  on a dispatched run ([[ledger-sweep-two-false-stale-modes]]);
+* confirmation of the 3 torch traced timeouts, the last residue I have not
+  re-measured.
+
+Queued now; results next wake.
+
