@@ -45939,3 +45939,45 @@ Reported to Jo as: delta real, reproducible, predates my merge, mechanism
 unresolved. Not going to assert the tidy story a third time when I have already
 had to retract it once this wake.
 
+
+### 2026-08-17 — gh#1324 coverage FIXED: the dead-fallback class, caught in the act
+
+Jo: "Coverage can't decrease." So gh#1324's +2 had to be closed, not explained.
+
+**Mechanism proven by A/B**, tracing lines 2991-2992 on both trees:
+
+    potential              base (gh#1323)   gh#1324
+    SphericalShell              hits         NO LONGER hits
+    HomogeneousSphere           hits         NO LONGER hits
+    AnyAxisymRazorThin          hits         hits
+    DoubleExpDisk/RazorThin      no           no
+
+The two potentials this PR fixes were the ONLY live coverers of `Orbits.E()`'s
+`except (ValueError, TypeError, IndexError)` per-element fallback. Making them
+accept arrays stops the vectorised call raising, so nothing enters the branch.
+Textbook [[coverage-never-decreases]]: the loss is a defensive branch going
+unreachable, never new untested code.
+
+**Why I failed to reproduce it last wake:** I traced the branch in the
+`/var/tmp/gh1324` worktree — the tree where the fix had ALREADY removed the
+effect — and concluded the mechanism was unproven. The A/B needs the BASE arm,
+and I only ran the "after" one. That is [[ab-must-reproduce-before-it-can-clear]]
+almost verbatim: a clean "bad" side proves nothing, and I should have noticed
+the bad side was never actually run.
+
+**Fix:** a forcing test using `AnyAxisymmetricRazorThinDiskPotential`, which
+still rejects arrays and so keeps the branch reachable. It checks the fallback's
+VALUES against a per-element reference assembled in the test, not just that the
+line executes. The potential is static, so `t` plays no role and the fallback's
+time indexing cannot be silently wrong. Verified two ways: the test passes, AND
+tracing it shows 2991 and 2992 both executed.
+
+Pushed `651e75ed`. Expect 26 -> 24 misses, matching gh#1323, so no decrease.
+
+**Correction to my own rule.** I had written "check whether the PR could reach
+the file at all before believing the number". That is WRONG as stated and I acted
+on it twice. File locality is not causal locality — the entire dead-fallback
+class works at a distance, by making someone else's `except` unreachable. The
+right question is not "does the PR touch that file" but "could the PR change
+whether that branch is ENTERED".
+
