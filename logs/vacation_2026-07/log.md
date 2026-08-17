@@ -46055,3 +46055,27 @@ Worth keeping: **a PR's failures are not necessarily in one run.** Checking
 `.run_id` per failing job, rather than assuming a single run, recovered a
 re-run that would otherwise have waited a full cycle.
 
+
+### 2026-08-17 — gh#1331 MERGED (develop 091053a9): traced AnyAxisym closed ON DEVELOP
+
+gh#1331 came back CLEAN — 152 SUCCESS, 0 failures — with coverage **15 misses vs
+base 15**, both sides at **28 sessions** (same event type, both complete, so a
+directly comparable pair rather than the push-vs-PR mismatch that confused
+gh#1324). Audited: single file, the one `xp.where` is the dead-branch guard
+pattern rather than the if→`where` array-input class, no duplication, and
+`_ZFORCE_ZFLOOR_REL` sits beside `_R2DERIV_ZFLOOR` where the sibling constant
+already lives. Squash-merged: develop `acfc7d88` -> **`091053a9`**.
+
+**Traced AnyAxisym is now at zero failures on develop**, not just on a branch.
+The whole arc, every step measured:
+
+    baseline                       3 failed
+    + gh#1328 (fixture)            2 failed
+    + gh#1330 (log subtraction)    1 failed
+    + gh#1331 (zforce floor)       0 failed
+
+**gh#1324:** its orbit-shard run reached `completed`, so the targeted re-run was
+finally accepted. That was the symplectic bit-identity flake (5.55112e-16), and
+`all-clear` was red only downstream of it. The wheel/conda flake already cleared
+on its own earlier re-run. Nothing in gh#1324 is PR-caused.
+

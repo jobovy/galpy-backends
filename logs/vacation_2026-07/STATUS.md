@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-17
+# Vacation status snapshot — 2026-08-17 (gh#1331 merged)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -10,7 +10,7 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 ## Branch state
 
     main                   342a2dac   (gh#1323 merged 2026-08-17)
-    feat/backends-develop  acfc7d88   (gh#1327, gh#1328, gh#1330 merged)
+    feat/backends-develop  091053a9   (gh#1327/1328/1330/1331 merged)
 
 ## Open PRs
 
@@ -26,11 +26,6 @@ both resolved:
 * It genuinely **cost 2 lines of coverage** (26 vs gh#1323's 24). Fixed — see
   "the coverage lesson" below.
 
-**gh#1331 → `feat/backends-develop`** `backend-jit/zforce-relative-floor`, head
-`557499f8`. **Mine to merge.** Floors `|z|` relative to R in the traced zforce.
-CI mid-run; codecov red is the usual mid-upload phantom (21 sessions vs base 27,
-85.98% against a true 99.96%).
-
 ## Merged since the last snapshot
 
 * **gh#1327** → `24500321` — the develop coverage regression, 20 → 15 misses.
@@ -38,6 +33,9 @@ CI mid-run; codecov red is the usual mid-upload phantom (21 sessions vs base 27,
   `is_backend_array`, not `get_namespace`. Coverage 15 vs base 15.
 * **gh#1330** → **`acfc7d88`** — the `finite_part_quad` log subtraction.
   152 SUCCESS, coverage 15 vs 15 with head on the *more* complete side.
+* **gh#1331** → **`091053a9`** — the zforce relative floor. 152 SUCCESS,
+  coverage 15 vs base 15, both sides at 28 sessions. Traced AnyAxisym is now
+  at ZERO failures on develop.
 * **gh#1323** → main `342a2dac` (Jo).
 
 ## Traced AnyAxisym is CLOSED
@@ -47,7 +45,7 @@ Every step measured on `-k anyaxisym --backend jax --jit`, not projected:
     baseline                       3 failed   (1 accuracy + 2 tracer errors)
     + gh#1328 (fixture)            2 failed
     + gh#1330 (log subtraction)    1 failed
-    + gh#1331 (zforce floor)       0 failed
+    + gh#1331 (zforce floor)       0 failed   <- MERGED, on develop
 
 Last row verified on the synced branch: **11 passed, 1 skipped, 2 xfailed, 0
 FAILED**. The xfails report `x`, not `X` — no hidden XPASS, no ledger delta.
