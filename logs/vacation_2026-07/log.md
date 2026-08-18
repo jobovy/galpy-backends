@@ -47115,3 +47115,47 @@ the AD arm scans 20000 steps under `adjoint="direct"`); its value is now the
 local |AD-FD|-vs-h baseline, which will show whether this reproduces off-CI at
 all. **The flake verdict itself is unaffected** — that rests on the twin split
 plus `behind=0`, not on any mechanism.
+
+#### The probe landed: the loss IS non-smooth, but ~1000x too weakly to explain CI
+
+Local, default tolerance (which is the 1e-12 default), AD took 312 s:
+
+    AD = 5.3195518898
+    h=1e-02   rel 1.766e-02   FAIL
+    h=1e-03   rel 2.087e-04   PASS
+    h=1e-04   rel 1.465e-04   PASS
+    h=1e-05   rel 7.988e-03   FAIL
+
+A textbook FD U-curve. Truncation falls ~85x from h=1e-2 to 1e-3 (h^2, as it
+should), then the error **RISES 54x** from h=1e-4 to 1e-5. A rising branch at
+small h is the signature of a genuinely non-smooth loss -- if the loss were
+smooth, the error would keep falling until f64 roundoff (~1e-11 relative here),
+which is five orders below where it actually turns.
+
+Backing the jitter out of the two noise-dominated points puts the
+non-smoothness in the loss DIFFERENCE at **~1e-7 to 1e-6 absolute** -- six
+orders ABOVE the 1e-12 solver tolerance. So the non-smoothness is real but it
+does not come from the ODE tolerance; it enters somewhere in the track
+assembly. It is also erratic rather than a clean floor: a constant noise floor
+would scale exactly as 1/h (10x per decade), and the observed jump is 54x.
+
+Two conclusions, kept separate on purpose:
+
+* **Confirmed and quantified:** the test sits on an FD noise floor, and its own
+  h-grid (1e-3, 1e-4) brackets the U-curve minimum with only ~20x margin
+  (best local 1.5e-4 vs the 3e-3 bar). That is a thin margin for a quantity
+  whose noise is erratic.
+* **NOT established:** local jitter is ~1000x too small to produce CI's 20%
+  failure. The mechanism CLASS is present; it is not yet shown SUFFICIENT.
+  I am not closing that gap by assertion. (Local caveat still stands: no C
+  extension in that worktree, so the frozen sdf differs from CI's.)
+
+**Separate real wart found by the crash of the tight-tolerance arm:**
+
+    Orbits.py:2207  integrate_orbit(pot, ic2d, ts_int, rtol=_rtol, atol=_atol, **_ibk)
+    TypeError: got multiple values for keyword argument 'rtol'
+
+`rtol`/`atol` passed through `integrate_kwargs` COLLIDE with the explicitly
+forwarded pair instead of overriding, so the documented-looking knob is
+unusable. Small, self-contained, disjoint from open work -- candidate for a
+later PR.
