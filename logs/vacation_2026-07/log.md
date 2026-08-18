@@ -47820,3 +47820,44 @@ while every other C callback (`staeckel_c`, `adiabatic_c`) declares
 PRs: gh#1336's codecov +4 PERSISTS after the rebase onto 77ab9ae4, confirming it
 is content and not a stale-base artifact; its Windows red is a conda-forge 502
 (infra, re-run requested). gh#1338 still early.
+
+### 2026-08-18 — gD1 + gS1 BUILT (both cached), gh#1336 down to codecov only
+
+**gD1 (differentiable DFs)** -- Jo's scoping: jeans + SPHERICAL dfs, not qdf.
+
+    panel                      quantity                 AD vs FD (13 params)
+    (a) jeans.sigmar           d sigma_r/da at r=2      median 4.6e-11  max 1.2e-10
+    (b) isotropicHernquistdf   d f/d(amp) at E=-0.4     median 2.5e-10  max 1.8e-9
+
+Autodiff straight through a Jeans-equation quadrature and through a spherical
+DF's f(E), matching central FD to ten-plus digits across a whole parameter
+SWEEP -- a curve, not a single anecdotal point.
+
+**gS1 (differentiable stream track)** -- d(track)/d(halo q) through the full
+pipeline, with the FD cross-check ON the figure per Jo:
+
+    dR/dq  AD [-0.16652 -1.06852 -1.90249]   rel vs FD  9e-4, 9e-5, 4e-4
+    dz/dq  AD [-0.12324  0.66095  4.96743]   rel vs FD  7e-4, 7e-4, 7e-5
+
+~1e-4 is the RIGHT order for a central difference at h=1e-3 on a curved
+function; a perfect match would have meant the FD was not independent.
+
+Physics worth saying out loud: **the sensitivity grows along the stream**
+(dz/dq: 0.12 -> 0.66 -> 4.97 across chunks). Points further down the stream have
+integrated longer in the halo and carry far more information about its
+flattening. That is the argument for differentiable stream models in one panel.
+
+Both figures cache to data/*.json, so they re-plot without re-measuring (the
+thing that bit the "refresh" earlier today, and what Jo asked for on g17).
+
+**Constraints that shaped gS1**, all discovered by hitting them:
+* `jax.jvp` impossible -- the orbit path is `custom_vjp` (forward mode raises),
+  so no cheap one-pass whole-track derivative.
+* sequential `jax.grad` per component, NOT `jax.jacrev` -- jacrev vmaps its
+  backward pass, the exact batching that corrupts this gradient.
+* AD arm needs `adjoint="direct"`; the default recursive adjoint is a
+  dynamic-bound `while_loop` that reverse mode rejects outright.
+
+**PRs:** gh#1336's Windows conda-502 cleared on re-run -- 137 success, and the
+ONLY remaining red is codecov/project -0.01%, i.e. the +4 that persisted through
+the rebase. gh#1338 progressing (116 success).
