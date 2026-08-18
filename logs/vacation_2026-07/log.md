@@ -47713,3 +47713,41 @@ content was never at risk.
 CI now re-measures codecov against a CURRENT base instead of the stale one, which
 is a real signal either way: if the +4 persists it is confirmed against fresh
 numbers; if it vanishes it was tied to the old comparison.
+
+### 2026-08-18 — gh#1338 opened (-1 xfail, measured); Windows red is conda 502
+
+**gh#1336 rebased head 7f370e17 is early** (12 success, 137 pending) and BOTH
+SHAs are still uploading coverage (base 13 sessions, head 3), so the codecov
+re-measurement is far too early to read. Not drawing anything from it yet.
+
+**The one red is infrastructure, not the PR:**
+
+    requests.exceptions.HTTPError: 502 Server Error: Bad Gateway for url:
+    https://conda.anaconda.org/conda-forge/noarch/...msgpack.zst
+
+conda-forge 502 during env setup on `build (windows-latest, 3.12,
+tests/test_orbit...)`. Nothing to fix; it re-runs once its run finishes (GitHub
+refuses a job re-run while the run is active). Checked job -> run_id first per
+the twin rule: it is the push run, and its pull_request twin is still queued.
+
+**gh#1338 OPENED: -1 xfail, 14 -> 13.** Removes
+`jax-jit test_pickling_potential_unitful_dens`, MEASURED passing by the regen
+run rather than inferred. Also corrects the comment it sat under, which claimed
+a units-based density is untraceable "by construction ... there is nothing to
+fix in the test" -- true for its sibling `drops_units_wrapper`, not for this
+one.
+
+Two things I made explicit in the PR because they are easy to get wrong:
+
+* **This PR's own CI cannot verify the change.** The traced suite is only
+  reachable via workflow_dispatch(jit=true), so a green run here is not evidence
+  either way; the regen artifact IS the measurement. Said so in the PR body so a
+  green tick is not mistaken for confirmation.
+* **Did not fold in the 4 newly-found unledgered traced failures.** They are
+  pre-existing on develop and belong in their own change, not smuggled into a
+  one-line ledger edit.
+
+Conflict with gh#1336 was SIMULATED, not assumed: both touch
+`tests/backend_xfail.txt` but in different hunks (line ~258 vs ~339), and
+`git merge-tree` reports 0 conflicts. Reused the now-merged rtol worktree for
+the branch instead of creating another (disk at 92%).
