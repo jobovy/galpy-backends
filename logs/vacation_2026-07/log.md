@@ -47466,3 +47466,52 @@ gradient defect that surfaces on some py3.14 runs, with a documented mechanism
 (vmap-batching the inner jacrev leaks ~20%), which I cannot bisect from a 3.13
 box. Re-ran the remaining twin; that is the honest way to land gh#1336 without
 pretending the underlying defect is fixed.
+
+### 2026-08-18 — Jo checked in: codecov +4 confirmed, gh#1337 opened, jit regen dispatched
+
+**Jo is right about codecov, and I have the exact number:**
+
+    base 2eb1ac0e   lines=48563  hits=48548  misses=15  sessions=28
+    head 07fce93b   lines=48579  hits=48560  misses=19  sessions=27
+
+**misses 15 -> 19 = +4.** But `codecov/patch` is SUCCESS at 100% of diff hit,
+so it is NOT untested new code, and `sessions` went 28 -> 27: exactly one upload
+missing, and the missing one is the `test_backend` shard whose twin failed. A
+failed shard never uploads, and that shard is the only thing exercising a number
+of jax/torch-only lines. Phantom signature -- but the twin re-run in flight is
+the discriminator: sessions back to 28 AND misses back to 15 = upload; misses
+still 19 = real, and I fix it. Verifying, not assuming.
+
+**gh#1337 OPENED** (`backend/inbackend-tolerance`): rtol/atol through
+inbackend_kwargs, A/B'd both directions, files disjoint from gh#1336. Two PRs in
+flight now.
+
+**The ledger is at 14 real entries** (grep -v comments/blanks), 12 once gh#1336
+lands. Jo: "almost at xfail zero". Structure:
+
+    4  jax+torch  AdiabaticGrid_outsidegrid_c, qdf::test_call_diffinoutputs
+    3  jax+torch  test_analytic_ecc_rperi_rap, jax test_analytic_zmax
+    1  jax-jit    test_eccentricity
+    2  *-jit      poisson_surfdens[AnyAxisym]      <- Jo's design call
+    2  jax-jit    test_pickling_*                  <- BY CONSTRUCTION
+    2  *-jit      forceAsDeriv[AnyAxisym]          <- gh#1336 removes these
+
+**Two of the 14 are not burnable and should stop being counted as debt.** The
+pickling pair's own ledger comment says a units-based density "is NOT TRACEABLE,
+and this is by construction rather than a defect ... there is nothing to fix in
+the test." poisson_surfdens is the deliberate array opt-out.
+
+**`jax-jit test_eccentricity` is very likely stale**: its comment says it is the
+AnyAxisym traced-GL story seen through an orbit -- the exact root cause gh#1332
+retired when it un-xfailed the TORCH-jit twin as measured-stale.
+
+**Did NOT re-measure locally** -- the ledger's own header forbids it: "Do NOT
+re-measure on a dev box ... a local py3.13 unsplit run of the same files
+disagreed on exactly one entry". Reading the file before acting saved a wasted
+measurement, and it is the same py3.13-vs-3.14 blind spot that has now bitten
+this investigation twice.
+
+So I dispatched the prescribed measurement instead: **backend-tests.yml with
+jit=true AND regen=true** on develop (run 32141815273). regen writes a
+regenerated ledger as an ARTIFACT instead of xfailing, so it says directly which
+of the 7 jit entries still fail -- including whether test_eccentricity XPASSes.
