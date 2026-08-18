@@ -47360,3 +47360,33 @@ Built the extension in place (`python setup.py build_ext --inplace`, NOT
 live ("Using C implementation to integrate orbits"). Re-running the two streamdf
 AD tests in that configuration now -- the first apples-to-apples comparison
 against CI's 4.1316 / 8.24e-01.
+
+#### streamdf AD: isolated + C extension PASSES; narrowing to execution context
+
+With the C extension built, the q-gradient test **passes on my box in
+isolation**. So the defect is not "my machine computes a different gradient" --
+it is context-dependent.
+
+Checked whether my twin-split evidence had been comparing different shards.
+It had not: both check-runs at cf794ba5 carry the SAME name,
+`build (ubuntu-latest, 3.14, tests/test_backend*.py, false, false, false,
+false, true, true)`. Same OS, same Python, same shard. (Their conclusions now
+read cancelled/success rather than the success/failure I recorded at the time,
+because my own re-run and force-push cancellation overwrote them -- the ORIGINAL
+observation is the one in this log, not what the API returns today.)
+
+So: same config, same tree, bimodal outcome, and a 19.95% discrepancy that
+reproduces to 5 digits whenever it does fail. That combination is not
+arithmetic; it is **execution-context dependence** -- some global state left by
+whatever else ran in the same process.
+
+Ruled out one candidate immediately: `pytest-randomly` is NOT installed, so test
+ORDER is deterministic. The live candidate is **xdist worker assignment**, which
+can vary run to run and changes which tests share a process with this one. I
+already have two memories pointing here: xdist shared-state artifacts bite
+specific suites, and the earlier streamdf flakes were **full-file-context**
+dependent, not reproducible on hand-picked nodeids.
+
+My isolated run used `-k` (2 tests) -- exactly the configuration that hides a
+context bug. Full-file run chained; if that reproduces the 8.24e-01, the bug is
+local to this file's ordering and I can bisect it to the specific predecessor.
