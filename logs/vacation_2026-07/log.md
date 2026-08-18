@@ -47561,3 +47561,43 @@ even one line, and I do not yet have an explanation I can defend.
 Also: the local `--cov` probe SIGABRTs at `jaxlib/xla_client.py` import
 (coverage's tracer vs jax), so the "which test covers line 3340" question is not
 answerable that way; the gh#1337 control answers it more cheaply anyway.
+
+#### The +4 is a genuine execution difference, not a coverage artifact
+
+Checked whether the 4 lines are even tracked on both sides, because
+3337-3339 being "hit" while 3340-3341 were "missed" inside ONE statement looked
+like line-attribution noise:
+
+    line   2eb1ac0e (base)   07fce93b (head)
+    3336   not-tracked       not-tracked
+    3337   not-tracked       not-tracked
+    3338   not-tracked       not-tracked
+    3339   not-tracked       not-tracked
+    3340   HIT               MISS
+    3341   HIT               MISS
+    3403   HIT               MISS
+    3404   HIT               MISS
+
+Only those 4 are tracked statements in that region (the rest are continuation
+lines coverage does not count), and they flip HIT -> MISS. **Same lines tracked
+on both sides, so this is a real execution difference**, not attribution.
+The array-`t` branch of `Orbit.E()` genuinely did not execute at head.
+
+Call site located: `tests/test_orbits.py:7724`, `_to_numpy(os.E(times)[ii])` --
+the multi-orbit, array-times path. That file is in a shard gh#1336 does not
+touch, which is what makes this odd.
+
+**Specific prediction for the control.** gh#1336's structure is: the
+test_backend shard FAILED, I re-ran it, it passed -- so codecov saw an upload
+from the failed attempt AND one from the passing attempt. gh#1337 now has
+exactly the same structure (shard failed, re-run queued). If the re-run
+mechanism is the cause, gh#1337 must move from
+
+    misses=15 sessions=27 Orbits.py=0     ->     misses=19 Orbits.py=4
+
+once its re-run uploads. If instead it settles at 15/0, the +4 is gh#1336's own
+and I fix it before merging. Either way the answer arrives without another
+speculative round.
+
+gh#1336 stays unmerged. `all-clear` is correctly refusing while codecov/project
+is red -- that gate is doing its job, not misfiring.
