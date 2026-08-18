@@ -47278,3 +47278,48 @@ fix reverted), then compare the failing NAME SETS. If they are identical the
 change is exonerated regardless of why the 7 fail. My new test is deselected in
 the unpatched arm because it is designed to fail there (already A/B'd
 separately). Result next wake.
+
+### 2026-08-18 — RECLASSIFY: the streamdf AD failure is NOT a flake
+
+It failed again on gh#1336's rebased head. Comparing the two runs, at DIFFERENT
+SHAs:
+
+    cf794ba5   q AD=4.131630e+00   best|AD-ownFD| = 8.2407853e-01
+    07fce93b   q AD=4.131613e+00   best|AD-ownFD| = 8.2409614e-01
+               R0 1.782114e-01 / 1.70e-01     vs    1.782153e-01 / 1.70e-01
+
+**The discrepancy reproduces to 5 significant figures across two SHAs.** Random
+noise does not do that. I called this a flake on the strength of the twin split
+(same tree, push run passed, PR run failed) plus `behind=0`. That evidence was
+sound as far as it went -- the behaviour IS nondeterministic across runners --
+but "nondeterministic across runners" is not the same as "random", and I let the
+first reading stand as the classification. **Corrected: this is a DETERMINISTIC
+failure whose occurrence depends on the runner environment.** On a machine where
+it fails, it fails with the same number every time.
+
+That also rescues the magnitude, which was the thing my earlier mechanisms could
+not explain (they were six orders short). 0.82410/4.13161 = **19.95%**, and the
+test's own docstring warns that "a vmap chunk loop instead leaks ~20%". So the
+failing environments are taking a different assembly path through the track, and
+the ~20% is a systematic leak, not noise. The local FD U-curve I measured
+(non-smoothness ~1e-6, best case 1.5e-4 against a 3e-3 bar) is a REAL but
+SEPARATE weakness -- it is why the margin is thin, not why CI fails at 20%.
+
+Consequence for the loop: re-running this shard is no longer "clearing a flake",
+it is rolling for a runner that happens to take the good path. I re-ran it to
+unblock gh#1336 (which is entirely unrelated to streamdf), but the streamdf AD
+gradient needs a real fix and should not be re-run indefinitely.
+
+#### Also: my own A/B deadlocked, and the reported "7 failures" was a partial read
+
+Two process errors worth recording rather than quietly fixing:
+
+* I reported "7 failures" from an in-progress dot line (`........FFFF.F..FF`).
+  The finished run is **15 failed, 69 passed**. Reading counts off a progress
+  line is the partial-run trap.
+* The chained A/B never ran its second arm. `while pgrep -f "pytest
+  tests/test_backend_inbackend_ode"` matches every Bash-tool WRAPPER whose
+  command line contains that string -- including the wrapper running the loop's
+  own pgrep. It could never exit. Re-launched sequentially (no polling), and the
+  rule is now in memory: never `pgrep -f`/`pkill -f` on a pattern that can appear
+  in a command I issue (it has now cost me a killed shell AND a lost wake).
