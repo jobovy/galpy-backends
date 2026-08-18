@@ -47390,3 +47390,45 @@ dependent, not reproducible on hand-picked nodeids.
 My isolated run used `-k` (2 tests) -- exactly the configuration that hides a
 context bug. Full-file run chained; if that reproduces the 8.24e-01, the bug is
 local to this file's ordering and I can bisect it to the specific predecessor.
+
+#### The 20% is a DOCUMENTED failure mode, and xdist is refuted
+
+Two things settled this wake.
+
+**xdist REFUTED.** The failing shard is named `build (...)`, i.e. `build.yml`,
+whose pytest invocation has no `-n`/`--dist` -- plain serial. `backend-tests.yml`
+even records WHY xdist is unusable here (it "can't pickle several mock/C-backed
+potentials"). So the shard is serial and deterministic in order, and my
+worker-assignment story is dead. `pytest-randomly` is not installed either, so
+test order is fixed. Both of my execution-context candidates are gone.
+
+**But the 20% itself is documented in my own helper** (`_vmap_track_chunks`,
+streamdf.py:4854):
+
+    NOT jax.vmap: `single` calls calcaAJac = jax.jacrev of the AA map (over a
+    diffrax/C-STM integration with no vmap batching rule), and jax.vmap batches
+    that inner jacrev in a way that silently DROPS the outer d/d(parameter)
+    gradient (the forward value is correct, but jax.grad through the track
+    leaks ~20%).
+
+So a ~20% gradient leak is the KNOWN signature of vmap-batching that inner
+jacrev, and the observed CI failure is 19.95%. The forward value staying correct
+while only the gradient is wrong also matches: the test's AD and its own FD
+disagree, but nothing blows up.
+
+`_vmap_track_chunks` itself looks safe on this box: `jax.lax.map(f, xs, *,
+batch_size=None)` in jax 0.10.1 defaults to sequential, which is consistent with
+my local pass. But it is not the only vmap in the stack -- `orbit_ode._solve`
+picks its path from the SHAPE of the time array:
+
+    if ts.ndim > 1: return jax.vmap(_solve, in_axes=(0,0), out_axes=1)(y0, ts)
+    return _solve(y0, ts)
+
+A shape-selected branch is exactly the kind of switch that yields two discrete
+outcomes rather than a spread. **I am NOT adopting this as the cause yet** --
+two earlier mechanisms (adaptive-step noise, max_steps truncation) both looked
+this good and both died on arithmetic. It needs a local reproduction to bisect,
+and the full-file run is what decides whether I have one.
+
+Isolated + C extension: **2 passed** in 919 s. So `-k`-selected, the test is
+clean; the full-file run is the remaining lever.
