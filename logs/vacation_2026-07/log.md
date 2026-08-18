@@ -47751,3 +47751,72 @@ Conflict with gh#1336 was SIMULATED, not assumed: both touch
 `tests/backend_xfail.txt` but in different hunks (line ~258 vs ~339), and
 `git merge-tree` reports 0 conflicts. Reused the now-merged rtol worktree for
 the branch instead of creating another (disk at 92%).
+
+### 2026-08-18 — talk figures: refresh was a re-plot (caught), gS1 built, jax "slowdown" explained
+
+Jo is giving a talk tomorrow and asked for up-to-date speed figures plus new
+jit/AD figures for potentials, orbits, AA and DFs (jeans + SPHERICAL dfs, not
+qdf) and streams. Decisions taken: fix the stream defect then include AD with an
+FD cross-check; investigate the jax slowdown time-boxed; re-run g17 AND cache it.
+
+**CAUGHT MY OWN BAD CLAIM.** I first reported "6 speed figures refreshed". They
+were only RE-PLOTTED: the harness caches measurements in `data/*.json` and
+`run` replots from them ("Re-measure by deleting the JSON and re-running", g2's
+own docstring). The jsons were dated Jun 5-17, so I had re-rendered June numbers
+with today's timestamp -- exactly the staleness Jo asked me to remove.
+
+Worse, my chain reported `exit=0` for everything because
+`python ... | tail -5; echo "exit=$?"` reports **tail's** status, not python's.
+That masked a real failure: **g15 errored** (FileNotFoundError) and I had DELETED
+its json to force re-measure -- but g15 is a cross-env figure whose data comes
+from a separate measure step, so `run` cannot rebuild it. Restored from the
+backup I took first; `git status` clean. Lesson: never read exit status through
+a pipe, and back up before deleting inputs.
+
+Genuinely re-measured (json + pdf both new): g2, g5, g6.
+
+**The jax "slowdown" is NOT a regression -- time-boxed investigation done.**
+The jsons stamp their environment, so this was one comparison, not a bisect:
+
+    JUNE   jax 0.10.1  torch 2.12.0+cu126  TITAN Xp  galpy 1.12.0.dev0
+    TODAY  jax 0.10.1  torch 2.12.0+cu126  TITAN Xp  galpy 1.12.1.dev0
+
+Identical libraries -- so it is our code. The N-dependence identifies WHICH kind:
+
+    g2 jax GPU new/old   N=100  1e3   1e4  | 1e5   1e6   1e7
+                         0.65   0.69  0.60 | 1.08  1.18  1.27
+
+Fixed per-call overhead: dominates small N, gone by N~1e5, and at 1e7 we are
+1.27x FASTER than June. Consistent with the @backend_input coercion boundary
+landing in this window (and with the known "~5 ms flat eager overhead" item).
+Talk framing: eager per-call cost rose at the boundary, at-scale throughput
+improved, jit removes the overhead entirely.
+
+**gS1 (stream track sensitivity) written, with caching from the start.** Three
+API/semantics constraints found the hard way, all worth recording:
+
+* `jax.jvp` is IMPOSSIBLE here -- the orbit path is a `custom_vjp`
+  ("can't apply forward-mode autodiff (jvp) to a custom_vjp function"), so the
+  cheap one-pass whole-track derivative is off the table. Reverse mode only.
+* I use an explicit sequential loop of `jax.grad`, NOT `jax.jacrev`, because
+  jacrev vmaps its backward pass -- the exact batching that corrupts this
+  gradient. Avoiding it is the point of the figure.
+* the AD arm needs `adjoint="direct"`; the default recursive adjoint is a
+  dynamic-bound `while_loop` that reverse-mode rejects outright.
+
+**Stream defect: reproduced, but NOT fixed, and I did not pretend otherwise.**
+Forcing the vmap path locally gives a 7.66% wrong gradient while lax.map matches
+FD to 1.8e-4 -- so the corruption mode is real and now reproducible on demand.
+But CI's magnitude is 19.95%, and I refuted the vmap site I suspected: the
+stream track makes 13 `orbit_ode.integrate` calls, ALL `ts.ndim==1`, so its
+`jax.vmap` branch is never taken. Fourth refuted hypothesis. Rather than ship a
+talk-eve speculative patch, gS1 plots the AD-vs-FD cross-check so the figure
+carries its own evidence.
+
+Tracked lead (not acted on): `orbit_stm.py` declares `vmap_method="expand_dims"`
+while every other C callback (`staeckel_c`, `adiabatic_c`) declares
+`"sequential"`. That asymmetry is a plausible corruption site.
+
+PRs: gh#1336's codecov +4 PERSISTS after the rebase onto 77ab9ae4, confirming it
+is content and not a stale-base artifact; its Windows red is a conda-forge 502
+(infra, re-run requested). gh#1338 still early.
