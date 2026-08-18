@@ -47432,3 +47432,37 @@ and the full-file run is what decides whether I have one.
 
 Isolated + C extension: **2 passed** in 919 s. So `-k`-selected, the test is
 clean; the full-file run is the remaining lever.
+
+### 2026-08-18 — full-file run is a NULL result; and I misread the shard re-run
+
+**Full-file, C extension present: 161 passed.** The two streamdf AD tests pass
+in full-file context on this box. So there is no local reproduction -- not
+isolated, not in file context, not with the C extension. That kills the
+execution-context theory as something I can chase locally and lands squarely on
+a blind spot I already have recorded: **local py3.13 cannot see py3.14-CI-only
+failures.** The failing shard is ubuntu-latest / 3.14; this box is 3.13.
+
+**Correction: the shard re-run did NOT fail again.** Last wake I reported the
+re-run as a second failure. Distinguishing the jobs by `run_id` shows otherwise:
+
+    job=95677412266  success  attempt=2  run=32116017002
+    job=95645574313  failure  attempt=1  run=32116012807
+
+Two DIFFERENT runs -- the push/pull_request twins. My re-run (attempt 2) passed;
+the red still displayed was the other twin, which I had never re-run. I compared
+conclusions without checking `run_id` and read it as "failed again". This is the
+same twin-confusion that has now cost me three separate misreads, and the fix is
+mechanical: **on any shard red, resolve job -> run_id FIRST**, because the twins
+share an identical name and only the run distinguishes them.
+
+Also checked develop's own head 2eb1ac0e: that shard is **2 success**. So this
+is not a develop-wide breakage, and gh#1336 did not introduce it.
+
+**What this does and does not change.** The reclassification stands on its
+evidence -- when it fails, it fails at 19.95%, twice, to 5 significant figures,
+which is not noise. But operationally it DOES clear on re-run, so it behaves as
+an intermittent for the purposes of landing PRs. Both things are true: a real
+gradient defect that surfaces on some py3.14 runs, with a documented mechanism
+(vmap-batching the inner jacrev leaks ~20%), which I cannot bisect from a 3.13
+box. Re-ran the remaining twin; that is the honest way to land gh#1336 without
+pretending the underlying defect is fixed.
