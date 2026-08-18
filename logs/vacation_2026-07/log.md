@@ -47202,3 +47202,63 @@ gone, now only awaiting checks). Cancelled the superseded cf794ba5 PR-event run
 to free runners -- safe because cf794ba5 is no longer the head, so it cannot
 gate the merge (cancelling a SAME-SHA push run is the thing that blocks). CI is
 up on the rebased head: 100 queued.
+
+### 2026-08-18 — next PR built locally: rtol/atol reachable through inbackend_kwargs
+
+gh#1336's CI is draining on the rebased head (85 success, 65 pending, only red is
+`codecov/project` on partial uploads -- the usual climb). Held the PR count at
+one and did local work.
+
+**Deliberately did NOT start the ledger comment-hygiene cleanup**: it edits
+`tests/backend_xfail.txt`, the same file gh#1336 touches, so opening it now
+would recreate the conflict I just resolved. It waits for the merge.
+
+Instead: the `rtol`/`atol` collision I tripped over during the flake probe.
+
+    Orbits.py:2207  integrate_orbit(pot, ic2d, ts_int, rtol=_rtol, atol=_atol, **_ibk)
+    TypeError: got multiple values for keyword argument 'rtol'
+
+Scoped it honestly first: both docstrings only ever promised `max_steps`,
+`solver`, `adjoint`, so this is NOT a broken documented feature. But the real
+gap stands -- **`actionAngleIsochroneApprox` exposes no rtol/atol parameters at
+all** and `integrate_kwargs` is its only passthrough, so there is currently NO
+way for an AA caller to set the solver tolerance. Fix: pop rtol/atol from a
+COPY of the dict, plus both docstrings.
+
+**A/B'd, because a passing test proves nothing on its own:**
+
+    WITHOUT fix   TypeError: got multiple values for keyword argument 'rtol'   FAILED
+    WITH fix      2 passed
+
+Test is two-sided, not finite-and-nonzero: the loose tolerance must CHANGE the
+trajectory (>1e-9 -- a silently dropped rtol gives a bit-identical result) and
+must still behave like a tolerance (<1e-2); the same value passed both spellings
+must agree to 1e-12; and with a tight explicit pair AND a loose dict the loose
+one must win -- the discriminating assertion, since reversed precedence would
+return `tight`.
+
+**Then A/B'd my own fix's subtlety.** `dict(...)` makes a copy because
+actionAngleIsochroneApprox STORES the dict (`self._integrate_kwargs`) and passes
+it on every call, so popping from the caller's dict would honour the tolerance
+once and silently drop it after. I asserted that in a comment, then proved it --
+reverting just the `dict()`:
+
+    E  AssertionError: caller dict mutated: {}
+       assert {} == {'atol': 1e-05, 'rtol': 1e-05}
+       tests/test_backend_inbackend_ode.py:647
+
+Every EARLIER assertion still passed, so the reuse check is the only thing that
+catches it. That is why it is in the test.
+
+**No full-file regression result yet -- not claiming one.** The first
+`test_backend_inbackend_ode.py` run produced an 18-byte output file containing
+only my echo (no pytest output captured at all), so it is unusable; re-running
+it with explicit redirection on a now-quiet box. Also noting a hazard I walked
+into: I edited Orbits.py for the A/B WHILE that full-file run was live. It
+happens to be harmless (Python imported the module at startup, so the running
+process held the patched version), but editing the tree under test is exactly
+how a sweep gets silently corrupted.
+
+Branch `backend/inbackend-tolerance` off develop 2eb1ac0e, NOT pushed -- opens
+when gh#1336 merges. Files are disjoint from gh#1336
+(Orbits.py + actionAngleIsochroneApprox.py + test_backend_inbackend_ode.py).
