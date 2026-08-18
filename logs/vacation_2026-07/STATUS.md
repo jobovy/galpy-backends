@@ -43,18 +43,25 @@ Flake verdict is twin-proven AND tree-checked: same SHA, push run's
 `ahead=3 behind=0` vs develop's current head, so the PR merge is a
 fast-forward and both twins test identical trees.
 
-## Live investigation: the streamdf AD tests FD an adaptive ODE solve
+## Live investigation: streamdf AD flake — cause still OPEN
 
 `test_determine_stream_track_differentiable_{potential,progenitor}` compare
-`jax.grad` to a central FD of the same backend track. Both arms run diffrax
-with `PIDController(rtol, atol)` — adaptive. Shifting q by h can change the
-accepted step sequence, a discrete jump of order the tolerance, which the FD
-divides by 2h. At h=1e-4 a 1e-4 jump is a unit error in the derivative; a
-last-bit CPU difference between runners is enough to flip one accept/reject.
+`jax.grad` to a central FD of the same backend track.
 
-Explains all four facts: nondeterministic across runners, overshoot huge and
-variable (66× the bar on q, 320× on R0 — far too big for a tolerance flake),
-both tests fail together, usually passes.
+**Two mechanisms proposed and BOTH killed this wake:**
+* *Adaptive-step FD noise* — dead: `inbackend_ode.py:149` already defaults to
+  `rtol=atol=1e-12`, and tol/2h is ~1e-7 relative against an observed 20%.
+  Six orders short.
+* *AD arm truncating at its 10x-smaller `max_steps`* — dead: no `throw=False`,
+  so diffrax raises rather than truncating, and the failure was a plain
+  assertion with a finite AD.
+
+**Live lead:** the test's own docstring warns "a vmap chunk loop instead leaks
+~20%", and the q failure is 8.24e-01/4.131630 = **19.95%**. Points at the
+chunk-assembly path, not solver noise. Does not explain the progenitor failure
+in the same run (95%), so either two mechanisms or a shared upstream cause.
+
+The FLAKE VERDICT is unaffected — it rests on the twin split plus `behind=0`.
 
 Probe running: asserted quantity across h at default vs rtol=atol=1e-12.
 **Caveat: that worktree has no built C extension**, so the numpy sdf falls back

@@ -47063,7 +47063,7 @@ holds. (Note `base.sha` from the pulls API is the RECORDED base, which goes
 stale -- gh#1332 reads `behind=1` against real develop. Compare against the
 branch ref, not `base.sha`.)
 
-**Mechanism: the test finite-differences an ADAPTIVE ODE solve.** Both arms of
+**Mechanism (RETRACTED later this wake -- see the correction below; tolerance is already 1e-12 and the magnitude is six orders short):** Both arms of
 `_track_loss_fn` build `actionAngleIsochroneApprox(integrate_method="diffrax")`,
 and the jax path runs `stepsize_controller=diffrax.PIDController(rtol, atol)`.
 An adaptive solver's output is a *discontinuous* function of the parameter: shift
@@ -47081,3 +47081,37 @@ vs rtol=atol=1e-12, not a proxy). Caveat recorded up front: that worktree has no
 built C extension, so `_build_numpy_sdf` falls back to leapfrog -- the mechanism
 is unaffected (both arms share the frozen sdf and both run diffrax) but local
 MAGNITUDES are not CI magnitudes.
+
+#### CORRECTION (same wake): the adaptive-step mechanism does NOT explain the magnitude
+
+I wrote the adaptive-solver story above as a conclusion. It does not survive the
+next check, so it is retracted as the cause:
+
+`galpy/backend/_reference/inbackend_ode.py:149` already defaults to
+**`rtol=atol=1e-12`** ("matching galpy's C integrators"). So the "tight
+tolerance" arm of my probe is the DEFAULT, and the fix I was heading toward
+(tighten the FD arm) is a no-op. Worse, the magnitude does not work: a step
+sequence change perturbs the solution by of order the global error (~1e-10 even
+allowing for accumulation over tintJ=8 in a quasi-regular log halo), and
+FD divides that by 2h — giving ~1e-7 relative at h=1e-4, against an OBSERVED
+8.24e-01/4.13 = 20%. **Six orders short. The mechanism is not the cause.**
+
+Second candidate also dead: the two arms differ 10x in `max_steps` (20000 for
+the AD arm vs 200000 for FD), which looked like the AD sitting at its cap. But
+`_solve` passes no `throw=False`, so diffrax RAISES on exceeding max_steps
+rather than silently truncating — and the observed failure is a plain
+AssertionError with a finite AD that passed the `isfinite and abs>0` guard. No
+exception means the cap was never hit.
+
+**The live lead is a number in the test's own docstring.** It warns that "a
+vmap chunk loop instead leaks ~20%", and the q failure is
+8.24e-01/4.131630 = **19.95%**. That points at the chunk-assembly path
+(lax.map vs a vmap chunk loop), not at solver noise. It does NOT explain the
+progenitor failure in the same run (0.1698/0.1782 = 95%), so either there are
+two mechanisms or the shared cause is upstream of both.
+
+Not hypothesising further without data. Probe still running (it is slow because
+the AD arm scans 20000 steps under `adjoint="direct"`); its value is now the
+local |AD-FD|-vs-h baseline, which will show whether this reproduces off-CI at
+all. **The flake verdict itself is unaffected** — that rests on the twin split
+plus `behind=0`, not on any mechanism.
