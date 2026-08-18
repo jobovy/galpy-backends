@@ -46823,3 +46823,48 @@ Held unpushed: two develop PRs (gh#1332, gh#1334) are already open.
                          behind gh#1316, so a stale-base component is likely
                          too. Not acting until the run completes.
     gh#1332 -> develop   149 queued behind the other two (runner-saturated)
+
+### 2026-08-17 — forceAsDeriv[AnyAxisym] is BURNABLE, measured on both backends
+
+With all three pieces present -- the numpy Phi cusp port, the centred midplane
+FD, and gh#1334's traced Phi fix (cherry-picked locally for the measurement) --
+and the two ledger lines temporarily lifted:
+
+    jax   --jit  -k "forceAsDeriv and AnyAxisym"   1 passed
+    torch --jit  -k "forceAsDeriv and AnyAxisym"   1 passed
+    numpy        -k "forceAsDeriv"                 149 passed, 0 failed
+
+So the pair
+
+    jax-jit   tests/test_potential.py::test_forceAsDeriv_potential[AnyAxisym...]
+    torch-jit tests/test_potential.py::test_forceAsDeriv_potential[AnyAxisym...]
+
+comes out of `tests/backend_xfail.txt`: a **-2 xfail delta**. That is the first
+of the four AnyAxisym `-jit` entries to actually fall; the two
+`poisson_surfdens` ones remain, blocked on the array opt-out flag, which is
+Jo's call.
+
+The numpy number is worth noting on its own: 149 passed with ZERO failures
+across the whole potential zoo, including `mockInterpSnapshotRZPotential`, which
+the main-targeted worktree could not run (no pynbody / no C extension there).
+So the centred-difference change is clean for every potential, not just the
+razor-thin ones it was written for.
+
+**Sequencing constraint discovered while doing this.** The ledger removal cannot
+ride in the port PR as it stands: without gh#1334's traced fix on the base,
+forceAsDeriv would fail UN-ledgered and turn the PR red. So the order is fixed:
+
+    gh#1334 merges -> rebase the port branch onto the new develop
+                   -> THEN add the ledger-removal commit -> push
+
+Cherry-picking gh#1334 into the port branch instead would duplicate a commit
+that is about to arrive via the base, so the local cherry-pick was used for
+measurement only and has been dropped; the branch is back to its two commits
+with the ledger intact.
+
+**Process note (my error).** Building these two commits, I ran `git commit
+--amend` immediately after a pre-commit rejection. Because a rejected commit
+does not exist, `--amend` retargeted the PREVIOUS commit and silently folded the
+AnyAxisym port into the AnySpherical one under the wrong message. Nothing was
+pushed; I reset to base and rebuilt both with disjoint file sets. Rule: after a
+pre-commit rejection there is no new commit to amend -- re-run the plain commit.
