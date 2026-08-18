@@ -46962,3 +46962,36 @@ That re-run is the ONLY valid discriminator here: develop's own post-merge run
 of the same shard is green, gh#1332 differs from develop by two deleted ledger
 lines, and the local reproduction is unusable because this worktree has no C
 extension and silently integrates with leapfrog instead.
+
+### 2026-08-18 — the streamdf AD reds were a flake, and the proof was free
+
+gh#1332's shard re-run passed. But the actual resolution is more embarrassing
+and more useful than that: the answer was in the SAME SHA the whole time.
+
+    77497f93  run 32065313890  pull_request  attempt 1  test_backend  SUCCESS
+    77497f93  run 32065309528  push          attempt 1  test_backend  FAILED
+
+push and pull_request run every job twice. A pass/fail split between the twins
+at one SHA IS the flake proof -- [[same-sha-duplicate-run-is-a-free-ab]], a
+memory I already had. Instead I spent three steps:
+
+1. hypothesised gh#1316's grid-guard loosening caused it (timing fit perfectly;
+   refuted by one call to develop's own post-merge CI, which is green on the
+   same shard);
+2. reproduced locally, got "2 passed", and nearly cited it -- worthless,
+   because this worktree has no C extension and silently integrated with
+   LEAPFROG instead of the C integrator;
+3. re-ran the shard.
+
+The first of those was pointing at a MERGED PR, and the next action would have
+been proposing a revert. That is the real cost, not the wasted time.
+
+**Memory updated with an explicit order of operations:** on any shard failure,
+list the same-SHA check-runs and look for a twin of that job FIRST; only
+hypothesise a cause if both twins agree. Also recorded the trap that made the
+split invisible to me: the two check-runs have IDENTICAL names, so `sort -u` on
+names collapses them -- key on the id or the conclusion.
+
+Remaining on gh#1332: `all-clear` is red because it evaluated while the push
+twin's shard was still failing. Re-run once the shard re-run (attempt 2,
+queued) completes.
