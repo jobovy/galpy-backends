@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-17 (gh#1333 opened; GitHub outage)
+# Vacation status snapshot — 2026-08-18 (gh#1316+gh#1333 merged; queue-bound)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -9,8 +9,8 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## Branch state
 
-    main                   bea36ff1   (gh#1323 342a2dac, gh#1324 de8e63c0, both merged)
-    feat/backends-develop  091053a9   (gh#1327/1328/1330/1331 merged)
+    main                   c7891fca   (gh#1323, gh#1324, gh#1333 all merged)
+    feat/backends-develop  b4a21907   (gh#1316 merged 2026-08-17)
 
 ## Open PRs
 
@@ -112,3 +112,36 @@ fixing traced Phi alone moves the FD from 8.3e3 to the PHYSICALLY CORRECT
 
 `351c0c5a`, hourly at :13, session-only, created 2026-08-13 → **expires
 ~2026-08-20**. Verified alive this wake.
+
+---
+
+## 2026-08-18 addendum — everything is queue-bound, nothing is broken
+
+    gh#1334 -> develop   150 success, 0 fail. BLOCKED: its `all-clear` step
+                         "Wait for all other checks to pass" has been polling
+                         since 20:22:08Z, waiting on a `backend status report`
+                         job queued behind gh#1332's backlog. GitHub's 6h job
+                         cap expires it ~02:22Z. If it times out that is queue
+                         STARVATION, not a defect -- re-run all-clear once
+                         gh#1332 drains. Diff already audited clean.
+
+    gh#1332 -> develop   running at last. Only red is codecov/project on
+                         partial uploads (41% with 12 of 150 shards in), the
+                         same preliminary artifact as before. Base now reads
+                         b4a2190, so the develop-merge refresh took.
+
+## Ready to push, waiting on gh#1334
+
+`backend/anyspherical-array-mass`, two clean commits off b4a21907:
+
+    8784f65d  AnySpherical: array input returned the value at r[0]
+              (AnySphericalPotential.py + quadpack.py)   76/77 cells -> 0/77
+    d28283d0  AnyAxisym: port main's numpy Phi cusp fix + centred midplane FD
+              (AnyAxisym*.py + tests/test_potential.py)
+
+**A third commit is owed and deliberately NOT written yet:** the -2 xfail
+ledger delta for `test_forceAsDeriv_potential[AnyAxisym]` (jax-jit + torch-jit).
+Both were MEASURED passing traced with gh#1334's fix applied locally, but the
+removal cannot land until gh#1334 is on the base -- without it the test would
+fail UN-ledgered and redden the PR. Order: gh#1334 merges -> rebase -> add the
+ledger commit -> push.
