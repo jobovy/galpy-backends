@@ -14,7 +14,9 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## Open PRs — ONE
 
-**gh#1336 → develop** `backend/anyspherical-array-mass`, head `cf794ba5`.
+**gh#1336 → develop** `backend/anyspherical-array-mass`, head `07fce93b`
+(REBASED onto 2eb1ac0e 2026-08-18: merging gh#1332 made it DIRTY -- adjacent
+xfail deletions in the same hunk. Resolved minimally; diffstat unchanged).
 Three commits:
 
   * AnySpherical: array input silently returned the mass inside `r[0]` at every

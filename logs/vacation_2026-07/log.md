@@ -47159,3 +47159,46 @@ Two conclusions, kept separate on purpose:
 forwarded pair instead of overriding, so the documented-looking knob is
 unusable. Small, self-contained, disjoint from open work -- candidate for a
 later PR.
+
+### 2026-08-18 — gh#1336 went DIRTY from my own merge; rebased and resolved
+
+Merging gh#1332 put develop at 2eb1ac0e and immediately made gh#1336
+`mergeStateStatus=DIRTY`. **I caused it:** gh#1332 removed an xfail entry
+IMMEDIATELY ADJACENT to the two entries gh#1336 removes, so the two deletions
+land in the same hunk of `tests/backend_xfail.txt`. Same file AND same hunk --
+the case where a conflict is genuine.
+
+Proved it rather than assuming (GitHub can report CONFLICTING spuriously under
+load). `git merge-tree` showed a real overlap:
+
+    changed in both   tests/backend_xfail.txt
+    <<<<<<< .our    # same AnyAxisym root cause seen through an orbit
+                    torch-jit tests/test_orbit.py::test_eccentricity
+    =======  .their torch-jit ...test_forceAsDeriv_potential[AnyAxisym...]
+
+Policy check first: [[no-force-push-open-prs]] carries an EXPLICIT exception --
+for a **conflict with its base**, a clean rebase + `--force-with-lease` is the
+right move and Jo OK'd it for exactly this circumstance. So: rebase, not a
+merge commit (which [[no-merge-commits-rebase-only]] would also disfavour).
+
+Resolution kept MINIMAL and faithful: took develop's file and removed exactly
+the two `forceAsDeriv[AnyAxisym]` entry lines with `grep -F` (nodeid brackets
+are a grep character class). Verified 347 -> 345 lines, the diff-vs-develop is
+exactly those two deletions and NOTHING added, and a full-tree conflict-marker
+sweep is clean. Diffstat before and after the rebase is IDENTICAL
+(5 files, +94/-37), so no content was lost in the replay.
+
+**Deliberately did NOT widen scope.** Both removed entries leave orphaned
+comment blocks behind -- including a ~19-line investigation note describing the
+traced-Phi-at-z=0 defect that gh#1334 has since FIXED, so the ledger now
+carries explanations for entries that no longer exist. That is real ledger rot
+and worth a follow-up, but folding a 20-line comment deletion into a
+conflict-resolution force-push would make the force-push much harder to verify.
+Scope discipline wins; hygiene gets its own commit.
+
+Verified the PR CONTENT after pushing, not just push success: head 07fce93b,
+base 2eb1ac0e, same 5 files, and merge state moved DIRTY -> BLOCKED (conflict
+gone, now only awaiting checks). Cancelled the superseded cf794ba5 PR-event run
+to free runners -- safe because cf794ba5 is no longer the head, so it cannot
+gate the merge (cancelling a SAME-SHA push run is the thing that blocks). CI is
+up on the rebased head: 100 queued.
