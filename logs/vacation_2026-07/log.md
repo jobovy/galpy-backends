@@ -47681,3 +47681,35 @@ Now investigating the +4 for real. Two tracks:
   every line by +11).
 * **Rebase.** gh#1336 is now `behind=1` (develop moved to 77ab9ae4), so it needs
   a rebase regardless; the fresh CI re-measures codecov against the new base.
+
+#### The local hunt for the +4 FAILED to reproduce — abandoning it, not concluding from it
+
+Traced `tests/test_orbits.py::test_energy_jacobi_angmom` in gh#1336's worktree
+with `sys.settrace`, watching Orbits.py 3340/3341/3403/3404:
+
+    arm A  gh#1336 head, no C ext      test PASSED   lines hit: []
+    arm B  gh#1336 sources reverted    test PASSED   lines hit: []
+    arm A' gh#1336 head, WITH C ext    test PASSED   lines hit: []
+
+**Both arms give []**, and building the C extension did not change it. That is
+NOT an exoneration of gh#1336 -- it means the experiment never reproduced the
+baseline. CI's BASE hits those lines; my "base" arm does not. When the arm that
+is supposed to reproduce the phenomenon does not, the A/B says nothing about the
+other arm, and a clean "bad" side proves nothing.
+
+Root cause of the wasted effort: **I picked the covering test from a grep**
+(`os.E(times)` at test_orbits.py:7724) and never validated that it is what
+covers those lines. It demonstrably is not. Every conclusion downstream of that
+guess was unfounded, so I am dropping the local line of attack rather than
+spending more wakes refining a probe built on an unverified premise.
+
+Restored the worktree to a clean state afterwards (0 modified files) so the PR
+content was never at risk.
+
+**Switched to the approach that cannot be wrong about the premise:** gh#1336 was
+`behind=1` after gh#1337 merged, so it needed a rebase anyway. Rebased onto
+77ab9ae4 -- clean, no conflict markers, diffstat unchanged (5 files,
++94/-37) -- and force-pushed (the sanctioned base-movement case). head 7f370e17.
+CI now re-measures codecov against a CURRENT base instead of the stale one, which
+is a real signal either way: if the +4 persists it is confirmed against fresh
+numbers; if it vanishes it was tied to the old comparison.
