@@ -47262,3 +47262,19 @@ how a sweep gets silently corrupted.
 Branch `backend/inbackend-tolerance` off develop 2eb1ac0e, NOT pushed -- opens
 when gh#1336 merges. Files are disjoint from gh#1336
 (Orbits.py + actionAngleIsochroneApprox.py + test_backend_inbackend_ode.py).
+
+#### Full-file run: 7 failures — NOT yet attributed (A/B running)
+
+The clean re-run of `test_backend_inbackend_ode.py` shows `........FFFF.F..FF`.
+The mechanism is almost certainly environmental: `_c_reference` integrates with
+`method="dop853_c"`, and `/var/tmp/rtol-fix` is a fresh worktree with **no built
+C extension**, so galpy silently falls back to a Python integrator at different
+accuracy and the `rtol=1e-6` comparison fails. This is the mirror of the usual
+trap -- a missing C extension normally fakes PASSes; here it fakes FAILURES.
+
+**But a mechanism is not a verdict, so I am not attributing it by argument.**
+Chained an A/B: same worktree, same invocation, ONE difference (the Orbits.py
+fix reverted), then compare the failing NAME SETS. If they are identical the
+change is exonerated regardless of why the 7 fail. My new test is deselected in
+the unpatched arm because it is designed to fail there (already A/B'd
+separately). Result next wake.
