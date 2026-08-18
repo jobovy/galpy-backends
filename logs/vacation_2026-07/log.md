@@ -46868,3 +46868,53 @@ does not exist, `--amend` retargeted the PREVIOUS commit and silently folded the
 AnyAxisym port into the AnySpherical one under the wrong message. Nothing was
 pushed; I reset to base and rebuilt both with disjoint file sets. Rule: after a
 pre-commit rejection there is no new commit to amend -- re-run the plain commit.
+
+### 2026-08-18 — two streamdf AD failures on gh#1332: two hypotheses, both refuted
+
+gh#1332's `test_backend*.py` shard came back **2 failed, 6753 passed**:
+
+    test_determine_stream_track_differentiable_potential
+      q  AD=4.131630e+00  best|AD-ownFD|=8.24e-01   (tol 0.003*|AD| = 1.24e-02)
+    test_determine_stream_track_differentiable_progenitor
+      R0 AD=1.782114e-01  best|AD-ownFD|=1.70e-01   (tol 5.3e-04)
+
+gh#1332 deletes two `torch-jit test_eccentricity` ledger lines. It cannot touch
+streamdf autodiff, and neither test is ledgered anywhere. So something else.
+
+**Hypothesis 1 (mine): gh#1316 caused it.** The timing fit perfectly -- these
+appeared only after I refreshed gh#1332's base onto develop-with-gh#1316, and
+gh#1316 loosened the interpRZPotential grid guard from bit-exact to rtol=1e-14
+on backends, so a streamdf AD path building an interp grid would now get the
+ACCEPTED vectorised grid instead of the fallback -> different grid, different
+gradient. Behaviour-at-a-distance, the class I have got wrong before.
+
+**REFUTED by one API call.** develop's own post-merge run at b4a21907 ran the
+same `test_backend*.py` shard and it is **success**. The base is clean; gh#1316
+did not break these. I was one step from proposing a revert of a merged PR on a
+causal story that took ~20 seconds to disprove. The timing correlation was real
+and meant nothing.
+
+**Hypothesis 2: reproduce locally.** Ran both tests in the develop-based
+worktree: **2 passed** in 930 s. That looked like confirmation of "flake".
+
+**ALSO INVALID**, and this one is the documented trap. The run emitted
+
+    galpyWarning: Cannot use C integration because C extension not loaded
+    (using leapfrog instead)
+
+so it integrated the stream orbits with LEAPFROG where CI uses the C
+integrator. Different integrator, different numbers -- a local pass here is
+[[worktree-missing-c-ext-fakes-passes]] verbatim, and I nearly quoted it as
+evidence. A gradient-vs-FD test is exactly where a silently different
+integrator changes the answer.
+
+**Where that leaves it.** develop green (with C ext) and gh#1332 red (with C
+ext) on content that differs only by two deleted ledger lines. That is the
+signature of a flake, and the discriminator is a re-run of the shard -- not a
+local run, which cannot reach the same code path in this worktree. Blocked
+until gh#1332's 36 remaining jobs finish (`rerun-failed-jobs` is refused while
+any job is pending).
+
+*Standing lesson, third instance this vacation:* a cheap local reproduction is
+only evidence if it runs the SAME code path. Check the warnings before reading
+the result.
