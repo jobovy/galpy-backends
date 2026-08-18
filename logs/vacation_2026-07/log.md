@@ -46995,3 +46995,29 @@ names collapses them -- key on the id or the conclusion.
 Remaining on gh#1332: `all-clear` is red because it evaluated while the push
 twin's shard was still failing. Re-run once the shard re-run (attempt 2,
 queued) completes.
+
+### 2026-08-18 — eager ledger staleness sweep at develop 700f8694: ZERO stale
+
+Ran the (ledgered AND passed) sweep against the COMPLETED All-backend run on the
+current develop head (run 32095075400, push event, 44 shard junit artifacts):
+
+    CANDIDATE STALE (ledgered AND passed)        0
+    still failing/skipped (correctly ledgered)  48
+    not present in these artifacts               2   (file-level slow-skips:
+                                                      test_streamTrack.py,
+                                                      test_streamdf.py)
+
+**There is no free eager burndown left at this head.** That is a useful thing to
+know rather than a disappointment: it means further ledger reduction has to come
+from the `-jit` half (which this run does not exercise) or from fixing real
+gaps, not from pruning entries that have quietly started passing.
+
+Confirmed the run was EAGER before trusting the result -- `event=push`, and zero
+job names contain `jit`. The sweep script refuses to infer this because the
+workflow names artifacts `backend-junit-${BACKEND}-${SHARD}` with BACKEND just
+jax/torch, so a traced run's artifacts are byte-indistinguishable by name from
+an eager one's; sweeping the wrong half silently evaluates the wrong entries.
+
+Also used a COMPLETED run deliberately: develop's newer All-backend run for the
+same SHA is still in_progress, and gathering from an unfinished run misses
+timed-out shards and reports their entries as "not present".
