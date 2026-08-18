@@ -47644,3 +47644,40 @@ clear, the TRACED one is not, and the gap was hidden by the suite not running.
 Burning `unitful_dens` edits `tests/backend_xfail.txt`, the same file gh#1336
 touches, so it queues behind that merge rather than re-creating the conflict I
 already resolved once.
+
+### 2026-08-18 — CONTROL LANDED: the +4 is gh#1336's own. gh#1337 MERGED.
+
+The control completed and it went against gh#1336, exactly as the stated
+fallback said it would:
+
+    base    2eb1ac0e   misses=15  sessions=28  Orbits.py=0
+    gh#1336 07fce93b   misses=19  sessions=28  Orbits.py=4
+    gh#1337 3db6fec9   misses=15  sessions=28  Orbits.py=0   <- CONTROL
+
+gh#1337 had the IDENTICAL structure -- test_backend shard failed, I re-ran it,
+it passed, so codecov saw uploads from both attempts -- and it shows NO +4 at a
+full 28 sessions. **So the re-run mechanism is refuted and the coverage
+regression is gh#1336's own content.** It does not merge until fixed. Sharper
+still: gh#1337 MODIFIES Orbits.py and has 0 misses there, while gh#1336 does not
+touch the file and has 4.
+
+Worth noting the prediction discipline paid off here: I wrote down both branches
+in advance ("15/0 = gh#1336's own and I fix it"), so the result settled it
+without another speculative round.
+
+**gh#1337 MERGED (77ab9ae4).** Audit was genuinely small: the diff is two
+`dict.pop` calls plus docstrings and a test, so the if->xp.where array-input
+class does not arise (no array branching), there is no new helper to duplicate
+or misplace, and the ledger delta is none. 152/152 green.
+
+Now investigating the +4 for real. Two tracks:
+
+* **Local trace probe.** `sys.settrace` on `tests/test_orbits.py::
+  test_energy_jacobi_angmom` in gh#1336's worktree, watching whether Orbits.py
+  lines 3340/3341/3403/3404 (the array-`t` `E()` branches, planar and 3D)
+  execute at all. gh#1336 does not touch Orbits.py, so its line numbers still
+  match develop's -- which is exactly why this probe is meaningful here and
+  would NOT have been on the rtol-fix worktree (my Orbits.py change there shifts
+  every line by +11).
+* **Rebase.** gh#1336 is now `behind=1` (develop moved to 77ab9ae4), so it needs
+  a rebase regardless; the fresh CI re-measures codecov against the new base.
