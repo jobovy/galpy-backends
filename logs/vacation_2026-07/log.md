@@ -47601,3 +47601,46 @@ speculative round.
 
 gh#1336 stays unmerged. `all-clear` is correctly refusing while codecov/project
 is red -- that gate is doing its job, not misfiring.
+
+### 2026-08-18 — jit regen COMPLETED (45/45): two of my claims refuted, 4 hidden failures found
+
+Dispatched run 32141815273 (jit=true, regen=true) finished green and its 44
+`backend-xfail-new-*` artifacts give the traced ledger as it SHOULD be.
+Diffing against the current one:
+
+**STALE -> burnable (1):**
+
+    jax-jit tests/test_potential.py::test_pickling_potential_unitful_dens
+
+**REFUTES what I told Jo last wake.** I said the two `test_pickling_*` entries
+were "by construction, not burnable", quoting the ledger comment that a
+units-based density "is NOT TRACEABLE ... there is nothing to fix in the test".
+One of the two now PASSES traced. The comment is stale for `unitful_dens` (its
+sibling `drops_units_wrapper` does still fail). Burnable: -1.
+
+**ALSO REFUTES my other prediction.** I reasoned that `jax-jit test_eccentricity`
+was "very likely stale" because gh#1332 retired its TORCH twin as measured-stale
+and both share the AnyAxisym traced-GL root cause. The regen still lists it: it
+FAILS traced. The two backends genuinely diverge -- the fix cleared torch-jit and
+did not clear jax-jit. Good that I dispatched a measurement instead of
+un-ledgering on the inference; that would have shipped a red.
+
+**NEW: 4 traced failures that are in NO list (on develop, WITHOUT gh#1336):**
+
+    torch-jit test_orbit.py::test_energy_conservation_linear[AnyAxisym...]
+    torch-jit test_orbit.py::test_energy_jacobi_conservation[AnyAxisym...]
+    torch-jit test_potential.py::test_anyaxisymmetricrazorthindisk_second_derivs_at_z0
+    torch-jit test_potential.py::test_vcirc_vesc_special
+
+(Two further regen entries -- `test_dynamfric_c`, `FDMDynamicalFrictionForce_
+central_limit` -- ARE already in backend_slow_skip.txt, so they are not new debt.)
+
+Three of the four are AnyAxisym. They have been invisible because the traced
+suite is only reachable via workflow_dispatch, so nothing gates on it. **The
+honest ledger picture is therefore 14 ledgered + 4 unledgered-traced, not 14.**
+Worth saying plainly given "almost at xfail zero": the eager ledger is nearly
+clear, the TRACED one is not, and the gap was hidden by the suite not running.
+
+Burning `unitful_dens` edits `tests/backend_xfail.txt`, the same file gh#1336
+touches, so it queues behind that merge rather than re-creating the conflict I
+already resolved once.
