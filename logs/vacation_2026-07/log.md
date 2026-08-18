@@ -47021,3 +47021,63 @@ an eager one's; sweeping the wrong half silently evaluates the wrong entries.
 Also used a COMPLETED run deliberately: develop's newer All-backend run for the
 same SHA is still in_progress, and gathering from an unfinished run misses
 timed-out shards and reports their entries as "not present".
+
+### 2026-08-18 — gh#1332 MERGED (2eb1ac0e); the streamdf AD flake has a mechanism
+
+**gh#1332 merged.** Went 152/152 green once the shard re-run landed and
+`all-clear` was re-run; its red had only ever been a stale evaluation against
+the push twin's failing shard. Audit was vacuous by construction -- the diff is
+13 lines in `tests/backend_xfail.txt` and no code, so there is no if->xp.where
+array-input surface, no duplication, no helper placement to check.
+**Ledger delta: -1 xfail** (`torch-jit tests/test_orbit.py::test_eccentricity`).
+An un-xfail is self-validating: had the test still failed it would have reddened
+the torch-jit shard un-ledgered. Not an un-defer, so no paired
+`.test_orbit_durations` edit -- xfailed tests still execute and record real
+durations; only skipped ones record 0.05.
+
+**gh#1336's three reds are ONE flake, and the chain is worth writing down.**
+
+    head cf794ba5   sessions=27   cov=99.96
+    base 700f8694   sessions=28   cov=99.96
+
+The head is missing exactly one codecov upload session. A failed shard never
+uploads its coverage, so the flaky `test_backend*.py` shard IS the missing
+session -- that is what produced `codecov/project -0.01%`, which is what held
+`all-clear`. There was no separate codecov defect to chase, and re-running the
+shard restores the 28th session. **Generalisation: a shard flake also shows up
+as a codecov/project drop. Don't diagnose the codecov red on its own.**
+
+**The twin-split flake verdict, this time on a sound footing.** I checked the
+twin FIRST (the ordering rule from last wake) and got the verdict in one call
+instead of three:
+
+    gh#1336, same SHA   push  run 32098751720   test_backend shard  success
+                        PR    run 32098783870   test_backend shard  FAILURE
+
+But a twin split is only proof of nondeterminism if both twins test the same
+tree -- push events check out the head commit, pull_request events check out
+head MERGED INTO BASE. So I tested my own hypothesis before trusting the
+verdict: `compare` says gh#1336 is `ahead=3 behind=0` against develop's CURRENT
+head, so the PR merge is a fast-forward and the trees are identical. Verdict
+holds. (Note `base.sha` from the pulls API is the RECORDED base, which goes
+stale -- gh#1332 reads `behind=1` against real develop. Compare against the
+branch ref, not `base.sha`.)
+
+**Mechanism: the test finite-differences an ADAPTIVE ODE solve.** Both arms of
+`_track_loss_fn` build `actionAngleIsochroneApprox(integrate_method="diffrax")`,
+and the jax path runs `stepsize_controller=diffrax.PIDController(rtol, atol)`.
+An adaptive solver's output is a *discontinuous* function of the parameter: shift
+q by h and the controller can accept a different step sequence, a discrete jump
+of order the solver tolerance. The FD then divides that jump by 2h, so at
+h=1e-4 a 1e-4 loss jump is a UNIT error in the derivative. Different runner CPUs
+(AVX2 vs AVX-512) differ in the last bit, which is enough to flip one
+accept/reject. That single mechanism explains all four observations: it is
+nondeterministic across runners, the overshoot is huge and variable (66x the bar
+on q, 320x on R0 -- far too big for a tolerance flake), both tests fail
+together, and it usually passes.
+
+Measuring it directly (probe computes the ASSERTED quantity across h at default
+vs rtol=atol=1e-12, not a proxy). Caveat recorded up front: that worktree has no
+built C extension, so `_build_numpy_sdf` falls back to leapfrog -- the mechanism
+is unaffected (both arms share the frozen sdf and both run diffrax) but local
+MAGNITUDES are not CI magnitudes.
