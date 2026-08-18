@@ -47515,3 +47515,49 @@ So I dispatched the prescribed measurement instead: **backend-tests.yml with
 jit=true AND regen=true** on develop (run 32141815273). regen writes a
 regenerated ledger as an ARTIFACT instead of xfailing, so it says directly which
 of the 7 jit entries still fail -- including whether test_eccentricity XPASSes.
+
+### 2026-08-18 — codecov +4: PHANTOM HYPOTHESIS REFUTED, cause still open
+
+The twin re-run landed and the missing upload arrived. My phantom call did not
+survive it:
+
+    base 2eb1ac0e   lines=48563  hits=48548  misses=15  sessions=28
+    head 07fce93b   lines=48579  hits=48560  misses=19  sessions=28
+
+**Both at 28 sessions, and the +4 stayed.** So the discriminator I chose says
+REAL, and I am treating it as real. Jo flagged this correctly.
+
+**Located it: all 4 are in `galpy/orbit/Orbits.py` -- a file gh#1336 does not
+touch.**
+
+    base   Orbits.py misses = 0
+    head   Orbits.py misses = 4   (lines 3340, 3341, 3403, 3404)
+
+Those are the `t=numpy.tile(t, thiso[0].T.shape[:-1] + (1,)).T` argument lines
+inside the `try:` body of `Orbit.E()` -- planar at 3340-41, 3D at 3403-04 --
+guarded by `except (ValueError, TypeError, IndexError, RuntimeError)` with a
+per-element fallback. Arguments are evaluated BEFORE the call, so "missed" here
+cannot mean "the call raised": it means that array-`t` branch never executed.
+This is a which-tests-ran difference, not a code change. `codecov/patch` is
+SUCCESS at 100% of diff hit, consistent with that.
+
+**Refuted the obvious next explanation too.** "The failing test_backend shard
+lost the coverage" does not hold on its own: gh#1337 had the SAME shard failure
+with a completely different diff and shows
+
+    gh#1337 3db6fec9   misses=15  sessions=27  Orbits.py misses=0
+
+**gh#1337 is the control, and it is not finished** -- 27 sessions, one short,
+because its shard failed and has not been re-run yet (GitHub refuses while the
+run is active). The clean test is therefore free: if gh#1337 ALSO lands at
+misses=19 / Orbits.py=4 once its 28th session arrives, then the cause is the
+failed-attempt upload being counted as a session while a good shard upload is
+absent -- i.e. mechanism, not content. If it lands at 15/0, the +4 is genuinely
+gh#1336's and I fix it before merging.
+
+**gh#1336 does NOT merge until this resolves.** Coverage never decreases, not
+even one line, and I do not yet have an explanation I can defend.
+
+Also: the local `--cov` probe SIGABRTs at `jaxlib/xla_client.py` import
+(coverage's tracer vs jax), so the "which test covers line 3340" question is not
+answerable that way; the gh#1337 control answers it more cheaply anyway.
