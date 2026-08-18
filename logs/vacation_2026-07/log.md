@@ -47323,3 +47323,40 @@ Two process errors worth recording rather than quietly fixing:
   own pgrep. It could never exit. Re-launched sequentially (no polling), and the
   rule is now in memory: never `pgrep -f`/`pkill -f` on a pattern that can appear
   in a command I issue (it has now cost me a killed shell AND a lost wake).
+
+### 2026-08-18 — A/B verdict + the reason my streamdf probe was untestable
+
+**rtol/atol change EXONERATED.** Base arm finally ran (it had been deadlocked by
+the pgrep-matches-my-own-wrapper bug):
+
+    patched  : 15 failed, 69 passed
+    unpatched: 15 failed, 68 passed, 1 deselected
+    IDENTICAL failing sets (15 == 15)
+
+So the 15 are pre-existing in that worktree and none of them is mine. Note the
+count: I had reported "7 failures" from an in-progress dot line last wake; the
+finished number is 15. Never read counts off a progress line.
+
+**Why those 15 fail, and why my streamdf probe was worthless.** The worktree had
+no built C extension. The .so lives at the WORKTREE ROOT
+(`<tree>/libgalpy.cpython-313-x86_64-linux-gnu.so`), not under `galpy/`, which is
+why my first check for it looked in the wrong place and found "none" everywhere.
+`_c_reference` integrates with `method="dop853_c"`, so without the extension
+galpy silently falls back to a Python integrator and the rtol=1e-6 comparisons
+fail. The usual trap is a missing C extension faking PASSes; here it fakes
+FAILURES.
+
+**The part that matters:** the same gap made my streamdf FD probe non-comparable
+to CI, and I did not notice at the time. My probe reported **AD = 5.3196**; CI
+reports **AD = 4.1316** -- 29% apart. They are not the same computation, because
+`_build_numpy_sdf` builds the frozen sdf with the DEFAULT integrator, which
+without the C extension is leapfrog. So my conclusion "the CI magnitude does not
+reproduce locally" was never actually tested -- I was measuring a different
+problem and comparing its answer to CI's.
+
+Built the extension in place (`python setup.py build_ext --inplace`, NOT
+`pip install -e .`, which would repoint the editable install away from
+/var/tmp/streamtorch and break every other worktree) and verified the C path is
+live ("Using C implementation to integrate orbits"). Re-running the two streamdf
+AD tests in that configuration now -- the first apples-to-apples comparison
+against CI's 4.1316 / 8.24e-01.
