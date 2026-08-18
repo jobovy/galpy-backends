@@ -46918,3 +46918,47 @@ any job is pending).
 *Standing lesson, third instance this vacation:* a cheap local reproduction is
 only evidence if it runs the SAME code path. Check the warnings before reading
 the result.
+
+### 2026-08-18 — gh#1334 MERGED (develop 700f8694); gh#1336 opened with a -2 ledger burn
+
+gh#1334's `all-clear` finally cleared once gh#1332's backlog drained: 152
+SUCCESS, 0 failures, mergeStateStatus CLEAN, squash-merged. develop is now
+**700f8694** and traced Phi at z=0 is 3e-5 -> 1e-12.
+
+That unblocked the port branch, which was waiting on exactly this. Rebased
+`backend/anyspherical-array-mass` onto 700f8694 (clean, no conflicts), verified
+both fixes coexist in the tree (`_quad_apeak` for the numpy cusp, three
+`transformed_quad` sites for the traced one), removed the two ledger lines, and
+re-measured on the FINAL content rather than trusting the earlier local
+cherry-pick measurement:
+
+                     before                     after
+    jax   --jit      11 passed, 2 xfailed       12 passed, 1 xfailed
+    torch --jit      11 passed, 2 xfailed       12 passed, 1 xfailed
+
+forceAsDeriv moved xfail -> passed on both; the surviving xfail
+(`poisson_surfdens`) reports `x`, not `X`, so the delta is exactly **-2** with
+no hidden XPASS.
+
+**gh#1336 OPENED** -> feat/backends-develop, three commits:
+
+    ca65467b  AnySpherical array input -> 76/77 cells wrong becomes 0/77
+    0d47c529  AnyAxisym numpy Phi cusp + centred midplane FD (port of #1333)
+    cf794ba5  ledger: -2 xfail
+
+All three pieces are required for the burn and none suffices alone -- stated in
+the commit rather than left implicit, because "traced Phi alone" moves the FD
+from 8.3e3 to the physically CORRECT -2.105, which the old one-sided assertion
+still rejects.
+
+### 2026-08-18 — gh#1332 shard re-run fired
+
+gh#1332's codecov cleared on its own (converged from 41% as the uploads landed,
+same as every previous time). Its last red was the `test_backend*.py` shard with
+the two streamdf AD failures. Run finally reached pending=0, so
+`rerun-failed-jobs` was accepted (run 32065309528).
+
+That re-run is the ONLY valid discriminator here: develop's own post-merge run
+of the same shard is green, gh#1332 differs from develop by two deleted ledger
+lines, and the local reproduction is unusable because this worktree has no C
+extension and silently integrates with leapfrog instead.
