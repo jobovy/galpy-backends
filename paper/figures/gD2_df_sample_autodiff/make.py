@@ -209,7 +209,7 @@ def make():
     d2 = numpy.array(data["dsigma_jeans"])
     err = numpy.array(data["dsigma_mc_err"])
     pull = numpy.fabs(d1 - d2) / err
-    ax2.text(0.04, 0.06,
+    ax2.text(0.53, 0.07,
              f"agreement within MC noise:\nmax {pull.max():.1f}$\\sigma$, median {numpy.median(pull):.1f}$\\sigma$",
              transform=ax2.transAxes, fontsize=7.5, color="0.25")
 
