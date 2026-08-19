@@ -48113,3 +48113,37 @@ codecov/project reads -13.99% -> all-clear fails. So the "coverage failure" is
 downstream of the stream defect, not an independent problem, and the -13.99% is
 NOT the +4-line issue I fixed earlier (that one is resolved by 531fffa7).
 Attempt 2 of the py3.14 job is running.
+
+### 2026-08-19 (wake) — gh#1336 red is REAL and NOT clearing; py3.14 blind spot removed
+
+Cron e935a60c alive (created today).
+
+**The py3.14 stream failure is deterministic, not a flake.** Attempt 2 fails with
+the same numbers as attempt 1 (AD=4.131630 vs 4.131613; |AD-FD|=8.24e-01 both).
+That falsifies my 2026-08-13 note that it "operationally clears on re-run" -- it
+does not, at least not on this SHA. Re-running is not a path here.
+
+Two hypotheses raised and BOTH killed by measurement this wake:
+
+1. *"gh#1336 causes it."* It touches `galpy/util/quadpack.py`, a shared utility
+   -- but the change is purely ADDITIVE (a new `quad_over_limits`; no existing
+   function modified), and nothing else it touches (AnySpherical, AnyAxisym) is
+   used by the stream test. Note the honest tension I have NOT resolved: develop
+   HEAD (5ab0ceab) PASSES that same shard, and gh#1336 is only 1 commit behind
+   (a ledger-only commit that cannot move a gradient). So something differs and
+   I cannot yet name it.
+2. *"jax 0.11.1 regressed it."* CI has jax 0.11.1 (released 2026-08-17); my box
+   had 0.10.1. Plausible, and wrong: running the minimal probe under a fresh
+   py3.14 env gives essentially IDENTICAL numbers to py3.13
+   (adaptive 4.23e-3 vs 4.12e-3; nsteps 7e-16 vs 3e-14). Not a jax regression,
+   and the nsteps fix works on both.
+
+**py3.14 blind spot removed.** Built `galpy314` (python 3.14.6, jax 0.11.1,
+diffrax 0.7.2, numpy 2.5.2, scipy 1.18.0, + array-api-compat/matplotlib/astropy).
+The 2026-08-13 entry said this failure "cannot be bisected from a 3.13 box" --
+that was true only because nobody had built a 3.14 box. Now there is one, and
+galpy is compiling against it in the gh#1336 worktree so the ACTUAL failing test
+can be run rather than reasoned about.
+
+Status: gh#1336 blocked on a real red I can now, for the first time, attempt to
+reproduce locally. gh#1344 CI still filling in after the two follow-up commits.
