@@ -48395,3 +48395,23 @@ he meant all three it is one more command.
 Working headroom is now ~4G rather than ~700M, so a single shard run is viable
 again -- but a full figure re-measure still is not. The underlying problem is
 unchanged: 284G of the 304G is other users on the shared NFS mount.
+
+### 2026-08-19 (wake) — gh#1344 clean on the revert; multi-file py3.14 run launched
+
+Cron e935a60c alive. Disk 4.1G free (post-cleanup), so a local shard-scale run is
+viable again -- that is what unblocked this experiment.
+
+gh#1344 at the reverted 45a58a27: **104 success, no test failures**, only the two
+codecov checks (incomplete, 45 jobs pending). py3.14 backend shard in progress;
+it passed at 192c2139 before my bad commit, so the expectation is that the revert
+restores it -- stated as an expectation, not a result.
+
+Launched the one context I have never tested for gh#1336's 95%: `test_backend_
+potential.py` + `test_backend_streamdf.py` in ONE pytest session under py3.14 on
+the gh#1336 tree. Rationale: nodeid and single-file contexts both give the same
+0.42%, and the only remaining structural difference from CI is that CI runs the
+whole test_backend*.py set in one session -- and gh#1336 specifically alters
+test_potential.py and backend_xfail.txt, which change what runs there. Pairing
+the potential file with the streamdf file is the cheapest probe of that
+interaction. If it still gives 0.42%, session context is refuted too and I am out
+of local hypotheses.
