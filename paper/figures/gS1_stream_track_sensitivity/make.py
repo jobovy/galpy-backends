@@ -16,10 +16,25 @@ potential parameters. This is the capability figure for that stack.
     the figure shows carries its own evidence.
 
 Why an explicit sequential loop of ``jax.grad``: the orbit path is a
-``jax.custom_vjp`` (reverse-mode only -- forward-mode ``jvp`` raises), and
-``jax.jacrev`` would vmap its backward pass, which is precisely the batching that
-silently corrupts this gradient (see ``_vmap_track_chunks``). So the derivative of
-each shown component is taken with a separate, unbatched ``jax.grad``.
+``jax.custom_vjp`` (reverse-mode only -- forward-mode ``jvp`` raises), so the
+derivative of each shown component is taken with a separate, unbatched
+``jax.grad``, and the chunk assembly uses ``jax.lax.map`` rather than
+``jax.vmap``.
+
+That is NOT because jacrev cannot be vmapped -- it can; measured 2026-08-19,
+pure-JAX ``vmap(jacrev)`` under an outer ``grad`` agrees to 1e-10, and so does
+galpy's own action-angle map when the potential parameter is a plain float
+(4.5e-7). The real constraint is the ODE solver: ``orbit_ode`` integrates with an
+ADAPTIVE step-size controller, and the second-order path this figure needs
+(an outer d/dq through an inner ``jacrev``) requires diffrax's ``DirectAdjoint``,
+which differentiates the solver's internal operations. Differentiating through
+ADAPTIVELY CHOSEN steps is what corrupts the gradient: under ``jax.vmap`` batch
+elements take different step sequences and the batched reverse pass is wrong by
+2-13% (growing with integration time), while the forward value stays right to
+1e-10 -- which is exactly why this was mis-diagnosed for so long as a jacrev
+batching bug. Forcing identical steps (``ConstantStepSize``) restores agreement
+to ~3e-7. Sequential ``lax.map`` sidesteps it because the steps are never
+batched, which is what makes the numbers in panel (b) trustworthy.
 
 Reproducibility: the track evaluations are expensive (~100 s each), so the
 *measure* step writes data/gS1_stream_track_sensitivity.json and the *plot* step
