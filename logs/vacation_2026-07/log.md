@@ -47861,3 +47861,50 @@ thing that bit the "refresh" earlier today, and what Jo asked for on g17).
 **PRs:** gh#1336's Windows conda-502 cleared on re-run -- 137 success, and the
 ONLY remaining red is codecov/project -0.01%, i.e. the +4 that persisted through
 the rebase. gh#1338 progressing (116 success).
+
+### 2026-08-18 — gh#1338 MERGED (5ab0ceab): ledger 14 -> 13; gF1 added for the talk
+
+**gh#1338 merged.** 152/152 green, merge=CLEAN. Audit trivially clean: the diff
+is `tests/backend_xfail.txt` only -- one entry removed plus a corrected comment,
+so no code, hence no if->xp.where array-input surface, no duplication, no helper
+placement. **Ledger delta: -1 xfail, 14 -> 13 real entries.**
+
+Worth restating what made this one defensible: the traced suite is
+dispatch-only, so this PR's own CI could NOT verify the change. The evidence is
+the regen artifact from run 32141815273, and I said so in both the PR body and
+the merge commit rather than letting a green tick imply confirmation.
+
+**gF1 built for the talk (Jo's request): F_R by autodiff vs the exact analytic
+force**, on the potentials where the hand-coded force is genuinely awkward:
+
+    240 points over 6 potentials   median |AD-exact|/|exact| = 2.45e-16
+                                   worst case                = 4.0e-15
+                                   float64 eps               = 2.22e-16
+
+    DehnenBar (rotating) 5.7e-16 | DiskSCF 1.6e-15 | MN+NFW 1.2e-15
+    MWPotential2014      6.3e-16 | SCF     9.2e-16 | SpiralArms 4.0e-15
+
+A few ULP everywhere: autodiff is not approximating the analytic force, it is
+reproducing it. Strongest precision statement in the whole set.
+
+**The DF-sampling demo Jo also asked for: BUILT, MEASURED, and HELD BACK.**
+AD does flow through a Monte-Carlo estimator of sigma_r(r) from a 4e6-particle DF
+sample -- r enters via the kernel weights, so a differentiable *draw* is not
+needed (which matters: backend RNG/key threading is still an open item). With a
+local-LINEAR estimator (local-constant couples to the steep density gradient and
+wrecks the derivative) the derivative lands within ~0.5% of the Jeans quadrature.
+But a bandwidth sweep shows sigma_MC drifting MONOTONICALLY to ~0.9% below the
+Jeans value as H shrinks:
+
+    H     0.60      0.25      0.10      0.06
+    rel   8.3e-04   6.6e-03   8.6e-03   9.1e-03
+
+For a self-consistent isotropic Hernquist DF those should converge together, so
+that is either a sampling bias or a mis-pairing of the DF with jeans.sigmar --
+and the good-looking agreement at H=0.6 is partly cancellation. Not presentable
+without an explanation, so it joins gS1 in the "built, not shown" pile. Same
+standard both times: a figure I cannot defend cold does not go on a slide.
+
+**Talk deliverables** (artifact page, all committed + pushed):
+title illustration (260 real orbits), gF1, gD1, re-measured g2/g5/g6/g17,
+orbit-integration g8/g12/g15 labelled CROSS-ENV with June dates, and g7/g16/g18.
