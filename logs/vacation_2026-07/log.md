@@ -48548,3 +48548,46 @@ shell, which burned a 10-minute tool timeout. Both are in memory already.
 built. Re-run once the enclosing run finishes (a single job cannot be re-run
 while its run is in progress). codecov patch/project are failing with 134 jobs
 still queued, which is the known incomplete-upload phantom.
+
+### 2026-08-19 (later) — gS3 delivered; forward-mode AD unblocked in streamspraydf
+
+**Cron** e935a60c alive, created 2026-08-19 -> expires ~2026-08-26.
+
+**gS3 SHIPPED (86b7292)** — streamspraydf + streamTrack, which is what Jo actually
+meant by "smooth track" (I first built it on streamdf; see below). ONE forward-mode
+pass at q0=0.9 gives every particle's d/dq; the predicted particles go through
+streamTrack and are compared against a full re-run. Both sides use identical track
+machinery (same progenitor curve, smoothing pinned to the base GCV fit), so the
+comparison isolates the gradient, not the fitter.
+
+    |dq|     :    0.025     0.050     0.100     0.200
+    shift    : 1.10e-02  2.17e-02  3.55e-02  7.75e-02   slope 0.92 (linear)
+    residual : 5.76e-03  6.52e-03  9.49e-03  2.72e-02   slope 0.73
+
+Claim on the figure: 50-75% of the shift removed by one pass. NOT a dq^2 story --
+the residual flattens to ~5e-3 of track extent as dq->0, so a reconstruction floor
+limits it, not linearization. A 2-point version fitted slope 1.52 and would have
+been captioned "dq^2"; sweeping a decade refuted that. Lesson recorded.
+
+**streamdf route is BLOCKED, and it explains a gS1 caveat.** AD through streamdf's
+track differentiates it at FROZEN stream setup (progenitor freqs/angles/offsets are
+construction-time). Measured at tintJ=30: AD(frozen) dR/dq = -0.0858, FD of that
+same function converges to it (-0.08534/-0.08569/-0.08577), but a FRESH rebuild
+gives -0.0102 -- 8x apart. Both are correct derivatives of different models.
+Additionally at tintJ=8 (gS1's setting) the model is unconverged: FDs do not settle
+and jax-vs-numpy tracks differ by 4.7% of extent (1.6e-08 at tintJ=30). => gS1
+should not be presented as a physical stream-track sensitivity without that
+qualifier. Making this figure work needs streamdf's SETUP traceable end-to-end.
+
+**PR2 (789f4887, backend/streamspray-integrate-kwargs, stacked on gh#1346):**
+integrate_kwargs threaded to every in-backend solve. Forward mode was impossible
+because diffrax's default checkpointed adjoint is a custom_vjp (reverse-only);
+q is a SCALAR, so reverse would need one pass per particle. Validated: tangent vs
+CRN central difference = 5.9e-02 / 6.0e-04 / 1.6e-05 at h=1e-2/1e-3/1e-4.
+
+**gh#1346:** Windows red was `CondaHTTPError 403` (env never built) -> re-ran once
+the enclosing run completed, attempt 2 green. codecov/project self-healed.
+codecov/patch was REAL: 2 lines (the traced-IC probe fallback), uncovered because
+the backend suite uploads no coverage and I cannot edit workflows. Fixed by
+extracting `_theta_probe_point()` with a stated contract and covering BOTH branches
+from the numpy suite (39 passed) -- not a pragma, not a workflow edit.
