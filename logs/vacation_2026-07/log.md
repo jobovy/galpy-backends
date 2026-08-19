@@ -48269,3 +48269,25 @@ fixing it also clears gh#1336 is for CI to answer, not for me to assert.
 What survives unchanged: adaptive+DirectAdjoint makes the gradient depend on the
 step sequence; nsteps removes that dependence; 0.4191% -> 0.0513% on the platform
 that fails; both arms now differ only in the adjoint, as a clean A/B should.
+
+### 2026-08-19 (wake) — memory corrected; gh#1344 CI re-running with the test fix
+
+Cron e935a60c alive.
+
+gh#1344 pushed to 01e7d3b9 (test fix); CI restarted, py3.14 backend shard still
+queued. That shard IS the prediction test for last wake's fix.
+
+**Corrected a memory of mine that was actively wrong.**
+`regen-py-version-blind-spot` said py3.14-only failures cannot be bisected from
+the py3.13 dev box, and I had twice repeated that as a hard limit. It was true
+only because nobody had built a 3.14 box; doing so took ~15 minutes and the
+"unreproducible" failure reproduced on the first run. Memory now records the
+recipe (conda python=3.14 + pip jax/diffrax/array-api-compat + build_ext) and,
+importantly, the LIMIT discovered the same day: a local py3.14 run of hand-picked
+nodeids is still NOT CI's context, because CI runs the whole shard in one session
+and gh#1336 changes which tests run there.
+
+Launched the whole `test_backend_streamdf.py` FILE (not nodeids) on the gh#1336
+tree under py3.14 -- a step closer to CI's context, to see whether the 95%
+magnitude appears when the file's other tests share the session. Not claiming
+anything from it until it lands.
