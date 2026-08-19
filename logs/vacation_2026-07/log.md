@@ -48085,3 +48085,31 @@ job, which is how it has cleared before.
 Worth keeping: I nearly shipped a test edit justified by a mechanism I had
 correctly root-caused in a NEIGHBOURING configuration. The mechanism being right
 did not make the fix right for THIS symptom; only the measurement settled it.
+
+### 2026-08-19 (wake) — gh#1344 hardened; gh#1336 chain understood
+
+Cron e935a60c alive (created today, expires ~2026-08-26).
+
+**gh#1344 -> 192c2139** (two follow-up commits, plain pushes, no force):
+* Covered the torch `nsteps` guard. I had added `raise NotImplementedError` for
+  nsteps-on-torch with NO test -- it would have landed as an uncovered new line
+  and (rightly) dinged codecov/patch. It also deserves a test on merit: a
+  silently-ignored nsteps hands back an adaptively-stepped solve while the caller
+  believes the steps are fixed, exactly the confusion the option removes.
+* Reflowed the `_vmap_track_chunks` docstring -- my earlier edit had run into the
+  following "torch:" sentence, producing a 110-char line. Caught by auditing my
+  own diff, not by a linter.
+
+Audited the diff against the standing numpy invariant: `streamdf.py` is prose
+only; `inbackend_ode.py` is signature + docstring + passing `nsteps` through, and
+the numpy branch still raises exactly as before. No numpy-reachable behaviour
+changes. (Careless moment worth noting: my first line-length check scanned the
+WHOLE file and flagged lines 161-163, which are pre-existing and nothing to do
+with me. Re-ran it scoped to my region before believing it.)
+
+**gh#1336 blocker chain now fully traced**, and it is one defect, not three:
+py3.14 shard fails on the stream AD test -> that shard uploads no coverage ->
+codecov/project reads -13.99% -> all-clear fails. So the "coverage failure" is
+downstream of the stream defect, not an independent problem, and the -13.99% is
+NOT the +4-line issue I fixed earlier (that one is resolved by 531fffa7).
+Attempt 2 of the py3.14 job is running.
