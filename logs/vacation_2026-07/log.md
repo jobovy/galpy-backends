@@ -48350,3 +48350,15 @@ docstrings. gh#1344 is now those 4 files only.
 **Still OPEN and now clearly labelled as such:** the py3.14 stream-gradient
 fragility, and gh#1336's 95%. I have no fix, and the two "explanations" I had
 (gh#1336 causation; constant stepping) are both dead.
+
+**BLOCKER PINGED: /home disk 100% full.** Mid-wake, `git commit` died with
+`fatal: error when closing loose object file: No space left on device`. /home was
+at 304G used, **0 bytes free**. Cleared regenerable caches (.cache/gh 624M,
+.cache/pip 160M) -> 783M free, which unblocked the commit (80d7f54). 287G of the
+304G is not mine to delete, so this needs Jo. Phone pinged.
+
+Also noticed while investigating: py3.14 envs `gp314` and `galpy-py314` ALREADY
+existed. I built `galpy314` (1.0G) without checking. It turns out NOT to be
+redundant -- neither pre-existing env has jax/diffrax -- but I got there by luck,
+not by looking. Check for an existing env before building one, especially on a
+disk this close to full.
