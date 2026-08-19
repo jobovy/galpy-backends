@@ -48057,3 +48057,31 @@ Corrections to my own earlier work, both self-caught:
 
 **gS1 un-excluded and on the talk page** with the corrected mechanism in its
 docstring (figure bytes unchanged, verify OK 12b8f76aa543).
+
+### 2026-08-19 (wake) — NEGATIVE RESULT: nsteps does NOT demonstrably fix the py3.14 red
+
+Cron e935a60c alive (created today, expires ~2026-08-26).
+
+I expected the constant-step fix to also cure the py3.14
+`test_determine_stream_track_differentiable_potential` failure, since both look
+like the same DirectAdjoint+adaptive fragility. **Measured before changing the
+test, and it does not:**
+
+    adaptive (current test)  best|AD-FD| = 6.976e-04   rel 0.0138%   (bar 0.3%)
+    nsteps=3000              best|AD-FD| = 1.356e-03   rel 0.0269%   (bar 0.3%)
+
+On this py3.13 box BOTH pass with an order of magnitude to spare, and nsteps is
+slightly WORSE. So there is no local evidence that nsteps fixes the CI red, and
+I did NOT edit the test on the strength of a plausible mechanism. gh#1344 keeps
+the claim it can support: the BATCHED (vmap) Jacobian, which I measured directly
+(1e-14 plain orbit, 7e-7 through the AA map).
+
+The py3.14 failure remains platform-specific and unreproducible from a 3.13 box
+-- same limitation recorded on 2026-08-13. What IS new: the mechanism class is
+now known (DirectAdjoint differentiating adaptively-chosen steps), so it is a
+real defect with a deterministic cause rather than "an intermittent". Re-ran the
+job, which is how it has cleared before.
+
+Worth keeping: I nearly shipped a test edit justified by a mechanism I had
+correctly root-caused in a NEIGHBOURING configuration. The mechanism being right
+did not make the fix right for THIS symptom; only the measurement settled it.
