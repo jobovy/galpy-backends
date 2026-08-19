@@ -47957,3 +47957,50 @@ the error bar honestly does not cover it, and the docstring says so.
 The lesson worth keeping: holding gS1 and this one back for being unexplained
 was right, and the payoff was not a nicer figure but a bug report. "I cannot
 defend this cold" is a finding-generator, not just a publication gate.
+
+### 2026-08-18 (wake) — gh#1336 codecov RESOLVED: it was never a phantom
+
+Cron 351c0c5a alive (created 2026-08-13, 5 days -> re-create at tomorrow's wake).
+
+**The codecov +4 that blocked gh#1336 for days is understood and fixed.** Six
+mechanisms had been refuted (phantom, re-run, pytest-split, stale base, ...) and
+I had it "located to Orbits.py E() array-t branches" -- which was right in spirit
+and WRONG in specifics. I had been reading line numbers off `/var/tmp/rtol-fix`,
+a different worktree, and had the missed lines as 3340/3341/3403/3404: the `try`
+bodies. Asking codecov for the actual line list gave **3347/3348 and 3410/3411 --
+the `except` branches**. Opposite meaning: not "the vectorised call stopped
+running" but "the FALLBACK stopped running".
+
+From there it fell out in minutes. E() has FIVE copies of that try/except, one
+per phasedim:
+
+    3320  phasedim 2 (1D)              covered
+    3347  phasedim 3 (planar, NO phi)  MISSED
+    3375  phasedim 4 (planar + phi)    covered
+    3410  phasedim 5 (3D, NO phi)      MISSED
+    3446  phasedim 6 (3D + phi)        covered
+
+Exactly the two **phi-less** shapes. This PR makes AnySpherical/AnyAxisym
+array-safe, so they no longer raise inside the vectorised evaluation and the
+fallback lost its trigger -- for those two shapes only; a real AnyAxisym orbit
+still reaches the phasedim-6 copy (measured by sys.settrace, which is how I know
+the fallback is LIVE and not dead code). So: a test, not a deletion.
+
+Pushed 531fffa7. The trigger is a **synthetic** scalar-only potential, not a
+quadrature-backed real one -- cheaper, deterministic, backend-safe, and it models
+the exact condition. Expected energies come from the harmonic CLOSED FORM rather
+than galpy's own per-orbit path, so the assertion does not test the code against
+itself; two orbits of different energy at four distinct times mean an
+(orbit, time) transposition in the fallback cannot pass. sys.settrace confirms
+all four previously-missed lines now execute; passes under torch and jax too.
+
+Three self-inflicted detours worth recording, all the same root cause -- checking
+a probe's provenance before believing it:
+1. First fallback probe imported `/var/tmp/streamtorch/galpy`, not the PR head
+   (editable-install shadow, again), AND my hand-rolled tile shape did not match
+   the real call. Discarded, redone against the actual code path.
+2. Read the line numbers off the wrong worktree, which inverted the diagnosis.
+3. Test first failed on non-equispaced times routing to symplec4_c -- my bug,
+   and a useful sign the test reaches the real integrator.
+
+**gh#1338 merged earlier this wake** (5ab0ceab, ledger 14 -> 13).
