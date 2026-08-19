@@ -48147,3 +48147,33 @@ can be run rather than reasoned about.
 
 Status: gh#1336 blocked on a real red I can now, for the first time, attempt to
 reproduce locally. gh#1344 CI still filling in after the two follow-up commits.
+
+### 2026-08-19 (wake) — py3.14 stream failure REPRODUCED LOCALLY (first time)
+
+Cron e935a60c alive.
+
+Built galpy against the new py3.14 env in the gh#1336 worktree (C extension
+compiles and runs: dop853_c gives R(1.0)=1.1873552750282084). Then ran the two
+failing tests:
+
+    test_determine_stream_track_differentiable_potential   PASSED
+    test_determine_stream_track_differentiable_progenitor  FAILED
+    R0 AD=3.542997e-01  best|AD-FD|=1.48e-03  -> 0.42%  (bar 0.3%)
+
+**Reproduced -- but as a MARGINAL miss (0.42% vs a 0.3% bar), where CI shows
+95%** (CI: R0 AD=1.782e-01, |AD-FD|=1.70e-01). The AD value itself differs
+between my py3.14 box and CI's (0.354 vs 0.178, factor ~2), so the environments
+still are not identical. What both agree on: this test sits on a knife edge. On
+py3.13 it passes with an order of magnitude to spare; on py3.14 it is right at
+the bar locally and far past it in CI.
+
+That finally makes the fix testable WHERE IT FAILS. Last wake I measured nsteps
+on py3.13 and found no improvement (0.0138% -> 0.0269%) and correctly refused to
+change the test on that basis -- but py3.13 had nothing to fix. Built the nsteps
+branch under py3.14 and launched the real comparison.
+
+Also settled for free, no re-run spent: gh#1344's Windows red is
+`test_quantity.py::test_streamgapdf_sample`, and the SAME SHA carries both a
+PASSING and a FAILING instance of that identical job (95969876376 vs
+95969887427) -- the push/pull_request twin. A pass/fail split at one SHA is proof
+of nondeterminism. Matches the known Windows flake.
