@@ -48291,3 +48291,25 @@ Launched the whole `test_backend_streamdf.py` FILE (not nodeids) on the gh#1336
 tree under py3.14 -- a step closer to CI's context, to see whether the 95%
 magnitude appears when the file's other tests share the session. Not claiming
 anything from it until it lands.
+
+### 2026-08-19 (wake) — file-level context gives the SAME number; CI's 95% still unexplained
+
+Cron e935a60c alive.
+
+Ran the WHOLE `test_backend_streamdf.py` on the gh#1336 tree under py3.14
+(1 failed, 84 passed, 1 skipped, 22:53):
+
+    R0 AD=3.542997e-01  |AD-FD|=1.48e-03     <- IDENTICAL to the nodeid run
+
+So the file-level session changes nothing. My "hand-picked nodeids are not CI's
+context" caution was a correct general rule and the right reason to retract the
+innocence claim -- but it is NOT the explanation here, at least not at file
+level. Local reproduction is stable at 0.42% in every context I can build; CI's
+gh#1336 is 95%. **That gap is still unexplained and I am not inventing a story
+for it.** The remaining untested difference is the full shard (all
+test_backend*.py in one session), where gh#1336 also alters backend_xfail.txt
+and test_potential.py.
+
+gh#1344 (01e7d3b9) has NO test failures: 86 success, only the two codecov checks
+(incomplete, 32 jobs still queued), py3.14 backend shard in progress. That shard
+is the real test of whether the nsteps test-fix holds in CI's own context.
