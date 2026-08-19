@@ -48177,3 +48177,29 @@ Also settled for free, no re-run spent: gh#1344's Windows red is
 PASSING and a FAILING instance of that identical job (95969876376 vs
 95969887427) -- the push/pull_request twin. A pass/fail split at one SHA is proof
 of nondeterminism. Matches the known Windows flake.
+
+**nsteps VALIDATED on py3.14 (the platform where it actually fails):**
+
+    adaptive (current)   R0 AD=3.542997e-01  |AD-FD|=1.48e-03  rel=0.4191%  FAIL (bar 0.3%)
+    nsteps=3000          R0 AD=3.560532e-01  |AD-FD|=1.83e-04  rel=0.0513%  PASS
+
+8x better residual; FAIL -> PASS with 6x margin. The adaptive arm reproduces the
+pytest failure exactly (0.4191% vs the 0.42% pytest reported), so the probe is
+measuring the same thing the test does.
+
+This is the vindication of last wake's refusal: on py3.13 nsteps looked useless
+(0.0138% -> 0.0269%) and I declined to change the test on a mechanism argument.
+That was right -- py3.13 has no defect to fix. The fix had to be measured on the
+platform that fails, which required building the 3.14 box first.
+
+Caveat I am NOT glossing: I validated against a 0.42% manifestation; CI's is 95%.
+Same mechanism class and nsteps removes the mechanism outright (no step-size
+dependence left), so it should carry -- but "should" is not "measured", and the
+CI shard is the falsifier.
+
+NEXT, and deliberately not pre-empted: gh#1344's own py3.14 backend shard is
+still running. It carries the nsteps OPTION but leaves the test unchanged, on the
+same base as develop. If it PASSES while gh#1336 fails, something in gh#1336 is
+responsible after all and the test change would be papering over it. If it FAILS
+too, the defect is in the base and the test-side fix is correct. That experiment
+is already in flight for free; waiting for it before touching the test.
