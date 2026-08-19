@@ -130,16 +130,24 @@ def make():
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
 
+    # Plotting the two streams on top of each other is useless here: with the key
+    # held fixed the q=0.90 and q=0.95 clouds differ by ~0.003 in position and sit
+    # exactly on top of one another. What is worth seeing is WHERE the stream
+    # responds, so colour each particle by its own sensitivity |dr/dq|, obtained
+    # from the same two common-random-number draws (finite difference over dq, so
+    # this is a first-order sensitivity, not the AD gradient itself).
     s0, s1 = data["streams"]["q0"], data["streams"]["q1"]
-    ax1.plot(s1["x"], s1["y"], ".", color=_C1, ms=2.5, alpha=0.75,
-             label=rf"$q={s1['q']:.2f}$")
-    ax1.plot(s0["x"], s0["y"], ".", color=_C0, ms=2.5, alpha=0.75,
-             label=rf"$q={s0['q']:.2f}$")
+    x0, y0 = numpy.array(s0["x"]), numpy.array(s0["y"])
+    dq = s1["q"] - s0["q"]
+    dr = numpy.hypot(numpy.array(s1["x"]) - x0, numpy.array(s1["y"]) - y0) / dq
+    sc = ax1.scatter(x0, y0, c=dr, s=7, cmap="magma_r", linewidths=0)
+    cb = fig.colorbar(sc, ax=ax1, pad=0.02)
+    cb.set_label(r"$|{\rm d}\mathbf{r}/{\rm d}q|$", fontsize=9)
+    cb.ax.tick_params(labelsize=7)
     ax1.set_xlabel("$x$")
     ax1.set_ylabel("$y$")
     ax1.set_aspect("equal", adjustable="datalim")
-    ax1.set_title(rf"sprayed stream, same key ($N={data['n_show']}$)")
-    ax1.legend(fontsize=7, framealpha=0.92, markerscale=3)
+    ax1.set_title(rf"per-particle sensitivity to $q$ ($N={data['n_show']}$)")
 
     hs = numpy.array(data["hs"])
     for i, row in enumerate(data["conv"]):
