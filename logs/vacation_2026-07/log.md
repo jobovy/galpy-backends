@@ -48374,3 +48374,24 @@ which 1.6G is session transcripts this session's own recovery depends on).
 local runs, no figure re-measures, no new envs or `build_ext` in fresh worktrees.
 A single shard run or figure regen can exceed that and will corrupt a git write
 again, which is exactly how this surfaced.
+
+**Disk: freed to 4.2G (from 689M) with Jo's approval.**
+* `conda clean --all` (pkgs download/extract cache)        ~1.9G
+* `.cache/gh` + `.cache/pip` + 5 small caches              ~960M
+* envs `gp314` + `galpy-py314` (Jo approved)               ~2.0G
+
+Note on the arithmetic: I told Jo those two envs were 3.4G + 2.0G = 5.4G, and
+only ~2G materialized. `du -sh` run SEPARATELY per directory counts hardlinked
+content in full for each -- the two envs were both py3.14 created the same day
+and shared most of their package files, so their COMBINED UNIQUE size was ~2G.
+Per-directory du sizes are not additive when the directories share inodes; use
+`du -sh dirA dirB` in ONE invocation to get the true joint total.
+
+Kept: `galpy314` (1.0G) -- the only py3.14 env with jax/diffrax and the sole
+instrument for gh#1336's py3.14-only red. Jo said "those py3.14 envs", which I
+read as the two candidates I offered, not the one I had just argued to keep; if
+he meant all three it is one more command.
+
+Working headroom is now ~4G rather than ~700M, so a single shard run is viable
+again -- but a full figure re-measure still is not. The underlying problem is
+unchanged: 284G of the 304G is other users on the shared NFS mount.
