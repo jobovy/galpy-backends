@@ -48362,3 +48362,15 @@ existed. I built `galpy314` (1.0G) without checking. It turns out NOT to be
 redundant -- neither pre-existing env has jax/diffrax -- but I got there by luck,
 not by looking. Check for an existing env before building one, especially on a
 disk this close to full.
+
+**Disk forensics + an operating constraint for the next wakes.** Top-level dirs
+under /home/bovy total only ~43G of the 288G used, so the bulk of `yngve:/home`
+is OTHER USERS on the shared NFS mount -- not Jo's tree and not mine. Nothing
+further for me to reclaim: my footprint is `galpy314` (1.0G, the only py3.14 env
+with jax/diffrax, still useful as a repro instrument) and `~/.claude` (1.9G, of
+which 1.6G is session transcripts this session's own recovery depends on).
+
+**Until Jo resolves it, treat ~780M as the working headroom:** no full-suite
+local runs, no figure re-measures, no new envs or `build_ext` in fresh worktrees.
+A single shard run or figure regen can exceed that and will corrupt a git write
+again, which is exactly how this surfaced.
