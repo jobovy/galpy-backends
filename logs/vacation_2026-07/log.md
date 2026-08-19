@@ -48238,3 +48238,34 @@ Every step here overturned something I believed at the previous step. The ones
 that mattered most were the two NEGATIVE results (3 and 6): step 3 stopped me
 shipping a fix that had no evidence behind it, and step 6 stopped me hunting a
 culprit inside gh#1336 that was never there.
+
+**Test fix pushed to gh#1344 (01e7d3b9), and a claim of mine RETRACTED.**
+
+Gates, both run before pushing:
+
+    py3.14 (where it failed):  2 passed   (was 1 failed, 1 passed)
+    py3.13 (where it passed):  2 passed   (unchanged -- no regression)
+
+**Retraction.** Last entry I wrote "gh#1336 is INNOCENT ... the py3.14 stream red
+is a BASE defect", on the strength of develop and gh#1336 failing with
+bit-identical numbers locally. Then gh#1344's own py3.14 shard came back GREEN in
+CI:
+
+    CI  develop py3.14   PASS     local  develop py3.14   FAIL (0.42%)
+    CI  gh#1344 py3.14   PASS     local  gh#1336 py3.14   FAIL (0.42%, identical)
+    CI  gh#1336 py3.14   FAIL (95%)
+
+Locally identical, in CI different -- so the local comparison cannot settle it.
+My local runs were HAND-PICKED NODEIDS; CI runs the whole test_backend*.py shard
+in one session, and gh#1336 also edits backend_xfail.txt and test_potential.py,
+which changes what runs in that shard. That is precisely the invalid-context trap
+I have a standing rule about ([[handpicked-nodeid-batch-is-not-a-context]]) and I
+walked into it anyway. The 95%-vs-0.42% magnitude gap says the same thing.
+
+Amended the commit message BEFORE pushing (it was still local, so no force-push)
+to scope the claim: the fragility is real, measured, and in the base; whether
+fixing it also clears gh#1336 is for CI to answer, not for me to assert.
+
+What survives unchanged: adaptive+DirectAdjoint makes the gradient depend on the
+step sequence; nsteps removes that dependence; 0.4191% -> 0.0513% on the platform
+that fails; both arms now differ only in the adjoint, as a clean A/B should.
