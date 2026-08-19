@@ -47908,3 +47908,52 @@ standard both times: a figure I cannot defend cold does not go on a slide.
 **Talk deliverables** (artifact page, all committed + pushed):
 title illustration (260 real orbits), gF1, gD1, re-measured g2/g5/g6/g17,
 orbit-integration g8/g12/g15 labelled CROSS-ENV with June dates, and g7/g16/g18.
+
+### 2026-08-18 (later) — the held-back DF figure was hiding a REAL galpy bug
+
+Jo asked whether the random-sample figure hadn't worked out. It had; what had
+not worked out was galpy. Chased the unexplained ~0.9% and it localized cleanly.
+
+**Three INDEPENDENT theory legs agree to 7 decimals; the sample does not.**
+
+    r      Hernquist(1990) eq.10   df.sigmar   jeans.sigmar     SAMPLE
+    1.0        0.2700268           0.2700268    0.2700268      0.2676406
+    2.0        0.2345798           0.2345798    0.2345798      0.2317473
+    5.0        0.1745383           0.1745383    0.1745383      0.1725917
+
+That the legs are independent is the load-bearing part: `df.sigmar` is a DF
+velocity-moment integral (`_vmomentdensity`), `jeans.sigmar` solves the Jeans
+ODE, and Hernquist eq.10 is closed form. I checked the source rather than
+assuming, precisely because two agreeing legs can be one leg wearing a hat.
+
+**The sample is low at EVERY radius: 25/25 log-spaced bins below, mean ratio
+0.99225 +/- 0.00047 (~16 sigma), and n-INDEPENDENT** (0.99225 at 4e6 vs 0.99203
+at 4e5). Not statistics, then. Not the direction decomposition either --
+sqrt(<v^2>/3) carries the same deficit, so it is in the sampled speeds.
+
+**Cause: the inverse-CDF velocity grid.** `_make_pvr_interpolator` ships
+`n_v_vesc=100`:
+
+    n_v_vesc=100 (default)   0.9947 0.9934 0.9898 0.9911 0.9992   deficit 0.64%
+    n_v_vesc=300             1.0014 0.9998 0.9959 0.9971 1.0052   deficit 0.01%
+    n_v_vesc=1000            1.0037 1.0020 0.9980 0.9992 1.0073   deficit -0.21%
+
+At the default every radius is below unity; refined, they scatter both sides.
+
+**Provenance checked, not asserted.** Grid params are unchanged vs main and the
+defaults blame to ae40261b (upstream). But "identical code, therefore
+pre-existing" is inference, so I ran the probe on an origin/main worktree: the
+sample values come back BIT-IDENTICAL (0.2676406, 0.2317473, 0.1725917). So the
+bug is pre-existing upstream AND the numpy sampling path survived the migration
+byte-identical -- one probe, two facts. Filed as **gh#1343**.
+
+**gD2 built and pushed** (b689ead) now that the disagreement is explained:
+d(sigma_r)/dr via jax.grad through the sample vs through the Jeans quadrature.
+Stated against MC noise from 8 independent sub-samples -- derivative pull median
+0.6 sigma, value pull median 0.9 sigma. The innermost point (r = 4H) sits at 5.5
+sigma and is KEPT, not trimmed: there the residual is kernel bias, not noise, so
+the error bar honestly does not cover it, and the docstring says so.
+
+The lesson worth keeping: holding gS1 and this one back for being unexplained
+was right, and the payoff was not a nicer figure but a bug report. "I cannot
+defend this cold" is a finding-generator, not just a publication gate.
