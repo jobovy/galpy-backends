@@ -92,7 +92,7 @@
   "g15_icderiv_speed": {
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -100,7 +100,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "07eca85",
+    "git": "a0a03b1",
     "sha256": "c3f5572fae224a891728bac20a8c18491f11bdea50d874e4812d5fff4ed2bafc",
     "track": "G"
   },
@@ -122,7 +122,7 @@
   "g17_staeckel_actionangle_speed_jax": {
     "description": "Staeckel actionsFreqsAngles throughput vs N -- jax (eager vs jit, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -130,14 +130,14 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2aaeb6b",
-    "sha256": "ca97a822671370abb911d6244c4145554ba48a8a004b4fa08885fb9b7d138659",
+    "git": "653cd10",
+    "sha256": "8380bcf9090a7822a9e512d0b1852111c684b244e2d360b261590135b7aa4322",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_torch": {
     "description": "Staeckel actionsFreqsAngles throughput vs N -- torch (eager, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -145,8 +145,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "dbd4715",
-    "sha256": "ac5f6878322da4d6041352f51350b051a41badb4be5f2f85b73513069d0d27e9",
+    "git": "653cd10",
+    "sha256": "5ccaf96c2365a05dc3f49cff000a73322608e384f4fd70686afdd4cbd467459d",
     "track": "G"
   },
   "g18_actionangle_sensitivity": {
@@ -182,7 +182,7 @@
   "g2_throughput": {
     "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU), compute-only vs end-to-end transfer [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -190,8 +190,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2ddfbc2",
-    "sha256": "bc47b1552dbca81cf0b9a0f95597fedd290adb746a0eeebaa86ee93feeba8143",
+    "git": "a0a03b1",
+    "sha256": "34df6dce1eb6b3229c7ea85ae20c38ab5e17ef5bf8cd82adf117b64a1ae0681d",
     "track": "G"
   },
   "g2b_transfer": {
@@ -227,7 +227,7 @@
   "g5_autodiff_overhead": {
     "description": "gradient vs value throughput (reverse-mode AD overhead), jax/torch GPU [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -235,14 +235,14 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "825a8a8",
-    "sha256": "d8dfdf7dedebf854b2993b3982509173149842458a094b1a0e75eccc7cb500b4",
+    "git": "a0a03b1",
+    "sha256": "e062de0ad4b3b765c07eff24e264cc598b504483c12ac486586d3dd4913fe879",
     "track": "G"
   },
   "g6_jit_amortization": {
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -250,8 +250,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2ddfbc2",
-    "sha256": "c93b6b93034d2486ec52790483939ea31a64485f04875c88eed6ca2e631fb317",
+    "git": "a0a03b1",
+    "sha256": "ec7ffbde8a6f6d46115a560b5a2380c6e8ecf239aee021049a53859ca021f4ba",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -297,6 +297,21 @@
     },
     "git": "4a23413",
     "sha256": "74c2b3f686339cfdc26e0bfe4f88d6ac55dfa929a36dec1216b45f12484d570a",
+    "track": "G"
+  },
+  "gS1_stream_track_sensitivity": {
+    "description": "differentiable stream track: d(track)/d(halo q) by AD (jax.jvp) with an on-figure finite-difference cross-check [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "b98e9bf",
+    "sha256": "12b8f76aa5431b54f0600adb3d50a959796ca5937c130708ff44ab8798f0c80a",
     "track": "G"
   }
 }
