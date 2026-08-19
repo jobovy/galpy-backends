@@ -48313,3 +48313,40 @@ and test_potential.py.
 gh#1344 (01e7d3b9) has NO test failures: 86 success, only the two codecov checks
 (incomplete, 32 jobs still queued), py3.14 backend shard in progress. That shard
 is the real test of whether the nsteps test-fix holds in CI's own context.
+
+### 2026-08-19 (wake) — MY FIX REGRESSED CI; REVERTED (gh#1344 45a58a27)
+
+Cron e935a60c alive.
+
+CI falsified the prediction I explicitly said it would test, and the result is
+worse than "no help":
+
+    gh#1344 py3.14 backend shard BEFORE the test change (adaptive):  PASS
+    gh#1344 py3.14 backend shard AFTER  the test change (nsteps):    FAIL
+        R0 AD=3.575753e-01  |AD-FD|=1.51e-03  -> 0.42%
+
+The AD value moved (3.5758 vs adaptive 3.5430), so nsteps WAS live in CI; it just
+does not shrink the residual there the way it does on my py3.14 box (0.0513%).
+So I turned a green shard red on an otherwise-clean PR. Reverted immediately;
+`tests/test_backend_streamdf.py` is now byte-identical to develop.
+
+**The lesson, and it is not the one I thought I had learned.** Two wakes ago I
+was pleased with myself for refusing to change the test on py3.13 evidence and
+insisting on measuring "where it fails". I then did exactly that, got a clean
+8x improvement, and shipped -- and it was still wrong, because a local py3.14 box
+does not predict CI either. Reproducing a failure buys a DEBUGGING INSTRUMENT,
+not a verdict. Recorded as [[local-py314-does-not-predict-ci]].
+
+Note the shape of the trap: the local fix looked convincing (0.4191% -> 0.0513%,
+FAIL -> PASS with 6x margin) precisely BECAUSE the local manifestation was mild.
+CI's is 95%. A fix validated against a 0.42% symptom was never entitled to claim
+the 95% one, and I flagged that caveat in the commit message -- then acted as if
+it did not matter.
+
+What SURVIVES, on independent evidence: the `nsteps` option and its test (batched
+Jacobian 1e-14 plain orbit / 7e-7 AA map), the torch guard, and the corrected
+docstrings. gh#1344 is now those 4 files only.
+
+**Still OPEN and now clearly labelled as such:** the py3.14 stream-gradient
+fragility, and gh#1336's 95%. I have no fix, and the two "explanations" I had
+(gh#1336 causation; constant stepping) are both dead.
