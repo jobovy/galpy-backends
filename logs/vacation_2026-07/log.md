@@ -48502,3 +48502,49 @@ gh#1346 fix -- verified by inspecting the imported source, not assumed. Measurin
 there would raise TracerArrayConversionError, which is the DESIRED failure mode:
 the figure cannot silently produce a wrong number against unfixed code. Measure
 after gh#1346 merges and that tree is updated.
+
+### 2026-08-19 — talk figures: gS2 landed, gS3 (large-dq extrapolation) measuring
+
+**gS2 (particle-spray sensitivity) — DONE, committed c37e1c3, on the artifact page.**
+Panel (a) as first designed was a dud and I replaced it: overplotting the streams
+at q=0.90 and q=0.95 from the same key hid the second cloud entirely (they differ
+by ~0.003 in position), so the panel appeared to show nothing happening. It now
+colours each particle by its own |dr/dq|, which has real structure — sensitivity
+GROWS along the stream, because particles stripped earlier have integrated longer
+in the halo. Panel (b) is the FD converging onto AD: monotone in h for every
+n >= 60, reaching 7.9e-05 at n=240.
+
+    n      h=1e-2     1e-3     1e-4     1e-5
+    60   8.47e-02  9.03e-04 4.46e-04 1.52e-04
+   120   4.69e-01  4.81e-03 7.36e-04 1.49e-04
+   240   1.94e-01  1.95e-03 2.11e-04 7.91e-05
+
+PROVENANCE CAVEAT (carried on both gS2 and gS3): measured with PYTHONPATH pointed
+at the gh#1346 worktree, because the enabling fix is not yet merged. Re-measure
+after #1346 lands.
+
+**FINDING: forward-mode AD works through the stream track.** gS1's docstring says
+jax.jvp is impossible here. That is true of the C-STM orbit path (a custom_vjp),
+but NOT of diffrax with adjoint='direct', which differentiates the solver's own
+operations. jax.jvp returned the whole (nchunk, 6) track tangent in ONE pass
+(124s at nTrackChunks=5). Cross-check: d(track)/dq[0,0] = -0.16652692 against
+gS1's independently-computed -0.166524 (separate reverse-mode grads, different
+chunk count). This is what makes a smooth many-chunk track affordable — gS1
+needed one reverse pass per component.
+
+**gS3 (new, Jo's request): does ONE AD pass predict the track for a LARGE change
+in halo shape?** track(q0) + dq*d(track)/dq vs a full direct re-run, over
+dq = +-0.2 (q from 0.7 to 1.1 — a genuinely different halo, not a perturbation),
+plus the error-vs-|dq| scaling, which for a first-order Taylor prediction must
+fall off as dq^2. nTrackChunks=15 for a smooth curve. Measuring now.
+
+Two self-inflicted delays worth recording: numpy 2 removed the ndarray.ptp()
+METHOD (numpy.ptp() still exists), which crashed the first run AFTER the
+expensive jvp; and I again wrote a wait-loop whose pgrep pattern matched its own
+shell, which burned a 10-minute tool timeout. Both are in memory already.
+
+**gh#1346 CI:** the Windows red is NOT a test failure —
+`CondaHTTPError: HTTP 403 Forbidden` for conda-forge repodata, i.e. the env never
+built. Re-run once the enclosing run finishes (a single job cannot be re-run
+while its run is in progress). codecov patch/project are failing with 134 jobs
+still queued, which is the known incomplete-upload phantom.
