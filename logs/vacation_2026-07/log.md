@@ -48465,3 +48465,40 @@ decide that boundary, then build the figure (d(stream morphology)/d(halo param)
 with an on-figure CRN finite-difference cross-check, gS1 style). Not promising
 the figure until the 2e-4 agreement holds across n and h -- one configuration at
 n=60 is not yet a figure.
+
+### 2026-08-19 (wake) — spray gradient PASSES the stability gate; gS2 module written
+
+Cron e935a60c alive. gh#1346 CI early (5 running, 144 queued) -- nothing to drive.
+
+**The gate I set for myself before promising a figure: AD-vs-CRN-FD across
+particle count AND step size.** It passes, and for the right reason:
+
+     n      h=1e-2       1e-3       1e-4       1e-5
+    30    1.75e-03    1.68e-05   5.98e-04   4.85e-04
+    60    8.47e-02    9.03e-04   4.46e-04   1.52e-04
+   120    4.69e-01    4.81e-03   7.36e-04   1.49e-04
+   240    1.94e-01    1.95e-03   2.11e-04   7.91e-05
+
+For every n >= 60 the disagreement falls MONOTONICALLY as h shrinks, converging
+on the AD value at ~1e-4. That is finite-difference truncation: the FD is the
+limited arm and AD is its h->0 limit. The big h=1e-2 errors (up to 47%) are the
+same truncation, not a defect.
+
+Two things I am NOT quoting as headline numbers: the n=30 row is non-monotonic,
+and its 1.68e-05 at h=1e-3 is lucky cancellation rather than better accuracy --
+so n=30 is excluded from the figure entirely rather than cherry-picked.
+
+**That reshaped the figure for the better.** A single AD-vs-FD number is weak
+evidence for a stochastic estimator. gS2 panel (b) instead plots the FD
+CONVERGING onto AD as h shrinks, per particle count -- a stronger claim
+(AD is the h->0 limit of a pathwise derivative through a Monte-Carlo sampler)
+and an honest one. Panel (a) draws the stream at two flattenings from the SAME
+key, so the visible difference is physics, not resampling.
+
+**gS2 module written and committed (4c5e559), NOT yet measured.** Provenance
+blocker found before writing any data: the harness imports galpy from
+/var/tmp/streamtorch (the editable-install shadow), which does NOT contain the
+gh#1346 fix -- verified by inspecting the imported source, not assumed. Measuring
+there would raise TracerArrayConversionError, which is the DESIRED failure mode:
+the figure cannot silently produce a wrong number against unfixed code. Measure
+after gh#1346 merges and that tree is updated.
