@@ -299,6 +299,21 @@
     "sha256": "74c2b3f686339cfdc26e0bfe4f88d6ac55dfa929a36dec1216b45f12484d570a",
     "track": "G"
   },
+  "gF1_autodiff_forces": {
+    "description": "F_R by autodiff vs the exact analytic force for complicated potentials (SCF, DiskSCF, spiral, bar, composites): agreement at a few ULP of float64",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "9ec5bd2",
+    "sha256": "b0d5738a02ae9120f86c96f5ccb7dafeea908db4d9aecce5c2a784beeed82dca",
+    "track": "G"
+  },
   "gS1_stream_track_sensitivity": {
     "description": "differentiable stream track: d(track)/d(halo q) by AD (jax.jvp) with an on-figure finite-difference cross-check [measure->json, plot byte-stable]",
     "env": {
