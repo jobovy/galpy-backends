@@ -48004,3 +48004,56 @@ a probe's provenance before believing it:
    and a useful sign the test reaches the real integrator.
 
 **gh#1338 merged earlier this wake** (5ab0ceab, ledger 14 -> 13).
+
+### 2026-08-19 — STREAM AD DEFECT ROOT-CAUSED AND FIXED (gh#1344)
+
+Cron re-created: **e935a60c, created 2026-08-19 -> expires ~2026-08-26** (old
+351c0c5a deleted at exactly the 6-day mark).
+
+**The mechanism we had recorded was wrong.** Both the `_vmap_track_chunks`
+docstring and my own July/August log entries said `jax.vmap` batches the inner
+`jacrev` and silently drops the outer d/d(parameter) gradient. Jo remembered it
+the same way ("jax doesn't allow vmap-of-jacrev, undocumented failure"). It does
+not survive measurement:
+
+    pure JAX vmap(jacrev) under an outer grad     1e-10    fine
+    galpy AA map, q = python float                4.5e-7   fine
+    galpy AA map, q = jnp.asarray(0.9) ADAPTIVE   1.9e-2 .. 1.3e-1  WRONG
+    galpy AA map, q = jnp.asarray(0.9) CONSTANT   3e-7 .. 8e-7      fine
+
+Real cause: `orbit_ode.integrate` runs `dt0=None` + `PIDController` (ADAPTIVE).
+The track's second-order path (outer d/dq through an inner jacrev) forces
+diffrax `DirectAdjoint`, which differentiates the solver's OWN operations -- so
+under vmap, where batch elements pick different step sequences, the batched
+reverse pass is wrong while the forward stays right to 1e-10. That asymmetry is
+precisely what made it look like a silent gradient drop for months. Error grows
+with integration time (1.9% -> 7.5% -> 13% across chunks); the trigger needs an
+array-valued potential parameter, i.e. the AD configuration itself.
+
+**gh#1344 opened** (b9e5cb40): opt-in `nsteps` = constant step (t1-t0)/nsteps.
+Batched Jacobian then matches unbatched to ~1e-14 on a plain orbit, ~7e-7 through
+a full AA map, and the constant-step trajectory still matches the adaptive one to
+4.2e-11 -- so it is not buying correctness with accuracy. Test asserts BOTH
+directions. Adaptive stays the default.
+
+**galpy never shipped a wrong stream gradient**: `_vmap_track_chunks` uses
+`lax.map`, which never batches the steps. Re-verified end-to-end today at 0.09%
+vs a finite difference of the same track. What the fix unlocks is BATCHING that
+loop, which lax.map costs us.
+
+**The bug is also a live CI red.** gh#1336's py3.14 shard fails
+`test_determine_stream_track_differentiable_potential` at `AD=4.131613e+00,
+|AD-FD|=8.24e-01` = **19.95%** -- the exact number from my August notes. Same
+DirectAdjoint+adaptive fragility, platform-dependent step sequence. So this was
+never "an intermittent"; it is a real defect with a deterministic cause.
+
+Corrections to my own earlier work, both self-caught:
+* the 48% I first quoted compared the vmap arm's AD against the LAX arm's FD --
+  an invalid A/B. With each arm's own FD: lax 0.09%, vmap 48%. Right conclusion,
+  wrong evidence, and I said so before relying on it.
+* the "13% wrong Jacobian" localization initially pointed at the INPUTS; a fresh
+  process on the same saved ICs gave 4.5e-7. The real discriminator was float vs
+  array q. Refuted my own step rather than building on it.
+
+**gS1 un-excluded and on the talk page** with the corrected mechanism in its
+docstring (figure bytes unchanged, verify OK 12b8f76aa543).
