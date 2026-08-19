@@ -48591,3 +48591,57 @@ codecov/patch was REAL: 2 lines (the traced-IC probe fallback), uncovered becaus
 the backend suite uploads no coverage and I cannot edit workflows. Fixed by
 extracting `_theta_probe_point()` with a stated contract and covering BOTH branches
 from the numpy suite (39 passed) -- not a pragma, not a workflow edit.
+
+### 2026-08-19 (evening) — JIT BOUNDARY CENSUS: 98.2% traced
+
+**Cron** e935a60c alive (created 2026-08-19 -> expires ~2026-08-26).
+
+Jo asked whether tests might be passing SPURIOUSLY under --jit, i.e. whether the
+suite is green because nothing actually traced. Pass counts cannot answer that, so
+instrumented `traced_call` and counted boundary calls on a CI-shaped shard
+(`tests/test_potential.py --backend jax --jit --splits 5 --group 1`):
+
+    boundary calls: 25571   traced: 25105   eager-fallback: 466   traced = 98.2%
+
+So the jit layer is NOT hollow at the @backend_input boundary. Two limits on that
+number, both stated to Jo rather than glossed:
+  (a) it measures the BOUNDARY, not the graph underneath -- a call can trace at the
+      entry point and still hit eager work deeper in;
+  (b) the 466 fallbacks were unclassified. traced_call declines for three reasons
+      and only ONE is a gap: `nested` (already inside a trace) and `mode-off` are
+      correct behaviour; `ns-mismatch` (caller on a different framework than the
+      jit mode) is real missed coverage. Re-running split by reason.
+
+**MERGED gh#1346** (ff765858): streamspraydf probes for a backend potential
+parameter even with a backend IC. Audit before merge found one duplication
+(`_promote_progenitor_backend` re-extracting the same six progenitor accessors);
+folded into gh#1348 as `_progenitor_now()`, with the fallback deliberately kept
+only on the probe -- giving _promote a fallback would silently substitute a fixed
+unit-circular IC for the real progenitor.
+
+**gh#1336 root-caused and fixed**: its py3.14 red was NOT a test-tolerance issue and
+NOT its own code -- the branch was 2 commits behind and lacked gh#1344 ("nsteps
+makes the batched reverse pass exact"), the fix for exactly the AD-vs-FD mismatch
+it was failing on. Merged develop in (not rebased: rebasing an open PR means a
+force-push; the merge commit vanishes on squash). Both py3.14 shards now SUCCESS.
+Waiting on the queued All-backend run to merge.
+
+**gh#1348 OPENED**: integrate_kwargs threaded through streamspraydf -> forward-mode
+AD through a spray stream. Tangent validated against a CRN central difference:
+5.9e-02 / 6.0e-04 / 1.6e-05 at h=1e-2/1e-3/1e-4.
+
+**Off-grid AA fallback (Jo's question) -- MEASURED, feasible.** Jo asked why grid AA
+cannot fall back off-grid; the numpy path masks and SUBSETS (`R[indx]`), which
+tracing forbids, and a plain `where` evaluates the expensive direct action for every
+point, defeating the grid. But:
+
+    direct actionAngleAdiabatic under jax.jit: OK (traceable)
+    lax.cond branch taken 14.57 ms/call vs not taken 0.38 ms/call  (38x, really skipped)
+    direct cost scales with count: N=8 20.3ms, N=64 44.9ms, N=512 315.2ms
+    jnp.where(cond, size=K) gather/scatter under jit: round-trips, only masked entries change
+
+=> design: `n_off = sum(indx)`; lax.cond(n_off==0 -> interp only; n_off<=K ->
+gather K padded slots and scatter back; else -> direct for all). Grid speed in the
+common case, correct always, no silent truncation from the static K. Two things to
+check first: whether grid AA is ever called inside a vmap (vmap degrades cond AND
+the gather to select-everything), and whether torch.cond supports the same shape.
