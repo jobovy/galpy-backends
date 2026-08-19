@@ -48203,3 +48203,38 @@ same base as develop. If it PASSES while gh#1336 fails, something in gh#1336 is
 responsible after all and the test change would be papering over it. If it FAILS
 too, the defect is in the base and the test-side fix is correct. That experiment
 is already in flight for free; waiting for it before touching the test.
+
+### 2026-08-19 (wake) — gh#1336 is INNOCENT; the py3.14 stream red is a BASE defect
+
+Cron e935a60c alive.
+
+Ran the same failing test on the DEVELOP-based tree under py3.14, rather than
+waiting for CI to answer it:
+
+    gh#1336 tree (aa-sph):    R0 AD=3.542997e-01  |AD-FD|=1.48e-03
+    develop tree (streamfix): R0 AD=3.542997e-01  |AD-FD|=1.48e-03
+
+**Bit-identical.** gh#1336's content is irrelevant to this test -- which retires
+the "shared quadpack utility" lead and, more importantly, means CI's
+develop-PASSES / gh#1336-FAILS split was marginality in CI's environment, not
+causation. The defect is in the BASE, exposed by py3.14.
+
+That is what makes the test-side fix correct rather than a cover-up, so it is now
+applied to gh#1344: `nsteps=3000` in BOTH arms of `_track_loss_fn`, with the
+measurement chain in the comment. It also makes the two arms differ only in the
+adjoint, which is what a clean A/B should do -- previously they differed in
+adjoint AND max_steps AND (implicitly) step sequence.
+
+The full evidence chain, in the order it was actually established:
+1. adaptive + DirectAdjoint under vmap is wrong (2-13%), forward fine to 1e-10.
+2. constant steps fix the batched Jacobian (1e-14 plain orbit, 7e-7 AA map).
+3. on py3.13 nsteps looked useless for the STREAM TEST (0.0138% -> 0.0269%) --
+   and I refused to change the test on that basis. Correct: no defect there.
+4. built a py3.14 box; the test fails there (0.4191%, bar 0.3%).
+5. nsteps on py3.14: 0.4191% -> 0.0513%. PASS with 6x margin.
+6. develop vs gh#1336 on py3.14: bit-identical -> base defect, not PR-caused.
+
+Every step here overturned something I believed at the previous step. The ones
+that mattered most were the two NEGATIVE results (3 and 6): step 3 stopped me
+shipping a fix that had no evidence behind it, and step 6 stopped me hunting a
+culprit inside gh#1336 that was never there.
