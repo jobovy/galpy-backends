@@ -48415,3 +48415,53 @@ test_potential.py and backend_xfail.txt, which change what runs there. Pairing
 the potential file with the streamdf file is the cheapest probe of that
 interaction. If it still gives 0.42%, session context is refuted too and I am out
 of local hypotheses.
+
+### 2026-08-19 (wake) — gh#1344 MERGED (19595792); streamspray theta-dispatch fix -> gh#1346
+
+Cron e935a60c alive.
+
+**gh#1344 merged**: 152 success, merge=CLEAN after the revert -- the prediction
+that reverting restores the shard held. Audited before merging: the two new
+branches (`dt0`, `stepsize_controller`) switch on `nsteps`, a STATIC config value,
+not array data, so the if->xp.where array-input class does not apply; no
+duplication (single-site threading per file); placement correct (option in the
+jax integrator, plumbed via the reference dispatcher, torch guard at the dispatch
+point). Ledger delta: none.
+
+Caught during that audit: `git diff origin/develop` showed streamspraydf.py in
+the PR -- it was my UNCOMMITTED spray work in the same worktree. `git diff
+origin/develop HEAD` and `gh pr diff --name-only` both confirmed the PR head was
+the intended 4 files. Exactly the stacked-PR leak this repo has bitten me with
+before; the habit of checking PR content rather than working-tree diff caught it.
+
+**Jo's priority: the streamspray figure.** He believed the enabling work was long
+done. My task list said blocked. HE WAS CLOSER TO RIGHT than my list: the code is
+backend-aware, has an in-backend integration path, and sample() even threads a
+jax key. One dispatch gap made it unreachable:
+
+`_sample_setup`'s theta probe sat inside `else` of `if ic_backend:`, so with a
+BACKEND progenitor IC it never ran -> theta_backend False -> dispatch chose
+dop853_c -> progenitor integrated through the C-STM, which carries d/d(IC) but
+NOT d/d(theta) -> jax.grad w.r.t. a potential parameter died in the C parser. The
+combination that fails (differentiable parameter AND backend IC) is precisely
+what a stream fit uses, so the capability looked present but was unreachable.
+
+Hoisting the probe gives, end to end:
+
+    <R^2> = 2.69399310
+    AD  d<R^2>/dq = 1.01136308e-02
+    FD  d<R^2>/dq = 1.01113228e-02   (SAME key -- common random numbers)
+    rel diff      = 2.28e-04
+
+**gh#1346 opened** (ad77ed29). The test is a real regression guard, verified by
+A/B: with the fix it passes in 95.6s (running the gradient); with the file
+reverted it fails in 11.7s at the C parser. Gate: whole
+test_backend_streamspraydf.py, 58 passed.
+
+SECOND boundary found, NOT fixed here and flagged in the PR: `sample(
+return_orbit=True)` builds output via `vxvv=as_numpy(out).T`, severing the
+gradient at the Orbit boundary. The test uses return_orbit=False. Next steps:
+decide that boundary, then build the figure (d(stream morphology)/d(halo param)
+with an on-figure CRN finite-difference cross-check, gS1 style). Not promising
+the figure until the 2e-4 agreement holds across n and h -- one configuration at
+n=60 is not yet a figure.
