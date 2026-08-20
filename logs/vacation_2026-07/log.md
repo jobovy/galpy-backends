@@ -48645,3 +48645,53 @@ gather K padded slots and scatter back; else -> direct for all). Grid speed in t
 common case, correct always, no silent truncation from the static K. Two things to
 check first: whether grid AA is ever called inside a vmap (vmap degrades cond AND
 the gather to select-everything), and whether torch.cond supports the same shape.
+
+### 2026-08-20 — gh#1336 MERGED (ledger 13 -> 11); gh#1348 coverage fix; off-grid helper
+
+**Cron** e935a60c alive (created 2026-08-19 -> expires ~2026-08-26).
+
+**MERGED gh#1336** (ae4086aa): AnySpherical array + AnyAxisym midplane port,
+-2 xfail. Ledger now **11**. It had been the longest-stuck PR. Audit before merge:
+3 of 4 new `if`s test `numpy.ndim` (static under tracing), the 4th is test-side on
+concrete values, and `quad_over_limits` is a scipy wrapper for the NUMPY path so it
+does not duplicate galpy/backend/quadrature.py.
+
+**RETRACTION — twice now on the same red.** I claimed gh#1336's py3.14 failure was
+caused by its branch missing gh#1344 ("nsteps"). Then gh#1348 -- which sits on
+develop WITH gh#1344 -- failed the same two streamdf AD tests with matching numbers
+(q AD=4.1316, best=8.24e-01). So that explanation is insufficient. After rebasing
+gh#1348 onto develop-with-gh#1336 both py3.14 shards PASS. I am NOT claiming
+gh#1336 fixed it either: its diff touches AnySpherical/AnyAxisym/quadpack, nothing
+in streamdf's AD path, so there is no mechanism, and 2 observations per side does
+not separate that from intermittency. Current honest state: UNEXPLAINED, passing.
+The measured fragility underneath is real and stands on its own:
+
+    tintJ=8   FD in h:  1.8e-04, 1.4e-04, then DEGRADES to 8.8e-03 at h=1e-5
+    tintJ=30  FD in h:  1.7e-04, 8.7e-06, 6.9e-06   (settles)
+    jax-vs-numpy track at q0: 4.7% of extent at tintJ=8, 1.6e-08 at tintJ=30
+
+i.e. these tests pass at a sweet-spot step size rather than because the quantity is
+settled. Worth converging deliberately rather than after the next mystery red.
+
+**gh#1348 codecov/patch was REAL** (not the phantom): sessions 28 vs 28, misses
+15 -> 16, one line -- streamspraydf.py:953, the branch that hands solver options to
+the in-backend integrator, reachable only with integrate_kwargs on jax/torch, and
+that suite uploads no coverage. Fixed by testing `_ikw`'s CONTRACT from the numpy
+suite (options to diffrax/torchdiffeq, withheld from C/numpy, default withholds
+everywhere, returned dict is a copy) -- values asserted, not lines touched.
+
+**Off-grid AA fallback, staged locally** (branch backend/offgrid-aa-fallback,
+11c4d15f): `galpy/backend/control.py` with `cond` + `masked_indices`. Eager takes a
+plain Python `if` (reusing the already-exported has_concrete_truth_value); only a
+traced predicate reaches lax.cond/torch.cond. Verified functionally on numpy, jax
+and torch. BOTH backends skip the untaken branch against real work:
+
+    jax   lax.cond   taken 14.57 ms  not taken 0.38 ms   (38x)
+    torch torch.cond taken 83.05 ms  not taken 0.18 ms   (460x)
+
+Two traps recorded: (a) a first torch probe reported 0.116 vs 0.102 ms and would
+have "confirmed" skipping -- its expensive branch was not expensive; (b) the same
+mistake in jax via XLA constant-folding, because the branch did not depend on its
+input. Any test for this MUST use an input-dependent expensive branch.
+vmap exposure checked and clear: grid AA is consumed by quasiisothermaldf, and the
+only vmap in the library is constantbetadf's.
