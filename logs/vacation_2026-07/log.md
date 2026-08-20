@@ -48695,3 +48695,48 @@ mistake in jax via XLA constant-folding, because the branch did not depend on it
 input. Any test for this MUST use an input-dependent expensive branch.
 vmap exposure checked and clear: grid AA is consumed by quasiisothermaldf, and the
 only vmap in the library is constantbetadf's.
+
+### 2026-08-20 (later) — gh#1352: the py3.14 streamdf-gradient flake, root-caused
+
+**Cron** e935a60c alive (created 2026-08-19 -> expires ~2026-08-26).
+
+**THE FLAKE IS REAL AND NOW EXPLAINED.** test_determine_stream_track_differentiable_
+{potential,progenitor} on the py3.14 backend shard went FAIL -> PASS -> FAIL across
+three runs on IDENTICAL branch content, always with the same numbers (q AD=4.1316,
+best=8.24e-01). That pattern refutes BOTH causal stories I offered earlier -- the
+missing gh#1344, then gh#1336's content. Neither was right; I said so in gh#1352's
+description so a reviewer does not re-derive them.
+
+Cause: at tintJ=8 the isochrone-approx actions are unconverged, so the TRACK is not
+a settled function of q and the AD-vs-own-FD check passes only at a sweet-spot h.
+
+    tintJ=8    FD in h: 1.8e-04, 1.4e-04, DEGRADES to 8.8e-03 at h=1e-5
+    tintJ=30   FD in h: 1.7e-04, 8.7e-06, 6.9e-06            (settles)
+    jax-vs-numpy track at q0: 4.7% of extent (tintJ=8) vs 1.6e-08 (tintJ=30)
+
+**gh#1352 OPENED**: tintJ 8 -> 30, and a single h=1e-4 (the min-over-two-h hedge was
+only needed for the unconverged form; 300x margin remains).
+
+**The cost reasoning I nearly got wrong.** I first measured tintJ=30 at 930s for the
+two tests and started planning fallbacks for a shard that already runs ~70min
+against a ~90min kill. Then I measured the BASELINE on the same machine:
+
+    tintJ=8,  two h   913.91s
+    tintJ=30, one h   757.42s      17% FASTER
+
+The converged form is CHEAPER than what it replaces. Two assumptions were wrong:
+that cost scales with evaluation count (AD pass + jax compile dominate -- dropping
+2 of 5 evaluations bought only 19%), and that correctness costs speed here. Lesson:
+an absolute timing is not a delta; measure what it REPLACES.
+
+**gh#1348**: own content green, incl. the REAL codecov gap (streamspraydf.py:953,
+sessions 28/28, misses 15->16) closed by testing `_ikw`'s contract from the numpy
+suite. Blocked only by the above flake; the re-run's pull_request twin is green,
+push twin still running, then all-clear needs a re-run.
+
+**Off-grid AA (backend/offgrid-aa-fallback, local)**: helper + non-fakeable tests
+committed; the consumer is committed as f1fb830e marked UNVERIFIED. Blocker found:
+`self._aA` is built c=True, so the fallback hands jax/torch arrays to the C
+implementation. The resulting AttributeError is MASKED by actionAngle.__call__ as
+"'__call__' method not implemented" (the handler is even marked pragma: no cover) --
+worth fixing on its own, it will mislead the next reader too.
