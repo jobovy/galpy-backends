@@ -49563,3 +49563,33 @@ collection failure, a small instance of [[long-measurement-needs-a-quiet-box]].
 not a regression -- no 28-line diff can move a 48k-line project by 34 points. `Lines +28`
 matches the new module's 28 statements exactly, so the diff accounting itself is right.
 Re-check once all checks report; if patch is still red THEN it is real and worth chasing.
+
+### 2026-08-21 — my chained verification never ran for 2 hours, and nothing said so
+
+The numpy-path check I "chained to the build" last wake had been waiting since 02:48. The
+build **finished at 02:48**; the loop waited until 04:40 anyway, because
+
+    while pgrep -f "setup.py build_ext" >/dev/null; do sleep 30; done
+
+matches the **bash wrapper** whose own command line contains that string -- the same wrapper
+artefact as `grep pytest`. `ps -o args=` on the pid it matched read
+`/bin/bash -c source ...snapshot-bash...`, visibly not the build. A stuck waiter is
+indistinguishable from a slow job unless you look, and I only looked because ">1h for a galpy
+C build" felt wrong.
+
+Two independent tells, both cheap: the log's **mtime** was ~2h stale, and its tail already said
+"Finished installing galpy". Neither requires guessing.
+
+**Never gate a wait-loop on `pgrep -f <command string>`.** Wait on the thing itself: a sentinel
+line the job appends (`until grep -q DONE log`), `wait $!`, or a marker file. Recorded in
+[[measure-elapsed-time-never-assume-it]]. Related self-match: `pgrep`/`pkill -f` matching the
+CURRENT shell exits 144 -- the bracket trick (`'numpy_chec[k]'`) avoids it.
+
+**And the .so was in the wrong place again.** `build_ext --inplace` put
+`libgalpy.cpython-313-...so` at the WORKTREE ROOT, not in `galpy/`. It happened to load from
+that cwd, but I copied it into `galpy/` and asserted provenance properly rather than trusting
+it:
+
+    libgalpy loaded: True   AND   actionAngleStaeckel(c=True)._c: True
+
+Without that second assertion a missing C extension turns C-gated tests into silent passes.
