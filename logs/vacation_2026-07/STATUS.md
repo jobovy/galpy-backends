@@ -1,94 +1,95 @@
-# Vacation status snapshot — 2026-08-18 (gh#1332 merged; gh#1336 sole open PR)
+# Vacation status snapshot — 2026-08-21 (gh#1352 + gh#1356 both near-green, awaiting last shards)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
 
 ---
 
-## Nothing is blocked on Jo
+## Nothing is blocked on Jo except gh#1356 (a main PR — main PRs are Jo's to merge)
 
 ## Branch state
 
-    main                   c7891fca   (gh#1323, gh#1324, gh#1333 merged)
-    feat/backends-develop  2eb1ac0e   (gh#1316, gh#1334, gh#1332 merged)
+    main                   45e2dcde   (gh#1355 merged)
+    feat/backends          982b1781
+    feat/backends-develop  d25dac4a   (gh#1348, gh#1336 merged; 106 ahead of feat/backends)
 
-## Open PRs — ONE
+## Open PRs — TWO ARE MINE. Four others share my git identity and are NOT mine.
 
-**gh#1336 → develop** `backend/anyspherical-array-mass`, head `07fce93b`
-(REBASED onto 2eb1ac0e 2026-08-18: merging gh#1332 made it DIRTY -- adjacent
-xfail deletions in the same hunk. Resolved minimally; diffstat unchanged).
-Three commits:
+**`--author @me` returns SIX open PRs. Only two are mine.** The other agent
+session (`session_01N2Jm4Y1A9eQRXMEaHaqwwJ`) commits under the same identity.
+Attribute by the `Claude-Session` trailer on the head commit before acting:
 
-  * AnySpherical: array input silently returned the mass inside `r[0]` at every
-    element. `_rawmass` now goes through `quad_over_limits` (which was missing
-    from develop entirely — cherry-picked from main's gh#1323) and `_revaluate`
-    splits scalar/array. **76 of 77 grid cells wrong → 0 of 77.**
-  * AnyAxisym: port main's numpy Phi midplane-cusp fix + centred midplane FD.
-  * **Ledger delta: −2 xfail** (jax-jit + torch-jit
-    `test_forceAsDeriv_potential[AnyAxisym]`), measured 11 passed/2 xfailed →
-    12 passed/1 xfailed.
+    gh#1352  MINE          backend/streamdf-grad-tintj  -> feat/backends-develop
+    gh#1356  MINE          fix/adiabatic-action-quadrature -> main
+    gh#1357  OTHER AGENT   staeckel-chi-quadrature
+    gh#1353  OTHER AGENT   aainv-spherical-quadrature
+    gh#1351  OTHER AGENT   aainv-vertical-quadrature
+    gh#1347  OTHER AGENT   aainv-staeckel-single
 
-Status: one shard re-run in flight. All three reds trace to ONE flake — see
-below. `_force_accepts_arrays = False` is KEPT (Jo's design call); its comment
-was corrected because the old numerical justification was stale.
+**gh#1352 → develop**, head `cae49223`. 150 pass / 0 fail / 3 pending
+(`all-clear`, a jax qdf/pv2qdf/streamgapdf shard, a torch quantity/coords shard).
+MERGEABLE/BLOCKED only on those. **Pre-merge audit is DONE** (see log): diff is
+`backend_slow_skip.txt` +21, `backend_xfail.txt` −28, `test_backend_streamdf.py`
+±50, **no source files** — so the if→xp.where / duplication / helper-placement
+criteria are N/A by construction. The test change is a CONVERGENCE fix (tintJ
+8→30, FD settled to 8.7e-06 at h=1e-4), **not** a tolerance loosening; the 3e-3
+bar is unchanged. **Ledger delta: xfail 11→8, slow_skip 75→79, skip 68 flat.**
+Next action: verify green + head still `cae49223`, then squash-merge. Mine to merge.
 
-## The gh#1336 reds are one flake, not three problems
+**gh#1356 → main**, head `40716dfe`. 149 pass / 0 fail / 2 pending / 3 skipping.
+Fixes gh#1354: galpy's C adiabatic action quadrature lost ~4 digits at the sqrt
+turning points. jr 7.88e-04 → 6.83e-10, jz 1.52e-04 → 9.31e-10 (order 10→20,
+cost +33%). **Jo's to merge.** Conflicts with gh#1357 in `HISTORY.txt` ONLY;
+I offered to take the one-hunk resolution — gh#1357 is still OPEN, so there is
+nothing to resolve yet.
 
-    head cf794ba5   sessions=27      base 700f8694   sessions=28
+## Flagged to Jo, not acted on
 
-A failed shard never uploads coverage, so the flaky shard IS the missing
-session → that is the `codecov/project −0.01%` → which held `all-clear`.
-**A shard flake also presents as a codecov drop; don't diagnose it separately.**
+gh#1357 removed the C/Python bit-parity claim for Staeckel, so any backend-vs-C
+test asserting ULP-level agreement may now assert something untrue. Not mine to
+change (other agent's PR).
 
-Flake verdict is twin-proven AND tree-checked: same SHA, push run's
-`test_backend*.py` shard succeeded while the PR run's failed, and gh#1336 is
-`ahead=3 behind=0` vs develop's current head, so the PR merge is a
-fast-forward and both twins test identical trees.
+## Ledger (at develop d25dac4a)
 
-## Live investigation: streamdf AD flake — cause still OPEN
+    backend_xfail       11      -> 8  once gh#1352 lands
+    backend_slow_skip   75      -> 79
+    backend_skip        68      unchanged
 
-`test_determine_stream_track_differentiable_{potential,progenitor}` compare
-`jax.grad` to a central FD of the same backend track.
+Remaining 8 xfail after gh#1352 = 6 by-design/upstream + 2 gated on gh#1356
+reaching develop. **Zero open fixable defects in the xfail ledger.**
 
-**Two mechanisms proposed and BOTH killed this wake:**
-* *Adaptive-step FD noise* — dead: `inbackend_ode.py:149` already defaults to
-  `rtol=atol=1e-12`, and tol/2h is ~1e-7 relative against an observed 20%.
-  Six orders short.
-* *AD arm truncating at its 10x-smaller `max_steps`* — dead: no `throw=False`,
-  so diffrax raises rather than truncating, and the failure was a plain
-  assertion with a finite AD.
+## Deferred / next up
 
-**Live lead:** the test's own docstring warns "a vmap chunk loop instead leaks
-~20%", and the q failure is 8.24e-01/4.131630 = **19.95%**. Points at the
-chunk-assembly path, not solver noise. Does not explain the progenitor failure
-in the same run (95%), so either two mechanisms or a shared upstream cause.
-
-The FLAKE VERDICT is unaffected — it rests on the twin split plus `behind=0`.
-
-Probe running: asserted quantity across h at default vs rtol=atol=1e-12.
-**Caveat: that worktree has no built C extension**, so the numpy sdf falls back
-to leapfrog — mechanism unaffected (both arms share the frozen sdf, both run
-diffrax), but local magnitudes are NOT CI magnitudes.
-
-## Ledger
-
-Eager sweep at 700f8694: **0 stale**, 48 correctly ledgered, 2 file-level
-not-present. No free eager burndown left at this head — further reduction must
-come from the `-jit` half or from real fixes.
+* torch namespace-threading: 89 of 192 graph breaks are `_resolver.py:45`
+  `_BACKEND_CTX.get()`. ContextVar reads ARE the break (positive control: 1 for
+  a ContextVar, 0 for a module global / default arg / closure). Fix is a ~100-site
+  change blocked on a thread-safety design call. **The jax/torch jit gap is ONE
+  cause, not diffuse rot.**
+* Off-grid AA fallback — gated on gh#1356 reaching develop.
+* Appendix F (`galpy-jax/appendices/F_adiabatic_action_quadrature.md`, 202 lines)
+  documents the GL endpoint theory: for (1−x)^α × analytic, error is O(n^−(2α+2));
+  √ endpoint ⇒ O(n⁻³), factor 8 per doubling (measured exponent 2.90–2.99).
+  §11 was CORRECTED: AnyAxisym is a Cauchy PV + Hadamard finite part (by design),
+  NOT the same √-endpoint bug.
 
 ## Standing corrections to how I work
 
 * **Never decrease coverage, not even one line** (Jo).
+* **`--author @me` is not "mine"** — check the `Claude-Session` trailer.
+* **An accepted `gh run cancel` is not a completed one.** A run with 44 done + 1
+  queued job has nothing to interrupt; escalate to
+  `gh api -X POST repos/jobovy/galpy/actions/runs/<id>/force-cancel`.
 * **Check the same-SHA twin FIRST** on any shard red — but a twin split only
-  proves nondeterminism if `behind=0`; PR-event runs test head merged into base.
-* **Compare against the branch ref, not `base.sha`** (which goes stale).
+  proves nondeterminism if `behind=0`.
+* **A failed shard uploads no coverage**, so a flake presents AS a codecov drop.
+  Judge a codecov red by WHICH FILES dropped, not by session counts.
 * **File presence is not behaviour.** Run the measurement the fix changes.
-* **A test whose predicate duplicates the guard it tests measures nothing.**
-* **Probe inside `jax.jit`.** Eager hands concrete scalars to scipy.
-* **`ps` on a shell pipeline measures the WRAPPER**, and cwd resets between
-  calls — use absolute paths.
+* **`TORCH_LOGS` writes to stderr**, and pytest discards stderr for passing
+  tests — needs both `2>` redirection and `-s`, or you get a false zero.
+* **A built `.so` is not where `build_ext --inplace` says it is.** Assert
+  `load_libgalpy()` and `aA._c` or an A/B silently compares Python to Python.
 
 ## Cron
 
-`351c0c5a`, hourly at :13, session-only, created 2026-08-13 → **expires
-~2026-08-20 (2 days)**. Verified alive this wake.
+`e935a60c`, hourly at :13, session-only, **created 2026-08-19 → expires
+~2026-08-26 (5 days)**. Verified alive this wake via CronList.
