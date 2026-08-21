@@ -49593,3 +49593,19 @@ it:
     libgalpy loaded: True   AND   actionAngleStaeckel(c=True)._c: True
 
 Without that second assertion a missing C extension turns C-gated tests into silent passes.
+
+**Numpy-path verification for gh#1358 CLOSED (the gap I had flagged as outstanding).** Run with
+the C extension genuinely active -- provenance asserted, not assumed (`libgalpy loaded: True`
+AND `actionAngleStaeckel(c=True)._c: True`), so C-gated tests could not fake passes:
+
+    tests/test_potential.py + test_actionAngle.py + test_orbit.py
+    2075 passed, 106 skipped, 0 failed   (8:42, -n 16)
+
+That is the numpy-untouched claim measured rather than argued: off a trace
+`TracedContextVar.get/set/reset` ARE the ContextVar's, and `_is_compiling()` reads `sys.modules`
+so a numpy-only run never even imports torch.
+
+Verification status for gh#1358 is now: numpy 2075 passed | torch/jax/numpy gates 155 + 12 each
+| py3.14 -W error 8 passed/4 torch-skips | new module 100% covered | jit-path A/B 18 break
+lines -> 0. The ONE thing still unverifiable locally is the 4 torch tests on py3.14 (galpy314
+has no torch) -- CI's to close.
