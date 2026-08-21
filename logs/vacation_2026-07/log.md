@@ -49674,3 +49674,45 @@ Remaining question is `codecov/project` alone. patch passing means MY DIFF's lin
 project compares whole-project coverage against base and still shows 2 uploads missing. If it
 does not clear once the last shard reports, it is the stale-base class rather than anything in
 this PR -- but I will judge that when all checks are in, not before.
+
+### 2026-08-21 — codecov/project is a REAL -4-miss delta, not a phantom; and I broke a worktree
+
+**All 153 checks reported: 152 pass, 2 fail — `codecov/project` + `all-clear` (one root cause).**
+Per the rule I set myself, I re-judged instead of calling phantom twice. The verdict FLIPPED:
+
+    codecov API, head a2cca9a5   sessions 28   lines 48621  hits 48602  misses 19
+    codecov API, base a7cf6ed3   sessions 28   lines 48593  hits 48578  misses 15
+
+**Sessions are EQUAL (28 vs 28)**, so both reports are complete -- the incomplete-upload story
+that correctly explained the earlier red does NOT apply here. head genuinely carries +4 misses.
+
+But codecov's own summary says *"All modified and coverable lines are covered by tests"* and
+`codecov/patch` PASSED, so the 4 misses sit on lines **outside my diff**, in a project that
+carries just 15 misses total across 48.6k lines. -0.01% is a rounding-edge delta on lines I
+never touched.
+
+**I had a specific hypothesis and it is REFUTED.** I thought: making code traceable removes it
+from coverage.py's view, because lines compiled into a dynamo graph never execute as Python
+bytecode. Testable, so I tested it -- base vs head coverage of `test_backend_jit_mode.py`:
+
+    _jit.py   HEAD 110 stmts, 1 missed (line 205)
+    _jit.py   BASE 110 stmts, 1 missed (line 205)     <- identical, hypothesis dead
+
+Worth stating plainly: that was a tidy story and it was wrong. The 4 lines remain unidentified;
+`--cov` on a single file cannot see them and the codecov file_report endpoint returns no
+line_coverage for this sha.
+
+**And I corrupted my own worktree doing it.** I bracketed the A/B in `git stash` / `git stash
+pop` -- in a worktree that was already CLEAN. `git stash` with nothing to stash creates no entry
+silently, so `pop` took `stash@{0}`, which belonged to a DIFFERENT branch
+(`backend-jit/gridwave-tolerance`), and left `tests/backend_slow_skip.txt` in `UU`. I have a
+memory that says never to stash in this repo and I did it anyway.
+
+Contained: git keeps the entry on a conflicted pop, so the other branch's WIP survived (had it
+applied cleanly it would have been silently dropped). Recovered with
+`git checkout HEAD -- <file>`; worktree clean, no conflict markers, HEAD == pushed cf6463bb,
+both stashes intact. Memory sharpened with this variant.
+
+`cf6463bb` (the DRY fix) is now pushed -- it was needed anyway and doubles as the coverage
+retest. If project comes back red at exactly -4 again, that is systematic and I will chase the
+specific lines; if it clears, the 4 were run-to-run noise.
