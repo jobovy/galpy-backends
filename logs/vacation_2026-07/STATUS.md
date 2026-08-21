@@ -49,7 +49,9 @@ action quadrature no longer loses ~4 digits at the sqrt turning points
 (jr 7.88e-04 -> 6.83e-10, jz 1.52e-04 -> 9.31e-10). **Unblocks** the 2 remaining
 fixable xfail entries (`AdiabaticGrid_outsidegrid_c`, jax+torch) and task #103
 (off-grid AA fallback) -- but only once main flows into feat/backends -> develop,
-which is a rebase, NOT to be started while gh#1358 is in flight against develop.
+which is a rebase **JO DOES, NOT ME** (his call 2026-08-21: "I'll have to do that
+rebase, it's complicated"). Park these two entries as a normal blocked dependency
+and work on something else; do NOT hand-carry the main-side fix onto develop.
 
 ## Flagged to Jo, not acted on
 
