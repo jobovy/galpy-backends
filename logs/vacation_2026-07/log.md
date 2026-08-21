@@ -49653,3 +49653,24 @@ would throw away the verdict on the substantive change and I would have to re-ea
 So the order is: let a2cca9a5 finish -> read whether the substantive change is genuinely green
 (and whether codecov healed) -> THEN push the DRY commit. One extra CI cycle either way, but
 this way I keep the answer to the question I actually care about.
+
+**a2cca9a5 verdict is in, and holding the push paid off.**
+
+    codecov/patch   FAIL -> PASS   (self-healed as uploads landed, exactly as the 7-vs-27
+                                    session count predicted -- the phantom call was right)
+    py3.14 tests/test_backend*.py   PASS
+    151 pass / 1 fail / 2 pending   (only codecov/project red; all-clear + the twin shard left)
+
+The py3.14 backend shard passing **closes the one gap I said only CI could close**: galpy314 has
+no torch locally, so the four torch tests in the new file were unverifiable here. That shard
+collects `tests/test_backend*.py` WITH torch on 3.14, and it is green. Had I pushed the DRY
+commit when I wrote it, I would have discarded this answer and had to re-earn it over another
+~2h.
+
+Local gate on the DRY refactor (the 4 under_trace-consuming files): **torch 157 / jax 157 /
+numpy 157 passed**.
+
+Remaining question is `codecov/project` alone. patch passing means MY DIFF's lines are covered;
+project compares whole-project coverage against base and still shows 2 uploads missing. If it
+does not clear once the last shard reports, it is the stale-base class rather than anything in
+this PR -- but I will judge that when all checks are in, not before.
