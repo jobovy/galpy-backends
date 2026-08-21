@@ -49539,3 +49539,16 @@ py3.14 `-W error` 8 passed / 4 torch-skips. PR description rewritten (a stale de
 worse than none) and the old-SHA runs cancelled -- 6 went straight to `cancelled`, the 7th
 (All-backend, fully queued) needed force-cancel, again confirming that an accepted cancel is
 not a completed one. Stale-sha sweep is clean; the 8 current-SHA runs now have those runners.
+
+**codecov/project red on gh#1358 is the early-phase phantom, and the one real risk is ruled
+out.** The monitor fired it at 5 of 153 checks reported -- i.e. before essentially any coverage
+uploaded. The only way it could have been a REAL drop is uncovered lines in the new module, so
+I measured that directly instead of waiting:
+
+    galpy/backend/_tracectx.py    28 stmts, 0 missed, 100%   (from its test file alone)
+
+Two incidental gotchas worth keeping: `--cov galpy.backend._tracectx` (a submodule target)
+dies with `ImportError: cannot load module more than once per process` out of
+`numpy.fft._pocketfft_umath` -- use CI's own `--cov galpy --cov-config .coveragerc` and filter
+the report. And a concurrent `build_ext` writing into the tree produced one transient
+collection failure, a small instance of [[long-measurement-needs-a-quiet-box]].
