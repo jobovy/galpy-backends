@@ -26,12 +26,14 @@ Attribute by the `Claude-Session` trailer on the head commit before acting:
     gh#1351  OTHER AGENT   aainv-vertical-quadrature
     gh#1347  OTHER AGENT   aainv-staeckel-single
 
-**gh#1358 → develop** `backend/torch-graphbreak-contextvar`, head `b4ac1b98`, base
-`a7cf6ed3`. JUST OPENED, CI starting. Adds `galpy/backend/_tracectx.py::TracedContextVar`
+**gh#1358 → develop** `backend/torch-graphbreak-contextvar`, head `a2cca9a5`, base
+`a7cf6ed3`. Head a2cca9a5 (follow-up: `.set` made traceable too -- the first commit was incomplete). CI re-running. Adds `galpy/backend/_tracectx.py::TracedContextVar`
 (ContextVar + a `threading.local` mirror read only while `torch.compiler.is_compiling()`)
 and moves all three galpy context vars onto it. **Measured on this base: 9/9
 `fullgraph=True` FAIL before -> 9/9 OK after, bit-identical, zero galpy break sites**
-(sites were `_resolver.py:45` and `_jit.py:190`). Tests A/B-verified: the 2 integration
+A/B on galpy's OWN jit("torch") path: baseline 18 break lines (`_resolver.py:45` x5,
+`_jit.py:174` x1) -> 0. `_jit.py:174` is `_TRACING.set(True)`, so the `.set` half was
+load-bearing.. Tests A/B-verified: the 2 integration
 tests fail with the wiring reverted. Also hoists `_no_torch_compile_deprecations` out of
 3 byte-identical copies. Gate: torch/jax/numpy 155 passed each. **No ledger change.**
 Mine to merge once green.
