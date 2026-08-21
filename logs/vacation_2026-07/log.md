@@ -49746,3 +49746,45 @@ never evidence of "noise".
 `.set` traceable too -- if the mechanism is real, cf6463bb should show the SAME or MORE misses
 in `_jit.py`, not fewer. If instead `_jit.py` comes back clean, the mechanism is wrong again.
 Either way the answer arrives without more guessing.
+
+### The +4 misses are SOLVED — and the mechanism was real (gh#1358 -> 42215210)
+
+The `cf6463bb` run reproduced it exactly: `galpy/backend/_jit.py` = **4 misses again**, same as
+`a2cca9a5`. Systematic, not noise, and caused by my diff. `codecov/patch` passed on both, so
+every line I wrote is covered — the loss was elsewhere in the same file.
+
+**The hypothesis I twice mis-called is confirmed.** `_torch_compiled`'s inner `call` body is
+exactly 4 statement lines:
+
+    174  token = _TRACING.set(True)
+    175  try:
+    176      return method(*args, **kwargs)
+    178      _TRACING.reset(token)
+
+`coverage.py` records what the CPython interpreter executes. A frame dynamo compiles end-to-end
+**never runs as Python bytecode**, so its lines report MISSED even though the code ran. Before
+the fix, `call` graph-broke at `_TRACING.set(True)` and fell back to the interpreter, so those
+lines counted. After the fix dynamo swallowed the whole frame. **A successful traceability fix
+looked like a coverage regression.**
+
+**Fixed at the root, not with a pragma.** `_torch_compiled` now compiles `method` and leaves the
+bookkeeping in an interpreted wrapper. That is also the inversion my own notes had already
+flagged as correct: setting the tracing flag INSIDE the region the flag exists to guard is
+backwards. Coverage returns because `call` runs as Python again.
+
+Re-verified after the change, because it alters WHAT is compiled -- not assumed from "tests
+still pass":
+
+    galpy jit("torch")   value matches eager, ZERO galpy break sites
+    fullgraph battery    9/9 OK, bit-identical
+    re-entrancy          traced_call 1 / NOT_TRACED 0 / dynamo graphs 1
+    tests                28 passed; _tracectx.py 100%
+
+**Also handled:** a macos-15 red on `test_from_name_values/errors` -- SIMBAD/VizieR
+`DALServiceError`, the known external-service flake class (my diff cannot affect remote name
+resolution). Re-ran that job rather than investigating the PR.
+
+**Near-miss worth recording:** the push printed *"Recorded resolution for
+tests/backend_slow_skip.txt"* -- rerere echoing the earlier stash accident. I checked the commit
+contents rather than trusting the push: commit is `_jit.py` only (13/3), PR diff is exactly the
+9 intended files, ledger **untouched** vs develop. Verify content, never push success.
