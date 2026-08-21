@@ -49552,3 +49552,14 @@ dies with `ImportError: cannot load module more than once per process` out of
 `numpy.fft._pocketfft_umath` -- use CI's own `--cov galpy --cov-config .coveragerc` and filter
 the report. And a concurrent `build_ext` writing into the tree produced one transient
 collection failure, a small instance of [[long-measurement-needs-a-quiet-box]].
+
+**codecov/patch ALSO red -- same phantom, and the comment states the discriminator outright:**
+
+    BASE a7cf6ed   sessions 27   coverage 99.96%
+    HEAD a2cca9a   sessions  7   coverage 65.21%   (-34.76%, Hits -16868, Misses +16896)
+
+7 uploads against the base's 27, with 102 of 153 checks still pending. A -34.76% swing with
++16.9k misses is the signature of files present but untested by the shards that HAVE uploaded,
+not a regression -- no 28-line diff can move a 48k-line project by 34 points. `Lines +28`
+matches the new module's 28 statements exactly, so the diff accounting itself is right.
+Re-check once all checks report; if patch is still red THEN it is real and worth chasing.
