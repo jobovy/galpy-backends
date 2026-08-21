@@ -49716,3 +49716,33 @@ both stashes intact. Memory sharpened with this variant.
 `cf6463bb` (the DRY fix) is now pushed -- it was needed anyway and doubles as the coverage
 retest. If project comes back red at exactly -4 again, that is systematic and I will chase the
 specific lines; if it clears, the 4 were run-to-run noise.
+
+### The +4 misses are localized: ALL of them are in `galpy/backend/_jit.py`
+
+Stopped guessing and asked codecov per-file. Both `totals/?sha=` and `report/?sha=` work
+unauthenticated; diffing the per-file misses is decisive:
+
+    head a2cca9a5   ... galpy/backend/_jit.py  4     <- present only on head
+    base a7cf6ed3   ... (_jit.py absent = 0 misses)
+    every other file identical on both sides
+
+So the drop is **caused by my diff**, in a file my diff touches. I had been leaning toward
+"noise on lines I never touched"; that was wrong and the per-file diff says so plainly.
+
+**Mechanism: a HYPOTHESIS, explicitly not confirmed.** `_torch_compiled`'s inner `call` body --
+`token = _TRACING.set(True)` / `try` / `return method(...)` / `finally` / `_TRACING.reset(token)`
+-- is almost exactly 4 statement lines, and it lives INSIDE the region torch.compile walks. If
+dynamo now compiles that frame instead of breaking out of it, the frame never executes as Python
+bytecode and coverage.py cannot see it. Making code traceable would then REMOVE it from
+coverage. That fits the count and the location.
+
+I am labelling it unconfirmed because I have already been wrong in both directions on it: I
+"refuted" it from a single-file run, then resurrected it. **A one-file `--cov` run cannot
+reproduce a merged-report drop** -- base and head are IDENTICAL there (110 stmts, 1 missed, line
+205) precisely because other CI shards cover those lines. So "not reproducible locally" was
+never evidence of "noise".
+
+**What decides it:** the in-flight `cf6463bb` run. That commit adds `_TRACE_ONLY`, which makes
+`.set` traceable too -- if the mechanism is real, cf6463bb should show the SAME or MORE misses
+in `_jit.py`, not fewer. If instead `_jit.py` comes back clean, the mechanism is wrong again.
+Either way the answer arrives without more guessing.
