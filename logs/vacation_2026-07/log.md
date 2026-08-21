@@ -49609,3 +49609,37 @@ Verification status for gh#1358 is now: numpy 2075 passed | torch/jax/numpy gate
 | py3.14 -W error 8 passed/4 torch-skips | new module 100% covered | jit-path A/B 18 break
 lines -> 0. The ONE thing still unverifiable locally is the 4 torch tests on py3.14 (galpy314
 has no torch) -- CI's to close.
+
+### gh#1358 pre-merge audit — and it FOUND something
+
+Ran the three audit criteria properly rather than as a formality.
+
+**1. if->xp.where array-input class: CLEAN.** Only three new `if`s in source, and all three
+branch on CONTROL state, never on an array value:
+
+    if is_compiling():        (x2)
+    if var_token is not _TRACE_ONLY:
+
+Nothing here can be reached with an array where a scalar was assumed, so the class is N/A by
+construction rather than by inspection-and-hope.
+
+**2. Duplication: a REAL finding.** `_namespaces.under_trace` already carried the same
+`sys.modules` guard + `torch.compiler.is_compiling()` that `_tracectx` had grown -- "am I inside
+a torch.compile trace?" was written twice. They are genuinely DIFFERENT predicates and neither
+replaces the other: `under_trace(*xs)` asks whether those ARRAYS are traced and returns False
+when handed none, so it cannot answer for a ContextVar read (which has no array). What was
+duplicated is the primitive underneath. Fixed: `_tracectx.is_compiling()` is now that single
+primitive and `under_trace` composes it with its is-it-a-tensor test. Verified unchanged, not
+assumed:
+
+    under_trace(numpy)=False  under_trace(concrete tensor)=False  inside trace=(True, True)
+
+**3. Helper placement: CLEAN.** `_tracectx.py` sits in `galpy/backend/` -- generic backend
+infra, not embedded in a specific potential/df module ([[generic-helpers-go-in-backend]]).
+`no_torch_compile_deprecations` went to `tests/backend_jit_helpers.py`, the existing shared
+test-helper module, rather than a fourth private copy.
+
+**Cost I accepted deliberately:** pushing the DRY fix discards ~145 already-green checks and
+re-runs ~2h of CI on a runner-constrained repo, to remove three duplicated lines. Taken because
+"audit every PR for duplication" is a standing instruction, deferred cleanups get forgotten, and
+the run was not green yet anyway (codecov still healing), so no finished result was thrown away.
