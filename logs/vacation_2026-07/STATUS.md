@@ -26,8 +26,10 @@ Attribute by the `Claude-Session` trailer on the head commit before acting:
     gh#1351  OTHER AGENT   aainv-vertical-quadrature
     gh#1347  OTHER AGENT   aainv-staeckel-single
 
-**gh#1352 → develop**, head `cae49223`. 150 pass / 0 fail / 3 pending
-(`all-clear`, a jax qdf/pv2qdf/streamgapdf shard, a torch quantity/coords shard).
+**gh#1352 → develop**, head `cae49223`. 151 pass / 0 fail / 2 pending
+(`all-clear` + the jax qdf/pv2qdf/streamgapdf shard, which sat QUEUED 5h51m on pure
+runner contention -- ~140 jobs deep repo-wide, mostly the other agent's 4 PRs -- and
+picked up a runner on its own at 05:59Z. NOT a wedge; do not cancel).
 MERGEABLE/BLOCKED only on those. **Pre-merge audit is DONE** (see log): diff is
 `backend_slow_skip.txt` +21, `backend_xfail.txt` −28, `test_backend_streamdf.py`
 ±50, **no source files** — so the if→xp.where / duplication / helper-placement
@@ -60,11 +62,18 @@ reaching develop. **Zero open fixable defects in the xfail ledger.**
 
 ## Deferred / next up
 
-* torch namespace-threading: 89 of 192 graph breaks are `_resolver.py:45`
-  `_BACKEND_CTX.get()`. ContextVar reads ARE the break (positive control: 1 for
-  a ContextVar, 0 for a module global / default arg / closure). Fix is a ~100-site
-  change blocked on a thread-safety design call. **The jax/torch jit gap is ONE
-  cause, not diffuse rot.**
+* **torch graph breaks — NO LONGER BLOCKED. This is the next PR.** Prototyped and
+  measured 2026-08-21; patch saved at `prototypes/torch-graphbreak-contextvar.patch`
+  (73 lines, 2 files). Two defects: (a) `_backend_dtype` is EAFP and dynamo turns
+  the `numpy.issubdtype` raise into a hard `InternalTorchDynamoError` instead of
+  routing it to the `except`; (b) the `_BACKEND_CTX.get()` read needs only a
+  trace-time mirror, since the backend context is fixed during a trace.
+  **A/B with `fullgraph=True`: 9/9 pass with the fixes, 9/9 fail without, output
+  bit-identical, galpy breaks 8 -> 0.** The thread-safety objection that had this
+  filed as a ~100-site refactor is answered: `threading.local()` traces just as
+  cleanly. numpy path measured unaffected (202 passed). Still to do in the PR:
+  size the reduction on the FULL torch `--jit` suite (9/9 is 3 analytic potentials;
+  the 192-break figure came from a real test file).
 * Off-grid AA fallback — gated on gh#1356 reaching develop.
 * Appendix F (`galpy-jax/appendices/F_adiabatic_action_quadrature.md`, 202 lines)
   documents the GL endpoint theory: for (1−x)^α × analytic, error is O(n^−(2α+2));
