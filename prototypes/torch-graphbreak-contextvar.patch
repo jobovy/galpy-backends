@@ -1,0 +1,73 @@
+diff --git a/galpy/backend/_namespaces.py b/galpy/backend/_namespaces.py
+index 2d84e2bb..333bdddd 100644
+--- a/galpy/backend/_namespaces.py
++++ b/galpy/backend/_namespaces.py
+@@ -243,6 +243,8 @@ def _backend_dtype(xp, dtype):
+     """
+     if dtype is None or xp is numpy:
+         return dtype
++    if not isinstance(dtype, (numpy.dtype, str, type)):
++        return dtype
+     try:
+         is_numpy_dtype = numpy.issubdtype(dtype, numpy.generic)
+     except TypeError:  # not a numpy dtype (already a torch.dtype): leave it
+diff --git a/galpy/backend/_resolver.py b/galpy/backend/_resolver.py
+index 8be6419c..b020bd27 100644
+--- a/galpy/backend/_resolver.py
++++ b/galpy/backend/_resolver.py
+@@ -15,6 +15,8 @@
+ ###############################################################################
+ import contextlib
+ import contextvars
++import sys
++import threading
+ 
+ import numpy
+ 
+@@ -22,6 +24,14 @@ from ._namespaces import namespace_for_name, namespace_from_arrays
+ 
+ # Thread-/async-safe default backend; stores (name, force) or None.
+ _BACKEND_CTX = contextvars.ContextVar("galpy_backend", default=None)
++_TRACE_MIRROR = threading.local()
++
++
++def _ctx_get():
++    _torch = sys.modules.get("torch")
++    if _torch is not None and _torch.compiler.is_compiling():
++        return getattr(_TRACE_MIRROR, "ctx", None)
++    return _BACKEND_CTX.get()
+ 
+ 
+ def get_namespace(*arrays, xp=None):
+@@ -42,7 +52,7 @@ def get_namespace(*arrays, xp=None):
+     """
+     if xp is not None:
+         return namespace_for_name(xp)
+-    ctx = _BACKEND_CTX.get()
++    ctx = _ctx_get()
+     if ctx is not None and ctx[1]:  # forced default beats the data
+         return namespace_for_name(ctx[0])
+     ns = namespace_from_arrays(arrays)
+@@ -55,7 +65,7 @@ def get_namespace(*arrays, xp=None):
+ 
+ def backend():
+     """Return the name of the current default backend ('numpy' if unset)."""
+-    ctx = _BACKEND_CTX.get()
++    ctx = _ctx_get()
+     return ctx[0] if ctx is not None else "numpy"
+ 
+ 
+@@ -76,10 +86,13 @@ def use(name, force=False):
+     """
+     namespace_for_name(name)  # validate eagerly
+     token = _BACKEND_CTX.set((name, force))
++    _prev = getattr(_TRACE_MIRROR, "ctx", None)
++    _TRACE_MIRROR.ctx = (name, force)
+     try:
+         yield namespace_for_name(name)
+     finally:
+         _BACKEND_CTX.reset(token)
++        _TRACE_MIRROR.ctx = _prev
+ 
+ 
+ def set_default_backend(name, force=False):

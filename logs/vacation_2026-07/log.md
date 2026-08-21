@@ -49373,3 +49373,57 @@ That last pair is the only one with a path forward, and the gate is real rather 
 bookkeeping: the off-grid backend fallback has to agree with C, and **C is the inaccurate side
 until gh#1356 lands** -- the test's bar currently pins the wrong value. So "zero open fixable
 defects in the xfail ledger" is accurate as of this head.
+
+### The torch jit gap is ~15 lines, not a ~100-site refactor — MEASURED, and my prior read was wrong
+
+Standing note said: 89 of 192 torch graph breaks are `_resolver.py:45` (`_BACKEND_CTX.get()`),
+fix = thread a namespace through ~100 call sites, **blocked on a thread-safety design call**.
+Filling the CI wait with a local prototype, that assessment turns out to be wrong on both counts.
+
+**Two independent defects, both in `galpy/backend/`:**
+
+**(1) `_namespaces.py:_backend_dtype` is a hard ERROR under `torch.compile`, not a break.** It
+is EAFP: it calls `numpy.issubdtype(dtype, numpy.generic)` and catches the `TypeError` a torch
+dtype provokes. Dynamo evaluates that call as a python constant during tracing, so the raise
+escapes as `InternalTorchDynamoError: Cannot interpret 'torch.float64' as a data type` instead
+of reaching the `except`. **An EAFP try/except that dynamo cannot emulate is a hard error under
+trace.** Fix is to guard only the raising input -- a torch dtype is the one thing that is
+neither a `numpy.dtype`, a `str`, nor a `type`:
+
+    if not isinstance(dtype, (numpy.dtype, str, type)):
+        return dtype
+
+My FIRST attempt at this guard was wrong and a 32-case equivalence table caught it: I had
+excluded `type`, which silently changed behaviour for the python builtins (`int`, `float`,
+`bool`, `object`, ...) and for `jnp.float32`/`jnp.bfloat16` -- all of which `numpy.issubdtype`
+accepts. 9 real mismatches. The final form is 0 mismatches over 32 dtype inputs including
+torch and jax bfloat16. (The 10th "mismatch", `None`, was an artifact of my harness omitting
+the function's early return -- worth stating so the count is not later mistaken for a real gap.)
+
+**(2) The ContextVar read needs a trace-time mirror, not a 100-site refactor.** During a
+`torch.compile` trace the backend context is fixed by construction, so the ContextVar read is
+trace-invariant. Reading a mirror only while `torch.compiler.is_compiling()` removes every break.
+
+**The A/B, `fullgraph=True` (hard-errors on ANY break), 3 potentials x 3 methods:**
+
+    with both fixes    9/9 fullgraph=OK,  output bit-identical to eager
+    baseline           9/9 fullgraph=FAIL "Dynamo does not know how to trace method `get`
+                                           of ContextVar"
+    galpy graph breaks 8 -> 0   (only torch-internal cpp_extension.py:140 remains)
+
+**The thread-safety objection is answered, not dodged.** A single module global would indeed be
+wrong if two threads compiled under different backends. So I tested the honest version --
+`threading.local()` -- and dynamo traces `getattr(_TRACE_MIRROR, "ctx", None)` just as cleanly:
+**9/9 fullgraph OK, 0 breaks**. That was the entire blocker, and it costs nothing.
+
+numpy path unaffected: `_backend_dtype` early-returns for `xp is numpy`, and `_ctx_get()` is
+`_BACKEND_CTX.get()` verbatim when not tracing (and when torch is not even imported).
+Measured: `test_potential.py -k "normalize or forceAsDeriv"` = **202 passed, 0 failed**.
+
+Patch saved at `prototypes/torch-graphbreak-contextvar.patch` (73 lines). NOT opened as a PR --
+gh#1352 and gh#1356 already hold my two slots. This is the next PR the moment gh#1352 merges.
+Working tree reverted to clean.
+
+**Caveat before this ships:** the 9/9 is three analytic potentials; the 192-break figure came
+from a real test file. The PR needs the full torch `--jit` suite to size the true reduction,
+and that measurement waits for the CI queue to drain.
