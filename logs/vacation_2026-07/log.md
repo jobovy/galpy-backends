@@ -49809,3 +49809,36 @@ I offered never materialised -- gh#1356 merged cleanly without it.
 **gh#1358 coverage retest: not yet readable.** sessions=12 of ~28 with CI at 65/153, so the
 report is mid-upload (misses 7921, cov 83.7% -- meaningless at this stage). Judging it now would
 repeat the mistake I made two wakes ago. Waiting for the session count to complete.
+
+### The coverage mechanism is CONFIRMED by intervention (gh#1358 @ 42215210)
+
+Not correlation -- a three-point causal series, one variable changed:
+
+    a2cca9a5   bookkeeping INSIDE the compiled region   _jit.py  4 misses
+    cf6463bb   bookkeeping INSIDE the compiled region   _jit.py  4 misses
+    42215210   bookkeeping moved OUTSIDE                _jit.py  0 misses
+
+Whole project back to **misses = 15, exactly base's count**, coverage 99.96%, and **zero failing
+checks** (123 pass / 30 pending). Both codecov checks cleared on their own once the real cause
+was fixed -- no re-run, no threshold argument, no pragma.
+
+So the finding stands: **making a frame torch.compile-traceable removes its lines from
+coverage.py**, because a compiled frame never executes as Python bytecode. A successful jit fix
+can present as a coverage regression. The remedy is architectural -- keep bookkeeping outside
+the region it guards -- and it is now in memory as its own entry.
+
+Worth noting how close I came to getting this wrong twice: first I called it "noise on lines I
+never touched" (it was mine), then I "refuted" the mechanism from a single-file `--cov` run that
+structurally cannot reproduce a merged-report drop. What settled it was codecov's per-file
+`report/?sha=` diff, then a real intervention.
+
+**Final audit re-run on the full diff (2 commits landed since the first pass):**
+
+    array-input branching   3 added `if`s, all on CONTROL state -- never an array value
+    duplication             torch.compiler.is_compiling() is CODE in exactly one place
+                            (_tracectx.py:24); the other 2 grep hits are docstrings
+    helper placement        _tracectx.py in galpy/backend/; 1 definition of the
+                            deprecation helper (was 3 byte-identical copies)
+    ledger                  untouched vs develop
+
+Ready to merge as soon as the last 30 checks report.
