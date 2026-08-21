@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-21 (gh#1352 MERGED; gh#1358 opened; gh#1356 awaits Jo)
+# Vacation status snapshot — 2026-08-21 (gh#1352 + gh#1356 MERGED; gh#1358 sole open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -9,7 +9,8 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
 ## Branch state
 
-    main                   45e2dcde   (gh#1355 merged)
+    main                   10843281   (gh#1356 MERGED 11:38Z as 5d7b7e76 -- the adiabatic
+                                      quadrature fix is now on main)
     feat/backends          982b1781
     feat/backends-develop  a7cf6ed3   (gh#1352 merged; 107 ahead of feat/backends)
 
@@ -43,12 +44,12 @@ Mine to merge once green.
 contention and picked up a runner on its own -- not a wedge, and cancelling would have
 cost hours.
 
-**gh#1356 → main**, head `40716dfe`. 149 pass / 0 fail / 2 pending / 3 skipping.
-Fixes gh#1354: galpy's C adiabatic action quadrature lost ~4 digits at the sqrt
-turning points. jr 7.88e-04 → 6.83e-10, jz 1.52e-04 → 9.31e-10 (order 10→20,
-cost +33%). **Jo's to merge.** Conflicts with gh#1357 in `HISTORY.txt` ONLY;
-I offered to take the one-hunk resolution — gh#1357 is still OPEN, so there is
-nothing to resolve yet.
+**gh#1356 MERGED by Jo** 2026-08-21 11:38Z as `5d7b7e76` on main. galpy's C adiabatic
+action quadrature no longer loses ~4 digits at the sqrt turning points
+(jr 7.88e-04 -> 6.83e-10, jz 1.52e-04 -> 9.31e-10). **Unblocks** the 2 remaining
+fixable xfail entries (`AdiabaticGrid_outsidegrid_c`, jax+torch) and task #103
+(off-grid AA fallback) -- but only once main flows into feat/backends -> develop,
+which is a rebase, NOT to be started while gh#1358 is in flight against develop.
 
 ## Flagged to Jo, not acted on
 
