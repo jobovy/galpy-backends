@@ -49163,3 +49163,28 @@ enters only at second order and was never the accuracy limit.
 Near-miss while checking it: my verification snippet computed order 40 as F+3Q instead of
 F+4Q and reported +66% against the doc's +99%. The DOC was right and the CHECK was wrong --
 almost "corrected" a correct number. Recomputed: order 40 = 1.99x = +99%.
+
+### Jo asked: is the glfixed_point loop faster, and should the other integrals switch?
+
+**Speed was not the motivation.** The loop replaced the callback because applying the
+substitution otherwise means pushing zmax/cc/rr through GSL's `void *params`; evaluating nodes
+directly is what the sibling derivative routines already do. Measured at equal order 10:
+callback 2.675s vs loop 2.48s per 200k actions -- suggestive of ~7% (one fewer indirect call
+per node) but NOT a controlled interleaved A/B, and negligible beside the +33% of the order
+bump. Per-node cost is dominated by evaluatePotentials either way.
+
+So: **do not propagate the call-style change** -- that is churn. The substitution is the point,
+and only where an endpoint branch point exists.
+
+**Staeckel: same bug, measured.** Same plain glfixed over turning-point limits, no
+substitution, and the code comment states the same wrong inference ("the J integrands VANISH at
+the turning points, so no t^2-substitution is needed"). Convergence in order gives ratio -> 8,
+i.e. O(n^-3), with the default order 10 carrying ~4.6e-4 (jr) / ~1.4e-4 (jz) -- the same
+magnitudes as adiabatic.
+
+Note the trap I nearly fell into: c=True vs c=False agree to 1e-12, which proves NOTHING,
+because the python path deliberately reproduces C's rule. Two implementations of the same
+quadrature agreeing is not evidence of accuracy. The order-convergence test is the discriminator.
+
+**Jo: leave it -- another agent is on Staeckel.** Recorded in appendix F section 10, not
+actioned, no PR opened, no Staeckel code touched.

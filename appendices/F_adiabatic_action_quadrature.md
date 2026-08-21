@@ -191,7 +191,38 @@ moved the answer by three orders of magnitude.
   per iteration. Verified rather than argued: $J_R,J_z$ are **bitwise identical** (sha256) at
   `OMP_NUM_THREADS` 1/2/8/16, scaling 10.04 s → 1.15 s.
 
-## 10. The transferable lesson
+## 10. Does the same bug sit in Staeckel? (measured — yes; NOT actioned)
+
+`actionAngleStaeckel.c` has the identical structure: `gsl_integration_glfixed` over
+`[u_{\min},u_{\max}]` and `[v_{\min},\pi/2]`, integrands `sqrt(...Squared)`, **no
+substitution**. The Python/backend path deliberately reproduces C's rule
+(`actionAngleStaeckel.py:92`: *"Matches the C gsl_glfixed exactly: plain GL of `order` points
+... the J integrands VANISH at the turning points, so no t^2-substitution is needed"*) — which
+is the same inference this appendix refutes: vanishing is not sufficient, it vanishes like a
+square root.
+
+Note the trap this creates: comparing `c=True` against `c=False` shows agreement to ~1e-12,
+which proves nothing, because both run the same rule. The discriminating test is convergence
+**in the order**:
+
+| order | $\Delta J_R$ | $\Delta J_z$ | ratio |
+|---:|---:|---:|---:|
+| 10→20 | 3.97e-04 | 1.25e-04 | — |
+| 20→40 | 5.32e-05 | 1.68e-05 | 7.46 |
+| 40→80 | 6.90e-06 | 2.18e-06 | 7.71 |
+| 80→160 | 8.80e-07 | 2.78e-07 | 7.84 |
+| 160→320 | 1.11e-07 | 3.51e-08 | 7.93 |
+| 320→640 | 1.40e-08 | 4.41e-09 | 7.93 |
+
+Factor $\to 8$ per doubling: $O(n^{-3})$ again. Extrapolated, the default order 10 carries
+**~4.6e-4 in $J_R$ and ~1.4e-4 in $J_z$** — the same magnitudes as the adiabatic defect. The
+module already contains `_staeckel_t2_action` (used for the derivative panels), so the machinery
+for the fix exists.
+
+**Deliberately not actioned here** (2026-08-20, Jo's call): a separate agent is working on
+Staeckel, so this is recorded rather than fixed, to avoid two people editing the same code.
+
+## 11. The transferable lesson
 
 The same shape of bug is the largest remaining cluster in the xfail ledger: three entries
 (`poisson_surfdens[AnyAxisym]` ×2 and `test_eccentricity`) are one root cause — AnyAxisym's
