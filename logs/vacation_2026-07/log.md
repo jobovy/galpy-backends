@@ -48740,3 +48740,426 @@ committed; the consumer is committed as f1fb830e marked UNVERIFIED. Blocker foun
 implementation. The resulting AttributeError is MASKED by actionAngle.__call__ as
 "'__call__' method not implemented" (the handler is even marked pragma: no cover) --
 worth fixing on its own, it will mislead the next reader too.
+
+---
+
+## 2026-08-20 — the off-grid blocker was not what my own WIP note said
+
+**gh#1354 FILED: galpy's C adiabatic actions lose ~4 digits.** Chasing the off-grid
+AA fallback, I checked the assumption written into f1fb830e's commit message --
+"the fallback needs the pure-python (c=False) actionAngleAdiabatic, and its numerics
+must still meet the test's 1e-8 bar against the C answer". That is backwards. Measured
+against an independent reference (endpoint-regularizing substitution + adaptive quad
+at 1e-14, cross-checked against the c=False path, agreeing to 7e-15):
+
+    Jz:  C = 1.44e-04 rel err      python = 7e-15
+    Jr:  C = 4.61e-04 rel err      python = exact
+
+The C is the inaccurate side. `calcJzAdiabatic` and `calcJRAdiabatic` apply plain
+fixed-order Gauss-Legendre directly to integrands with sqrt zeros at the endpoints
+(z=zmax; rperi AND rap). GL is only algebraically convergent there -- measured 8x per
+doubling of order, i.e. O(n^-3), exactly the sqrt-endpoint rate. Reproducing the C rule
+in numpy matched C to 1.1e-14 (jz) / 2.3e-14 (jr), so the rule I measured IS the one C runs.
+
+The fix is free and already in the file: the sibling DERIVATIVE routines
+(calcdJzAdiabatic / calcdJRAdiabatic, which I added for the Jacobian work) use the
+regularizing substitutions. At the same order 10:
+
+    jz  plain 1.44e-04  ->  z=zmax*sin(phi)      1.24e-07   (~1200x)
+    jr  plain 4.61e-04  ->  r=cc-rr*cos(theta)   2.15e-11   (~21000x)
+
+Confirmed the defect is on origin/main (the plain-GL action routines are there;
+calcdJzAdiabatic is NOT -- that's mine). So this is upstream, not backend-branch damage.
+Filed rather than patched: it moves c=True output at 1e-4, so it is not byte-identical
+and is Jo's call.
+
+**What this means for the 2 xfails.** test_actionAngleAdiabaticGrid_outsidegrid_c asserts
+grid-fallback == direct-C to 1e-8. Both ledger entries are EAGER (no -jit suffix). That bar
+is a C-vs-C self-consistency check and the value it pins is the less accurate one, so a
+backend fallback built on the accurate path can never satisfy it -- it would be "wrong" by
+5e-4 for being right. Options are (a) reproduce C's plain GL-10 backend-natively (easy to
+trace, a fixed 10-point rule, but deliberately reproduces the defect), or (b) fix C per
+gh#1354 and bump the order, after which all three paths agree and the fallback follows
+naturally. (b) is the principled one and it needs Jo. NOT proceeding with the fallback
+until that resolves; the WIP stays unverified rather than being forced past a bar that
+encodes the bug.
+
+**Two measurement-harness bugs, same day, same symptom (a confident zero).**
+1. `TORCH_LOGS=graph_breaks` writes to STDERR. My first attribution run captured stdout
+   only, reported "0 graph breaks", and I nearly read that as "torch is clean".
+2. After fixing that, still zero -- because pytest captures stderr per-test at the fd level
+   and DISCARDS it for passing tests. `-s` is required. The earlier 782-break census only
+   worked because it read `torch._dynamo.utils.counters` from inside a plugin.
+   With `-s`, one single test yields 8 breaks, all in galpy's own dispatch layer:
+   `_resolver.py:45` (x4), `_jit.py:174/190/191`. Full attribution re-running.
+   Lesson (again): an instrument that reports zero needs a positive control before the
+   zero is believed. Both times the code was fine and my capture was broken.
+
+**Also**: that attribution run had been executing in /var/tmp/streamfix, which has no built
+C extension (so=0) -- and NO --jit-capable worktree has one, so the original 782-break
+census shares that limitation. It narrows which tests run, so site lists are a lower bound.
+
+### torch.compile graph breaks: attributed, and it is ONE mechanism
+
+With capture finally working (`2>` + `-s`), 5 of 6 test_potential shards give 176 breaks,
+and they are not spread across potential code:
+
+     83  galpy/backend/_resolver.py:45        <- ctx = _BACKEND_CTX.get()
+     19  galpy/backend/_jit.py:190            <- mode = _JIT_CTX.get()
+      7  galpy/backend/_jit.py:174            <- token = _TRACING.set(True)
+      6  galpy/backend/_jit.py:191            <- _TRACING.get()
+      7  galpy/backend/_namespaces.py:152-3   <- torch.compiler.disable (deliberate)
+      5  galpy/backend/quadrature.py:201
+     22  array_api_compat/_helpers.py:666     <- array_namespace(), reached from _resolver
+      8  array_api_compat/torch/_aliases.py:911
+     ~18 actual potential code (Multipole 10, planarComposite 4, Composite 1, ...)
+
+Every top galpy site is a **ContextVar operation**. Positive control: a bare
+`ContextVar.get()` inside `torch.compile(fn, fullgraph=False)` produces exactly 1 graph
+break; the identical function without it produces 0.
+
+**This explains the jax/torch asymmetry.** jax.jit traces Python EXECUTION, so a ContextVar
+read just happens at trace time and costs nothing. Dynamo compiles the BYTECODE, so the same
+read is an opaque call and severs the graph. Hence jax 98.2% traced vs torch 73.8% -- not
+because torch support is rotten across the library, but because the backend-selection context
+and the jit-mode flags are read INSIDE the compiled region.
+
+Sharpest instance: `_jit.py` does `torch.compile(call)` where `call`'s FIRST statement is
+`_TRACING.set(True)`. The tracing bookkeeping sits inside the very region it is enabling.
+Inverting that (compile `method`, do the ContextVar work outside the compiled callable) is a
+small, contained change. The 83 `_resolver` breaks are the deeper half: `get_namespace()` is
+called from inside potential methods, so removing those means resolving the namespace at the
+`@backend_input` boundary and threading it in -- which is what the decorator already does for
+`slots`, so the shape exists.
+
+NOT starting that now: gh#1352 and the actionAngle PR are in flight, and it is a change to the
+boundary decorator that deserves its own PR. Recorded as the next jit target.
+
+Caveat on the numbers: "Graph Break Reason:" lines outnumber breaks ~9:1 (repeat/recompile), so
+the per-site counts (one `Graph break in user code at` per break) are the reliable metric, not
+the reason histogram. And these shards run without a built C extension, so the site list is a
+lower bound.
+
+### gh#1354 FIXED -> gh#1356 (Jo asked for it directly)
+
+Substituted both adiabatic action integrands onto their regularized variables, exactly as the
+sibling derivative routines already do -- `z = zmax*sin(phi)` for Jz, `R = cc-rr*cos(theta)`
+for JR -- replacing the gsl_function machinery with an explicit `glfixed_point` loop. Same
+`order` nodes, so **no extra cost**. `JzAdiabaticIntegrand`/`JRAdiabaticIntegrand` had no other
+callers and are removed; the `*Squared` ones stay (root finders use them).
+
+Measured vs the exact python path over 40 random points:
+
+    jr  max 7.88e-04 -> 1.41e-06     med 4.97e-04 -> 8.80e-08
+    jz  max 1.52e-04 -> 2.40e-06     med 1.47e-04 -> 3.75e-07
+
+Single point vs the independent reference: jz 1.438e-04 -> 1.240e-07, exactly the 1.24e-07 I
+had predicted from the order-10 substituted rule, which is a good sign the thing I built is
+the thing I analysed.
+
+**The A/B nearly fooled me.** To show the new guard test actually measures the fix I built the
+UNMODIFIED C in a scratch worktree with `setup.py build_ext --inplace`. It reported `build
+rc=0` -- and produced no `.so` at `galpy/`: the linked library landed at the worktree ROOT.
+Had I run the test then, galpy would have fallen back to the python path, the test would have
+compared python to python, PASSED, and "proved" the old code was fine. Copied the .so into
+`galpy/` and asserted `libgalpy loaded` AND `aA._c is True` before trusting the arm. It then
+failed at 5.079e-04, and passes with the fix. Same family as the missing-C-ext trap, but the
+tell here was an absence, not a warning.
+
+Also: both this PR and gh#1355 appended to tests/test_actionAngle.py -> `git merge-tree`
+confirmed a real conflict. Rather than stack, moved the new test next to the other Adiabatic
+tests (better placement anyway); merge is now CLEAN.
+
+Local gates: test_actionAngle 216 passed (215 + the new guard), test_qdf + test_pv2qdf 66,
+test_quantity 243. HISTORY.txt records the ~1e-4 c=True change.
+
+**Open: gh#1352 (develop), gh#1355 + gh#1356 (main).** gh#1352's one red is
+test_integrate_negative_time hitting the 300s pytest-timeout under jax EAGER -- it is already
+slow-skip-ledgered for jax-jit but not for eager, and gh#1352 touches only
+tests/test_backend_streamdf.py, so it cannot be the cause. Waiting for the run to finish to
+re-run that job; if eager crosses the cap repeatedly it wants its own ledger entry, on
+measurement rather than one flake.
+
+NOTE: `pip install -e .` REPOINTS THE WHOLE ENV. Did it twice today (aa-mask, adiab-quad) and
+restored to /home/bovy/Repos/galpy both times. Worth remembering before running any probe from
+a neutral cwd.
+
+### Order-20 measurement (follow-up option for gh#1356, NOT folded into it)
+
+gh#1356 lands the substitution at the existing order 10. That leaves C at ~1e-6 vs the exact
+python path -- better than the 1e-4 it was, but still ABOVE the 1e-8 bar that
+test_actionAngleAdiabaticGrid_outsidegrid_c asserts, so it does not by itself unblock a
+backend off-grid fallback. Measured what order 20 would buy, built and provenance-checked:
+
+    order 10:  jr max 1.90e-06  jz max 1.48e-06     ~2.48 s / 200k actions
+    order 20:  jr max 6.83e-10  jz max 9.31e-10     ~3.30 s / 200k actions
+
+~3 orders of magnitude for **+33%**, not the 2x you'd guess from doubling the nodes -- the
+zmax/rperi/rap root-finding is a fixed cost independent of order, so only the quadrature part
+doubles. Interleaved A/B/A/B, min-of-7 each, stable to <2% across rounds.
+
+At order 20 C sits at ~1e-9, comfortably under the 1e-8 bar, which is exactly what a
+backend off-grid fallback needs to pass -> 2 xfails. Deliberately NOT folded into gh#1356:
+that PR is described and reviewed as costing nothing, and a 33% cost change is a separate
+tradeoff that is Jo's call. Recorded here; raised in the report.
+
+**Third false-zero of the day, same family.** First pass at this measurement had BOTH trees
+reporting identical pre-fix numbers. Cause: `python /abs/path/script.py` puts the SCRIPT's
+directory on sys.path[0], NOT the cwd -- so both trees imported the main-repo galpy via the
+editable install, and I was "comparing" one build against itself. Fix: copy the script INTO
+each tree and assert `galpy.__file__.startswith(os.getcwd())` plus `load_libgalpy() is not
+None` before measuring. Every provenance check I add keeps paying for itself.
+
+**Jo said go to order 20** -> pushed as a SEPARATE commit (40716dfe) on gh#1356, so the
+substitution's "free" claim and the 33% cost stay independently reviewable/revertable. Also
+tightened the guard bar 1e-5 -> 1e-8: ~10x margin on the measured 9.3e-10, and tight enough to
+reject a silent regression of the ORDER too (order 10 + substitution measures 1.9e-6). PR
+description rewritten to cover both commits rather than left claiming "no extra cost".
+
+Jo also asked whether the removed OpenMP/params code had just been obsolete. It had not:
+`gsl_integration_glfixed` takes a callback + `void *params`, so Ez/R had to be written into a
+struct INSIDE the parallel loop -- shared mutable state, hence malloc(nthreads*...) and
+omp_get_thread_num() indexing. Inlining the integrand removes the callback, so that state
+becomes loop-body locals, which OpenMP privatizes per-iteration for free. Verified rather than
+argued: jr/jz bitwise identical (sha256) at OMP_NUM_THREADS 1/2/8/16, scaling 10.04s -> 1.15s.
+
+## 2026-08-20 (later) — one measurement justified a ledger entry, one refuted my fix
+
+**gh#1352 red: MEASURED, not re-run.** The jax orbit g4 shard failed on a pytest-timeout,
+not an assertion, and gh#1352 touches only tests/test_backend_streamdf.py. Rather than
+re-running until green (and the run was wedged anyway -- its "backend status report" job sat
+queued for hours behind the ~250 jobs gh#1355+gh#1356 enqueued), I timed the test:
+
+    test_integrate_negative_time, --backend jax, local: 389.68s
+
+At the measured CI/local ratio for jax shards (0.71) that is ~277s against the 300s cap --
+an ~8% margin, so the outcome is decided by runner variance, not by code. It is ALREADY
+deferred for jax-jit; its sibling test_integrate_backwards (same loop over Python
+integrators) sits two lines above in the same section. Added the jax-eager entry with the
+measurement in the comment. **slow_skip 75 -> 76; xfail 11 and skip 68 unchanged.**
+Verified it takes effect rather than assuming the format: SKIPPED with the backend-slow-skip
+reason, selection 389.7s -> 17.6s. Pushed as 44dbee2a, which also re-triggers the wedged run.
+
+**ContextVar prototype: REFUTED, 1 of 13.** Inverted `torch.compile(call)` so the
+_TRACING bookkeeping happens outside the compiled callable rather than as its first
+statement. Measured on the same normalize_potential subset, before/after:
+
+    _resolver.py:45  (_BACKEND_CTX.get)      5 -> 5
+    array_api_compat array_namespace         3 -> 3
+    _jit.py traced_call mode checks          3 -> 3   (lines shifted by my insert)
+    quadrature.py:201                        1 -> 1
+    _jit.py:174 (_TRACING.set in wrapper)    1 -> 0
+                                            13 -> 12
+
+So the change does exactly what it should and nothing more. My "sharpest instance" framing
+oversold it: the wrapper's own break is ~8% of the total, and the dominant cost is
+get_namespace() being called from INSIDE potential methods, which needs the namespace
+resolved at the @backend_input boundary and threaded in -- the harder half I had already
+flagged but was hoping to shortcut. Holding the 8-line change locally on
+backend-jit/contextvar-outside-compile; it is correct but not worth a PR alone, and three
+are already open.
+
+**Waiter fired late.** The "wait for the wedged run to complete, then rerun --failed" waiter
+finally fired at 17:05 -- after I had already diagnosed the timeout, ledgered it, and pushed
+44dbee2a. It re-ran jobs on the SUPERSEDED sha (571f5f69), burning the exact resource that was
+the bottleneck. Cancelled that run: safe because merge gates evaluate the HEAD sha, and the old
+sha's history is already recorded in its completed jobs (151 pass + the 1 timeout). Lesson
+folded into the flake-watcher memory: a long-lived waiter should NOTIFY, not act, or re-check
+at fire time that the PR head is still the sha it was armed against.
+
+### The namespace-threading fix is viable — measured, not assumed
+
+Probed what dynamo will actually trace, since the whole torch gap rests on it:
+
+    ContextVar.get()        -> 1 graph break
+    module global           -> 0
+    default arg / closure   -> 0
+
+So it is specifically the ContextVar that is opaque; a global or a closure-passed value
+traces fine. That makes the 89 `_resolver.py:45` breaks fixable in principle: `traced_call`
+already receives the resolved `xp` from @backend_input (the plumbing half-exists), so it can
+read the ContextVar ONCE outside the compiled region -- where it costs nothing -- and pass the
+namespace in as an argument or closure.
+
+The blocker is not tracing, it is **thread-safety**: `_BACKEND_CTX` is a ContextVar precisely
+so concurrent callers can force different backends, and a module global would race. So the
+change cannot be "swap ContextVar for a global"; it has to be "stop calling get_namespace()
+from inside the compiled region", which means the ~100 namespace-aware methods take the
+namespace instead of re-deriving it. That is a real design task (and overlaps task #215's
+COMPUTE_METHODS hand-maintenance), not a patch.
+
+Recorded rather than built: three PRs are open and this deserves its own design + PR.
+
+### gh#1355 codecov/project red = upload phantom, diagnosed by FILE not by session count
+
+codecov/project failed while codecov/patch passed. The session-count discriminator I usually
+reach for pointed the WRONG way -- head had MORE sessions than base (17 vs 13), which argues
+against "incomplete uploads". The file-level view settled it:
+
+    74 files dropped, all galpy/potential/potential_c_ext/*.c   (-4540 hits)
+        KGPotential.c 100 -> 0, SpiralArms.c 100 -> 30.9, Ellipsoidal.c 100 -> 32.5, ...
+     9 python files dropped, all orbit/ + linear/vertical potential
+        Orbits.py 100 -> 71.9, integrateLinearOrbit.py 100 -> 56.7, ...
+
+`galpy/actionAngle/actionAngle.py` -- the ONLY source file this PR touches -- is NOT in the
+drop list, and the PR cannot move C coverage at all. The still-pending checks are exactly the
+"Test Python 3.x wheels" and `build (..., tests/test_orbit.py ...)` jobs that cover those
+files. So it is an incomplete upload set (50 checks outstanding), and it should self-heal.
+
+**Lesson: session count is not a sufficient discriminator.** More sessions can still mean a
+missing SUBSET (here the gcov/C ones). Ask WHICH FILES dropped -- if the drop is in files the
+PR cannot touch, it is an upload artifact regardless of what the session counts say.
+Re-check when it is fully reported; if project stays red at 0 pending, re-run all-clear.
+
+**gh#1355 codecov: SELF-HEALED, as the file-level diagnosis predicted.** project now passes;
+head went 88.41% -> 99.93%, hits 34845 -> 39385, sessions 17 -> 24 as the wheel/test_orbit
+shards uploaded. Note head has 39385 hits vs base 39377 -- coverage went UP, consistent with
+now covering the four handlers that used to be `pragma: no cover`. Confirms the rule I wrote
+last wake: diagnose by WHICH FILES dropped, not by session count.
+
+**Xfail ledger: 11 entries, 6 groups.** Mapped what is actually left:
+  2  actionAngleAdiabaticGrid_outsidegrid_c (jax+torch) -- the off-grid pair, needs gh#1356
+  2  qdf test_call_diffinoutputs (jax+torch)            -- BY DESIGN (unbound pair)
+  3  orbit analytic ecc/rperi/rap + zmax (jax x2, torch) -- comment says "un-xfail when Track E
+     lands", and Track E HAS landed, so possibly stale; probing with --runxfail rather than
+     trusting the comment (the last "12 stale entries" I found were all my own measurement bugs)
+  2  poisson_surfdens AnyAxisym (jax-jit + torch-jit)   -- the z=0 LOG endpoint, in progress
+  1  pickling_potential_drops_units_wrapper (jax-jit)
+  1  eccentricity (jax-jit)
+
+### The 3 orbit-analytic xfails: the recorded REASON is wrong for both jax entries
+
+Ran them under `--runxfail` (jax, 36m54s total) to see the real outcome rather than trust the
+ledger comment ("routes through actionAngleStaeckel_c, not yet backend-migrated ... hits numpy
+.flags on a jax array or NotImplementedError. Un-xfail when Track E lands."):
+
+    test_analytic_zmax          -> PASSED
+    test_analytic_ecc_rperi_rap -> FAILED: Timeout (>1200s) from pytest-timeout
+
+So neither still fails for the recorded reason. Track E HAS landed, and zmax now passes; and
+ecc_rperi_rap does not raise NotImplementedError/AttributeError, it simply never finishes.
+Both are **mis-filed as xfail when they are timeouts** -- the same class as the
+test_integrate_negative_time entry earlier today, and the same as the jax NonInertial pair
+(memory: "Timeout overrides xfail -> slow_skip": a ledgered xfail that hits the cap is
+recorded as a plain FAILED, so the ledger lies about why).
+
+**NOT concluding the disposition yet.** zmax passing is not the same as zmax being
+un-ledgerable: total wall time was 2214s with ecc_rperi_rap consuming 1200 of it, which puts
+zmax near ~1000s -- far over the 300s CI cap, in which case it moves xfail -> slow_skip rather
+than being burned outright. Measuring zmax alone with --durations before deciding. The two
+outcomes differ: <300s = burn one xfail entry; >>300s = re-file, xfail 11 -> 10 but slow_skip
++1 (no net ledger win, but the ledger stops lying).
+
+Also nearly self-inflicted: `pkill -f "test_analytic"` matched ITS OWN command line (the -k
+argument contains that string) and killed the launcher, exit 144. Same self-matching trap as
+the earlier `pgrep -f` wait-loop. Re-launched via a script file so the pattern cannot match.
+
+**Codecov reds on gh#1352 + gh#1356: same upload-stage artifact, third instance today.**
+gh#1356 head sessions=4 (base 13; gh#1355 needed 24 before it went green), coverage 48.11%,
+195 files dropped incl. actionAngleTorus.cc / Cautun20.py / integrateLinearOrbit.c -- files the
+PR cannot touch. 87 checks still pending.
+
+New wrinkle worth remembering: gh#1356 fails codecov/**patch** as well as project, where
+gh#1355 failed only project. That difference is diagnostic, not alarming -- gh#1356 changes **C**,
+so a missing gcov upload lands squarely on its changed lines; gh#1355 changed only Python, so
+its patch stayed green while the C files dragged project down. So "patch red too" does NOT mean
+"more likely real"; it means the PR touched a language whose coverage arrives late.
+
+No action on any of the three. The rule that keeps working: judge by WHICH FILES dropped and
+whether the PR could have touched them, not by session counts and not by which codecov context
+is red.
+
+**Measured, then re-filed (834b5217 on gh#1352).** zmax alone: **1136.3s, PASSES**. So the
+disposition is the second of the two I flagged: not a burn, a re-file. At 0.71 CI/local even
+the passing one is ~807s against the 300s cap, so un-xfailing would turn a green test into a
+timeout FAILED -- which is precisely how these came to be misdescribed in the first place
+(a ledgered xfail that hits the cap records as a plain FAILED, so the ledger inherits a reason
+nobody re-checked).
+
+**Ledger delta: xfail 11 -> 9, slow_skip 76 -> 78, skip 68 unchanged.** No net reduction, and
+that is the honest framing -- the win is that the xfail list, which is supposed to BE the list
+of real defects, no longer carries two entries that are not failing for the stated reason (one
+is not failing at all). Verified the move takes effect: both SKIPPED, selection 2214s -> 9.4s.
+Left the torch ecc_rperi_rap entry alone: different reason block, unmeasured.
+
+Running total for gh#1352's ledger work today: 3 entries corrected, all from measurement
+rather than from re-running until green.
+
+### What the xfail ledger actually is now: 9 entries, 5 causes
+
+After the re-file, read every remaining entry's recorded reason:
+
+    2  actionAngleAdiabaticGrid_outsidegrid_c (jax+torch)  -- off-grid fallback; needs gh#1356
+    2  qdf test_call_diffinoutputs (jax+torch)             -- BY DESIGN (unbound pair)
+    3  AnyAxisym traced-GL accuracy  <-- ONE root cause:
+         poisson_surfdens[AnyAxisym] (jax-jit + torch-jit)
+         test_eccentricity (jax-jit): "same AnyAxisymmetricRazorThinDisk story seen through
+           an orbit -- traced GL forces carry ~1e-6, so a circular orbit returns e=5.4e-6
+           against a 1e-8 tolerance. Passes eager jax."
+    1  pickling_potential_drops_units_wrapper (jax-jit)    -- untraceable as_numpy() boundary
+    1  torch test_analytic_ecc_rperi_rap                   -- MEASURING now (different reason
+         block from the jax pair I just re-filed, so deliberately not assumed to match)
+
+So the "stubborn xfails" Jo asked about are really five problems, not eleven tests, and the
+largest single one (3 entries) is **an endpoint-singularity quadrature error** -- the same
+FAMILY as the adiabatic defect I just fixed in gh#1354/gh#1356, where plain fixed-order
+Gauss-Legendre was applied across a singular endpoint. Different site (AnyAxisym's traced GL
+forces vs the action integrals), same shape of bug. Task #218/#219 already carry the
+Hadamard finite-part groundwork for it.
+
+Worth stating plainly: 2 of the 9 are by design and will never burn, and 2 more are gated on
+a PR that is open. The genuinely open engineering is 3 (AnyAxisym GL) + 1 (as_numpy boundary),
+plus whatever the torch measurement says.
+
+**Torch sibling measured too: PASSES in 743.1s (cae49223).** I deliberately did not assume it
+matched the jax pair -- it sat under a different reason block, and assuming by analogy is
+exactly how the jax entries acquired a description nobody re-checked. The measurement says the
+same thing anyway: not broken, just far over the cap (~530s at the 0.71 jax CI/local ratio;
+no torch-specific ratio measured, so that number is carried across backends and flagged as
+such in the ledger comment).
+
+Its block turned out to be worse than stale: the entry was the LAST one under
+"REBASE-PREVIEW Phase-2 gaps", whose comments describe time-dependent SCF, sphericaldf
+negative-df sampling and streamspraydf integrate=True -- **none of which is this test**. The
+reason recorded against it was never its own; it had simply outlived its neighbours. Dropped
+the whole 21-line block, which now documented nothing.
+
+**Ledger delta today: xfail 11 -> 8, slow_skip 75 -> 79, skip 68 unchanged.** Four entries
+corrected, every one from a measurement rather than a re-run. Xfail is now 8 entries / 4
+causes: 2 off-grid (gh#1356), 2 qdf by-design, 3 AnyAxisym traced-GL, 1 as_numpy boundary.
+
+### gh#1356 red: test_symplectic_dxdv_base_bit_identity — settled by same-SHA A/B, not by memory
+
+A real test job went red on the order-20 PR (py3.14, ubuntu, test_orbit/test_orbits/
+test_symplectic_dxdv), which matters because that PR deliberately CHANGES values. My notes say
+this exact test is intermittent at ~5.55e-16, but a matching test name is not evidence, so:
+
+1. Scope: gh#1356 touches HISTORY.txt, actionAngleAdiabatic.c, tests/test_actionAngle.py.
+   `git diff --name-only origin/main...HEAD | grep -iE "orbit|symplec|integrate"` -> NONE.
+   The failing test integrates a MiyamotoNagai orbit through symplectic integrate_dxdv and
+   compares base-orbit bit-identity. No action-angle, no quadrature, no shared file.
+2. **Same-SHA A/B**: at the identical commit, the push and pull_request copies of that job
+   split -- one `failure`, one `success`. Same code, opposite outcomes.
+
+That is conclusive on its own and does not lean on the memory at all. Re-running the job
+targeted and once (the run was still in_progress, so a rerun was refused; waiter armed).
+
+The waiter is precondition-checked this time: it records the head sha when armed and, at fire
+time, re-reads it and REFUSES to act if the head has moved. That is the direct fix for this
+morning's waiter that fired against a superseded sha and burned runners re-running work I had
+already obsoleted.
+
+**Wrote up the math: `appendices/F_adiabatic_action_quadrature.md`** (Jo asked for an
+explainer). Covers: the two action integrals with galpy's exact prefactors; why the limits
+being *defined* by F=0 forces a square-root branch point at the endpoint; the classical
+Donaldson-Elliott/Trefethen result that Gauss-Legendre against a (1-x)^alpha endpoint decays
+as O(n^-(2a+2)), i.e. O(n^-3) for alpha=1/2; the measured series confirming the exponent
+(implied p = 2.90, 2.95, 2.97, 2.99, 2.99 across five doublings); the two substitutions with
+the algebra showing the transformed integrand goes as eps^2 and is analytic; why the change
+of variable is free (same node count); the cost decomposition making order 20 the knee; and
+the pretty non-worry that dJz/dzmax = sqrt(F(zmax)) = 0, so the turning-point root solve
+enters only at second order and was never the accuracy limit.
+
+Near-miss while checking it: my verification snippet computed order 40 as F+3Q instead of
+F+4Q and reported +66% against the doc's +99%. The DOC was right and the CHECK was wrong --
+almost "corrected" a correct number. Recomputed: order 40 = 1.99x = +99%.

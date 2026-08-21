@@ -166,7 +166,8 @@ galpy-jax/
       _harness/{figure.py, style.py, backends.py, bench.py, manifest.json}
       <figname>/{make.py, <figname>.pdf, data/, README.md}   # every figure = code + artifact + repro hash
   logs/<PR-or-topic>/{log.md (Approach/Dead-ends/Results/Plots), plots/, results.md}
-  appendices/{B_variational_equations.md, D_special_functions.md, E_coverage_tolerance_ledger.md}
+  appendices/{B_variational_equations.md, D_special_functions.md, E_coverage_tolerance_ledger.md,
+              F_adiabatic_action_quadrature.md}
 ```
 Paper sections map 1:1 to tracks. Every `log.md` opens with Approach / Dead-ends / Results / Plots so dead-ends are preserved. **Every paper figure lives under `paper/figures/<name>/` with reproducible `make.py` (Track G); `verify-all` re-renders all figures against the final code and fails on mismatch.**
 
