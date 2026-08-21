@@ -224,12 +224,32 @@ Staeckel, so this is recorded rather than fixed, to avoid two people editing the
 
 A paste-ready brief for that agent is at [`HANDOFF_staeckel_quadrature.md`](../HANDOFF_staeckel_quadrature.md).
 
-## 11. The transferable lesson
+## 11. The transferable lesson — and where it does NOT extend
 
-The same shape of bug is the largest remaining cluster in the xfail ledger: three entries
-(`poisson_surfdens[AnyAxisym]` ×2 and `test_eccentricity`) are one root cause — AnyAxisym's
-*traced* GL forces carrying ~$10^{-6}$, again from integrating across an endpoint singularity
-with a fixed-order rule. **Whenever a quadrature's limits are defined by the vanishing of its
-own integrand, the integrand has a branch point at the limit, and a fixed-order polynomial rule
-will converge algebraically there.** The fix is nearly always a change of variable, not more
-nodes.
+**The lesson.** *When a quadrature's limits are defined by the vanishing of its own integrand,
+the integrand has a square-root branch point at the limit, and a fixed-order polynomial rule
+converges only algebraically there. The fix is a change of variable, not more nodes.* That is
+established for the adiabatic actions (§1-§7) and measured for Staeckel (§10).
+
+**Correction (2026-08-20).** An earlier revision of this section claimed the AnyAxisym xfail
+cluster (`poisson_surfdens[AnyAxisym]` x2 + `test_eccentricity`, 3 entries) was "the same shape
+of bug". **That was wrong on both counts**, and the distinction matters because it changes what
+a reader would do:
+
+1. **Different singularity type.** AnyAxisym's are a **Cauchy principal value** at $a=R$ and a
+   **Hadamard finite part** at $z=0$ (`AnyAxisymmetricRazorThinDiskPotential.py:51, 112-126,
+   251-253`). Those are *non-integrable* in the ordinary sense -- the integrand diverges and the
+   integral exists only as a PV / finite part. A square-root endpoint, by contrast, is an
+   *integrable* zero. **A change of variable does not fix a PV or a finite part.** The correct
+   treatment is to subtract the singular model and add back its analytic finite part, which is
+   exactly what `_finite_part_quad` already implements.
+2. **Not an oversight.** The ledger records it as **"BY DESIGN, not a defect"**: the backend path
+   *deliberately* uses GL so that gradients exist, while concrete input reuses scipy. Under a
+   trace the input IS a tracer, so the traced value is knowingly less accurate. It is an
+   accuracy-vs-differentiability trade that was made on purpose -- unlike the adiabatic case,
+   where the substitution was simply missing from the action routines while sitting in plain
+   sight in the derivative routines next to them.
+
+What the two families do share is only the general fact that **a non-analytic endpoint defeats a
+fixed-order polynomial rule**. The diagnosis (a convergence study in the order) transfers; the
+prescription does not.

@@ -49188,3 +49188,24 @@ quadrature agreeing is not evidence of accuracy. The order-convergence test is t
 
 **Jo: leave it -- another agent is on Staeckel.** Recorded in appendix F section 10, not
 actioned, no PR opened, no Staeckel code touched.
+
+### Correction to appendix F: AnyAxisym is NOT the same bug
+
+I published appendix F claiming the AnyAxisym xfail cluster was "the same shape of bug" as the
+adiabatic defect. Checked it instead of leaving it asserted, and it is wrong on both counts:
+
+1. **Different singularity.** AnyAxisym has a Cauchy PRINCIPAL VALUE at a=R and a HADAMARD
+   FINITE PART at z=0 (AnyAxisymmetricRazorThinDiskPotential.py:51, 112-126, 251-253). Those are
+   non-integrable; a sqrt endpoint is an integrable zero. **A change of variable does not fix a
+   PV or a finite part** -- you subtract the singular model and add back its finite part, which
+   `_finite_part_quad` already does. So my prescription would have sent someone down the wrong
+   road.
+2. **Not an oversight.** The ledger says "BY DESIGN, not a defect": the backend path deliberately
+   uses GL so GRADIENTS EXIST while concrete input reuses scipy; under a trace the input is a
+   tracer, so the traced value is knowingly less accurate. A deliberate accuracy-vs-
+   differentiability trade -- the opposite of the adiabatic case, where the substitution was
+   simply missing while sitting in plain sight in the neighbouring derivative routines.
+
+Corrected section 11 to state what actually transfers (the DIAGNOSIS -- an order-convergence
+study) and what does not (the PRESCRIPTION). Worth catching: I had handed Jo that document, and
+the wrong version would have mis-routed whoever picked up the AnyAxisym entries.
