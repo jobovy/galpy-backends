@@ -49842,3 +49842,40 @@ structurally cannot reproduce a merged-report drop. What settled it was codecov'
     ledger                  untouched vs develop
 
 Ready to merge as soon as the last 30 checks report.
+
+### Rebase protocol CORRECTED, and the difficulty MEASURED (for Jo)
+
+I had recorded "the main->develop rebase is Jo's, never touch it". Too absolute. Jo's actual
+protocol: *"if it's necessary, you're going to have to pause and help me do it. Last time you
+prepared the rebase by doing it and pushing it to a new branch for checking, then after I applied
+it. Really depends on how tough it is, if it's straightforward, we can probably skip the detailed
+check."*
+
+So: **I prepare and measure; Jo applies.** Pause the loop for it; scratch worktree onto a NEW
+branch; never force-push the real integration branch. Recorded in
+[[no-merge-commits-rebase-only]].
+
+**Measured the difficulty rather than guessing** (merge-base `87256016`, 2026-08-11):
+
+    main ahead of base       13 commits
+    feat/backends ahead     225 commits
+    develop ahead of f/b    107 commits
+    files touched  main 48 / f-b 271  ->  16 overlap
+    git merge-tree          7 files CONFLICT, the other 9 auto-merge
+
+    galpy/actionAngle/actionAngleVerticalInverse.py
+    galpy/actionAngle/actionAngle_c_ext/actionAngleAdiabatic.c   <- gh#1356, my own
+    galpy/df/sphericaldf.py
+    galpy/potential/AnySphericalPotential.py
+    galpy/potential/HomogeneousSpherePotential.py
+    galpy/potential/RazorThinExponentialDiskPotential.py
+    galpy/potential/SphericalShellPotential.py
+
+**Two caveats I gave Jo rather than quoting "7" as if it were the effort.** (1) `merge-tree`
+simulates a MERGE; a rebase replays 225 commits one at a time, so the same file can conflict
+repeatedly -- 7 is a LOWER BOUND. (2) The conflicts are not textual: AnySpherical, RazorThin,
+SphericalShell and sphericaldf are exactly where main landed numerical fixes AND the backend
+migration rewrote the same paths, so resolving them is a correctness judgment.
+
+**My recommendation to Jo: NOT "straightforward, skip the check"** -- he should review the
+resolutions on those four. Nothing is blocked on it now; gh#1358 does not need the sync.

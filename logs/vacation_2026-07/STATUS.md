@@ -49,9 +49,19 @@ action quadrature no longer loses ~4 digits at the sqrt turning points
 (jr 7.88e-04 -> 6.83e-10, jz 1.52e-04 -> 9.31e-10). **Unblocks** the 2 remaining
 fixable xfail entries (`AdiabaticGrid_outsidegrid_c`, jax+torch) and task #103
 (off-grid AA fallback) -- but only once main flows into feat/backends -> develop,
-which is a rebase **JO DOES, NOT ME** (his call 2026-08-21: "I'll have to do that
-rebase, it's complicated"). Park these two entries as a normal blocked dependency
-and work on something else; do NOT hand-carry the main-side fix onto develop.
+which is a rebase where **I PREPARE, JO APPLIES** (2026-08-21). Protocol: pause the
+loop, measure difficulty, replay in a SCRATCH worktree onto a NEW branch, push for
+Jo to inspect; never force-push the integration branch; never hand-carry the
+main-side fix onto develop.
+
+MEASURED difficulty (merge-base 87256016, 2026-08-11): main +13, feat/backends
++225, develop +107; 16 overlapping files; **git merge-tree = 7 conflicting files**
+(actionAngleVerticalInverse.py, actionAngleAdiabatic.c, sphericaldf.py,
+AnySphericalPotential.py, HomogeneousSpherePotential.py,
+RazorThinExponentialDiskPotential.py, SphericalShellPotential.py). 7 is a LOWER
+BOUND -- merge-tree simulates a merge, a rebase replays 225 commits. Told Jo this
+is NOT skip-the-check: four of those are files where main landed numerical fixes
+and the backend migration rewrote the same paths.
 
 ## Flagged to Jo, not acted on
 
