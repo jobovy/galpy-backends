@@ -49427,3 +49427,52 @@ Working tree reverted to clean.
 **Caveat before this ships:** the 9/9 is three analytic potentials; the 192-break figure came
 from a real test file. The PR needs the full torch `--jit` suite to size the true reduction,
 and that measurement waits for the CI queue to drain.
+
+### 2026-08-21 — gh#1352 MERGED; and half my "discovery" was already fixed on develop
+
+**gh#1352 merged** into feat/backends-develop as `a7cf6ed3` (154 pass / 0 fail / 0 pending,
+head `cae49223` unchanged from the audited SHA). Develop ledger is now **xfail 8, slow_skip 79,
+skip 68**. The shard that had been queued 5h51m picked up a runner on its own at 05:59Z and
+went green -- confirming the contention read and that force-cancelling it would have been a
+self-inflicted delay.
+
+**Correction to yesterday's prototype writeup.** I measured the torch graph-break work on
+`feat/backends`, which is **106 commits behind develop**. On develop, defect (1) -- the EAFP
+`_backend_dtype` that dynamo turns into an `InternalTorchDynamoError` -- **is already fixed**,
+with the identical `isinstance(dtype, (numpy.dtype, str, type))` guard I had derived and the
+same rationale spelled out in its docstring. So that half was a REDISCOVERY of landed work, not
+a finding. Only the ContextVar half is real on the target branch. Re-measured on develop before
+writing any code:
+
+    develop baseline   9/9 fullgraph=FAIL, break sites _resolver.py:45 (9) + _jit.py:190 (2)
+    develop + fix      9/9 fullgraph=OK, bit-identical, ZERO galpy break sites
+
+The lesson is the one I keep relearning: **measure on the branch you are going to ship to.** A
+prototype on a stale base can attribute a fix to yourself that someone already landed.
+
+**The PR (`backend/torch-graphbreak-contextvar`, off `a7cf6ed3`).** Rather than mirror logic
+duplicated per module, one shared helper: `galpy/backend/_tracectx.py` with `TracedContextVar`,
+a ContextVar plus a **`threading.local`** mirror consulted only while `torch.compiler.is_compiling()`.
+All three of galpy's context variables move onto it -- `_BACKEND_CTX` (resolver) and
+`_JIT_CTX`/`_TRACING` (_jit) -- which covers both break sites with one mechanism.
+
+Thread-local rather than a module global is the whole point: two threads forcing different
+backends must not see each other, and that isolation is why these are ContextVars at all. The
+docstring states the one narrow case where mirror and ContextVar can disagree
+(`copy_context().run(...)` / asyncio, where the context moves but the thread does not) instead
+of pretending it is airtight.
+
+**Tests are A/B-verified, not assumed.** With the wiring reverted but `_tracectx.py` kept:
+
+    test_forced_backend_survives_a_fullgraph_compile        FAILS without the fix
+    test_jit_mode_contextvars_are_readable_inside_a_trace   FAILS without the fix
+    the 8 unit tests of the class itself                    pass either way (they test the class)
+
+`fullgraph=True` is the assertion mechanism -- it hard-errors on ANY graph break, so reaching
+the value comparison IS the no-break proof, and `torch.equal` then pins bit-identity. The
+equivalence test drives the ContextVar and the mirror APART (setting `_var` directly) so each
+branch is discriminated; setting both to the same value would pass whichever branch ran.
+
+**Duplication audit, per the standing directive:** `_no_torch_compile_deprecations` existed as
+three byte-identical copies (same md5) in test_backend_{trace,multipole,anyaxisymdisk}.py.
+Hoisted into `tests/backend_jit_helpers.py` as `no_torch_compile_deprecations`. Net -75/+21.
