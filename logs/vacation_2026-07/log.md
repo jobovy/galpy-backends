@@ -49879,3 +49879,45 @@ migration rewrote the same paths, so resolving them is a correctness judgment.
 
 **My recommendation to Jo: NOT "straightforward, skip the check"** -- he should review the
 resolutions on those four. Nothing is blocked on it now; gh#1358 does not need the sync.
+
+### 2026-08-21 — gh#1358 MERGED (`3cf23204`); slow-skip burndown STARTED (gh#1359)
+
+**gh#1358 merged** into feat/backends-develop: 154 pass / 0 fail, head matching the audited SHA
+exactly. galpy's dispatch layer is now torch.compile-traceable -- `TracedContextVar` over all
+three context vars, `_torch_compiled` inverted so bookkeeping stays interpreted. 18 break lines
+-> 0; fullgraph 9/9; numpy path 2075 passed with C active. **Ledger delta: none.**
+
+**Jo redirected the work:** *"If you can skip the rebase for now and make other ledger progress,
+that would be fine, still lots of slow-skip tests to resolve as well."* So: rebase parked (his
+to apply), slow-skip burndown is the new line.
+
+**Ledger shape (79 entries):** jax 44, jax-jit 26, torch-jit 6, torch 3. By file: test_orbit 20,
+test_noninertial 17, test_interp_potential 9, test_potential 8, test_FDMdynamfric 7. The
+entries carrying a MEASURED time (test_orbit, test_noninertial) are genuinely slow -- up to
+1535 s. The ones with **no measurement recorded** are the suspicious ones: never re-timed since
+they were added, so they may have been fixed by work that landed since.
+
+**First sweep: all 9 test_interp_potential entries are STALE -> gh#1359 (79 -> 70).**
+Hypothesis was specific: the interpRZPotential grid-build vectorisation should have killed this
+whole cluster. Measured:
+
+    --backend jax          46 passed, 242.9s   entries  3.8s .. 43.7s
+    --backend jax --jit    46 passed,  47.7s   entries  2.6s, 3.0s
+    --backend torch --jit  46 passed, 144.0s   entries  0.4s, 1.7s
+
+10-100x under the 300 s cap, and the TRACED arms are faster than eager.
+
+**Three things checked rather than assumed** -- each could have made this a false clean-up:
+* **C extension active FIRST** (libgalpy loaded AND interpRZPotential(enable_c=True)); otherwise
+  the `_c` tests skip and "fast" is an artefact ([[worktree-missing-c-ext-fakes-passes]]).
+* **Whole-file runs with junitxml**, never hand-picked nodeids
+  ([[handpicked-nodeid-batch-is-not-a-context]]).
+* **NOT a two-file edit here.** The `.test_orbit_durations` rule exists for the SPLIT
+  test_orbit.py; test_interp_potential.py is neither split nor listed there. Confirmed, then
+  loaded the edited ledger through conftest's own parser: zero interp nodeids remain under
+  jax / jax-jit / torch / torch-jit.
+
+The margin also does not depend on my CI/local factor: at 0.4-43.7 s local, even a 5x ADVERSE
+factor stays clear of the cap (measured factor is ~0.71, i.e. CI is faster).
+
+Next unmeasured clusters: test_FDMdynamfric (7), test_potential (8).
