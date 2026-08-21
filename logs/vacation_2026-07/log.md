@@ -49209,3 +49209,167 @@ adiabatic defect. Checked it instead of leaving it asserted, and it is wrong on 
 Corrected section 11 to state what actually transfers (the DIAGNOSIS -- an order-convergence
 study) and what does not (the PRESCRIPTION). Worth catching: I had handed Jo that document, and
 the wrong version would have mis-routed whoever picked up the AnyAxisym entries.
+
+### gh#1355 MERGED; gh#1357 (other agent's Staeckel fix) verified independently
+
+**gh#1355 is in main** (45e2dcde) -- Jo merged it. My earlier pairwise merge check used a stale
+local ref for that branch; redone against current main.
+
+**Merge topology for the two remaining main PRs:** gh#1356 (adiabatic) and gh#1357 (Staeckel)
+each merge CLEANLY onto current main; GitHub agrees (MERGEABLE; BLOCKED = checks outstanding).
+They conflict with EACH OTHER in **HISTORY.txt only** -- tests/test_actionAngle.py auto-merges,
+which is a direct payoff from having moved my guard test next to the other Adiabatic tests
+instead of appending at EOF. Whichever lands second needs a one-hunk HISTORY resolution.
+
+**Verified gh#1357's fix with my own diagnostic** (built the branch, provenance-checked, ran the
+order-convergence test):
+
+    C path, order 10 vs order-1280 reference, 4 points:
+        jr max 1.167e-12   (was ~4.6e-04)
+        jz max 1.224e-09   (was ~1.45e-04)
+
+So the C fix works -- ~8 orders on jr, ~5 on jz.
+
+**But one thing to flag.** On that branch the PYTHON path returns BIT-IDENTICAL values for
+order = 5, 10, 20, 40, 1280:
+
+    order 5..1280 (c=False): jr=5.411163855830099e-03  jz=2.110404076797348e-02  (all identical)
+    order 5/10/20 (c=True) : differ and converge, as expected
+
+`order=` is silently ignored on c=False, where it was honoured before (on develop, python order
+10 vs 1280 differed by 4.6e-4). The python value is essentially converged -- it agrees with C at
+order 20 to ~4e-14 -- so accuracy is fine; the issue is that the knob is now a no-op there. That
+matters for this project specifically, because the backend/jax/torch path IS the python path and
+is supposed to match C bit-for-bit at a given order; if python is order-independent and C is not,
+that parity can only hold at one particular order.
+
+NOT posting this on gh#1357 unilaterally -- Jo is coordinating the two agents. Reported instead.
+
+### Milestone: the xfail ledger has ZERO open fixable defects left
+
+Read every one of the 8 remaining entries' recorded reasons (and spot-verified the largest
+cluster at the source earlier today). The breakdown:
+
+  **By design / upstream-blocked (6):**
+    2  qdf test_call_diffinoutputs (jax+torch)  -- the unbound pair, by design
+    3  AnyAxisym (poisson_surfdens x2 + test_eccentricity) -- VERIFIED at source today: a
+       Cauchy principal value at a=R and a Hadamard finite part at z=0; the backend path
+       deliberately uses GL so GRADIENTS EXIST while concrete input reuses scipy, so the
+       traced value is knowingly less accurate. An accuracy-vs-differentiability trade.
+    1  pickling_potential_drops_units_wrapper -- astropy Quantity arithmetic strips a
+       jax/torch node to numpy, so a units-based density is inherently non-differentiable;
+       the numpy round-trip goes through as_numpy(), which a tracer cannot satisfy. Fixing
+       it means making Quantity traceable, i.e. upstream astropy.
+
+  **Gated on an open PR (2):**
+    2  actionAngleAdiabaticGrid_outsidegrid_c -- unblocked once gh#1356 lands (at order 20
+       C sits at ~1e-9, under the 1e-8 bar the test asserts against the direct answer)
+
+So **nothing in the xfail list is a defect I can currently fix**. That is the honest answer to
+"some stubborn xfails are left": what remains is 6 deliberate trades / upstream limits and 2
+waiting on a PR, not 8 unsolved problems.
+
+Provenance caveat: AnyAxisym I verified against the class source today; the qdf pair and the
+pickling entry I am taking from their recorded reasons plus my own earlier task notes, not from
+a fresh measurement.
+
+Ledger today: **xfail 11 -> 8, slow_skip 75 -> 79, skip 68 unchanged** — 4 entries corrected,
+each from a measurement rather than a re-run, and 3 of the 4 were passing or non-failing while
+ledgered as expected failures.
+
+**gh#1352 codecov red = phantom, confirmed by the file rule:** 171 files dropped, 67 of them .c,
+including actionAngleAdiabatic.py -- and gh#1352 changes ONLY two .txt ledger files, so it
+cannot move coverage anywhere. sessions 19 vs base 28. patch 0/0 is expected for a .txt-only
+diff. 76 checks still pending; self-heals.
+
+### Stale-CI sweep: an accepted cancel is not a completed one
+
+Jo asked whether any CI was still running for old commits. There were two, both on gh#1352
+(from the three ledger pushes): runs on 834b5217 and 44dbee2a, each **44 jobs completed + 1
+queued** -- the `backend status report` job that needs: every shard and was starved of a runner.
+
+`gh run cancel` was accepted for both and then did NOTHING for over an hour; they stayed
+`queued/` with no conclusion, because there was no running job for the cancel to interrupt.
+The fix is force-cancel (only permitted after a normal cancel has been tried):
+
+    gh api -X POST repos/jobovy/galpy/actions/runs/<id>/force-cancel
+
+Both reached `completed/cancelled` in under 30s. Sweep now clean: 0 stale-SHA active on either
+PR; gh#1352 has 3 current-SHA runs, gh#1356 has 2.
+
+**The lesson worth keeping:** I reported "cancels submitted" last wake and treated that as done.
+It was not -- the same class as trusting an accepted request over an observed state. Verify the
+run reached `cancelled`, and escalate to force-cancel if it is still queued.
+
+This is the third distinct CI-hygiene issue in one day from the same root: my own pushes and
+re-runs queueing work that outlives its relevance, in a runner-constrained repo. (1) a waiter
+that fired against a superseded sha, (2) a wedged run whose last job never got a runner,
+(3) these two stale runs. Worth a sweep after any burst of pushes, not only when something looks
+wrong.
+
+### gh#1352 pre-merge audit (done while waiting on the last 5 shards)
+
+Did the merge audit up front rather than idling. Diff vs develop:
+
+    tests/backend_slow_skip.txt    | 21 +++
+    tests/backend_xfail.txt        | 28 ---
+    tests/test_backend_streamdf.py | 50 +++---
+    source files touched: NONE
+
+So the three audit criteria (if->xp.where array-input class, duplication, helper placement)
+are N/A by construction -- there is no source change that could introduce them.
+
+The one test-logic change is a CONVERGENCE fix, not a tolerance loosening: tintJ 8 -> 30 with
+the h-convergence measurements recorded inline at the call site, and the min-over-two-h hedge
+dropped because FD has settled (8.7e-06 at h=1e-4, ~300x under the bar). **The 3e-3 bar is
+unchanged**; the comment states that loosening it would only hide the problem.
+
+Ledger delta: xfail 11 -> 8, slow_skip 75 -> 79, every entry carrying its measured seconds.
+
+Waiter is NOTIFY-ONLY: it records the head sha when armed, re-reads it at fire time, and
+reports rather than merging. Merging is a deliberate step I want to take myself after
+re-verifying green + unchanged head -- and an auto-merging waiter is exactly the shape that
+misfired yesterday against a superseded sha.
+
+### 2026-08-21 — a queued job is not necessarily a wedged one
+
+gh#1352's last shard (`backend jax test_qdf/test_pv2qdf/test_streamgapdf`) has been
+`queued` for **5h51m**, 43 of 44 sibling jobs green. That is the exact surface signature of
+yesterday's wedge, where the fix was `force-cancel`. **Applying that here would have been wrong.**
+
+I checked the rest of the repo's queue before acting:
+
+    repo-wide:  ~40 jobs in_progress, ~140+ queued
+    sources:    staeckel-chi-quadrature, aainv-spherical-quadrature,
+                aainv-vertical-quadrature (other agent's PRs) + wheel/pyodide builders on main
+
+So the job is not starved by a broken run -- it is behind a genuinely full queue. **The
+discriminator between the two cases is the rest of the repo's queue depth, not the age of the
+queued job.** Wedge = the job waits while runners sit idle. Contention = everything waits.
+Cancel+rerun under contention is strictly worse: it sends all 44 shards to the BACK of the
+same queue I am already at the front of.
+
+Consequence for this wake: I am deliberately **not** dispatching a jit measurement run, even
+though the loop lists that as the standard fill-the-wait task. Adding a 44-shard workflow to a
+140-deep queue would delay my own merge for the sake of a number I can measure any other day.
+Not-idling does not mean not-thinking about what the work costs someone else -- here, me.
+
+Also corrected a live misattribution: `--author @me` lists SIX open PRs and only TWO are mine.
+gh#1357/#1353/#1351/#1347 belong to `session_01N2Jm4Y1A9eQRXMEaHaqwwJ`, the concurrent agent
+session, which commits under the same git identity. I nearly recorded them as my own in
+STATUS.md. The `Claude-Session` trailer on the head commit is the discriminator; that rule is
+now written into STATUS.md rather than living only in memory.
+
+**Ledger classification validated** (not assumed) against the ledger's own recorded reasons.
+The 8 entries surviving gh#1352:
+
+    2  qdf test_call_diffinoutputs                by design (unbound pair)
+    2  poisson_surfdens[AnyAxisym] -jit           by design (GL vs scipy under a tracer)
+    1  jax-jit test_eccentricity                  tolerance: computed ecc asked to vanish to 1e-16
+    1  jax-jit drops_units_wrapper                Quantity strips the tracer -> as_numpy boundary
+    2  AdiabaticGrid_outsidegrid_c                GATED ON gh#1356
+
+That last pair is the only one with a path forward, and the gate is real rather than
+bookkeeping: the off-grid backend fallback has to agree with C, and **C is the inaccurate side
+until gh#1356 lands** -- the test's bar currently pins the wrong value. So "zero open fixable
+defects in the xfail ledger" is accurate as of this head.
