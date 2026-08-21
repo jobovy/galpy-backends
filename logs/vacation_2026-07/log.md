@@ -49501,3 +49501,41 @@ and it is stated rather than papered over -- exactly the
 Chained a broad numpy-path run (test_potential + test_actionAngle + test_orbit, with the C
 extension present) to fire when the in-flight `build_ext` finishes, since a missing .so would
 silently turn C-gated tests into passes.
+
+### 2026-08-21 — adversarial pass on my own PR found it INCOMPLETE (gh#1358 -> a2cca9a5)
+
+Rather than wait on CI, I attacked my own change. It was half a fix.
+
+**The gap.** `TracedContextVar` made `.get` traceable. But `_jit.py`'s compiled `call` does
+`_TRACING.set(True)` **inside** the region torch.compile walks, and `ContextVar.set` is opaque
+to dynamo for exactly the same reason `.get` is. My "zero break sites" measurement missed it
+because the probe compiled a plain lambda -- it never exercised galpy's own jit path. Direct
+test: `set+get+reset` under `fullgraph=True` FAILED for both `TracedContextVar` and a plain
+ContextVar.
+
+Fix: while tracing, `set` updates the mirror and leaves the ContextVar alone. That is the
+correct semantics, not a dodge -- a trace is a compile-time artifact whose writes must not
+outlive it, and reads during the trace hit the mirror anyway. `reset` recognises such a token
+by a module-level sentinel.
+
+**A METHOD BUG I nearly shipped a false number on.** My first attempt at the jit-path A/B did
+`git checkout -- galpy/backend/_resolver.py galpy/backend/_jit.py` to get the "baseline" -- but
+I had already COMMITTED the fix, so `checkout --` restores from HEAD, which now CONTAINS the
+fix. **Both arms were the fixed code**, and both dutifully reported "0 break sites". I only
+caught it because 0-vs-0 was suspicious and I checked whether the path traced at all
+(`traced_call` invocations: 1, NOT_TRACED: 0, dynamo graphs: 1 -- so it HAD traced, meaning the
+baseline should have shown breaks). Redone against the base commit explicitly
+(`git checkout a7cf6ed3 -- ...`), with a `grep -c TracedContextVar` assertion that the arms
+actually differ:
+
+    baseline a7cf6ed3   18 graph-break lines: _resolver.py:45 (x5), _jit.py:174 (x1)
+    with fix            0 galpy break sites, value bit-identical to eager
+
+**`_jit.py:174` IS `_TRACING.set(True)`** -- so the `.set` half was load-bearing, and the
+earlier commit alone would have left that site breaking. The corrected A/B is what proves it.
+
+Both new tests A/B-verified to fail without the change. Gate: torch/jax/numpy 12 each, plus
+py3.14 `-W error` 8 passed / 4 torch-skips. PR description rewritten (a stale description is
+worse than none) and the old-SHA runs cancelled -- 6 went straight to `cancelled`, the 7th
+(All-backend, fully queued) needed force-cancel, again confirming that an accepted cancel is
+not a completed one. Stale-sha sweep is clean; the 8 current-SHA runs now have those runners.
