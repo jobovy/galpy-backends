@@ -49476,3 +49476,28 @@ branch is discriminated; setting both to the same value would pass whichever bra
 **Duplication audit, per the standing directive:** `_no_torch_compile_deprecations` existed as
 three byte-identical copies (same md5) in test_backend_{trace,multipole,anyaxisymdisk}.py.
 Hoisted into `tests/backend_jit_helpers.py` as `no_torch_compile_deprecations`. Net -75/+21.
+
+### 2026-08-21 later — gh#1358 CI opened; py3.14 skew checked locally
+
+gh#1358 (`b4ac1b98`) is running: at first look 6 pass / 1 fail / 146 pending. The one "fail"
+is `codecov/project` with **6 of 153 checks reported** -- i.e. almost no coverage uploaded yet.
+Too early to be a signal either way; not diagnosing it until the run is substantially complete
+(the discriminator is WHICH FILES dropped, not the early red).
+
+**Checked the one thing I could close locally: version skew.** The coverage-carrying shard for
+this PR is `tests/test_backend*.py` on **python 3.14** with `-W error::DeprecationWarning
+-W error::FutureWarning`; I had only run py3.13. Verified the glob actually collects the new
+file (82 matches, `test_backend_tracectx.py` among them) and that this shard runs
+`--cov galpy` and uploads -- so **the new module's lines ARE measured**, which is what matters
+for the "coverage never decreases" rule.
+
+    py3.14 + -W error, tests/test_backend_tracectx.py:  7 passed, 3 skipped
+
+The 3 skips are the torch-requiring tests: **galpy314 has no torch installed**, so the
+fullgraph/regression trio cannot be checked locally on 3.14 at all. That gap is CI's to close,
+and it is stated rather than papered over -- exactly the
+[[ci-single-backend-install-blindspot]] shape.
+
+Chained a broad numpy-path run (test_potential + test_actionAngle + test_orbit, with the C
+extension present) to fire when the in-flight `build_ext` finishes, since a missing .so would
+silently turn C-gated tests into passes.
