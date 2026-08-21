@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-21 (gh#1352 + gh#1356 both near-green, awaiting last shards)
+# Vacation status snapshot — 2026-08-21 (gh#1352 MERGED; gh#1358 opened; gh#1356 awaits Jo)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,7 +11,7 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   45e2dcde   (gh#1355 merged)
     feat/backends          982b1781
-    feat/backends-develop  d25dac4a   (gh#1348, gh#1336 merged; 106 ahead of feat/backends)
+    feat/backends-develop  a7cf6ed3   (gh#1352 merged; 107 ahead of feat/backends)
 
 ## Open PRs — TWO ARE MINE. Four others share my git identity and are NOT mine.
 
@@ -26,17 +26,20 @@ Attribute by the `Claude-Session` trailer on the head commit before acting:
     gh#1351  OTHER AGENT   aainv-vertical-quadrature
     gh#1347  OTHER AGENT   aainv-staeckel-single
 
-**gh#1352 → develop**, head `cae49223`. 151 pass / 0 fail / 2 pending
-(`all-clear` + the jax qdf/pv2qdf/streamgapdf shard, which sat QUEUED 5h51m on pure
-runner contention -- ~140 jobs deep repo-wide, mostly the other agent's 4 PRs -- and
-picked up a runner on its own at 05:59Z. NOT a wedge; do not cancel).
-MERGEABLE/BLOCKED only on those. **Pre-merge audit is DONE** (see log): diff is
-`backend_slow_skip.txt` +21, `backend_xfail.txt` −28, `test_backend_streamdf.py`
-±50, **no source files** — so the if→xp.where / duplication / helper-placement
-criteria are N/A by construction. The test change is a CONVERGENCE fix (tintJ
-8→30, FD settled to 8.7e-06 at h=1e-4), **not** a tolerance loosening; the 3e-3
-bar is unchanged. **Ledger delta: xfail 11→8, slow_skip 75→79, skip 68 flat.**
-Next action: verify green + head still `cae49223`, then squash-merge. Mine to merge.
+**gh#1358 → develop** `backend/torch-graphbreak-contextvar`, head `b4ac1b98`, base
+`a7cf6ed3`. JUST OPENED, CI starting. Adds `galpy/backend/_tracectx.py::TracedContextVar`
+(ContextVar + a `threading.local` mirror read only while `torch.compiler.is_compiling()`)
+and moves all three galpy context vars onto it. **Measured on this base: 9/9
+`fullgraph=True` FAIL before -> 9/9 OK after, bit-identical, zero galpy break sites**
+(sites were `_resolver.py:45` and `_jit.py:190`). Tests A/B-verified: the 2 integration
+tests fail with the wiring reverted. Also hoists `_no_torch_compile_deprecations` out of
+3 byte-identical copies. Gate: torch/jax/numpy 155 passed each. **No ledger change.**
+Mine to merge once green.
+
+**gh#1352 MERGED** as `a7cf6ed3` (2026-08-21 06:41Z). Ledger on develop is now
+**xfail 8 / slow_skip 79 / skip 68**. Its last shard sat QUEUED 5h51m on pure runner
+contention and picked up a runner on its own -- not a wedge, and cancelling would have
+cost hours.
 
 **gh#1356 → main**, head `40716dfe`. 149 pass / 0 fail / 2 pending / 3 skipping.
 Fixes gh#1354: galpy's C adiabatic action quadrature lost ~4 digits at the sqrt
