@@ -49643,3 +49643,13 @@ test-helper module, rather than a fourth private copy.
 re-runs ~2h of CI on a runner-constrained repo, to remove three duplicated lines. Taken because
 "audit every PR for duplication" is a standing instruction, deferred cleanups get forgotten, and
 the run was not green yet anyway (codecov still healing), so no finished result was thrown away.
+
+**Holding the DRY push until a2cca9a5's CI completes -- deliberately.** `cf6463bb` (the
+is_compiling DRY fix) is committed locally but NOT pushed. a2cca9a5 is at 145/153, and two of
+its six remaining checks are the **py3.14 `tests/test_backend*.py` shards** -- exactly the ones
+that verify the four torch tests I could not run locally (galpy314 has no torch). Pushing now
+would throw away the verdict on the substantive change and I would have to re-earn it.
+
+So the order is: let a2cca9a5 finish -> read whether the substantive change is genuinely green
+(and whether codecov healed) -> THEN push the DRY commit. One extra CI cycle either way, but
+this way I keep the answer to the question I actually care about.
