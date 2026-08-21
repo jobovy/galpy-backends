@@ -50016,3 +50016,43 @@ belong IN the ledger as comments, so the next sweep skips them instead of paying
 rediscover. gh#1359 is at 126 pass / 27 pending and is a ledger-only PR; adding comments would
 restart ~2 h of CI for zero behaviour change and would conflict with itself. Do it as a small
 follow-up after gh#1359 merges.
+
+### 2026-08-21 — gh#1359 MERGED (79→70); gh#1360 opened (70→68)
+
+**gh#1359 merged** as `cb036ff8`: the nine stale test_interp_potential entries are gone.
+Verified ledger-only before merging (1 file, xfail 8→8, skip 68→68).
+
+**Second sweep -> gh#1360 (70 -> 68).** test_potential.py, whole file under jax with xdist,
+59 min, 1284 passed:
+
+    UN-DEFER  test_MovingObject_2ndderivs_fd        0.2s
+    UN-DEFER  test_MultipoleExpansion_deepcopy     73.9s  CI~53s
+    stays     4x poisson_surfdens wrapper cases   >700s TIMEOUT
+    stays     poisson_surfdens[...TriaxialLogHalo] 371.9s CI~264s  (12% margin)
+    stays     test_DehnenBinney98                  289.3s CI~205s  (32% margin)
+
+**My hypothesis was WRONG and the PR says so.** I predicted the `poisson_surfdens` wrappers
+would be the stale ones -- the surfdens Poisson fallback was reworked since they were ledgered,
+which is exactly the kind of story that explained interp_potential. They are in fact the
+**slowest tests in the file**. The two genuine stales had no story pointing at them. The
+plausible-mechanism heuristic worked once and failed here; only measurement decides.
+
+Checked the 0.2 s was not a vacuous pass by reading the test: it integrates two orbits with
+`dop853_c` (C, backend-independent) then does ~150 scalar MovingObjectPotential evaluations with
+analytic-vs-FD assertions.
+
+**Held the line on two near-cap entries** (264 s and 205 s estimated against a 300 s cap).
+Taking them would have made the headline 70 -> 66. An un-deferred test that flakes in CI costs
+far more than the ledger line it saves.
+
+**Twelve entries annotated in place** with their measurements (6 test_potential + 6 dynamfric).
+That is the durable value of a zero-yield measurement: the next sweep skips them.
+
+Ledger-only again, checked not assumed: `.test_orbit_durations` holds ONLY test_orbit.py (574)
+and test_orbits.py (115) keys -- so despite test_potential.py being pytest-split, there is no
+durations file to update.
+
+**Next target: the WHOLE-FILE defers.** `jax tests/test_streamdf.py` and
+`jax tests/test_streamTrack.py` defer entire files, which hides which tests are actually slow --
+if only a few are, splitting to per-test recovers the rest. Bigger potential win than any
+remaining per-test cluster.
