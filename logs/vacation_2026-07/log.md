@@ -49921,3 +49921,38 @@ The margin also does not depend on my CI/local factor: at 0.4-43.7 s local, even
 factor stays clear of the cap (measured factor is ~0.71, i.e. CI is faster).
 
 Next unmeasured clusters: test_FDMdynamfric (7), test_potential (8).
+
+### Slow-skip sweep PLAN: which clusters can be un-deferred vs which need real work
+
+Triaging the remaining 70 by whether the entry carries a MEASURED time, because that is what
+separates "never re-timed, probably stale" from "genuinely performance-gated".
+
+**Stale-CANDIDATES (no measurement recorded -- sweep these):**
+
+    test_potential.py        8 jax   (MovingObject 2nd derivs, Multipole deepcopy,
+                                      DehnenBinney98, 5x poisson_surfdens wrappers)
+    test_FDMdynamfric.py     7       measuring now
+    test_dynamfric.py        3       measuring now
+    test_noninertial.py      8 jax eager   (the jax-JIT siblings ARE measured)
+    test_qdf.py              2 jax
+    misc                     galpypaper test_diskdf, streamspraydf test_center,
+                             actionAngle Staeckel freqsAngles, streamdf + streamTrack
+                             (whole-FILE defers -- worth splitting to per-test)
+
+**Genuinely slow, MEASURED -- these need a real speedup, not an un-defer:**
+
+    test_orbit.py           lyapunov_spectrum 662s / henonheiles 1535s; analytic_zmax
+                            1136s; analytic_ecc_rperi_rap >1200s (timed out)
+    test_noninertial.py     9 jax-jit entries, 354-616s TRACED
+    test_streamTrack.py     2 jax-jit, 314-452s traced
+
+The noninertial jax-jit block (9 entries, all 354-616 s) is the single biggest coherent target
+in the ledger and is a REAL performance problem, not bookkeeping -- NonInertialFrameForce's
+backend path is slow enough traced that it clears the 300 s cap by 20-100%. That is a genuine
+optimisation project, not a sweep, and it is where the remaining ledger mass actually lives.
+
+**Discipline for this sweep:** an entry only comes off the ledger with (a) a whole-file run,
+(b) the C extension verified active, (c) per-test durations from junitxml, and (d) a margin
+wide enough that the CI/local factor cannot flip it. Anything that measures NEAR the cap stays
+deferred with its measurement recorded -- a re-deferred entry with a number is more useful than
+an un-deferred one that flakes.
