@@ -49991,3 +49991,28 @@ bare-name bugs. **Always attribute by full nodeid.**
 **Value delivered even with zero un-defers:** four entries that carried NO measurement now have
 one. A re-deferred entry with a number is worth more than an unmeasured one -- the next sweep
 skips them instead of paying 42 minutes to rediscover this.
+
+**Torch arm done — cluster CLOSED at zero un-defers, 6 entries newly measured.**
+
+    jax   FDM::central_limit                >700s TIMEOUT     stays
+    jax   FDM::const_FDMfactor              >700s TIMEOUT     stays
+    jax   dynamfric::test_dynamfric_c       >700s TIMEOUT     stays
+    jax   FDM::test_dynamfric_c              332.0s CI~236s   stays (only 21% margin)
+    torch FDM::central_limit                 619.0s CI~440s   stays (well over cap)
+    torch dynamfric::test_dynamfric_c       >700s TIMEOUT     stays
+
+**A second near-miss on attribution.** The torch run showed
+`tests/test_FDMdynamfric.py::test_dynamfric_c` passing in 78.8 s, which looked like an un-defer
+candidate. It is **not ledgered under torch at all** -- only under jax (where it takes 332 s).
+An unledgered test running fast proves nothing. Checking the ledger itself, not the run output,
+is what caught it. Same family as the bare-name collision an hour earlier: this cluster has
+punished sloppy attribution twice, in two different ways.
+
+Still unmeasured in this cluster: `torch-jit FDM::const_FDMfactor` (entry 10). The three
+`jax-jit` entries already carry `# 300s cap` from a prior measurement.
+
+**Follow-up worth doing, deliberately NOT folded into gh#1359:** these six now have numbers that
+belong IN the ledger as comments, so the next sweep skips them instead of paying 70 minutes to
+rediscover. gh#1359 is at 126 pass / 27 pending and is a ledger-only PR; adding comments would
+restart ~2 h of CI for zero behaviour change and would conflict with itself. Do it as a small
+follow-up after gh#1359 merges.
