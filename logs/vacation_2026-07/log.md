@@ -49788,3 +49788,24 @@ resolution). Re-ran that job rather than investigating the PR.
 tests/backend_slow_skip.txt"* -- rerere echoing the earlier stash accident. I checked the commit
 contents rather than trusting the push: commit is `_jit.py` only (13/3), PR diff is exactly the
 9 intended files, ledger **untouched** vs develop. Verify content, never push success.
+
+### 2026-08-21 — gh#1356 MERGED to main by Jo (`5d7b7e76`)
+
+The adiabatic action-quadrature fix landed. galpy's C `calcJzAdiabatic`/`calcJRAdiabatic` no
+longer lose ~4 digits at the sqrt turning points: jr 7.88e-04 -> 6.83e-10, jz 1.52e-04 ->
+9.31e-10, for +33% cost at order 20. That closes gh#1354.
+
+**What it unblocks, and what it does NOT.** The two remaining *fixable* xfail entries
+(`test_actionAngleAdiabaticGrid_outsidegrid_c`, jax + torch) were gated on this because the
+off-grid backend fallback has to agree with C and C was the inaccurate side -- the test's bar
+pinned the wrong value. Task #103 (off-grid AA fallback) likewise. But the fix is on **main**,
+and those entries live on **develop**; they only become actionable once main flows through
+feat/backends into develop, which is a rebase ([[no-merge-commits-rebase-only]]) and must NOT be
+started while gh#1358 is in flight against develop. Recorded, not acted on.
+
+gh#1357 (the other agent's Staeckel PR) is still OPEN, so the `HISTORY.txt` one-hunk resolution
+I offered never materialised -- gh#1356 merged cleanly without it.
+
+**gh#1358 coverage retest: not yet readable.** sessions=12 of ~28 with CI at 65/153, so the
+report is mid-upload (misses 7921, cov 83.7% -- meaningless at this stage). Judging it now would
+repeat the mistake I made two wakes ago. Waiting for the session count to complete.
