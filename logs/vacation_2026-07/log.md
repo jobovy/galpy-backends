@@ -49956,3 +49956,38 @@ optimisation project, not a sweep, and it is where the remaining ledger mass act
 wide enough that the CI/local factor cannot flip it. Anything that measures NEAR the cap stays
 deferred with its measurement recorded -- a re-deferred entry with a number is more useful than
 an un-deferred one that flakes.
+
+### Dynamical-friction cluster: NEGATIVE result — genuinely slow, zero un-defers
+
+Measured `test_dynamfric.py` + `test_FDMdynamfric.py`, jax eager, whole-file, C extension
+active, junitxml durations. **All four ledgered jax entries stay deferred:**
+
+    tests/test_FDMdynamfric.py::test_FDMDynamicalFrictionForce_central_limit   >700s TIMEOUT
+    tests/test_FDMdynamfric.py::test_FDMDynamicalFrictionForce_const_FDMfactor >700s TIMEOUT
+    tests/test_dynamfric.py::test_dynamfric_c                                  >700s TIMEOUT
+    tests/test_FDMdynamfric.py::test_dynamfric_c            332.0s  CI~236s  passes, but only
+                                                            21% under the 300 s cap -> STAYS
+
+Unlike interp_potential (where a specific vectorisation explained the staleness), there was no
+landed change that should have made these fast, and the measurement agrees. **This is what the
+ledger is FOR** -- these entries are honest.
+
+**The bare-name collision nearly produced a false un-defer.** Both files define `test_dynamfric_c`,
+`test_dynamfric_c_minr`, `test_dynamfric_c_minr_warning`. The by-NAME view showed
+"test_dynamfric_c: one FAILED at 700 s, one PASSED at 332 s" -- from which either file could have
+been declared stale. Only the full nodeid (classname + name) resolves it: the 700 s one is
+test_dynamfric.py's, the 332 s one is test_FDMdynamfric.py's. This is exactly
+[[ledger-sweep-two-false-stale-modes]], where all twelve "stale" findings turned out to be my own
+bare-name bugs. **Always attribute by full nodeid.**
+
+**Two measurement-method failures this round, both mine:**
+* `--timeout-method=thread` KILLS the process, so junitxml never gets written and the whole
+  file's durations are lost -- including tests that already finished. `signal` fails the slow
+  test and lets the session finish. Recorded in [[per-test-cap-not-per-file-timeout]].
+* My cleanup `kill` pattern was broad enough to kill the REPLACEMENT job seconds after launch;
+  both jobs died with exit 144 and wrote nothing. Relaunched under `setsid` with a
+  non-matching name.
+
+**Value delivered even with zero un-defers:** four entries that carried NO measurement now have
+one. A re-deferred entry with a number is worth more than an unmeasured one -- the next sweep
+skips them instead of paying 42 minutes to rediscover this.
