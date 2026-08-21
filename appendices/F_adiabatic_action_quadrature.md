@@ -222,6 +222,8 @@ for the fix exists.
 **Deliberately not actioned here** (2026-08-20, Jo's call): a separate agent is working on
 Staeckel, so this is recorded rather than fixed, to avoid two people editing the same code.
 
+A paste-ready brief for that agent is at [`HANDOFF_staeckel_quadrature.md`](../HANDOFF_staeckel_quadrature.md).
+
 ## 11. The transferable lesson
 
 The same shape of bug is the largest remaining cluster in the xfail ledger: three entries
