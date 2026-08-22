@@ -50575,3 +50575,45 @@ NON-namespace meaning (`xp = numpy.zeros(...)` is a sample-point array). Harmles
 today but directly adversarial to any `xp is numpy` guard analysis, and confusing
 given the repo-wide convention that `xp` is the namespace. Worth renaming if that
 file is touched.
+
+## 2026-08-22 — #215 CLOSED with evidence: widening the conventions check finds ZERO real bugs
+
+Followed my own "propose before implementing" note by first measuring what the
+proposal would buy. It buys nothing, and that is a firmer result than the PR
+would have been.
+
+Staged measurement, using the REAL `_BareNumpyVisitor` (not a re-implementation):
+
+    widened to every namespace-aware def except __init__   ->  29 new sites (baseline 0)
+    after a constant-arg scalar-ufunc exemption            ->  23 survive
+    after inspecting all 23 by hand                        ->   0 real bugs
+
+The 23 survivors are three legitimate patterns:
+
+1. **`numpy.arange(0, N, dtype=float)` building STATIC basis-index arrays**
+   (SCFPotential; N/L/M are expansion ORDERS), immediately anchored with
+   `asarray_on_device(xp, ..., dev)`. This is the CORRECT idiom -- `xp.arange`
+   under trace would turn compile-time constants into traced arrays. **A widened
+   check would penalise the right pattern**, which is the strongest argument
+   against widening.
+2. `SCFPotential._gaussianQuadrature`: static Gauss-Legendre node construction,
+   numpy-by-design.
+3. `AnySphericalPotential._backend_dens` / `AnyAxisym._bk_dispatch`:
+   `numpy.asarray` inside `if is_backend_array(a) and self._dens_needs_numpy:`,
+   a deliberate round-trip for a user-supplied numpy-only callable, re-anchored
+   via `as_backend_constant`, and documented as keeping the numpy path
+   byte-identical.
+
+**So the compute HELPERS are already clean.** Widening would need an exemption
+vocabulary (constant-arg ufuncs + static index arrays + per-function opt-outs) to
+buy zero findings. Task #215 closed, with the note that it should not be reopened
+without a NEW failure to point at.
+
+**Caveat stated plainly:** this is STATIC analysis of today's code. It shows no
+bare-numpy-on-a-backend-path in the helpers; it does NOT prove runtime
+backend-correctness -- that is what the all-backend suite is for.
+
+Two wakes in a row have now ended in a measured NEGATIVE (streamTrack not a
+burndown target; conventions-widening not worth doing). Both cost ~1 wake each
+and each removed a plausible-looking item from the roadmap permanently. That is
+the intended use of cheap measurement, not a shortfall.
