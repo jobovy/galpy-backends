@@ -50166,3 +50166,38 @@ by construction. **Ledger delta: xfail 8 -> 8, slow_skip 68 -> 69, skip 68 -> 68
 gh#1364 needs no rebase onto the new develop: files are disjoint
 (`_coerce.py` + `test_backend_coerce.py` vs `backend_slow_skip.txt`) and
 `git merge-tree` is clean.
+
+## 2026-08-22 — noninertial jax-eager sweep WITH the gh#1364 fix (whole file, serial)
+
+53 tests, `--backend jax`, C extension active, gh#1364's guard applied, quiet box:
+**53 passed in 5145.98 s (1:25:45)**, zero failures. The ledger's own recorded
+baseline for the same file is **6308 s**, so the file is ~1.23x faster overall
+(the per-test win is much larger on the force-bound tests and ~nil on the rest).
+
+All **8** ledgered `jax` eager entries ran; none is stale, all pass. Times, with
+CI estimated at the measured CI/local factor 0.71 and the ledger's existing
+**240 s CI margin** convention:
+
+    CI~     local    verdict     test
+    397.4   559.8    over cap    test_arbitraryaxisrotation
+    325.9   459.0    over cap    test_arbitraryaxisrotation_omegafunc
+    320.4   451.2    over cap    test_linacc_changingacc_xyz_accellsrframe_funcomegaz
+    288.3   406.0    keep        test_arbitraryaxisrotation_omegadot
+    284.4   400.6    keep        test_linacc_changingacc_xyz_accellsrframe_scalarfuncomegaz
+    213.7   301.0    UN-DEFER    test_python_vs_c_linacc_changingacc_xyz_accellsrframe_vecomegaz
+    199.1   280.4    UN-DEFER    test_arbitraryaxisrotation_omegafunc_nullpotential
+    176.7   248.8    UN-DEFER    test_python_vs_c_arbitraryaxisrotation_funcomega
+
+**Cross-check that the number is real, not a context artifact:**
+`omegafunc_nullpotential` measured **273.58 s** alone in the isolated A/B and
+**280.4 s** inside the whole 53-test file — 2.5% apart. Its BASE (no fix) time was
+**414.5 s** = CI~294 s, i.e. ON the cap. So the fix is precisely what moves these
+three under it.
+
+**Sequencing — this ledger PR CANNOT be opened before gh#1364 merges.** Against
+today's develop (no guard) the three un-deferred tests run at ~415/370/? s local
+=> CI ~294/263/... and would flake or time out. Ledger edit prepared and held.
+Prospective delta once gh#1364 lands: **slow_skip 69 -> 66**, jax noninertial
+8 -> 5. The 9 `jax-jit` noninertial entries are NOT touched: under trace,
+`as_backend_constant` runs once per trace, so the guard buys far less there —
+they need their own measurement.
