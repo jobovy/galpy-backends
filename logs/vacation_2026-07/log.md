@@ -50201,3 +50201,34 @@ Prospective delta once gh#1364 lands: **slow_skip 69 -> 66**, jax noninertial
 8 -> 5. The 9 `jax-jit` noninertial entries are NOT touched: under trace,
 `as_backend_constant` runs once per trace, so the guard buys far less there —
 they need their own measurement.
+
+## 2026-08-22 — gh#1364 self-audit found duplication IN MY OWN PR
+
+gh#1364 reached **152/152 green, mergeState CLEAN** at `cecfd453` (the codecov
+patch+project reds were the pre-upload phantom and cleared once the
+`test_backend*.py` shard uploaded). Before merging I ran the standing audit, and
+it caught a real finding on my own diff:
+
+* **if -> xp.where array-input class: clean.** The new `if` branches on a DEVICE
+  comparison, not on traced data, so there is no traced-boolean branch to convert.
+  Direct evidence rather than assertion: the local `--backend jax --jit`
+  noninertial sweep is running on this exact code with 0 failures.
+* **duplication: FOUND.** The commit left the same predicate open-coded at
+  `_coerce.py:104` (coerce_coords) and `:163` (as_backend_constant).
+
+That duplication is **not cosmetic — it is the defect class this PR fixes**. The
+guard existed in `coerce_coords` and was simply missed in `as_backend_constant`;
+open-coding it a third time would reproduce the bug a third time. Hoisted to
+`effective_device(xp, device)` in `_namespaces.py` (next to `default_device` /
+`device_of` / `asarray_on_device`, which already own the device vocabulary --
+NOT into `_coerce.py`, so a caller outside coercion can reach it).
+
+Pushed as `0f91eec8` (new commit, not a force-push). Cost: a full CI re-run
+(~153 jobs). Taken deliberately -- green-now was the cheaper option, but the
+standing directive is to audit for duplication before merging, and this
+particular duplication is what caused the bug.
+
+Re-verified on the new head: sharding constraints per `_force` still **0.00**
+(7.00 before the guard); numpy 41 / jax 41 / torch 41 passed (1 skipped each).
+`cecfd453`'s fully-green run is left intact as evidence the 4-line guard alone
+passed on all platforms.
