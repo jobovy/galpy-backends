@@ -50056,3 +50056,29 @@ durations file to update.
 `jax tests/test_streamTrack.py` defer entire files, which hides which tests are actually slow --
 if only a few are, splitting to per-test recovers the rest. Bigger potential win than any
 remaining per-test cluster.
+
+### 2026-08-21 — gh#1360 MERGED (`f15a522a`): slow_skip 70 -> 68
+
+Sweep total so far: **79 -> 68 merged**, plus 12 surviving entries now carrying measurements.
+Ledger on develop: xfail 8, slow_skip 68, skip 68.
+
+**The stream measurement was never running — third self-match of the day.** Last wake I reported
+a "serial relaunch" as in flight. It was not. The compound command exited 1 BEFORE its heredoc
+ran, so `/tmp/streamserial.sh` was never created; and the "2 processes still alive" I read as
+the run were my own `pgrep`/`ps` command lines at `etimes=0s`. Load 0.03 was the giveaway I
+should have led with.
+
+So the sequence was: (1) the xdist run genuinely deadlocked on fork, (2) I killed it correctly,
+(3) the replacement never launched, (4) I reported it as running. Only step 1 was understood at
+the time.
+
+**What I changed rather than just noting it:** write the script as its OWN command and `test -x`
+it; launch; then verify the LOG EXISTS AND HAS GROWN plus load has risen -- before claiming
+anything is in flight. This run is confirmed alive (log 60 bytes with the START stamp, load
+0.52 climbing).
+
+The two standing constraints for this file pair, both earned:
+* **SERIAL, never `-n`** -- streamdf forks via parallel_map and jax's fork deadlock is
+  deliberately unfixed ([[torch-fork-deadlock-streamdf]]).
+* **`uptime` before concluding "slow"** -- alive processes at idle load means blocked
+  ([[load-average-distinguishes-hung-from-slow]]).
