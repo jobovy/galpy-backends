@@ -50784,3 +50784,39 @@ Re-verified in the EXACT failing shard contexts: torch test_potential -k ExpTrun
 17 passed, torch test_quantity 1 passed, jax test_potential 17 passed,
 test_backend_exptruncnfw 43 passed on all three, numpy rc still byte-identical.
 Pushed as a NEW commit (no force-push on an open PR).
+
+## 2026-08-22 — gh#1367 second red: exp1 also followed the ambient namespace (`525176b6`)
+
+The torch-shard fix (`1cbb5e97`) was INCOMPLETE. Next run, the numpy
+`build (ubuntu-latest, 3.14, tests/test_backend*.py)` shard failed:
+
+    DeprecationWarning: __array_wrap__ must accept context and return_scalar ...
+    TypeError: Tensor.__array_wrap__() takes 2 positional arguments but 3 given
+      at scipy/optimize/_zeros_py.py:96
+
+I had fixed `xp` to follow the data and left `exp1` following the AMBIENT
+namespace. Under forced torch with a plain-float mass: `target_F` is a float ->
+brentq correctly goes to scipy -> but `exp1(<float>)` routes through the
+namespace router, resolves the FORCED torch namespace, and returns
+`tensor(344.81)`. scipy's brentq then wraps a Tensor via numpy, and numpy 2
+raises. Fix: `_e1 = _scipy_exp1 if numpy_path else exp1` -- same predicate as
+everything else, and on numpy it is what the code called before the migration.
+
+**I had this hypothesis two steps earlier and dropped it.** Mid-debug I saw
+`exp1(1e-150) -> NaN` under forced jax, chased that as a possible router bug,
+found it was my own missing `jax_enable_x64` (float32 underflow), and moved on --
+without returning to the original, correct suspicion that exp1 was
+namespace-sensitive. The red herring cost a full CI round-trip.
+
+**Second lesson, caught before it became a false report.** Re-gating, I ran the
+backend shards with `-W error::DeprecationWarning` and got 6 failures in
+`backend torch test_potential -k ExpTrunc`. Those are NOT CI failures: CI's
+per-shard flags DIFFER --
+
+    backend-tests.yml : pytest ... --backend=$BACKEND --disable-pytest-warnings   (NO -W error)
+    build.yml         : pytest -W error::DeprecationWarning -W error::FutureWarning ...
+
+and the shard that actually failed is a numpy `build` shard that happens to run
+`tests/test_backend*.py`. Re-running each shard with ITS OWN flags: 17 passed /
+1 passed / 43 passed. Using the wrong shard's flags manufactures failures just as
+easily as it hides them -- `verify-exact-ci-shard-context` cuts both ways.
