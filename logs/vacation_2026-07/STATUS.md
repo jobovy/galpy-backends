@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1363 + gh#1364 MERGED; gh#1365 sole open PR)
+# Vacation status snapshot — 2026-08-22 (gh#1363/1364/1365 MERGED; NO open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,37 +11,17 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  a4193e84   (gh#1364 merged; ledger xfail 8 / slow_skip 69 / skip 68)
+    feat/backends-develop  46ea6ade   (gh#1365 merged; ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PRs — ONE, mine
+## Open PRs — NONE. Next PR is mine to choose.
 
-**gh#1363 MERGED** `19f31a54` (154/154). Windows red was `test_from_name_values`,
-a live SIMBAD query -- same-SHA push twin passed the identical shard, and a
-ledger-only diff cannot reach a numpy `build` job. codecov self-healed.
+**gh#1363** `19f31a54` ledger split (43 streamTrack tests back in jax CI).
+**gh#1364** `a4193e84` `as_backend_constant` default-device guard + `effective_device`.
+**gh#1365** `46ea6ade` un-defer 8 noninertial entries: **slow_skip 69 -> 61**.
 
-**gh#1364 MERGED** `a4193e84` (154/154). `as_backend_constant` no longer names the
-default device (galpy #1300's guard, missing from the sibling helper); 144 call
-sites. Self-audit before merge found the SAME predicate open-coded twice -- which
-IS the defect class -- so it was hoisted to `effective_device(xp, device)` in
-`_namespaces.py` and pushed as a second commit, at the cost of a full CI re-run.
-Measured: `_force` 5069.7 -> 3064.0 us (1.65x).
-
-**gh#1365 OPEN -> develop** `ledger/noninertial-undefer`, head `43caac60`.
-Ledger-only. Un-defers 8 noninertial entries measured under the #1364 guard:
-jax eager 8->5, jax --jit 9->4, **slow_skip 69 -> 61**. Both halves are
-CONTROLLED A/Bs (BASE = develop without the guard, same box/command); BASE
-reproduces this ledger's own historical numbers to 0.85-1.02, and the speedup is
-heterogeneous 1.07x-1.64x so the two slowest tests stay deferred on their own
-merits. **Mine to merge once green.**
-
-## Ledger (at develop f15a522a)
-
-    backend_xfail        8
-    backend_slow_skip   68     (-> 69 entries / 43 tests un-skipped via gh#1363)
-    backend_skip        68
-
-Largest slow_skip blocks: test_orbit 20 (9 jax + 7 jax-jit + 3 torch-jit + 1
-torch), **test_noninertial 17** (8 jax + 9 jax-jit), test_potential 6.
+**CI never runs `--jit`** (verified: no workflow contains the flag). `jax-jit` /
+`torch-jit` ledger rows are LOCAL-only -- no CI risk, no CI validation. Report
+traced progress as locally-measured, never as CI-enforced.
 
 ## Measured and CLOSED this wake
 

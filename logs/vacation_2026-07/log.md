@@ -50463,3 +50463,37 @@ shard confirm only this variant is slow: `[..._norot]` 277.9 s, `[..._offset]`
 **Method note that keeps paying off:** measure FIXED-arm first. Had I started with
 a BASE arm here I would have spent another ~65 min to learn the same "stays
 deferred" answer.
+
+## 2026-08-22 — gh#1365 MERGED (`46ea6ade`): slow_skip 69 -> 61
+
+154/154 green. Audit: ledger-only diff (if->xp.where / duplication / placement
+N/A by construction); delta measured on the MERGED TREE, not the branch tip --
+**xfail 8 -> 8, slow_skip 69 -> 61, skip 68 -> 68**; noninertial jax eager 8 -> 5,
+jax-jit 9 -> 4. Both noninertial shards PASSED with the un-deferred tests running.
+
+### A CI-topology fact I had not checked before, and should have
+
+**No workflow contains `--jit`.** `backend-tests.yml` runs
+`pytest --backend=$BACKEND` over `BACKEND: [jax, torch]`; there is no jit axis on
+pull_request, push, schedule or workflow_dispatch. So:
+
+* the **3 jax-eager** un-defers were genuinely validated by this PR's CI (that
+  shard ran them and passed);
+* the **5 jax-jit** un-defers carry **zero CI risk** -- nothing in CI reads those
+  rows -- but equally get **zero CI validation**. My local controlled A/B is the
+  only evidence that will ever exist for them.
+
+That cuts both ways and I want it on the record in the honest direction: it makes
+the jit half safe to merge, and it means "traced-green" is a property I measure,
+not one CI enforces. Saved as memory `ci-never-runs-jit-mode`. Anywhere I report
+jit progress, it should be labelled as locally-measured.
+
+### Session ledger arc
+
+    68  (start)  ->  69  gh#1363  (+1 entry, but 43 streamTrack tests back in CI)
+                ->  61  gh#1365  (-8, on the back of gh#1364's guard)
+
+Three merges: gh#1363 (ledger split), gh#1364 (as_backend_constant device guard
++ effective_device helper), gh#1365 (un-defer). Two targets measured and REJECTED
+rather than forced: streamTrack (0.96x-1.11x) and the RotateAndTilt orbit entry
+(528.9 s, CI~375, over cap).
