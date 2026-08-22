@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1363/1364/1365 MERGED; NO open PR)
+# Vacation status snapshot — 2026-08-22 (gh#1363/1364/1365/1366 MERGED; NO open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,7 +11,7 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  46ea6ade   (gh#1365 merged; ledger xfail 8 / slow_skip 61 / skip 68)
+    feat/backends-develop  47875227   (gh#1366 merged; ledger xfail 8 / slow_skip 61 / skip 68)
 
 ## Open PRs — NONE. Next PR is mine to choose.
 

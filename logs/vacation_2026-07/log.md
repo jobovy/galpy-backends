@@ -50617,3 +50617,37 @@ Two wakes in a row have now ended in a measured NEGATIVE (streamTrack not a
 burndown target; conventions-widening not worth doing). Both cost ~1 wake each
 and each removed a plausible-looking item from the roadmap permanently. That is
 the intended use of cheap measurement, not a shortfall.
+
+## 2026-08-22 — gh#1366 MERGED (`47875227`)
+
+154/154 green. Audit on the MERGED TREE (not the branch tip): ledger-only diff, so
+if->xp.where / duplication / placement are N/A by construction; **entry set
+byte-identical and xfail 8 / slow_skip 61 / skip 68 all unchanged** -- verified by
+parsing entry fields and comparing sets, since the whole claim of this PR is that
+nothing but comments moved.
+
+### Session totals (2026-08-22)
+
+    four merges:  gh#1363  19f31a54  ledger split, 43 streamTrack tests back in jax CI
+                  gh#1364  a4193e84  as_backend_constant device guard + effective_device
+                  gh#1365  46ea6ade  un-defer 8 noninertial entries      69 -> 61
+                  gh#1366  47875227  annotations: censored bound -> measurement
+
+    ledger arc:   68 -> 69 -> 61      (net -7 entries, +43 tests re-enabled)
+
+    measured and REJECTED rather than forced:
+      streamTrack burndown            0.96x-1.11x, all 4 entries stay
+      RotateAndTilt orbit entry       528.9 s, CI~375, over cap, stays
+      conventions-check widening      29 flags, 0 real bugs, task #215 CLOSED
+
+Three negatives and four merges. The negatives each cost about one wake and each
+permanently removed a plausible-looking item from the roadmap; that is the
+intended return on cheap measurement, not a shortfall.
+
+### Standing state
+
+No open PR. develop `47875227`, ledger 8/61/68. Cron `e935a60c` alive, created
+2026-08-19 -> expires ~2026-08-26 (re-create on or before the 26th).
+The main->develop rebase remains PARKED and is Jo's to apply (I prepare, Jo
+applies); it still gates the 2 `AdiabaticGrid_outsidegrid_c` xfail entries and
+task #103.
