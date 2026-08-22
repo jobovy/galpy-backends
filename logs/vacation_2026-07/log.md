@@ -50141,3 +50141,28 @@ Gate green on the branch: numpy 708 / jax 694 / torch 694 (1 skipped each).
 Tests A/B-verified: BASE 2 failed + 10 passed, FIXED 12 passed.
 
 **Opened as gh#1364** `backend/coerce-default-device-guard` head `cecfd453`.
+
+## 2026-08-22 — gh#1363 MERGED (`19f31a54`)
+
+Fully green, **154/154**, mergeState CLEAN, squash-merged into
+`feat/backends-develop`. The shard that had to prove it —
+`backend jax tests/test_streamdf.py tests/test_streamspraydf.py
+tests/test_streamTrack.py` — PASSED with the 43 newly un-skipped streamTrack
+tests actually running.
+
+Both reds cleared without a code change:
+* **windows-latest 3.14 orbit shard** = `test_from_name_values`, a **live SIMBAD
+  network query**. Settled three ways: the same-SHA `push` twin PASSED the
+  identical shard; the mechanism is an external service; and a ledger-only diff
+  cannot reach a numpy `build` job at all (conftest returns before reading the
+  ledger when the backend is numpy). Re-run -> green.
+* **codecov/project** self-healed as the remaining shards uploaded, exactly the
+  incomplete-upload phantom (head read 85.08% vs base 99.96% at ~half reported).
+
+Audit: ledger-only diff, so if->xp.where / duplication / helper-placement are N/A
+by construction. **Ledger delta: xfail 8 -> 8, slow_skip 68 -> 69, skip 68 -> 68**
+(count +1, but 43 tests returned to jax CI).
+
+gh#1364 needs no rebase onto the new develop: files are disjoint
+(`_coerce.py` + `test_backend_coerce.py` vs `backend_slow_skip.txt`) and
+`git merge-tree` is clean.
