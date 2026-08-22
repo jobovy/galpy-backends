@@ -50497,3 +50497,32 @@ Three merges: gh#1363 (ledger split), gh#1364 (as_backend_constant device guard
 + effective_device helper), gh#1365 (un-defer). Two targets measured and REJECTED
 rather than forced: streamTrack (0.96x-1.11x) and the RotateAndTilt orbit entry
 (528.9 s, CI~375, over cap).
+
+## 2026-08-22 — gh#1364 follow-up audit CLEAN; gh#1366 opened (ledger hygiene)
+
+**Family grep after the guard landed** (my own rule: when a perf guard lands, grep
+the family). On develop, `effective_device` is defined at `_namespaces.py:374` and
+called at BOTH `_coerce.py:105` and `:158`; the only two remaining
+`asarray(..., device=)` sites are DOWNSTREAM of it. The `_torch/*.py`
+`as_tensor(..., device=dev)` sites propagate an input tensor's device inside
+custom autograd Functions (once per forward/backward, not a hot loop) -- correct
+as-is. **Nothing left from the gh#1364 defect class.**
+
+**I nearly acted on a garbage grep first.** My initial run was in the MAIN
+checkout, which sits on `feat/backends` -- stale. It reported `effective_device`
+with ZERO callers, including no definition, which is what tipped me off. Same
+stale-tree trap as before, now caught by the absurdity of the result rather than
+by discipline. `git grep <pat> origin/feat/backends-develop -- 'galpy/*.py'`
+queries the ref directly and needs no worktree; that is the safe form from the
+main checkout.
+
+**gh#1366 opened** `ledger/annotate-measured` head `18106d19`. Comment-only,
+**entry set verified byte-identical 61 -> 61** by parsing entry fields and
+comparing sets. Banks this session's measurements:
+* the RotateAndTilt orbit entry's `>420s timed out` -> `PASSES in 528.9s (CI~375)`
+  -- a censored BOUND replaced by a measurement;
+* 4 streamTrack times refreshed post-guard (0.96x-1.11x), with the two
+  `with_progpot` rows explicitly annotated STAYS because they straddle the 240 s
+  margin on a 2-4% wobble;
+* an in-file note on why the guard does nothing for streamTrack (calls per
+  EVALUATION, not call sites), so the sweep is not repeated.
