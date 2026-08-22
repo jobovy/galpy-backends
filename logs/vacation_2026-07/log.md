@@ -50340,3 +50340,38 @@ verified against a copy of develop's ledger first). The script matches on the
 ENTRY FIELD ignoring trailing `# 616s` comments and requires an exact nodeid --
 a prefix match on `::test_arbitraryaxisrotation` would have silently swallowed
 `_omegafunc`, `_omegadot` and `_omegafunc_nullpotential`.
+
+## 2026-08-22 — NEGATIVE RESULT: the #1364 guard does NOT help streamTrack
+
+Natural next burndown target: gh#1363 deliberately kept 4 streamTrack entries
+deferred (2 eager at CI~290 / ~236, 2 jit at 452 s / 314 s traced), and
+`as_backend_constant`'s biggest consumers by call count are exactly the stream
+modules (streamdf 66, streamgapdf 20). So I measured the whole file on
+post-guard develop `a4193e84`.
+
+**No speedup.** 45 passed in 1186.11 s vs 1196 s pre-guard = **1.008x** for the
+file, and per-test for the two ledgered entries:
+
+    pre-guard    post      x     CI~
+        408.0   427.2   0.96   303.3   test_streamTrack_plot_spread_non_cartesian
+        331.7   323.7   1.02   229.8   test_streamTrack_with_progpot
+
+**Nothing is un-deferred.** Note the trap I did NOT walk into: `with_progpot`
+sits at CI~229.8, i.e. nominally *under* the 240 s margin, where pre-guard it was
+CI~236, nominally *over*. That crossing is a **2% wobble**, not a change --
+un-deferring on it would plant exactly the kind of recurring CI timeout the
+margin exists to prevent. It stays.
+
+**What this corrects:** "144 call sites" is a count, not a speedup. The guard
+saves a fixed cost *per as_backend_constant call*, so it only pays where that
+call sits in a hot per-evaluation loop -- NonInertialFrameForce evaluates
+`_force` tens of thousands of times inside a Python ODE integrator (1.07x-1.64x).
+streamTrack's stream-module calls are concentrated in TRACK SETUP, executed a
+handful of times, so the same fix is invisible there. The blast-radius argument
+in gh#1364 was about how many call sites could benefit, and I should not have let
+it imply that they all would.
+
+Corollary for the remaining ledger: do not assume the guard un-blocks any other
+cluster. Each needs its own measurement, and the cheap FIXED-arm-first ordering
+(measure post-guard; only run a BASE arm if something actually crosses the
+margin) settles most of them in one run instead of two.
