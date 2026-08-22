@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1363/1364/1365/1366 MERGED; NO open PR)
+# Vacation status snapshot — 2026-08-22 (gh#1363-1367 MERGED; NO open PR; next = task #221 Einasto)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,17 +11,24 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  47875227   (gh#1366 merged; ledger xfail 8 / slow_skip 61 / skip 68)
+    feat/backends-develop  08db5d90   (gh#1367 merged; ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PRs — NONE. Next PR is mine to choose.
+## Open PRs — NONE. Next PR = task #221 (Einasto _calculate_dn), recipe ready.
 
-**gh#1363** `19f31a54` ledger split (43 streamTrack tests back in jax CI).
-**gh#1364** `a4193e84` `as_backend_constant` default-device guard + `effective_device`.
-**gh#1365** `46ea6ade` un-defer 8 noninertial entries: **slow_skip 69 -> 61**.
+gh#1363 `19f31a54` ledger split (43 streamTrack tests back in jax CI)
+gh#1364 `a4193e84` as_backend_constant default-device guard + effective_device
+gh#1365 `46ea6ade` un-defer 8 noninertial entries, slow_skip 69 -> 61
+gh#1366 `47875227` ledger annotations: censored bound -> measurement
+gh#1367 `08db5d90` from_nfw mass -> rc differentiable (8e-12 vs FD)
 
-**CI never runs `--jit`** (verified: no workflow contains the flag). `jax-jit` /
-`torch-jit` ledger rows are LOCAL-only -- no CI risk, no CI validation. Report
-traced progress as locally-measured, never as CI-enforced.
+**CI never runs `--jit`** (verified). jax-jit/torch-jit ledger rows are LOCAL-only:
+no CI risk, no CI validation. Report traced progress as locally-measured.
+
+**Routed helpers follow the AMBIENT forced namespace, not their argument.**
+`backend.special.*` resolves the forced namespace even for a Python float, while
+`backend.optimize.brentq` follows the DATA. On a scipy path derive EVERY piece
+from one `numpy_path = not is_backend_array(...)` predicate. Cost gh#1367 two
+round-trips. Only torch surfaces it; jax accepts float args and stays green.
 
 ## Measured and CLOSED this wake
 

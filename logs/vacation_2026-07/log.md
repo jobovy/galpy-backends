@@ -50851,3 +50851,58 @@ trap, so #221's recipe now spells out the both-halves rule, the
 `backend_managed`-exempts-`--backend` gap, the per-shard `-W` difference, the
 C-extension build, and the `jax_enable_x64` probe requirement -- every trap this
 PR actually hit, so the sibling costs one round-trip instead of three.
+
+## 2026-08-22 — gh#1367 MERGED (`08db5d90`): from_nfw mass -> rc is differentiable
+
+154/154 green, including both `-W error` `test_backend*.py` shards (93 min) and
+all three shards that had been red. Audit clean on all four points:
+
+* **if->xp.where**: the branch is on `is_backend_array` -- a TYPE predicate, never
+  on traced data, so there is nothing to convert to `xp.where`.
+* **duplication**: `numpy_path` is assigned ONCE and used 6 times. That
+  single-predicate discipline IS the fix -- both reds came from deriving one
+  piece from the data and another from the ambient namespace.
+* **helper placement**: the only new `def`s are in the test file. No new source
+  helper; reuses `backend.optimize.brentq` + `backend.special.exp1`.
+* **ledger delta**: none (8 / 61 / 68), measured on the MERGED TREE.
+
+    numpy rc       175.7878520799847   BYTE-IDENTICAL
+    d(rc)/d(mass)  190.8931303136 vs central FD 190.8931303120 -> 8.08e-12
+                   identical on jax and torch
+    forward value  numpy == jax == torch to 1e-10
+
+### Cost, stated honestly: three CI round-trips, two of them my bugs
+
+Both were the SAME class -- a routed helper following the AMBIENT forced
+namespace while `brentq` follows the DATA. I fixed half of it and shipped, which
+is why it took two rounds instead of one. Saved as memory
+`routed-helpers-follow-ambient-not-argument`.
+
+Three compounding factors, all now written down:
+1. `jnp.exp` accepts a Python float and `torch.exp` does not, so jax stayed green
+   with the identical latent bug. "jax passes" proves nothing about namespace
+   plumbing.
+2. My pre-push gate could not have caught it: `tests/test_backend_exptruncnfw.py`
+   is `backend_managed`, which EXEMPTS it from the global `--backend` force, so
+   `pytest --backend torch` on that file forced nothing.
+3. The second bug only fails where `-W error` is on. `backend-tests.yml` uses
+   `--disable-pytest-warnings`; only the numpy `build` matrix escalates. Using
+   the wrong shard's flags manufactures failures as easily as it hides them --
+   I briefly produced 6 phantom failures that way and caught it before reporting.
+
+### Session totals (2026-08-22)
+
+    five merges:  gh#1363 19f31a54  ledger split, 43 streamTrack tests back in CI
+                  gh#1364 a4193e84  as_backend_constant device guard + effective_device
+                  gh#1365 46ea6ade  un-defer 8 noninertial entries   69 -> 61
+                  gh#1366 47875227  annotations: censored bound -> measurement
+                  gh#1367 08db5d90  from_nfw differentiable mass -> rc
+
+    ledger: 68 -> 61 (net -7, +43 tests re-enabled)
+    measured and REJECTED: streamTrack burndown, RotateAndTilt orbit entry,
+                           conventions-check widening (task #215 CLOSED)
+
+### Next
+
+No open PR. **Task #221 (EinastoPotential._calculate_dn) is the next PR** -- same
+shape, prerequisites verified, and its recipe now carries every trap gh#1367 hit.
