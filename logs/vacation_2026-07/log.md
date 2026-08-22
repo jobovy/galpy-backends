@@ -50232,3 +50232,45 @@ Re-verified on the new head: sharding constraints per `_force` still **0.00**
 (7.00 before the guard); numpy 41 / jax 41 / torch 41 passed (1 skipped each).
 `cecfd453`'s fully-green run is left intact as evidence the 4-line guard alone
 passed on all platforms.
+
+## 2026-08-22 — jax --jit noninertial sweep: my "helps far less under trace" claim looks WRONG
+
+Ran the whole file under `--backend jax --jit` with the gh#1364 guard:
+**53 passed in 4542.55 s**, zero failures. (The eager sweep of the same file was
+5145.98 s -- traced is FASTER here, which is itself worth noting.)
+
+I had predicted, twice in this log and in gh#1364's description, that the guard
+"buys far less" under trace because `as_backend_constant` runs once per trace.
+Against the times the ledger records for these entries, that is not what happened:
+
+    ledger(s)   now(s)     CI~    test
+      616.0     490.7    348.4    test_arbitraryaxisrotation
+      573.0     400.5    284.4    test_arbitraryaxisrotation_omegafunc
+      529.0     351.9    249.9    ..._accellsrframe_funcomegaz
+      477.0     297.5    211.2    test_python_vs_c_..._vecomegaz
+      454.0     352.3    250.1    test_arbitraryaxisrotation_omegadot
+      437.0     307.1    218.0    ..._accellsrframe_scalarfuncomegaz
+      386.0     247.2    175.5    ..._omegafunc_nullpotential
+      381.0     243.3    172.8    test_python_vs_c_arbitraryaxisrotation_funcomega
+      354.0     235.3    167.0    test_python_vs_c_..._scalarfuncomegaz
+
+i.e. **20-38% faster, comparable to eager**, and 5 of 9 would fall under the
+240 s CI margin.
+
+**NOT ACTING ON THIS YET.** Those "ledger" numbers are historical annotations
+from an earlier measurement, not a controlled arm -- different day, possibly
+different load and library versions. Comparing against them is exactly the
+"a matching number is the trap" failure mode. A wrong un-defer here does not
+fail loudly; it plants a recurring CI timeout.
+
+So a **BASE arm is now running**: same file, same command, same box, on a
+worktree at develop `19f31a54` (no guard). The two trees differ only in
+`_coerce.py` + `_namespaces.py` (plus the test file and streamTrack ledger lines,
+neither of which touches test_noninertial timings, and noninertial is stripped
+from both arms) -- so the comparison is single-variable. Only if BASE reproduces
+the ~600/570/530 s numbers does the jit burndown become real.
+
+Corroborating evidence that the box is NOT simply 30% fast today: in the eager
+sweep the un-ledgered sibling `omegadot_nullpotential` moved only 159.1 -> 146.8 s
+(7.7%), while the force-bound tests moved ~32%. But that is an argument, not the
+measurement -- hence the BASE arm.
