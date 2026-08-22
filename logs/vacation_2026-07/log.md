@@ -50526,3 +50526,52 @@ comparing sets. Banks this session's measurements:
   margin on a 2-4% wobble;
 * an in-file note on why the guard does nothing for streamTrack (calls per
   EVALUATION, not call sites), so the sweep is not repeated.
+
+## 2026-08-22 — task #215 ("COMPUTE_METHODS hand-maintained") is MIS-FRAMED; corrected
+
+Investigated as the next PR candidate. The premise does not survive contact with
+the code, and the correction is worth more than the PR would have been.
+
+**What #215 says:** "COMPUTE_METHODS is still hand-maintained: 100 namespace-aware
+defs outside it."
+
+**What is actually true:**
+* The **module** set is NOT hand-maintained -- `CHECKED_MODULES` is derived by an
+  AST scan for `_backend_compatible` ("the allowlist this replaces had drifted to
+  15 of 48 modules"). That drift was already fixed.
+* Only the ~17 **method NAMES** are hand-listed, and their narrowness is
+  DELIBERATE and asserted: `test_only_compute_methods_are_checked` says
+  *"__init__ machinery is numpy-by-design; the check must not spread to it."*
+  Widening indiscriminately would fight an existing test.
+* The count is 412 repo-wide today, not 100 -- but only **134** sit inside the
+  checked modules, and just **4** of those are `__init__`.
+
+**The REAL gap, stated precisely:** the list captures compute ENTRY POINTS but not
+the private HELPERS they call -- `_mass` (10), `_smooth` (5), `_force` (3),
+`_2ndderiv_xyz`, `_force_xyz`, the SCF internals (`_rhoTilde`, `_phiTilde`,
+`_dphiTilde`, ...), the Kuzmin/Staeckel derivative helpers. Bare numpy in one of
+those regresses the potential exactly as if it were in `_Rforce`.
+
+**But widening is NOT a clean fix, measured:** re-running the REAL
+`_BareNumpyVisitor` with the name set widened to every namespace-aware def except
+`__init__` flags **29 new sites (baseline 0)**, and triage shows most are
+legitimate -- numpy applied to COMPILE-TIME CONSTANTS:
+
+    numpy.arange(0, L)[numpy.newaxis, :]   static order index, not data  (SCF _dC/_d2C)
+    numpy.sqrt(2.0 * numpy.pi)             scalar constant beside real xp. ops (TriaxialGaussian._mass)
+    numpy.log(2.0) * xp.ones_like(z)       scalar constant             (KuijkenDubinski)
+    numpy.zeros(...) for Gauss-Legendre nodes  static quadrature setup (SCF _gaussianQuadrature)
+
+`SAFE_NUMPY_ATTRS` already exempts constant ATTRIBUTES (`numpy.pi`) but there is
+no exemption for constant-ARGUMENT CALLS, which is the whole false-positive class.
+
+**So #215 becomes a small, concrete design proposal, not a list edit:** add a
+constant-argument exemption to the visitor (all args literal/`Num`-foldable ->
+not a violation), THEN widen the name set to helpers. That is a judgement change
+to a convention Jo owns, on ~29 sites, so it is written up rather than started.
+
+**Incidental:** `SCFPotential._gaussianQuadrature` shadows `xp` with a
+NON-namespace meaning (`xp = numpy.zeros(...)` is a sample-point array). Harmless
+today but directly adversarial to any `xp is numpy` guard analysis, and confusing
+given the repo-wide convention that `xp` is the namespace. Worth renaming if that
+file is touched.
