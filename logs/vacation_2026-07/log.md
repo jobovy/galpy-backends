@@ -50820,3 +50820,34 @@ and the shard that actually failed is a numpy `build` shard that happens to run
 `tests/test_backend*.py`. Re-running each shard with ITS OWN flags: 17 passed /
 1 passed / 43 passed. Using the wrong shard's flags manufactures failures just as
 easily as it hides them -- `verify-exact-ci-shard-context` cuts both ways.
+
+## 2026-08-22 — is the routed-helper/scipy mismatch a LIVE bug elsewhere? Measured: no
+
+Two consecutive gh#1367 reds were the same class -- a namespace-routed helper
+(`galpy.backend.special.exp1`) resolves the AMBIENT forced namespace rather than
+its argument's, so on a scipy path it hands scipy a Tensor. Saved as memory
+`routed-helpers-follow-ambient-not-argument`.
+
+Grepped the family: **7 modules import BOTH `galpy.backend.special` and
+`scipy.optimize`/`scipy.integrate`** -- kingdf, streamdf, streamgapdf,
+AnyAxisymmetricRazorThinDisk, Einasto, SCF, TwoPowerSpherical.
+
+Mixing is not itself a bug; it only bites when a routed result flows into a scipy
+call on the numpy path. Rather than audit seven modules speculatively, used the
+empirical test: **my bug WAS caught by existing forced-backend tests**
+(test_potential::test_ExpTruncNFW_from_nfw, test_quantity::..._from_nfw_quantity),
+so a live instance elsewhere would already be red on develop.
+
+    develop 47875227, backend shards: success=46, failure=0
+
+So there is **no live instance** in the other six. My code introduced the only
+one, and it is fixed. Caveat stated plainly: this shows no instance that the
+suite EXERCISES -- an uncovered path could still harbour one -- which is the
+same caveat as any test-based claim, not a special weakness here.
+
+Einasto's is LATENT rather than live: its solve is scipy-only today, so nothing
+routed reaches scipy. Migrating it (task #221) is precisely what would expose the
+trap, so #221's recipe now spells out the both-halves rule, the
+`backend_managed`-exempts-`--backend` gap, the per-shard `-W` difference, the
+C-extension build, and the `jax_enable_x64` probe requirement -- every trap this
+PR actually hit, so the sibling costs one round-trip instead of three.
