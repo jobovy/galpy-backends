@@ -50738,3 +50738,49 @@ interpolation (galpy/backend/interpolate.py exists). Recorded, not started.
 runner contention, and a second PR would compete with it for the same runners --
 the same reasoning as "don't fill the wait by dispatching a measurement run".
 Prepared and held for the wake after gh#1367 merges.
+
+## 2026-08-22 — gh#1367 went RED on two torch shards; MY bug, fixed (`1cbb5e97`)
+
+    FAILED backend torch tests/test_potential.py --splits 5 --group 5
+             tests/test_potential.py::test_ExpTruncNFW_from_nfw
+    FAILED backend torch tests/test_quantity.py tests/test_coords.py
+             tests/test_quantity.py::test_ExpTruncNFWPotential_from_nfw_quantity
+
+    Froot = lambda al, tF: xp.exp(al) * (1.0 + al) * exp1(al) - 1.0 - tF
+    TypeError: exp(): argument 'input' must be Tensor, not float
+
+**Root cause, mine.** Under `use("torch", force=True)` with a PLAIN-FLOAT mass,
+`get_namespace(target_F)` reports the FORCED backend, but `target_F` is not a
+backend array -- so brentq, which dispatches on the DATA, correctly routes to
+scipy and hands the residual Python floats. `torch.exp(float)` raises. I derived
+`xp` from the ambient namespace and the brentq dispatch from the data, and the
+two disagreed.
+
+Fix: derive both from the SAME predicate.
+
+    numpy_path = not is_backend_array(target_F)
+    xp = numpy if numpy_path else get_namespace(target_F)
+
+**Only torch went red because `jnp.exp` accepts a Python float and `torch.exp`
+does not.** jax carried the identical latent bug and stayed green -- a reminder
+that "jax passes" is not evidence the namespace plumbing is right.
+
+**Why my pre-push gate missed it, precisely:** I ran `--backend torch` on
+`tests/test_backend_exptruncnfw.py`, but that module sets
+`pytestmark = pytest.mark.backend_managed`, which EXEMPTS it from the global
+force fixture. So `--backend torch` on that file never forced anything, and the
+forced-backend path for from_nfw was never exercised. The two failing tests live
+in force-managed files. Added a regression test that calls
+`use(backend, force=True)` EXPLICITLY inside this module.
+
+**And a probe-hygiene repeat.** Chasing the fix I saw `exp1(1e-150) -> NaN` under
+forced jax and briefly suspected a latent router bug. It was my probe: no
+`jax_enable_x64`, so jax ran float32, 1e-150 underflowed to 0, and expi(0) is
+-inf. With x64 on, the router is exact at every x from 1e-150 to 10. This is the
+SECOND time this session a bare probe silently measured float32 -- the suite sets
+x64 via conftest, so a standalone probe must too.
+
+Re-verified in the EXACT failing shard contexts: torch test_potential -k ExpTrunc
+17 passed, torch test_quantity 1 passed, jax test_potential 17 passed,
+test_backend_exptruncnfw 43 passed on all three, numpy rc still byte-identical.
+Pushed as a NEW commit (no force-push on an open PR).
