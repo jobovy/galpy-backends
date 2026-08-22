@@ -50390,3 +50390,40 @@ clearest possible sign that the line is not what moved.
 
 streamTrack is therefore CLOSED as a burndown target under this guard, and the
 "144 call sites" figure is confirmed to be a count of opportunity, not of effect.
+
+## 2026-08-22 — the guard's payoff scales with as_backend_constant calls PER EVALUATION
+
+streamTrack said 0.96x-1.11x; noninertial said 1.07x-1.64x. To find the rule
+rather than collect anecdotes, probed `RotateAndTiltWrapperPotential` -- the one
+remaining ledger entry whose potential is constant-heavy
+(`test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tiltedTriaxialNFW]`,
+">420 s, timed out").
+
+Controlled A/B on the post-guard tree, BASE arm = `effective_device` reduced to a
+pass-through (single variable, arms verified to differ), jax x64 ON:
+
+    RotateAndTilt.Rforce   BASE 24228.8 us   FIXED 12403.5 us   **1.95x**
+    sharding constraints   BASE     15.00/call    FIXED  0.00/call
+
+**The rule:** the guard removes a fixed per-`as_backend_constant`-call cost, so
+the speedup tracks how many such calls each *evaluation* makes:
+
+    RotateAndTilt        15 calls / force eval   -> 1.95x
+    NonInertialFrameForce 7 calls / force eval   -> 1.07x-1.64x
+    streamTrack          ~0 calls / evaluation   -> 1.0x  (its calls are in
+                                                    TRACK SETUP, run a few times)
+
+That is why "144 call sites" predicted nothing on its own: what matters is calls
+per evaluation multiplied by evaluations, not the count of source locations.
+
+**Probe hygiene note:** my first run of this probe forgot
+`jax.config.update("jax_enable_x64", True)` and silently measured float32 (jax
+warns and truncates). The suite sets x64 via conftest, so a bare probe does NOT
+reproduce suite conditions. Re-run with x64 before believing any standalone
+backend timing.
+
+Test-level measurement now running in a CI-FAITHFUL context: `test_orbit.py
+--splits 5 --group 3 --durations-path tests/.test_orbit_durations` (group 3 is
+where that nodeid lands, determined by collection, not guessed), with ONLY that
+one entry un-deferred so the shard content otherwise matches CI. No ledger change
+until that lands.
