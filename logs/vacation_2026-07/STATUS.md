@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1363 MERGED; gh#1364 sole open PR)
+# Vacation status snapshot — 2026-08-22 (gh#1363 + gh#1364 MERGED; gh#1365 sole open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,29 +11,28 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  19f31a54   (gh#1363 merged; ledger xfail 8 / slow_skip 69 / skip 68)
+    feat/backends-develop  a4193e84   (gh#1364 merged; ledger xfail 8 / slow_skip 69 / skip 68)
 
 ## Open PRs — ONE, mine
 
-**gh#1363 MERGED** as `19f31a54` — fully green 154/154. The shard that had to
-prove it (`backend jax ... test_streamTrack.py`) passed with the 43 un-skipped
-tests running. Both reds cleared with no code change: the windows red was
-`test_from_name_values`, a live SIMBAD query (same-SHA push twin PASSED the
-identical shard, and a ledger-only diff cannot reach a numpy `build` job);
-codecov/project self-healed as shards uploaded.
+**gh#1363 MERGED** `19f31a54` (154/154). Windows red was `test_from_name_values`,
+a live SIMBAD query -- same-SHA push twin passed the identical shard, and a
+ledger-only diff cannot reach a numpy `build` job. codecov self-healed.
 
-**gh#1364 -> develop** `backend/coerce-default-device-guard`, head `cecfd453`.
-`as_backend_constant` never got the galpy #1300 default-device guard that
-`coerce_coords` has 60 lines up in the same file, so every stored constant named
-its device explicitly — which COMMITS placement (397.6 us vs 134.6 us on jax CPU).
-Attributed by patching `jax._src.pjit.with_sharding_constraint`: **7.00 calls per
-`NonInertialFrameForce._force`, 100% from `_coerce.py:164`**.
-Measured A/B (arms verified to differ): `_force` **5069.7 -> 3064.0 us (1.65x)**;
-`test_arbitraryaxisrotation_omegafunc_nullpotential` eager **414.5 -> 273.6 s
-(1.51x)**. **144 call sites** (streamdf 66, streamgapdf 20, sphericaldf 11,
-NonInertialFrameForce 10, RotateAndTilt 9, ...) — a repo-wide eager win, not a
-noninertial one. numpy untouched (early return); GPU non-default anchors still
-named. Gate green: numpy 708 / jax 694 / torch 694. **No ledger change.**
+**gh#1364 MERGED** `a4193e84` (154/154). `as_backend_constant` no longer names the
+default device (galpy #1300's guard, missing from the sibling helper); 144 call
+sites. Self-audit before merge found the SAME predicate open-coded twice -- which
+IS the defect class -- so it was hoisted to `effective_device(xp, device)` in
+`_namespaces.py` and pushed as a second commit, at the cost of a full CI re-run.
+Measured: `_force` 5069.7 -> 3064.0 us (1.65x).
+
+**gh#1365 OPEN -> develop** `ledger/noninertial-undefer`, head `43caac60`.
+Ledger-only. Un-defers 8 noninertial entries measured under the #1364 guard:
+jax eager 8->5, jax --jit 9->4, **slow_skip 69 -> 61**. Both halves are
+CONTROLLED A/Bs (BASE = develop without the guard, same box/command); BASE
+reproduces this ledger's own historical numbers to 0.85-1.02, and the speedup is
+heterogeneous 1.07x-1.64x so the two slowest tests stay deferred on their own
+merits. **Mine to merge once green.**
 
 ## Ledger (at develop f15a522a)
 

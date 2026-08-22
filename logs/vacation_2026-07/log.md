@@ -50314,3 +50314,29 @@ uniformity:
 
 All of it gated on gh#1364 landing -- the un-defer is only valid on top of the
 guard. Prepared script extended to cover both halves.
+
+## 2026-08-22 — gh#1364 MERGED (`a4193e84`), gh#1365 opened
+
+154/154 green, audit clean on all four points:
+* if->xp.where: the new `if` branches on a device comparison; 53-test --jit
+  sweeps on this code, 0 failures, both arms.
+* duplication: the predicate is now open-coded **0** times in `_coerce.py`
+  (was 2); both sites route through `effective_device`.
+* placement: `effective_device` sits in `_namespaces.py` beside `device_of` /
+  `default_device` / `asarray_on_device`.
+* ledger delta: none.
+
+**One audit step of mine was measured wrong and is worth recording.** Comparing
+the BRANCH TIP's `backend_slow_skip.txt` against develop showed "69 -> 68", which
+reads as *this merge reverts gh#1363's ledger change*. It does not: the PR never
+modifies that file, and the branch simply carried a stale base. The right check
+is the MERGED TREE, not the branch tip:
+
+    tree=$(git merge-tree --write-tree origin/feat/backends-develop origin/<branch>)
+    git cat-file -p $tree:tests/backend_slow_skip.txt | grep -vc '^\s*#\|^\s*$'   # 69
+
+**gh#1365 opened** with the prepared script applied verbatim (69 -> 61, dry-run
+verified against a copy of develop's ledger first). The script matches on the
+ENTRY FIELD ignoring trailing `# 616s` comments and requires an exact nodeid --
+a prefix match on `::test_arbitraryaxisrotation` would have silently swallowed
+`_omegafunc`, `_omegadot` and `_omegafunc_nullpotential`.
