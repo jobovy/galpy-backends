@@ -1,73 +1,104 @@
 #!/usr/bin/env python3
-"""PREPARED, HELD until gh#1364 (as_backend_constant device guard) merges.
+"""PREPARED, HELD until gh#1364 (as_backend_constant default-device guard) merges.
 
-Un-defers the 3 jax-eager noninertial entries that clear the ledger's 240 s CI
-margin ONCE gh#1364's guard is in the base. Measured 2026-08-22, whole file,
-serial, C extension active, quiet box:  53 passed in 5145.98 s.
+Un-defers the noninertial entries that clear the ledger's 240 s CI margin ONCE
+gh#1364's guard is in the base. Both halves were measured as CONTROLLED A/Bs
+(same file, same command, same box; the two trees differ only in
+_coerce.py + _namespaces.py):
 
-DO NOT APPLY BEFORE gh#1364 IS IN THE BASE -- without the guard these run
-~415/370 s local (CI ~294/263) and would flake or time out.
+    jax eager   BASE 5146 s -> FIXED  ... , 3 of 8 entries clear the margin
+    jax --jit   BASE 5894 s -> FIXED 4543 s, 5 of 9 entries clear the margin
 
-Content-addressed (matches on entry text, not line numbers) so it survives a
-moved base. Run from the repo root; verifies before and after.
+DO NOT APPLY BEFORE gh#1364 IS IN THE BASE -- without the guard these run at
+their BASE times and would flake or time out.
+
+Matches on the ENTRY FIELD (backend + nodeid), ignoring trailing "# 616s"
+comments, and requires an EXACT nodeid match -- a prefix match on
+"::test_arbitraryaxisrotation" would also swallow _omegafunc / _omegadot /
+_omegafunc_nullpotential. Verifies the delta before writing.
 """
-import sys, pathlib
+import pathlib
+import sys
 
 LEDGER = pathlib.Path("tests/backend_slow_skip.txt")
 
-UNDEFER = [
-    "jax tests/test_noninertial.py::test_python_vs_c_linacc_changingacc_xyz_accellsrframe_vecomegaz",
-    "jax tests/test_noninertial.py::test_arbitraryaxisrotation_omegafunc_nullpotential",
-    "jax tests/test_noninertial.py::test_python_vs_c_arbitraryaxisrotation_funcomega",
-]
+# (backend, nodeid) -> measured FIXED seconds, CI estimate at the 0.71 factor
+UNDEFER = {
+    # jax eager: 8 -> 5
+    ("jax", "tests/test_noninertial.py::test_python_vs_c_linacc_changingacc_xyz_accellsrframe_vecomegaz"): (301.0, 213.7),
+    ("jax", "tests/test_noninertial.py::test_arbitraryaxisrotation_omegafunc_nullpotential"): (280.4, 199.1),
+    ("jax", "tests/test_noninertial.py::test_python_vs_c_arbitraryaxisrotation_funcomega"): (248.8, 176.7),
+    # jax --jit: 9 -> 4
+    ("jax-jit", "tests/test_noninertial.py::test_python_vs_c_linacc_changingacc_xyz_accellsrframe_vecomegaz"): (297.5, 211.2),
+    ("jax-jit", "tests/test_noninertial.py::test_linacc_changingacc_xyz_accellsrframe_scalarfuncomegaz"): (307.1, 218.0),
+    ("jax-jit", "tests/test_noninertial.py::test_arbitraryaxisrotation_omegafunc_nullpotential"): (247.2, 175.5),
+    ("jax-jit", "tests/test_noninertial.py::test_python_vs_c_arbitraryaxisrotation_funcomega"): (243.3, 172.8),
+    ("jax-jit", "tests/test_noninertial.py::test_python_vs_c_linacc_changingacc_xyz_accellsrframe_scalarfuncomegaz"): (235.3, 167.0),
+}
 
 ANNOTATION = """#
-# RE-MEASURED 2026-08-22, AFTER the as_backend_constant default-device guard
-# (gh#1364): whole file, --backend jax, serial, C extension active -- 53 passed
-# in 5145.98 s (the baseline recorded above for the same file was 6308 s). All 8
-# jax entries PASS; none was stale. CI estimated at the measured CI/local 0.71:
+# RE-MEASURED 2026-08-22 as CONTROLLED A/Bs, after the as_backend_constant
+# default-device guard (gh#1364). Whole file, serial, C extension active; the
+# BASE arm is develop without the guard, everything else identical. BASE
+# reproduces this ledger's own historical numbers to 0.85-1.02, so the arms are
+# comparable. CI estimated at the measured CI/local factor 0.71; entries are
+# kept unless they clear the 240 s CI margin.
 #
-#     CI~397.4  local 559.8  test_arbitraryaxisrotation                 (stays)
-#     CI~325.9  local 459.0  test_arbitraryaxisrotation_omegafunc       (stays)
-#     CI~320.4  local 451.2  ..._accellsrframe_funcomegaz               (stays)
-#     CI~288.3  local 406.0  test_arbitraryaxisrotation_omegadot        (stays)
-#     CI~284.4  local 400.6  ..._accellsrframe_scalarfuncomegaz         (stays)
-#     CI~213.7  local 301.0  test_python_vs_c_..._vecomegaz             UN-DEFERRED
-#     CI~199.1  local 280.4  ..._omegafunc_nullpotential                UN-DEFERRED
-#     CI~176.7  local 248.8  test_python_vs_c_arbitraryaxisrotation_funcomega  UN-DEFERRED
+#   jax --jit          BASE   FIXED     x     CI~
+#     test_arbitraryaxisrotation          525.6  490.7  1.07  348.4   stays
+#     ..._omegafunc                       523.9  400.5  1.31  284.4   stays
+#     ..._accellsrframe_funcomegaz        502.6  351.9  1.43  249.9   stays
+#     ..._omegadot                        387.3  352.3  1.10  250.1   stays
+#     test_python_vs_c_..._vecomegaz      486.7  297.5  1.64  211.2   un-deferred
+#     ..._accellsrframe_scalarfuncomegaz  399.1  307.1  1.30  218.0   un-deferred
+#     ..._omegafunc_nullpotential         372.8  247.2  1.51  175.5   un-deferred
+#     test_python_vs_c_...funcomega       383.1  243.3  1.57  172.8   un-deferred
+#     test_python_vs_c_..._scalarfunc     340.1  235.3  1.45  167.0   un-deferred
 #
-# The three removed clear the 240 s CI margin; the two at CI~284-288 do not and
-# stay deferred even though they are nominally under 300 s. Cross-check that the
-# numbers are not a context artifact: ..._omegafunc_nullpotential measured
-# 273.58 s ALONE and 280.4 s inside the full 53-test file (2.5% apart), against a
-# pre-guard 414.5 s. The un-ledgered sibling omegadot_nullpotential moved only
-# 159.1 -> 146.8 s (7.7%), i.e. the win scales with time spent in the force path,
-# which is what the guard predicts.
-#
-# The 9 jax-jit noninertial entries are deliberately NOT touched here: under
-# trace as_backend_constant runs once per trace, so the guard buys far less.
+# The speedup is HETEROGENEOUS (1.07x-1.64x): the two slowest tests barely move,
+# so they stay deferred on their own merits, not on an averaged figure.
+# jax eager (same treatment): 8 -> 5, un-deferring the three at CI~213.7 /
+# 199.1 / 176.7 s.
 """
+
+
+def entry_of(line):
+    """(backend, nodeid) for a ledger line, or None for blank/comment lines."""
+    bare = line.split("#", 1)[0].strip()
+    if not bare:
+        return None
+    parts = bare.split(None, 1)
+    return (parts[0], parts[1].strip()) if len(parts) == 2 else None
 
 
 def main():
     if not LEDGER.exists():
         sys.exit(f"run from the repo root; {LEDGER} not found")
-    text = LEDGER.read_text()
-    for entry in UNDEFER:
-        if text.count(entry + "\n") != 1:
-            sys.exit(f"expected exactly one bare occurrence of:\n  {entry}")
-    before = len([l for l in text.splitlines() if l.strip() and not l.startswith("#")])
-    for entry in UNDEFER:
-        text = text.replace(entry + "\n", "", 1)
-    marker = "jax tests/test_noninertial.py::test_linacc_changingacc_xyz_accellsrframe_funcomegaz\n"
-    if marker not in text:
-        sys.exit("anchor entry for the annotation is gone; re-derive by hand")
-    text = text.replace(marker, marker + ANNOTATION, 1)
-    LEDGER.write_text(text)
-    after = len([l for l in text.splitlines() if l.strip() and not l.startswith("#")])
-    print(f"slow_skip entries {before} -> {after}  (expected -3)")
-    if before - after != 3:
-        sys.exit("delta is not -3; inspect before committing")
+    lines = LEDGER.read_text().splitlines(keepends=True)
+    seen = [entry_of(ln) for ln in lines]
+    for key in UNDEFER:
+        n = seen.count(key)
+        if n != 1:
+            sys.exit(f"expected exactly 1 ledger line for {key}, found {n}")
+    before = sum(1 for e in seen if e)
+    kept, anchored = [], False
+    for ln, e in zip(lines, seen):
+        if e in UNDEFER:
+            continue
+        kept.append(ln)
+        if not anchored and e == (
+            "jax-jit",
+            "tests/test_noninertial.py::test_arbitraryaxisrotation",
+        ):
+            kept.append(ANNOTATION)
+            anchored = True
+    if not anchored:
+        sys.exit("annotation anchor not found; re-derive by hand")
+    LEDGER.write_text("".join(kept))
+    after = sum(1 for e in (entry_of(l) for l in kept) if e)
+    print(f"slow_skip entries {before} -> {after}  (expected -{len(UNDEFER)})")
+    if before - after != len(UNDEFER):
+        sys.exit("delta wrong; inspect before committing")
 
 
 if __name__ == "__main__":
