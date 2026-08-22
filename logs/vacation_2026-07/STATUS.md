@@ -1,122 +1,88 @@
-# Vacation status snapshot — 2026-08-21 (gh#1352 + gh#1356 MERGED; gh#1358 sole open PR)
+# Vacation status snapshot — 2026-08-22 (gh#1363 + gh#1364 open, both mine)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
 
 ---
 
-## Nothing is blocked on Jo except gh#1356 (a main PR — main PRs are Jo's to merge)
+## Nothing is blocked on Jo except the main->develop rebase (parked, Jo applies)
 
 ## Branch state
 
-    main                   10843281   (gh#1356 MERGED 11:38Z as 5d7b7e76 -- the adiabatic
-                                      quadrature fix is now on main)
+    main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  a7cf6ed3   (gh#1352 merged; 107 ahead of feat/backends)
+    feat/backends-develop  f15a522a   (gh#1360 merged; ledger 68/8/68)
 
-## Open PRs — TWO ARE MINE. Four others share my git identity and are NOT mine.
+## Open PRs — TWO, both mine
 
-**`--author @me` returns SIX open PRs. Only two are mine.** The other agent
-session (`session_01N2Jm4Y1A9eQRXMEaHaqwwJ`) commits under the same identity.
-Attribute by the `Claude-Session` trailer on the head commit before acting:
+**gh#1363 -> develop** `backend/split-streamtrack-filedefer`, head `3950a8d2`.
+Ledger-only (`tests/backend_slow_skip.txt`). Replaces the whole-file
+`jax tests/test_streamTrack.py` defer with two per-test entries
+(`plot_spread_non_cartesian` 408.0 s, `with_progpot` 331.7 s) — entry count
+68 -> 69 but **43 tests un-skipped**; the count is the wrong metric and the PR
+says so. Also reclassifies `jax tests/test_streamdf.py` as **DEADLOCK, not slow**
+(two runs hung, xdist 7186 s and serial >4 h, both at load ~0.05).
+CI 102 green, only `codecov/project` red (incomplete-upload phantom, self-heals).
+The one real red — windows-latest 3.14 orbit shard — was
+`test_from_name_values`, a **live SIMBAD network query**; the same-SHA push twin
+PASSED the identical shard, and a ledger-only diff cannot reach a numpy `build`
+job (conftest returns before reading the ledger when `--backend` is numpy).
+Re-run, now queued. **Mine to merge once green.**
 
-    gh#1352  MINE          backend/streamdf-grad-tintj  -> feat/backends-develop
-    gh#1356  MINE          fix/adiabatic-action-quadrature -> main
-    gh#1357  OTHER AGENT   staeckel-chi-quadrature
-    gh#1353  OTHER AGENT   aainv-spherical-quadrature
-    gh#1351  OTHER AGENT   aainv-vertical-quadrature
-    gh#1347  OTHER AGENT   aainv-staeckel-single
+**gh#1364 -> develop** `backend/coerce-default-device-guard`, head `cecfd453`.
+`as_backend_constant` never got the galpy #1300 default-device guard that
+`coerce_coords` has 60 lines up in the same file, so every stored constant named
+its device explicitly — which COMMITS placement (397.6 us vs 134.6 us on jax CPU).
+Attributed by patching `jax._src.pjit.with_sharding_constraint`: **7.00 calls per
+`NonInertialFrameForce._force`, 100% from `_coerce.py:164`**.
+Measured A/B (arms verified to differ): `_force` **5069.7 -> 3064.0 us (1.65x)**;
+`test_arbitraryaxisrotation_omegafunc_nullpotential` eager **414.5 -> 273.6 s
+(1.51x)**. **144 call sites** (streamdf 66, streamgapdf 20, sphericaldf 11,
+NonInertialFrameForce 10, RotateAndTilt 9, ...) — a repo-wide eager win, not a
+noninertial one. numpy untouched (early return); GPU non-default anchors still
+named. Gate green: numpy 708 / jax 694 / torch 694. **No ledger change.**
 
-**gh#1358 → develop** `backend/torch-graphbreak-contextvar`, head `a2cca9a5`, base
-`a7cf6ed3`. Head a2cca9a5 (follow-up: `.set` made traceable too -- the first commit was incomplete). CI re-running. Adds `galpy/backend/_tracectx.py::TracedContextVar`
-(ContextVar + a `threading.local` mirror read only while `torch.compiler.is_compiling()`)
-and moves all three galpy context vars onto it. **Measured on this base: 9/9
-`fullgraph=True` FAIL before -> 9/9 OK after, bit-identical, zero galpy break sites**
-A/B on galpy's OWN jit("torch") path: baseline 18 break lines (`_resolver.py:45` x5,
-`_jit.py:174` x1) -> 0. `_jit.py:174` is `_TRACING.set(True)`, so the `.set` half was
-load-bearing.. Tests A/B-verified: the 2 integration
-tests fail with the wiring reverted. Also hoists `_no_torch_compile_deprecations` out of
-3 byte-identical copies. Gate: torch/jax/numpy 155 passed each. **No ledger change.**
-Mine to merge once green.
+## Ledger (at develop f15a522a)
 
-**gh#1352 MERGED** as `a7cf6ed3` (2026-08-21 06:41Z). Ledger on develop is now
-**xfail 8 / slow_skip 79 / skip 68**. Its last shard sat QUEUED 5h51m on pure runner
-contention and picked up a runner on its own -- not a wedge, and cancelling would have
-cost hours.
+    backend_xfail        8
+    backend_slow_skip   68     (-> 69 entries / 43 tests un-skipped via gh#1363)
+    backend_skip        68
 
-**gh#1356 MERGED by Jo** 2026-08-21 11:38Z as `5d7b7e76` on main. galpy's C adiabatic
-action quadrature no longer loses ~4 digits at the sqrt turning points
-(jr 7.88e-04 -> 6.83e-10, jz 1.52e-04 -> 9.31e-10). **Unblocks** the 2 remaining
-fixable xfail entries (`AdiabaticGrid_outsidegrid_c`, jax+torch) and task #103
-(off-grid AA fallback) -- but only once main flows into feat/backends -> develop,
-which is a rebase where **I PREPARE, JO APPLIES** (2026-08-21). Protocol: pause the
-loop, measure difficulty, replay in a SCRATCH worktree onto a NEW branch, push for
-Jo to inspect; never force-push the integration branch; never hand-carry the
-main-side fix onto develop.
-
-MEASURED difficulty (merge-base 87256016, 2026-08-11): main +13, feat/backends
-+225, develop +107; 16 overlapping files; **git merge-tree = 7 conflicting files**
-(actionAngleVerticalInverse.py, actionAngleAdiabatic.c, sphericaldf.py,
-AnySphericalPotential.py, HomogeneousSpherePotential.py,
-RazorThinExponentialDiskPotential.py, SphericalShellPotential.py). 7 is a LOWER
-BOUND -- merge-tree simulates a merge, a rebase replays 225 commits. Told Jo this
-is NOT skip-the-check: four of those are files where main landed numerical fixes
-and the backend migration rewrote the same paths.
-
-## Flagged to Jo, not acted on
-
-gh#1357 removed the C/Python bit-parity claim for Staeckel, so any backend-vs-C
-test asserting ULP-level agreement may now assert something untrue. Not mine to
-change (other agent's PR).
-
-## Ledger (at develop d25dac4a)
-
-    backend_xfail       11      -> 8  once gh#1352 lands
-    backend_slow_skip   75      -> 79
-    backend_skip        68      unchanged
-
-Remaining 8 xfail after gh#1352 = 6 by-design/upstream + 2 gated on gh#1356
-reaching develop. **Zero open fixable defects in the xfail ledger.**
+Largest slow_skip blocks: test_orbit 20 (9 jax + 7 jax-jit + 3 torch-jit + 1
+torch), **test_noninertial 17** (8 jax + 9 jax-jit), test_potential 6.
 
 ## Deferred / next up
 
-* **torch graph breaks — NO LONGER BLOCKED. This is the next PR.** Prototyped and
-  measured 2026-08-21; patch saved at `prototypes/torch-graphbreak-contextvar.patch`
-  (73 lines, 2 files). Two defects: (a) `_backend_dtype` is EAFP and dynamo turns
-  the `numpy.issubdtype` raise into a hard `InternalTorchDynamoError` instead of
-  routing it to the `except`; (b) the `_BACKEND_CTX.get()` read needs only a
-  trace-time mirror, since the backend context is fixed during a trace.
-  **A/B with `fullgraph=True`: 9/9 pass with the fixes, 9/9 fail without, output
-  bit-identical, galpy breaks 8 -> 0.** The thread-safety objection that had this
-  filed as a ~100-site refactor is answered: `threading.local()` traces just as
-  cleanly. numpy path measured unaffected (202 passed). Still to do in the PR:
-  size the reduction on the FULL torch `--jit` suite (9/9 is 3 analytic potentials;
-  the 192-break figure came from a real test file).
-* Off-grid AA fallback — gated on gh#1356 reaching develop.
-* Appendix F (`galpy-jax/appendices/F_adiabatic_action_quadrature.md`, 202 lines)
-  documents the GL endpoint theory: for (1−x)^α × analytic, error is O(n^−(2α+2));
-  √ endpoint ⇒ O(n⁻³), factor 8 per doubling (measured exponent 2.90–2.99).
-  §11 was CORRECTED: AnyAxisym is a Cauchy PV + Hadamard finite part (by design),
-  NOT the same √-endpoint bug.
+* **Noninertial un-defer** — gh#1364 makes the measured test 273.6 s local
+  (~194 s CI at the 0.71 CI/local factor), under the 300 s cap. Un-deferring needs
+  all 17 entries re-measured ON TOP of gh#1364; that is the next ledger PR, and
+  it must wait for gh#1364 to land or the numbers are wrong.
+* **main -> develop rebase** — PARKED, Jo applies. MEASURED difficulty
+  (merge-base 87256016): main +13, feat/backends +225, develop +107; 16
+  overlapping files; **git merge-tree = 7 conflicting**. 7 is a LOWER BOUND.
+  Protocol: I prepare on a scratch branch, Jo applies. Unblocks the 2 remaining
+  fixable xfail entries (`AdiabaticGrid_outsidegrid_c`) + task #103.
+* Off-grid AA fallback — gated on the rebase.
+
+## Two hypotheses that died on 2026-08-22 (both recorded in log.md)
+
+1. **REFUTED** — the md5 single-entry cache in `_force` is 0.8% of the jax call
+   (66 us of 8207 us), not the bottleneck.
+2. **I read the source from the stale `feat/backends` tree** (107 commits behind)
+   and reported a defect that develop had already fixed. The measurement was
+   sound (it ran in a develop worktree); only the reading was stale.
 
 ## Standing corrections to how I work
 
 * **Never decrease coverage, not even one line** (Jo).
 * **`--author @me` is not "mine"** — check the `Claude-Session` trailer.
-* **An accepted `gh run cancel` is not a completed one.** A run with 44 done + 1
-  queued job has nothing to interrupt; escalate to
-  `gh api -X POST repos/jobovy/galpy/actions/runs/<id>/force-cancel`.
-* **Check the same-SHA twin FIRST** on any shard red — but a twin split only
-  proves nondeterminism if `behind=0`.
+* **Check the same-SHA twin FIRST** on any shard red — a push/pull_request split
+  at one SHA settles flake-vs-real for free.
 * **A failed shard uploads no coverage**, so a flake presents AS a codecov drop.
-  Judge a codecov red by WHICH FILES dropped, not by session counts.
-* **File presence is not behaviour.** Run the measurement the fix changes.
-* **`TORCH_LOGS` writes to stderr**, and pytest discards stderr for passing
-  tests — needs both `2>` redirection and `-s`, or you get a false zero.
-* **A built `.so` is not where `build_ext --inplace` says it is.** Assert
-  `load_libgalpy()` and `aA._c` or an A/B silently compares Python to Python.
+* **Read the source in the tree you MEASURED in**, not the main repo checkout.
+* **An accepted `gh run cancel` is not a completed one.**
 
 ## Cron
 
-`e935a60c`, hourly at :13, session-only, **created 2026-08-19 → expires
-~2026-08-26 (5 days)**. Verified alive this wake via CronList.
+`e935a60c`, hourly at :13, session-only, **created 2026-08-19 -> expires
+~2026-08-26**. Verified alive this wake via CronList.

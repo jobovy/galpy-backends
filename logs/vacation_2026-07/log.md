@@ -50127,3 +50127,17 @@ device; only the redundant default naming is skipped — same logic already bles
 in `coerce_coords`.
 
 Test-level A/B on `test_arbitraryaxisrotation_omegafunc_nullpotential` running.
+
+**Test-level A/B (same test, jax eager, quiet box, sequential arms):**
+
+    BASE  414.49 s      FIXED  273.58 s      1.51x
+
+414.5 s local ~= 294 s CI at the 0.71 CI/local factor -- right ON the 300 s cap;
+273.6 s local ~= 194 s CI, comfortably under. So this test becomes un-deferrable,
+but NOT in this PR: un-deferring needs all 17 noninertial entries re-measured on
+top of the fix. Separate ledger PR, after gh#1364 lands.
+
+Gate green on the branch: numpy 708 / jax 694 / torch 694 (1 skipped each).
+Tests A/B-verified: BASE 2 failed + 10 passed, FIXED 12 passed.
+
+**Opened as gh#1364** `backend/coerce-default-device-guard` head `cecfd453`.
