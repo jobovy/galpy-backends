@@ -50427,3 +50427,39 @@ Test-level measurement now running in a CI-FAITHFUL context: `test_orbit.py
 where that nodeid lands, determined by collection, not guessed), with ONLY that
 one entry un-deferred so the shard content otherwise matches CI. No ledger change
 until that lands.
+
+## 2026-08-22 — the RotateAndTilt orbit entry does NOT clear the cap (probe did not transfer)
+
+Measured in a CI-faithful context (`test_orbit.py --splits 5 --group 3
+--durations-path tests/.test_orbit_durations`, `--backend jax`, only the target
+un-deferred): **68 passed, 0 failed, 3873.92 s**.
+
+    528.9 s local -> CI~375.5 s   test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_tiltedTriaxialNFW]
+
+**OVER the 300 s cap. It stays deferred. No ledger change.**
+
+The 1.95x micro-speedup on `RotateAndTilt.Rforce` was real and correctly measured
+-- it just does not carry the test. `test_dxdv_3d_c_vs_python` also runs a full C
+integration and compares, so the Python force loop is only part of its cost. This
+is the third time in two days that a mechanism-level number failed to predict a
+test-level one, in both directions:
+
+* noninertial: micro 1.65x -> test 1.51x   (transferred)
+* streamTrack: micro n/a    -> test 1.0x   (no per-eval calls at all)
+* RotateAndTilt: micro 1.95x -> test still 528.9 s (not force-dominated)
+
+**A speedup ratio cannot even be quoted here.** The ledger's pre-guard value is
+CENSORED -- ">420 s (measured 2026-08-15, timed out)" is a lower bound produced
+by a timeout instrument, not a measurement. Dividing by a censored baseline would
+have manufactured any ratio I wanted. All that is honestly available is the
+post-guard absolute, and it is over cap.
+
+**Worth recording as ledger hygiene** (not a burndown): the entry now PASSES at
+528.9 s where it previously timed out, so its annotation ">420s, timed out" is
+strictly less informative than it could be. Three un-ledgered siblings in the same
+shard confirm only this variant is slow: `[..._norot]` 277.9 s, `[..._offset]`
+223.0 s, `[OblateStaeckelWrapperPotential]` 288.2 s -- all pass un-deferred.
+
+**Method note that keeps paying off:** measure FIXED-arm first. Had I started with
+a BASE arm here I would have spent another ~65 min to learn the same "stays
+deferred" answer.
