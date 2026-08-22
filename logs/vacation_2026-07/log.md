@@ -50375,3 +50375,18 @@ Corollary for the remaining ledger: do not assume the guard un-blocks any other
 cluster. Each needs its own measurement, and the cheap FIXED-arm-first ordering
 (measure post-guard; only run a BASE arm if something actually crosses the
 margin) settles most of them in one run instead of two.
+
+**jit arm confirms it.** Same file, post-guard, `--backend jax --jit`:
+45 passed in 1169.33 s.
+
+    pre-guard    post      x     CI~
+        452.0   406.7   1.11   288.8   test_streamTrack_plot_spread_non_cartesian
+        314.0   326.8   0.96   232.0   test_streamTrack_with_progpot
+
+All **4** streamTrack entries stay. `with_progpot` lands at CI~232 under jit too
+-- again nominally inside the 240 s margin on a ~4% wobble, again not acted on.
+Two independent runs putting the same test on either side of the line is the
+clearest possible sign that the line is not what moved.
+
+streamTrack is therefore CLOSED as a burndown target under this guard, and the
+"144 call sites" figure is confirmed to be a count of opportunity, not of effect.

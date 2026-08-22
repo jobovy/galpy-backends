@@ -43,6 +43,14 @@ merits. **Mine to merge once green.**
 Largest slow_skip blocks: test_orbit 20 (9 jax + 7 jax-jit + 3 torch-jit + 1
 torch), **test_noninertial 17** (8 jax + 9 jax-jit), test_potential 6.
 
+## Measured and CLOSED this wake
+
+* **streamTrack burndown: NO.** The #1364 guard gives 0.96x-1.11x there (both
+  eager and jit, whole file, post-guard develop). All 4 entries stay. The guard
+  pays only where `as_backend_constant` sits in a hot per-evaluation loop
+  (noninertial `_force`), not in track SETUP. Do not assume it un-blocks other
+  clusters -- measure each, FIXED-arm first.
+
 ## Deferred / next up
 
 * **Noninertial un-defer — MEASURED 2026-08-22, ledger edit PREPARED AND HELD.**
