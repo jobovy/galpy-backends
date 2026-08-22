@@ -299,6 +299,21 @@
     "sha256": "74c2b3f686339cfdc26e0bfe4f88d6ac55dfa929a36dec1216b45f12484d570a",
     "track": "G"
   },
+  "gD2_df_sample_autodiff": {
+    "description": "autodiff through a 4e6-particle sample of the isotropic Hernquist DF: d(sigma_r)/dr from the sample vs autodiff of the Jeans quadrature (CPU float64) [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "00d7dce",
+    "sha256": "e8ee153ba7774babf5f1db9d476903fb30d044448803c782ddf21b9e220a02d1",
+    "track": "G"
+  },
   "gF1_autodiff_forces": {
     "description": "F_R by autodiff vs the exact analytic force for complicated potentials (SCF, DiskSCF, spiral, bar, composites): agreement at a few ULP of float64",
     "env": {
@@ -327,6 +342,36 @@
     },
     "git": "b98e9bf",
     "sha256": "12b8f76aa5431b54f0600adb3d50a959796ca5937c130708ff44ab8798f0c80a",
+    "track": "G"
+  },
+  "gS2_streamspray_sensitivity": {
+    "description": "autodiff through a particle-spray stream: d(stream)/d(halo q), with the finite difference shown converging onto the AD value (CPU float64) [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "e5edc50",
+    "sha256": "6dd81ea2c48221674b4361848bd41d1faca5dff60d128394c2f396c1cd9a60f8",
+    "track": "G"
+  },
+  "gS3_track_extrapolation": {
+    "description": "one forward-mode AD pass predicts the streamspraydf smooth track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "9674f65",
+    "sha256": "d0e288c7c83e18769e0b3cc90ef7499afcaff31ce1dbea1d9825d175ac5608ae",
     "track": "G"
   }
 }

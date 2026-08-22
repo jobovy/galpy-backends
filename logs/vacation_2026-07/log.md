@@ -50082,3 +50082,48 @@ The two standing constraints for this file pair, both earned:
   deliberately unfixed ([[torch-fork-deadlock-streamdf]]).
 * **`uptime` before concluding "slow"** -- alive processes at idle load means blocked
   ([[load-average-distinguishes-hung-from-slow]]).
+
+## 2026-08-22 — `as_backend_constant` misses the galpy #1300 device guard (eager-backend win)
+
+Went looking for the NonInertialFrameForce slow-skip block (17 entries, the largest
+in the ledger). Two hypotheses died on the way to the real cause; recording both
+because the second one is the recurring mistake.
+
+1. **REFUTED — the md5 force cache.** `_force` opens with
+   `hashlib.md5(numpy.array([R,phi,z,vx,vy,vz,t]))` as a single-entry cache key.
+   Measured under jax: 66 us of an 8207 us call = **0.8%**. Not the bottleneck.
+2. **I read the source from the wrong branch.** The md5 line I first read was the
+   `feat/backends` copy (107 commits behind). On develop that cache is already
+   gated to `numpy_input` only, and `_force` already dispatches on `get_namespace`.
+   Same mistake as `measure-on-the-branch-you-ship-to`. The *measurement* was fine
+   (it ran in a develop worktree); only the reading was stale.
+
+**Actual cause, attributed by patching `jax._src.pjit.with_sharding_constraint`
+and counting galpy frames:** 7.00 calls per `_force`, **100% of them from
+`galpy/backend/_coerce.py:164 as_backend_constant`**.
+
+`coerce_coords` (same file, 60 lines up) carries the guard from galpy #1300:
+
+    if dev is not None and dev == default_device(xp):
+        dev = None   # naming the default device commits placement; ~3x
+
+`as_backend_constant` never got it — it passes `device=getattr(ref,"device",None)`
+unconditionally, and `ref` is always a real backend array, so the device is always
+named. `default_device`'s own docstring prices this at 397.6 us vs 134.6 us on jax
+CPU and blames it for turning "a 1.7 s dxdv test into a 300 s timeout".
+
+**A/B (arms verified to differ; develop worktree, jax CPU):**
+
+    _force per call    BASE 5069.7 us  ->  FIXED 3064.0 us    (1.65x)
+
+**Blast radius: 144 call sites**, not a noninertial fix —
+streamdf 66, streamgapdf 20, sphericaldf 11, NonInertialFrameForce 10,
+RotateAndTilt 9, streamspraydf 7, EllipsoidalPotential 6, ...
+i.e. exactly the slow-skip clusters (streams, noninertial).
+
+numpy path untouched: `if xp is numpy: return value` precedes the change.
+GPU safe: a non-default anchor (CUDA ref on a CPU-default run) still names its
+device; only the redundant default naming is skipped — same logic already blessed
+in `coerce_coords`.
+
+Test-level A/B on `test_arbitraryaxisrotation_omegafunc_nullpotential` running.
