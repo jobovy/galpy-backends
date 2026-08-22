@@ -50274,3 +50274,43 @@ Corroborating evidence that the box is NOT simply 30% fast today: in the eager
 sweep the un-ledgered sibling `omegadot_nullpotential` moved only 159.1 -> 146.8 s
 (7.7%), while the force-bound tests moved ~32%. But that is an argument, not the
 measurement -- hence the BASE arm.
+
+## 2026-08-22 — CONTROLLED jit A/B: my "20-38%, comparable to eager" was ALSO too strong
+
+BASE arm finished (develop `19f31a54`, no guard, same file / command / box):
+**53 passed in 5893.50 s** vs FIXED **4542.55 s**. Zero failures either side.
+
+**First, the validation that makes the comparison usable:** BASE reproduces the
+ledger's historical annotations to **0.85-1.02** (mean ~0.94). Those numbers were
+sound and the box is not systematically fast today -- so the earlier
+uncontrolled comparison was not fabricating a win. But it WAS overstating its
+uniformity:
+
+     ledger    BASE   FIXED     x     CI~   verdict    test
+      616.0   525.6   490.7  1.07   348.4  over cap   test_arbitraryaxisrotation
+      573.0   523.9   400.5  1.31   284.4  margin     test_arbitraryaxisrotation_omegafunc
+      529.0   502.6   351.9  1.43   249.9  margin     ..._accellsrframe_funcomegaz
+      454.0   387.3   352.3  1.10   250.1  margin     test_arbitraryaxisrotation_omegadot
+      477.0   486.7   297.5  1.64   211.2  UN-DEFER   test_python_vs_c_..._vecomegaz
+      437.0   399.1   307.1  1.30   218.0  UN-DEFER   ..._accellsrframe_scalarfuncomegaz
+      386.0   372.8   247.2  1.51   175.5  UN-DEFER   ..._omegafunc_nullpotential
+      381.0   383.1   243.3  1.57   172.8  UN-DEFER   test_python_vs_c_arbitraryaxisrotation_funcomega
+      354.0   340.1   235.3  1.45   167.0  UN-DEFER   test_python_vs_c_..._scalarfuncomegaz
+
+**Two of my own claims, corrected by this arm:**
+1. "The guard buys far less under trace" -- WRONG as a blanket claim (five tests
+   gain 1.30-1.64x).
+2. "20-38% faster, comparable to eager" -- ALSO too strong. The controlled range
+   is **1.07x-1.64x**, and for the two SLOWEST tests
+   (`test_arbitraryaxisrotation` 1.07, `..._omegadot` 1.10) the guard barely
+   helps at all. Prediction (1) was wrong in general but right for exactly those
+   two. Only the controlled arm could separate that; the ledger-vs-now
+   comparison averaged the heterogeneity away.
+
+**Burndown now justified** (240 s CI margin, factor 0.71):
+* jax-jit noninertial **9 -> 4** (5 un-deferred)
+* jax eager noninertial **8 -> 5** (3 un-deferred, measured earlier)
+* total slow_skip **69 -> 61**
+
+All of it gated on gh#1364 landing -- the un-defer is only valid on top of the
+guard. Prepared script extended to cover both halves.
