@@ -50696,3 +50696,45 @@ trades a domain check + two warnings (guidance, not correctness) for gradients.
    the bad push -- legitimate here because no PR existed on that branch yet.
 
 **gh#1367** `backend/from-nfw-differentiable` head `a0bfd3d8`. Ledger delta: none.
+
+## 2026-08-22 — audit: constructor-time scipy solves that block parameter gradients
+
+gh#1367's gap was "a differentiable helper exists, but this site imports scipy
+directly". Applied my own rule and grepped the family across galpy.
+
+Most `scipy.integrate`/`scipy.optimize` hits are DOCSTRINGS describing kwargs, not
+call sites. The real executable ones, after filtering:
+
+    galpy/util/quadpack.py            fixed_quad, quad   -- IS the numpy-path helper, correct
+    galpy/potential/ExpTruncNFW...    brentq             -- FIXED by gh#1367
+    galpy/potential/EinastoPotential  fsolve             -- SAME CLASS, prerequisites present
+    galpy/potential/AdiabaticContr... fixed_point x2     -- same class, bigger lift
+    galpy/df/streamspraydf.py         cumulative_trapezoid -- sampling, separate question
+
+**EinastoPotential is an exact sibling of gh#1367 and is ready to go.** Its
+`_calculate_dn` solves `2*Gamma_upper(3n, x) - Gamma(3n) = 0` for d_n -- SCALAR
+and MONOTONE (Gamma_upper decreases in x), so directly brentq-able. And the file
+ALREADY imports the backend `gamma`/`gammaincc` (as `_gamma`/`_gammaincc`) for
+its evaluate path, then reaches past them to `scipy.special` + `scipy.optimize`
+in the constructor -- the identical shape to from_nfw.
+
+Demonstrated before-state:
+
+    numpy _calculate_dn(4.0) = 11.668363153044764
+    jax.grad                 -> TracerArrayConversionError
+    FD target d(dn)/dn       = 2.99956321   (~3, consistent with dn ~ 3n - 1/3)
+
+Prerequisites confirmed present: backend `gamma`/`gammaincc` (router), backend
+`brentq` (differentiable), scalar monotone residual. So this is a small PR of the
+same shape, not a research project.
+
+**AdiabaticContractionWrapperPotential is NOT small.** Two `fixed_point` calls;
+the Blumenthal1986 one iterates on an ARRAY and uses `scipy.interpolate.interp1d`
+inside the iteration. It would need a fixed-point helper (galpy.backend.optimize
+has brentq / bisect_root / newton_polish but no fixed-point) AND backend
+interpolation (galpy/backend/interpolate.py exists). Recorded, not started.
+
+**Not opening the Einasto PR this wake on purpose:** gh#1367 is early in CI under
+runner contention, and a second PR would compete with it for the same runners --
+the same reasoning as "don't fill the wait by dispatching a measurement run".
+Prepared and held for the wake after gh#1367 merges.
