@@ -50651,3 +50651,48 @@ No open PR. develop `47875227`, ledger 8/61/68. Cron `e935a60c` alive, created
 The main->develop rebase remains PARKED and is Jo's to apply (I prepare, Jo
 applies); it still gates the 2 `AdiabaticGrid_outsidegrid_c` xfail entries and
 task #103.
+
+## 2026-08-22 — gh#1367 opened: from_nfw mass -> rc is now differentiable
+
+Pivoted off ledger archaeology (three straight measured negatives) to substantive
+differentiability work. Task #145, and it was real.
+
+`ExpTruncNFWPotential.from_nfw(nfw, mass=...)` solved amp*F(a/rc) = mass with
+`scipy.optimize.brentq` on a `numpy.exp` / `scipy.special.exp1` residual, so
+`d(rc)/d(mass)` did not exist on any backend (TracerArrayConversionError under
+`jax.grad`). Now routed through galpy's own `galpy.backend.optimize.brentq`,
+which ALREADY implements the implicit function theorem -- so this is a wiring
+change, not a new helper. `exp1` and `get_namespace` were already imported by
+the module for its evaluate path.
+
+    numpy rc         175.7878520799847   BYTE-IDENTICAL
+    d(rc)/d(mass)    190.8931303136  vs central FD 190.8931303120  -> 8.08e-12
+                     identical on jax and torch
+    forward value    numpy == jax == torch to 1e-10
+
+**Wiring detail that decides the whole thing:** `target_F` must be passed via
+`args=` rather than closed over. galpy's brentq FOLLOWS THE DATA -- with float
+brackets and a closed-over backend value it would have dispatched to scipy and
+silently stayed non-differentiable, with every test still green.
+
+**Deliberate trade, in the code:** under `jax.grad` the solved value is a TRACER,
+so the bracket pre-check and the two advisory warnings are Python control flow on
+it and would raise ConcretizationTypeError. They are now numpy-only. Backend path
+trades a domain check + two warnings (guidance, not correctness) for gradients.
+
+### Two process traps hit this wake, both caught
+
+1. **A "failure" that was my own worktree.** `test_potential.py -k ExpTrunc` failed
+   at 2.58e-07 on `test_ExpTruncNFW_smallr_series_c`. A/B showed it failing
+   IDENTICALLY on both arms, and `load_libgalpy() -> False` explained it: no C
+   extension in the fresh worktree, so a C-vs-Python test compares Python to a
+   fallback. Built the extension -> 17 passed. This is
+   `worktree-missing-c-ext-fakes-passes` inverted: here it faked a FAILURE.
+2. **The pre-commit hook rejected the commit and I nearly shipped nothing.**
+   `ruff-format` reformatted and failed the hook; HEAD stayed at the BASE sha,
+   and the subsequent push put the base commit on the branch. Caught by checking
+   that the SHA moved (`precommit-hooks-reject-first-commit`). Re-committed
+   (a0bfd3d8), re-ran everything after the reformat, force-with-lease to correct
+   the bad push -- legitimate here because no PR existed on that branch yet.
+
+**gh#1367** `backend/from-nfw-differentiable` head `a0bfd3d8`. Ledger delta: none.
