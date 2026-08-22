@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1363 + gh#1364 open, both mine)
+# Vacation status snapshot — 2026-08-22 (gh#1363 MERGED; gh#1364 sole open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,23 +11,16 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  f15a522a   (gh#1360 merged; ledger 68/8/68)
+    feat/backends-develop  19f31a54   (gh#1363 merged; ledger xfail 8 / slow_skip 69 / skip 68)
 
-## Open PRs — TWO, both mine
+## Open PRs — ONE, mine
 
-**gh#1363 -> develop** `backend/split-streamtrack-filedefer`, head `3950a8d2`.
-Ledger-only (`tests/backend_slow_skip.txt`). Replaces the whole-file
-`jax tests/test_streamTrack.py` defer with two per-test entries
-(`plot_spread_non_cartesian` 408.0 s, `with_progpot` 331.7 s) — entry count
-68 -> 69 but **43 tests un-skipped**; the count is the wrong metric and the PR
-says so. Also reclassifies `jax tests/test_streamdf.py` as **DEADLOCK, not slow**
-(two runs hung, xdist 7186 s and serial >4 h, both at load ~0.05).
-CI 102 green, only `codecov/project` red (incomplete-upload phantom, self-heals).
-The one real red — windows-latest 3.14 orbit shard — was
-`test_from_name_values`, a **live SIMBAD network query**; the same-SHA push twin
-PASSED the identical shard, and a ledger-only diff cannot reach a numpy `build`
-job (conftest returns before reading the ledger when `--backend` is numpy).
-Re-run, now queued. **Mine to merge once green.**
+**gh#1363 MERGED** as `19f31a54` — fully green 154/154. The shard that had to
+prove it (`backend jax ... test_streamTrack.py`) passed with the 43 un-skipped
+tests running. Both reds cleared with no code change: the windows red was
+`test_from_name_values`, a live SIMBAD query (same-SHA push twin PASSED the
+identical shard, and a ledger-only diff cannot reach a numpy `build` job);
+codecov/project self-healed as shards uploaded.
 
 **gh#1364 -> develop** `backend/coerce-default-device-guard`, head `cecfd453`.
 `as_backend_constant` never got the galpy #1300 default-device guard that
@@ -53,10 +46,14 @@ torch), **test_noninertial 17** (8 jax + 9 jax-jit), test_potential 6.
 
 ## Deferred / next up
 
-* **Noninertial un-defer** — gh#1364 makes the measured test 273.6 s local
-  (~194 s CI at the 0.71 CI/local factor), under the 300 s cap. Un-deferring needs
-  all 17 entries re-measured ON TOP of gh#1364; that is the next ledger PR, and
-  it must wait for gh#1364 to land or the numbers are wrong.
+* **Noninertial un-defer — MEASURED 2026-08-22, ledger edit PREPARED AND HELD.**
+  Whole file, jax eager, WITH gh#1364's guard: 53 passed in 5145.98 s (ledger's
+  own baseline for the same file: 6308 s). All 8 jax-eager entries pass; none
+  stale. Under the ledger's 240 s CI margin, **3 become un-deferrable**
+  (CI~213.7 / 199.1 / 176.7 s), 5 stay. Prospective delta **slow_skip 69 -> 66**.
+  **Cannot be opened until gh#1364 merges** — without the guard those three run
+  ~415 s local (CI~294) and would flake. The 9 jax-jit noninertial entries are
+  untouched: under trace the guard runs once per trace, so it buys far less.
 * **main -> develop rebase** — PARKED, Jo applies. MEASURED difficulty
   (merge-base 87256016): main +13, feat/backends +225, develop +107; 16
   overlapping files; **git merge-tree = 7 conflicting**. 7 is a LOWER BOUND.
