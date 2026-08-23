@@ -51822,3 +51822,43 @@ and it read as "proven". The sweep cost one command and changed the conclusion.
 Any gradient claim needs at least a parameter sweep spanning the STRUCTURAL cells
 (here: different `_m`), because the frozen term's size depends on which cell you
 are in.
+
+### The retraction STANDS — h-convergence refutes the "FD is noisy" rescue
+
+Having retracted the 4.9e-08 claim, I then hypothesised the opposite: that the
+FD reference was noise-dominated (as the numpy-path FD had been) and the AD was
+actually fine. Tested it by h-convergence rather than assuming:
+
+    beta=0.7, E=-0.4      AD = -8.2468397990e-03
+      h=1e-2   rel vs AD 9.90e-06     <- O(h^2) truncation still visible
+      h=3e-3             9.19e-05
+      h=1e-3             9.91e-05
+      h=3e-4             9.99e-05
+      h=1e-4             1.00e-04
+      h=3e-5             9.99e-05     <- PLATEAU
+
+    beta=-0.2, E=-0.4    plateaus at 2.02e-05
+
+A noise-dominated FD wanders as h shrinks; this one converges and holds across
+two decades. So the FD is sound and **the AD genuinely differs by 1.0e-04**. My
+rescue hypothesis is refuted; the retraction stands.
+
+Also ruled out an inherited-forward explanation: numpy vs backend fE agree to
+<= 4e-7 across the whole beta grid, including beta=0.7. The gap is in the
+derivative alone.
+
+Located: `_make_func` reads `self._beta` at CALL time (`lambda r:
+self._denspot._ddenstwobetadr(r, beta=self._beta)`), so the density derivative
+already tracks a live beta — that part was never frozen. What IS frozen is the
+integration-limit machinery: `self._logstartt` is calibrated from `self._alpha`
+by a while-loop that steps an INTEGER `guesspow`, so the limit is a
+piecewise-constant-in-beta heuristic. FD recalibrates it at beta+-h; AD holds it
+fixed. That difference is the 1e-4.
+
+Which leaves a judgement call rather than a bug: differentiating through a
+quadrature-limit heuristic is not obviously desirable (it is not physics), but
+freezing it costs up to 1e-4 relative on the gradient. Either is defensible;
+shipping it silently as "exact" is not. Recorded for Jo rather than decided.
+
+Three hypotheses this session, two of them mine and wrong, all settled by the
+same cheap instrument: vary the step/order and see whether the answer plateaus.
