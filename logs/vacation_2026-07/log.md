@@ -51668,3 +51668,30 @@ Measurement hygiene, thrice over: never interleave a forced-backend call into a
 loop measuring the numpy path; a zero-change sweep means the knob is unused, not
 that the answer is converged; and an FD that does not plateau in h is not a
 reference at all.
+
+### gh#1371 MERGED `856ceccc` — GROUP A COMPLETE
+
+    #1369  77a74fdb  Einasto + ExpTruncNFW        coerce params at __init__ top
+    #1370  542eae05  Ferrers + TwoPowerTriaxial   coerce at point of use
+    #1371  856ceccc  3 power-law spherical DFs    coerce at point of use
+
+Merge audit on #1371 was the cleanest of the three: zero new `if`s, zero new
+`def`s, and `from scipy import special` **removed outright** from all three DF
+files. Those three now import no scipy.special at all — the island is gone, not
+routed around. (Einasto / ExpTruncNFW / TwoPowerTriaxial still import it, by
+design: their numpy branches deliberately stay on scipy for byte-identity.)
+
+The through-line across the three PRs, worth stating once: **coerce at the point
+of use is the rule; #1369's stored-coerced params are the exception.** #1370 and
+#1371 each had a concrete blocker to storing —
+
+    Ferrers            numpy.fabs(self._b - 1.0)   fails on a tensor under -W error
+    TwoPowerTriaxial   if self.twominusalpha != 0  Python branch -> tracing hazard
+    constantbetaPowerLawdf  assert ... f"{self._n:.3f}"  breaks formatting
+
+— none of which a green backend suite would have caught. Each was found by
+grepping the changed attribute across `galpy/` BEFORE editing, which is now the
+standing rule (memory coercion-gate-the-readers-not-writers).
+
+Next: task #224 constantbetadf d/dbeta, scoped and measured in detail this
+session, worktree /var/tmp/dbeta rebased onto 856ceccc and ready.

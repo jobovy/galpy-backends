@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-23 (gh#1370 MERGED 542eae05; gh#1371 OPEN)
+# Vacation status snapshot — 2026-08-23 (gh#1371 MERGED 856ceccc; GROUP A COMPLETE; no open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,17 +11,17 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  542eae05   (ledger xfail 8 / slow_skip 61 / skip 68)
+    feat/backends-develop  856ceccc   (ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PR
+## Open PR — NONE. Next = task #224 (constantbetadf d/dbeta), fully scoped.
 
-**gh#1371 `3571c0a5` — power-law spherical DFs, fE normalizations on the
-backend.** Branch `backend/powerlawdf-routed-gamma` on develop 542eae05.
-A/B 6/6 on base. Gate 409/409/409 + sphericaldf 223 on numpy/torch/jax.
-Ledger delta: none. Completes Group A except constantbetadf (task #224).
+GROUP A COMPLETE (forced-backend construction, no setup islands left):
+    gh#1369 77a74fdb  Einasto + ExpTruncNFW
+    gh#1370 542eae05  Ferrers + TwoPowerTriaxial
+    gh#1371 856ceccc  3 power-law spherical DFs
+Also merged this session: gh#1363..gh#1368.
 
-Merged 2026-08-22/23: gh#1363..gh#1367, gh#1368 45221587, gh#1369 77a74fdb,
-**gh#1370 542eae05**.
+Worktree /var/tmp/dbeta on backend/constantbetadf-dbeta, rebased onto 856ceccc.
 
 
 ## Live findings from gh#1368
