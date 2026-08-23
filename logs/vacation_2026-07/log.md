@@ -51945,3 +51945,52 @@ Two process notes: pre-commit's isort rewrote `__init__.py` and REJECTED the
 first commit (SHA had not moved -- checked, per the standing habit); and
 `pkill -f "<pattern>"` killed my own shell twice because the wrapper's command
 line contains the pattern. `test_streamd[f]` fixes that.
+
+### gh#1372 grows a second commit: the whole-file jax defer comes OFF
+
+The measurement landed and it is decisive. With the fork fix,
+`tests/test_streamdf.py` under jax:
+
+    80 collected -> 76 passed, 4 failed, 786.9s (13:06)
+
+All 4 failures are ONE thing, raised in 0.0s:
+
+    NotImplementedError: actionAngleTorus wraps the external Torus C++ library
+    and is not jax/torch-backend compat
+
+That is the permanently out-of-scope family (task #43). There is already a
+convention for exactly these four in `backend_skip.txt` -- `torch` and `jax-jit`
+entries under a comment block explaining the Torus exclusion. Plain `jax` entries
+were absent only because the whole file was deferred. So the un-defer is:
+remove one whole-file slow-skip line, add 4 skip lines beside their twins.
+
+**Shard budget checked before claiming it fits**: jax streams shard is 6m10s
+today, job timeout 90 min, and torch ALREADY runs this same file in this same
+shard in 11m38s. jax at ~15 min is unremarkable. Slowest single test 198.5s, so
+nothing is near the per-test cap either.
+
+**Ledger delta (jax): ~80 deferred -> 4 skipped.** That one line was ~72% of all
+jax deferrals; jax deferred should go 109 -> ~33.
+
+**I reversed my own call from last wake, for a reason I had missed.** The PR said
+the ledger change would stay separate and be settled on its own evidence. But
+while the file is deferred, CI never runs test_streamdf under jax at all -- so
+shipping the fix alone would leave it validated only on my box. Folding the
+un-defer in is what makes CI exercise the thing being fixed. Description updated
+rather than left contradicting the diff.
+
+### The two CI reds are both premature, not real
+
+- `build (windows-latest, 3.14, test_quantity+test_coords)`:
+  `test_streamgapdf_sample`, the known Windows flake. Both same-SHA twins failed,
+  which normally argues AGAINST flake -- but this test is `numpy.random.seed(1)`
+  seeded, so the twins share RNG state and are NOT independent samples. The twin
+  discriminator does not apply to seed-dependent failures; noting that, because I
+  nearly used it as evidence. What settles it: my diff is structurally
+  UNREACHABLE on Windows (`parallel_map` returns at the Windows guard, line 211,
+  before the import and guard I added at 223/230), and outside multi.py the diff
+  is a bare import name plus an `__all__` entry. No mechanism exists.
+- `codecov/project`: run was ~half done (72 checks pending); coverage cannot
+  settle until every shard uploads.
+
+Neither warranted action this wake beyond confirming there is no mechanism.
