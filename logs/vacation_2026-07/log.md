@@ -51238,3 +51238,41 @@ went straight to `cancelled` and **the All-backend tests run again stayed
 in a row, same workflow -- it is the one whose last job never gets a runner, so
 a plain cancel has nothing to interrupt. Worth going straight to force-cancel
 for All-backend on a superseded SHA rather than waiting out the normal cancel.
+
+### 2026-08-23 — a REAL red on gh#1369: coercion leaked into `_scale`
+
+`backend torch tests/test_sphericaldf.py` went red. Not a flake; reproduced
+locally to the same counts (5 failed / 218 passed), all one shape:
+
+    return Spline1D(phis, r_a_values * self._scale, k=3)
+    TypeError: unsupported operand type(s) for *: 'numpy.ndarray' and 'Tensor'
+
+Coercing the constructor params made `_scale` a backend array — Einasto via
+`self._scale = self.h`, ExpTruncNFW via `self._scale = self.a` — and sphericaldf
+consumes `_scale` as a **plain scalar grid length** in a dozen places:
+`numpy.log10(self._rmax / self._scale)`, `numpy.amin([...])`,
+`_RToxi(a=self._scale)`, `r_a_values * self._scale`.
+
+So `_scale` is grid-construction bookkeeping, not physics. The fix belongs on the
+producing side (pin `_scale` to numpy) rather than converting a dozen consumers,
+and the physical quantities stay on the backend: Einasto keeps h/amp/n coerced,
+ExpTruncNFW keeps `_alpha`/`_E1_alpha`/`_Ftot`. 5 failed -> **223 passed**.
+
+One subtlety caught on the way: my first fix was a bare
+`float(as_numpy(self.h))`, which changes `_scale` on the NUMPY path too —
+`numpy.float64` becomes a Python `float`. Same value, different type, and
+exactly the kind of silent numpy-path change the mission forbids. Guarded it on
+`is_backend_array` and verified value AND type are identical to develop.
+
+### The gate gap, stated so I stop repeating it
+
+I gated the touched BACKEND suites (conventions/spherical/exptruncnfw under both
+forced arms) and the whole numpy `test_potential.py`. I did not run the
+downstream CONSUMER suite under a forced backend. **Coercion changes an
+attribute's TYPE, so the suites that must be gated are the ones that READ the
+attribute, not only the ones that write it.** For a coercion PR the rule is:
+grep the coerced attribute across `galpy/`, and gate every module that reads it.
+
+Separately: my Group A gate globbed `tests/test_backend*.py` (all backend files,
+~1h/arm) when I meant three files. Left running since it is the faithful CI
+shard context and the box is idle, but the mis-scope is worth noting.
