@@ -51276,3 +51276,43 @@ grep the coerced attribute across `galpy/`, and gate every module that reads it.
 Separately: my Group A gate globbed `tests/test_backend*.py` (all backend files,
 ~1h/arm) when I meant three files. Left running since it is the faithful CI
 shard context and the box is idle, but the mis-scope is worth noting.
+
+### The _scale fix traded one red for another — and the tension is real
+
+Pinning `_scale` to a concrete numpy value fixed sphericaldf but broke
+construction INSIDE a jax trace: under `jax.grad`, `h`/`a` are tracers and
+
+    float(as_numpy(self.h))
+    jax.errors.TracerArrayConversionError: __array__() called on a traced array
+
+It took out the two new constructor-differentiability checks **and a
+pre-existing test from #1367** (`test_param_grad_vs_fd[jax-a]`). So the first
+"fix" was not a fix; my local re-gate caught it before CI did, which is the
+only reason it did not become a second red push.
+
+The two requirements are genuinely in tension: `_scale` must be concrete for the
+numpy grid consumers and cannot be concretized under a trace. Resolved by taking
+a concrete value when one exists and keeping the traced value otherwise. That is
+not papering over: the consumers needing a concrete `_scale` build numpy
+interpolation grids and cannot run under a trace, so the traced branch never
+reaches them.
+
+    test_sphericaldf --backend=torch    223 passed   (grid consumers)
+    backend trio, build.yml flags       390 passed, 1 skipped
+    backend trio --backend=jax          390 passed, 1 skipped
+    backend trio --backend=torch        390 passed, 1 skipped
+    numpy _scale identical to develop in VALUE and TYPE
+
+Also of note: a ruff reformat between my two edits silently invalidated the
+patch anchor, so the first try/except application asserted out and only the
+COMMENTS landed. Caught because the test count did not move. Re-read the file
+after any formatter run before matching on its text.
+
+### Windows quantity/coords red: FLAKE, proven by the same-SHA twin
+
+At `284e5d8c` the Windows `test_quantity.py test_coords.py` job was **success**
+on the pull_request run and **failure** on the push run -- same SHA, same code,
+opposite verdicts. develop's last five runs of that shard are all green. This is
+exactly the free A/B from `same-sha-duplicate-run-is-a-free-ab`: when push and
+pull_request both run every job, a verdict split at one SHA settles
+flake-vs-real for nothing. Check that BEFORE investigating a suspicious red.
