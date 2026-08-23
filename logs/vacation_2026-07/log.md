@@ -51455,3 +51455,21 @@ byte-identical across 21 probes (3 slopes x {isotropic, constantbeta at 3 betas,
 osipkovmerritt at 2 r_a}) in VALUE and TYPE. Gate 409/409/409.
 
 Held unpushed: gh#1370 is the open PR and the rule is one at a time.
+
+### 2026-08-23 — gh#1370 at 152 pass / 0 fail, waiting on one long shard
+
+codecov/project healed itself once the `test_backend*.py` shard uploaded, as it
+always does: **152 pass, 0 fail**. The only thing outstanding is the
+pull_request copy of that shard (all backend test files under jax+torch), which
+started 11:09 UTC and is at step 20/26 after ~95 min. Not wedged — repo queue is
+3, and its **push twin completed SUCCESSFULLY at 12:16 UTC**, so the identical
+code already passed once. Merge when it lands.
+
+Local DF gate for the Group A finale finished fully green in the meantime:
+`test_sphericaldf` 223 passed under **torch, jax AND numpy**.
+
+Worth noting how long that all-backend shard now takes: ~90 min for the
+pull_request copy versus ~70 for the push copy of the same job. Every push to a
+backend PR costs roughly that before the PR can merge, and the twin structure
+means it is paid twice. That is the dominant term in the merge latency now, not
+the fixing.
