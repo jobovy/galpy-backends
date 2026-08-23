@@ -51578,3 +51578,43 @@ set from it rather than from an optimistic 1e-12.
 *and* on eddingtondf (different messages, same cause) — fE expects arrays across
 the whole family. Consistent behaviour, not a constantbetadf defect, so nothing
 to report.
+
+### d/dbeta: the substitution moves with beta — grad-vs-FD would give a FALSE PASS
+
+Read `_fE_backend` properly. beta enters the general branch through **three**
+channels, and only the first is trivial:
+
+1. `self._fE_prefactor` — a multiplicative normalization from two gammas.
+   Closed form, easy.
+2. `alpha = self._alpha` inside the INTEGRAND: `diffsafe**alpha`.
+3. `alpha` inside the SUBSTITUTION and its limits:
+
+       def _smallr(t):  # r = rphiE + t**(1/(1-alpha))
+           r = t ** (1.0 / (1.0 - alpha)) + rphiE[..., None]
+           return 1.0/(1.0-alpha) * t ** (alpha/(1.0-alpha)) * _raw(r)
+       hi = rphiE ** (1.0 - alpha)
+       i1 = fixed_quad(xp, _smallr, lo, hi, n=_QUAD_N_FE)
+
+Channel 3 is the trap. The change of variables is *itself* a function of alpha,
+so differentiating w.r.t. beta moves the quadrature NODES. Mathematically the
+integral is invariant to the substitution and that dependence cancels exactly;
+numerically, at fixed order `_QUAD_N_FE`, it does not. The AD gradient therefore
+carries a spurious term from the moving grid.
+
+**And that makes the obvious test worthless.** A finite difference of the same
+fixed-order quadrature contains the SAME spurious term, so grad-vs-FD will agree
+to high precision while both are wrong. A green grad-vs-FD here would prove only
+that AD correctly differentiates the discretization — not that the derivative is
+the DF's. Same family as memory `stream-track-two-gradients` (frozen-xv d/dtheta
+is non-physical; always h-converge).
+
+So the acceptance test cannot be grad-vs-FD at one order. It has to be
+**convergence in `_QUAD_N_FE`**: the gradient must approach a limit as the
+quadrature refines, and the FD reference must be taken at high order. Recorded
+on task #224 before writing any code, because this is exactly the shape that
+produces a confident, green, wrong result.
+
+Also settled: `lo = 10.0 ** self._logstartt(Ecl)` comes from the numpy-calibrated
+spline — an integration-limit heuristic, not physics. Differentiating through it
+would be differentiating a heuristic; it should be treated as a constant w.r.t.
+beta (stop-gradient), and that choice stated rather than left implicit.
