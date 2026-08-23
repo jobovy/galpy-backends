@@ -51159,3 +51159,45 @@ hand-passed value and never construct anything. A forced-backend test that never
 runs the constructor cannot see a construction-time numpy fall-through. That is
 what "tests should meaningfully run on the backend" has to mean operationally —
 assert on what the CONSTRUCTOR stored.
+
+### The next Group A members are NOT a one-line coercion — and my own check would have hollow-greened them
+
+While gh#1369's CI ran I went to measure the remaining Group A classes (Ferrers,
+TwoPowerTriaxial, the four spherical DFs -- all `gamma(param)` normalizations)
+before folding them in. Two findings, the second one about my own new test.
+
+**1. Those six call scipy's `special.gamma` directly, not the routed one.** So
+coercing their params is necessary but not sufficient; the call sites have to
+move to `galpy.backend.special.gamma` too. That roughly doubles the work per
+class and is why they are not in gh#1369.
+
+**2. `scipy.special.gamma(tensor)` does not fail — it returns a tensor.**
+
+    scipy.special.gamma(torch.tensor(2.5))                 -> Tensor  (DETACHED)
+    scipy.special.gamma(torch.tensor(2.5, requires_grad))  -> RuntimeError
+    backend.special.gamma(torch.tensor(2.5, requires_grad)) -> grad matches
+                                          Gamma(x)psi(x) to 1.2e-16
+
+It round-trips through `__array__` and hands back a detached result. So a
+scipy-built setup path would pass my brand-new `_CONSTRUCTS_ON_BACKEND`
+(is_backend_array True) while delivering **no derivative at all**. Adding those
+six to the registry without noticing would have manufactured exactly the hollow
+green Jo warned about, in the test written to prevent hollow greens.
+
+Fixed on gh#1369 (`9ef33004`): the registry now also differentiates the
+constructor's output w.r.t. its own param and compares to a central difference
+taken on the numpy path, asserting `grad_fn is not None` on torch first -- that
+is the assertion that actually catches detachment.
+
+Verified gh#1369's own two are genuinely differentiable through the constructor,
+not just coerced: Einasto d(amp)/dn = 7.3e-10 vs FD (jax), ExpTruncNFW
+d(_Ftot)/da = 1.6e-9 vs FD on BOTH backends. Einasto+torch is skipped with the
+reason recorded (no igammac derivative upstream -- task #222).
+
+Stated honestly in the commit: this differentiability check does NOT fail on the
+pre-coercion base, because it hands the constructor a backend array directly,
+which already worked via #1367/#1368. It guards a class; it is not a second
+measurement of this PR. The coercion is measured by the is_backend_array check,
+which does fail 4/4 on base.
+
+Gate after the addition: 390 passed / 1 skipped on all three arms.
