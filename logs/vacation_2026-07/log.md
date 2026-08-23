@@ -51539,3 +51539,42 @@ nonsense — which a careless fix would "solve" by loosening the tolerance. Use
 interior beta (0.2/0.3/0.7) and verify `_m` is stable across the FD step.
 
 Recorded in full on task #224. Blocked on gh#1371 landing — one PR at a time.
+
+### d/dbeta baseline measured — and the branch split is actually good news
+
+Established the "before" picture before writing any code.
+
+**Which branch does a given construction take?**
+
+    constantbetadf(beta=-0.5)   -> _twobeta=-1.0 (FLOAT) -> halfint=False -> general
+    constantbetadf(twobeta=-1)  -> _twobeta=-1   (INT)   -> halfint=True  -> closed form
+    constantbetadf(beta= 0.5)   -> _twobeta= 1.0          -> halfint=False
+    constantbetadf(twobeta= 1)  -> _twobeta= 1            -> halfint=True
+
+The same physical DF takes two different algorithms depending on HOW you
+construct it. That looked alarming, so I checked whether they agree: on five
+energies spanning the valid window they match to **3.4e-07** and **2.6e-07**.
+Two implementations of the same thing, not a defect.
+
+And it settles the design cleanly rather than complicating it: **the `beta=`
+constructor always lands on the GENERAL branch — the differentiable one.** The
+`twobeta=` integer constructor is the discrete closed-form path, where
+differentiating w.r.t. beta is meaningless anyway (it exists only at odd-integer
+2*beta). So d/dbeta is naturally well-posed for exactly the construction a user
+would differentiate through. No branch-selection problem to solve.
+
+**Tolerance calibration, free**: that ~3e-7 is the general branch's quadrature
+accuracy relative to the closed form. A d/dbeta test on the general branch is
+bounded by that, not by machine precision — so the gradient tolerance should be
+set from it rather than from an optimistic 1e-12.
+
+**Interior beta confirmed** (must avoid `_m` breakpoints):
+
+    beta=0.2 -> _m=1, _alpha=0.300     beta=-0.5 -> _alpha=0.000  <- breakpoint
+    beta=0.3 -> _m=1, _alpha=0.200     beta= 0.5 -> _alpha=0.000  <- breakpoint
+    beta=0.7 -> _m=0, _alpha=0.800
+
+**Not a bug, checked**: `fE(0.7)` with a plain float raises on constantbetadf
+*and* on eddingtondf (different messages, same cause) — fE expects arrays across
+the whole family. Consistent behaviour, not a constantbetadf defect, so nothing
+to report.
