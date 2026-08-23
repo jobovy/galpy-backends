@@ -51036,3 +51036,62 @@ Worth noting the order this went in: the accuracy number alone would have
 justified Design A. It was the COST measurement that ruled it out, and I only
 took it because the function sits in an evaluation path. Measure the hot-path
 cost of a fallback BEFORE deciding it is an improvement.
+
+---
+
+## 2026-08-22 — Jo: "no numpy islands; tests must meaningfully run on the backend under a force"
+
+Jo flagged that my recent work sounded island-shaped. Audit result, honestly split:
+
+**Not an island (verified).** Einasto's compute path is clean: `_evaluate`,
+`_rforce`, `_r2deriv`, `_rdens` all return Tensors under forced torch; the only
+`numpy.` left is `numpy.pi`/`numpy.e` constants, and `_gamma`/`_gammaincc` are
+the routed helpers. No scipy on any evaluation path.
+
+**He was right about the setup path.** Under a forced backend `self.n` stays a
+Python float, so `_calculate_dn` took the scipy branch -- my new backend solve
+was reachable only by explicitly passing a backend-array n, i.e. it never
+executed in the forced-backend CI shards. And I had written a test *pinning*
+that ("stays numpy under force"), with gh#1367's `from_nfw` carrying the
+identical shape. That is the hollow-green pattern, self-inflicted twice.
+
+**Jo chose: coerce, and audit the whole class.**
+
+### The prototype works, and the C bridge survives
+
+`get_namespace()` with no array args already returns the forced namespace, so
+detection needs no new machinery. Coercing `n` at the TOP of `__init__`:
+
+    forced torch: self.n / self.amp / self.h  -> all Tensors (solve ran on backend)
+    dop853_c integrates fine, agrees with dop853 to 10 digits (E=0.6147650706)
+    unforced numpy byte-identical; 231 passed under BOTH forced backends
+
+The C bridge was the risk I expected to bite -- `hasC=True` means params cross
+ctypes -- and it did not.
+
+### Two mistakes worth recording
+
+1. **Placement.** My first patch replaced `self.n = n`, which sits AFTER the
+   `rs=` branch that runs the solve. So the constructor still used scipy while a
+   manual post-hoc call I made myself looked coerced -- and I reported that as
+   "setup now runs on the backend". Assert on the CONSTRUCTOR's stored attrs,
+   never on a leaf call you make yourself.
+2. **The tests could not have caught this either way.** `_ein_dn` passes `n` to
+   `_calculate_dn` directly, so every Einasto test exercises the leaf and never
+   the constructor. That is exactly why the coercion prototype changed ZERO test
+   verdicts. A forced-backend test that never constructs cannot see a
+   construction-time numpy fall-through.
+
+### The class: 29 constructor-scipy classes, but TWO problems
+
+* **Group A (~9) -- scalar-param setup solves.** Einasto, ExpTruncNFW (merged,
+  same shape), Ferrers, TwoPowerTriaxial, 4 spherical DFs (`gamma` of a param),
+  AdiabaticContraction. Coercion fixes these. This is the class Jo means.
+* **Group B (~20) -- table/spline builders.** Multipole, SCF, interpRZ/Spherical,
+  kingdf, qdf, streamdf/gapdf/spraydf, AA grids, DFcorrection, snapshots.
+  Coercion does NOT fix these; they need backend interpolation and are already
+  tracked (#150/#103/#130). Explicitly out of the coercion PR.
+
+gh#1368 gains commit `56921b42` dropping the wrong-contract test. It stays the
+prerequisite -- coercion is only useful once `_calculate_dn` HAS a backend
+branch. Task #223 carries the coercion + Group A + constructor-path tests.
