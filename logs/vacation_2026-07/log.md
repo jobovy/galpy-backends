@@ -51497,3 +51497,45 @@ The placement lesson across the three: #1369 could store coerced params, but
 Python-level branch on `self.twominusalpha`, and an assert whose message
 formats `{self._n:.3f}`. **Coerce at the point of use is the general rule; #1369
 is the special case, not the template.**
+
+### Jo: d/dbeta IS a goal — and beta is not a simple parameter
+
+Scoped constantbetadf properly before touching it, and the shape is not what
+"route the gamma calls" suggests. Two DISCRETE quantities are derived from beta
+at construction and they select the algorithm:
+
+    self._twobeta = twobeta
+    self._halfint = isinstance(self._twobeta, int) and self._twobeta % 2 == 1
+    if self._halfint:  self._m = (3 - self._twobeta) // 2
+    else:              self._m = int(numpy.floor(1.5 - self._beta))
+                       self._alpha = 1.5 - self._beta - self._m
+
+Three traps, all measured rather than reasoned:
+
+1. **`isinstance(x, int)` is False for numpy.int64, torch AND jax.** So coercing
+   `_twobeta` silently flips `_halfint` True->False and runs a *different
+   algorithm*, with no error anywhere. `_halfint` drives branches at 439, 469,
+   530, 593, 663.
+2. **`_m = int(floor(1.5 - beta))` is piecewise-constant**, jumping at
+   beta = 1.5 - k. Measured: beta=-0.51 -> _m=2, beta=-0.49 -> _m=1.
+3. `int(floor(tracer))` raises TracerArrayConversionError.
+
+So `_twobeta`/`_halfint`/`_m` must stay raw Python — they are the algorithm
+selector and a **derivative order**, structural rather than continuous. Only
+`_alpha = 1.5 - beta - _m` and the gamma prefactors are differentiable. It is
+"coerce at the point of use" a third time, but here it is required for
+CORRECTNESS: storing a coerced beta changes which math runs.
+
+**What d/dbeta can honestly mean**: only on the general branch (the half-integer
+branch exists only at discrete beta — a measure-zero set, so differentiating
+there is meaningless), and only between `_m` breakpoints. The DF is genuinely
+piecewise in beta. Better to say that than to ship a gradient that is quietly
+wrong at the seams.
+
+**The test trap this exposes**: the obvious beta values sit ON breakpoints.
+beta=-0.5 and beta=0.5 both give `_alpha=0.000` exactly, and floor jumps between
+-0.51 and -0.49. A grad-vs-FD test there straddles the jump and returns
+nonsense — which a careless fix would "solve" by loosening the tolerance. Use
+interior beta (0.2/0.3/0.7) and verify `_m` is stable across the FD step.
+
+Recorded in full on task #224. Blocked on gh#1371 landing — one PR at a time.
