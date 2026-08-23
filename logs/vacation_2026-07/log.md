@@ -51473,3 +51473,27 @@ pull_request copy versus ~70 for the push copy of the same job. Every push to a
 backend PR costs roughly that before the PR can merge, and the twin structure
 means it is paid twice. That is the dominant term in the merge latency now, not
 the fixing.
+
+### gh#1370 MERGED `542eae05`; gh#1371 opened (Group A finale)
+
+The long shard landed at 12:48 UTC after ~99 min — 154 pass, 0 fail, CLEAN.
+Merge audit was the cleanest yet: **zero** new `if`s, **zero** new `def`s, and
+the only import change is `from scipy.special import gamma` ->
+`from ..backend.special import gamma`. That diff shape is what an island
+removal should look like.
+
+**gh#1371** is the finale: the three power-law spherical DFs. Rebased onto
+542eae05, re-gated 409/409/409 after the rebase, pushed, opened.
+
+Group A as landed/queued:
+
+    #1369  77a74fdb  Einasto + ExpTruncNFW        (coerce params at __init__ top)
+    #1370  542eae05  Ferrers + TwoPowerTriaxial   (coerce at point of use)
+    #1371  3571c0a5  3 power-law spherical DFs    (open)
+    ----   task #224 constantbetadf              (split out: d/dbeta, not an island)
+
+The placement lesson across the three: #1369 could store coerced params, but
+#1370 and #1371 could not — `numpy.fabs(self._b - 1.0)` under `-W error`, a
+Python-level branch on `self.twominusalpha`, and an assert whose message
+formats `{self._n:.3f}`. **Coerce at the point of use is the general rule; #1369
+is the special case, not the template.**
