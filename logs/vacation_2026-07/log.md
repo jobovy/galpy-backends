@@ -51738,3 +51738,47 @@ change — pre-existing, not introduced.
 attribute, not an interface. The mechanism is proven; how a user should *supply*
 the differentiable beta is a design choice — an `fE(E, beta=...)` override, a
 dedicated method, or something else.
+
+### Jo: "could we just use a dummy for jax?" — YES, and better: jax hands us the real value
+
+Tested rather than argued. Inside `jax.grad`:
+
+    float(b)                        -> ConcretizationTypeError
+    float(jax.lax.stop_gradient(b)) -> OK, 0.3          <- PUBLIC API
+    float(b.primal)                 -> OK, 0.3          <- private internal
+    float(jax.device_get(b))        -> ConcretizationTypeError
+
+  inside jax.jit:
+    float(stop_gradient(b))         -> ConcretizationTypeError
+
+So under reverse-mode AD the primal IS reachable through public API. No
+user-supplied dummy is needed — the constructor can concretize itself. Only
+shape-only `jit` tracing has no value at all, and beta is a model parameter, not
+traced data, so that is a non-case.
+
+Independently confirmed the dummy logic is sound anyway: building an integer
+structural quantity from a constant and differentiating the rest gives the exact
+analytic gradient (1.2000000000 vs 2*b*(m+1) = 1.2), **provided the dummy lands
+in the same `_m` cell as the real beta**.
+
+**Design settled, and it is uniform across backends** — which is what I wanted
+and could not see a route to before Jo's question:
+
+    _beta_static = _concrete_scalar(beta)   # stop_gradient/float under AD
+    self._m      = int(floor(1.5 - _beta_static))   # structural
+    self._halfint = ...                              # structural
+    self._beta   = beta                              # LIVE, differentiable
+
+`beta=` in the constructor becomes the differentiable parameter on BOTH backends.
+No `fE(E, beta=...)` override, no context manager, no torch/jax asymmetry.
+
+Implemented so far: `_fE_backend` rebuilds alpha and the prefactor from a coerced
+beta (forward unchanged, numpy vs backend 2.28e-7), and `_concrete_scalar` added.
+Constructor still stops at `_fE_prefactor` (line ~447), which calls scipy gamma
+on the live beta. beta appears at ~20 sites total across `_dMdE`,
+`_vmomentdensity`, `_sample_eta` and the fE pair — routing them is mechanical but
+each needs its own gradient check, so it is a PR, not a wake. Not rushing it.
+
+Already verified end-to-end via the eval-time beta (structure fixed, live beta at
+eval): jax and torch both -2.3980785146e-01, **4.9e-08 vs the FD reference** —
+so the mechanism is proven; what remains is extending it to the other sites.
