@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-23 (gh#1368 MERGED 45221587; gh#1369 OPEN)
+# Vacation status snapshot — 2026-08-23 (gh#1369 MERGED 77a74fdb; gh#1370 OPEN)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,18 +11,16 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  45221587   (ledger xfail 8 / slow_skip 61 / skip 68)
+    feat/backends-develop  77a74fdb   (ledger xfail 8 / slow_skip 61 / skip 68)
 
 ## Open PR
 
-**gh#1369 `b17a8beb` — potential: build on the forced backend at construction.**
-Branch `backend/forced-setup-coercion` on develop 45221587. coerce_coords at the
-top of Einasto/ExpTruncNFW `__init__` + `_CONSTRUCTS_ON_BACKEND` registry in
-test_backend_conventions. A/B 4/4 fail on base. Gate 387/387/387 + 1288 numpy.
-Ledger delta: none.
+**gh#1370 `219339a6` — Ferrers/TwoPowerTriaxial gamma normalizations on the
+backend.** Branch `backend/groupa-routed-gamma` on develop 77a74fdb. A/B 8/8 on
+base. Gate 400/400/400 + 1288 numpy. Ledger delta: none.
 
 Merged 2026-08-22/23: gh#1363 19f31a54, gh#1364 a4193e84, gh#1365 46ea6ade,
-gh#1366 47875227, gh#1367 08db5d90, **gh#1368 45221587**.
+gh#1366 47875227, gh#1367 08db5d90, gh#1368 45221587, **gh#1369 77a74fdb**.
 
 
 ## Live findings from gh#1368

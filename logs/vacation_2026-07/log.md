@@ -51357,3 +51357,42 @@ with **0:00:00 CPU time each**, and the RSS is mostly shared copy-on-write —
 `free` reports 19 GB used of 125 with 106 available, load 1.36. So: leaked, but
 costing nothing. Left alone. Worth writing down because the headline number
 (55 GB, 22 days) invites a cleanup that would have been pure risk for no gain.
+
+### gh#1369 MERGED `77a74fdb`; gh#1370 opened (Group A continued)
+
+The torus flake cleared exactly as diagnosed: re-ran the single job once the
+parent run completed (GitHub refuses a job re-run while siblings are in flight),
+it **passed**, then `all-clear` needed its own re-run since it had failed on the
+dependency. Final: **154 pass, 0 fail, state=CLEAN**.
+
+Merge audit: the only `if`s in the diff are `is_backend_array(...)` ternaries —
+type dispatch, not branching on array values; **zero** new `def`s (it reuses
+`coerce_coords` and `as_numpy`); both imports come from `..backend`.
+
+### gh#1370: the reader check earned its keep immediately
+
+Ferrers and TwoPowerTriaxial compute their normalization constants from scipy's
+`special.gamma`, so under a force they were built on scipy. Routed onto
+`galpy.backend.special.gamma`, which is byte-identical to scipy on numpy (13
+scalars incl. TYPE, plus a 97-point array).
+
+Placement deliberately differs from #1369 — **coerce at the point of use**, not
+at the stored attribute — because Ferrers runs `numpy.fabs(self._b - 1.0)` (which
+rejects a tensor under `-W error`) and TwoPowerTriaxial branches on
+`self.twominusalpha` twice (a tracing hazard). Raw params, backend constant.
+
+Then I applied yesterday's new rule *before* gating, and it paid off at once:
+grepping the changed attributes found `psi_inf` read by
+`integrateFullOrbit.py:256` and `integratePlanarOrbit.py:285`, which push it
+through **ctypes into the C integrator**. Tested directly — `dop853_c` under
+forced torch returns the identical energy to unforced (0.3650000000 /
+-0.4718484022). Had I only run the backend suites again, that would have been
+the next CI surprise.
+
+A/B is 8/8 on base, and the differentiability half fires here (it did not for
+#1369's two, which already used routed helpers) because `scipy.special.gamma`
+hands back a silently detached tensor. The guard written for hypothetical future
+entries caught the real defect in the very next two.
+
+Gate: 400 passed/1 skipped on all three backend arms, 1288 passed/102 skipped on
+numpy test_potential.py.
