@@ -50906,3 +50906,92 @@ Three compounding factors, all now written down:
 
 No open PR. **Task #221 (EinastoPotential._calculate_dn) is the next PR** -- same
 shape, prerequisites verified, and its recipe now carries every trap gh#1367 hit.
+
+---
+
+## 2026-08-22 (later) — task #221 EinastoPotential `_calculate_dn`
+
+Same shape as gh#1367: numpy keeps `fsolve` verbatim (byte-identical), backend
+inputs go through the differentiable `galpy.backend.optimize.brentq`.
+
+    def _calculate_dn(self, n, est_dn):
+        if not is_backend_array(n):
+            ... fsolve(func, est_dn)[0]          # untouched -> byte-identical
+        def froot(x, nn):
+            return 2.0 * _gammaincc(3.0 * nn, x) - 1.0
+        return brentq(froot, 1e-12, 3.0 * n, args=(n,))
+
+Two deliberate choices. The residual is the **regularized** `2Q(3n,x)-1` rather
+than galpy's `2*Gamma_upper - Gamma`: same root, same implicit-diff gradient (the
+Gamma factor cancels), and it avoids the `Gamma(3n)` overflow that breaks the
+numpy path at n >~ 57. The bracket is `[1e-12, 3n]` because d_n is the **median**
+of Gamma(3n), which lies below the mean 3n for every n>0 -- verified over
+n = 0.5..20 that the root really is inside.
+
+### The finding: torch's `gammaincc` is ~6 digits worse than scipy for a >~ 21
+
+torch forward at n=10 came out 1.555e-10 off numpy while jax was 4.6e-15. Rather
+than loosen a tolerance, I asked whether the SOLVER or the SPECIAL FUNCTION was
+wrong: evaluate the residual of the **numpy** root under each library.
+
+    residual 2Q(30,dn)-1   scipy=-1.11e-16   torch=+6.76e-10   jax=-1.75e-14
+    implied root shift from torch's residual: 1.555e-10  (rel)
+    OBSERVED torch error                    : 1.555e-10
+
+Three digits of agreement: brentq converges perfectly to the root of the function
+torch hands it. The error is entirely torch's. Sweeping a:
+
+    a:        1.5    3     6    12  |   21      30      45      60
+    |dQ| tc:  0e0  2e-16 2e-16 1e-16|  4.0e-10 3.4e-10 2.8e-10 2.4e-10
+    |dQ| jx: 2e-16 2e-16 6e-16 8e-16|  6.7e-15 8.7e-15 3.2e-15 9.0e-15
+
+A discrete algorithm switch inside torch's `igammac` between a=12 and a=21. So
+the test tolerance is set FROM that measurement, per backend, not picked round:
+`{"jax": 1e-12, "torch": 1e-9}` against measured worsts of 6.6e-14 and 1.6e-10.
+
+In-galpy blast radius is small: `EinastoPotential` (a=3n, bad for n >~ 7) and
+`PowerSphericalPotentialwCutoff` (a=1.5-alpha/2 < 1.5, safe). Recorded in memory
+`torch-op-gotchas-vs-numpy-jax`.
+
+### My own test bug, twice over
+
+1. Bare `torch.tensor(4.0)` gave **float32** (2.3e-6 off). This module does not
+   set a global default dtype -- it passes `dtype=torch.float64` at every
+   construction site. Match the module's idiom, don't assume the global.
+2. **3 of my 4 tests passed on the BASE arm.** `fsolve` happily accepts a jax or
+   torch array and returns the RIGHT `np.float64`, so a value-only assertion is
+   blind to the numpy fallback. Fixed by asserting `is_backend_array(raw)` first
+   -- exactly memory `value-checks-cannot-see-numpy-fallback`, hit again. A/B
+   went 1/4 -> 9/12 failing on BASE once the tests could actually see the change.
+
+Also widened the forward test from one n to n = 0.5, 1, 4, 10 so the bracket is
+exercised rather than one lucky index.
+
+### Pre-existing numpy defects found (NOT fixed -- reporting only)
+
+* `n=0.05` -> fsolve returns a **negative** d_n (-1.720765) with "iteration is
+  not making good progress". The backend brentq gets this right; numpy does not.
+* `n>=60` -> `Gamma(3n)=inf`, "invalid value encountered in subtract".
+
+Both are in the shipped numpy path and predate this work. Left alone: fixing them
+moves numpy bits, which the mission forbids without Jo's sign-off.
+
+### torch gradient: blocked upstream, deliberately jax-only
+
+`.backward()` through the solve raises `NotImplementedError: the derivative for
+'igammac: input' is not implemented` -- torch has no dQ/da at all. The gradient
+test is jax-only with that named in its docstring. A `gammaincc` fallback in
+`galpy.backend.special` (none today, it is `_no_fallback`) would close both the
+gradient gap and the accuracy gap above; logged as the follow-up.
+
+### Opened as gh#1368 (`1ae24301`)
+
+Gate, each arm with its OWN shard's flags:
+
+    build.yml test_backend shard  -W error::Deprecation/Future    231 passed
+    backend-tests.yml --backend=jax                               231 passed
+    backend-tests.yml --backend=torch                             231 passed
+    numpy: WHOLE tests/test_potential.py                         1288 passed
+
+Ledger delta: none. A/B: 9 of 12 new tests fail on base, the other 3 being the
+byte-identity guards that must pass on both arms.

@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1363-1367 MERGED; NO open PR; next = task #221 Einasto)
+# Vacation status snapshot — 2026-08-22 (gh#1368 OPEN, awaiting CI)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,69 +11,62 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  08db5d90   (gh#1367 merged; ledger xfail 8 / slow_skip 61 / skip 68)
+    feat/backends-develop  08db5d90   (ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PRs — NONE. Next PR = task #221 (Einasto _calculate_dn), recipe ready.
+## Open PR
 
-gh#1363 `19f31a54` ledger split (43 streamTrack tests back in jax CI)
-gh#1364 `a4193e84` as_backend_constant default-device guard + effective_device
-gh#1365 `46ea6ade` un-defer 8 noninertial entries, slow_skip 69 -> 61
-gh#1366 `47875227` ledger annotations: censored bound -> measurement
-gh#1367 `08db5d90` from_nfw mass -> rc differentiable (8e-12 vs FD)
+**gh#1368 `1ae24301` — EinastoPotential differentiable d_n solve (jax/torch).**
+Branch `backend/einasto-dn-differentiable`, based exactly on develop 08db5d90.
+Files: `galpy/potential/EinastoPotential.py`, `tests/test_backend_spherical.py`.
+Ledger delta: NONE. Local gate: 4/4 arms green (231/231/231 + 1288 numpy).
+A/B: 9 of 12 new tests fail on base; the other 3 are byte-identity guards that
+must pass on both.
 
-**CI never runs `--jit`** (verified). jax-jit/torch-jit ledger rows are LOCAL-only:
-no CI risk, no CI validation. Report traced progress as locally-measured.
+Merged earlier today: gh#1363 19f31a54, gh#1364 a4193e84, gh#1365 46ea6ade,
+gh#1366 47875227, gh#1367 08db5d90.
 
-**Routed helpers follow the AMBIENT forced namespace, not their argument.**
-`backend.special.*` resolves the forced namespace even for a Python float, while
-`backend.optimize.brentq` follows the DATA. On a scipy path derive EVERY piece
-from one `numpy_path = not is_backend_array(...)` predicate. Cost gh#1367 two
-round-trips. Only torch surfaces it; jax accepts float args and stays green.
+## Live findings from gh#1368
 
-## Measured and CLOSED this wake
-
-* **streamTrack burndown: NO.** The #1364 guard gives 0.96x-1.11x there (both
-  eager and jit, whole file, post-guard develop). All 4 entries stay. The guard
-  pays only where `as_backend_constant` sits in a hot per-evaluation loop
-  (noninertial `_force`), not in track SETUP. Do not assume it un-blocks other
-  clusters -- measure each, FIXED-arm first.
+* **`torch.special.gammaincc` is ~6 digits worse than scipy for a >~ 21.**
+  |dQ| <= 2.2e-16 for a<=12, but 2.4e-10..4.0e-10 for a>=21 (jax <= 9e-15) — a
+  discrete `igammac` algorithm switch. Diagnose this class by evaluating the
+  residual of the NUMPY root under each library BEFORE suspecting the solver.
+  Blast radius in galpy: EinastoPotential only (PowerSphericalPotentialwCutoff
+  uses a<1.5). Recorded in memory `torch-op-gotchas-vs-numpy-jax`.
+* **torch has no `igammac` derivative w.r.t. the order** — torch grads through
+  any gammaincc are blocked upstream. A `gammaincc` fallback in
+  `galpy.backend.special` (`_no_fallback` today) closes BOTH gaps. Follow-up.
+* **Two pre-existing numpy Einasto defects, reported not fixed:** n=0.05 ->
+  fsolve returns a NEGATIVE d_n (-1.720765); n>=60 -> Gamma(3n)=inf.
 
 ## Deferred / next up
 
-* **Noninertial un-defer — MEASURED 2026-08-22, ledger edit PREPARED AND HELD.**
-  Whole file, jax eager, WITH gh#1364's guard: 53 passed in 5145.98 s (ledger's
-  own baseline for the same file: 6308 s). All 8 jax-eager entries pass; none
-  stale. Under the ledger's 240 s CI margin, **3 become un-deferrable**
-  (CI~213.7 / 199.1 / 176.7 s), 5 stay. Prospective delta **slow_skip 69 -> 66**.
-  **Cannot be opened until gh#1364 merges** — without the guard those three run
-  ~415 s local (CI~294) and would flake. The 9 jax-jit noninertial entries are
-  untouched: under trace the guard runs once per trace, so it buys far less.
-* **main -> develop rebase** — PARKED, Jo applies. MEASURED difficulty
-  (merge-base 87256016): main +13, feat/backends +225, develop +107; 16
-  overlapping files; **git merge-tree = 7 conflicting**. 7 is a LOWER BOUND.
-  Protocol: I prepare on a scratch branch, Jo applies. Unblocks the 2 remaining
-  fixable xfail entries (`AdiabaticGrid_outsidegrid_c`) + task #103.
+* **main -> develop rebase** — PARKED, Jo applies. MEASURED (merge-base
+  87256016): main +13, feat/backends +225, develop +107; 16 overlapping files;
+  `git merge-tree` = **7 conflicting**, a LOWER BOUND. I prepare on a scratch
+  branch, Jo applies. Unblocks the 2 `AdiabaticGrid_outsidegrid_c` xfails +
+  task #103.
+* **Differentiable `gammaincc` in galpy.backend.special** — see above; would
+  serve every consumer, not just Einasto.
+* **AdiabaticContractionWrapperPotential** — NOT small: two
+  `scipy.optimize.fixed_point` calls, Blumenthal1986 iterates on an ARRAY with
+  `interp1d` inside. Needs a fixed-point helper + backend interpolation.
 * Off-grid AA fallback — gated on the rebase.
-
-## Two hypotheses that died on 2026-08-22 (both recorded in log.md)
-
-1. **REFUTED** — the md5 single-entry cache in `_force` is 0.8% of the jax call
-   (66 us of 8207 us), not the bottleneck.
-2. **I read the source from the stale `feat/backends` tree** (107 commits behind)
-   and reported a defect that develop had already fixed. The measurement was
-   sound (it ran in a develop worktree); only the reading was stale.
 
 ## Standing corrections to how I work
 
 * **Never decrease coverage, not even one line** (Jo).
-* **`--author @me` is not "mine"** — check the `Claude-Session` trailer.
-* **Check the same-SHA twin FIRST** on any shard red — a push/pull_request split
-  at one SHA settles flake-vs-real for free.
-* **A failed shard uploads no coverage**, so a flake presents AS a codecov drop.
+* **A value-only assertion cannot see a numpy fallback** — scipy happily takes a
+  backend array and returns the RIGHT np.float64. Assert `is_backend_array`
+  FIRST, then compare. Cost 3 of 4 tests silently passing on base this PR.
+* **Match the test module's dtype idiom** — `test_backend_spherical.py` passes
+  `dtype=torch.float64` per construction; it does NOT set a global default.
 * **Read the source in the tree you MEASURED in**, not the main repo checkout.
-* **An accepted `gh run cancel` is not a completed one.**
+* **`--author @me` is not "mine"** — check the `Claude-Session` trailer.
+* **Check the same-SHA twin FIRST** on any shard red.
+* **A failed shard uploads no coverage**, so a flake presents AS a codecov drop.
 
 ## Cron
 
 `e935a60c`, hourly at :13, session-only, **created 2026-08-19 -> expires
-~2026-08-26**. Verified alive this wake via CronList.
+~2026-08-26**. Verified alive this wake via CronList (3 days of headroom).
