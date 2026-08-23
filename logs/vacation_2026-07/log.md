@@ -51428,3 +51428,30 @@ PowerLaw DFs, 9 sites, all `__init__`.
 Also cleared this wake: the mis-scoped `gateGA` full sweep finished green
 (1288 test_potential, 223 sphericaldf), independently re-confirming gh#1370's
 change on top of the targeted arms I had already run.
+
+### Group A finale built locally (`c6dfec14`), held behind gh#1370
+
+The three power-law spherical DFs — isotropicPowerLawdf, constantbetaPowerLawdf,
+osipkovmerrittPowerLawdf — each build their fE normalization from scipy's
+`special.gamma` of a derived exponent, so under a force the DF was not built on
+the backend. Routed onto `galpy.backend.special.gamma` with the exponents
+coerced at the point of use (#1370's placement).
+
+Two things the reader check turned up before I touched anything:
+
+* `constantbetaPowerLawdf` asserts `self._n > -1.0` with an f-string
+  `{self._n:.3f}` a few lines ABOVE the gamma block — a stored tensor would
+  break the message formatting. Another vote for coercing locally.
+* `isotropicPowerLawdf` already does `resolve_namespace(Ei, self._fEnorm)`,
+  i.e. the eval path was **already written to accept a backend `_fEnorm`**.
+  Only the setup had been left behind. Pleasant confirmation that this is the
+  intended end state, not a novel design.
+
+After the swap none of the three imports `scipy.special` at all, so the import
+is dropped — the island is gone rather than routed around.
+
+A/B 6/6 forced checks fail on base; the 3 no-op guards pass on both arms. numpy
+byte-identical across 21 probes (3 slopes x {isotropic, constantbeta at 3 betas,
+osipkovmerritt at 2 r_a}) in VALUE and TYPE. Gate 409/409/409.
+
+Held unpushed: gh#1370 is the open PR and the rule is one at a time.
