@@ -51862,3 +51862,45 @@ shipping it silently as "exact" is not. Recorded for Jo rather than decided.
 
 Three hypotheses this session, two of them mine and wrong, all settled by the
 same cheap instrument: vary the step/order and see whether the answer plateaus.
+
+### Ledger sweep on develop 856ceccc — clean, and structurally blind
+
+Ran the artifact sweep (memory `ledger-staleness-sweep-from-artifacts`) over the
+44 backend-junit artifacts of the completed run at develop head:
+
+    jax:   3466 passing testcases in artifacts, 0 ledgered-but-passing
+    torch: 3572 passing testcases in artifacts, 0 ledgered-but-passing
+
+No regressions and no stale xfails. But the empty result is not "the ledger is
+clean" — it is a property of the instrument:
+
+    xfail entries          8   <- CAN show up as a pass in an artifact
+    slow_skip + skip     129   <- SKIPPED, so they can NEVER show up as a pass
+
+So this sweep can only ever audit 6% of the ledger. The other 94% is invisible to
+it by construction: to know whether a slow-skip is stale you have to RUN it.
+Worth stating plainly so a future empty sweep is not read as an all-clear.
+
+### The ledger is dominated by ONE line
+
+Per-shard, jax carries 109 deferrals to torch's 3, and 79 of the 109 sit in the
+streams shard. Those 79 are not 79 ledger lines — they are mostly ONE:
+
+    jax tests/test_streamdf.py    # whole-FILE entry, no ::testname
+
+One line is ~72% of all jax deferrals. Its note carries two different claims --
+"DEADLOCKS, does not merely run slow" (2026-08-21) and a long analysis of
+streamTrack being over the shard timeout. Those want different fixes, so the
+first job is to find out which one is actually load-bearing.
+
+`restrict_to_single_thread`'s docstring already answers the mechanism question:
+torch's fix (cap the child to one thread) has NO jax analogue -- "jax has no
+equivalent knob ... and the only cure available there is not forking at all".
+But that cure is already implemented twice in `parallel_map`, for Windows and
+for jit mode, both of which just `return list(map(...))`. Extending that guard
+to forced-jax is a 3-line change in the idiom the function already uses.
+
+Reproduction dispatched before touching anything: `test_streamTrack_multi_parallel`
+(a purpose-built multi=True test) under forced jax, with load sampled every 10s --
+low load through a long run means deadlock, high load means merely slow
+(memory `load-average-distinguishes-hung-from-slow`).
