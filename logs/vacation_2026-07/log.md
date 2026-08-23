@@ -51782,3 +51782,43 @@ each needs its own gradient check, so it is a PR, not a wake. Not rushing it.
 Already verified end-to-end via the eval-time beta (structure fixed, live beta at
 eval): jax and torch both -2.3980785146e-01, **4.9e-08 vs the FD reference** —
 so the mechanism is proven; what remains is extending it to the other sites.
+
+### RETRACTION: the "4.9e-08 mechanism proven" was a single-point measurement
+
+Pushed the constructor-differentiable beta further and found the next blocker —
+`self._gradfunc`, the vmapped m-th derivative of `dens * r^(2beta)`, is built at
+construction via `_autodiff_xp()` (jax) while beta may be a torch tensor:
+
+    torch: TypeError: unsupported operand for ** : 'LinearizeTracer' and 'Tensor'
+
+That raised a question about my OWN earlier result: in the eval-time-beta test,
+`_gradfunc` had already been built from the CONCRETE beta, yet AD matched
+full-constructor FD to 4.9e-08. Either the `_deriv` beta-dependence is negligible,
+or I got lucky. Swept it:
+
+    beta    E      AD(frozen _gradfunc) vs FD(full constructor)
+     0.2  -0.7     4.75e-08
+     0.2  -0.4     7.11e-09
+     0.3  -0.7     4.92e-08   <- the number I reported
+     0.3  -0.4     7.77e-09
+     0.7  -0.7     2.27e-05
+     0.7  -0.4     1.00e-04   <- 2000x worse
+    -0.2  -0.7     3.84e-06
+    -0.2  -0.4     2.02e-05
+
+**Lucky.** The frozen `_gradfunc` omits a real term worth up to 1e-4 relative.
+beta=0.7 has `_m`=0, so `_deriv` IS just dens*r^(2beta) and its beta-dependence
+is direct and unmitigated — the worst case, and precisely the one I had not
+sampled. beta=0.2/0.3 (both `_m`=1) happen to be mild.
+
+So: the eval-time-beta route gives an INCOMPLETE gradient, not a complete one.
+Retracting "the mechanism is proven, what remains is extending it" — what remains
+is the substantive part. A correct d/dbeta needs beta to flow through `_gradfunc`
+too, which means the autodiff namespace used to build that closure must match
+beta's backend rather than being chosen once at construction.
+
+Method note: this is the single-point-validation trap. One beta, one E, 4.9e-08,
+and it read as "proven". The sweep cost one command and changed the conclusion.
+Any gradient claim needs at least a parameter sweep spanning the STRUCTURAL cells
+(here: different `_m`), because the frozen term's size depends on which cell you
+are in.
