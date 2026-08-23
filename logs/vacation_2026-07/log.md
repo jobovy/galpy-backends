@@ -51396,3 +51396,35 @@ entries caught the real defect in the very next two.
 
 Gate: 400 passed/1 skipped on all three backend arms, 1288 passed/102 skipped on
 numpy test_potential.py.
+
+### Group A's tail is two different problems, not one (AST census)
+
+I was about to fold "the four spherical DFs" into one PR. An AST census of where
+each `special.gamma` call actually sits says otherwise:
+
+    isotropicPowerLawdf        __init__: [91, 96]
+    osipkovmerrittPowerLawdf   __init__: [116, 117, 122, 123]
+    constantbetaPowerLawdf     __init__: [107, 110, 111]
+    ---- all setup-only: the clean Group A shape, 9 sites ----
+
+    constantbetadf.__init__            [447, 448]      <- only 2 of 16
+    _constantbetadf._dMdE              [165,167,212,214]
+    _constantbetadf._sample_eta        [236, 237]
+    _constantbetadf._vmomentdensity    [293,294,295,319,320,321]
+    constantbetadf._fE_numpy           [600]
+    constantbetadf._fE_backend         [668]           <- scipy in a BACKEND method
+
+So constantbetadf is 12 sites inside EVALUATION methods, which is a different
+problem: not "setup fell through to scipy" but "the DF cannot be differentiated
+w.r.t. its own anisotropy parameter beta". Nothing is broken today — every one
+is `gamma(<expr in self._beta>)` on a plain float, so they are numpy scalar
+CONSTANTS that broadcast fine, and under `--jit` they resolve at trace time, so
+traceability is untouched. That is exactly why the suites are green.
+
+Split out as task #224 with the decision it needs (is d/dbeta a goal?) rather
+than smuggled into a PR about setup islands. The Group A finale is the three
+PowerLaw DFs, 9 sites, all `__init__`.
+
+Also cleared this wake: the mis-scoped `gateGA` full sweep finished green
+(1288 test_potential, 223 sphericaldf), independently re-confirming gh#1370's
+change on top of the targeted arms I had already run.
