@@ -51695,3 +51695,46 @@ standing rule (memory coercion-gate-the-readers-not-writers).
 
 Next: task #224 constantbetadf d/dbeta, scoped and measured in detail this
 session, worktree /var/tmp/dbeta rebased onto 856ceccc and ready.
+
+### d/dbeta WORKS — 4.9e-08 vs FD on both backends
+
+Implemented the `_fE_backend` change: rebuild `alpha = 1.5 - beta - self._m` and
+the fE prefactor from a **coerced** beta via routed gamma, leaving the stored
+`_alpha`/`_fE_prefactor` untouched so the numpy path and the __init__ calibration
+stay byte-identical. Forward unchanged (backend vs numpy 2.28e-7, same as before).
+
+First attempt at the gradient failed — and failed in the CONSTRUCTOR, exactly the
+trap scoped earlier:
+
+    jax  : TracerArrayConversionError
+    torch: Can't call numpy() on Tensor that requires grad
+
+because `__init__` runs `_m = int(numpy.floor(1.5 - self._beta))`. **d/dbeta
+through the constructor is impossible in principle**, not merely awkward: `_m` is
+an integer derivative order and cannot be traced.
+
+The working shape separates the two roles of beta:
+
+    d = constantbetadf(pot=pot, beta=0.3)   # CONCRETE -> fixes _m, _halfint,
+                                            #   _alpha, and the numpy calibration
+    d._beta = <tracer>                      # DIFFERENTIABLE beta at EVAL time
+    grad(fE)                                # flows
+
+Measured, n=400, h=1e-4, FD reference on the BACKEND path (not numpy — that one
+is noise-dominated below h~1e-4, established earlier):
+
+    FD reference : -2.3980786327e-01
+    jax          : -2.3980785146e-01   rel 4.924e-08
+    torch        : -2.3980785146e-01   rel 4.924e-08
+
+Both backends agree with each other exactly and with FD to 5e-8 — which is the
+general branch's own quadrature floor (~3e-7 vs the closed form), so this is at
+the achievable limit, not a loose tolerance.
+
+Also confirmed: the 7 ruff E731 in this file are IDENTICAL before and after the
+change — pre-existing, not introduced.
+
+**Open API question for Jo** (not mine to invent): setting `d._beta` is a private
+attribute, not an interface. The mechanism is proven; how a user should *supply*
+the differentiable beta is a design choice — an `fE(E, beta=...)` override, a
+dedicated method, or something else.
