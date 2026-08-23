@@ -51904,3 +51904,44 @@ Reproduction dispatched before touching anything: `test_streamTrack_multi_parall
 (a purpose-built multi=True test) under forced jax, with load sampled every 10s --
 low load through a long run means deadlock, high load means merely slow
 (memory `load-average-distinguishes-hung-from-slow`).
+
+### gh#1372 OPEN — parallel_map deadlocks under jax; run serially instead
+
+Chased the "one line = 72% of jax deferrals" finding to its cause and fixed it.
+
+**Reproduced first.** `test_streamTrack_multi_parallel` under forced jax: 14
+forked children alive, load average **0.06-0.36**, no progress in 9 minutes.
+Fourteen processes at ~0.1 load are parked, not working -- that is the
+hung-vs-slow discriminator, and it confirms the ledger note's "DEADLOCKS, does
+not merely run slow" rather than taking it on trust.
+
+**Mechanism, already documented in the tree.** `restrict_to_single_thread`'s
+docstring says it outright: torch's pool survives a fork once the child is
+capped to one thread, but "jax has no equivalent knob ... and the only cure
+available there is not forking at all". That cure is already implemented TWICE
+in `parallel_map`, for Windows and for jit mode, both plain
+`return list(map(...))`. This adds the third case. The fix was sitting in a
+docstring the whole time.
+
+**A/B:** hung >540s without the guard, **passed in 46.3s** with it.
+
+Placement: `fork_deadlocks_backend()` went into `galpy.backend` beside
+`restrict_to_single_thread`, not into `galpy.util.multi` -- backend knowledge
+belongs in the backend package.
+
+Two tests, in the existing `test_backend_multi.py` idiom of asserting the
+MECHANISM (a deadlock is a hang, so a test that waits on the join is useless):
+child-pid == parent-pid, plus a **negative control** that numpy still forks. The
+control matters: a guard that serialized everything would pass the jax test
+while silently costing every numpy user their cores. Verified the jax test has
+teeth by removing the guard -- it fails (pids differ), other four still pass.
+
+**Ledger deliberately NOT touched in this PR.** Whether `jax
+tests/test_streamdf.py` can come off the slow-skip list depends on whole-file
+timing, not on the deadlock alone; that measurement is running separately. A
+whole-file entry worth ~70 deferrals deserves its own evidence.
+
+Two process notes: pre-commit's isort rewrote `__init__.py` and REJECTED the
+first commit (SHA had not moved -- checked, per the standing habit); and
+`pkill -f "<pattern>"` killed my own shell twice because the wrapper's command
+line contains the pattern. `test_streamd[f]` fixes that.

@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-23 (gh#1371 MERGED 856ceccc; GROUP A COMPLETE; no open PR)
+# Vacation status snapshot — 2026-08-23 (gh#1372 OPEN: jax fork deadlock)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -13,7 +13,19 @@ answer. `log.md` is the trace; read this first and go there only for the why.
     feat/backends          982b1781
     feat/backends-develop  856ceccc   (ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PR — NONE. Next = task #224 (constantbetadf d/dbeta), fully scoped.
+## Open PR — gh#1372 backend/jax-fork-serial @ 8733e8f6 (CI running)
+
+parallel_map forks into a DEADLOCK under jax (reproduced: 14 parked children,
+load 0.06-0.36, >540s no progress; 46.3s with the fix). Cure = don't fork, the
+same serial path parallel_map already uses for Windows and jit mode.
+Ledger intentionally untouched; whole-file timing measuring separately in
+/var/tmp/forkjax to decide whether `jax tests/test_streamdf.py` (~72% of ALL
+jax deferrals, a whole-FILE entry) can be un-deferred.
+
+Task #224 (constantbetadf d/dbeta) is PARKED on a Jo judgement call: freezing
+the integration-limit heuristic costs up to 1e-4 on the gradient (h-converged,
+so the FD reference is sound and the AD genuinely differs). Either choice is
+defensible; shipping it silently as exact is not.
 
 GROUP A COMPLETE (forced-backend construction, no setup islands left):
     gh#1369 77a74fdb  Einasto + ExpTruncNFW
