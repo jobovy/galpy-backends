@@ -51126,3 +51126,36 @@ exp1 float32 red herring earlier today, now three times in one session. And the
 find only happened because the worktree name collided: `git worktree add
 /var/tmp/coerce` failed with "already exists", which is what made me look. A
 plain "search utilities first" habit should not depend on a lucky collision.
+
+### gh#1368 MERGED `45221587`; gh#1369 opened (the island fix)
+
+gh#1368 went fully green (154 pass / 0 fail) and merged. The two codecov fails
+that sat red for three hours were the incomplete-upload phantom and healed
+themselves as the coverage shards landed — the head figure climbed 69.33% ->
+85.98% -> parity. Worth remembering the shape: a codecov "drop" while shards are
+still pending is arithmetic, not a regression.
+
+Merge audit on the final diff: the only `if` is `if not is_backend_array(n)` — a
+TYPE dispatch, not a branch on array VALUES, so not the if->xp.where class; the
+two `def`s are local residual closures, not reusable helpers; both new imports
+are existing shared utilities.
+
+Two CI-ops notes. I freed runners by cancelling the superseded SHA's three
+in-flight runs (queue depth was 11); two cancelled normally and one stayed
+`queued` after an accepted cancel — the wedge signature — and needed
+`force-cancel`. And the last job to finish was the **push-event duplicate** of
+the test_backend shard, whose pull_request twin had already passed; that one
+must NOT be cancelled, since cancelling a same-SHA push run blocks the merge.
+
+**gh#1369** then fixes the island itself: `coerce_coords` at the top of
+`__init__` for Einasto and ExpTruncNFW, plus a `_CONSTRUCTS_ON_BACKEND` registry
+in test_backend_conventions with two parametrized checks. A/B: all 4
+forced-backend constructor checks fail on base; the 2 no-op guards pass on both.
+Gate 387/387/387 + 1288 numpy.
+
+The line worth keeping from this one: **the existing Einasto tests passed
+identically before and after the fix**, because they call the setup helper with a
+hand-passed value and never construct anything. A forced-backend test that never
+runs the constructor cannot see a construction-time numpy fall-through. That is
+what "tests should meaningfully run on the backend" has to mean operationally —
+assert on what the CONSTRUCTOR stored.

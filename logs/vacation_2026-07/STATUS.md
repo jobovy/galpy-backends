@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-22 (gh#1368 OPEN, awaiting CI)
+# Vacation status snapshot — 2026-08-23 (gh#1368 MERGED 45221587; gh#1369 OPEN)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -11,19 +11,19 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 
     main                   5d7b7e76
     feat/backends          982b1781
-    feat/backends-develop  08db5d90   (ledger xfail 8 / slow_skip 61 / skip 68)
+    feat/backends-develop  45221587   (ledger xfail 8 / slow_skip 61 / skip 68)
 
 ## Open PR
 
-**gh#1368 `1ae24301` — EinastoPotential differentiable d_n solve (jax/torch).**
-Branch `backend/einasto-dn-differentiable`, based exactly on develop 08db5d90.
-Files: `galpy/potential/EinastoPotential.py`, `tests/test_backend_spherical.py`.
-Ledger delta: NONE. Local gate: 4/4 arms green (231/231/231 + 1288 numpy).
-A/B: 9 of 12 new tests fail on base; the other 3 are byte-identity guards that
-must pass on both.
+**gh#1369 `b17a8beb` — potential: build on the forced backend at construction.**
+Branch `backend/forced-setup-coercion` on develop 45221587. coerce_coords at the
+top of Einasto/ExpTruncNFW `__init__` + `_CONSTRUCTS_ON_BACKEND` registry in
+test_backend_conventions. A/B 4/4 fail on base. Gate 387/387/387 + 1288 numpy.
+Ledger delta: none.
 
-Merged earlier today: gh#1363 19f31a54, gh#1364 a4193e84, gh#1365 46ea6ade,
-gh#1366 47875227, gh#1367 08db5d90.
+Merged 2026-08-22/23: gh#1363 19f31a54, gh#1364 a4193e84, gh#1365 46ea6ade,
+gh#1366 47875227, gh#1367 08db5d90, **gh#1368 45221587**.
+
 
 ## Live findings from gh#1368
 
