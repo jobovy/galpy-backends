@@ -51316,3 +51316,44 @@ opposite verdicts. develop's last five runs of that shard are all green. This is
 exactly the free A/B from `same-sha-duplicate-run-is-a-free-ab`: when push and
 pull_request both run every job, a verdict split at one SHA settles
 flake-vs-real for nothing. Check that BEFORE investigating a suspicious red.
+
+### 2026-08-23 (later) — gh#1369 `9b8d75c4`: the tracer-safe fix holds
+
+Local gates finished green on every arm that matters:
+
+    test_sphericaldf --backend=torch     223 passed   (the grid consumers)
+    test_sphericaldf  numpy              223 passed
+    test_potential.py numpy             1288 passed, 102 skipped
+    backend trio x3 arms                 390 passed, 1 skipped each
+
+(The "3 failed" trio lines in gate1369b.log predate the tracer-safe fix; the
+file is a running log, not a final verdict — read the timestamps.)
+
+### Second same-SHA flake, and this time I checked the twin FIRST
+
+A red appeared on the `test_actionAngleTorus/conversion/interp_potential/util`
+shard. Applied the twin check before investigating, which is the order I got
+wrong yesterday:
+
+    9b8d75c4  pull_request  FAILURE
+    9b8d75c4  push          SUCCESS      <- same SHA, same code
+    develop, last 4 runs of the shard: all success
+
+Then confirmed it is infrastructure, not code: the job log is 19 KB containing
+only checkout and cleanup — **no pytest output at all** — and ends with
+`Process completed with exit code 4`, which is pytest's *usage* error, not a
+test failure. Nothing ran. Re-run is the correct response, but `gh run rerun`
+refuses while sibling jobs are still in flight ("This workflow is already
+running"), so it waits for the run to finish. Next wake's first action.
+
+### A scare that measured out to nothing
+
+The process table showed ~55 python processes on the box, some **22 days** old,
+about 40 of them on a *deleted* `/var/tmp/ssmeas`, totalling 55.6 GB RSS. That
+looks like exactly the contention that corrupts measurements. It is not: they
+are idle pytest-xdist worker bootstraps
+(`python -u -c "import sys;exec(eval(sys.stdin.readline()))"`) blocked on stdin
+with **0:00:00 CPU time each**, and the RSS is mostly shared copy-on-write —
+`free` reports 19 GB used of 125 with 106 available, load 1.36. So: leaked, but
+costing nothing. Left alone. Worth writing down because the headline number
+(55 GB, 22 days) invites a cleanup that would have been pure risk for no gain.
