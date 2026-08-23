@@ -50995,3 +50995,44 @@ Gate, each arm with its OWN shard's flags:
 
 Ledger delta: none. A/B: 9 of 12 new tests fail on base, the other 3 being the
 byte-identity guards that must pass on both arms.
+
+### Task #222 scoped, and its obvious design MEASURED DEAD
+
+While gh#1368's CI ran, I scoped the gammainc/gammaincc follow-up. galpy already
+has the mechanism -- `_NATIVE_UNRELIABLE[backend]` in `special/_router.py`, the
+same slot that forces jax off its broken hyp2f1 -- so "add gammaincc to torch's
+set, write a fallback" looked like a half-day PR.
+
+First I extended the accuracy measurement. torch's P and Q have **identical**
+errors (one `igammac` kernel), and the switch is a hard threshold, not a drift:
+
+    a       20        21        30       60       120
+    torch   1.1e-16   4.04e-10  3.4e-10  2.4e-10  1.7e-10
+    jax     5.6e-15   4.6e-15   1.2e-14  1.9e-14  5.6e-14
+
+Then I prototyped the fallback (series for x<a+1, Lentz CF above) and measured
+what iteration count the accuracy needs: 120/80 holds <= 6e-14 out to a=150, and
+more iterations do not help (exp/gammaln roundoff floor). Then I timed it:
+
+    shape        native      CF(80)             series(120)
+    scalar        2.8us     5049us  (1788x)     1073us  (380x)
+    1k array      219us    10190us  (  46x)     2377us  (10.9x)
+    100k array   9237us    98017us  ( 10.6x)   27174us  ( 2.9x)
+
+`EinastoPotential._evaluate` calls gammaincc **per evaluation**. So Design A
+would have bought a 1e-10 accuracy improvement for a ~1000x scalar slowdown on a
+hot path -- exactly the failure mode in memory
+`migration-flips-numpy-fallthrough-to-eager-slow`, and it would likely have
+shown up as CI timeouts rather than as an obvious mistake.
+
+Design B instead: keep torch's native forward and supply only the MISSING
+gradient via a custom autograd rule. dQ/dx is elementary and cheap; dQ/da needs
+the series/CF, but in the BACKWARD pass only, so the 120-iteration cost is paid
+once per gradient rather than once per evaluation. That fixes the actual blocker
+(torch cannot differentiate gammaincc at all) and leaves the 2.4e-10 rounding
+documented rather than "fixed" at 1000x.
+
+Worth noting the order this went in: the accuracy number alone would have
+justified Design A. It was the COST measurement that ruled it out, and I only
+took it because the function sits in an evaluation path. Measure the hot-path
+cost of a fallback BEFORE deciding it is an improvement.
