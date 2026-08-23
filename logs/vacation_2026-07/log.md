@@ -51095,3 +51095,34 @@ ctypes -- and it did not.
 gh#1368 gains commit `56921b42` dropping the wrong-contract test. It stays the
 prerequisite -- coercion is only useful once `_calculate_dn` HAS a backend
 branch. Task #223 carries the coercion + Group A + constructor-path tests.
+
+### The coercion helper already existed — I nearly rewrote it
+
+Before writing `as_backend_param`, I looked for prior art and found a stale
+worktree sitting on `feat/coerce-backend-leaves`, whose single commit is Jo's
+own **gh#1139, merged in July**: "potential: coerce scalar coords at migrated
+leaves (forced-backend fix)". Its docstring already promises the exact contract
+I was about to re-derive:
+
+* numpy → **strict object-identical pass-through**, so the numpy path stays
+  byte-identical;
+* otherwise a plain Python scalar is lifted to the backend's **float64**,
+  device-anchored and grad-safe — explicitly because "a bare `asarray` of a
+  Python float would give torch float32 and miss the tolerances".
+
+Verified: unforced returns the same object; forced torch gives Tensor float64;
+forced jax gives ArrayImpl float64. So the whole site pattern is
+
+    xp = get_namespace()          # no args -> the FORCED namespace, or numpy
+    (n,) = coerce_coords(xp, n)
+
+gh#1139 applied this to coordinate INPUTS at migrated leaves. Task #223 is the
+same helper at a new call site — constructor PARAMS. Nothing new belongs in
+`galpy.backend`, which is the opposite of what task #223 said an hour ago.
+
+Two process notes. The jax row in my first check read `float32` and looked like
+a helper bug; it was my probe missing `jax_enable_x64` — the same trap as the
+exp1 float32 red herring earlier today, now three times in one session. And the
+find only happened because the worktree name collided: `git worktree add
+/var/tmp/coerce` failed with "already exists", which is what made me look. A
+plain "search utilities first" habit should not depend on a lucky collision.
