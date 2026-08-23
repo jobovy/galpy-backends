@@ -51618,3 +51618,53 @@ Also settled: `lo = 10.0 ** self._logstartt(Ecl)` comes from the numpy-calibrate
 spline — an integration-limit heuristic, not physics. Differentiating through it
 would be differentiating a heuristic; it should be treated as a constant w.r.t.
 beta (stop-gradient), and that choice stated rather than left implicit.
+
+### d/dbeta: measured properly, and two of my own measurements were wrong first
+
+Three corrections, in the order I made and then caught them.
+
+**1. The moving-quadrature-node worry is REFUTED numerically.** Differentiating
+`_fE_backend` does move the nodes (the substitution depends on alpha), but the
+derivative converges as cleanly as the value:
+
+    n:        25 -> 50 -> 100 -> 200 -> 400
+    fE   |d|:      9.9e-8  4.6e-9  2.0e-10  6.5e-12
+    dfE/db|d|:     9.7e-8  6.9e-9  6.4e-10  6.8e-11
+
+No plateau. At the default n=100 the gradient is converged to ~6e-10, so the
+spurious term is negligible and a fixed-order gate is defensible — with a
+convergence check kept as the thing that PROVES the gate is meaningful.
+
+**2. My first convergence run measured nothing.** I monkeypatched `_QUAD_N_FE`
+and swept 25..400 on the numpy path, getting `0.00e+00` change everywhere. That
+should have stopped me instantly: a 16x refinement that moves nothing is not a
+converged integral, it is an unused knob. `_QUAD_N_FE` only appears in
+`_fE_backend`; the numpy `fE` uses scipy's ADAPTIVE `integrate.quad`. Had to
+force a backend (and assert `is_backend_array` on the result) to measure at all.
+Same family as memory value-checks-cannot-see-numpy-fallback.
+
+**3. My FD-stability table was contaminated.** It showed the numpy and backend
+FDs both plateauing and agreeing. They do not — that loop interleaved a
+forced-jax call with each numpy call. Re-run with numpy ONLY and no jax in the
+process:
+
+    h:      1e-3        1e-4        1e-5        1e-6        1e-7
+    numpy: -2.3980829  -2.3980199  -2.3945014  -2.4060619  -2.3416026  (e-01)
+    backend converged (n=400):     -2.3980785e-01
+
+The numpy FD is noise-dominated below h~1e-4: scipy's adaptive-quadrature error
+is not smooth in beta, so differencing amplifies it by 1/(2h). At h=1e-3 it
+agrees with the backend to **4e-7**. So the paths AGREE; the "1.5e-3 discrepancy
+between numpy and backend derivatives" I flagged an hour ago was my own FD noise,
+not a real disagreement. Retracted.
+
+**Consequence, and it reverses my written plan**: task #224 said "FD reference
+computed on the NUMPY path, so this compares against an independent evaluation".
+That is WRONG at any normal step size. The FD reference must be the BACKEND path
+at high quadrature order, or the numpy path at LARGE h (~1e-3..1e-4). Corrected
+on the task.
+
+Measurement hygiene, thrice over: never interleave a forced-backend call into a
+loop measuring the numpy path; a zero-change sweep means the knob is unused, not
+that the answer is converged; and an FD that does not plateau in h is not a
+reference at all.
