@@ -51201,3 +51201,40 @@ measurement of this PR. The coercion is measured by the is_backend_array check,
 which does fail 4/4 on base.
 
 Gate after the addition: 390 passed / 1 skipped on all three arms.
+
+### 2026-08-23 — Group A completion scoped (and the byte-identity gate cleared)
+
+The blocker for finishing Group A was whether moving those six classes off
+`scipy.special.gamma` onto the routed `galpy.backend.special.gamma` can keep the
+numpy path byte-identical. It can:
+
+    13/13 scalar values byte-identical AND same type (numpy.float64)
+    97-point array: numpy.array_equal == True
+
+So the routed helper is a strict pass-through to scipy on numpy, and the
+migration is safe. Concrete scope, measured:
+
+    FerrersPotential                1 site
+    TwoPowerTriaxialPotential       3
+    constantbetadf                 16   <- the outlier
+    isotropicPowerLawdf             2
+    osipkovmerrittPowerLawdf        4
+    constantbetaPowerLawdf          3
+                                   --
+                                   29 call sites across 6 files
+
+Each also needs its constructor params coerced (the gh#1369 pattern) and a
+registry entry. Note the two halves are *both* required and neither works alone:
+coercing without migrating the call site feeds scipy a tensor it silently
+detaches; migrating without coercing leaves the param a float so nothing
+reaches the backend under a force.
+
+### CI ops: the same run wedges every time
+
+gh#1369's CI sat at 2/151 for an hour. Cause was contention plus the superseded
+SHA `b17a8beb` still holding 6 runs. Cancelled them (repo queue 20 -> 14); five
+went straight to `cancelled` and **the All-backend tests run again stayed
+`queued` after an accepted cancel** and needed `force-cancel`. That is now twice
+in a row, same workflow -- it is the one whose last job never gets a runner, so
+a plain cancel has nothing to interrupt. Worth going straight to force-cancel
+for All-backend on a superseded SHA rather than waiting out the normal cancel.
