@@ -52036,3 +52036,37 @@ if they time out, the guard needs narrowing to the case that actually deadlocks.
 Noting this against myself: I opened this PR describing it as a clean
 correctness fix, and it is, but I had not checked what else forks. "Who else
 calls the thing I changed" is a question to ask BEFORE opening, not after.
+
+### gh#1372: 152/152 green, the 2.73x question is CLOSED empirically
+
+Both open questions from last wake resolved, and in the direction that makes the
+PR shippable:
+
+* **All 6 jax orbit shards PASS** with the guard in place. The 2.73x serial cost
+  on Python-path multi-orbit integration is absorbed -- the shards had headroom I
+  could not see from a microbenchmark. I was right to read CI rather than
+  redesign on the strength of a 12-orbit timing.
+* **The jax streams shard PASSES**, so the fix is now validated in CI on ~76
+  newly-running tests rather than only on my box. That was the whole point of
+  folding the un-defer in.
+
+Shard cost, predicted vs actual (I predicted ~15 min from 6m10s + ~554s):
+
+    jax streams    6m10s -> 15m40s     torch  11m38s -> 11m53s (untouched)
+
+The torch column is the control: unchanged, as it must be, since the guard is
+keyed on the active backend.
+
+**Pre-merge audit — clean on all three:**
+* *if -> xp.where array-input class*: the one added `if` branches on a CONTROL
+  predicate (which backend is active), not on array data, so it is not that
+  class; and traceability is unaffected because parallel_map already returns
+  serially under jit mode.
+* *duplication*: exactly one `backend() == "jax"` exists in galpy/ -- mine.
+  Nothing pre-existing was reinvented.
+* *placement*: `fork_deadlocks_backend` at _namespaces.py:508, directly after
+  `restrict_to_single_thread` at 486.
+* numpy byte-identity: guard is False unless the active backend is jax.
+
+Remaining: the test_backend shard (70-100 min, carries the new tests + coverage)
+and all-clear. Merge when those turn.
