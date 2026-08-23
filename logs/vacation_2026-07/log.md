@@ -51994,3 +51994,45 @@ rather than left contradicting the diff.
   settle until every shard uploads.
 
 Neither warranted action this wake beyond confirming there is no mechanism.
+
+### Risk I found in my OWN PR: the jax guard costs 2.73x on multi-orbit integration
+
+Chasing "did the fork fix unblock other deferrals?" I greped who calls
+parallel_map, and the answer changed the question. Two findings:
+
+**1. No further un-defer available.** The remaining ">700s TIMEOUT" jax entries
+(dynamfric, FDMdynamfric, 4x poisson_surfdens) don't pass `multi=`, and their
+modules never call parallel_map. They are genuinely slow, not misfiled
+deadlocks. Recording the negative result so nobody re-runs 6x700s to find out.
+
+**2. But `Orbits.py` and the three integrators DO call parallel_map**, and
+`_NUMCORES` comes from `OMP_NUM_THREADS`, which the workflows never set -- so it
+falls back to `cpu_count()` (~4 on a runner). Multi-orbit integration on the
+PYTHON path therefore forks today, under jax, and passes. My guard makes that
+serial. Measured at CI-like OMP_NUM_THREADS=4, 12 orbits, method='odeint':
+
+    serial (WITH my guard)     9.05s
+    fork   (WITHOUT my guard)  3.32s      -> 2.73x
+
+That matters because the jax orbit shards already carry entries measured "only
+12%-32% under the cap". A 2.73x hit on the Python-path multi-orbit tests could
+push passing tests over -- which would trade 76 un-deferred stream tests for N
+newly-deferred orbit tests. Not obviously a win.
+
+Two honest readings, and I can't pick between them from the armchair:
+* **Cost:** jax+fork demonstrably works for these orbit tests today, so the
+  guard is broader than the bug requires and buys nothing here but slowness.
+* **Benefit:** jax's own warning says deadlock is *likely*, not certain -- this
+  is a race. Several jax orbit entries are ledgered as "(failed)" or "TIMEOUT",
+  and an intermittent fork deadlock is exactly what that looks like. If so,
+  serializing CONVERTS those timeouts into passes and the 2.73x buys
+  correctness.
+
+The in-flight CI run is the direct measurement -- those shards are executing
+with the guard right now -- so the right move is to read them, not to redesign
+preemptively. If they go green the cost is absorbed and the question is closed;
+if they time out, the guard needs narrowing to the case that actually deadlocks.
+
+Noting this against myself: I opened this PR describing it as a clean
+correctness fix, and it is, but I had not checked what else forks. "Who else
+calls the thing I changed" is a question to ask BEFORE opening, not after.
