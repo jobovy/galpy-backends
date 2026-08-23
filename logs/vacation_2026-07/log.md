@@ -52070,3 +52070,11 @@ keyed on the active backend.
 
 Remaining: the test_backend shard (70-100 min, carries the new tests + coverage)
 and all-clear. Merge when those turn.
+
+Also checked (negative, recorded so it is not re-checked):
+`tests/test_streamspraydf.py::test_center` is NOT a fork victim -- it passes no
+`multi=`, and `galpy/df/streamspraydf.py` never calls parallel_map at all. It
+stays deferred on its own merits.
+
+Both codecov checks (patch AND project) PASS on gh#1372, so the new helper and
+guard are covered and nothing regressed -- coverage rule satisfied.
