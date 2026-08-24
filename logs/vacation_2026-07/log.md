@@ -52205,3 +52205,45 @@ What finally settled it was validating the ARBITER (`mpmath-quadosc-final-arbite
 comparing scipy AND my series against 50-digit mpmath, which showed scipy exact
 (0 .. 5.7e-14, mostly 2e-16) and mine at 3.6e-14 .. 1.1e-13. That single check
 would have saved the three detours -- do it FIRST next time a "floor" appears.
+
+### #222: the regularised-prefix implementation WORKS -- and the bar was mis-stated
+
+Implemented last wake's prescribed cure and verified it. Two rounds:
+
+**Round 1 (wrong).** Naive regularised prefix was erratic: exact at x=a but
+3.4e-07 at a=40,x=35 and 0.31 at a=0.5. Two bugs, both mine:
+* My `u - log1p(u)` used a truncated series for |u|<0.25. At u=-0.125 the first
+  omitted term (u^8/8) is 2.4e-7 relative -- exactly the observed error. The
+  threshold was BACKWARDS: the direct `u - log1p(u)` only loses ~log10(2/|u|)
+  digits (~1.2 at u=0.125), so it beats the series everywhere except |u| tiny.
+  Series now only below 1e-4.
+* The Stirling remainder omega(a) asymptotic series needs a >~ 20; at a=5 it is
+  ~1e-11 and at a=0.5 it is useless. Fixed by using the NAIVE exponent for
+  a < 20 -- where it is already accurate, because lnGamma(a) is O(1) there and
+  no large cancellation exists. So the two methods are each used exactly where
+  the other fails.
+
+**Round 2 (verified).** Hybrid prefix, arbiter mpmath at dps=60:
+
+      a       x     mine err    scipy err
+    2.0     2.0   3.74e-16    5.61e-16
+   40.0    12.0   3.81e-15    1.11e-14
+   80.0    24.0   7.27e-15    7.18e-14     <- 10x better than scipy
+  200.0    60.0   4.73e-15    1.03e-13     <- 20x better than scipy
+  200.0   200.0   0.00e+00    6.54e-16
+
+Mine is as good as or better than scipy at 19 of 20 grid points. The design is
+viable; find and characterise the 1 outlier next.
+
+**The bar was mis-stated, by me, last wake.** I wrote "torch is exact to ~1e-16
+for a<=20, so a 1e-13 fallback would DEGRADE it". But that 1e-16 was
+torch-vs-SCIPY agreement, not accuracy. Against 60-digit truth scipy itself
+carries ~2.4e-15 at a=10 and ~1e-13 at a=80-200. So the real bar is "as accurate
+as scipy" (the numpy path IS scipy), not 1e-16 -- and the fallback clears it.
+
+Generalises: whenever a tolerance is quoted, check what it was measured
+AGAINST. "Agrees with the incumbent" and "is correct" are different claims, and
+the first silently inherits the incumbent's error. Same family as
+`mpmath-quadosc-final-arbiter`, now bitten from the opposite direction: last
+wake the arbiter check saved me, this wake the missing arbiter check had already
+misled me into declaring the whole approach non-viable.
