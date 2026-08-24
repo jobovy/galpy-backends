@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-24 (gh#1374 near-green; Group 1 sweep running; PAUSE for Jo's #1204 review after)
+# Vacation status snapshot — 2026-08-24 (gh#1374 MERGED; gh#1380 Group-1 ledger OPEN; PAUSED for Jo's #1204 review)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -13,13 +13,19 @@ answer. `log.md` is the trace; read this first and go there only for the why.
     feat/backends          982b1781
     feat/backends-develop  856ceccc   (ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PR — gh#1374 backend/gammainc-fallback @ eab6c41b (143 pass / 9 pending)
+## Open PR — gh#1380 ledger/group1-measured @ c2744b79 (CI running)
 
-torch gammainc/gammaincc differentiable in the ORDER: native forward + custom
-backward (analytic d/dx closed form; series/CF d/da only when a requires grad).
-485x -> 2.08x scalar after the redesign. Pre-merge audit DONE and clean.
-Follow-ups: NONE (the 7 other autograd.Functions wrap C calls; generate_vmap_rule
-would be silently wrong there).
+Group 1 done: all 10 previously-unmeasured jax deferrals measured. 3 un-deferred
+(25.2s / 83.4s / 139.6s), 7 stay with measured notes. jax slow_skip 33 -> 30,
+UNMEASURED 10 -> 0.
+
+## PAUSED for Jo's review of #1204 (as agreed)
+
+Remaining 30 jax deferrals are ONE root cause: jax eager per-call overhead
+(~5 ms flat) -- Python-loop orbit integration and per-pixel grid loops. That is
+the vectorization project (tasks #74/#79/#130), weeks not days, deliberately NOT
+started before the review.
+
 
 ## JO'S PLAN: finish gh#1374 -> Group 1 measurement sweep -> PAUSE for #1204 review
 

@@ -52707,3 +52707,45 @@ information: the first fixed a cap chosen for precision I did not need, the
 second followed from discovering the file/needed ratio. What I should have done
 at setup is ask "how many of this file's tests do I need, and does this file
 have fixtures?" -- both are one grep, and together they were worth ~2 hours.
+
+### Group 1 COMPLETE — gh#1380 open. jax slow_skip 33 -> 30, unmeasured 10 -> 0
+
+Final sweep results, all ten measured:
+
+    UN-DEFER (3)
+      test_qdf::test_meanjz_noaac_issue300              25.2s   (12x under cap)
+      test_streamspraydf::test_center                   83.4s
+      test_galpypaper::test_diskdf                     139.6s
+    STAY (7)
+      noninertial ..._scalarfuncomegaz                 343.2s  (CI~244s, ~19% under)
+      noninertial ...omegadot                          391.3s  (CI~278s, ~7% under)
+      noninertial ..._funcomegaz                       397.0s  (CI~282s, ~6% under)
+      noninertial arbitraryaxisrotation                >400s   (cap)
+      noninertial ...omegafunc                         >400s   (cap)
+      actionAngleStaeckel_python_c_freqsAngles         >400s   (cap)
+      qdf sampleV_interpolate                          >900s
+
+3 of 10 stale -- lower than my "plausibly ~5" estimate but the same ballpark.
+
+**The three marginal ones are the interesting call.** 343/391/397s local become
+~244/278/282s on CI against a 300s cap, i.e. they would PASS. Un-deferring them
+would swap a deferral for a flake, and the ledger already carries precedent for
+exactly that judgement (streamTrack_with_progpot "straddles the margin on a ~2%
+wobble, which is noise, not a change"). So they stay WITH the margin written
+down, which is more useful than either silently keeping them or optimistically
+dropping them.
+
+**Verification that mattered before pushing:** the diff showed 10 removed lines,
+which looks like 10 un-defers. Seven of those are modified lines (removed +
+re-added with a note). Deleting 7 deferrals would silently un-defer slow tests
+and blow up the shard, so I checked each of the 7 is still present by name --
+including the bare `test_arbitraryaxisrotation`, whose first grep read 0 only
+because my pattern anchored `$` and the line now ends in a comment. Net: 30
+entries (33 - 3), 0 unmeasured.
+
+Per Jo's instruction the deliverable was the PR, not the table -- and the "simple
+change" clause found no takers: the only tractable-looking lead
+(sampleV_interpolate) turned out to be the per-pixel loop, i.e. the vectorization
+project.
+
+**PAUSING HERE for Jo's review of #1204**, as agreed.
