@@ -52867,3 +52867,39 @@ contention — 74 queued on gh#1380 alone. A third PR would add ~150 jobs to the
 very queue that is delaying the merge I am waiting on, which is the specific
 mistake [[all-clear-queued-rerun-and-ledger-rebase]] warns about. Opens as soon
 as gh#1380 lands.
+
+### Review batches 2 and 3: 5 findings -> 10
+
+Jo posted two more comment batches. Full list now 10; all 10 reproduced locally.
+
+**Finding 10 (`symmetric_quad` rejects a finite eager torch limit)** folded into
+the already-pushed finding-2 branch as a second commit -- same file, PR not open
+yet, so no force-push question ([[pr-granularity-less-atomic]]).
+
+The interesting part was the SHAPE of the fix. The obvious repair -- treat every
+backend array as finite -- makes the reported error go away and introduces a
+worse one: an eager backend `inf` would then take the FINITE branch and
+integrate [-inf, inf] as a bounded interval, i.e. trade a loud crash for a
+silent wrong answer. Asking the BACKEND for finiteness instead keeps the
+semi-infinite branch reachable. Two of the new tests pass on both sides of the
+A/B on purpose: they guard the fix's shape, not the bug. Worth being explicit
+that they are not a reproduction, or they read as evidence they are not.
+
+Also pinned the GRADIENT, not just the absence of a crash: the whole point of an
+eager grad-tracking limit is d/db, and `d/db int_-b^b s^2 ds = 2b^2 = 2` comes
+back exact. "It no longer raises" would have been a hollow green
+([[stringent-gradient-tests]]).
+
+**Findings 3 and 4 reproduced verbatim:**
+
+    d/dR surfdens(..., forcepoisson=True) -> ConcretizationTypeError
+    d/dz same call                        -> 0.20928850209359318  (works)
+    galcenrect_to_XYZ(Xsun=torch grad)    -> Can't call numpy() on Tensor...
+
+Both are next, as one PR (`Potential.py` + `coords.py`, disjoint from the two
+open PRs).
+
+**Finding 5 needs a decision, not an implementation.** Jo's read is that
+`set_jit("jax")` only makes sense with the jax backend, so it should imply it.
+Agreed -- but "implies" has two materially different readings for a PUBLIC API,
+and they are not interchangeable, so this is Jo's call rather than mine.
