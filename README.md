@@ -253,7 +253,17 @@ backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). 
 | #1274 | interpRZPotential: keep grids + off-grid fallbacks in internal units (pre-existing numpy bug) | GREEN (151/0) — targets `main`, Jo's to merge |
 | #1275 | SpiralArms tolerance cleanup + interpSpherical range check independent of FDM + NFW alpha/beta on conc/rmax paths | MERGED `44b06e31` |
 | #1278 | AnyAxisym: geometric panel grading so the a=R peak resolves at any \|z\| (K=24 was 95% low at 1e-12) | MERGED `f963eb42` |
-| #1279 | `--jit` gets its own slow-skip list, populated by measurement; backend-aware actionAngle bars (#171) | OPEN — CI running |
+| #1279 | `--jit` gets its own slow-skip list, populated by measurement; backend-aware actionAngle bars (#171) | MERGED `d2ad93c9` |
+| #1363 | ledger: split the streamTrack whole-file defer — 43 tests back into jax | MERGED `19f31a54` |
+| #1364 | backend: `as_backend_constant` must not name the default device (1.5x eager win on wrapper forces) | MERGED `a4193e84` |
+| #1367 | `ExpTruncNFW.from_nfw`: differentiable mass → rc solve (implicit function theorem; 8e-12 vs FD) | MERGED `08db5d90` |
+| #1368 | `EinastoPotential`: differentiable d_n solve on jax/torch (regularized residual, same root) | MERGED `45221587` |
+| #1369 | potential: build on the forced backend, not scipy, at construction (Einasto + ExpTruncNFW) | MERGED `77a74fdb` |
+| #1370 | Ferrers/TwoPowerTriaxial: gamma normalizations on the backend (coerce at point of use) | MERGED `542eae05` |
+| #1371 | power-law spherical DFs: fE normalizations on the backend; `from scipy import special` gone | MERGED `856ceccc` |
+| #1372 | `parallel_map`: run serially under jax instead of forking into a deadlock; un-defers `test_streamdf.py` (~76 tests) | MERGED `a063e674` |
+| #1374 | special: backend-op `gammainc`/`gammaincc` differentiable in the ORDER (native forward + custom backward; 485x → 2.08x) | MERGED `068de984` |
+| #1380 | ledger: un-defer 3 measured-stale jax entries; measure the rest of Group 1 (unmeasured 10 → 0) | OPEN — CI running |
 
 ## Upstream issues filed from this work (numpy-path defects, not backend)
 
