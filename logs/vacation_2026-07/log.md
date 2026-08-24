@@ -52422,3 +52422,38 @@ differentiate w.r.t. the order.
 This is roughly the "Design B" I rejected several wakes ago for leaving the
 precision gap. The correct answer was B plus a narrow forward re-route, not the
 uniform replacement I built.
+
+### gh#1374 REDESIGNED (447618da): native forward + custom backward
+
+Implemented the plan. torch now gets a `torch.autograd.Function` whose forward
+is the native kernel and whose backward supplies the analytic d/dx plus, only
+on demand, the series/CF d/da. Calls that differentiate nothing skip the
+wrapper entirely.
+
+    us/call          native   routed     was
+      scalar           11.7     24.4   5216.8   (485x -> 2.08x)
+      n = 1000        253.5    269.7   6912.4   ( 41x -> 1.06x)
+
+d/da still matches FD to ~6e-11; d/dx is now EXACT (2.1e-16) because it is the
+closed form x^(a-1) e^-x / Gamma(a) rather than differentiated quadrature. That
+is a strict improvement over the uniform version.
+
+**Two functorch requirements, both discovered by failing tests, not by reading
+docs first.** The spherical DFs reach this through `torch.func` vmap/grad, and
+a plain autograd.Function is not enough there:
+1. the combined `forward(ctx, ...)` form raises "must override the
+   setup_context staticmethod" -- needs the split forward/setup_context API;
+2. even then, "You tried to vmap over _IncGamma, but it does not have vmap
+   support" -- needs `generate_vmap_rule = True`.
+Worth remembering: **a custom autograd.Function is not automatically usable
+under torch.func.** If any caller vmaps or uses functional grad, the modern API
+plus generate_vmap_rule are mandatory, and only a vmapping test will reveal it.
+
+**Honest scope change, stated in the commit and the PR:** keeping the native
+forward gives back torch's ~5e-10 accuracy for a >~ 21. That is the pre-existing
+behaviour, not a regression, but this PR no longer fixes the PRECISION gap --
+only the differentiability one. I relaxed my own large-order parity test from
+rtol 1e-13 to 1e-8 with the reason inline, rather than leave a test asserting a
+precision galpy does not actually buy on this path. The accurate series/CF is
+still in the tree and still exercised (it IS the d/da backward), so restoring
+the forward precision later is a routing question, not a rewrite.
