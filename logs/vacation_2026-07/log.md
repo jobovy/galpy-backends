@@ -52974,3 +52974,57 @@ Corrupted my own numpy regression run by reverting files mid-flight for an A/B
 containing 2 failures, because `-x` plus xdist interrupt masks the count
 ([[never-report-partial-run-as-result]]). Re-ran clean once editing stopped
 rather than reasoning about which half was real.
+
+### The regression check, done properly on the third attempt
+
+Verdict: **no regression.** Complete junitxml failure sets, both arms in the
+same worktree, differing only in the commit:
+
+    BASE failures:    8
+    PATCHED failures: 8
+    PATCHED-only (real regressions): (none)
+    BASE-only:                       (none)
+    passes 1633 -> 1639  = exactly the 6 new tests
+
+The 8 shared failures are all `mockInterpSnapshotRZPotential` (needs pynbody) or
+C-extension comparisons -- `test_dehnen_bar_python_c_consistency`,
+`test_ExpTruncNFW_smallr_series_c`, the two `RotateAndTiltWrapper` integration
+tests, `test_InterpSnapshotRZPotential_pickling`. This worktree has no
+`libgalpy*.so` ([[worktree-missing-c-ext-fakes-passes]]), which manufactures
+exactly that set.
+
+Three attempts to get here, and the first two were both my own instrumentation
+rather than the code:
+
+1. **Corrupted by editing the tree mid-run** for an A/B
+   ([[long-measurement-needs-a-quiet-box]]).
+2. **Truncated by `| tail -6`** -- the log file then holds only the last six
+   LINES, so I could name 5 of 8 failures on one arm and 7 of 8 on the other and
+   "compared" those. Equal totals plus matching visible names looked like a
+   clean answer; it was inference from a window
+   ([[never-report-partial-run-as-result]]).
+3. junitxml, untruncated, machine-diffed. Which is what the memory already says
+   to do and what I should have done first.
+
+Also: my "still running" polls were **false positives** for a while --
+`pgrep -f "test_backend_potential_dif[f]"` was matching stale wait-loop wrapper
+shells from ELEVEN DAYS ago (etimes 965932). The bracket trick stops pgrep
+matching its own command line; it does not stop it matching someone else's
+long-dead babysitter. Load average was the tell: 2.06 with a nominal 16 workers.
+
+Branch pushed as `fix/traced-surfdens-and-galcen-rot` @ 1d29a6dd (7 files).
+PR still held behind the two-PR cap.
+
+### Finding 6 sized (next PR, must FOLLOW this one -- same file)
+
+    lbd_to_XYZ                @scalarDecorator @degreeDecorator
+    vrpmllpmbb_to_vxvyvz      @scalarDecorator @degreeDecorator
+    XYZ_to_galcenrect         @scalarDecorator
+    XYZ_to_galcencyl          @scalarDecorator
+    vxvyvz_to_galcenrect      @scalarDecorator
+    galcencyl_to_galcenrect   <none -- forces numpy internally>
+    lambdanu_to_Rz            <none -- forces numpy internally>
+
+Five carry the numpy-promoting decorator, two force numpy in the body. All are
+the INVERSE/adjacent direction of transforms whose forward direction is already
+migrated -- the same asymmetry finding 4 was.
