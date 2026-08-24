@@ -53028,3 +53028,57 @@ PR still held behind the two-PR cap.
 Five carry the numpy-promoting decorator, two force numpy in the body. All are
 the INVERSE/adjacent direction of transforms whose forward direction is already
 migrated -- the same asymmetry finding 4 was.
+
+## 2026-08-24 (cont.) -- finding 7, and a Windows red that was a known flake
+
+### The #1381 Windows red: NOT mine, settled by the free A/B
+
+`tests/test_quantity.py::test_streamgapdf_sample` failed on
+windows-latest/3.14. #1381 touches only `gammainc.py` and
+`test_backend_special.py`, so the prior was already "unrelated" -- but the
+same-SHA PUSH twin ran the IDENTICAL job and PASSED
+([[same-sha-duplicate-run-is-a-free-ab]]). Same commit, same shard, one pass one
+fail = flake, and it is the one already recorded in
+[[windows-streamgapdf-sample-flake]].
+
+Tried to re-run just that job: **"job cannot be rerun"** -- GitHub refuses a
+single-job rerun while the run still has queued siblings. So the re-run has to
+wait for the run to complete. Forcing a whole-run rerun now would re-queue ~150
+jobs behind the same contention that is already the bottleneck
+([[all-clear-queued-rerun-and-ledger-rebase]]). Deferred, not forgotten.
+
+Also of note: gh#1380's `codecov/project` **cleared on its own**, exactly as the
+phantom diagnosis predicted. 120 green / 25 queued, zero failures.
+
+### Finding 7 -- map_coordinates dispatched on the query points only
+
+    if not is_backend_array(coords):
+        return _scipy_ndimage.map_coordinates(numpy.asarray(filtered), ...)
+
+so a backend PREFILTERED GRID queried at fixed numpy points went to scipy, which
+called `numpy.asarray` on it and raised. Reproduced both halves:
+
+    torch:    RuntimeError: Can't call numpy() on Tensor that requires grad
+    jax.jit:  TracerArrayConversionError
+
+The framing that matters: this is not an exotic combination. It is how you
+differentiate an interpolant w.r.t. the DATA it was built from with the sample
+points held fixed. The grid carries derivatives just as much as the coordinates
+do; only one of the two was allowed to.
+
+Third consumer of `prefer_backend_namespace` in as many PRs -- boundary, coords,
+now interpolate. Hoisting it rather than inlining the rule a second time has
+already paid for itself; stacked this branch on the coords one specifically so
+it could reuse it instead of spelling it a third time.
+
+Bar: value parity FIRST (3.3e-16 vs numpy/scipy), then grad-vs-FD at every one
+of the 12 grid nodes -- max |AD-FD| = 3.0e-10, the FD floor
+([[stringent-gradient-tests]]). 165/165 in the interpolate suite.
+
+Pushed as `fix/map-coordinates-grid-dispatch` @ 444bda33.
+
+### Branch queue (all verified, all held behind the two-PR cap)
+
+    fix/quadrature-batching-anyaxisym-units  29d92b49  findings 2, 10, +torch .to()
+    fix/traced-surfdens-and-galcen-rot       1d29a6dd  findings 3, 4, + helper hoist
+    fix/map-coordinates-grid-dispatch        444bda33  finding 7  (stacked on ^)
