@@ -53082,3 +53082,58 @@ Pushed as `fix/map-coordinates-grid-dispatch` @ 444bda33.
     fix/quadrature-batching-anyaxisym-units  29d92b49  findings 2, 10, +torch .to()
     fix/traced-surfdens-and-galcen-rot       1d29a6dd  findings 3, 4, + helper hoist
     fix/map-coordinates-grid-dispatch        444bda33  finding 7  (stacked on ^)
+
+## 2026-08-24 (cont.) -- my own regression, and the audit that found its twin
+
+### #1381 CI caught a REAL red, and it was mine
+
+The `test_backend*.py` shard failed 3 Einasto/torch tests:
+
+    RuntimeError: value cannot be converted to type int64_t without overflow
+    at galpy/backend/special/_fallback/gammainc.py:211
+
+My endpoint guard built the limit with `xp.full_like(a, float("inf"))`.
+EinastoPotential passes an INTEGER order, and `torch.full_like(<int64>, inf)`
+raises. So a guard written to remove a NaN replaced it with a hard error, on
+the one potential in galpy that actually drives gammainc.
+
+Fixed by building from `dens` (float by construction). But the lesson is the
+gap, not the line: **gh#1374 tested endpoint VALUES but not endpoint GRADIENTS;
+I tested endpoint gradients but not endpoint DTYPES.** An int order is a
+different dtype, not a different value -- no number of extra points on a float
+grid would ever have found it. Two rounds of the same mistake, one axis apart.
+
+### The audit found the same class in my OTHER branch -- worse
+
+Having been bitten, I grepped my other diffs for arrays built from a
+caller-supplied parameter. `_galcen_rot` had it, and it does not crash:
+
+    float Xsun=8.0 : [6.9925305784, 2.0000109074, 2.9974776864]
+    int64 Xsun=8   : [7.0000024336, 2.000010918,  2.9999870429]
+    Zsun=0 answer  : [7.0000024336, 2.000010918,  2.9999870429]   <- identical
+
+`promote_scalars` anchors everything on the FIRST BACKEND ARRAY's dtype, so an
+integer Xsun dragged the python-float `Zsun=0.02` to int64 **0**. The Sun's
+height silently became zero. ~7.5e-3 in X: too small to look broken, too large
+to be roundoff. A silent wrong answer is strictly worse than the crash the
+gammainc version produced, and only the audit would have found it -- no test in
+the suite passes an integer Xsun.
+
+Fixed by float-ifying BEFORE promoting. Test pins BOTH directions (equals the
+float answer AND is not the Zsun=0 answer) because a one-sided assertion would
+not notice a re-truncation.
+
+Deliberately did NOT change `promote_scalars` itself: its dtype anchoring is
+documented, its existing callers all pass float refs, and rewriting shared
+coercion semantics inside a review-fix PR is the wrong place for it. That a
+float scalar can be silently truncated into an integer dtype is a sharp edge to
+raise with Jo separately.
+
+### Branch state (all pushed; PRs still capped at two)
+
+    fix/gammainc-endpoint-grad               cc8286a3  (#1381, +dtype fix)
+    fix/quadrature-batching-anyaxisym-units  29d92b49
+    fix/traced-surfdens-and-galcen-rot       be5ff216  (+truncation fix)
+    fix/map-coordinates-grid-dispatch        40407ded  (rebased onto ^)
+
+gh#1380: 140 green / 8 queued, zero failures; codecov/project cleared itself.
