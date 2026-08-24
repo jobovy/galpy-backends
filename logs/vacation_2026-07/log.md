@@ -52660,3 +52660,21 @@ a one-liner.
 
 Sibling check that made this legible: `test_sampleV` runs 160.7s and is NOT
 deferred, so it is not "sampling is slow" -- it is specifically the grid build.
+
+### Group 1: cut a losing bet on the noninertial run
+
+test_noninertial had run ~65 min of its 90-min file-level `timeout 5400`, with 5
+Group-1 entries each able to burn the 900s per-test cap (5 x 900 = 75 min before
+the file's other tests). If it hit the wall it would be SIGTERM'd, and pytest
+writes junitxml at SESSION END -- so I would have got ZERO data for all five,
+after ~90 minutes of machine time.
+
+Killed it and re-dispatched noninertial + actionAngle with a **400s** per-test
+cap. The ledger question is only "comfortably under the ~300s cap or not", so
+400s answers it exactly as well as 900s and halves the worst-case wall time. A
+test that trips 400s is recorded ">400s STAYS", which is the correct verdict.
+
+Worth keeping: when a measurement's only job is to decide a THRESHOLD, cap it
+just above the threshold. I set 900s reflexively to "get the real number", but
+the real number is not the deliverable -- the verdict is, and the larger cap only
+bought precision I had no use for while risking the whole run.
