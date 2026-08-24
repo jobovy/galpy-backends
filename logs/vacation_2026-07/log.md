@@ -52283,3 +52283,42 @@ Three process notes from this wake:
    "set". Caught by checking the SHA moved; the later push fast-forwarded it.
    Verify the SHA before pushing, not after.
 3. 383 worktrees are registered. Housekeeping backlog, noted not acted on.
+
+### CRON ROTATED — 5451d57e created 2026-08-24, expires ~2026-08-31
+(old e935a60c, created 08-19, deleted). Rotated a day EARLY rather than at the
+~6-day trigger: the threshold would have fallen on 08-25 against an 08-26
+expiry, which is too tight for something whose failure mode is silent death.
+
+### gh#1374: CI caught a REAL bug my prototype missed — x = inf returned NaN
+
+Two torch sphericaldf tests failed (eddington dMdE integral, constantbeta
+dens_directint). Checked the base first: develop passes that shard 4/4, so it
+was mine. The traceback gave it away immediately -- `Emax = tensor(nan)` from
+`dfi._pot(numpy.inf, 0)`.
+
+**The potential at r = inf reaches gammainc with x = inf**, where modified
+Lentz does b = inf -> d = 1/inf = 0 -> h *= d*c = 0*inf = NaN. One NaN, both
+failures. Fixed by clamping infinity out of the CF and applying the exact
+limits P(a,inf)=1, Q(a,inf)=0 after; verified for a=0.5..30 and for arrays
+mixing finite entries with inf (max err 0.0 vs scipy).
+
+Local after the fix: test_backend_special 207 passed; test_sphericaldf
+--backend=torch **223 passed** (was 221 passed + 2 FAILED).
+
+**Two things I did wrong, both avoidable:**
+
+1. **My sweep went to x = 1e6 but never to infinity.** I swept a in [0.01,300]
+   and x in [1e-8,1e6] and called it broad. Infinity is not a large number, it
+   is a separate CASE, and for these functions it is a REACHABLE one -- total
+   mass and potential-at-infinity both evaluate there. Endpoints deserve
+   explicit enumeration, not extrapolation from a log grid.
+2. **The sibling fallback documented this exact hazard and I read past it.**
+   exp1.py's source says, in as many words: "E_1(inf) = 0 (r=inf appears in
+   potential-at-infinity/mass)". I used exp1.py as the structural model for the
+   whole module -- copied its regime split, its clamping discipline, its
+   docstring shape -- and still missed the one comment that named the trap. When
+   modelling on a sibling, read its GUARDS as a checklist, not just its shape.
+
+The new test pins BOTH endpoints (x=0 and x=inf) with exact comparisons, which
+is what `special-fn-edge-testing` says to do and what I should have written
+first.
