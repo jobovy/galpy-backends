@@ -52903,3 +52903,74 @@ open PRs).
 `set_jit("jax")` only makes sense with the jax backend, so it should imply it.
 Agreed -- but "implies" has two materially different readings for a PUBLIC API,
 and they are not interchangeable, so this is Jo's call rather than mine.
+
+## 2026-08-24 (cont.) -- review findings 3 + 4, and a fifth thing underneath them
+
+Branch `fix/traced-surfdens-and-galcen-rot` @ 1d29a6dd on develop. CI on the two
+open PRs is still deep in the queue (gh#1380 at 80 green / 53 queued), so this
+was all local work per loop step 3.
+
+### Finding 3 -- surfdens gated on the integration LIMIT only
+
+`_quad_needs_backend(xp, absz)` chose scipy-vs-backend-quadrature from `absz`
+alone, so `grad` w.r.t. R at fixed z fell into scipy and raised a
+concretization error while the SAME derivative w.r.t. z worked. Made variadic.
+Both surfdens routes verified grad-vs-FD to ~2e-11 -- and the Poisson and
+density routes agree with EACH OTHER, which is the check that would catch a
+gate that merely stopped raising.
+
+### Finding 4 -- and it was two bugs, not one
+
+`_galcen_rot` was hard-coded numpy, on a documented assumption I can quote:
+"Xsun/Zsun ... are configuration, never traced data". They are not -- the solar
+position is a fit parameter. The tell was in the same file: the JACOBIAN of the
+same transform already handled backend Xsun/Zsun. When one direction of a
+transform pair handles something and the other does not, the assumption is
+usually wrong rather than the code.
+
+The second bug only showed up once the first was fixed: the namespace probe
+read `get_namespace(X, Y, Z)` -- no Xsun/Zsun -- so a backend Xsun with numpy
+coordinates took the numpy path regardless. Fixing THAT surfaced a third
+thing: probing the mix raises "Multiple namespaces for array inputs".
+
+### The rule already existed -- hoisted rather than re-spelled
+
+"Backend args decide, numpy ones are weak and coerce across" was written inline
+at the `@backend_input` boundary. It is now `prefer_backend_namespace` in
+galpy.backend, used by both sites ([[generic-helpers-go-in-backend]],
+[[audit-placement-and-duplication]]).
+
+Deliberately NOT `resolve_namespace`, which looks like the same function and is
+not: it falls back to the CONTEXT/forced namespace, which would reroute an
+all-numpy call onto a forced backend instead of following its arguments
+([[routed-helpers-follow-ambient-not-argument]]). Two helpers three lines apart
+in the same module, one of them subtly wrong for this job.
+
+numpy byte-identity held: 303 coords values across scalar AND array Xsun, both
+signs, both `_extra_rot`.
+
+### FINDING 11 (mine, not Codex's): torch has NO surfdens gradient at all
+
+Writing the finding-3 test, the torch arm failed with `'float' object has no
+attribute 'backward'` -- and the traceback said `_qagse`. surfdens had gone to
+scipy and returned a **detached float**. The gate is `under_trace`, which asks
+`torch.compiler.is_compiling()` and is therefore False for EAGER torch
+autograd. So no torch gradient works through surfdens, in R or z, and never
+did.
+
+Exactly [[value-checks-cannot-see-numpy-fallback]]: the VALUE is right, so
+nothing that only checks values could ever have caught it.
+
+Not folded in, because it is not a one-liner: widening the gate to
+grad-tracking eager tensors routes scalar-only potentials into the
+array-calling GL rule, which is the undecidable `_force_accepts_arrays` problem
+the docstring already describes. Left as an explicit `pytest.skip` carrying
+that reasoning rather than a quietly dropped parametrisation.
+
+### Process note
+
+Corrupted my own numpy regression run by reverting files mid-flight for an A/B
+([[long-measurement-needs-a-quiet-box]]) -- and it reported `exit code 0` while
+containing 2 failures, because `-x` plus xdist interrupt masks the count
+([[never-report-partial-run-as-result]]). Re-ran clean once editing stopped
+rather than reasoning about which half was real.
