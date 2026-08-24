@@ -52322,3 +52322,32 @@ Local after the fix: test_backend_special 207 passed; test_sphericaldf
 The new test pins BOTH endpoints (x=0 and x=inf) with exact comparisons, which
 is what `special-fn-edge-testing` says to do and what I should have written
 first.
+
+### gh#1374: the 3 "failures" were ONE cause -- my own supersede, not defects
+
+Read the checks too quickly at first and wrote "torch sphericaldf now passes".
+That was a stale check list. Checking which SHA each failure belonged to:
+
+    987862d6 (head)  -- every run in_progress/queued, nothing reported yet
+    db8cc76d (prev)  -- Linux/Mac FAILURE, All-backend FAILURE
+
+So all the reds were on the PREVIOUS commit. And the test_backend shard log on
+db8cc76d has no FAILED line at all -- it ends with
+
+    ##[error]The runner has received a shutdown signal...
+    ##[error]Process completed with exit code 143
+
+i.e. **cancelled**, because I pushed the x=inf fix while that run was still
+going and the concurrency group killed it. codecov/patch and codecov/project
+then went red for the derived reason: a cancelled shard uploads no coverage, so
+the new lines read as uncovered ([[codecov-project-blocks-via-all-clear]]).
+
+One cause, three red checks, zero defects. Worth the two minutes it took to
+check SHAs before "fixing" anything -- the alternative was hunting a coverage
+gap that does not exist.
+
+Note on the module's coverage shape: it is branch-free by construction (every
+conditional is an `xp.where`, not a Python `if`), so there are no partially
+covered branches to chase. Local `--cov` could not be run to confirm -- coverage
++ numpy pocketfft raises "cannot load module more than once per process" in this
+env -- but CI's own shard is the authority there anyway.
