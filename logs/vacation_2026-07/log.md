@@ -52501,3 +52501,32 @@ coverage through the path that actually uses it.
 Small but worth naming: the coverage tool found a design smell, not just a
 metric gap. A branch for "some other backend" in a module only ever reached by
 one backend is speculative generality; the uncovered line was the symptom.
+
+### Abandoned a side probe that could not have told me anything
+
+Set out to verify my "the a>20 precision limitation is not a regression" claim by
+comparing EinastoPotential's d_n under numpy vs torch. Three attempts failed on
+attribute names (`_dn` does not exist; `dn` is folded into `amp = amp*e**dn`;
+`_amp` stays 1.0 so it is not recoverable that way).
+
+Stopped, because the probe was never load-bearing: the claim is true BY
+CONSTRUCTION. Before this PR torch's a>20 forward was `torch.special.gammaincc`;
+after it, it is `torch.special.gammaincc`. Same path, same digits -- there is
+nothing to compare. I was about to spend a fourth attempt measuring the
+difference between a thing and itself.
+
+Worth noticing as a pattern: I reached for a measurement because measurement has
+been the right move all week, without first asking whether the two arms could
+differ. An A/B whose arms are identical by construction is not evidence, it is
+just expensive. [[ab-arms-must-differ-in-one-thing]] says this for the case where
+I accidentally build identical arms; this is the case where the arms are
+identical for a REASON I already knew.
+
+### PR body rewritten to match what ships
+
+gh#1374's description still described the uniform-fallback design and led with
+the precision fix. Rewrote it: differentiability is the headline, the 485x
+measurement and the native-forward/custom-backward design are explained, and the
+a>20 precision gap is stated as explicitly NOT fixed (pre-existing, not a
+regression). [[pr-description-drifts-after-rework]] -- a stale description is
+worse than none, and this one had drifted through two redesigns.
