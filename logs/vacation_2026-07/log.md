@@ -52749,3 +52749,31 @@ change" clause found no takers: the only tractable-looking lead
 project.
 
 **PAUSING HERE for Jo's review of #1204**, as agreed.
+
+### Review-prep: the galpy-jax README table was 3 days and 10 PRs stale
+
+Paused on new work, so I checked the artefact Jo will actually consult during
+the review -- and found the index in worse shape than the logs:
+
+* last touched 2026-08-21, i.e. missing #1363, #1364, #1367, #1368, #1369,
+  #1370, #1371, #1372, #1374 -- nine merged PRs;
+* worse, the final row still read "#1279 ... OPEN -- CI running" when #1279 had
+  merged as `d2ad93c9` long before. A stale OPEN is not a gap, it is a false
+  statement about the branch's state, and it sat at the BOTTOM of the table
+  where a reader stops.
+
+Corrected #1279 and added ten rows through #1380 (with merge SHAs looked up from
+the API rather than recalled).
+
+My standing note [[keep-galpy-jax-log-current]] says plan/track + README table +
+logs/ on LANDING each PR. I kept logs/ meticulously -- it is where the reasoning
+goes and it is what I write during the work -- and let the README rot, because
+updating it is a separate step AFTER the merge, when the interesting part is
+already over. That is exactly the step to automate or to fold into the merge
+itself; a per-PR habit that depends on remembering a post-merge chore will keep
+failing this way.
+
+Also updated PR #1204's description (it was EMPTY): goal, the scorecard against
+that goal (ledger 392 -> 140 against a target of 0, so NOT met), what changed,
+a suggested reading order, and two caveats a reviewer needs -- that CI never
+runs --jit, and that numpy byte-identity was the invariant.
