@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-23 (gh#1372 OPEN: jax fork deadlock)
+# Vacation status snapshot — 2026-08-23 (gh#1372 MERGED a063e674; no open PR)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -13,27 +13,19 @@ answer. `log.md` is the trace; read this first and go there only for the why.
     feat/backends          982b1781
     feat/backends-develop  856ceccc   (ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PR — gh#1372 backend/jax-fork-serial @ 8733e8f6 (CI running)
+## Open PR — NONE. gh#1372 MERGED (develop a063e674).
 
-parallel_map forks into a DEADLOCK under jax (reproduced: 14 parked children,
-load 0.06-0.36, >540s no progress; 46.3s with the fix). Cure = don't fork, the
-same serial path parallel_map already uses for Windows and jit mode.
-Ledger intentionally untouched; whole-file timing measuring separately in
-/var/tmp/forkjax to decide whether `jax tests/test_streamdf.py` (~72% of ALL
-jax deferrals, a whole-FILE entry) can be un-deferred.
+jax no longer forks in parallel_map (it deadlocked: 14 parked children, load
+0.06-0.36, >540s; 46.3s with the fix). tests/test_streamdf.py is un-deferred
+under jax: ~80 deferred tests -> 4 explicit skips. ZERO whole-file jax defers
+remain. Costs 2.73x on multi-orbit Python-path integration; all 6 jax orbit
+shards absorb it (measured, not assumed).
 
-Task #224 (constantbetadf d/dbeta) is PARKED on a Jo judgement call: freezing
-the integration-limit heuristic costs up to 1e-4 on the gradient (h-converged,
-so the FD reference is sound and the AD genuinely differs). Either choice is
-defensible; shipping it silently as exact is not.
-
-GROUP A COMPLETE (forced-backend construction, no setup islands left):
-    gh#1369 77a74fdb  Einasto + ExpTruncNFW
-    gh#1370 542eae05  Ferrers + TwoPowerTriaxial
-    gh#1371 856ceccc  3 power-law spherical DFs
-Also merged this session: gh#1363..gh#1368.
-
-Worktree /var/tmp/dbeta on backend/constantbetadf-dbeta, rebased onto 856ceccc.
+Next = task #222 (differentiable gammainc/gammaincc in galpy.backend.special),
+which unblocks EinastoPotential torch grads AND the torch gammaincc precision
+gap. Task #224 (constantbetadf d/dbeta) stays PARKED on a Jo judgement call:
+freezing the integration-limit heuristic costs up to 1e-4 on the gradient
+(h-converged, so the FD reference is sound and the AD genuinely differs).
 
 
 ## Live findings from gh#1368

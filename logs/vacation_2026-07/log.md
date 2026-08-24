@@ -52078,3 +52078,35 @@ stays deferred on its own merits.
 
 Both codecov checks (patch AND project) PASS on gh#1372, so the new helper and
 guard are covered and nothing regressed -- coverage rule satisfied.
+
+### gh#1372 MERGED — develop a063e674
+
+154/154 green, mergeable CLEAN, squash-merged into feat/backends-develop.
+
+Ledger on develop after the merge:
+
+    backend_xfail.txt       8   (unchanged)
+    backend_slow_skip.txt  61 -> 60
+    backend_skip.txt       68 -> 72
+    jax slow_skip lines         33
+    whole-file jax defers   1 -> 0
+
+The line-count delta understates it: the removed line was a whole-FILE defer, so
+the real move is ~80 jax tests from deferred to running (jax deferred should read
+~33 rather than 109 in the next census). And a structural milestone worth naming:
+**there are now zero whole-file jax defers** -- every remaining jax deferral is an
+explicit, individually-justified test rather than a blanket exclusion hiding an
+unknown number of them. That is exactly the class of thing that let one fork
+deadlock sit unexamined for two days.
+
+Arc of this PR, worth remembering as a shape:
+1. A routine ledger sweep came back empty -- and the empty result was the finding
+   (the instrument is blind to 94% of the ledger).
+2. Which exposed that ONE line was 72% of all jax deferrals.
+3. Whose note claimed a deadlock -- checked rather than trusted, and confirmed by
+   load average (14 procs at ~0.1).
+4. Whose fix was already written in a docstring I had read and mis-concluded from
+   ("no equivalent knob" describes one mechanism, not a verdict).
+5. Then a self-audit found the guard costs 2.73x on multi-orbit integration --
+   a real risk, settled by CI (all 6 jax orbit shards pass) rather than by
+   redesigning on a microbenchmark.
