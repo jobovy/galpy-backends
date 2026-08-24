@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-23 (gh#1372 MERGED a063e674; no open PR)
+# Vacation status snapshot — 2026-08-24 (gh#1374 near-green; Group 1 sweep running; PAUSE for Jo's #1204 review after)
 
 **This file is OVERWRITTEN, not appended.** It is the "where are things now"
 answer. `log.md` is the trace; read this first and go there only for the why.
@@ -13,19 +13,21 @@ answer. `log.md` is the trace; read this first and go there only for the why.
     feat/backends          982b1781
     feat/backends-develop  856ceccc   (ledger xfail 8 / slow_skip 61 / skip 68)
 
-## Open PR — NONE. gh#1372 MERGED (develop a063e674).
+## Open PR — gh#1374 backend/gammainc-fallback @ eab6c41b (143 pass / 9 pending)
 
-jax no longer forks in parallel_map (it deadlocked: 14 parked children, load
-0.06-0.36, >540s; 46.3s with the fix). tests/test_streamdf.py is un-deferred
-under jax: ~80 deferred tests -> 4 explicit skips. ZERO whole-file jax defers
-remain. Costs 2.73x on multi-orbit Python-path integration; all 6 jax orbit
-shards absorb it (measured, not assumed).
+torch gammainc/gammaincc differentiable in the ORDER: native forward + custom
+backward (analytic d/dx closed form; series/CF d/da only when a requires grad).
+485x -> 2.08x scalar after the redesign. Pre-merge audit DONE and clean.
+Follow-ups: NONE (the 7 other autograd.Functions wrap C calls; generate_vmap_rule
+would be silently wrong there).
 
-Next = task #222 (differentiable gammainc/gammaincc in galpy.backend.special),
-which unblocks EinastoPotential torch grads AND the torch gammaincc precision
-gap. Task #224 (constantbetadf d/dbeta) stays PARKED on a Jo judgement call:
-freezing the integration-limit heuristic costs up to 1e-4 on the gradient
-(h-converged, so the FD reference is sound and the AD genuinely differs).
+## JO'S PLAN: finish gh#1374 -> Group 1 measurement sweep -> PAUSE for #1204 review
+
+Group 1 = the 10 jax slow_skip entries carrying NO measured time. Sweep running
+in /var/tmp/g1sweep (whole files under --backend jax, per-test cap 900s via
+signal so it MEASURES rather than kills). Remaining 23 are one root cause: jax
+eager per-call overhead (~5 ms flat) -- a weeks-long vectorization project, NOT
+before the review.
 
 
 ## Live findings from gh#1368

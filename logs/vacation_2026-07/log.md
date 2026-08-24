@@ -52560,3 +52560,44 @@ the only one. They would fail exactly as mine did the moment anything reaches
 them through `torch.func` vmap/grad, with the same two opaque errors. Nothing
 vmaps them today, so this is latent rather than broken; but it is a known trap
 now, and the AA C-native paths are plausible future vmap targets.
+
+### PLAN SET BY JO (2026-08-24): finish gh#1374 + follow-ups + Group 1, then PAUSE for review
+
+Jo asked how much burndown is left, then set the plan: current PR, any
+follow-ups, Group 1, then stop for a review of #1204.
+
+**Burndown estimate given (grounded in the ledger, not memory).** 33 jax
+deferrals split three ways:
+* **Group 1 -- 10 entries with NO measured time**: qdf x2, noninertial x5,
+  galpypaper::test_diskdf, streamspraydf::test_center,
+  actionAngleStaeckel_python_c_freqsAngles. Cheapest work available; the two
+  prior measurement sweeps cleared 104->98 and 98->92 with no code change.
+* **Group 2 -- 11 measured PASSING but over the ~300s cap** (269s..1535s). A ~2x
+  speedup clears most.
+* **Group 3 -- 12 measured TIMEOUT** (>420s..>1200s). Needs 3-5x.
+Groups 2+3 are ONE root cause, not 23 problems: jax eager per-call overhead
+(~5 ms flat, 186x on a scalar call), i.e. Python-loop orbit integration where
+every force evaluation is a separate eager dispatch. One lever moves all 23.
+Recommended reviewing #1204 now rather than waiting weeks for that project.
+
+Other ledgers are near-terminal: of 72 skips, 12 are Torus (permanently out of
+scope) and the rest by-design; of 8 xfails, 2 wait on the main->develop rebase,
+2 are by-design qdf, 4 are jit-mode entries CI never runs.
+
+### Follow-ups from gh#1374: NONE. Checked, and the obvious candidate is a trap.
+
+The audit flagged 7 other `torch.autograd.Function` classes with no
+`setup_context`/`generate_vmap_rule` -- `_torch/staeckel_c.py` (4),
+`adiabatic_c.py` (2), `orbit_stm.py` (1). Tempting one-line "fix".
+
+It would be WRONG. All 7 wrap ctypes C entry points:
+`t.detach().to("cpu", torch.float64).numpy()` then a C call.
+`generate_vmap_rule=True` builds a rule by tracing the forward under vmap, and
+that forward calls `.numpy()` on the input -- under vmap it would either error or
+silently compute on the wrong shape. Adding it swaps a LOUD CORRECT error for a
+QUIET WRONG answer. Making those vmappable means batching the C entry itself,
+which is a feature (orbit_stm already has a batched C entry from task #100), not
+a follow-up.
+
+So the honest answer to "any follow-ups?" is no. Recording the reasoning because
+the one-line change looks obviously right and will tempt someone again.
