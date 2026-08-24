@@ -52247,3 +52247,39 @@ the first silently inherits the incumbent's error. Same family as
 `mpmath-quadosc-final-arbiter`, now bitten from the opposite direction: last
 wake the arbiter check saved me, this wake the missing arbiter check had already
 misled me into declaring the whole approach non-viable.
+
+### gh#1374 OPEN — backend-op gammainc/gammaincc (task #222 SHIPPED)
+
+Wrote the module from the verified design, wired it in, tested, opened.
+`galpy/backend/special/_fallback/gammainc.py` (152 lines) + router entry +
+3 tests. torch-only: jax natives are fine, numpy stays scipy bit-identically.
+
+Verified end-to-end after wiring:
+* torch forward now matches scipy to <= 1.65e-15 for a = 2..150, INCLUDING
+  a = 21 (0.00e+00) where the native path shipped 8.6e-10.
+* torch d/da works: -2.3184867204e-01, which is jax's independent native d/da
+  to 10 digits. That cross-check is stronger than the FD comparison.
+* numpy: `gammaincc(21,21) == scipy` exactly, still float64.
+
+**A/B on the new tests (they have teeth):** with the router entry reverted,
+`test_gammainc_large_order_value_parity[torch]` FAILS and
+`test_gammainc_grad_wrt_order[torch]` FAILS with the real
+`NotImplementedError: the derivative for 'igamma: input'`. The third test
+(d/dx not regressed) passes in both arms by design. Full file 204 passed.
+
+**Coverage hole named:** the pre-existing `_A` grid is [0.5, 1.0, 2.0, 3.5] --
+its max is 3.5, entirely below the a ~ 20 regime where torch breaks. The gap
+was not bad luck, it was untested territory. New grid crosses 20 explicitly.
+
+Three process notes from this wake:
+1. **A stale worktree nearly became a stale-base PR.** `git worktree add`
+   failed ("branch already exists") but `cd` into the path SUCCEEDED, so I
+   wrote the new module into a gh#1368-era tree based on 08db5d90 (develop is
+   a063e674) carrying an obsolete uncommitted prototype. Checking provenance
+   caught it. A failed `worktree add` does not mean you are not standing in a
+   tree -- verify the base, not the command's exit.
+2. **Pre-commit rejected the commit AND I pushed anyway**, sending the BASE
+   commit as the branch. codespell flagged my variable `ser` as a typo for
+   "set". Caught by checking the SHA moved; the later push fast-forwarded it.
+   Verify the SHA before pushing, not after.
+3. 383 worktrees are registered. Housekeeping backlog, noted not acted on.
