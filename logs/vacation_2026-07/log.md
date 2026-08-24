@@ -52601,3 +52601,33 @@ a follow-up.
 
 So the honest answer to "any follow-ups?" is no. Recording the reasoning because
 the one-line change looks obviously right and will tempt someone again.
+
+### gh#1374 MERGED — develop 068de984 (154/154 green)
+
+torch gammainc/gammaincc differentiable in the ORDER. Native forward + custom
+backward; d/dx closed form, series/CF d/da only when the order requires grad.
+485x -> 2.08x scalar after the redesign. Audit was done in advance, so the merge
+was one step.
+
+### Group 1 sweep: Jo clarified the deliverable is a LEDGER PR, not a table
+
+"if Group 1 actually now passes, then you should also do the PR to update the
+ledger. And similarly, if a simple change can make group 1 pass, do that before
+pausing." So: measure -> un-defer what passes -> fix what a small change fixes
+-> PR -> then pause. Correct framing; measuring without acting would just move
+the information from one file to another.
+
+Results as they land (cap ~300s; verdict UN-DEFER if comfortably under):
+
+    test_qdf::test_meanjz_noaac_issue300              25.2s   UN-DEFER (12x under)
+    test_qdf::test_sampleV_interpolate               900.0s   STAYS (timeout)
+    test_streamspraydf::test_center                   83.4s   UN-DEFER
+
+test_qdf ran 23:00 for the whole file, test_streamspraydf 3:55. Still to come:
+galpypaper, noninertial (5 entries), actionAngle.
+
+Note on test_sampleV_interpolate: its non-interpolated sibling `test_sampleV`
+runs 160.7s and is NOT deferred, so the interpolation grid build is what costs
+the extra >740s. That is a plausible target for the "simple change" clause --
+worth a look once the sweep finishes, before assuming it belongs with the
+vectorization project.
