@@ -52631,3 +52631,32 @@ runs 160.7s and is NOT deferred, so the interpolation grid build is what costs
 the extra >740s. That is a plausible target for the "simple change" clause --
 worth a look once the sweep finishes, before assuming it belongs with the
 vectorization project.
+
+### Group 1 sweep: 4/10 measured, 3 UN-DEFERS confirmed
+
+    test_qdf::test_meanjz_noaac_issue300         25.2s   UN-DEFER (12x under cap)
+    test_streamspraydf::test_center              83.4s   UN-DEFER
+    test_galpypaper::test_diskdf                139.6s   UN-DEFER
+    test_qdf::test_sampleV_interpolate          900.0s   STAYS (timeout)
+
+test_noninertial (5 entries) running ~37 min so far -- expected, since each of
+its 5 can burn up to the 900s cap. test_actionAngle last.
+
+**test_sampleV_interpolate classified, and it is NOT a simple fix.** Read the
+implementation rather than guessing from the timing:
+* the deliberate outlier at (R=8, z=5) does NOT expand the grid -- outliers are
+  handled individually, `for i in range(outliers_R.size): self.sampleV(...)`,
+  one call each. So my first guess (outlier blows up the pixel count) was wrong.
+* the real cost is a NESTED PYTHON LOOP over grid pixels:
+      for i in range(z_number):
+          for j in range(R_number):
+              grid_max_vT[i][j] = ...   # a per-pixel optimisation
+  Every iteration pays the ~5 ms eager-dispatch overhead.
+
+So it is the same root cause as Groups 2/3 and belongs with the vectorization
+project (and specifically with task #130, qdf sampling on backend/GPU) -- not
+with this ledger PR. Vectorizing a per-pixel maxVT optimisation is delicate, not
+a one-liner.
+
+Sibling check that made this legible: `test_sampleV` runs 160.7s and is NOT
+deferred, so it is not "sampling is slow" -- it is specifically the grid build.
