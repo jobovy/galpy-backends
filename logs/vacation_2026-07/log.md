@@ -52110,3 +52110,47 @@ Arc of this PR, worth remembering as a shape:
 5. Then a self-audit found the guard costs 2.73x on multi-orbit integration --
    a real risk, settled by CI (all 6 jax orbit shards pass) rather than by
    redesigning on a microbenchmark.
+
+### Next PR scoped: task #222, differentiable gammainc/gammaincc (torch-only)
+
+Reproduced both claimed gaps before designing anything. The scope is NARROWER
+than the task note implied -- jax needs nothing at all:
+
+    GAP 1  torch gammaincc accuracy vs scipy (x = a)
+             a<=20  ->  0.00e+00 .. 4.7e-16   (exact)
+             a=21   ->  8.57e-10              <- discrete algorithm switch
+             a=30   ->  7.10e-10
+             a=60   ->  4.95e-10
+           jax at a=21: 9.08e-15. Fine.
+
+    GAP 2  d/da (the ORDER):
+             torch gammainc  -> NotImplementedError: the derivative for
+                                'igamma: input' is not implemented
+             torch gammaincc -> same, for 'igammac: input'
+             torch d/dx      -> works on both
+             jax  d/da       -> works on both (-2.3184867204e-01)
+
+So: **torch only**, both functions, two independent defects.
+
+**Design.** One implementation closes both: write the fallback in pure xp ops
+(standard split -- series for P when x < a+1, continued fraction for Q when
+x >= a+1), then put torch's gammainc/gammaincc in `_NATIVE_UNRELIABLE`. Autodiff
+through my own ops then supplies d/da AND d/dx for free, and an accurate
+implementation removes the a>=21 error. Fixing only the gradient (Design B from
+the earlier scoping) leaves the 5e-10 shipping, which per
+`backend-precision-must-match-numpy` is a defect, not a tradeoff.
+
+Accuracy bar: must match scipy to ~1e-15 ACROSS the domain, including a<=20
+where torch is currently exact -- routing to a fallback must not lose digits
+where native was perfect. That is the hard part and the thing to measure first.
+
+**Reuse, not reinvention:** `galpy/backend/optimize.py::iterate_bracket(step, x0, n)`
+is already the fixed-schedule iteration primitive (eager Python loop; rolled into
+`lax.fori_loop` under a trace so n copies don't unroll into the jaxpr). Its body
+is fully generic -- only its NAME reflects its first use. The series and the CF
+both want exactly that, so reuse it rather than writing a second loop harness.
+Note for Jo: the name is bracket-specific for what is a general primitive.
+
+Watch out: `xp.where` over the series/CF branch evaluates BOTH sides eagerly, so
+the dead branch needs guarded arguments or it will NaN-poison the gradient
+(`xp-where-dead-branch-guards`).
