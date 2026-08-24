@@ -52530,3 +52530,33 @@ measurement and the native-forward/custom-backward design are explained, and the
 a>20 precision gap is stated as explicitly NOT fixed (pre-existing, not a
 regression). [[pr-description-drifts-after-rework]] -- a stale description is
 worse than none, and this one had drifted through two redesigns.
+
+### gh#1374 pre-merge audit done early (so the merge is one step when green)
+
+CI still running -- both test_backend shards in_progress, and codecov reads
+17.43% on the new file because the shard that COVERS it has not uploaded yet.
+Premature, not a real drop; confirmed by checking the shard status rather than
+believing the percentage.
+
+Audit of the final diff (3 files, +342/-3):
+
+* **if -> xp.where array-input class: CLEAN.** Every `if` in the diff branches
+  on a CONTROL value -- `upper` (which of the two functions), autograd's
+  `needs_input_grad`, `requires_grad`, dict membership. None branches on array
+  data, so none has the "works on scalars, breaks on arrays" shape.
+* **Duplication: none.** `hyp1f1.py` turned up in the grep, but it CALLS
+  `gammainc` from the router rather than carrying its own series -- it is a
+  consumer. Pleasant side effect: hyp1f1 silently gains d/da on torch from this
+  PR, since its `gammainc(a_arr, Xs)` now routes through the new backward.
+* **Helper placement: correct** -- the module sits in
+  `galpy/backend/special/_fallback/` beside its siblings, and the torch-specific
+  wrapper lives with the function it wraps rather than in `galpy/backend/_torch/`.
+
+**Finding worth a follow-up (NOT this PR -- different files, out of scope):**
+galpy has 7 other `torch.autograd.Function` classes --
+`_torch/staeckel_c.py` (4), `_torch/adiabatic_c.py` (2), `_torch/orbit_stm.py`
+(1) -- and NONE of them defines `setup_context` or `generate_vmap_rule`. Mine is
+the only one. They would fail exactly as mine did the moment anything reaches
+them through `torch.func` vmap/grad, with the same two opaque errors. Nothing
+vmaps them today, so this is latent rather than broken; but it is a known trap
+now, and the AA C-native paths are plausible future vmap targets.
