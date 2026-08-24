@@ -52479,3 +52479,25 @@ than hoping a test surfaces it.
 
 Remaining before merge: torch potential g3/g5, both test_backend twins, the jax
 shards, and all-clear. Nothing to act on until those report.
+
+### gh#1374: 152/154 green; the one uncovered line was dead code (eab6c41b)
+
+The redesign held: 152 pass, and the only two reds were codecov/patch plus
+all-clear gating on it. Asked codecov WHICH LINE rather than guessing
+([[find-uncovered-lines-codecov-api]]):
+
+    galpy/backend/special/_fallback/gammainc.py  99.09%  missed: [236]
+
+Line 236 was `return _both(xp, a, x)[...]` -- the non-torch tail of
+_dispatch_one. Unreachable: the router only calls a fallback for names in
+_NEEDS_FALLBACK, and for gammainc/gammaincc that is torch alone. Dead on
+arrival, written reflexively because the other fallbacks in this package are
+backend-generic.
+
+Removed it rather than pragma-ing it ([[no-hiding-uncovered-code]]). `_both` is
+still live -- it IS the d/da backward -- so the accurate series/CF keeps its
+coverage through the path that actually uses it.
+
+Small but worth naming: the coverage tool found a design smell, not just a
+metric gap. A branch for "some other backend" in a module only ever reached by
+one backend is speculative generality; the uncovered line was the symptom.
