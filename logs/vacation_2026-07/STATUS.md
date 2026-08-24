@@ -27,17 +27,17 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 * **gh#1381** `fix/gammainc-endpoint-grad` @ e6f63275 — review finding 1.
   d/dx gammainc was NaN at the x=0 endpoint. CI just dispatched.
 
-## Pushed, PR deliberately HELD (would be a 3rd open PR)
+## Pushed / committed, PRs deliberately HELD (would exceed the two-PR cap)
 
-* **`fix/quadrature-batching-anyaxisym-units`** @ e4ac1e07 — review finding 2
-  (finite_part_quad honours its documented array signature; 4 sites, not 1)
-  PLUS a torch construction bug the byte-identity A/B turned up on its own
-  (`.to()` duck-typing collides with `torch.Tensor.to`). Based directly on
-  develop, NOT stacked on gh#1381 — the two touch disjoint files.
-  Local gate green: 132 passed / 1 skipped across both touched test files.
-  Branch is pushed; opening the PR waits on gh#1380 merging, both to respect
-  the two-PR cap and because a 3rd PR would add ~150 jobs to a queue that is
-  already the thing delaying gh#1380.
+* **`fix/quadrature-batching-anyaxisym-units`** @ 29d92b49 (PUSHED) — findings
+  2 + 10, plus the torch `.to()` construction bug the byte-identity A/B turned
+  up on its own. Local gate: 82 quadrature tests, 132 across both touched files.
+* **`fix/traced-surfdens-and-galcen-rot`** @ 1d29a6dd (local) — findings 3 + 4,
+  plus `prefer_backend_namespace` hoisted out of `_input.py` into galpy.backend
+  so the coords fix reuses the boundary's rule instead of re-spelling it.
+  All 6 new tests A/B clean; coords numpy byte-identity over 303 values.
+
+Both open as soon as gh#1380 lands.
 
 ## Codex review of #1204 — 5 findings, all reproduced
 
@@ -45,9 +45,30 @@ answer. `log.md` is the trace; read this first and go there only for the why.
 |---|-------|-------|
 | 1 | `gammainc.py:196` NaN d/dx at x=0 | **gh#1381 open** |
 | 2 | `quadrature.py:622` scalar-only `finite_part_quad` | **committed, pushing next** |
-| 3 | `Potential.py:128/:817/:914` surfdens gate misses traced `R` | next PR |
-| 4 | `coords.py:100/:1217/:1591` `_galcen_rot` hard-codes numpy | next PR (with 3) |
-| 5 | `_jit.py:39` + `_input.py:179` `set_jit("jax")` alone doesn't trace | **NEEDS JO**: fix the docs or fix the behaviour? |
+| 3 | `Potential.py:128/:817/:914` surfdens gate misses traced `R` | **committed** 1d29a6dd |
+| 4 | `coords.py:100/:1217/:1591` `_galcen_rot` hard-codes numpy | **committed** 1d29a6dd |
+| 5 | `_jit.py:39` + `_input.py:179` `set_jit("jax")` alone doesn't trace | **NEEDS JO** — see the fork below |
+| 6 | 7 more numpy-forcing coords transforms | open |
+| 7 | `interpolate.py:794` map_coordinates dispatches on query coords | open |
+| 8 | constructor paths not `jax.jit`-safe (min/branch/assert on traced params) | open |
+| 9 | `hyp2f1` treats `a,b,c` as structural python scalars | open |
+| 10 | `quadrature.py:533` symmetric_quad rejects a finite eager torch limit | **committed** 29d92b49 |
+| 11 | **MINE, not Codex's**: NO torch gradient through surfdens, ever | reported, not fixed |
+
+**Finding 5 is a fork, not an implementation.** Jo's read (set_jit implies the
+backend) admits two materially different readings for a PUBLIC API:
+(a) `set_jit("jax")` TURNS THE BACKEND ON — then a call that returned a float
+now returns a jax array, process-wide, from something that reads like a
+performance toggle; (b) `set_jit("jax")` REQUIRES a jax backend and RAISES
+otherwise — no hidden global mutation, and the advertised-vs-actual mismatch
+becomes a loud error. I lean (b). Either way it is a no-op for the suite, which
+always combines `--backend` with `--jit`.
+
+**Finding 11** — the gate is `under_trace`, i.e. `torch.compiler.is_compiling()`,
+which is False for EAGER torch autograd, so surfdens takes scipy and returns a
+silently DETACHED float. No torch gradient in R OR z, and never was. Not folded
+in: widening the gate routes scalar-only potentials into the array-calling GL
+rule, the undecidable `_force_accepts_arrays` problem the docstring describes.
 
 Finding 2 is worth stating precisely: it is **not reachable today**. The only
 caller is AnyAxisym, whose forces are `@check_potential_inputs_not_arrays`, so
