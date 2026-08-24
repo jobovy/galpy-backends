@@ -52457,3 +52457,25 @@ rtol 1e-13 to 1e-8 with the reason inline, rather than leave a test asserting a
 precision galpy does not actually buy on this path. The accurate series/CF is
 still in the tree and still exercised (it IS the d/da backward), so restoring
 the forward precision later is a routing question, not a rewrite.
+
+### gh#1374 @ 447618da: the redesign WORKED -- every regressed shard is green
+
+    before (uniform fallback)        after (native fwd + custom bwd)
+      3 torch orbit shards  FAIL       all 3            PASS
+      torch potential g3    FAIL       g1, g2, g4       PASS (g3, g5 pending)
+      torch sphericaldf     FAIL       torch sphericaldf PASS
+      test_backend twins    OOM(137)   pending
+
+102 pass / 49 pending / 2 fail, and both fails are codecov, which cannot settle
+until every shard uploads. No torch shard is red.
+
+So the 485x -> 2.08x fix did what the measurement predicted. Worth noting the
+arc: the perf regression was invisible to every check I ran locally (accuracy
+sweeps, endpoint tests, gradient tests all passed at every stage) and only CI's
+full-suite timing exposed it. There was no local test that would have caught it,
+because the cost only matters at the scale of a whole shard -- which is an
+argument for measuring cost DIRECTLY (a microbenchmark of old-vs-new) rather
+than hoping a test surfaces it.
+
+Remaining before merge: torch potential g3/g5, both test_backend twins, the jax
+shards, and all-clear. Nothing to act on until those report.
