@@ -52154,3 +52154,54 @@ Note for Jo: the name is bracket-specific for what is a general primitive.
 Watch out: `xp.where` over the series/CF branch evaluates BOTH sides eagerly, so
 the dead branch needs guarded arguments or it will NaN-poison the gradient
 (`xp-where-dead-branch-guards`).
+
+### Task #222 prototype: the naive series+CF port does NOT meet the precision bar
+
+Prototyped the standard series/continued-fraction gammainc in numpy before
+touching the backend module, and swept it against scipy. It plateaus at ~1e-13
+at large a regardless of iteration count (N=100 and N=800 identical), which is
+WORSE than torch's current ~1e-16 for a<=20. So routing all of torch's gammaincc
+to a naive fallback would fix a>=21 (5e-10 -> 1e-13) while DEGRADING a<=20
+(1e-16 -> 1e-13) -- a defect by `backend-precision-must-match-numpy`, not a win.
+
+**Diagnosis (verified, after three wrong turns):** the prefactor exponent
+
+    -x + a*ln(x) - lnGamma(a)      at a=x=80:
+    -80.0000 + 350.5621 - 269.2911  =  1.2710
+
+cancels three ~350-magnitude terms down to O(1). Each carries |term|*eps, i.e.
+~7.8e-14 and ~6.0e-14 absolute, and exp() turns that straight into relative
+error. Confirmed by substitution:
+
+    only lgamma in 50-digit  ->  3.3e-15 .. 5.5e-14   (still bad)
+    WHOLE exponent 50-digit  ->  0 .. 8.9e-16         (exact)
+    float64 series sum is fine in both arms
+
+Cure is the standard "regularised gamma prefix" (Boost/Cephes, and why scipy is
+exact): rewrite as  -a*(lam - 1 - ln lam) - 0.5*ln(2*pi*a) - omega(a)  with
+lam = x/a, the bracket via log1p for lam ~ 1, omega the small Stirling
+remainder. Then no large term ever appears and the exponent is O(1) by
+construction. That is the implementation to write -- NOT more iterations.
+
+**Three measurement errors of mine on the way, all worth remembering:**
+
+1. **A denominator guard manufactured the headline number.** My relative error
+   used `np.maximum(ref, 1e-300)`. The reported "worst point" turned out to be
+   a=70.1, x=0.001 where P = 2.7e-311 (subnormal) and scipy returns exactly 0.0
+   -- so "both are zero" was scored as 2.7e-11 error. Every early worst-case
+   figure was that artifact. Exclude underflow explicitly; do not guard a
+   denominator and call the result a relative error.
+
+2. **Partial high-precision substitution is not a valid test** when several
+   terms share a magnitude. I "refuted" the prefactor hypothesis three separate
+   ways -- float128 series, 40-digit lgamma, Kahan -- and each time the number
+   did not move, because each fixed ONE of three equally-large terms. The
+   hypothesis was right all along; my test was incapable of showing it.
+
+3. **Two sweeps I compared (1.11e-13 vs 1.88e-11) used different a-grids**, so
+   they were never comparable. I read a real change into a sampling difference.
+
+What finally settled it was validating the ARBITER (`mpmath-quadosc-final-arbiter`):
+comparing scipy AND my series against 50-digit mpmath, which showed scipy exact
+(0 .. 5.7e-14, mostly 2e-16) and mine at 3.6e-14 .. 1.1e-13. That single check
+would have saved the three detours -- do it FIRST next time a "floor" appears.
