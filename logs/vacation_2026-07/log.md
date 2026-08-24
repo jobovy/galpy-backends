@@ -53137,3 +53137,46 @@ raise with Jo separately.
     fix/map-coordinates-grid-dispatch        40407ded  (rebased onto ^)
 
 gh#1380: 140 green / 8 queued, zero failures; codecov/project cleared itself.
+
+## 2026-08-24 (cont.) -- gh#1380 audited and ready; finding 8 reproduced
+
+### gh#1380: 152 green, zero failures, only the two meta-jobs left
+
+Audited for merge. The `if -> xp.where` array-input class, duplication and
+helper placement all read N/A: the diff is ONE text file
+(`tests/backend_slow_skip.txt`).
+
+But a ledger PR has its own audit, and it is not the diff -- it is whether the
+un-defers actually flipped. Checked the qdf jax shard log directly rather than
+inferring from shard-green:
+
+    tests/test_qdf.py::test_meanjz_noaac_issue300   PASSED     <- un-deferred, runs, passes
+    tests/test_qdf.py::test_sampleV_interpolate     SKIPPED (backend-slow-sk...)  <- still deferred, correct
+    Backend jax: 126 passed, 1 xfail (ledger), 6 deferred (slow-skip), 0 XPASS
+
+That is the flip [[verify-burndown-flips-by-ab]] asks for, in the un-defer
+direction: the entry left the ledger AND the test now runs green.
+
+### Finding 8 reproduced -- all four sites
+
+    ExpTruncNFW(a=tracer)              TracerBoolConversionError
+    from_nfw(nfw, rc=tracer)           TracerBoolConversionError
+    TwoPowerTriaxial(alpha=tracer)     TracerBoolConversionError
+    constantbetaPowerLawdf(beta=)      TracerBoolConversionError
+
+Took THREE corrections to get a valid probe, and every one of the false starts
+was mine, not galpy's: wrong kwarg (`from_nfw(mass=)` -- it is
+`from_nfw(nfw, rc=, mass=)`), wrong potential class for the DF, then
+`alpha must be > 2 for bound orbits`. Each intermediate run produced a
+confident-looking traceback that was purely my own signature error. Worth
+naming because a probe that raises SOMETHING reads like a reproduction, and
+three of these four "reproductions" would have been fiction if I had stopped
+early ([[reproduce-the-assertion-not-a-proxy]]).
+
+This is the heavier class: it is not a dispatch or dtype slip but Python
+control flow (`min(a, rc)`, comparisons on alpha/beta, asserts) evaluated on
+traced constructor parameters. Fixing it means deciding, per site, whether the
+parameter is genuinely structural (then it should reject a tracer loudly) or
+data (then the branch must become xp.where / a lax select). That is a design
+question per potential, not a mechanical sweep -- and it is exactly the
+question finding 9 (hyp2f1's a,b,c) asks too.
