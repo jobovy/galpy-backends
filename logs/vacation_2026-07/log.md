@@ -52678,3 +52678,32 @@ Worth keeping: when a measurement's only job is to decide a THRESHOLD, cap it
 just above the threshold. I set 900s reflexively to "get the real number", but
 the real number is not the deliverable -- the verdict is, and the larger cap only
 bought precision I had no use for while risking the whole run.
+
+### Group 1: switched to nodeid-selection for noninertial -- VALID here, and 10x less work
+
+The 400s-cap whole-file run had reached 59 min of its 90-min wall and was going
+to be a coin flip again. Before killing it a second time I checked WHY the file
+was so slow, and the answer reframed the job:
+
+    tests in test_noninertial.py:            54
+    Group-1 entries I actually need:          5
+
+I was running 54 jax-slow tests to measure 5. The standing rule
+[[handpicked-nodeid-batch-is-not-a-context]] says a hand-picked nodeid batch is
+NOT a valid context -- but that rule exists because SOME files build module-level
+objects (test_streamdf.py builds an sdf at import). It is a property of the FILE,
+not a universal law. Checked this one:
+
+    @pytest.fixture in test_noninertial.py:   none
+    module-level assignments:                 none
+    all 6 target signatures:                  def test_x():   <- no fixture args
+    the tests build their own potentials inline
+
+So nodeid selection is faithful HERE, and the run is now bounded at 6 x 400s
+instead of an unbounded 54-test file.
+
+Two kills of the same measurement is not thrash if each is driven by NEW
+information: the first fixed a cap chosen for precision I did not need, the
+second followed from discovering the file/needed ratio. What I should have done
+at setup is ask "how many of this file's tests do I need, and does this file
+have fixtures?" -- both are one grep, and together they were worth ~2 hours.
