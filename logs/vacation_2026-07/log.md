@@ -52777,3 +52777,93 @@ Also updated PR #1204's description (it was EMPTY): goal, the scorecard against
 that goal (ledger 392 -> 140 against a target of 0, so NOT met), what changed,
 a suggested reading order, and two caveats a reviewer needs -- that CI never
 runs --jit, and that numpy byte-identity was the invariant.
+
+## 2026-08-24 (cont.) -- Codex review of #1204: the first two fix PRs
+
+Jo ran a Codex review over #1204 and asked for follow-up PRs into it. Five
+findings, all five reproduced. Planned as three PRs by file-disjointness:
+`galpy/backend/` kernels, then the call-site gates, then the `set_jit` semantics
+question that needs Jo's direction.
+
+### gh#1381 -- gammainc d/dx is NaN at the x=0 endpoint (finding 1)
+
+`dP/dx = prefix(a,x)/x`, and `prefix(a,0) = 0`, so the endpoint is 0/0. x=0 is a
+reachable point -- gh#1374's own value test pins `P(a,0)=0` -- so a caller
+differentiating through it got a silent NaN. Replaced the divide with the
+explicit limit (`a<1 -> +inf`, `a=1 -> 1`, `a>1 -> 0`).
+
+The oracle question was the interesting part. The obvious move is "match jax's
+native gammainc", and it would have been WRONG: jax returns NaN for `d/dx` at
+`a=1, x=0`, where the analytic answer is plainly 1 (`P(1,x) = 1-e^-x`). Pinned
+the analytic limit instead and skipped that one point on the jax arm. A
+reference implementation is only an oracle where it is itself correct.
+
+Root cause of the gap, and it is mine: gh#1374 added endpoint VALUE tests and no
+endpoint GRADIENT tests, in a PR whose entire subject was gradients.
+
+### finding 2 -- `finite_part_quad` is scalar-only: NOT a live bug, and 4 sites
+
+Codex flagged the `lam` slope estimate as scalar-only. Two corrections to my own
+first read:
+
+1. **My first patch was wrong and my test was wrong.** I "fixed" one line, got a
+   broadcast error at a different shape, and my scalar check read 54734.5
+   against an expected 1.08 -- because I had passed `peak_width=b`, taking the
+   sinh branch, when the finite part needs `peak_width=0`. I had guessed the
+   contract instead of reading the docstring that states it. Reading it settled
+   both in a minute.
+2. **It is four sites, not one.** `fixed_quad` is already fully batched
+   (`a[..., None] + span[..., None] * x01`, reduce `axis=-1`), so everything it
+   calls back into meets a `(batch, n)` node array: the `c/u^2` model term in
+   `residual`, the `b` in the `lam` estimate (plus its reduction axis), the `w`
+   in the sinh substitution, AND `lam * log(u/b)` in the log-subtraction lambda
+   -- which I only found because the batched test failed after the first three.
+
+**It is also not reachable today.** The sole caller is `AnyAxisym`, whose forces
+are decorated `@check_potential_inputs_not_arrays`, so R and z are guaranteed
+scalar -- that potential's array opt-out is deliberate and Jo has already ruled
+on it. So this is a general `galpy.backend` helper not honouring its own
+documented signature (`b : array`, integrand "vectorised over a trailing node
+axis"), not a defect any user can hit. Worth fixing, worth saying plainly which
+one it is. With no batched caller to validate against, the tests are synthetic
+and analytic: `f(u) = c/u^2 + exp(-u)` has finite part `2 sinh(b) - 2c/b`.
+
+Byte-identity held on the real path: 32 AnyAxisym R2deriv/z2deriv values,
+bit-for-bit equal on numpy, jax and torch (float64), arms differing only in
+`quadrature.py`.
+
+### ...and a bug the A/B found that nobody was looking for
+
+The torch arm of that byte-identity check would not run at all:
+
+    AnyAxisymmetricRazorThinDiskPotential.py:213
+    surfdens(1.0).to(units.Msun / units.pc**2)
+    TypeError: to() received an invalid combination of arguments - got (CompositeUnit)
+
+`__init__` duck-types "does surfdens carry units?" by calling `.to()` and
+catching `AttributeError`. A torch tensor HAS `.to()`, with an entirely
+different meaning, so it raises TypeError instead -- not in the except clause,
+so construction dies. jax escapes only because jax arrays have no `.to` at all.
+
+Untested because the test module's `_surfdens` dispatches on its ARGUMENT, and
+`__init__` probes with a plain python float, so it comes back numpy on every
+backend. The new test uses what a torch user actually writes: backend array out,
+whatever goes in.
+
+Deliberately did NOT add TypeError to the units-INPUT probe above it: there an
+exception means "expected units", and torch's TypeError means "expected a
+Tensor" -- catching it would mis-detect, not fix.
+
+Two lessons worth keeping. Duck-typing on a method name is unsafe once tensor
+libraries are in play (`.to`, `.T`, `.item`, `.shape` all collide). And a
+byte-identity A/B is a reachability probe as well as a numerical one -- it runs
+paths the suite does not.
+
+Local gate on the finding-2 PR: 132 passed / 1 skipped across
+`test_backend_quadrature.py` + `test_backend_anyaxisymdisk.py`. Branch pushed as
+`fix/quadrature-batching-anyaxisym-units` @ e4ac1e07 but the PR is HELD: gh#1380
+and gh#1381 are already open (my cap of two), and the repo is under heavy runner
+contention — 74 queued on gh#1380 alone. A third PR would add ~150 jobs to the
+very queue that is delaying the merge I am waiting on, which is the specific
+mistake [[all-clear-queued-rerun-and-ledger-rebase]] warns about. Opens as soon
+as gh#1380 lands.
