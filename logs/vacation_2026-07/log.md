@@ -52351,3 +52351,31 @@ conditional is an `xp.where`, not a Python `if`), so there are no partially
 covered branches to chase. Local `--cov` could not be run to confirm -- coverage
 + numpy pocketfft raises "cannot load module more than once per process" in this
 env -- but CI's own shard is the authority there anyway.
+
+### ...and the one red that IS on the head is an OOM in an unrelated test
+
+Refined the above after checking detailsUrl -> run -> SHA properly. On the head
+987862d6 there IS one real red, but not where I assumed:
+
+    build (ubuntu, test_backend*.py)  [PUSH run]  -> exit code 137 (SIGKILL/OOM)
+    killed during tests/test_backend_actionAngle.py::
+        test_isochroneapprox_inbackend_hessian[torch], at 4% of the shard
+
+That test is actionAngle/isochroneapprox under a torch Hessian -- it does not
+touch gammainc at all. develop passes this shard 6/6, so the naive read is
+"mine". But the PULL_REQUEST twin at the SAME SHA is still running and has not
+reported, and both runs execute that same heavy double-backward test
+CONCURRENTLY on the shared pool. Two copies of the heaviest test in the suite is
+a credible OOM mechanism with no relation to my diff.
+
+So: wait for the twin rather than "fix" a non-bug. If the pull_request shard
+passes, the push 137 is a resource artifact of double-running.
+
+Two forensic notes from this wake, both near-misses:
+* `gh pr checks` mixes in check runs from SUPERSEDED commits. My first read
+  ("torch sphericaldf now passes") was from a stale list. Resolve
+  detailsUrl -> run -> headSha before believing any red or green.
+* codecov/patch + codecov/project went red for a DERIVED reason -- the shard
+  that carries their coverage was cancelled, so the new lines read as
+  uncovered. I nearly went hunting for a coverage gap in a module that is
+  branch-free by construction and cannot have one.
