@@ -52379,3 +52379,46 @@ Two forensic notes from this wake, both near-misses:
   that carries their coverage was cancelled, so the new lines read as
   uncovered. I nearly went hunting for a coverage gap in a module that is
   branch-free by construction and cannot have one.
+
+### gh#1374: the OOM is MINE. Double-run hypothesis REFUTED; cost never measured
+
+Both twins at 987862d6 failed the test_backend shard, so it is not a double-run
+resource artifact -- my hypothesis from last wake is dead. And the red spread to
+9 checks, ALL torch: 3 torch orbit shards, a torch potential shard, both
+test_backend twins, plus the derived codecov pair and all-clear.
+
+All torch, and the fallback is torch-only. Measured the thing I never measured:
+
+    torch gammaincc, us/call     native    fallback    ratio
+      scalar                       10.8      5216.8    485x
+      n = 1000                    170.4      6912.4     41x
+
+**PowerSphericalPotentialwCutoff is a component of MWPotential2014** and calls
+gammainc on essentially every evaluation, mostly with SCALARS. So I replaced one
+native call with 170 unrolled backend ops on one of the hottest paths in the
+library. 485x on a scalar explains the shard timeouts, and the autograd graph
+retained across those 170 iterations explains the OOM (exit 137).
+
+**The error is not the algorithm, it is what I chose to validate.** I swept
+accuracy against mpmath at 60 digits across a in [0.5,200] and x/a in [0.3,4],
+found the exponent-cancellation floor, measured the crossover, measured minimum
+iteration counts -- and never once timed the function or asked who calls it.
+`migration-flips-numpy-fallthrough-to-eager-slow` is a memory I already hold and
+it describes exactly this: a hot-path migration flipping a fast native call into
+an eager-slow loop. Accuracy was the interesting problem, so I validated the
+interesting problem.
+
+**Redesign (next wake).** Pay the loop only where native actually fails:
+* forward: native torch (exact for a <= 20, ~5e-10 above) -- restores hot-path
+  speed. Route to the series/CF only for the a > 20 precision regime.
+* d/dx: CLOSED FORM, dP/dx = x^(a-1) e^-x / Gamma(a) = exactly the prefix I
+  already compute. No loop at all.
+* d/da: no closed form, so it needs the differentiated series/CF -- but ONLY
+  when `a` actually requires grad, which no hot path does.
+A torch.autograd.Function with native forward + this backward keeps both wins
+(d/da AND the a>20 precision) at native cost on every call that does not
+differentiate w.r.t. the order.
+
+This is roughly the "Design B" I rejected several wakes ago for leaving the
+precision gap. The correct answer was B plus a narrow forward re-route, not the
+uniform replacement I built.
