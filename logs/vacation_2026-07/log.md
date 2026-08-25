@@ -53793,3 +53793,85 @@ Option (b) -- require an active backend, raise otherwise -- is one line, cannot
 surprise, and turns a confusing downstream failure into an error at the call
 site. Going with (b), documented as an assumption. Not started: both PR slots
 are full.
+
+---
+
+## 2026-08-25 (third) — I called a root cause twice and was wrong both times
+
+Cron `5451d57e` alive.
+
+### The qdf red on gh#1382 was never a test failure
+
+"Process completed with exit code 4" with the run still in progress looked like
+pytest's usage-error code. Once the run completed and the log was readable, it
+was `wget`:
+
+    Connecting to release-assets.githubusercontent.com ... connected.
+    Unable to establish SSL connection.
+
+A transient SSL failure downloading `lcov-1.15.tar.gz` during environment
+SETUP. The tests never ran. Re-run dispatched. The same-SHA push run had
+already passed the identical job, which was the first clue.
+
+### test_orbmethods: two wrong diagnoses before the right one
+
+The torch run of the coords-adjacent files gave 5 failures, one of which
+(`test_galpypaper::test_orbmethods`) was a NUMERICAL miss: 1.392e-3 against a
+1e-3 tolerance on a hard-coded literal. The test sits directly under a comment
+saying it was weakened once before "because improved galcen<->heliocen
+transformation has changed these" — i.e. an explicit pin on the very transform
+I had just migrated. Everything pointed at me.
+
+**Wrong diagnosis #1: "f32 precision defect in my backend path."** Measuring
+numpy-vs-torch on the changed transforms gave `vrpmllpmbb_to_vxvyvz` at
+**1.008e-07** where its siblings were 2.2e-16. The speed invariant
+(|v| is preserved: the (vr, d·pmll·K, d·pmbb·K) triad is orthonormal) said numpy
+was right at 2.3e-16 and torch wrong at 8.5e-9. Root cause looked airtight:
+`torch.asarray(<python float>)` is float32, and `scalarDecorator`'s
+`@backendNative` path does exactly that before the body runs. I fixed it and
+called it confirmed.
+
+**It was a real defect — but not this one.** `tests/conftest.py:485` does
+`torch.set_default_dtype(torch.float64)` for the whole suite. Under the harness
+`torch.asarray(<python float>)` is ALREADY float64, so the f32 path cannot
+manifest in ANY test. Re-measured with the harness's dtype: every changed
+transform agrees with numpy at 2.2e-16. The harness silently supplies the one
+thing real users lack, which is why nothing ever caught it and also why it
+cannot be the red.
+
+**Wrong diagnosis #2: "ulp amplified through the integration."** Plausible
+next story. Refuted by measurement: a 1-ulp IC perturbation moves vR(5) by
+2.4e-14, not 1e-3. I had also built the probe on an orbit I INVENTED rather
+than the test's — it returned −2.99 where the test expects 45.2, which is
+exactly the tell that a proxy is not the assertion
+([[reproduce-the-assertion-not-a-proxy]]).
+
+**The actual answer, from running the test's own orbit:** numpy and torch give
+the IDENTICAL value (diff **0.000e+00**) and BOTH miss the literal by 1.392e-3.
+So it is not backend-related at all. And reverting only my stack's five source
+files to the develop base inside the same worktree (which has the built C
+extension) gives the SAME 45.201138694253274 — my commits do not move it. The
+`feat/backends` tree gives 45.202993419433426, which passes. So
+**`test_orbmethods` is a pre-existing red on `feat/backends-develop`**, from
+work already merged between feat/backends and eabc3a5a, on numpy as much as
+torch. My branch is exonerated; flagged for separate investigation.
+
+The lesson I keep re-learning: "the failing test sits right on top of what I
+changed" is a hypothesis, not evidence, and a base arm on the branch you
+actually ship to settles it in one command
+([[measure-on-the-branch-you-ship-to]]).
+
+### What survived
+
+The f32 fix is kept, because it IS real for users — just not for the suite.
+Its regression test had to be built twice: the first two versions passed with
+AND without the fix (once because I fed backend arrays where torch's promotion
+hides the loss, once because conftest's float64 default hides it). The third
+version restores torch's own default dtype for its duration, and is verified to
+FAIL without the fix and pass with it. A test that cannot fail is not a test
+([[ab-must-reproduce-before-it-can-clear]]).
+
+Also dropped a torch `.T`-on-1-D deprecation warning surfaced by the run, and
+hoisted `promote_common_dtype` into `galpy.backend` (the helper-placement audit).
+
+### Ledger delta this PR: 0. No entries added, none burned.
