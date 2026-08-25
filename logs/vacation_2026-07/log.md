@@ -53596,3 +53596,114 @@ re-run, so the VizieR outage is receding. Residual reds are the same outage
 (test_from_name in 4 orbit builds + notebooks 3.10) and codecov/project. Nothing
 re-runnable this wake -- those runs are queued/in-progress again.
 gh#1382: 56 green, 97 queued, no failures.
+
+---
+
+## 2026-08-25 — finding 6 complete, and an f32 defect hiding under an f64 suite
+
+### First: the box was wedged, and not by CI
+
+Every command came back "Command output was lost ... ENOSPC". Not a test
+failure, not a CI problem — `/dev/sda6 110G 104G 0 100% /`. The ROOT
+filesystem was full, which takes `/tmp` and `/var/tmp` with it, and my git
+worktrees live in `/var/tmp`. Writes to diagnostics files silently produced
+empty files, so the only way to see anything was to write to the NFS `/home`
+and read it back.
+
+The consumers were all mine and all reconstructible: thousands of per-process
+`torchinductor_galpy_*` compile caches from months of forced-torch runs, plus
+`pip-cache`/`pipcache`/`uv-cache`. Freed ~10G, `/` back to 91%. Deliberately
+left alone: `galpy-gpu` (8.8G, the documented sm_61 env), `venv-p23/p24`,
+`galax-src`, and every `/tmp/w5s*` directory belonging to other sessions.
+
+Worth a memory: the torchinductor cache is per-process and never garbage
+collected, so a long-running forced-torch campaign leaks a directory per test
+process indefinitely.
+
+### The finding-6 work turned up a defect in ALREADY-MERGED code
+
+Before writing parts 6 and 7 I probed the ones I had already done. The probe
+that mattered was not "does it give the right answer" but "does it run at all
+under torch's DEFAULT dtype":
+
+    torch.float32  galcenrect_to_XYZ     RAISED expected m1 and m2 to have the same dtype
+    torch.float32  galcenrect_to_vxvyvz  RAISED  "
+    torch.float32  XYZ_to_galcenrect     RAISED  "
+    torch.float32    (_extra_rot=False)  ok
+    torch.float64  <all three>           ok
+
+`galcen_extra_rot` is a float64 module constant. numpy promotes silently;
+torch REFUSES to matmul float64 against float32. `_extra_rot=True` is the
+DEFAULT, so **every torch user with default-dtype tensors hit this on every
+one of these transforms** — and two of the three are merged code, not mine.
+The whole suite runs in float64, which is exactly why nothing caught it.
+
+Fix is `_promote_pair`, casting via `result_type`. That is numpy's own
+promotion rule, so float32 in gives float64 out — matching the numpy path
+rather than quietly dropping precision ([[backend-precision-must-match-numpy]]).
+I checked what numpy actually returns for f32 input before choosing, instead of
+assuming the `match_input_dtype` exit-cast convention applied here.
+
+### And a defect in my OWN unmerged code: the backend branch was dead
+
+`XYZ_to_galcenrect` (part 5, last wake) had a backend branch and no
+`@backendNative`. `scalarDecorator` calls `numpy.asarray(args[0])` to test
+ndim BEFORE dispatching, so with a grad-carrying or traced coordinate it
+raised — torch "Can't call numpy() on Tensor that requires grad", jax
+`TracerArrayConversionError` — before reaching the branch at all. The branch
+was unreachable for precisely the inputs it was written for.
+[[backendnative-must-be-innermost-decorator]] again, and the tell was that the
+already-migrated sibling `galcenrect_to_XYZ` (which HAS the opt-in) passed the
+same probe.
+
+### The migration exposed a third one: resolved namespace, uncoerced inputs
+
+Running `tests/test_coords.py --backend torch` gave 10 failures. The base
+coords.py gave 0 — so all 10 were mine. Five were the real class:
+`resolve_namespace` returns the FORCED namespace even when the coordinates are
+still numpy, so `xp.cos(ndarray)` / `xp.reshape(ndarray)` raised in
+`lbd_to_XYZ`, `vrpmllpmbb_to_vxvyvz`, `galcencyl_to_galcenrect` and
+`lambdanu_to_Rz`. Coerce the inputs, never data-guard the dispatch
+([[coerce-under-forced-not-dataguard]]); `coerce_coords` is a documented no-op
+when xp is numpy. That took 10 -> 7, and the residual 7 were uniformly
+`numpy.all(<Tensor>)` at assertion sites — the file's own `as_numpy` treatment,
+already used 73 times there.
+
+Final: **98/98 under numpy, torch AND jax.** finding 6 is **7 of 7**.
+
+### Two gates that earned their keep
+
+*Byte-identity with a negative control.* Hash over 37-element arrays x
+{scalar, array, negative Xsun} x {scalar, array Zsun} x `_extra_rot`, compared
+against the untouched `feat/backends` tree: identical. But a clean result on
+the "changed" side proves nothing unless the probe can detect a change, so I
+perturbed the numpy branch by 1 ulp — hash moved — and restored it — hash came
+back exactly ([[ab-must-reproduce-before-it-can-clear]]).
+
+*Non-vacuous gradients.* First grad-vs-FD run reported
+`vxvyvz_to_galcenrect: AD 0.0000000000  FD 0.0000000000  rel 0.00e+00 OK`.
+That "OK" is worthless: at the default `Zsun=0` the rotation genuinely does not
+depend on Xsun, so the check cannot distinguish a correct gradient from no
+gradient at all. Re-ran at `Zsun=0.02`, where d/dXsun, d/dZsun and d/dvsun are
+all nonzero — 1e-8 to 1e-11 against central differences, and jax `jit(grad(...))`
+traces ([[stringent-gradient-tests]]).
+
+The import-shadow trap bit once here too: the first byte-identity run reported
+`galpy: /var/tmp/adiab-quad/galpy/__init__.py` for BOTH arms — a third worktree,
+via the editable-install meta-path finder, which beats `sys.path`. Printing
+`galpy.__file__` and asserting on it is the only reason I noticed
+([[galpy-editable-install-import-shadow]]).
+
+### CI
+
+Runner queue is deep; both PRs are queue-bound rather than broken.
+gh#1381: the consistent red is `test_from_name_*` — the SIMBAD/VizieR outage.
+I probed the service directly (`Orbit.from_name('LMC')` -> 78.77, -69.01, back
+up) before re-running, rather than re-running hopefully. The macos reds settled
+for free as a same-SHA A/B: the `pull_request` run had exactly ONE failure while
+the `push` run at the identical SHA had three, so those two are flakes
+([[same-sha-duplicate-run-is-a-free-ab]]). codecov/project is the usual
+incomplete-upload phantom while backend shards are still queued.
+gh#1382: 89 green, 64 queued, zero failures.
+
+Cron `5451d57e` verified alive at wake (P0 keep-alive).
