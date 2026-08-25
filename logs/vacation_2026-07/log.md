@@ -54480,3 +54480,47 @@ different sources than its second. Discarded and re-run on a quiet tree, this
 time in **CI's exact shape** (`--splits 5 --group N`), because CI runs that file
 split five ways and a whole-file local run is a different context.
 [[long-measurement-needs-a-quiet-box]], [[verify-exact-ci-shard-context]]
+
+### The detachment audit: one more real defect, three refuted
+
+Having found the 2F1 case, I grepped galpy for `math.<fn>` applied to values
+that can be backend arrays and measured each with grad-vs-FD rather than by
+reading the code.
+
+**Real (fixed, `48a68247`)** — `hyp1f1.py:39`, `math.gamma(a)`: identical class.
+torch `d/da 1F1(a, a+1; -3)` = **-1.45e-01** against a true **-1.02e-01**, 42%
+wrong and completely silent; jax raised one line earlier at the
+`abs(b - (a+1))` domain check. Routed + `concretely_true`, and now **both**
+backends agree with scipy's FD to **5.4e-10**. A/B: 2 failed on base, 2 passed
+with the fix.
+
+Side finding worth recording: `torch.special.gammainc` taken directly raises
+`NotImplementedError` for the derivative w.r.t. its ORDER, but galpy's routed
+`gammainc` does carry it — which is why the fix works on torch at all. Relevant
+to the pending "differentiable gammainc/gammaincc fallback" task.
+
+**Refuted (measured, no change):**
+
+* `GaussianAmplitudeWrapperPotential.py:70` `math.exp(arg)` — I predicted the
+  guard (`isinstance(t, (float, int))`) would miss a tensor `to=`. It does not:
+  `dPhi/dto` with a python-float `t` matches FD to **2.7e-11**.
+* `RazorThinExponentialDiskPotential.py:212/267` `math.sqrt(2.0)` — a literal.
+* `SpiralArmsPotential.py:647` `math.cos(self._alpha)` — a tensor `alpha` does
+  not silently detach; something earlier in the constructor raises
+  "Can't call numpy() on Tensor that requires grad". Visible, different class,
+  left alone.
+
+### gh#1383 status
+
+**codecov/patch went GREEN** at 18:11Z — the four new `_CHAIN_CASES` did their
+job. `codecov/project` is still red at 99.87 / 59 misses, but 44 of those 59 are
+in `galpy/backend/quadrature.py`, a file this PR does not touch, and one of the
+two `tests/test_backend*.py` coverage jobs is still running. Incomplete upload,
+not a real drop — same shape as [[codecov-session-count-discriminates-phantom]].
+Waiting, not fixing.
+
+Local gate on `backend/constructor-jit-safety` after the re-run on a quiet tree,
+in CI's exact shape (`--splits 5 --group N`): **1288 passed, 0 failed** across
+the five groups, plus `test_backend_special.py` 231 passed and
+`test_potential.py` 1288 passed on numpy. The ~25 "F"s from the corrupted
+whole-file run were the artifact, as suspected.
