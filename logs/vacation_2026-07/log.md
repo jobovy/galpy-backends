@@ -53707,3 +53707,89 @@ incomplete-upload phantom while backend shards are still queued.
 gh#1382: 89 green, 64 queued, zero failures.
 
 Cron `5451d57e` verified alive at wake (P0 keep-alive).
+
+---
+
+## 2026-08-25 (later) — the audit found a helper in the wrong place, and the hoist bit me
+
+Cron `5451d57e` alive. Ran the loop's own diff audit on the coords stack before
+opening it as a PR. Three criteria, three outcomes:
+
+*`if` -> `xp.where` array-input class:* clean. The only new Python branches are
+the `under_trace`-guarded structural gate from finding 3 — trace-vs-eager, not
+data-dependent.
+
+*Duplication:* clean, and better than before — the shared `_to_galcen_rot`
+means the rotation-matrix literal now appears exactly ONCE in the file
+(`grep -c` = 1) where parts 5 and 6 would each have spelled it.
+
+*Helper placement:* **failed, and rightly.** `_promote_pair` was sitting in
+`coords.py`, but nothing about it is coords-specific — galpy holds float64
+expansion-coefficient tables, quadrature nodes and spline coefficients that
+meet user coordinates exactly the same way, and torch rejects the mismatch
+identically there. Checked first that `galpy.backend` had no equivalent
+(`match_input_dtype` is the EXIT cast, `asarray_on_device` places without
+promoting), then hoisted it as `promote_common_dtype(xp, *arrays, device=...)`.
+[[generic-helpers-go-in-backend]].
+
+### The hoist deleted two functions and I found out from the tests, not the check
+
+    start = s.index("def _promote_pair(")
+    end   = s.index("def _apply_galcen_rot(")
+    s = s[:start] + s[end:]
+
+`_to_galcen_rot` and `_as_vsun` had been inserted between those anchors EARLIER
+IN THE SAME SESSION, so the splice took all three. 19 torch + 19 jax failures,
+`NameError: name '_to_galcen_rot' is not defined`.
+
+This is [[def-to-def-splice-deletes-methods]] for the third time, and the
+annoying part is that the ast set-diff I already have written as the guard would
+have named both casualties in one command — I just ran it *after* the tests
+instead of before. It is faster than the tests AND it localises. Memory updated
+with the recurrence and with the better primitive for a hoist specifically:
+delete the function's exact source text (asserting count == 1) rather than
+`index(next def)`, which has no idea what grew between the anchors.
+
+Restored, re-validated: **98/98 numpy / torch / jax**, byte-identity hash
+unchanged at `041efffc`.
+
+Also: `git commit` was rejected by isort (it rewrote the new import), SHA did
+not move — caught by checking, per [[precommit-hooks-reject-first-commit]].
+And two tool calls died with exit 144 because a `pkill -f` pattern and then a
+`ps | grep | kill` loop matched my own shell / process group. Same family as
+the pgrep self-match; the fix is a distinctive detached launch plus a marker
+file, not a pattern kill.
+
+### Retargeted the wider gate
+
+Killed the six-run shard sweep at 41% after 38 minutes — six sequential runs at
+that rate is ~6h, and the numpy arm is the LEAST informative given the hash gate
+already proves the numpy path. Then checked which test files actually reference
+the changed functions, which is what I should have done first:
+`test_quantity.py` **does not touch them at all**, so most of that 38 minutes
+was measuring nothing. The real exposure is `test_backend_coords`,
+`test_kuzminkutuzov`, `test_galpypaper`, plus the stream files. Those are
+running now, torch first.
+
+### CI
+
+gh#1381: the `pull_request` Linux/Mac run is **completed: success** — with
+SIMBAD back, the whole Linux/Mac matrix passes at this SHA, and codecov/project
+self-healed as predicted. The 4 remaining reds in the rollup all belong to the
+`push` run, which still has one macos job in flight, so its stale entries cannot
+be re-run yet.
+gh#1382: 129 green, one new red — the ubuntu qdf/pv2qdf/streamgapdf_impulse
+shard, **exit code 4 = pytest USAGE error**, not a test failure, and the
+identical job at the identical SHA passed in the push run. Infrastructure-shaped,
+but not classified until the run finishes and the log is readable.
+
+### finding 5, resolved on my side
+
+Reading `_jit.py` settles the fork Jo's steer left open. `set_jit` only
+validates and sets a ContextVar, and there is a paired `jit(mode)` CONTEXT
+MANAGER. Option (a) -- have it turn the backend on -- would give `with
+jit("jax"):` two exit obligations and silently swap the user's backend on entry.
+Option (b) -- require an active backend, raise otherwise -- is one line, cannot
+surprise, and turns a confusing downstream failure into an error at the call
+site. Going with (b), documented as an assumption. Not started: both PR slots
+are full.
