@@ -54524,3 +54524,58 @@ in CI's exact shape (`--splits 5 --group N`): **1288 passed, 0 failed** across
 the five groups, plus `test_backend_special.py` 231 passed and
 `test_potential.py` 1288 passed on numpy. The ~25 "F"s from the corrupted
 whole-file run were the artifact, as suspected.
+
+## 2026-08-25 evening — gh#1383 went 154/154, then the audit found a duplicate
+
+Cron `5451d57e` alive.
+
+**codecov cleared itself at 18:42Z**, exactly as the incomplete-upload reading
+predicted: patch AND project both SUCCESS, and the PR reached **154/154, CLEAN**.
+The 44-of-59 misses in `galpy/backend/quadrature.py` — a file this PR does not
+touch — were the tell.
+
+### The pre-merge audit paid for itself again
+
+Reading the whole diff before merging (per Jo's "fix before merging" gate):
+
+* **`if` -> `xp.where` class: clean.** Every remaining Python `if` in the new
+  coords code branches on SHAPE (`ndim`), TYPE (`isinstance(vsun, (list, tuple))`)
+  or a static flag (`_extra_rot`) — all static under tracing. The only
+  data-valued branches were already converted (`Rz_to_lambdanu`'s two
+  `xp.where` clamps).
+* **Helper placement: clean.** `prefer_backend_namespace` and
+  `promote_common_dtype` are in `galpy.backend`; the coords-specific
+  `_to_galcen_rot` / `_as_vsun` / `_row_or_T` stay in `coords.py`.
+* **Duplication: ONE found and fixed.** `XYZ_to_galcenrect` and
+  `vxvyvz_to_galcenrect` carried the same three lines character for character
+  apart from component names — the same rotation `_apply_extra_rot` already does
+  for the inverse transforms, differing only in shape convention ((N,3) block vs
+  loose components). Hoisted to a named sibling `_rotate_components`, with each
+  docstring pointing at the other. Backend-only code, so numpy is untouched;
+  gate 180 passed on numpy, 98 under torch, 98 under jax. Pushed as `0c69715a`,
+  which costs a fresh ~154-check cycle — that is what the gate is for.
+
+Second time this gate has caught a real duplicate at the last moment (the first
+was `node_axis` on gh#1382).
+
+### Both queued branches merge cleanly onto the post-gh#1383 tree
+
+`git merge-tree` (1 s, instead of assuming):
+`backend/constructor-jit-safety` -> rc=0, `fix/mapcoords-grid-dispatch` -> rc=0.
+Both touch `galpy/backend/_namespaces.py` and `__init__.py`, which gh#1383 also
+touches, and neither conflicts — so no rebase.
+[[simulate-the-merge-dont-assume-conflict]], [[dont-reflexively-rebase-disjoint-prs]]
+
+### Traced-green measured for the new work
+
+The mission's actual dimension, not just eager:
+`tests/test_backend_special.py` + `tests/test_backend_constructor_jit.py` under
+**`--backend jax --jit`: 245 passed**, and under **`--backend torch --jit`:
+245 passed**. Zero failures on either. So the constructor guards, the traced
+hyp2f1 route selection and the routed hyp1f1 Gamma are all traced-green, not
+merely eager-green. (CI never runs jit mode, so this is a local-only measurement
+— which is exactly why it is worth taking.)
+
+PR body for the constructor branch is drafted and waiting at
+`$SCRATCH/pr_body_jitsafe.md`; it opens the moment gh#1383 merges and the cap
+frees.
