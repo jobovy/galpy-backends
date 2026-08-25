@@ -53923,3 +53923,59 @@ The `push` arm's reds were the SIMBAD outage plus one job cancelled at GitHub's
 in-progress job blocks `rerun --failed` on the WHOLE run, and it is not
 cancellable either (cancelling a same-SHA push blocks the merge), so the only
 move is to wait out the 6h cap.
+
+---
+
+## 2026-08-25 (fifth) — RETRACTION: test_orbmethods is not a develop red
+
+Cron `5451d57e` alive.
+
+**I told Jo last wake that `test_galpypaper::test_orbmethods` is a pre-existing
+numpy-side red on `feat/backends-develop`. That is wrong.** CI runs it and it
+PASSES on the develop-based gh#1381:
+
+    gh run view --log --job 97707777234 | grep -o "test_orbmethods [A-Z]*"
+    -> test_orbmethods PASSED
+
+The tell I should have taken seriously immediately: both open PRs are
+develop-based and both went fully green, and CI does run that file. A red that
+CI cannot see is a statement about my machine, not the branch.
+
+**Actual cause: `/var/tmp/rev1` has no compiled C extension.** `find rev1 -name
+'*.so'` returns NOTHING. So `Orbit.integrate` silently used the pure-Python
+integrator, and the test pins `o.vR(5.0, vo=220.0)` against a literal measured
+with the C one — hence 45.201138694253274 vs 45.202530965094553, a 1.392e-3
+miss, in a worktree where the Python code was fine.
+[[worktree-missing-c-ext-fakes-passes]], which I had filed as "fakes PASSes";
+it fakes failures just as happily.
+
+Two specific ways it defeated my reasoning, both now in the memory:
+
+* The "base arm" I ran in the main repo tree was **confounded**: that tree HAS
+  its `.so` and rev1 does not, so what looked like a code comparison was a
+  C-extension comparison.
+* Reverting my stack's five PYTHON sources inside rev1 and getting the same
+  number did NOT exonerate the worktree. The cause lived outside the Python
+  sources, so it was constant across both arms — an A/B executed correctly that
+  structurally could not discriminate. [[ab-arms-must-differ-in-one-thing]] has
+  a corollary I had not drawn: the arms must differ in the one thing, AND the
+  suspected cause must actually be inside the thing you are varying.
+
+Building the extension in rev1 so that worktree stops producing invalid
+numbers. The coords validation is unaffected — coords/quadrature/special are
+pure Python, and the byte-identity, 98/98 three-mode and grad-vs-FD results
+never touched `Orbit.integrate`.
+
+### The rest of the wake
+
+* **gh#1381 is 153/154**, every real run green on BOTH arms (push and
+  pull_request); only the `all-clear` poller is re-running. Pre-audited the
+  diff so the merge is immediate: 2 files, +77/-2; the three `if`s in the diff
+  are all TEST-side, and the source change is entirely `xp.where` including the
+  `x_safe` dead-branch guard that keeps 0 out of the divide. No new helpers, so
+  nothing to dedupe or place.
+* **gh#1382**: dedup fix validated 136/136 across numpy/torch/jax and pushed
+  (head `59a36ad7`, verified the PR carries exactly the 4 expected files). CI
+  re-running.
+* The coords branch sits directly on the develop head, `git merge-tree` shows
+  **0 conflicts**, and all three PRs touch disjoint files.
