@@ -54001,3 +54001,52 @@ self-heal; discriminate with session counts next wake if it does not
 Also re-running the targeted torch/jax/numpy set in rev1 now that it HAS a C
 extension, because the earlier 5-failure reading from that worktree was taken
 without one.
+
+---
+
+## 2026-08-25 (sixth) — the re-measurement found 3 real regressions in gh#1383
+
+Cron `5451d57e` alive.
+
+Re-ran the targeted set in rev1 now that it HAS a C extension. The earlier
+"5 torch failures" reading was taken without one; the honest number is **3**,
+all in `test_kuzminkutuzov` (`test_lambdanu_to_Rz`, `test_Rz_to_lambdanu`,
+`test_Rz_to_lambdanu_r2lt0`). numpy and jax: 0.
+
+**And this time the A/B says they are MINE.** Reverting all 8 of the branch's
+changed files to the develop base *inside the same worktree* (valid now that the
+C extension is present) gives **10/10 under torch**; with the branch's files,
+3 failures. So gh#1383 introduced them — not pre-existing, not ledger material.
+
+Cause is the familiar one: coercing `lambdanu_to_Rz` / `Rz_to_lambdanu` makes
+them return backend arrays under a forced backend, so `numpy.all(<Tensor>)` at
+the assertion sites raises.
+
+### The fix looked applied and did nothing
+
+    R, z = as_numpy(coords.lambdanu_to_Rz(...))
+
+`as_numpy` on a **tuple** is a passthrough — it returns the tuple with its
+Tensor elements intact. These functions return `(R, z)` / `(l, n)`, so the wrap
+was a no-op and the test failed with the *identical* error, which reads as "the
+fix didn't work" rather than "the fix wasn't applied". I verified the
+passthrough directly rather than re-guessing:
+
+    as_numpy((tensor, tensor)) -> tuple, element 0 is still a Tensor
+
+Fixed by mapping over the elements. Also worth noting: my first rewrite only
+caught 2 of the 6 sites because a line-regex misses the multi-line
+`a, b = as_numpy(\n    call(...)\n)` form — redone with `ast`, then asserted
+zero remaining offenders by walking for `Assign(target=Tuple, value=Call(as_numpy))`.
+New memory: [[as-numpy-tuple-passthrough]].
+
+torch is now 10/10. jax and numpy arms still running; **holding the push until
+all three are green** rather than pushing on one arm.
+
+### CI
+
+gh#1382: 97 green / 54 queued after the dedup push, with `codecov/patch` +
+`codecov/project` red while uploads are still landing — the incomplete-upload
+phantom; will discriminate by session count if it survives the full run.
+gh#1383: CI running on the pre-fix head, so the 3 kuzminkutuzov reds should
+appear there too and be cleared by the pending push.
