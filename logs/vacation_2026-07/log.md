@@ -53512,3 +53512,43 @@ catches it; without that the work silently looks done
 ([[precommit-hooks-reject-first-commit]]).
 
 finding 6: 3 of 7 (lambdanu_to_Rz, galcencyl_to_galcenrect, lbd_to_XYZ).
+
+## 2026-08-25 04:2x -- finding 6 at 4 of 7; ruff pattern fixed at the source
+
+### vrpmllpmbb_to_vxvyvz (part 4) -- the biggest of the four safe ones
+
+Same decorator pair as lbd_to_XYZ, plus two more blockers in the body:
+`numpy.zeros((3,3,N))` + NINE indexed writes (jax is immutable), and
+`l *= 180/pi` in-place on an input.
+
+Two details a careless rewrite gets wrong:
+
+* **R[1, 2] is never assigned in the original**, so it stays ZERO. In the
+  stacked form that hole has to be written explicitly -- and it is exactly the
+  element a "tidy up the matrix" instinct would fill in.
+* `(R.T * invr.T).sum(-1)` on a 3-D array: `.T` reverses ALL axes, and torch
+  DEPRECATES `.T` for ndim > 2 ([[torch-op-gotchas-vs-numpy-jax]]). Rather than
+  hunt for permute_dims, wrote the contraction it actually IS --
+  `out[n,j] = sum_i R[i,j,n] * invr[i,j,n]` = `xp.sum(R * invr, axis=0).T` --
+  which leaves one 2-D transpose, safe everywhere.
+
+Byte-identity 156 values across degree x XYZ x n. A/B: all 4 parametrisations
+fail on base. XYZ=True is parametrised on purpose -- it is the only branch
+reaching the in-place mutation.
+
+### Fixed the recurring ruff rejection at its source
+
+Ran `ruff format` on the touched files BEFORE `git commit` instead of letting
+the hook abort and re-committing. Commit landed first try. The previous two
+rejections were not bad luck: code written through a heredoc is never
+ruff-formatted, so the first commit after such an edit ALWAYS fails. Two
+observations made it a pattern; the fix is one command, not more vigilance.
+
+### CI
+
+gh#1381: re-ran the failed notebook jobs (its notebooks run had completed, so
+`rerun --failed` was finally available -- the build runs are still queued).
+Reds remain the SIMBAD/VizieR outage + codecov. gh#1382 building, 56 green.
+
+finding 6: 4 of 7 (lambdanu_to_Rz, galcencyl_to_galcenrect, lbd_to_XYZ,
+vrpmllpmbb_to_vxvyvz). Remaining three all need the sign(Xsun) decision.
