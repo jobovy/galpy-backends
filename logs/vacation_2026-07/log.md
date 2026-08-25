@@ -54617,3 +54617,36 @@ A/B base.
 That is two duplicates caught by the pre-merge/pre-open audit in one day
 (`node_axis` on gh#1382, the forward extra-rot block on gh#1383, and now this
 one — three in three PRs). The gate is not ceremonial.
+
+### Finding 11 sharpened: torch surfdens is not "no gradient", it is a WRONG one
+
+I had reported finding 11 as "no torch gradient through surfdens". Measuring it
+properly (MiyamotoNagai a=0.5 b=0.1 at R=1, z=0.3) splits it into two distinct
+behaviours, and one of them is worse than reported:
+
+| route | returns | torch AD vs FD |
+| --- | --- | --- |
+| `forcepoisson=False` (default, `_dens`) | a bare Python **float** | graph severed — no gradient at all |
+| `forcepoisson=True` (Rforce/R2deriv/phi2deriv) | **Tensor, requires_grad=True, grad_fn set** | `d/dR` -1.0317e-01 vs -1.3455e-01 (**23% wrong**); `d/dz` +5.812e-03 vs +2.058e-02 (**72% wrong**) |
+
+The FD reference is anchored, not assumed: **jax** AD matches it to **1.6e-10 on
+both routes**, so the finite differences are right and torch is wrong. The
+partial-graph signature — a `grad_fn` present, both components wrong but by
+different amounts — is the same silent-detachment class as hyp2f1/hyp1f1: the
+scipy-integrated piece detaches while the algebraic prefactor still carries a
+graph.
+
+**Cause**, and why I am NOT fixing it unilaterally: `_quad_needs_backend` gates
+on `under_trace`, which is deliberately False for EAGER torch autograd (it asks
+`torch.compiler.is_compiling()`), so surfdens takes scipy. Its docstring
+justifies that on the VALUE — scipy calls the integrand node-by-node so
+scalar-only potentials keep working, and `_force_accepts_arrays` is not
+decidable because a wrapper forwards through its own undecorated `_Rforce`. That
+justification does not extend to the GRADIENT.
+
+The proposal, for Jo rather than for me to land quietly: when a coordinate is a
+**grad-tracking eager tensor**, use the backend GL rule if
+`_force_accepts_arrays(pot)` and otherwise **raise**, instead of silently
+returning a wrong gradient. Same principle as the hyp1f1 fix — turn a silent
+wrong answer into either a correct one or a loud one. It changes behaviour for
+existing users, so it wants its own PR and a decision, not a drive-by.
