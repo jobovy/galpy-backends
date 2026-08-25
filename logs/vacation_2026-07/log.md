@@ -53444,3 +53444,33 @@ Two PRs open again: gh#1381 (gammainc) and gh#1382 (quadrature).
 
 `fix/coords-inverse-transforms` has lambdanu_to_Rz and galcencyl_to_galcenrect.
 Now that the queue is light, this can push next wake without starving anything.
+
+### gh#1381's 10 reds are ONE external outage, not code
+
+    tests/test_orbit.py::test_from_name_values  FAILED
+    tests/test_orbit.py::test_from_name_errors  FAILED
+    E  pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities endpoint at:
+
+SIMBAD/VizieR unreachable. Same root cause as all four `run-notebooks` jobs
+(3.10/3.11/3.13/3.14) -- which is exactly [[no-rerun-vizier-notebook-flakes]]:
+re-run these, never cancel them. Four notebook versions failing together LOOKS
+systemic, and is: systemically external.
+
+Note the ordering trap I avoided: `gh pr checks` showed 10 FAILURE, but querying
+the runs showed them still queued/in_progress at the head SHA. The failures are
+individual JOBS inside runs that have not finished, so `rerun --failed` is not
+available yet -- same "cannot be rerun" wall as before. They wait for their runs
+to complete.
+
+Restored the 45 CANCELLED checks by re-running the all-backend run I
+force-cancelled earlier to save gh#1380. That was the cost of that trade, paid
+now that gh#1380 is safely merged -- which is the right order, not an accident.
+
+### finding 6 rebased onto the new develop, still held
+
+`fix/coords-inverse-transforms` rebased onto eabc3a5a cleanly (0 conflict
+markers, verified by grep not by the absence of a rebase error). Still NOT
+pushed: it has no PR and will not for a while (stacked behind the coords
+branch), and the queue just absorbed gh#1382's 97 plus gh#1381's restored 45.
+Pushing three more runs for a branch nobody is waiting on is the exact habit
+that starved gh#1380.
