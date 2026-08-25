@@ -7,54 +7,29 @@ the trace.
 
 ## Merged into `feat/backends-develop` this cycle
 
-* **gh#1381** `fix/gammainc-endpoint-grad` → `206ccd78`
-* **gh#1382** `fix/quadrature-batching-anyaxisym-units` → `06267d1d`
-  (merged only after the duplication audit: the `on_nodes` closure was replaced
-  by the pre-existing module-level `node_axis()` helper.)
+* **gh#1381** `fix/gammainc-endpoint-grad` -> `206ccd78`
+* **gh#1382** `fix/quadrature-batching-anyaxisym-units` -> `06267d1d`
+* **gh#1383** `fix/coords-inverse-transforms` -> **`4e2cc322`** at 154/154 CLEAN.
+  Review findings 3, 4 and 6 (finding 6 complete, 7 of 7), plus
+  `promote_common_dtype` + `prefer_backend_namespace` hoisted into
+  `galpy.backend`, the `scalarDecorator` float32 fix, the `_quad_needs_backend`
+  all-coordinates fix, and the `actionAngleIsochroneApprox` mixed-set coercion.
+  Its last red was a **19-second race**: `all-clear` gave up at 22:16:40Z while
+  codecov flipped green at 22:16:58Z. Re-ran that one job. Ledger delta: 0.
 
-## The one open PR (mission cap = 2, using 1)
+## The open PR
 
-* **gh#1383** `fix/coords-inverse-transforms`, worktree `/var/tmp/rev1`,
-  head **`1ff63b7e`** — review findings 3 + 4 + 6 (finding 6 complete, 7 of 7),
-  plus `promote_common_dtype` hoisted into `galpy.backend`, the
-  `scalarDecorator` python-scalar/float32 fix, and a torch `.T`-on-1-D guard.
-  **Ledger delta: 0.**
+* **gh#1388** `fix/mapcoords-grid-dispatch`, worktree `/var/tmp/mapfix`, head
+  `e7dcb342` (2 commits) on develop `4e2cc322`. Review batch-2 item 2:
+  `map_coordinates` dispatched on the query coordinates alone, so a backend
+  prefiltered GRID queried at fixed numpy points fell into scipy and raised
+  ("Can't call numpy() on Tensor that requires grad" / TracerArrayConversion).
+  Gates measured BEFORE opening: value parity 3.3e-16, grad-vs-FD 3.0e-10 at
+  every one of 12 grid nodes, `tests/test_backend_interpolate.py` 165 passed on
+  numpy / 165 under jax / 165 under torch. Ledger delta: 0. CI starting.
 
-  Two red classes found on the previous head and BOTH now fixed and pushed:
+## Queued behind gh#1388 (approved sequencing)
 
-  1. *torch stream shard.* A/B in the same worktree — base (merge-base
-     `206ccd78`) 161 passed / 0 failed, my branch 2 failures, so both were mine.
-     `test_calcaAJacLB` needed `coerce_coords` in
-     `actionAngleIsochroneApprox._parse_args_backend` (mixed numpy/backend
-     coordinate set); `test_streamTrack_sample_consistency` needed `as_numpy`
-     at the assertion site. Re-run of the same three files under `--backend
-     torch`: **161 passed, 0 failed (751 s)** — matches the base arm exactly.
-  2. *codecov/project + codecov/patch.* A REAL drop (99.96 → 99.90, 28
-     sessions), not the stale-base phantom. 30 missed lines, all in
-     `coords.py`, all backend branches added by this PR. Four new
-     `_CHAIN_CASES` in `tests/test_backend_coords.py` cover them; a coverage
-     run confirms **all 30 lines now execute** (82 passed, was 67).
-
-  **`1ff63b7e` reached 154/154 SUCCESS, mergeStateStatus CLEAN** — codecov
-  cleared itself at 18:42Z once the second `tests/test_backend*.py` upload
-  landed, confirming the incomplete-upload reading.
-
-  Then the pre-merge audit found a **duplicate**: the forward
-  `XYZ_to_galcenrect` / `vxvyvz_to_galcenrect` extra-rot blocks were identical
-  three-liners, and the same rotation `_apply_extra_rot` already did for the
-  inverse transforms. Hoisted to `_rotate_components`; pushed as **`0c69715a`**,
-  which is re-running the full ~154-check cycle. Gate for the change: 180 passed
-  on numpy, 98 under torch, 98 under jax.
-
-## Queued behind gh#1383 (approved sequencing)
-
-1. `fix/mapcoords-grid-dispatch` (worktree `/var/tmp/mapfix`, head
-   **`f05987fa`**, 2 commits) — backend `map_coordinates` silently returned an
-   ndarray under torch/jax eager and raised under torch+grad and jax-jit.
-   **READY**: pre-open audit removed a duplicated `device_of`, and the branch is
-   gated on a throwaway probe (gh#1383 head + this branch cherry-picked):
-   `tests/test_backend_interpolate.py` **165 passed on numpy, 165 under
-   `--backend torch`**. Rebase onto develop and open the moment gh#1383 merges.
 2. Review batch-2 items 3 AND 4 — **BUILT AND COMMITTED LOCALLY, not
    pushed**: branch `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
    head **`48a68247`** (4 commits) on develop `06267d1d`. PR body drafted at
