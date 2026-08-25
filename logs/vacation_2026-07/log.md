@@ -53979,3 +53979,25 @@ never touched `Orbit.integrate`.
   re-running.
 * The coords branch sits directly on the develop head, `git merge-tree` shows
   **0 conflicts**, and all three PRs touch disjoint files.
+
+**Retraction closed.** With the C extension built in rev1, `test_galpypaper.py`
+is 14 passed / 1 skipped under BOTH numpy AND forced torch. So the
+`test_orbmethods` failure was 100% the absent `.so`, in both backends, and none
+of it touched the coords work.
+
+**gh#1381 MERGED** as `206ccd78` on feat/backends-develop (audit clean: 2 files,
++77/-2, all three `if`s test-side, source is pure `xp.where` with the `x_safe`
+dead-branch guard, no new helpers).
+
+**gh#1383 OPENED** — the coords branch (findings 3/4/6, finding 6 complete 7/7),
+rebased onto the new develop head with 0 conflicts, conflict-marker grep clean,
+verified to carry exactly its 8 files (+649/-150). Ledger delta 0.
+
+**gh#1382** post-dedup CI: `codecov/patch` + `codecov/project` red with 137
+checks still QUEUED — codecov evaluating before any upload landed. Expected to
+self-heal; discriminate with session counts next wake if it does not
+([[codecov-session-count-discriminates-phantom]]).
+
+Also re-running the targeted torch/jax/numpy set in rev1 now that it HAS a C
+extension, because the earlier 5-failure reading from that worktree was taken
+without one.
