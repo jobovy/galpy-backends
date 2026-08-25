@@ -53552,3 +53552,47 @@ Reds remain the SIMBAD/VizieR outage + codecov. gh#1382 building, 56 green.
 
 finding 6: 4 of 7 (lambdanu_to_Rz, galcencyl_to_galcenrect, lbd_to_XYZ,
 vrpmllpmbb_to_vxvyvz). Remaining three all need the sign(Xsun) decision.
+
+## 2026-08-25 05:0x -- finding 6 UNBLOCKED by measurement, not by a decision
+
+I had parked the three galcen-rotation members pending a "sign(Xsun) convention
+decision from Jo". That framing was wrong, and one test settled it:
+
+    round trip galcenrect_to_XYZ -> XYZ_to_galcenrect, Zsun=0.02
+      Xsun=+8.0   max|err| 1.110e-15
+      Xsun=-1.0   max|err| 4.441e-16
+      Xsun=-8.0   max|err| 1.554e-15
+
+**Exact at negative Xsun.** The two matrices are genuine INVERSES, not rival
+conventions -- both correct as written. And the reason they differ is visible
+once you look at the operand rather than the matrix: `XYZ_to_galcenrect` puts
+sign(Xsun) on `Z` (`numpy.sign(Xsun) * Z`), `_galcen_rot` puts it in the matrix.
+
+So: reuse the CONTRACTION (`_apply_galcen_rot`), never the matrix builder. My
+earlier conclusion -- that sharing `_galcen_rot` would break negative Xsun --
+was right, but I had it filed as "needs Jo" when it was a question I could
+answer myself in one command. Worth noticing: "this needs a decision" is
+sometimes just an unrun experiment.
+
+### And the byte-identity gate caught me deviating from the file's own precedent
+
+First cut routed numpy through the shared contraction as well. Byte-identity
+FAILED: **2.2e-16 over 471 values** -- einsum and matmul disagree in the last
+ulp. One ulp is still a numpy-path change ([[flag-numpy-byte-identical-changes]]).
+
+The fix was already written in this very file: `galcenrect_to_XYZ` keeps an
+explicit `if xp is numpy:` einsum branch for exactly this reason. I had invented
+a cleaner-looking structure and lost the property the existing structure exists
+to protect. Reverted the numpy branch verbatim; identity restored, and the
+backend path reproduces numpy EXACTLY (0.00e+00) at both signs of Xsun.
+
+finding 6: **5 of 7**. Remaining: XYZ_to_galcencyl, vxvyvz_to_galcenrect --
+both now unblocked by the same reasoning.
+
+### CI
+
+gh#1381: 10 -> 6 failures. codecov/patch cleared; 3 of 4 notebooks went green on
+re-run, so the VizieR outage is receding. Residual reds are the same outage
+(test_from_name in 4 orbit builds + notebooks 3.10) and codecov/project. Nothing
+re-runnable this wake -- those runs are queued/in-progress again.
+gh#1382: 56 green, 97 queued, no failures.
