@@ -53291,3 +53291,46 @@ Armed a wait on the actual gate (status report leaving QUEUED). If it is still
 queued next wake -- i.e. 7h+ -- that is a pattern worth telling Jo about rather
 than a blip to keep absorbing: a substantively-green PR that cannot merge
 because of cross-branch runner starvation is something only he can arbitrate.
+
+## 2026-08-25 (cont.) -- pinged Jo; finding 6 has a DRY trap
+
+### gh#1380: pinged, at the 7h threshold I set myself
+
+`backend status report` run created 18:25, still QUEUED at 01:23 = 7h. Checked
+the workflow before escalating: `report` is `needs: [backend-suite]` with
+`if: always()`, and every backend-suite job on gh#1380 has COMPLETED -- so it is
+dispatchable and simply starved. 37 runs in flight, the bulk on `staeckel-*`
+branches that are not mine.
+
+Pinged the phone. It is a real blocker by the loop's definition: a substantively
+green PR (152/152) that cannot merge for reasons outside my control, where the
+only remaining levers belong to Jo (prioritise, cancel his own branches, or
+merge). I will not cancel another session's CI to decide it for him.
+
+### Local work chosen to NOT make it worse
+
+Advanced finding 6 locally and deliberately did NOT push -- firing another full
+matrix would worsen the exact starvation I had just escalated. Branch
+`fix/coords-inverse-transforms` exists locally, unpushed.
+
+### And finding 6 is not the mechanical sweep it looks like
+
+`XYZ_to_galcenrect` builds the rotation INLINE, duplicating `_galcen_rot`. The
+obvious move -- and the one a duplication audit pushes toward -- is to reuse the
+helper. Tested the algebra instead of assuming:
+
+    Xsun=+8   _galcen_rot  [[-0.999997, 0, -0.0025], [0,1,0], [-0.0025, 0, 0.999997]]
+              inline       [[ 0.999997, 0, -0.0025], [0,1,0], [ 0.0025, 0, 0.999997]]
+              inline == rot.T ?  False     inline == -rot.T ?  False
+
+Neither the transpose nor its negative. And at Xsun=-8 they diverge DIFFERENTLY:
+`_galcen_rot` carries a `sign(Xsun)` convention the inline matrix does not.
+
+So merging them would silently change results for NEGATIVE Xsun -- a real
+configuration, and a change no test in the suite would catch (nothing passes a
+negative Xsun through this pair). Same shape as the Zsun truncation: the
+plausible cleanup is the bug.
+
+Finding 6 therefore needs a convention decision per function, not a sweep. That
+is worth knowing BEFORE writing 7 migrations, which is why the branch is a stub
+rather than a half-finished diff.
