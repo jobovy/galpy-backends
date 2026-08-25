@@ -53875,3 +53875,51 @@ Also dropped a torch `.T`-on-1-D deprecation warning surfaced by the run, and
 hoisted `promote_common_dtype` into `galpy.backend` (the helper-placement audit).
 
 ### Ledger delta this PR: 0. No entries added, none burned.
+
+---
+
+## 2026-08-25 (fourth) — the audit gate earned its place
+
+Cron `5451d57e` alive.
+
+**gh#1382 went 154/154 CLEAN** once the qdf shard was re-run — that red was
+`wget` failing SSL on the `lcov` download during environment setup, so exit
+code 4 was wget's, not pytest's, and the tests never ran. The same-SHA push run
+had already passed the identical job.
+
+**Then the pre-merge audit stopped the merge, correctly.** Three criteria:
+
+* *if -> xp.where array-input class:* the one new Python branch,
+  `if concretely_infinite:`, REPLACES a pre-existing branch driven by the same
+  whole-array `numpy.all(isfinite(b))` reduction. My change only fixes WHICH
+  namespace answers the question (`numpy.asarray` raises on a grad-tracking
+  tensor). So no new array-input class — though the latent "b mixes inf and
+  finite entries takes one branch for all" is pre-existing and worth a separate
+  look.
+* *duplication:* **FAILED.** The `on_nodes` closure I added inside
+  `finite_part_quad` is a re-spelling of `node_axis()` — a documented,
+  module-level helper defined **five lines up in the same file**, whose
+  docstring says the same thing mine does ("no-op for a scalar... which is what
+  lets a call site adopt it without perturbing its scalar results"). I wrote a
+  private duplicate of a public helper I had scrolled past.
+* *helper placement:* fine once the above is fixed — `node_axis` is already
+  where it belongs.
+
+Fixed in `/var/tmp/quadfix`: closure deleted, 5 call sites rewired to
+`node_axis`. Behaviour-identical (`getattr(v,"ndim",0)` truthiness vs `> 0`
+agree for int ndim), but validating across numpy/torch/jax before pushing
+anyway.
+
+The cost calculus was real — #1382 is green NOW and pushing resets ~154 checks
+in a runner-constrained repo. I still pushed, because "merge it and fold the
+DRY fix into the next PR" is exactly how a duplicate becomes permanent, and the
+loop gates the merge on this audit for a reason.
+
+**gh#1381 recovered on its own terms.** All runs finally completed; the
+`pull_request` arm is fully green (Linux/Mac, notebooks, All-backend, Windows).
+The `push` arm's reds were the SIMBAD outage plus one job cancelled at GitHub's
+6h cap — re-run once the runs completed, and the PR is now 145 green with only
+`all-clear` left to re-run. Note for next time: a `push` run stuck with one
+in-progress job blocks `rerun --failed` on the WHOLE run, and it is not
+cancellable either (cancelling a same-SHA push blocks the merge), so the only
+move is to wait out the 6h cap.
