@@ -54579,3 +54579,41 @@ merely eager-green. (CI never runs jit mode, so this is a local-only measurement
 PR body for the constructor branch is drafted and waiting at
 `$SCRATCH/pr_body_jitsafe.md`; it opens the moment gh#1383 merges and the cap
 frees.
+
+## 2026-08-25 late — mapcoords pre-audited and gated ON TOP of gh#1383
+
+Cron `5451d57e` alive. gh#1383's re-run on `0c69715a` is mid-cycle (codecov red
+again, same incomplete-upload shape as the last cycle — it cleared itself then
+and there is nothing to fix).
+
+`fix/mapcoords-grid-dispatch` could not be tested at all before now: it calls
+`prefer_backend_namespace`, which exists only on gh#1383. Rather than wait, I
+built a throwaway probe — gh#1383's head with the mapcoords commit cherry-picked
+on top, in the disposable `/var/tmp/jitbase` worktree — and gated it there.
+
+**The pre-open audit found a second duplicate**, in my own branch this time:
+
+    xp = prefer_backend_namespace(filtered, coords)
+    dev = device_of(filtered, coords)        # added by this branch
+    filtered = asarray_on_device(xp, filtered, dev)
+    coords  = asarray_on_device(xp, coords, dev)
+    dev = device_of(coords, filtered)        # PRE-EXISTING, now recomputing
+                                             # the device of operands just
+                                             # placed on that device
+
+Kept the pre-existing line in its original argument order and coerced after it;
+one line net. No behaviour change — both spellings resolve to the same device,
+before and after the coercion. Committed on the branch in its own worktree as
+`f05987fa` ([[git-reset-clobbers-mainworktree-branch]]).
+
+Gate, with the fix, on top of gh#1383: `tests/test_backend_interpolate.py`
+**165 passed on numpy and 165 under `--backend torch`**.
+
+So the moment gh#1383 merges, `fix/mapcoords-grid-dispatch` rebases onto develop
+and opens with its gates already measured — no waiting for a first-run
+discovery. Probe worktree reset back to develop afterwards so it stays a neutral
+A/B base.
+
+That is two duplicates caught by the pre-merge/pre-open audit in one day
+(`node_axis` on gh#1382, the forward extra-rot block on gh#1383, and now this
+one — three in three PRs). The gate is not ceremonial.
