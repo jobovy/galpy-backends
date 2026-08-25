@@ -53377,3 +53377,34 @@ before assuming, which is the reverse of what the coincidence invited.
 
 Held the push again: still not adding a matrix to the queue that is starving
 gh#1380.
+
+## 2026-08-25 03:2x -- finding 6 part 2; queue 22 and draining
+
+gh#1380 unchanged (both meta-jobs QUEUED, all-clear re-polling). Repo queue
+37 -> 29 -> 22 over three wakes, so it is clearing on its own.
+
+### galcencyl_to_galcenrect -- three lines, and the risk was the SHAPE
+
+Two of its three lines were already fine (cyl_to_rect / cyl_to_rect_vec were
+migrated in the streams keystone). The only numpy pin was the assembly:
+
+    return numpy.column_stack([x, y, zc, vx, vy, vzc])
+
+The trap is not the namespace, it is that `column_stack` promotes a scalar
+column to shape (1,), so a SCALAR call must return (1, 6). A bare
+`xp.stack(..., axis=-1)` returns (6,) instead -- and every ARRAY call keeps
+working, so the whole suite stays green while the scalar contract silently
+changes. Reshape-to-(-1,) first, then stack.
+
+Same family as the Zsun truncation and the `_galcen_rot` transpose: the obvious
+one-line translation is right for the common case and wrong for the edge, and
+the edge is the one nothing tests. Third time today.
+
+Byte-identity: 162 values over n = 1, 5, 20 plus the scalar path. 155 passed
+across both coords suites.
+
+finding 6: 2 of 7 done (lambdanu_to_Rz, galcencyl_to_galcenrect). Remaining:
+lbd_to_XYZ, vrpmllpmbb_to_vxvyvz (independent, safe), and the three
+galcen-rotation members that need the sign(Xsun) convention decision.
+
+Still unpushed, by choice.
