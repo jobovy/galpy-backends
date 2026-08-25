@@ -53180,3 +53180,50 @@ parameter is genuinely structural (then it should reject a tracer loudly) or
 data (then the branch must become xp.where / a lax select). That is a design
 question per potential, not a mechanical sweep -- and it is exactly the
 question finding 9 (hyp2f1's a,b,c) asks too.
+
+## 2026-08-25 -- stale-CI hygiene, and the runner contention I was CAUSING
+
+Jo asked whether I had been cancelling old CI on the open PRs. I had not, this
+whole session, and the answer was worse than "forgot a sweep": the waste was
+mostly on my own PR-LESS branches.
+
+Every push to a held branch fires the full Linux/Mac + Windows + notebooks
+matrix even with NO PR attached, and every REBASE orphans a complete set at the
+pre-rebase SHA. Holding three branches behind the two-PR cap and rebasing them
+was quietly competing with gh#1380 and gh#1381 for the exact runners I had been
+describing as "contention" as if it were weather.
+
+Cancelled 8 superseded-SHA runs:
+
+    fix/gammainc-endpoint-grad        e6f63275   (1 job left, not the "big one" I called it)
+    fix/quadrature-...                e4ac1e07
+    fix/traced-surfdens-...           1d29a6dd  x3
+    fix/map-coordinates-...           444bda33  x3
+
+Deliberately left the HEAD-SHA push runs alone: cancelling a same-SHA push run
+leaves a blocking red once a PR is opened at that SHA
+([[cancel-push-run-leaves-cosmetic-red]]). Only prior-commit runs are safe to
+cut ([[cancel-stale-pr-ci-on-push]]).
+
+### Then the real blocker, which the sweep exposed
+
+gh#1380 had sat at "152 green / 2 pending" across several wakes. Aged it
+properly instead of re-reading the same summary:
+
+    all-clear             IN_PROGRESS since 19:39  -> 4h44m, and its timeout is 5h
+    backend status report QUEUED      since 22:45  -> 1h38m
+
+`backend status report` is a JOB INSIDE gh#1380's own all-backend run -- all 44
+shards green, but the final job never got a runner. all-clear waits on it, and
+was ~16 minutes from timing out and turning gh#1380 red for no reason at all.
+
+Discriminator said CONTENTION not wedge (26 runs in flight repo-wide), and the
+single biggest consumer was gh#1381's fresh all-backend run: **44 queued jobs**,
+fired by my own push two wakes ago. Cancelled it to free the one runner gh#1380
+needed inside the window. gh#1381 is nowhere near merging (149 queued) and its
+run is cheap to redo; gh#1380 is one job from landing with a hard deadline. That
+is the trade.
+
+**Standing change:** cancel prior-SHA runs immediately after every push AND
+every rebase, not as an occasional sweep. The rebase case is the worst -- it
+orphans a whole matrix at once, silently.
