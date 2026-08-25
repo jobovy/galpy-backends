@@ -1,69 +1,105 @@
-# Vacation status snapshot — 2026-08-25 (late)
+# Vacation status snapshot — 2026-08-25 (midday)
 
 **This file is OVERWRITTEN, not appended.** "Where are things now"; `log.md` is
 the trace.
 
 ---
 
-## Open PRs (2 = my cap)
+## Merged into `feat/backends-develop` this cycle
 
-* **gh#1382** `fix/quadrature-batching-anyaxisym-units` — findings 2 + 10 + the
-  torch `.to()` construction bug. **CI 154/154, mergeStateStatus CLEAN.**
-  NOT merged yet: the pre-merge duplication audit found that the `on_nodes`
-  closure I added to `finite_part_quad` duplicates the module-level, documented
-  `node_axis()` helper five lines up the same file. Fix is committed in the
-  worktree `/var/tmp/quadfix` (closure deleted, 5 call sites rewired). Pushing
-  it costs one full CI cycle; merging without it ships a duplicate. Decision:
-  push the fix, then merge — the audit gate exists for exactly this.
-  Its earlier ubuntu-qdf red was **wget** failing SSL on the `lcov` download
-  during setup (exit 4 is wget's, not pytest's); re-run passed.
-* **gh#1381** `fix/gammainc-endpoint-grad` — finding 1 + the int-dtype
-  follow-up. **The `pull_request` arm is fully green** (Linux/Mac, notebooks,
-  All-backend, Windows). The `push` arm carried the SIMBAD-outage reds plus one
-  job cancelled at GitHub's 6h cap; both re-run dispatched now that the runs
-  finally completed. `all-clear` re-runs last.
+* **gh#1381** `fix/gammainc-endpoint-grad` → `206ccd78`
+* **gh#1382** `fix/quadrature-batching-anyaxisym-units` → `06267d1d`
+  (merged only after the duplication audit: the `on_nodes` closure was replaced
+  by the pre-existing module-level `node_axis()` helper.)
 
-## Committed locally, PR HELD behind the cap
+## The one open PR (mission cap = 2, using 1)
 
-* **`fix/coords-inverse-transforms`** @ 17802043 (worktree `/var/tmp/rev1`) —
-  findings 3 + 4 + 6 (**finding 6 complete, 7 of 7**), plus:
-  - the f64-constant/f32-data promotion fix, hoisted to `galpy.backend` as
-    `promote_common_dtype` (helper-placement audit);
-  - `scalarDecorator` no longer lets a plain-Python-scalar call fall to torch
-    float32 (user-facing only — conftest sets float64, so no test outcome
-    changes; regression test controls the dtype itself and is verified to fail
-    without the fix);
-  - a torch `.T`-on-1-D deprecation guard.
-  Gate: `tests/test_coords.py` 98/98 under numpy, torch AND jax; numpy
-  byte-identity verified with a 1-ulp negative control; gradients grad-vs-FD
-  1e-8..1e-11 where non-vacuous. **Ledger delta: 0.**
+* **gh#1383** `fix/coords-inverse-transforms`, worktree `/var/tmp/rev1`,
+  head **`1ff63b7e`** — review findings 3 + 4 + 6 (finding 6 complete, 7 of 7),
+  plus `promote_common_dtype` hoisted into `galpy.backend`, the
+  `scalarDecorator` python-scalar/float32 fix, and a torch `.T`-on-1-D guard.
+  **Ledger delta: 0.**
 
-## FOR JO — a pre-existing red on develop, not mine
+  Two red classes found on the previous head and BOTH now fixed and pushed:
 
-`tests/test_galpypaper.py::test_orbmethods` fails on `feat/backends-develop`
-under **plain numpy** (and identically under torch): `o.vR(5.0, vo=220.0)`
-gives 45.201138694253274 against a hard-coded 45.202530965094553, i.e. 1.392e-3
-against a 1e-3 tolerance. `feat/backends` gives 45.202993419433426 and passes.
-Established by reverting only my stack's five source files to the develop base
-INSIDE the same worktree (so the built C extension is held constant) — the
-value does not move, so my commits are not the cause. Something merged between
-feat/backends and eabc3a5a shifted the orbit result. Worth a look: it is a
-numpy-side red sitting on the integration branch.
+  1. *torch stream shard.* A/B in the same worktree — base (merge-base
+     `206ccd78`) 161 passed / 0 failed, my branch 2 failures, so both were mine.
+     `test_calcaAJacLB` needed `coerce_coords` in
+     `actionAngleIsochroneApprox._parse_args_backend` (mixed numpy/backend
+     coordinate set); `test_streamTrack_sample_consistency` needed `as_numpy`
+     at the assertion site. Re-run of the same three files under `--backend
+     torch`: **161 passed, 0 failed (751 s)** — matches the base arm exactly.
+  2. *codecov/project + codecov/patch.* A REAL drop (99.96 → 99.90, 28
+     sessions), not the stale-base phantom. 30 missed lines, all in
+     `coords.py`, all backend branches added by this PR. Four new
+     `_CHAIN_CASES` in `tests/test_backend_coords.py` cover them; a coverage
+     run confirms **all 30 lines now execute** (82 passed, was 67).
 
-## Open review findings not yet done
+  CI on `1ff63b7e` is running.
 
-* **finding 5** — decided on my side: `set_jit` only sets a ContextVar and has a
-  paired `jit(mode)` CONTEXT MANAGER, so having it turn the backend on would
-  give `with jit("jax"):` two exit obligations and silently swap the user's
-  backend. Going with "require an active backend, raise otherwise". Not started
-  (cap).
-* **findings 8 & 9** — traced constructor params + `hyp2f1` scalar params; all
-  four finding-8 sites reproduce `TracerBoolConversionError`.
-* **finding 11 (mine, reported not fixed)** — no torch gradient through surfdens.
+## Queued behind gh#1383 (approved sequencing)
+
+1. `fix/mapcoords-grid-dispatch` (worktree `/var/tmp/mapfix`, `fc58581c`) —
+   backend `map_coordinates` silently returned an ndarray under torch/jax
+   eager and raised under torch+grad and jax-jit. BLOCKED: it uses
+   `prefer_backend_namespace`, which only exists on gh#1383.
+2. Review batch-2 item 3 — constructor jit-safety. **BUILT AND COMMITTED
+   LOCALLY, not pushed**: branch `backend/constructor-jit-safety`, worktree
+   `/var/tmp/jitsafe`, head `03ac6bd6` on develop `06267d1d`. Adds
+   `galpy.backend.concretely_true` and applies it to `ExpTruncNFWPotential`
+   `min(a, rc)`, `TwoPowerTriaxialPotential`'s alpha/beta validation and its
+   two alpha == 2 branches, and `constantbetaPowerLawdf`'s four asserts; plus
+   hoists `sphericaldf._handle_rmin`'s explicit-rmin early return above the
+   non-traceable Phi(0) probe. Gates: jit(grad)-vs-FD 1e-11..1e-7 on four
+   parameters, torch autograd agreeing to ~1e-14, numpy byte-identity by
+   sha256 with a 1-ulp negative control, A/B 7-failed-on-base vs 14-passed,
+   numpy regressions 394 + 1288 passed. Forced-backend gate still running.
+3. Review batch-2 item 4 — `hyp2f1.py:51/92/156` scalar params. **Confirmed
+   still open by item 2's work**: `TwoPowerTriaxialPotential.__call__`
+   (`_psi` -> hyp2f1) dies at `_in_regime`'s `a > 0 and (c - a) >= 1.0` under
+   jit(grad), and at `float(math.ceil(6.0 / B))` under eager grad. Route
+   selection cannot be a concreteness guard, so this needs its own design:
+   either evaluate both routes and select (NaN-safety on the dead branch), or
+   pin the Euler quadrature's grading `k` to its finest value while traced.
+4. `_jit.py` docstring: "trace every boundary call" overstates it. Next review
+   PR, not gh#1383.
+
+## Closed / retracted
+
+* **finding 5 (`set_jit`) — CLOSED as working-as-intended** on Jo's
+  instruction ("leave set_jit as is and drop the branch"). Branch and worktree
+  deleted; the reasoning is posted as PR gh#1204 comment 5411848615: `set_jit`
+  runs before the data exists, so validating a backend there checks the
+  *ambient* backend, which is the wrong thing when the pattern is data-driven.
+* **RETRACTED: "pre-existing develop red in `test_galpypaper::test_orbmethods`".**
+  There was no red. `/var/tmp/rev1` had **no built C extension at all**, so the
+  test ran a different code path. Built it; passes locally under numpy and
+  torch, and CI passes it too. [[worktree-missing-c-ext-fakes-passes]] cuts
+  both ways — a missing `.so` also fakes FAILURES.
+
+## Still open, not started
+
+* **findings 8 & 9** — traced constructor params + `hyp2f1` scalar params
+  (= queue items 2 and 3 above); all four finding-8 sites reproduce
+  `TracerBoolConversionError`.
+* **finding 11 (mine, reported not fixed)** — no torch gradient through
+  `surfdens`.
+* **To-do, deferred by Jo**: systematic f32 / default-dtype sweep.
+  `tests/conftest.py:485` sets `torch.set_default_dtype(torch.float64)`, which
+  masks the entire class from every test. Jo: "for now we can leave it, but put
+  it on a to-do list."
+* **Ledger**: 137 entries, 97 exercised, **0 stale** — emptying it needs real
+  fixes, not pruning. Jo: "the goal is eventually a literal zero ledger, but
+  not for gh#1204."
 
 ## Housekeeping
 
-* Cron `5451d57e` (hourly at :13) verified alive 2026-08-25; created 2026-08-24,
-  expires ~2026-08-31.
+* Cron `5451d57e` (hourly at :13) verified alive 2026-08-25; created
+  2026-08-24, expires ~2026-08-31.
 * Root filesystem hit 100% on 2026-08-25 and wedged every command with ENOSPC.
   Freed ~10G from never-GC'd `torchinductor_*` caches; expect recurrence.
+* `coverage run -m pytest` is BROKEN in this env (numpy re-import dies with
+  "cannot load module more than once per process"). Workaround that works:
+  start `coverage.Coverage()` in-process AFTER pre-importing numpy/scipy/
+  pytest/jax/torch, with `sys.path.insert(0, os.getcwd())`, then call
+  `pytest.main([...])`. Driver kept at `$SCRATCH/covdrv.py`.

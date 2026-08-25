@@ -54313,3 +54313,111 @@ never decreases, not even one line"): extend the existing parametrization in
 `tests/test_backend_coords.py` to include `XYZ_to_galcenrect`,
 `XYZ_to_galcencyl` and `vxvyvz_to_galcenrect` so their backend branches are
 exercised where coverage is measured.
+
+---
+
+## 2026-08-25 midday — gh#1383: both red classes closed, pushed as `1ff63b7e`
+
+Cron `5451d57e` alive (created 2026-08-24, expires ~2026-08-31).
+
+### The A/B settled ownership, and both failures were mine
+
+Base arm (merge-base `206ccd78`, same worktree, same `.so`): **161 passed,
+0 failed** over `test_streamdf.py` + `test_streamspraydf.py` +
+`test_streamTrack.py -k 'not useTM'` under `--backend torch`. My branch: 2
+failures. So: mine, not pre-existing, not ledger material.
+
+1. `test_calcaAJacLB` — `TypeError: atleast_1d() received an invalid
+   combination of arguments - got (numpy.float64)`. streamdf hands
+   `actionAngleIsochroneApprox._parse_args_backend` a **mixed** coordinate set:
+   some components already promoted by the caller, the rest still numpy
+   scalars. `get_namespace` answers from whichever argument IS a backend array,
+   so it resolves to torch and then `torch.atleast_1d` rejects the numpy ones.
+   Fix: `coerce_coords(xp, R, vR, vT, z, vz, phi)` right after resolving — the
+   whole set, not a per-argument data-guard. No-op on numpy, so the numpy path
+   is untouched. [[coerce-under-forced-not-dataguard]]
+2. `test_streamTrack_sample_consistency` — `TypeError: std() received an
+   invalid combination of arguments - got (ddof=int, )`.
+   `galcencyl_to_galcenrect` is backend-native now, so the following numpy
+   reductions reject its Tensor. `as_numpy` at the assertion site.
+
+Gate after both fixes: the same three files under `--backend torch` give
+**161 passed, 0 failed (751 s)** — identical to the base arm.
+
+### codecov: fixed by reaching the branches where coverage is measured
+
+The drop was real (99.96 → 99.90, 28 sessions, `codecov/patch` red too) and the
+30 missed lines were all mine. The cause is the known one
+([[backend-branches-need-test-backend-coverage]]): the coverage job runs the
+numpy path, and the forward galcen transforms early-return there, so their
+backend branches are only reachable from a `tests/test_backend_*.py` file.
+
+Checked rather than assumed that the coverage job can even see them:
+`build.yml` installs jax (+diffrax) and torch (+torchdiffeq) for that job and
+its shard glob is `tests/test_backend*.py`. So four new `_CHAIN_CASES` —
+`XYZ_to_galcenrect`, `XYZ_to_galcencyl`, `vxvyvz_to_galcenrect`, and a second
+`vxvyvz_to_galcenrect` passing `vsun` pre-built (the default is a list, so the
+other `_as_vsun` branch needs an array).
+
+**Measured**: a coverage run over `coords.py` turns all 30 of
+`[156-161, 168, 173-175, 1282-1285, 1288-1291, 1514-1515, 1618-1621,
+1624-1628, 1631]` from missed to executed. First pass left `175` uncovered —
+that is exactly why the second `vsun` case exists. 82 passed (was 67).
+
+### Tooling note: `coverage run -m pytest` is broken in this env
+
+Every form of it — `pytest --cov`, `coverage run -m pytest`, `COVERAGE_CORE`
+variants — dies with `ImportError: cannot load module more than once per
+process` from a lazy first import of `numpy.fft` / `scipy.linalg` under
+coverage. Not cwd-specific, not the jaxtyping plugin (tried `-p no:jaxtyping`,
+`--assert=plain`). What works: pre-import numpy/scipy/pytest/jax/torch, then
+`coverage.Coverage()` in-process, then `pytest.main([...])`, with
+`sys.path.insert(0, os.getcwd())` so galpy resolves to the worktree and not the
+editable-install shadow ([[galpy-editable-install-import-shadow]]). Module-level
+lines then read as missed, which is fine — everything under test is in function
+bodies. Driver kept at `$SCRATCH/covdrv.py`.
+
+### Pushed
+
+`313bc460..1ff63b7e` as two commits (stream fixes; coverage tests). No in-flight
+runs on the superseded SHA, so nothing to cancel. CI running.
+
+### Same wake, second stream: review batch-2 item 3 built and committed locally
+
+Branch `backend/constructor-jit-safety` (worktree `/var/tmp/jitsafe`, off develop
+`06267d1d`), commit `f81054ba`. Not pushed — the two-PR cap says gh#1383 first.
+
+The finding is "constructor params are not jit-safe". Reproduced all four sites,
+and the reproduction had to be under **`jax.jit(jax.grad(...))`, not plain
+`jax.grad`**: under grad alone the tracer is a JVPTracer whose primal is
+concrete, so `min(a, rc)` and `if beta <= 2.0` both work and the defect hides.
+My first repro used plain grad and reported three of four sites as OK.
+
+Fix rule, as `galpy.backend.concretely_true` — a two-line wrapper over the
+already-exported, **zero-user** `has_concrete_truth_value`: a check fires only
+when it can be PROVEN to fire; a degenerate special case is taken only when it
+can be PROVEN to apply. `min(a, rc)` → `xp.minimum`.
+
+One site was not of that shape and mattered more than expected:
+`sphericaldf._handle_rmin` probed `Phi(0)` to decide whether to auto-pick an
+rmin **before** the early return for an explicitly-given rmin. That probe is not
+traceable and, with an explicit rmin, its result is dead. Moving the early
+return in front of it is what actually unlocked `d f_E / d beta` under jit.
+
+Numbers: jit(grad) vs central differences 1e-11..1e-7 relative on ExpTruncNFW
+d/da (both sides of the `_small_r_thresh` split), TwoPowerTriaxial d/dalpha and
+d/dbeta, and cbPLdf d/dbeta; jit(grad) reproduces eager grad to the last digit;
+torch autograd agrees with jax to ~1e-14. numpy byte-identity verified by
+sha256 with a 1-ulp negative control that moves the hash.
+
+A/B on the new `tests/test_backend_constructor_jit.py`: **7 failed / 7 passed on
+the base, 14 passed with the fix**. The 7 that pass on both sides are the
+"still raises when concrete" guards — deliberately, since a guard that silently
+disabled a validation check would otherwise read as a pass.
+[[test-encodes-the-prechange-contract]]
+
+**Not fixed, stated rather than hidden**: `hyp2f1`'s fallback selects its route
+by comparing the PARAMETERS (`_in_regime`, `_euler_labeling`, `_pfaff_series`),
+so tracing w.r.t. alpha/beta still dies there. Route selection cannot be a
+concreteness guard — you would have to evaluate both routes — so review item 4
+needs its own answer and its own change.
