@@ -53474,3 +53474,41 @@ pushed: it has no PR and will not for a while (stacked behind the coords
 branch), and the queue just absorbed gh#1382's 97 plus gh#1381's restored 45.
 Pushing three more runs for a branch nobody is waiting on is the exact habit
 that starved gh#1380.
+
+## 2026-08-25 04:0x -- finding 6 part 3 (lbd_to_XYZ): BOTH halves or neither
+
+This is the `@scalarDecorator` half of finding 6, and it has a property worth
+naming: **either fix in isolation looks reasonable and does nothing.**
+
+    scalarDecorator promotes inputs through numpy unless the wrapped function
+    sets _galpy_backend_native  ->  marking the function alone still leaves
+                                    numpy.cos in the body
+    the body was raw numpy      ->  migrating the body alone still receives
+                                    numpy, because the decorator already
+                                    converted
+
+So "migrate the body" and "add the marker" are each a complete-looking change
+with zero effect. Only together do they move anything.
+
+`@backendNative` INNERMOST is not style: scalarDecorator reads the attribute off
+the function it WRAPS, so anywhere else in the stack it is dead code that still
+reads correct ([[backendnative-must-be-innermost-decorator]]).
+
+The test asserts `is_backend_array(out)` rather than comparing values, because a
+STRIPPED input returns the RIGHT NUMBERS as a numpy array -- a value-only
+assertion cannot see this defect at all
+([[value-checks-cannot-see-numpy-fallback]]). Confirmed by the A/B: all four
+parametrisations fail on base.
+
+Byte-identity 138 values; 155 passed across both coords suites.
+
+### ruff-format rejected the first commit AGAIN (2nd time today)
+
+Same as the lambdanu commit: hook reformats, commit aborts, `git log` still
+shows the PREVIOUS SHA. It is now clearly a PATTERN, not an accident -- code I
+write through a heredoc is not ruff-formatted, so the first commit after any
+such edit will always be rejected. Printing the SHA after every commit is what
+catches it; without that the work silently looks done
+([[precommit-hooks-reject-first-commit]]).
+
+finding 6: 3 of 7 (lambdanu_to_Rz, galcencyl_to_galcenrect, lbd_to_XYZ).
