@@ -54140,3 +54140,62 @@ not prunable — **emptying the ledger from here requires real fixes, not
 bookkeeping**. The earlier burndown waves have already taken the cheap ones.
 The 40 unexercised entries are the only place a free win could still hide, and
 they need a `--jit` run to judge.
+
+---
+
+## 2026-08-25 (ninth) — finding 5 CLOSED as working-as-intended; scope corrected by Jo
+
+Surfaced accumulated questions to Jo. Three of the four answers changed what I
+do next, and one corrected how I ask.
+
+### finding 5: closed, no behaviour change
+
+Jo: *"leave set_jit as is and drop the branch (and spell out in reply to review)."*
+Branch `fix/set-jit-requires-backend` and its worktree DELETED; reply posted as
+PR #1204 comment 5411848615.
+
+The argument that settled it — and the piece I only found by reading the tests
+rather than reasoning:
+
+`set_jit` does not select a backend, it ARMS tracing conditionally; the framework
+that decides comes from `use(...)` **or the data**. Jo guessed this ("maybe for
+implied backends? Like when the inputs are backend arrays"), and the tests
+confirm it: `test_jax_traced_matches_eager` passes `jnp.asarray(...)` under
+`jit("jax")` with no `use(...)`. Crucially that is not just "doesn't raise" —
+`test_jax_reuses_the_compiled_trace`, `..._nested_boundaries_do_not_retrace` and
+`..._retraces_after_a_parameter_changes` COUNT TRACES and also run without
+`use(...)`, so tracing demonstrably happens off data-implied backends.
+
+The decisive point: **`set_jit` is called before the data exists.** Validating at
+`set_jit` time can only check the AMBIENT backend, which is the wrong thing when
+the pattern is data-driven. That is precisely why the strict version took the
+file to 12 failures / 16.
+
+The reviewer's own diagnosis was "probably an API/documentation mismatch rather
+than a core harness bug", and that is where it lands: the only residue is the
+`_jit.py` docstring overstating ("trace every boundary call"). That wording gets
+tightened in the NEXT review PR — deliberately not in gh#1383, whose CI is
+running, since a doc commit there would burn a full ~154-check cycle.
+
+### Scope corrected — and the lesson is about how I ask
+
+Jo, twice: *"Is this a review finding? I'm missing the context"* / *"I don't
+quite understand why you are asking me about this, was it part of the #1204
+review?"*
+
+Neither the ledger question nor the f32 question was a #1204 review finding. The
+ledger goal comes from my own standing mission statement; the f32 default-dtype
+class was my own discovery while doing finding 6. Both are legitimate, neither
+was in scope, and I presented them without saying where they came from.
+**When surfacing a question, state its provenance — review / mission / my own
+find — because that is what tells Jo whether it is in scope right now.**
+[[1204-scope-and-priorities]]
+
+Directives recorded:
+* **Priority is getting #1204 merged.** The review findings ARE the work.
+* Ledger literal-zero is the eventual goal but **explicitly not for #1204** — so
+  my 0-of-97-stale sweep result is post-#1204 information, not a work item now.
+* f32/default-dtype sweep → **to-do list**, do not start.
+* Audit gate **CONFIRMED**: fix before merging, even cosmetic, even at the cost
+  of a full CI cycle.
+* Sequencing approved: merge gh#1382 → gh#1383 → findings 8 & 9.
