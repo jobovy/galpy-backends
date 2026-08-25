@@ -48,10 +48,13 @@ the trace.
 
 ## Queued behind gh#1383 (approved sequencing)
 
-1. `fix/mapcoords-grid-dispatch` (worktree `/var/tmp/mapfix`, `fc58581c`) —
-   backend `map_coordinates` silently returned an ndarray under torch/jax
-   eager and raised under torch+grad and jax-jit. BLOCKED: it uses
-   `prefer_backend_namespace`, which only exists on gh#1383.
+1. `fix/mapcoords-grid-dispatch` (worktree `/var/tmp/mapfix`, head
+   **`f05987fa`**, 2 commits) — backend `map_coordinates` silently returned an
+   ndarray under torch/jax eager and raised under torch+grad and jax-jit.
+   **READY**: pre-open audit removed a duplicated `device_of`, and the branch is
+   gated on a throwaway probe (gh#1383 head + this branch cherry-picked):
+   `tests/test_backend_interpolate.py` **165 passed on numpy, 165 under
+   `--backend torch`**. Rebase onto develop and open the moment gh#1383 merges.
 2. Review batch-2 items 3 AND 4 — **BUILT AND COMMITTED LOCALLY, not
    pushed**: branch `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
    head **`48a68247`** (4 commits) on develop `06267d1d`. PR body drafted at
