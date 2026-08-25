@@ -54050,3 +54050,55 @@ gh#1382: 97 green / 54 queued after the dedup push, with `codecov/patch` +
 phantom; will discriminate by session count if it survives the full run.
 gh#1383: CI running on the pre-fix head, so the 3 kuzminkutuzov reds should
 appear there too and be cleared by the pending push.
+
+---
+
+## 2026-08-25 (seventh) — finding 5 measured, and PARKED
+
+Cron `5451d57e` alive.
+
+kuzminkutuzov fix validated **10/10 under numpy, torch AND jax**, pushed to
+gh#1383 (head `313bc460`, verified the PR carries the tuple-map). Then cancelled
+the 7 superseded runs on the old head — one needed `force-cancel` because it was
+still `queued` — to give the runners back.
+
+### finding 5: implemented, then parked on the evidence
+
+Implemented option (b): `set_jit("jax")` / `jit("jax")` raise unless jax is the
+active backend. It works — six behaviours check out, and `tests/conftest.py`
+already composes them in the required order
+(`with use(name, force=True), jit(name):`), so the `--backend --jit` harness is
+untouched.
+
+**Then I ran `tests/test_backend_jit_mode.py`: 12 failures out of 16.** That
+file deliberately encodes the OPPOSITE contract — 11 of its tests set a jit mode
+with no backend selected at all, and `test_numpy_path_ignores_jit_mode` says so
+in its docstring: *"Trace mode must not touch the numpy path"*. Option (b) turns
+that documented no-op into a RuntimeError.
+
+So the existing design is "jit mode is an orthogonal request, honoured where the
+data lives and ignored otherwise" — coherent, tested, and NOT an oversight.
+Reversing it is a breaking API change, which is exactly the "direction call" Jo
+asked for. Committed as `e16f1f84` on a local branch marked **PARKED (do not
+push)**, with the three options and their now-MEASURED costs:
+
+  (a) set_jit turns the backend ON  — gives `jit(mode)` two exit obligations and
+      silently swaps the caller's backend on entry.
+  (b) set_jit REQUIRES the backend  — 12 test rewrites; reverses a documented
+      no-op.
+  (c) leave orthogonal, warn only   — no churn, keeps the contract, loses the
+      hard error at the mistake site.
+
+I had told Jo I "leaned (b)" twice on reasoning alone. Running the tests turned
+a preference into a number, and the number argues the other way.
+[[test-encodes-the-prechange-contract]].
+
+### And I nearly lost the work to my own cleanup
+
+The background script I wrote ended with a stray `git stash -q`. It stashed the
+finding-5 change and pushed TWO OTHER branches' stashes down to {1} and {2} —
+`git stash` is repo-wide, so a later `stash pop` from a different worktree would
+have taken mine ([[git-stash-is-repo-wide-not-worktree]]). Caught it by checking
+`git stash list` rather than assuming the worktree was clean; popped it back in
+its own worktree and confirmed the stack returned to its original two entries.
+Do not put `git stash` in a throwaway script.
