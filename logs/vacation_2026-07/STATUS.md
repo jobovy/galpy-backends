@@ -98,8 +98,17 @@ the trace.
 * **findings 8 & 9** — traced constructor params + `hyp2f1` scalar params
   (= queue items 2 and 3 above); all four finding-8 sites reproduce
   `TracerBoolConversionError`.
-* **finding 11 (mine, reported not fixed)** — no torch gradient through
-  `surfdens`.
+* **finding 11 (mine, reported not fixed) — SHARPENED, and worse than
+  reported.** It is not "no torch gradient": with `forcepoisson=True` surfdens
+  returns a Tensor with `requires_grad=True` and a `grad_fn` whose gradient is
+  **23% wrong in R and 72% wrong in z** (MiyamotoNagai a=0.5 b=0.1 at R=1,
+  z=0.3; FD anchored by jax AD matching it to 1.6e-10 on both routes). With the
+  default `forcepoisson=False` it returns a bare Python float, severing the
+  graph. Cause: `_quad_needs_backend` gates on `under_trace`, False for eager
+  torch autograd, so scipy runs and the integrated piece detaches while the
+  algebraic prefactor keeps a graph. **Needs Jo's decision** (behaviour change):
+  for a grad-tracking eager tensor, use the backend GL rule when
+  `_force_accepts_arrays(pot)` and RAISE otherwise. Own PR.
 * **To-do, deferred by Jo**: systematic f32 / default-dtype sweep.
   `tests/conftest.py:485` sets `torch.set_default_dtype(torch.float64)`, which
   masks the entire class from every test. Jo: "for now we can leave it, but put
