@@ -53334,3 +53334,46 @@ plausible cleanup is the bug.
 Finding 6 therefore needs a convention decision per function, not a sweep. That
 is worth knowing BEFORE writing 7 migrations, which is why the branch is a stub
 rather than a half-finished diff.
+
+## 2026-08-25 02:2x -- finding 6 part 1 landed locally (unpushed)
+
+gh#1380 still QUEUED on both meta-jobs; queue drained 37 -> 29. all-clear was
+re-run per Jo, so it is polling again and will go green on its own once the
+status report dispatches. Nothing else to do there.
+
+### lambdanu_to_Rz: the if -> xp.where class, exactly
+
+    index = (r2 < 0.0) * ((n + a) > 0.0) * ((n + a) < 1e-10)
+    if numpy.any(index):                    # python branch on DATA
+        if isinstance(r2, numpy.ndarray):
+            r2[index] = 0.0                 # in-place: jax is immutable
+        else:
+            r2 = 0.0
+
+Three separate blockers in five lines: a python branch on data, an in-place
+write, and isinstance dispatch. `jax.jit(jax.grad(...))` raised
+TracerBoolConversionError. Its FORWARD direction was migrated long ago -- this
+is the inverse catching up, the same asymmetry as finding 4.
+
+Bar met on all four axes: A/B (base raises, patched works), numpy byte-identity
+(144 values, 3 ac x 3 Delta, array AND scalar), backend-array assertion (not
+just a matching value -- [[value-checks-cannot-see-numpy-fallback]]), and
+grad-vs-FD rather than "it traced" (an INVERTED mask would trace just as
+happily and be wrong).
+
+### Two process saves worth recording
+
+**The commit was REJECTED and I nearly missed it.** ruff-format reformatted a
+file, so the first `git commit` failed; `git log` still showed the PREVIOUS
+commit. Caught only because I print the SHA after every commit
+([[precommit-hooks-reject-first-commit]]). Without that the "commit" would have
+been a no-op and the work would have looked done.
+
+**A consumer test failed and it was NOT mine.**
+`test_kuzminkutuzov::test_actionConservation` went red -- a direct consumer of
+this function, so the obvious read is "you broke it". A/B'd instead: fails
+IDENTICALLY on the parent commit (missing libgalpy in this worktree). Attributed
+before assuming, which is the reverse of what the coincidence invited.
+
+Held the push again: still not adding a matrix to the queue that is starving
+gh#1380.
