@@ -53227,3 +53227,33 @@ is the trade.
 **Standing change:** cancel prior-SHA runs immediately after every push AND
 every rebase, not as an occasional sweep. The rebase case is the worst -- it
 orphans a whole matrix at once, silently.
+
+### Correction: NOT a wedge, and two instrument errors in ten minutes
+
+Wrote "runners are IDLE, this is a wedge" off a query that returned nothing.
+The query was MALFORMED -- `[...]|"\(.x)"` wraps in an array and then tries to
+interpolate, so it silently emits nothing. Re-ran it properly: **49 runs in
+flight.** Contention, not a wedge. An empty result from a hand-rolled jq is not
+evidence of an empty queue; it is evidence of a bad jq
+([[never-report-partial-run-as-result]] again, in a new costume).
+
+Second instrument error, five minutes earlier: `gh run cancel` reported
+"✓ submitted" for all 8 runs and I said so, but the request only COMPLETES when
+there is a running job to interrupt. 7 of 8 landed; the 8th (a run with a single
+stranded queued job) stayed `queued` indefinitely and needed
+`POST .../force-cancel` ([[all-clear-queued-rerun-and-ledger-rebase]]). "Submitted"
+is not "cancelled" -- verify the status, do not read the acknowledgement.
+
+### Where the capacity was actually going, and where I stopped
+
+Top consumers were again my own PR-LESS branches. Force-cancelled 6 more
+(map-coordinates x3, traced-surfdens x3): 49 -> 43 in flight. Those branches
+have no PR, so no same-SHA push run can block a merge today, and opening their
+PRs will fire fresh runs anyway.
+
+Then STOPPED, deliberately, with gh#1380's all-clear ~10 min from its 5h cap.
+The next cancellations would have been gh#1381's own build matrices -- real
+signal on an open PR -- to buy ten minutes on a recovery that is cheap and
+certain: a timed-out all-clear is a QUEUEING ARTIFACT, and re-running that ONE
+job after the status report lands fixes it. Trading another PR's CI for that is
+a bad trade, and by then I was thrashing rather than deciding.
