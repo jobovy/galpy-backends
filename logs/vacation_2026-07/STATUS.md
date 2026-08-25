@@ -1,79 +1,69 @@
-# Vacation status snapshot — 2026-08-25 (Codex review of #1204: findings 1/2/3/4/6)
+# Vacation status snapshot — 2026-08-25 (late)
 
-**This file is OVERWRITTEN, not appended.** It is the "where are things now"
-answer. `log.md` is the trace; read this first and go there only for the why.
+**This file is OVERWRITTEN, not appended.** "Where are things now"; `log.md` is
+the trace.
 
 ---
 
-## Nothing is blocked on Jo except (a) the main->develop rebase (parked) and
-## (b) review finding 5, which needs a direction call (see below).
-
-## Branch state
-
-    feat/backends          982b1781
-    feat/backends-develop  eabc3a5a   (last merge: gh#1380 ledger Group-1)
-
 ## Open PRs (2 = my cap)
 
-* **gh#1381** `fix/gammainc-endpoint-grad` @ cc8286a3 — finding 1: d/dx gammainc
-  was NaN at the x=0 endpoint, plus the int-dtype follow-up (`full_like` on an
-  INTEGER order raises on torch; EinastoPotential passes one).
-  CI: 95 green / 53 queued. Reds are **all external or settled**:
-  `test_from_name_*` = the SIMBAD/VizieR outage (service re-probed 2026-08-25
-  and it is BACK; failed run re-run), the two macos reds are flakes proven by
-  the same-SHA push-vs-pull_request A/B, `codecov/project` is the incomplete-
-  upload phantom while backend shards are still queued.
-* **gh#1382** `fix/quadrature-batching-anyaxisym-units` @ (head) — findings
-  2 + 10 + the torch `.to()` construction bug. CI: 89 green / 64 queued, **zero
-  failures**.
+* **gh#1382** `fix/quadrature-batching-anyaxisym-units` — findings 2 + 10 + the
+  torch `.to()` construction bug. **CI 154/154, mergeStateStatus CLEAN.**
+  NOT merged yet: the pre-merge duplication audit found that the `on_nodes`
+  closure I added to `finite_part_quad` duplicates the module-level, documented
+  `node_axis()` helper five lines up the same file. Fix is committed in the
+  worktree `/var/tmp/quadfix` (closure deleted, 5 call sites rewired). Pushing
+  it costs one full CI cycle; merging without it ships a duplicate. Decision:
+  push the fix, then merge — the audit gate exists for exactly this.
+  Its earlier ubuntu-qdf red was **wget** failing SSL on the `lcov` download
+  during setup (exit 4 is wget's, not pytest's); re-run passed.
+* **gh#1381** `fix/gammainc-endpoint-grad` — finding 1 + the int-dtype
+  follow-up. **The `pull_request` arm is fully green** (Linux/Mac, notebooks,
+  All-backend, Windows). The `push` arm carried the SIMBAD-outage reds plus one
+  job cancelled at GitHub's 6h cap; both re-run dispatched now that the runs
+  finally completed. `all-clear` re-runs last.
 
-## Committed locally, PR HELD behind the two-PR cap
+## Committed locally, PR HELD behind the cap
 
-* **`fix/coords-inverse-transforms`** @ e999b04c (worktree `/var/tmp/rev1`) —
-  findings 3 + 4 + 6, stacked linearly on eabc3a5a. **finding 6 is now 7 of 7.**
-  Contains, beyond the migration itself, three defects the migration exposed:
-  1. **f32 defect in ALREADY-MERGED code.** `galcen_extra_rot` is a float64
-     constant; torch refuses f64@f32, so `galcenrect_to_XYZ` /
-     `galcenrect_to_vxvyvz` / `XYZ_to_galcenrect` raised for ANY torch user at
-     torch's default dtype. Invisible because the suite is all-float64.
-     `_promote_pair` casts via `result_type` = numpy's own promotion.
-  2. **My own dead branch.** `XYZ_to_galcenrect` had a backend branch but no
-     `@backendNative`, so `scalarDecorator`'s numpy ndim probe raised before
-     reaching it on exactly the grad/traced inputs it was for.
-  3. **Resolved-namespace / uncoerced-input** in `lbd_to_XYZ`,
-     `vrpmllpmbb_to_vxvyvz`, `galcencyl_to_galcenrect`, `lambdanu_to_Rz`.
-  Gate: `tests/test_coords.py` **98/98 under numpy, torch AND jax** (torch was
-  10 failures before, 0 after; the pre-stack base is also 0, so all 10 were
-  mine). numpy byte-identity verified WITH a 1-ulp negative control.
-  Gradients grad-vs-FD 1e-8..1e-11 at `Zsun != 0` where they are non-vacuous.
-  Wider shard runs (test_quantity+test_coords, and the conversion/util/
-  kuzminkutuzov shard) in all 3 modes were in flight at end of wake.
+* **`fix/coords-inverse-transforms`** @ 17802043 (worktree `/var/tmp/rev1`) —
+  findings 3 + 4 + 6 (**finding 6 complete, 7 of 7**), plus:
+  - the f64-constant/f32-data promotion fix, hoisted to `galpy.backend` as
+    `promote_common_dtype` (helper-placement audit);
+  - `scalarDecorator` no longer lets a plain-Python-scalar call fall to torch
+    float32 (user-facing only — conftest sets float64, so no test outcome
+    changes; regression test controls the dtype itself and is verified to fail
+    without the fix);
+  - a torch `.T`-on-1-D deprecation guard.
+  Gate: `tests/test_coords.py` 98/98 under numpy, torch AND jax; numpy
+  byte-identity verified with a 1-ulp negative control; gradients grad-vs-FD
+  1e-8..1e-11 where non-vacuous. **Ledger delta: 0.**
 
-  NOTE: the older branch `fix/traced-surfdens-and-galcen-rot` @ be5ff216 is a
-  DIVERGENT earlier copy of the same work (same subjects, different SHAs).
-  `fix/coords-inverse-transforms` supersedes it — open that one, not both.
+## FOR JO — a pre-existing red on develop, not mine
 
-* **`fix/map-coordinates-grid-dispatch`** (worktree `/var/tmp/interpfix`) —
-  finding 7.
+`tests/test_galpypaper.py::test_orbmethods` fails on `feat/backends-develop`
+under **plain numpy** (and identically under torch): `o.vR(5.0, vo=220.0)`
+gives 45.201138694253274 against a hard-coded 45.202530965094553, i.e. 1.392e-3
+against a 1e-3 tolerance. `feat/backends` gives 45.202993419433426 and passes.
+Established by reverting only my stack's five source files to the develop base
+INSIDE the same worktree (so the built C extension is held constant) — the
+value does not move, so my commits are not the cause. Something merged between
+feat/backends and eabc3a5a shifted the orbit result. Worth a look: it is a
+numpy-side red sitting on the integration branch.
 
 ## Open review findings not yet done
 
-* **finding 5** — NEEDS JO'S CALL. Jo steered "`set_jit("jax")` only makes
-  sense when working on the backend, so implies `--backend`", but the fork
-  remains: (a) `set_jit` turns the backend on, or (b) it REQUIRES one already
-  set and raises otherwise. I lean (b). Not implemented.
-* **findings 8 & 9** — traced constructor params (`min(a, rc)`,
-  TwoPowerTriaxial branches, constantbetaPowerLawdf asserts) and `hyp2f1`
-  scalar params. All four finding-8 sites reproduce `TracerBoolConversionError`.
-  Needs a per-site structural-vs-data decision.
-* **finding 11 (mine, reported not fixed)** — no torch gradient through
-  surfdens, ever.
+* **finding 5** — decided on my side: `set_jit` only sets a ContextVar and has a
+  paired `jit(mode)` CONTEXT MANAGER, so having it turn the backend on would
+  give `with jit("jax"):` two exit obligations and silently swap the user's
+  backend. Going with "require an active backend, raise otherwise". Not started
+  (cap).
+* **findings 8 & 9** — traced constructor params + `hyp2f1` scalar params; all
+  four finding-8 sites reproduce `TracerBoolConversionError`.
+* **finding 11 (mine, reported not fixed)** — no torch gradient through surfdens.
 
 ## Housekeeping
 
-* Cron `5451d57e` (hourly at :13) verified alive 2026-08-25. Session-only and
-  expires ~7d after creation — re-create on ANY wake where CronList is empty.
-* `/dev/sda6` (root, carries /tmp and /var/tmp) hit **100% full** this wake and
-  wedged every command with ENOSPC. Freed ~10G by deleting per-process
-  `torchinductor_galpy_*` caches + pip/uv caches. Those caches are never GC'd
-  and leak one directory per forced-torch test process — expect this to recur.
+* Cron `5451d57e` (hourly at :13) verified alive 2026-08-25; created 2026-08-24,
+  expires ~2026-08-31.
+* Root filesystem hit 100% on 2026-08-25 and wedged every command with ENOSPC.
+  Freed ~10G from never-GC'd `torchinductor_*` caches; expect recurrence.
