@@ -54255,3 +54255,61 @@ again — All-backend and Linux/Mac still running) and one REAL failure, the
 `backend torch` streamdf/streamspraydf/streamTrack shard, exit code 1. Logs are
 not retrievable mid-run, so a local reproduction of that exact shard is running
 rather than pattern-matching it against the known-flaky streamdf torch list.
+
+---
+
+## 2026-08-25 (eleventh) — gh#1383's codecov red is REAL, and I know exactly why
+
+Cron `5451d57e` alive.
+
+### ⚠ STATE WARNING (restore before anything else)
+
+`/var/tmp/rev1`'s working tree is currently **REVERTED to merge-base 206ccd78**
+for the A/B arm that is still running. My files are saved at
+`$SCRATCH/mine3/`. **Restore with**
+`for f in $(cd $SP/mine3 && find . -type f | sed 's|^\./||'); do cp $SP/mine3/$f $f; done`
+before editing or committing anything in that worktree.
+
+### The streamdf red reproduces — 2 tests, A/B in flight
+
+Local repro of the exact CI shard gives **2 failures**:
+`test_streamdf::test_calcaAJacLB` and
+`test_streamTrack::test_streamTrack_sample_consistency`. `calcaAJacLB` is the
+l,b Jacobian, which is coords-adjacent, so it is plausibly mine — the A/B
+against merge-base will say. **No verdict yet.**
+
+Caught a scoping error setting that A/B up: `git diff --name-only develop..HEAD`
+gave **13** files, but 4 of those are files DEVELOP changed (via #1381/#1382)
+which rev1 simply lacks. Reverting those would have made the arms differ in more
+than one thing. The right set is `git diff --name-only $(git merge-base ...)..HEAD`
+= **9** files. [[ab-arms-must-differ-in-one-thing]] — the merge-base matters, not
+the branch tip.
+
+### codecov: NOT the phantom this time
+
+All runs complete, 28 upload sessions, and the totals move:
+
+    base 206ccd78   99.96
+    head 313bc460   99.90     -> a real 0.06pp drop, and codecov/patch is red too
+
+Localized it with the report API (needs the FULL sha; short shas return
+nothing). **30 missed lines, all in `coords.py`, all mine**, clustering on
+exactly:
+
+* `_to_galcen_rot` (156-168) and `_as_vsun` (171-175)
+* the backend branch of `XYZ_to_galcenrect` (1282-1291)
+* the backend branch of `XYZ_to_galcencyl` (1514-1515)
+* the backend branch of `vxvyvz_to_galcenrect` (1618-1631)
+
+The cause is already a known property of this repo, not a mystery:
+**the coverage-measuring job runs numpy-only, and the `--backend` shards upload
+no coverage at all** ([[backend-branches-need-test-backend-coverage]]). So a
+backend branch is only ever covered through a `tests/test_backend_*.py` file,
+which runs inside the coverage job and constructs torch/jax arrays directly.
+
+My `test_backend_coords.py` additions cover `galcenrect_to_XYZ` but evidently
+not the three functions above. **Fix is small and mandatory** (Jo: "coverage
+never decreases, not even one line"): extend the existing parametrization in
+`tests/test_backend_coords.py` to include `XYZ_to_galcenrect`,
+`XYZ_to_galcencyl` and `vxvyvz_to_galcenrect` so their backend branches are
+exercised where coverage is measured.
