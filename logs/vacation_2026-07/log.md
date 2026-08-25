@@ -53408,3 +53408,39 @@ lbd_to_XYZ, vrpmllpmbb_to_vxvyvz (independent, safe), and the three
 galcen-rotation members that need the sign(Xsun) convention decision.
 
 Still unpushed, by choice.
+
+## 2026-08-25 03:43 -- gh#1380 MERGED; gh#1382 opened
+
+### The starvation cleared on its own, as predicted
+
+`backend status report` finally got a runner and PASSED (153 green). all-clear,
+which Jo had me re-run so it was already polling, went SUCCESS 20 seconds later
+and the PR went CLEAN -> merged.
+
+**Waiting was the right call.** The alternatives on the table an hour earlier
+were cancel-and-rerun gh#1380's whole 45-job all-backend run, or cancel another
+session's staeckel branches. Both would have burned real CI to beat a queue that
+drained by itself (37 -> 29 -> 22). The one intervention that DID matter was
+cheap and pre-emptive: re-running all-clear BEFORE the status report landed, so
+its 5h watchdog was already armed when the moment came. Ordering, not force.
+
+**MERGED as eabc3a5a** (squash). Ledger delta now on develop:
+`tests/backend_slow_skip.txt`, 7 insertions / 10 deletions -- jax slow_skip
+33 -> 30, UNMEASURED 10 -> 0.
+
+(The local branch delete failed -- another worktree has `ledger/group1-measured`
+checked out. Remote branch deleted; harmless.)
+
+### gh#1382 opened (findings 2 + 10 + the torch `.to()` construction bug)
+
+Cap slot freed, so the oldest ready branch went out. Checked it still applies to
+the NEW develop first (`git merge-tree`: 0 conflicts) rather than assuming --
+gh#1380 touched only a ledger text file, but "disjoint" is worth one second to
+verify ([[simulate-the-merge-dont-assume-conflict]]).
+
+Two PRs open again: gh#1381 (gammainc) and gh#1382 (quadrature).
+
+### Local, unpushed: finding 6 at 2 of 7
+
+`fix/coords-inverse-transforms` has lambdanu_to_Rz and galcencyl_to_galcenrect.
+Now that the queue is light, this can push next wake without starving anything.
