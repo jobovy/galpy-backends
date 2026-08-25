@@ -54650,3 +54650,38 @@ The proposal, for Jo rather than for me to land quietly: when a coordinate is a
 returning a wrong gradient. Same principle as the hyp1f1 fix — turn a silent
 wrong answer into either a correct one or a loud one. It changes behaviour for
 existing users, so it wants its own PR and a decision, not a drive-by.
+
+## 2026-08-25 late evening — gh#1383 MERGED, gh#1388 opened
+
+Cron `5451d57e` alive.
+
+### The last red was a 19-second race, not a defect
+
+`all-clear` came back FAILURE with everything else green. Reading the job rather
+than re-running blindly: it started 19:39:10Z, waited on other checks, and gave
+up at **22:16:40Z** — while codecov flipped to success at **22:16:58/59Z**. It
+timed out on codecov by **nineteen seconds**. Re-ran that one job; SUCCESS.
+
+**gh#1383 merged into `feat/backends-develop` as `4e2cc322`** at 154/154, CLEAN.
+That closes review findings 3, 4 and 6 (finding 6 complete, 7 of 7), plus
+`promote_common_dtype` and `prefer_backend_namespace` hoisted into
+`galpy.backend`, the `scalarDecorator` float32 fix, the `_quad_needs_backend`
+all-coordinates fix, and the `actionAngleIsochroneApprox` mixed-set coercion.
+Ledger delta: 0.
+
+### gh#1388 opened immediately — no first-run discovery
+
+`fix/mapcoords-grid-dispatch` rebased cleanly onto `4e2cc322` (2 commits,
+`e7dcb342`), conflict-marker grep clean (the one `=======` hit is AUTHORS.txt's
+heading underline, checked rather than assumed), and re-gated on the REAL
+develop base: `tests/test_backend_interpolate.py` **165 passed on numpy, 165
+under `--backend jax`**. Opened as **gh#1388**, base `feat/backends-develop`,
+verified by reading back its number/base/head/files rather than trusting the
+push. [[verify-pr-content-not-push-success]]
+
+Preparing it against a throwaway probe last wake paid off exactly as intended:
+the audit duplicate was already fixed and the gates already measured, so the PR
+opened ready instead of discovering both on its first CI run.
+
+Queue now: gh#1388 (open, CI starting) -> `backend/constructor-jit-safety`
+(items 3+4 + the detachment audit, gated, PR body drafted).
