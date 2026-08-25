@@ -54685,3 +54685,32 @@ opened ready instead of discovering both on its first CI run.
 
 Queue now: gh#1388 (open, CI starting) -> `backend/constructor-jit-safety`
 (items 3+4 + the detachment audit, gated, PR body drafted).
+
+## 2026-08-26 — the `_jit` docstring, and what counting it corrected
+
+Cron `5451d57e` alive. gh#1388 sitting at 151 pending / 0 failing (runners
+queued), so nothing to drive; local work instead.
+
+Folded the deferred "`_jit.py` docstring overstates it" item into
+`backend/constructor-jit-safety` (`76382023`), and did it by **counting
+`traced_call`'s returns** rather than by rewording from a read of the code.
+
+Two behaviours stay eager by design and neither was documented:
+
+    evaluateDensities, 2-component potential   4 boundary calls, 1 traced
+    evaluateSurfaceDensities                   2 boundary calls, 1 traced
+    torch coordinates under jit("jax")         1 boundary call,  0 traced
+
+**Counting also corrected the module's own example.** The comment on `_TRACING`
+cited `Potential.__call__ -> evaluatePotentials` as the nesting case. Measured:
+that chain reaches the boundary **once**, not twice — and so does
+`evaluateRforces`, on a composite AND on a wrapper. The adapters-to-undecorated-
+evaluators work (gh#1271/#1272/#1273) removed those crossings, and the comment
+was never updated. Had I only softened the wording I would have kept a
+plausible, wrong example; the two calls that really do nest are the density
+ones.
+
+Worth keeping as a habit: my first probe returned "1 boundary call, 1 traced,
+0 nested" and I nearly wrote that the nesting guard never fires in practice.
+It does — just not on the chain the comment named. The right move was to go
+looking for a case rather than to generalise from one negative.
