@@ -54102,3 +54102,41 @@ have taken mine ([[git-stash-is-repo-wide-not-worktree]]). Caught it by checking
 `git stash list` rather than assuming the worktree was clean; popped it back in
 its own worktree and confirmed the stack returned to its original two entries.
 Do not put `git stash` in a throwaway script.
+
+---
+
+## 2026-08-25 (eighth) — ledger sweep says there is nothing stale to prune
+
+Cron `5451d57e` alive.
+
+**gh#1382 is effectively green: 152/154, zero failures.** The
+`codecov/patch` + `codecov/project` reds self-healed exactly as the
+incomplete-upload phantom predicts, once the shards finished uploading — no
+intervention needed, and no session-count discrimination required in the end.
+Still BLOCKED on two stragglers: `all-clear` (in progress) and the All-backend
+run's final `backend status report` aggregator, which is a tiny job sitting in
+the runner queue behind everything else. All 44 of that run's test jobs are
+green.
+
+**gh#1383** is 51 green / 100 queued with codecov red at the same premature
+stage — same phantom, one cycle behind.
+
+### Ledger staleness sweep: 0 stale
+
+Used gh#1382's own 44 `backend-junit-*` artifacts (69 KB total) for the
+documented (ledgered AND passed) sweep. Guarded both false-stale modes from
+[[ledger-sweep-two-false-stale-modes]]: keyed on `(backend, tests/file.py::name)`
+rather than bare test name, and excluded `-jit` artifacts since a `--jit` ledger
+entry is not exercised by an eager run.
+
+    ledger entries                     137
+    exercised by this eager run         97
+    not exercised (cannot judge)        40
+    CANDIDATE-STALE (ledgered ∧ passed)  0
+
+Zero. Worth stating plainly because it is a *negative* result that changes the
+plan: the ledger is not carrying dead weight, so the remaining 137 entries are
+not prunable — **emptying the ledger from here requires real fixes, not
+bookkeeping**. The earlier burndown waves have already taken the cheap ones.
+The 40 unexercised entries are the only place a free win could still hide, and
+they need a `--jit` run to judge.
