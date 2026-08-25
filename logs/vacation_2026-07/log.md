@@ -54421,3 +54421,62 @@ by comparing the PARAMETERS (`_in_regime`, `_euler_labeling`, `_pfaff_series`),
 so tracing w.r.t. alpha/beta still dies there. Route selection cannot be a
 concreteness guard — you would have to evaluate both routes — so review item 4
 needs its own answer and its own change.
+
+### Review batch-2 item 4 (hyp2f1) — worse than reviewed, now fixed
+
+Committed on the same branch as item 3 (`backend/constructor-jit-safety`,
+`f2999ebe`). The review called `hyp2f1.py:51/92/156` "scalar params". The
+reproduction found a **silently wrong gradient**, not just a missing one:
+
+    math.lgamma(B) / float(math.ceil(6.0 / B))
+
+* on **jax** these raise, so a traced exponent is refused — visible;
+* on **torch** they do NOT raise. `__float__` runs and DETACHES the Gamma
+  prefactor from the autograd graph. `requires_grad` stays True, `grad_fn` is
+  set, the value is right to 1e-14, and the gradient is wrong by 10x:
+  measured `d/da 2F1(a,2;3;-5)` = **-8.98e-03** against a true **-8.56e-02**,
+  and `TwoPowerTriaxial dPhi/dalpha` = **0.834** against **0.548**.
+
+Textbook [[value-checks-cannot-see-numpy-fallback]]: value ✅, is_backend_array
+✅, grad_fn ✅, and only grad-vs-FD says no.
+
+So the guard is keyed on `is_backend_array`, NOT on concreteness — an ordinary
+untraced tensor has a perfectly good truth value and is exactly the broken case.
+Route selection, Euler labelling and the series labelling all move to `where()`
+when the parameters are backend values, with a SAFE `(B, A, c) = (1, 0, 2)` fed
+to the discarded Euler branch so `T**(B-1)` with `B <= 0` cannot NaN-poison the
+gradient of the series result that wins there.
+
+A/B on the new tests: **17 failed / 2 passed on the base, 19 passed with the
+fix**. The 2 that already passed are the Pfaff-series route — no `math.*` call
+in it, so it was correct all along.
+
+Accuracy is per route and is stated per route in the test, not averaged:
+
+    euler-transformed  (-3.2, 4.4, 5.2)      1e-10 .. 1e-11
+    pfaff-series       (-0.51, -0.98, 2.51)  1e-11 .. 1e-12
+    euler, generic     (1.7, 2.3, 3.4)       1e-6 .. 1e-5
+    euler, c - a == 1  (2.0, 2.0, 3.0)       1.6e-4 .. 2.9e-4
+
+### FOR JO — pre-existing hyp2f1 value-accuracy gap the suite cannot see
+
+Found while picking those tolerances, **identical on both A/B arms** so not
+caused by the change: the direct Euler route's VALUE is only ~1e-6..1e-7 when
+`c - B` is NOT an integer — (1.7, 2.3, 3.4) gives 1.09e-07 at |z|=5,
+(2.6, 1.1, 4.15) gives 1.75e-06 — against ~1e-14 when it is. Every parameter set
+in the existing test grid has integer `c - B` (galpy's own force calls are all
+c = a+1), so the gap is invisible to the suite. Cause: `X = xi^k` regularizes
+the `t^(B-1)` endpoint, and nothing regularizes `(1-t)^(c-B-1)`, which is a
+polynomial only for integer `c - B`. Raising `_NODES` only buys ~1/N (measured
+128 -> 1024: 1.1e-7 -> 9.4e-11). The real fix is a **Gauss-Jacobi rule** with
+weight `t^(B-1) (1-t)^(c-B-1)`, which would be spectral for any exponents and
+would fix the derivative accuracy above at the same time. Not done here.
+
+### Process note: I corrupted a measurement
+
+The `--backend torch tests/test_potential.py` gate was launched, and then I
+edited `hyp2f1.py` while it was running — so its first half ran against
+different sources than its second. Discarded and re-run on a quiet tree, this
+time in **CI's exact shape** (`--splits 5 --group N`), because CI runs that file
+split five ways and a whole-file local run is a different context.
+[[long-measurement-needs-a-quiet-box]], [[verify-exact-ci-shard-context]]
