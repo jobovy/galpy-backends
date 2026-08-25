@@ -35,7 +35,16 @@ the trace.
      `_CHAIN_CASES` in `tests/test_backend_coords.py` cover them; a coverage
      run confirms **all 30 lines now execute** (82 passed, was 67).
 
-  CI on `1ff63b7e` is running.
+  **`1ff63b7e` reached 154/154 SUCCESS, mergeStateStatus CLEAN** — codecov
+  cleared itself at 18:42Z once the second `tests/test_backend*.py` upload
+  landed, confirming the incomplete-upload reading.
+
+  Then the pre-merge audit found a **duplicate**: the forward
+  `XYZ_to_galcenrect` / `vxvyvz_to_galcenrect` extra-rot blocks were identical
+  three-liners, and the same rotation `_apply_extra_rot` already did for the
+  inverse transforms. Hoisted to `_rotate_components`; pushed as **`0c69715a`**,
+  which is re-running the full ~154-check cycle. Gate for the change: 180 passed
+  on numpy, 98 under torch, 98 under jax.
 
 ## Queued behind gh#1383 (approved sequencing)
 
@@ -43,9 +52,13 @@ the trace.
    backend `map_coordinates` silently returned an ndarray under torch/jax
    eager and raised under torch+grad and jax-jit. BLOCKED: it uses
    `prefer_backend_namespace`, which only exists on gh#1383.
-2. Review batch-2 item 3 — constructor jit-safety. **BUILT AND COMMITTED
-   LOCALLY, not pushed**: branch `backend/constructor-jit-safety`, worktree
-   `/var/tmp/jitsafe`, head `03ac6bd6` on develop `06267d1d`. Adds
+2. Review batch-2 items 3 AND 4 — **BUILT AND COMMITTED LOCALLY, not
+   pushed**: branch `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
+   head **`48a68247`** (4 commits) on develop `06267d1d`. PR body drafted at
+   `$SCRATCH/pr_body_jitsafe.md`. `git merge-tree` says it merges cleanly onto
+   the post-gh#1383 tree, so no rebase. Also carries the hyp2f1 + hyp1f1
+   parameter-gradient fixes and the silent-detachment audit. Traced-green
+   measured: 245 passed under `--backend jax --jit` AND `--backend torch --jit`. Adds
    `galpy.backend.concretely_true` and applies it to `ExpTruncNFWPotential`
    `min(a, rc)`, `TwoPowerTriaxialPotential`'s alpha/beta validation and its
    two alpha == 2 branches, and `constantbetaPowerLawdf`'s four asserts; plus
