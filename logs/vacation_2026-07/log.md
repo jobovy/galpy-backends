@@ -54199,3 +54199,59 @@ Directives recorded:
 * Audit gate **CONFIRMED**: fix before merging, even cosmetic, even at the cost
   of a full CI cycle.
 * Sequencing approved: merge gh#1382 → gh#1383 → findings 8 & 9.
+
+---
+
+## 2026-08-25 (tenth) — gh#1382 MERGED; map_coordinates finding is worse than reported
+
+Cron `5451d57e` alive.
+
+* **gh#1382 MERGED** as `06267d1d` (findings 2 + 10 + the torch `.to()` bug +
+  the `node_axis` de-duplication). Went CLEAN at 154/154 — the codecov reds were
+  the incomplete-upload phantom throughout and needed no intervention.
+* **finding 5 closed**, branch dropped, reply posted (comment 5411848615).
+
+### Correcting my own sequencing claim
+
+I told Jo the remaining review work was "#1383 then findings 8 & 9". Wrong:
+**batch-2 item 2 (`map_coordinates` grid dispatch) is still outstanding** and
+comes before them. I had it recorded in STATUS as a held branch and then said it
+was done. Re-read the review text to fix my numbering: batch 2's items are
+1 = coords inverse transforms (gh#1383), 2 = map_coordinates dispatch,
+3 = constructor jit-safety, 4 = hyp2f1 scalar params.
+
+### The map_coordinates defect is worse than the review states
+
+Reproduced against develop. `xp = array_api_compat.array_namespace(coords)` keys
+the namespace on the QUERY POINTS alone, so a backend-prefiltered grid queried at
+numpy points:
+
+    torch + grad      RuntimeError: Can't call numpy() on Tensor that requires grad
+    jax under jit     TracerArrayConversionError
+    torch plain       "ok" -> ndarray      <-- SILENT
+    jax eager         "ok" -> ndarray      <-- SILENT
+
+The review reported the two errors. The two silent cases are the worse half: no
+exception, the backend is simply dropped and differentiability dies. That is a
+numpy island produced at runtime, which the mission forbids outright. Worth
+remembering that `map_coordinates(spline_filter(grid), fixed_points)` is exactly
+how you differentiate an interpolant w.r.t. the DATA it was built from, so this
+is a real use, not a corner.
+
+The fix already existed on a stale branch (`fix/map-coordinates-grid-dispatch`,
+based on the pre-#1381 develop and carrying superseded coords commits).
+Cherry-picked the single relevant commit onto current develop as
+`fix/mapcoords-grid-dispatch` — clean, exactly 2 files.
+
+**It is BLOCKED on gh#1383**: it uses `prefer_backend_namespace`, which develop
+does not have and gh#1383 introduces (`git show develop:… | grep -c` = 0,
+`git show fix/coords-inverse-transforms:… | grep -c` = 1). So it cannot open
+until gh#1383 merges — which is the approved order anyway.
+
+### gh#1383
+
+141 green / 9 queued, with 3 reds: `codecov/patch` + `codecov/project` (premature
+again — All-backend and Linux/Mac still running) and one REAL failure, the
+`backend torch` streamdf/streamspraydf/streamTrack shard, exit code 1. Logs are
+not retrievable mid-run, so a local reproduction of that exact shard is running
+rather than pattern-matching it against the known-flaky streamdf torch list.
