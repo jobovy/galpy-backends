@@ -53257,3 +53257,37 @@ signal on an open PR -- to buy ten minutes on a recovery that is cheap and
 certain: a timed-out all-clear is a QUEUEING ARTIFACT, and re-running that ONE
 job after the status report lands fixes it. Trading another PR's CI for that is
 a bad trade, and by then I was thrashing rather than deciding.
+
+### gh#1380: all-clear timed out at 00:41, exactly as predicted
+
+    all-clear             FAILURE  (5h cap, started 19:39)
+    backend status report QUEUED   (its run created 18:25 -- 6h15m and counting)
+
+The failure is a QUEUEING ARTIFACT, not a test result: all 152 substantive
+checks are green. Recovery is to re-run the single all-clear job once the status
+report lands.
+
+**And the contention is no longer mine.** Measured properly this time:
+
+    7 queued  staeckel-wrapper-u0
+    7 queued  staeckel-interp
+    7 queued  fix/gammainc-endpoint-grad   <- mine (gh#1381)
+    6 queued  staeckel-interp-units
+    6 queued  staeckel-interp-coverage
+    3 queued  main
+    ...                                    42 in flight
+
+26 of 42 are `staeckel-*` / `aainv-staeckel-dev` -- NOT my branches
+([[concurrent-agent-session-shares-identity]]: another session's or Jo's work).
+Those are someone else's signal and I do not cancel them.
+
+Considered cancelling gh#1381's remaining 7 and did NOT: its push runs sit at
+the head SHA of an OPEN PR, where cancelling leaves a blocking red
+([[cancel-push-run-leaves-cosmetic-red]]), and freeing 4 pull_request slots out
+of 42 does not move a queue where 26 belong to other branches. That is the
+thrashing I had just committed to stopping, so I stopped.
+
+Armed a wait on the actual gate (status report leaving QUEUED). If it is still
+queued next wake -- i.e. 7h+ -- that is a pattern worth telling Jo about rather
+than a blip to keep absorbing: a substantively-green PR that cannot merge
+because of cross-branch runner starvation is something only he can arbitrate.
