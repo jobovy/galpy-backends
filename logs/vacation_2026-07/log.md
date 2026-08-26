@@ -55354,3 +55354,30 @@ second was STILL Hernquist-only because `alpha=1.8` trips
 `pot.alpha must be > 2 for bound orbits`. Only the third run actually exercised
 both families — [[never-report-partial-run-as-result]] applies to censuses too,
 not just test counts.
+
+## 2026-08-26 (wake 6) — gh#1393 MERGED as `366ffc04`
+
+Cron `5451d57e` alive. 154/154 CLEAN after the SIMBAD re-run passed.
+
+Audit before merge: one test file, 19+/13-. No new helpers (the only `+def` is
+the test function itself), **no new `if` branches** so nothing in the
+if->xp.where array-input class, and it reuses the file's existing `_grad_wrt`.
+
+One duplication observation recorded but deliberately NOT acted on: the
+`torch.set_default_dtype(torch.float64)` line makes this the **63rd**
+test_backend_*.py file setting the same process-global. That is conformity with
+an established convention rather than duplication this PR introduces, and
+hoisting it into conftest would change the numpy-session dtype for every test
+file at once — a far larger blast radius than this PR's scope. Worth a
+follow-up on its own, not a drive-by.
+
+**gh#1394**: codecov/patch and codecov/project both cleared themselves, exactly
+as the session count predicted last wake (25 vs 28 uploads, not a real drop).
+That left only the Windows `test_streamgapdf_sample` flake, already proven by
+the same-SHA twin; its parent run had completed, so the targeted re-run was
+finally accepted and is queued. 151 SUCCESS.
+
+No rebase of gh#1394 onto the new develop: files are disjoint from gh#1393's
+([[dont-reflexively-rebase-disjoint-prs]]).
+
+Merged this cycle: gh#1381, #1382, #1383, #1388, #1391, #1392, **#1393**.
