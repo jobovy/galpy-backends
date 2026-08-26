@@ -55004,3 +55004,51 @@ ledger burndown left, in either file.** 8 xfail = 4 by-design eager + 4 jit-only
 performance work, freshly measured. Emptying the ledger from here means
 (a) the off-grid-fallback design decision, (b) the qdf unbound semantics,
 (c) jax-eager speed. All three are Jo-facing or large, none is a sweep.
+
+## 2026-08-26 — gh#1391 MERGED; the whole gh#1204 review is now addressed
+
+Cron `5451d57e` alive.
+
+**gh#1391 reached 154/154 SUCCESS, CLEAN, merged as `cfe23abe`.**
+
+Audit before merging, on all three dimensions:
+
+* **if -> xp.where**: the traced hyp2f1 route selection IS the conversion; every
+  remaining Python `if` is guarded by `concretely_true` and documented as a
+  deliberate concreteness decision.
+* **Duplication**: `concretely_true` is a thin, documented wrapper with 8 call
+  sites; the gh#1388 tidy removed a real duplicate. One asymmetry checked rather
+  than waved through: hyp2f1 guards with `_params_are_backend`
+  (`is_backend_array` OR not-concrete) while hyp1f1 guards with plain
+  `is_backend_array`. **Measured**: a jax tracer IS `is_backend_array` under
+  both `jit` and `grad`, so the two spellings are equivalent in practice and
+  hyp1f1 has no gap.
+* **Helper placement**: `concretely_true` in `galpy.backend`; the
+  fallback-local helpers stay in their modules.
+
+That measurement also confirmed the design choice from the other side: under
+`jax.grad` a tracer HAS a concrete truth value (True), under `jax.jit` it does
+not. Keying the guard on `is_backend_array` rather than on concreteness is what
+makes it catch the eager-torch detachment case.
+
+### Review status posted to gh#1204 (comment 5422012558)
+
+Five PRs, ledger delta 0 across all of them:
+
+    batch 1 #1        -> gh#1381  206ccd78
+    batch 1 #2, #10   -> gh#1382  06267d1d
+    batch 1 #3/#4/#6  -> gh#1383  4e2cc322
+    batch 1 #5        -> closed as working-as-intended (comment 5411848615)
+    batch 2 #1        -> gh#1383
+    batch 2 #2        -> gh#1388  107a8060
+    batch 2 #3, #4    -> gh#1391  cfe23abe
+
+and three things handed back to Jo rather than decided unilaterally: the
+surfdens gradient gate (finding 11, now sharpened to 23%/72% wrong rather than
+"no gradient"), the hyp2f1 Gauss-Jacobi accuracy gap, and the AdiabaticGrid
+off-grid fallback.
+
+The headline for the review itself: **two findings filed as "not traceable"
+were actually silently WRONG gradients on torch** (10x on 2F1, 42% on 1F1), with
+`requires_grad`, a `grad_fn`, and a value correct to 1e-14 — invisible to any
+check short of grad-vs-FD.
