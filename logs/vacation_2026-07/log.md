@@ -55645,3 +55645,26 @@ Branch `backend/adiabaticgrid-offgrid`:
     bc69771e  develop
 
 Full gates (numpy / torch / jax `test_actionAngle.py`) still running.
+
+## 2026-08-26 (wake 12) — gh#1399 OPENED (AdiabaticGrid off-grid); gates all clean
+
+Cron alive.
+
+**Gates on `backend/adiabaticgrid-offgrid`, all clean:**
+
+    numpy test_actionAngle.py :: 210 passed
+    torch test_actionAngle.py :: 185 passed, 24 skipped, 1 xfailed
+    jax   test_actionAngle.py :: 184 passed, 25 skipped, 1 xfailed
+    test_backend_namespaces   :: 7 passed
+    new AdiabaticGrid tests   :: 7 passed (~235 s)
+
+The single `xfailed` per backend is exactly the `outsidegrid_c` ledger entry --
+expected, and now carrying a TRUE reason instead of a false one.
+
+**gh#1399 OPENED** against develop, head `17597688`. Carries the gh#1398
+cherry-pick (`d406551a`) deliberately, per Jo: it drops by patch-id when main is
+merged in and this is rebased.
+
+**gh#1398** (main): 105 SUCCESS / 45 pending, only the codecov upload phantom.
+
+Two PRs open = the cap. gh#1398 is Jo's to merge; gh#1399 is mine once green.
