@@ -55668,3 +55668,50 @@ merged in and this is rebased.
 **gh#1398** (main): 105 SUCCESS / 45 pending, only the codecov upload phantom.
 
 Two PRs open = the cap. gh#1398 is Jo's to merge; gh#1399 is mine once green.
+
+## 2026-08-26 (wake 13) — tanh-sinh prototyped: a real win, NOT a clean sweep
+
+Cron alive. gh#1398: symplectic bit-identity flake (5.55112e-16, the documented
+intermittent one) re-run targeted -> 145 SUCCESS, no reds. gh#1399: codecov
+phantom at its most extreme (head **2 sessions vs base 28**, 40.16% vs 99.96%)
+with 127 jobs still pending; self-heals.
+
+### tanh-sinh vs the shipping Gauss-Legendre, measured
+
+    a        b       c    min-exp   GL (ships)   tanh-sinh   winner
+    -1.010  0.0200  3.0100  0.0200   7.18e-02     6.80e-07   tanh-sinh
+     1.000  2.0000  2.0200  0.0200   3.01e-06     6.73e-07   tanh-sinh
+     1.000  0.0050  3.0000  0.0050   6.22e-15     2.90e-02   GL
+     1.000  2.0000  2.0050  0.0050   8.60e-07     2.89e-02   GL
+     1.000  2.0000  2.0500  0.0500   5.77e-06     2.22e-16   tanh-sinh
+     0.500  5.0000  5.0500  0.0500   8.88e-15     6.66e-16   tanh-sinh
+     2.000  2.0000  2.5000  0.5000   5.77e-15     6.66e-16   tanh-sinh
+
+tanh-sinh (n=200, hmax=7.5) is at MACHINE PRECISION for min(b, c-b) >= 0.05 --
+including the 5.77e-06 case that motivated all of this -- and beats GL by five
+orders at min-exp=0.02. But it LOSES badly below ~0.01, where GL sometimes lands
+at 6.2e-15. So it is a large win, not a clean sweep, and cannot simply replace
+GL: it wants to be a ROUTE chosen by min(b, c-b), with GL kept for the extreme
+tail.
+
+### Two of my own hypotheses refuted by measurement
+
+1. **"It's truncation reach."** True for min-exp in [0.05, 0.25] -- hmax 3.5->7.5
+   took c-b=0.05 from 7.4e-02 to 2.2e-16. FALSE below that: hmax 7.5->12 at
+   min-exp=0.02 goes 6.8e-07 -> 1.3e-06, i.e. no better.
+2. **"It's inf*0 node-dropping."** The `isfinite` mask in my first prototype WAS
+   silently discarding nodes, so I rewrote it with the singularity cancelled
+   analytically (`f*w = pi t^b (1-t)^(c-b) (1-zt)^-a cosh u`, both exponents
+   positive). Result: IDENTICAL to the digit. Not the cause.
+
+I have no third explanation and am not going to invent one. What is measured:
+the crossover sits near min-exp ~ 0.01-0.05.
+
+### And a correction to my own earlier census
+
+I told Jo "min c-b = 1.000, the DFs never enter the bad regime". That tracked
+only ONE of the Euler integral's two endpoint exponents. It has two -- `b-1` at
+t=0 and `c-b-1` at t=1 -- and galpy's own request `(-1.010, 0.020, 3.010)` has
+**b = 0.020**, squarely in the degraded band, where the SHIPPING GL is
+**7.18e-02** wrong. That is far worse than the ~1e-6 I reported as the worst
+case, and it is a real galpy DF parameter set, not a synthetic one.
