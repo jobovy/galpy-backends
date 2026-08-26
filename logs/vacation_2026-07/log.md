@@ -55467,3 +55467,52 @@ Also confirmed: galpy has NO backend-agnostic scatter today (`.at[` appears
 nowhere in the source), so `set_at(xp, arr, mask, values)` will be new shared
 machinery and belongs in `galpy.backend` per
 [[generic-helpers-go-in-backend]], with two call sites in this PR (jz and jr).
+
+## 2026-08-26 (wake 8, "keep going") — AdiabaticGrid port works; found a USER-FACING numpy bug
+
+### The port itself works
+
+`set_at(xp, arr, mask, values)` added to `galpy.backend` (galpy had no
+backend-agnostic scatter; jax needs `.at[].set`, torch needs index-assign), and
+`_evaluate_backend` now mirrors numpy's mask / `sum>0` / scatter for BOTH halves.
+Against the numpy grid:
+
+    all on-grid   torch  jr 7.33e-15   jz 6.66e-16
+    all on-grid   jax    jr 1.47e-13   jz 6.66e-16
+    MIXED         torch  jr 8.44e-14   jz 3.84e-14
+    MIXED         jax    jr 1.47e-13   jz 1.65e-13
+    all off-grid  torch  jr 8.44e-14   jz 4.54e-14
+    all off-grid  jax    jr 4.73e-14   jz 1.65e-13
+
+MIXED is the case the existing test never covers, and the one that would catch a
+scatter writing to the wrong positions.
+
+### A pre-existing, user-facing numpy bug — found by porting
+
+    grid c=False 1 off-grid: OK   jr=[0.01111263]
+    grid c=False 2 off-grid: TypeError: 'float' object is not subscriptable
+    grid c=True  2 off-grid: OK
+
+`actionAngleAdiabaticGrid(..., c=False)` **raises whenever 2+ points fall
+outside the grid**. Plain numpy, no backends. Root cause is a one-branch
+omission inside `actionAngleAdiabatic._evaluate`: the `len(R) > 1` loop calls
+itself per point and does `ojr[ii] = tjr[0]`, but the scalar `_justjr` branch
+returns a BARE float where its two siblings in the same method both wrap in
+`numpy.atleast_1d`:
+
+    _justjz -> (atleast_1d(nan), atleast_1d(nan), Jz)      wrapped
+    else    -> (atleast_1d(axiJ[0]), ...)                   wrapped
+    _justjr -> (self._aAS(...)[0], nan, nan)                NOT wrapped
+
+Invisible because the ONLY off-grid test is `..._outsidegrid_c`, which takes the
+C path and returns before the loop. Fixed by wrapping, matching its siblings.
+
+This is a main-branch bug in released galpy, not a backend one. Flagged to Jo.
+
+### Remaining
+
+`test_actionAngleAdiabaticGrid_outsidegrid_c` builds the grid with `c=True`,
+whose `_aA` is C-backed and rejects backend arrays outright
+(`NotImplementedError`). The backend fallback has to route to the PYTHON
+evaluator when the input is a backend array -- C can never take a tensor. That
+is the last piece.
