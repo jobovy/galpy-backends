@@ -54772,3 +54772,39 @@ Running now, on develop with a real C extension (the `_c` test needs one —
 now XPASS. Whole file, not `-k`, because a hand-picked nodeid is not a context
 ([[handpicked-nodeid-batch-is-not-a-context]]). Any XPASS still has to survive
 an A/B before it can be pruned ([[verify-burndown-flips-stash-rerun]]).
+
+### The four eager xfail entries are NOT stale — measured, all four still fail
+
+Whole-file runs on develop `4e2cc322` with a real C extension, both backends:
+
+    test_actionAngle.py --backend jax     183 passed, 25 skipped, 1 xfailed  (14m27s)
+    test_qdf.py        --backend jax       54 passed,  1 skipped, 1 xfailed  ( 7m47s)
+    test_actionAngle.py --backend torch   184 passed, 24 skipped, 1 xfailed  ( 4m19s)
+    test_qdf.py        --backend torch     55 passed,             1 xfailed  ( 7m51s)
+
+**Zero xpassed on any arm**, and the junitxml confirms the xfailed test in each
+run is the ledgered one (`test_actionAngleAdiabaticGrid_outsidegrid_c`,
+`test_call_diffinoutputs`) rather than some other test. So there is no free
+prune here: the eager ledger is genuine, and "ledger emptied" needs real fixes,
+not a staleness sweep.
+
+Useful negative result, and worth stating plainly rather than quietly moving on
+— I went looking for burndown and found none. The remaining xfail surface is
+**five distinct tests**:
+
+    test_actionAngleAdiabaticGrid_outsidegrid_c        (jax + torch)
+    test_qdf.py::test_call_diffinoutputs               (jax + torch)
+    test_orbit.py::test_eccentricity                   (jax-jit)
+    test_poisson_surfdens_potential[AnyAxisymmetric…]  (jax-jit + torch-jit)
+    test_pickling_potential_drops_units_wrapper        (jax-jit)
+
+Also noted: jax eager `test_actionAngle.py` takes **14m27s** against torch's
+**4m19s**, a 3.4x gap on the same file — consistent with the standing
+jax-eager-is-slow picture and relevant to the slow-skip list, 30 of whose 57
+entries are plain `jax`.
+
+### gh#1388
+
+codecov cleared; the only red left is the Windows `test_streamgapdf_sample`
+flake, and its workflow run has now completed so the targeted re-run went
+through this time. 24 checks still pending.
