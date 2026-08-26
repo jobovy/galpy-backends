@@ -55052,3 +55052,48 @@ The headline for the review itself: **two findings filed as "not traceable"
 were actually silently WRONG gradients on torch** (10x on 2F1, 42% on 1F1), with
 `requires_grad`, a `grad_fn`, and a value correct to 1e-14 — invisible to any
 check short of grad-vs-FD.
+
+## 2026-08-26 — gh#1392: the constant-beta family disagreed with itself
+
+Cron `5451d57e` alive. No PR was open (review closed out), so this went to the
+mission's own backlog: "differentiate the DF w.r.t. its anisotropy parameter",
+which Jo has called a goal.
+
+Verified on the merged develop `cfe23abe` and found the family **split**:
+
+    constantbetaPowerLawdf     d f_E/d beta  ->  works, rel 2.06e-11
+    constantbetaHernquistdf    d f_E/d beta  ->  RAISES, both backends
+
+Same line both times, `scipy.special.gamma(...)` on `beta` in the
+normalisation: `TracerArrayConversionError` on jax, "Can't call numpy() on
+Tensor that requires grad" on torch. The file already imports
+`galpy.backend.special as bspecial` -- the PowerLaw sibling routes through it
+and this one never did. One guarded line.
+
+    numpy FD  d f_E/d beta at E = -0.1   -1.0406774522e-02
+    jax   AD                             -1.0406774508e-02   rel 1.33e-09
+    torch AD                             -1.0406774508e-02   rel 1.33e-09
+
+Gates: A/B **2 failed / 2 passed -> 4 passed** (the PowerLaw pair passes on both
+arms, so it is the control); numpy byte-identity by sha256 over `_fEnorm` + f_E
+across 5 betas, identical to develop; `test_backend_constantbetadf` 40 passed;
+`test_sphericaldf` 223 passed on numpy AND 223 under `--backend torch`.
+**gh#1392 opened.** Ledger delta 0.
+
+### Two self-inflicted process failures this wake, both worth the ink
+
+**1. A vacuous probe point, three times running.** `fE(-0.3)` is identically 0
+for EVERY beta -- `psi0 = 0.25`, so E = -0.3 is unbound -- which makes the FD
+reference 0.0 and any gradient "agree". I only caught it because I printed the
+VALUE before trusting the derivative. Same shape as the earlier qdf and
+PowerLaw probes at unbound points. The test now asserts `|f_E| > 1e-12` before
+comparing, so the trap is closed in code rather than in my head.
+
+**2. I bracketed an A/B with `git stash`, which I have a standing note never to
+do.** [[git-stash-is-repo-wide-not-worktree]] exists precisely because two OTHER
+branches' stashes sit in the same stack. The stash swallowed the new test file
+as well as the source, so the "A/B" ran 0 tests and reported "36 deselected" --
+which is what tipped me off. Recovered by popping my own entry (verified the
+other two were untouched and merely renumbered), then redid it the right way:
+copy the file aside, `git show <ref>:<file>` over it, run, copy back. No damage,
+but I had the warning written down and used stash anyway.
