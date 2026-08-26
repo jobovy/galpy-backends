@@ -55516,3 +55516,49 @@ whose `_aA` is C-backed and rejects backend arrays outright
 (`NotImplementedError`). The backend fallback has to route to the PYTHON
 evaluator when the input is a backend array -- C can never take a tensor. That
 is the last piece.
+
+## 2026-08-26 (wake 9) — gh#1398 OPENED against MAIN (Jo's to merge)
+
+Cron alive. Jo: fix the numpy bug on main, then cherry-pick here so it drops in
+a rebase. Done both.
+
+**gh#1398** (`fix/adiabatic-justjr-multipoint`, `c811c7c8`, off `origin/main`):
+the one-branch `atleast_1d` fix + a regression test walking 1/2/3 off-grid points
+(1 is the control -- that count always worked).
+
+Regression gate, whole `tests/test_actionAngle.py`, same machine:
+
+    pristine origin/main : 2 failed, 225 passed
+    this branch          : 2 failed, 226 passed
+
+Identical failure set (`..._c_matches_python_quadrature` = the already-filed
+gh#1354, and `..._actions_c_convergence`), both pre-existing and local. Only
+delta is the added passing test.
+
+**Backend branch restructured** so the fix drops out on rebase:
+
+    e8e87665  AdiabaticGrid: exact off-grid actions via gather/scatter
+    d406551a  <cherry-pick of c811c7c8>
+    bc69771e  develop
+
+### Three process failures this wake, all mine, all caught
+
+1. **A commit that reported success but never moved the ref.** pre-commit printed
+   all-Passed and `git log -1` showed the new SHA, but the reflog had no entry,
+   the tree was still dirty, and the commit was a dangling object. Caught only
+   because `git show --stat HEAD` printed a DIFFERENT commit than `git log -1`
+   had just reported. No explanation found -- which is itself the reason to
+   verify rather than trust the success line. Redo also dropped a `git add -A`
+   that had been pulling in the embedded `actionAngleTorus_c_ext/torus` repo.
+
+2. **A grep-assert on a NON-UNIQUE marker.** I checked the A/B arms with
+   `grep -c 'atleast_1d(numpy.nan)'`, but the pre-existing `_justjz` branch
+   already contains two of them: count 2 = pristine, count 4 = fixed. I read
+   "2" as "my fix is present", concluded the base arm was mis-set-up, and KILLED
+   a perfectly good run. [[ab-arms-must-differ-in-one-thing]] says grep-assert
+   the arms differ -- it does not help if the marker is not unique to the change.
+   Redone with the fix's own comment line as the marker.
+
+3. **`pkill -f` / `pgrep -f` matched my own wrapper and killed my own command**,
+   twice, exit 144 -- exactly [[measure-elapsed-time-never-assume-it]]. Stopped
+   killing processes and just fixed the tree state instead.
