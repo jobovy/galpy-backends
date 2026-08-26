@@ -17,7 +17,17 @@ the trace.
 
 Status comment posted to gh#1204: **comment 5422012558**.
 
-**No PR is open.** develop is at `cfe23abe`.
+## The open PR
+
+* **gh#1392** `backend/constantbeta-hernquist-params`, worktree
+  `/var/tmp/jitsafe`, head `91a86a31`, base `feat/backends-develop` `cfe23abe`.
+  `constantbetaHernquistdf` could not be differentiated w.r.t. `beta` while its
+  PowerLaw sibling could — `scipy.special.gamma(beta)` in the normalisation,
+  raising on both backends. Routed. jax and torch AD now match a numpy central
+  difference to **1.33e-09**. Gates: A/B 2-failed -> 4-passed with the PowerLaw
+  pair as a both-arms control; numpy byte-identity by sha256 across 5 betas;
+  `test_backend_constantbetadf` 40 passed, `test_sphericaldf` 223 passed on
+  numpy and 223 under torch. Ledger delta 0.
 
 ## FOR JO — three decisions, none of which I made unilaterally
 
