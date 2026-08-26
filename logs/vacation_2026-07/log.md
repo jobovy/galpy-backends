@@ -55218,3 +55218,59 @@ The near-miss worth naming: I was one step from filing "pre-existing unledgered
 red on develop". The thing that stopped it was asking why CI is green *before*
 writing it up — [[local-env-is-one-version-point]] cutting in the unusual
 direction, where the LOCAL run was the broken instrument.
+
+## 2026-08-26 (wake 3) — surfdens/`requires_backend_grad` built; gh#1393 in CI
+
+Cron `5451d57e` alive. gh#1393 at 87 green / 65 pending, only the codecov/project
+upload phantom red — not actionable, so: build the next PR.
+
+### Jo settled all three review items this session
+
+1. **surfdens** — (b) widen the predicate, (c) only if needed. Both `forcepoisson`
+   routes must stay on the backend: *"everything always should!"*
+2. **hyp2f1** — do tanh-sinh regardless; Gauss-Jacobi only if tanh-sinh misses.
+   Also measure the anisotropic DFs' actual `c-b` range.
+3. **AdiabaticGrid** — eager gather/scatter, traced cap with NaN on overflow.
+
+He also rejected my `must_stay_in_backend` naming: *"it's really about tracing,
+not backend?"* — correct, and the fix was to keep two atomic predicates
+(`under_trace` = no concrete value, `requires_backend_grad` = carries a graph)
+and compose them at the call site, rather than one fused name that buries a
+policy decision.
+
+### The under_trace audit answered the generality question with data
+
+Four call sites in the whole package. Two need the grad condition, two must NOT:
+
+    Potential.py:157   _quad_needs_backend    YES — this is the bug
+    quadrature.py:533  isfinite probe          no — its is_backend_array branch
+                                                  already handles grad correctly
+    RazorThin:292      domain decidability     no — grad-tracking IS decidable
+    AnyAxisym:345      ALREADY hand-rolled it  — now uses the shared helper
+
+That last row is the finding: one site had independently discovered the same
+problem and open-coded `requires_grad or under_trace`. So the helper removes a
+duplicate rather than adding an abstraction.
+
+### (c) turned out to be unnecessary — measured, not assumed
+
+`AnySphericalPotential` is the only in-tree potential setting
+`_force_accepts_arrays = False`, the case that motivated a possible
+"raise unless array-safe" guard. It computes a CORRECT gradient through the
+backend quadrature: **4.01e-11 vs numpy FD on both routes**. So the simpler
+predicate-only fix stands and no guard is needed.
+
+### A pre-existing skip described this exact bug and deferred it here
+
+`test_surfdens_differentiates_in_R_not_only_z` already covered both routes and
+both variables, hardcoded to jax, with a torch skip reading *"...Its own
+change."* This is that change. Removed the skip, backend-dispatched its AD, and
+DROPPED the near-duplicate test I had just written — the audit-gate duplication
+catch, this time on my own new code.
+
+Gates: A/B on source alone 3 failed/3 passed -> 6 passed (the 3 passing on base
+are the jax arms); numpy byte-identical by sha256 over both routes on a 5x3 grid.
+Committed locally as `531bbcb3`; full suites running before push.
+
+Also: pre-commit rejected the first commit (ruff-format) and the SHA did not
+move — caught by checking, per [[precommit-hooks-reject-first-commit]].
