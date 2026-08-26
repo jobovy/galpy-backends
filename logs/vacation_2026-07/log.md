@@ -54808,3 +54808,39 @@ entries are plain `jax`.
 codecov cleared; the only red left is the Windows `test_streamgapdf_sample`
 flake, and its workflow run has now completed so the targeted re-run went
 through this time. 24 checks still pending.
+
+### The two eager xfail tests, characterized from the REAL error
+
+Re-ran both files with `GALPY_BACKEND_XFAIL_REGEN=1`, which makes the conftest
+report the underlying failure instead of swallowing it as an xfail. (The
+junitxml is no help here: the ledger's `<skipped type="pytest.xfail">` carries
+only `message="backend-xfail-ledger"` and an empty body.)
+
+**`test_qdf.py::test_call_diffinoutputs`** (jax + torch, 2 entries):
+
+    AssertionError: Test orbit in qdf that is supposed to be unbound is not
+
+That is the qdf unbound pair already judged **by design** — the backend path
+classifies an orbit the numpy path calls unbound as bound. Now confirmed from
+the error itself rather than from the note. Not burndown material without
+changing unbound-detection semantics.
+
+**`test_actionAngle.py::test_actionAngleAdiabaticGrid_outsidegrid_c`**
+(jax + torch, 2 entries):
+
+    AssertionError: actionAngleAdiabaticGrid evaluation outside of the grid fails
+    assert tensor([0.0047]) < 1e-08
+      where tensor([0.0047]) = fabs(tensor([0.0111]) - tensor(0.0064))
+
+An **accuracy** failure, not a crash: the grid evaluation outside its own grid
+returns J_z = 0.0111 where the direct `actionAngleAdiabatic(c=True)` gives
+0.0064 — a 73% discrepancy against a 1e-8 bar, so it is not a tolerance
+question. Note the shapes too: `tensor([0.0111])` (1-element) vs
+`tensor(0.0064)` (0-d), which is the shape signature of the grid path taking a
+different branch than the direct one. Worth a real look; that is 2 of the 8
+xfails and the only eager pair that is not by-design.
+
+So the eager xfail surface is: **2 by-design (qdf) + 2 genuinely fixable
+(AdiabaticGrid off-grid)**, and the other 4 are jit-only.
+
+gh#1388: 4 checks pending, zero failing.
