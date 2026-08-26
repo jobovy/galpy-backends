@@ -17,17 +17,21 @@ the trace.
 
 Status comment posted to gh#1204: **comment 5422012558**.
 
-## The open PR
+## Merged into `feat/backends-develop` this cycle — six PRs, ledger delta 0 on every one
 
-* **gh#1392** `backend/constantbeta-hernquist-params`, worktree
-  `/var/tmp/jitsafe`, head `91a86a31`, base `feat/backends-develop` `cfe23abe`.
-  `constantbetaHernquistdf` could not be differentiated w.r.t. `beta` while its
-  PowerLaw sibling could — `scipy.special.gamma(beta)` in the normalisation,
-  raising on both backends. Routed. jax and torch AD now match a numpy central
-  difference to **1.33e-09**. Gates: A/B 2-failed -> 4-passed with the PowerLaw
-  pair as a both-arms control; numpy byte-identity by sha256 across 5 betas;
-  `test_backend_constantbetadf` 40 passed, `test_sphericaldf` 223 passed on
-  numpy and 223 under torch. Ledger delta 0.
+    gh#1381  206ccd78   gammainc endpoint gradient
+    gh#1382  06267d1d   quadrature batching + AnyAxisym torch construction
+    gh#1383  4e2cc322   coords inverse galcen + f64/f32 promotion
+    gh#1388  107a8060   map_coordinates dispatches on the GRID too
+    gh#1391  cfe23abe   traceable constructors + hyp2f1/hyp1f1 parameters
+    gh#1392  8980402a   constantbetaHernquistdf d f_E/d beta
+
+**No PR is open.** develop is at `8980402a`.
+
+The gh#1204 review is fully addressed (status comment 5422012558). The
+parameter-detachment class is closed package-wide: a deliberate
+`scipy.special.*` sweep finds no remaining site where a raw scipy special
+function is applied to a value that can be a backend parameter.
 
 ## FOR JO — three decisions, none of which I made unilaterally
 
