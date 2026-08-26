@@ -55612,3 +55612,36 @@ and an entry that asserted something false now asserts something measured.
 
 Branch `backend/adiabaticgrid-offgrid`: `d49894ec` on top of the cherry-pick
 `d406551a` on develop.
+
+## 2026-08-26 (wake 11) — AdiabaticGrid coverage added; gates running
+
+Cron alive. gh#1398 (main): 25 SUCCESS / 105 pending, only the codecov upload
+phantom red -- not actionable.
+
+Added the missing coverage for everything this PR introduces (the backend-tests
+CI job uploads no coverage, so new backend code has to be exercised explicitly):
+
+* **`set_at`** -- replaces the masked entries AND is out of place. The
+  out-of-place property is asserted with a `requires_grad` input, because that
+  is what makes the clone load-bearing rather than defensive: torch raises on
+  in-place assignment into a graph-carrying tensor, and jax arrays are immutable.
+* **off-grid parity vs the numpy grid**, parametrized all-on-grid / MIXED /
+  all-off-grid. MIXED is the load-bearing case -- the pre-existing off-grid test
+  has ALL points off-grid, so a scatter writing to the wrong POSITIONS passes it.
+* **the traced contract** -- an off-grid entry under `jax.jit` must come back
+  NaN (visible) while the on-grid entry stays finite, rather than being silently
+  extrapolated.
+
+7 passed, ~235 s locally (grid builds dominate). Stated the runtime in the
+commit rather than hiding it: if the coverage shard finds it too slow it is a
+slow-skip candidate, but these are the ONLY coverage of the new code paths.
+
+Branch `backend/adiabaticgrid-offgrid`:
+
+    17597688  tests: set_at + MIXED + traced-NaN
+    d49894ec  route the fallback to the Python solver + fix the ledger reason
+    e8e87665  exact off-grid actions via gather/scatter
+    d406551a  <cherry-pick of the main fix c811c7c8>
+    bc69771e  develop
+
+Full gates (numpy / torch / jax `test_actionAngle.py`) still running.
