@@ -55309,3 +55309,48 @@ clean), potential_diff 212, anyaxisymdisk 53, anyspherical 14, namespaces 3.
 
 Two PRs open = the cap. Next up once one merges: AdiabaticGrid (eager
 gather/scatter + generous cap + NaN overflow), then hyp2f1 tanh-sinh.
+
+## 2026-08-26 (wake 5) — both PR reds classified; hyp2f1 DF census measured
+
+Cron `5451d57e` alive.
+
+**gh#1393**: 152 SUCCESS, 0 red. The SIMBAD re-run is still in flight; `all-clear`
+gates on it. Nothing to do.
+
+**gh#1394**: three reds, all classified as NOT mine:
+
+* `build (windows-latest, 3.14, test_quantity/test_coords)` —
+  `test_streamgapdf_sample`, the documented Windows flake. Settled by the
+  same-SHA twin ([[same-sha-duplicate-run-is-a-free-ab]]): at head `531bbcb3`
+  the **push** Windows run is `completed/success` while the **pull_request** one
+  failed. Same commit, same job, opposite verdicts = flake. Cannot re-run yet
+  (parent run still in_progress).
+* `codecov/patch` + `codecov/project` — the incomplete-upload phantom, settled by
+  session count ([[codecov-session-count-discriminates-phantom]]):
+  **base sessions=28, head sessions=25**, coverage 99.96 -> 85.69. A ~30-line
+  diff cannot move the project number 14 points; three uploads are simply
+  missing. Self-heals.
+
+### hyp2f1: the DFs never enter the bad regime (Jo asked for this)
+
+Instrumented `hyp2f1_fallback` and drove BOTH anisotropic DF families over
+beta in [-1.5, 0.49] (Hernquist; PowerLaw at alpha = 2.5/3.0/3.5). Exactly 5
+distinct (a, b, c) reach the fallback:
+
+    a=-3.000 b=4.000 c=5.000   c-b=1.000   -> 6.88e-15 (integer, exact)
+    a=-2.500 b=3.000 c=4.500   c-b=1.500   -> 4.73e-10
+    a=-1.600 b=1.200 c=3.600   c-b=2.400   -> better
+    a=-1.200 b=0.400 c=3.200   c-b=2.800   -> better
+    a=-1.010 b=0.020 c=3.010   c-b=2.990   -> better
+
+**MIN c-b = 1.000.** The 1e-6 error regime needs c-b -> 0 (exponent -> -1), which
+galpy's DFs never approach. So the gap is real but bites nothing today; worst
+case ~5e-10, three orders inside the 1e-6 test bar. tanh-sinh stays worth doing
+on numpy-parity grounds, but it is not urgent and no shipped result is wrong.
+
+Two false starts on the way, both caught before reporting: the first census was
+Hernquist-only because my PowerLaw constructor signature was wrong, and the
+second was STILL Hernquist-only because `alpha=1.8` trips
+`pot.alpha must be > 2 for bound orbits`. Only the third run actually exercised
+both families — [[never-report-partial-run-as-result]] applies to censuses too,
+not just test counts.
