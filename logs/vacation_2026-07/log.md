@@ -54894,3 +54894,46 @@ to re-run 154 checks.
 `backend/constructor-jit-safety` rebased onto `107a8060` (5 commits,
 conflict-marker grep clean) and now also carries the interpolate tidy. It is
 the next PR the moment its gate finishes.
+
+## 2026-08-26 — gh#1391 opened: review batch-2 items 3 AND 4
+
+Cron `5451d57e` alive.
+
+The tidy carried over from gh#1388 gated clean **in the valid context**:
+
+    tests/test_actionAngle.py          WHOLE file, numpy   209 passed
+    tests/test_backend_interpolate.py  numpy               165 passed
+    tests/test_backend_interpolate.py  --backend torch     165 passed
+
+which also retroactively settles last wake's scare: the 6 "failures" were the
+`-k` selection, not the edit. Committed as `5aeb189b` with that A/B recorded in
+the message so the next person does not repeat it.
+
+**gh#1391 opened** (`backend/constructor-jit-safety` -> `feat/backends-develop`,
+head `5aeb189b`, 6 commits, 12 files). Contents:
+
+* **item 3** — `galpy.backend.concretely_true` + the four constructor sites
+  (`min(a, rc)`, TwoPowerTriaxial validation and its two `alpha == 2` branches,
+  constantbetaPowerLawdf's four asserts), plus hoisting
+  `sphericaldf._handle_rmin`'s explicit-rmin early return above the
+  non-traceable `Phi(0)` probe — the thing that actually unlocked
+  `d f_E/d beta` under jit;
+* **item 4** — hyp2f1's parameters, where the review said "not traceable" and
+  the truth was **silently wrong on torch** (`d/da 2F1(a,2;3;-5)` = -8.98e-03
+  against -8.56e-02, with `requires_grad` and a `grad_fn` intact);
+* the same defect one file over in **hyp1f1** (42% wrong), found by grepping
+  for `math.<fn>` on backend values and measuring each hit — three of which
+  were refuted;
+* the **`_jit` docstring** corrected by counting boundary calls, which also
+  fixed the module's own stale nesting example;
+* the gh#1388 tidy above.
+
+Gates on the branch: numpy byte-identity by sha256 with a 1-ulp negative
+control; grad-vs-FD 1e-11..1e-7 under `jax.jit(jax.grad(...))`; torch autograd
+matching jax to ~1e-14; A/B 7-failed/7-passed -> 14-passed, 17/2 -> 19, 2/2 ->
+2/2 on the three new test groups; 231 special + 1288 potential numpy + 1288
+torch in CI's 5-way split; **245 passed under BOTH `--backend jax --jit` and
+`--backend torch --jit`**. Ledger delta: 0.
+
+Queue after this: the AdiabaticGrid off-grid xfail pair (the only eager ledger
+entries that are not by-design) and the surfdens gradient decision for Jo.
