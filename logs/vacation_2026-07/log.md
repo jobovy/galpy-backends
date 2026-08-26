@@ -55562,3 +55562,53 @@ delta is the added passing test.
 3. **`pkill -f` / `pgrep -f` matched my own wrapper and killed my own command**,
    twice, exit 144 -- exactly [[measure-elapsed-time-never-assume-it]]. Stopped
    killing processes and just fixed the tree state instead.
+
+## 2026-08-26 (wake 10) — AdiabaticGrid works; the ledger entry's REASON was false
+
+Cron alive. gh#1398 (main) early in CI, 125 pending, no reds.
+
+### The c=True blocker, and my earlier reading of it was wrong
+
+I had said "the fallback needs routing to the Python evaluator". True, but my
+grep-derived reading of WHY was wrong: I had conflated the two `use_c` blocks
+(`_evaluate` and `_EccZmaxRperiRap`). The real flow is
+
+    if use_c and xp is not numpy and not _special:  -> C-native differentiable
+    if not use_c and xp is not numpy:               -> _evaluate_backend
+    if use_c:                                       -> C call   <-- tensors land HERE
+
+`_special` is set by _justjr/_justjz, so my fallback skipped branch 1, failed
+`not use_c` for branch 2, and fell into the C call. `c=False` in the fallback
+kwargs forces use_c False and takes branch 2.
+
+### The remaining failure is gh#1354, not the port
+
+After that, `outsidegrid_c` still failed -- but NUMERICALLY, not by type:
+
+    jr reference (C)   = 0.011117771185
+    jr fallback (Py)   = 0.011112634625
+    difference         = 5.137e-06   vs a 1e-8 bar
+
+Measured on PURE NUMPY, no backend involved: C and Python adiabatic solvers
+disagree by exactly that. The test's reference is `actionAngleAdiabatic(c=True)`
+and the backend fallback MUST use Python (C cannot take a tensor), so the
+backend can never match a C reference here.
+
+**So the ledger entry's recorded reason was FALSE.** It said the backend
+"evaluates the interpolation grid only (no off-grid fallback)" -- no longer
+true. Rewrote it to state the real blocker (gh#1354, where per that issue the C
+value is the inaccurate one, i.e. the bar pins the wrong number).
+
+Ledger delta 0 rather than the -2 I hoped for. But the capability now exists,
+and an entry that asserted something false now asserts something measured.
+
+### What DID land
+
+* off-grid fallback exact vs the numpy grid: ~1e-13 for all-on-grid, MIXED and
+  all-off-grid, both backends
+* `test_..._outsidegrid_multiple_python` (Python-vs-Python, from the main-PR
+  cherry-pick) PASSES on both backends, NOT ledgered -- new coverage
+* both off-grid tests' assertions made backend-safe with `as_numpy`
+
+Branch `backend/adiabaticgrid-offgrid`: `d49894ec` on top of the cherry-pick
+`d406551a` on develop.
