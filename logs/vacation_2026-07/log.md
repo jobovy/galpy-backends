@@ -55417,3 +55417,53 @@ Note `thisEzZmax = exp(EzZmaxsInterp(R))` and the test is `log(Ez) > thisEzZmax`
 
 So the change is confined to `_evaluate_backend` + its docstring. Implementation
 next wake.
+
+## 2026-08-26 (wake 7) — AdiabaticGrid prerequisites verified; a bug hypothesis REFUTED
+
+Cron `5451d57e` alive. gh#1394: 153 SUCCESS, the Windows re-run IN_PROGRESS, no
+reds. Local work meanwhile.
+
+### The load-bearing assumption holds
+
+The whole eager-fallback design rests on `self._aA` (actionAngleAdiabatic)
+accepting and returning backend arrays. Verified before writing any code:
+
+    numpy  jr: [0.01111263 0.01268454]
+    torch  jr: tensor([0.0111, 0.0127])  is_backend_array: True   rel 6.24e-14
+    _justjz=True -> returns a 3-TUPLE (jr, Lz, jz), so the caller indexes [2]
+    (and [0] for _justjr) -- getting that index wrong would silently produce
+    the wrong action, so it was read from the source, not assumed.
+
+### A bug I thought I had found, and did not
+
+The numpy jr fallback reads:
+
+    ERLz[indx] / thisRL[indx],
+    numpy.zeros(len(thisRL)),      # <- FULL length, not sum(indx)
+    numpy.zeros(len(thisRL)),
+
+Every other argument is the `[indx]` subset. That looked like a latent
+shape bug that only survives because the existing test has ALL points off-grid.
+Measured instead of reported:
+
+    N=3, n_off=1: OK   off-grid jr rel = 7.8e-14
+    N=4, n_off=2: OK   off-grid jr rel = 7.8e-14, 2.0e-14
+    N=5, n_off=3: OK   off-grid jr rel = 7.8e-14, 2.0e-14, 1.5e-13
+
+**Refuted at n_off = 1, 2 and 3.** n_off=1 alone would have proved nothing
+(length-1 broadcasts against anything), which is why the 2- and 3-point cases
+mattered. I misread which variable is subset; the code is correct. No bug filed.
+
+### What this bought instead: the parity target, and a real test gap
+
+numpy handles MIXED on/off-grid arrays correctly and returns exact values for
+the off-grid entries. That is precisely what the backend port must reproduce —
+and the existing `test_actionAngleAdiabaticGrid_outsidegrid_c` only ever
+exercises the ALL-off-grid case. The new tests must include a mixed array, or
+they would not distinguish a correct scatter from one that writes to the wrong
+positions.
+
+Also confirmed: galpy has NO backend-agnostic scatter today (`.at[` appears
+nowhere in the source), so `set_at(xp, arr, mask, values)` will be new shared
+machinery and belongs in `galpy.backend` per
+[[generic-helpers-go-in-backend]], with two call sites in this PR (jz and jr).
