@@ -7,28 +7,24 @@ the trace.
 
 ## Merged into `feat/backends-develop` this cycle
 
-* **gh#1381** `fix/gammainc-endpoint-grad` -> `206ccd78`
-* **gh#1382** `fix/quadrature-batching-anyaxisym-units` -> `06267d1d`
-* **gh#1383** `fix/coords-inverse-transforms` -> **`4e2cc322`** at 154/154 CLEAN.
-  Review findings 3, 4 and 6 (finding 6 complete, 7 of 7), plus
-  `promote_common_dtype` + `prefer_backend_namespace` hoisted into
-  `galpy.backend`, the `scalarDecorator` float32 fix, the `_quad_needs_backend`
-  all-coordinates fix, and the `actionAngleIsochroneApprox` mixed-set coercion.
-  Its last red was a **19-second race**: `all-clear` gave up at 22:16:40Z while
-  codecov flipped green at 22:16:58Z. Re-ran that one job. Ledger delta: 0.
+* **gh#1381** -> `206ccd78`   gammainc endpoint gradient (review 1/5)
+* **gh#1382** -> `06267d1d`   quadrature batching + AnyAxisym torch construction (2/5)
+* **gh#1383** -> `4e2cc322`   coords inverse galcen + f64/f32 promotion (findings 3/4/6)
+* **gh#1388** -> `107a8060`   map_coordinates dispatches on the GRID too (batch-2 item 2)
 
 ## The open PR
 
-* **gh#1388** `fix/mapcoords-grid-dispatch`, worktree `/var/tmp/mapfix`, head
-  `e7dcb342` (2 commits) on develop `4e2cc322`. Review batch-2 item 2:
-  `map_coordinates` dispatched on the query coordinates alone, so a backend
-  prefiltered GRID queried at fixed numpy points fell into scipy and raised
-  ("Can't call numpy() on Tensor that requires grad" / TracerArrayConversion).
-  Gates measured BEFORE opening: value parity 3.3e-16, grad-vs-FD 3.0e-10 at
-  every one of 12 grid nodes, `tests/test_backend_interpolate.py` 165 passed on
-  numpy / 165 under jax / 165 under torch. Ledger delta: 0. CI starting.
+* **gh#1391** `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
+  head `5aeb189b` (6 commits, 12 files), base `feat/backends-develop`
+  `107a8060`. **Review batch-2 items 3 AND 4**, plus the silent-detachment
+  audit, the measured `_jit` docstring correction, and gh#1388's carried-over
+  tidy. Gates: numpy byte-identity (sha256, 1-ulp negative control);
+  grad-vs-FD 1e-11..1e-7 under `jax.jit(jax.grad(...))`; torch autograd within
+  ~1e-14 of jax; A/B on all three new test groups; 231 special + 1288 potential
+  numpy + 1288 torch 5-way split; **245 passed under both `--backend jax --jit`
+  and `--backend torch --jit`**. Ledger delta: 0. CI starting.
 
-## Queued behind gh#1388 (approved sequencing)
+## Queued behind gh#1391
 
 2. Review batch-2 items 3 AND 4 — **BUILT AND COMMITTED LOCALLY, not
    pushed**: branch `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
