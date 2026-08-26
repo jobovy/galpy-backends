@@ -55715,3 +55715,51 @@ t=0 and `c-b-1` at t=1 -- and galpy's own request `(-1.010, 0.020, 3.010)` has
 **b = 0.020**, squarely in the degraded band, where the SHIPPING GL is
 **7.18e-02** wrong. That is far worse than the ~1e-6 I reported as the worst
 case, and it is a real galpy DF parameter set, not a synthetic one.
+
+## 2026-08-26 (wake 14) — tanh-sinh envelope pinned; I stopped chasing the cause
+
+Cron alive. gh#1398: 149 SUCCESS, 3 skipped, 2 pending, NO reds (the symplectic
+flake re-run passed). gh#1399: 101 SUCCESS, 52 pending, codecov cleared exactly
+as the session count predicted. Neither actionable.
+
+### The arbiter is sound
+
+Before trusting "tanh-sinh loses at small exponents" I validated scipy against
+mpmath (dps=50) at those same extremes, per [[mpmath-quadosc-final-arbiter]]:
+
+    min-exp 0.0500  scipy-vs-mp 4.77e-16
+    min-exp 0.0200  scipy-vs-mp 1.46e-16
+    min-exp 0.0050  scipy-vs-mp 1.07e-16
+    min-exp 0.0005  scipy-vs-mp 1.06e-17
+
+scipy is right. The degradation is real, not an artifact of the reference.
+
+### THREE hypotheses, all refuted by measurement
+
+1. **reach (hmax)** -- true in [0.05, 0.25], false below. But that sweep was
+   CONFOUNDED: I varied hmax at fixed n, which also coarsens h = 2*hmax/n, so it
+   could not isolate either variable. Redone at CONSTANT h: 6.8e-07 -> 4.2e-07
+   over hmax 7.5->16. Still refuted, now cleanly.
+2. **inf*0 node-dropping.** My first prototype's `isfinite` mask WAS silently
+   discarding nodes, so I rewrote with the singularity cancelled analytically
+   (`f*w = pi t^b (1-t)^(c-b) (1-zt)^-a cosh u`, both exponents positive).
+   Identical to the digit.
+3. **step size (h).** 256x more nodes at fixed reach: 2.6e-02 -> 2.9e-02. No
+   change.
+
+The error is insensitive to EVERY quadrature parameter, which means it is not
+quadrature error. **I have not identified the cause and am not going to invent a
+fourth story.** The measured envelope is what the design needs.
+
+### The measured envelope, and why it is still worth doing
+
+    min(b, c-b) >= 0.05 : tanh-sinh ~1e-16  (GL up to 5.77e-06)
+    min(b, c-b)  = 0.02 : tanh-sinh 6.8e-07 (GL 7.18e-02)
+    min(b, c-b) <= 0.005: tanh-sinh 2.9e-02 (GL 6.2e-15 .. 8.6e-07)
+
+So it is a ROUTE selected on min(b, c-b), not a replacement: tanh-sinh above the
+threshold, GL kept below. Crucially, at galpy's OWN worst DF request
+(b = 0.020) tanh-sinh is **5 orders better than what ships**.
+
+Nodes are fixed and parameter-independent, so it stays traceable and
+differentiable -- the property that made it preferable to Gauss-Jacobi.
