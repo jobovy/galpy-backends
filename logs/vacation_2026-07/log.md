@@ -55163,3 +55163,58 @@ parameter-detachment class is closed package-wide, and the ledger's remaining
 
 The three open questions are Jo's: the surfdens gradient gate, the hyp2f1
 Gauss-Jacobi accuracy gap, and the AdiabaticGrid off-grid fallback.
+
+## 2026-08-26 (later) — gh#1393 OPENED: Einasto grad → torch + float64 pin
+
+Cron `5451d57e` alive. No PR was open, so: local work.
+
+### Task #222 was already done — and my first two greps both misread it
+
+Started by resolving a contradiction I had left hanging: `torch.special.gammainc`
+raises `NotImplementedError` for d/da, yet the hyp1f1 gradient I shipped in
+gh#1391 works on torch. Measured across three regimes × both functions:
+
+    a= 1.7 x= 3.0  gammainc   jax 1.2e-09  torch 1.2e-09
+    a= 0.4 x= 0.8  gammaincc  jax 1.7e-10  torch 1.7e-10
+    a=21.5 x=25.0  gammaincc  jax 1.0e-09  torch 1.0e-09
+
+galpy ships `_IncGamma` (`backend/special/_fallback/gammainc.py:175`), a custom
+`torch.autograd.Function` supplying exactly the order-derivative torch refuses.
+**Design B of task #222 is implemented and tested** (`test_gammainc_grad_wrt_order`).
+
+Two self-inflicted misreads on the way, both worth recording:
+* I grepped for `_IncGammaBackward` — torch's AUTO-GENERATED backward class name —
+  found nothing in galpy, and concluded galpy did not ship it. The source name is
+  `_IncGamma`; the metaclass appends `Backward`.
+* I annotated a grep `--- (empty above = no order-derivative test)` when the very
+  output above it listed `test_gammainc_grad_wrt_order` at line 1114.
+
+Both were caught by reading my own output instead of my summary of it.
+
+### The real find: this file ran its torch arms at float32
+
+Un-gating the Einasto test surfaced `test_force_hessian_identities[torch-Einasto]`
+failing at **6.96e-08** vs `rtol=1e-9`. The diagnosis took four wrong turns, each
+killed by measurement rather than argument:
+
+1. "a `-k` artifact" — no, reproduced unfiltered.
+2. "my splice deleted a method" — no, method-set diff showed only the rename.
+3. "`_IncGamma`'s dQ/dx backward is inaccurate" — no, exact to 4e-16.
+4. "jax arm contaminates the shared potential" — no, torch fails running FIRST,
+   and `vars(pot)` is unchanged.
+
+The actual cause: the file sets `jax_enable_x64` for jax but never
+`torch.set_default_dtype(torch.float64)` — unlike **62 sibling files**. conftest
+only sets it under `--backend torch`. In CI the shard globs all of
+`tests/test_backend*.py` and an alphabetically earlier module mutates the global
+first, so the file inherits float64 and passes. Alone, it silently runs float32,
+and 6.96e-08 is float32 epsilon.
+
+**Not a develop defect — CI is right.** What it did break was my own gate: a
+single-file local run of this file was not a valid precision check. Fixed by
+making the file self-sufficient. A/B on that one line flips 1 failed → 0.
+
+The near-miss worth naming: I was one step from filing "pre-existing unledgered
+red on develop". The thing that stopped it was asking why CI is green *before*
+writing it up — [[local-env-is-one-version-point]] cutting in the unusual
+direction, where the LOCAL run was the broken instrument.
