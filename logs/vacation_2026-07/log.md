@@ -55381,3 +55381,39 @@ No rebase of gh#1394 onto the new develop: files are disjoint from gh#1393's
 ([[dont-reflexively-rebase-disjoint-prs]]).
 
 Merged this cycle: gh#1381, #1382, #1383, #1388, #1391, #1392, **#1393**.
+
+### AdiabaticGrid off-grid: scoped, and smaller than expected
+
+Read the numpy `_evaluate` to extract the exact off-grid conditions. Two
+findings that shrink the job:
+
+**1. numpy ALREADY does gather/scatter.** Not a new pattern to invent — a port:
+
+    indx  = R > self._Rmax
+    indx += R < self._Rmin
+    indx += (Ez != 0.0) * (numpy.log(Ez) > thisEzZmax)
+    if numpy.sum(indxc) > 0: jz[indxc] = self._jzInterp.ev(...)
+    if numpy.sum(indx)  > 0: jz[indx]  = self._aA(..., _justjz=True)
+
+Boolean mask, `sum > 0` guard, scatter-assign. Exactly the eager design agreed
+with Jo. The backend version mirrors it with backend ops.
+
+**2. `_RLInterp_b` already exists** (line 336), built but never used by
+`_evaluate_backend`. The jr fallback needs `thisRL = RLInterp(ERLz)`, so I
+expected to add a backend interpolant — it is already there. No new machinery.
+
+Complete condition set:
+
+    jz off:  (R > Rmax) | (R < Rmin) | ((Ez != 0) & (log(Ez) > thisEzZmax))
+             -> self._aA(R, 0, 1, 0, sqrt(2*Ez), _justjz=True)
+    jr off:  (ERLz < Lzmin) | (ERLz > Lzmax) | (frac > 1) | (frac < 0)
+             -> self._aA(thisRL, sqrt(2*(ER - Phi(thisRL,0)) - ERLz^2/thisRL^2),
+                         ERLz/thisRL, 0, 0, _justjr=True)
+
+Note `thisEzZmax = exp(EzZmaxsInterp(R))` and the test is `log(Ez) > thisEzZmax`
+— dimensionally odd, but the backend must reproduce it EXACTLY for parity, not
+"fix" it. The existing backend path already matches the on-grid half's
+`Ez/thisEzZmax` convention.
+
+So the change is confined to `_evaluate_backend` + its docstring. Implementation
+next wake.
