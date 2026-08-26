@@ -54751,8 +54751,11 @@ develop `4e2cc322` (non-comment, non-blank lines):
                                  --
                                  65
 
-The files are 321 + 454 lines, nearly all of it comment and history, which is
-how the larger figure survived. The 8 xfails in full:
+The files are 321 + 454 lines, nearly all comment and history. I have NOT
+re-derived where 137 came from — it was measured on an earlier date and several
+burndown PRs have merged since, so the honest statement is just that 65 is the
+count on `4e2cc322` today and the older figure should not be repeated. The 8
+xfails in full:
 
     jax/torch   test_actionAngle.py::test_actionAngleAdiabaticGrid_outsidegrid_c
     jax/torch   test_qdf.py::test_call_diffinoutputs
