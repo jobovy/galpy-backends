@@ -5,24 +5,34 @@ the trace.
 
 ---
 
-## Merged into `feat/backends-develop` this cycle
+## The gh#1204 review is fully addressed — five PRs, ledger delta 0
 
-* **gh#1381** -> `206ccd78`   gammainc endpoint gradient (review 1/5)
-* **gh#1382** -> `06267d1d`   quadrature batching + AnyAxisym torch construction (2/5)
-* **gh#1383** -> `4e2cc322`   coords inverse galcen + f64/f32 promotion (findings 3/4/6)
-* **gh#1388** -> `107a8060`   map_coordinates dispatches on the GRID too (batch-2 item 2)
+    batch 1 #1        -> gh#1381  206ccd78   gammainc endpoint gradient
+    batch 1 #2, #10   -> gh#1382  06267d1d   quadrature batching + AnyAxisym torch
+    batch 1 #3/#4/#6  -> gh#1383  4e2cc322   coords inverse galcen + f64/f32 promotion
+    batch 1 #5        -> CLOSED as working-as-intended (comment 5411848615)
+    batch 2 #1        -> gh#1383
+    batch 2 #2        -> gh#1388  107a8060   map_coordinates dispatches on the GRID
+    batch 2 #3, #4    -> gh#1391  cfe23abe   traceable constructors + hyp2f1/hyp1f1 params
 
-## The open PR
+Status comment posted to gh#1204: **comment 5422012558**.
 
-* **gh#1391** `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
-  head `5aeb189b` (6 commits, 12 files), base `feat/backends-develop`
-  `107a8060`. **Review batch-2 items 3 AND 4**, plus the silent-detachment
-  audit, the measured `_jit` docstring correction, and gh#1388's carried-over
-  tidy. Gates: numpy byte-identity (sha256, 1-ulp negative control);
-  grad-vs-FD 1e-11..1e-7 under `jax.jit(jax.grad(...))`; torch autograd within
-  ~1e-14 of jax; A/B on all three new test groups; 231 special + 1288 potential
-  numpy + 1288 torch 5-way split; **245 passed under both `--backend jax --jit`
-  and `--backend torch --jit`**. Ledger delta: 0. CI starting.
+**No PR is open.** develop is at `cfe23abe`.
+
+## FOR JO — three decisions, none of which I made unilaterally
+
+1. **Finding 11, sharpened.** `surfdens` under torch is not "no gradient": with
+   `forcepoisson=True` it returns a Tensor with `requires_grad=True` and a
+   `grad_fn` whose gradient is **23% wrong in R, 72% wrong in z** (jax AD matches
+   the FD reference to 1.6e-10, so torch is the wrong one); with the default
+   `forcepoisson=False` it returns a bare float. Proposal: for a grad-tracking
+   eager tensor use the backend GL rule when `_force_accepts_arrays(pot)` and
+   RAISE otherwise. Behaviour change -> your call.
+2. **hyp2f1 direct-Euler value accuracy**, pre-existing and invisible to the
+   test grid: ~1e-6..1e-7 when `c - B` is not an integer, ~1e-14 when it is.
+   Gauss-Jacobi is the real fix.
+3. **actionAngleAdiabaticGrid off-grid fallback** (the parked opt-in decision) —
+   what its two xfail entries encode.
 
 ## Queued behind gh#1391
 
