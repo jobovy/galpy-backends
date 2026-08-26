@@ -54937,3 +54937,41 @@ torch in CI's 5-way split; **245 passed under BOTH `--backend jax --jit` and
 
 Queue after this: the AdiabaticGrid off-grid xfail pair (the only eager ledger
 entries that are not by-design) and the surfdens gradient decision for Jo.
+
+### CORRECTION: the AdiabaticGrid xfail pair is by-design too — all four eager entries are
+
+Last wake I called `test_actionAngleAdiabaticGrid_outsidegrid_c` "the only eager
+pair that is not by-design" and named it the next burndown target. That was
+wrong, and reading the code's own docs settles it — which is exactly the check I
+should have done before classifying:
+
+    class actionAngleAdiabaticGrid(actionAngle):
+        """... jax/torch input is supported and differentiable, but evaluates the
+        interpolation grid only (no off-grid fallback): inputs must lie within
+        the grid, whereas the numpy path falls back to a per-point solve
+        off-grid."""
+
+and on the backend evaluator itself:
+
+    def _evaluate_backend(self, R, vR, vT, z, vz):
+        """... Assumes on-grid inputs (the off-grid fallback to self._aA is
+        numpy-only)."""
+
+The test evaluates at R = 3.0 against a grid built with `Rmax=2.0`. numpy takes
+the documented per-point fallback and gets J_z = 0.0064; the backend path
+evaluates the interpolant outside its own grid and gets 0.0111. The 73%
+discrepancy IS the documented behaviour, not a defect.
+
+It is also already a tracked design decision — "AA grid backend: opt-in
+off-grid fallback (default off for jax/torch) + speed warning" — parked because
+routing off-grid points to a per-point solve costs the vectorisation the
+backend path exists for. That is Jo's call, not a quiet fix.
+
+**So all four eager xfail entries are by-design**: two qdf (unbound
+classification) and two AdiabaticGrid (no off-grid fallback). The eager ledger
+cannot be burned down at all without a design change, and the remaining four
+entries are jit-only. Corrected in STATUS.md as well.
+
+[[read-code-docs-before-classifying]] — the docstring said INTENDED, in two
+places, and I had gone as far as extracting the failing numbers without reading
+either.
