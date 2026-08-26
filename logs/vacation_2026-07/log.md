@@ -55124,3 +55124,42 @@ backend parameter. gh#1392 closes the class.
 Careful reading mattered here: my first pass counted the comment mentions as
 call sites, which would have manufactured five phantom "defects" in files that
 are already correct. Grepping for the symbol is not the same as finding a call.
+
+## 2026-08-26 — gh#1392 MERGED as `8980402a`
+
+Cron `5451d57e` alive. 154/154 SUCCESS, CLEAN; codecov cleared itself once the
+two `tests/test_backend*.py` uploads landed, as it has on every PR this cycle
+(`codecov/patch` was already green throughout, which is the tell).
+
+### The audit turned one "inconsistency" into a verified reason
+
+The obvious pre-merge question: the PowerLaw sibling calls `_bgamma`
+UNCONDITIONALLY while this fix guards with `is_backend_array(beta)`. Same idea,
+two spellings — a duplication/consistency smell. Measured instead of assumed:
+
+    plain          bspecial.gamma(0.3) -> float64  2.991568987687591
+    forced torch   bspecial.gamma(0.3) -> Tensor   tensor(2.9916)
+    scipy                                  2.991568987687591
+
+So the guard is **load-bearing**. Routed helpers follow the AMBIENT namespace,
+not their argument ([[routed-helpers-follow-ambient-not-argument]]), so without
+it a plain-float `beta` under `use("torch", force=True)` would silently turn
+`_fEnorm` into a Tensor. The PowerLaw file can go unconditional only because it
+coerces its exponents first. Two correct spellings for two different
+structures — recorded in the merge message so the next reader does not
+"simplify" the guard away.
+
+### Where the mission stands
+
+Six PRs merged into `feat/backends-develop` this cycle, ledger delta 0 on every
+one:
+
+    gh#1381 206ccd78   gh#1382 06267d1d   gh#1383 4e2cc322
+    gh#1388 107a8060   gh#1391 cfe23abe   gh#1392 8980402a
+
+The gh#1204 review is fully addressed (status comment 5422012558), the
+parameter-detachment class is closed package-wide, and the ledger's remaining
+65 entries are all either by-design or real performance work. **No PR is open.**
+
+The three open questions are Jo's: the surfdens gradient gate, the hyp2f1
+Gauss-Jacobi accuracy gap, and the AdiabaticGrid off-grid fallback.
