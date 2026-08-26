@@ -55274,3 +55274,38 @@ Committed locally as `531bbcb3`; full suites running before push.
 
 Also: pre-commit rejected the first commit (ruff-format) and the SHA did not
 move — caught by checking, per [[precommit-hooks-reject-first-commit]].
+
+## 2026-08-26 (wake 4) — gh#1394 OPENED; gh#1393 flake re-run
+
+Cron `5451d57e` alive.
+
+**gh#1393**: codecov/project cleared itself as always (147 SUCCESS). One new red:
+`build (macos-15-intel, 3.14, test_orbit/test_orbits)`. Read the log rather than
+assuming: `test_from_name_values` died on
+
+    pyvo.dal.exceptions.DALServiceError: Unable to access the capabilities
+    endpoint at https://simbad.cds.unistra.fr/simbad/sim-tap/capabilities
+
+— SIMBAD's TAP service was unreachable. External network flake, same class as the
+VizieR notebook flakes. Re-ran that ONE job (targeted, not the whole run, per
+[[flake-watcher-churn]]); it is in_progress.
+
+**gh#1394 OPENED** — the surfdens fix, `531bbcb3`, base develop `8980402a`.
+Files are disjoint from gh#1393's, so no rebase ([[dont-reflexively-rebase-disjoint-prs]]).
+
+### The one local red on the surfdens branch was expected, and I checked
+
+Background suites came back clean everywhere except
+`test_backend_spherical.py: 1 failed, 230 passed`. That is 231 = develop's exact
+baseline, i.e. the float32 Einasto failure gh#1393 fixes — the surfdens branch is
+off develop and does not carry that pin. Verified by name rather than inferred
+from the count: `test_force_hessian_identities[torch-EinastoPotential]`. It will
+vanish when gh#1393 lands. In CI it does not appear at all, because the coverage
+shard globs the whole `tests/test_backend*.py` set and an earlier module sets
+float64 first.
+
+Full gates on gh#1394: `test_potential.py` **1288 passed** (numpy regression
+clean), potential_diff 212, anyaxisymdisk 53, anyspherical 14, namespaces 3.
+
+Two PRs open = the cap. Next up once one merges: AdiabaticGrid (eager
+gather/scatter + generous cap + NaN overflow), then hyp2f1 tanh-sinh.
