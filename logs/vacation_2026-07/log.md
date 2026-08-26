@@ -54714,3 +54714,58 @@ Worth keeping as a habit: my first probe returned "1 boundary call, 1 traced,
 0 nested" and I nearly wrote that the nesting guard never fires in practice.
 It does — just not on the chain the comment named. The right move was to go
 looking for a case rather than to generalise from one negative.
+
+## 2026-08-26 early — gh#1388 flake, and the ledger is smaller than I have been saying
+
+Cron `5451d57e` alive.
+
+### gh#1388's one red is the known Windows flake, confirmed two ways
+
+`build (windows-latest, 3.14, tests/test_quantity.py tests/test_coords.py)`
+FAILED. Read it rather than re-running blind:
+
+    FAILED tests/test_quantity.py::test_streamgapdf_sample
+    AssertionError: streamgapdf sample lbdt does not return a correct Quantity
+    assert array([5.24222048e-06]) < 1e-06
+
+Two independent confirmations that it is not PR-caused:
+
+1. **Same-SHA twin split** — the identical job at the identical SHA passed in the
+   other run (push vs pull_request), which settles flake-vs-real for free
+   ([[same-sha-duplicate-run-is-a-free-ab]]);
+2. it is the exact test recorded in [[windows-streamgapdf-sample-flake]] as a
+   known Windows flake, and gh#1388 touches only
+   `galpy/backend/interpolate.py`.
+
+Re-run refused with HTTP 403 "The workflow run containing this job is already
+running" — a job can only be re-run once its run finishes. Queued for the next
+wake rather than forgotten.
+
+### Correcting my own number: the ledger is 65 active entries, not 137
+
+I have been repeating "137 entries" from an older sweep. Counted properly on
+develop `4e2cc322` (non-comment, non-blank lines):
+
+    tests/backend_xfail.txt       8 active   (2 jax, 2 torch, 3 jax-jit, 1 torch-jit)
+    tests/backend_slow_skip.txt  57 active   (30 jax, 20 jax-jit, 4 torch-jit, 3 torch)
+                                 --
+                                 65
+
+The files are 321 + 454 lines, nearly all of it comment and history, which is
+how the larger figure survived. The 8 xfails in full:
+
+    jax/torch   test_actionAngle.py::test_actionAngleAdiabaticGrid_outsidegrid_c
+    jax/torch   test_qdf.py::test_call_diffinoutputs
+    jax-jit     test_orbit.py::test_eccentricity
+    jax/torch-jit  test_potential.py::test_poisson_surfdens_potential[AnyAxisymmetricRazorThinDiskPotential]
+    jax-jit     test_potential.py::test_pickling_potential_drops_units_wrapper
+
+So "ledger emptied" is 8 xfails away, not 137 — a much closer target than I had
+been reporting, and the four eager ones are only TWO distinct tests.
+
+Running now, on develop with a real C extension (the `_c` test needs one —
+[[worktree-missing-c-ext-fakes-passes]]): whole-file `test_actionAngle.py` and
+`test_qdf.py` under both backends, to see whether any of the four eager entries
+now XPASS. Whole file, not `-k`, because a hand-picked nodeid is not a context
+([[handpicked-nodeid-batch-is-not-a-context]]). Any XPASS still has to survive
+an A/B before it can be pruned ([[verify-burndown-flips-stash-rerun]]).
