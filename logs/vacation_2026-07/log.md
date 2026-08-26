@@ -54844,3 +54844,53 @@ So the eager xfail surface is: **2 by-design (qdf) + 2 genuinely fixable
 (AdiabaticGrid off-grid)**, and the other 4 are jit-only.
 
 gh#1388: 4 checks pending, zero failing.
+
+## 2026-08-26 — gh#1388 MERGED; and a "regression" that wasn't
+
+Cron `5451d57e` alive.
+
+**gh#1388 reached 154/154 SUCCESS, CLEAN, and is merged into
+`feat/backends-develop` as `107a8060`.**
+
+### The audit found a third duplicate — and my first verdict on it was wrong
+
+Final read of the diff before merging: the coercion this PR adds makes the very
+next lines dead.
+
+    filtered = asarray_on_device(xp, filtered, dev)          # added by gh#1388
+    coords   = asarray_on_device(xp, coords, dev)            # added by gh#1388
+    filt = filtered if is_backend_array(filtered) else numpy.asarray(filtered)
+    cb   = asarray_on_device(xp, filt, dev)
+
+After the coercion `filtered` is always a backend array, so the `else
+numpy.asarray(...)` can never be taken and the second `asarray_on_device` is a
+no-op. Collapsed it to `cb = asarray_on_device(xp, filtered, dev)` and gated:
+interpolate 165 passed on numpy... and **`test_actionAngle.py -k "StaeckelGrid
+or AdiabaticGrid"` came back 6 failed**, with `UnboundError: 'Orbit seems to be
+unbound'` and "Circular orbit in the MWPotential does not have Jz=0".
+
+I reverted and was about to write it up as a real regression. Then I ran the
+A/B: **the reverted, CI-green commit gives the SAME 6 failed / 6 passed under
+that `-k` selection.** So the failures are an artifact of the `-k` context —
+those grid tests depend on state a `-k` run deselects — and my "genuine
+regression" reading was simply wrong. [[pytest-nodeid-brackets-are-grep-charclass]]
+is about the same trap from the other end; the general rule
+[[handpicked-nodeid-batch-is-not-a-context]] is what I violated, having quoted
+it myself two wakes ago.
+
+So the cleanup is probably fine, but I had NO valid evidence either way once I
+reverted. Rather than spend another ~2 h CI cycle on gh#1388 for a three-line
+cosmetic tidy — while a real silent-wrong-answer fix waited — I merged gh#1388
+as-is and folded the tidy into the NEXT PR
+(`backend/constructor-jit-safety`), where it costs no extra cycle. Gating it
+there against the **WHOLE** `test_actionAngle.py`, not a `-k` slice.
+
+That is the honest trade: the audit gate is not free, and the proportionate
+answer to a cosmetic finding on an already-green PR is to carry it forward, not
+to re-run 154 checks.
+
+### Branch state
+
+`backend/constructor-jit-safety` rebased onto `107a8060` (5 commits,
+conflict-marker grep clean) and now also carries the interpolate tidy. It is
+the next PR the moment its gate finishes.
