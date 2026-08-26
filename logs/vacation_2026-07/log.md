@@ -55097,3 +55097,30 @@ which is what tipped me off. Recovered by popping my own entry (verified the
 other two were untouched and merely renumbered), then redid it the right way:
 copy the file aside, `git show <ref>:<file>` over it, run, copy back. No damage,
 but I had the warning written down and used stash anyway.
+
+### The `scipy.special.*` sweep: gh#1392's site was the ONLY one left
+
+I found the Hernquist DF's detachment by accident (checking whether Jo's
+"differentiate the DF w.r.t. beta" goal was met). Doing the sweep deliberately
+now, so the answer is a result rather than luck — every `scipy.special.<fn>`
+call in `galpy/` outside the fallback implementations themselves:
+
+    galpy/potential/TwoPowerTriaxialPotential.py       2 hits -- both COMMENTS
+    galpy/potential/ExpTruncNFWPotential.py            2 hits -- both COMMENTS
+    galpy/backend/_namespaces.py                       2 hits -- both COMMENTS
+    galpy/potential/KuijkenDubinskiDiskExpansion...    1 hit  -- COMMENT
+    galpy/df/isotropicPowerLawdf.py                    COMMENT; calls use _bgamma
+    galpy/df/osipkovmerrittPowerLawdf.py               COMMENT; calls use _bgamma
+    galpy/df/constantbetaPowerLawdf.py                 COMMENT; calls use _bgamma
+    galpy/df/constantbetaHernquistdf.py:121            REAL, but inside the
+                                                       numpy-only branch of fE
+    galpy/df/constantbetaHernquistdf.py:50             the guarded line gh#1392 adds
+
+So the whole PowerLaw DF family (isotropic, Osipkov-Merritt, constant-beta) was
+already routed and **`constantbetaHernquistdf._fEnorm` was the single remaining
+site** where a raw scipy special function was applied to a value that can be a
+backend parameter. gh#1392 closes the class.
+
+Careful reading mattered here: my first pass counted the comment mentions as
+call sites, which would have manufactured five phantom "defects" in files that
+are already correct. Grepping for the symbol is not the same as finding a call.
