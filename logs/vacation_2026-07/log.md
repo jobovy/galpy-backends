@@ -54975,3 +54975,32 @@ entries are jit-only. Corrected in STATUS.md as well.
 [[read-code-docs-before-classifying]] — the docstring said INTENDED, in two
 places, and I had gone as far as extracting the failing numbers without reading
 either.
+
+### And the slow-skip half is not cheap either — stop looking for a free prune
+
+Having found the eager xfails all by-design, I checked whether the other 57
+entries offer anything. They do not, and the file says why: **every entry
+carries its own measurement and date**, and they are 2-5 days old, not stale.
+A sample:
+
+    jax test_qdf.py::test_sampleV_interpolate      >900s TIMEOUT (2026-08-24)
+    jax test_dynamfric.py::test_dynamfric_c        >700s TIMEOUT (2026-08-21)
+    jax test_actionAngle.py::..._freqsAngles       >400s cap    (2026-08-24)
+    jax test_noninertial.py::..._omegadot          391.3s (CI~278s) -- "PASSES,
+                                                   only ~7% under the cap"
+    jax test_streamTrack.py::..._with_progpot      323.7s, re-measured post-#1364
+                                                   (was 331.7s; 1.02x). "STAYS:
+                                                   it straddles the 240s margin
+                                                   on a ~2% wobble, which is
+                                                   noise, not a change"
+
+Several are explicitly kept because they sit just under the cap, and the qdf one
+names its blocker (the nested per-pixel loop in `sampleV_interpolate`, i.e. the
+parked vectorisation work, "not a tweak").
+
+**Conclusion, so it stops being re-derived every few wakes: there is no cheap
+ledger burndown left, in either file.** 8 xfail = 4 by-design eager + 4 jit-only
+(themselves previously found to need Jo or be by-design); 57 slow-skip = real
+performance work, freshly measured. Emptying the ledger from here means
+(a) the off-grid-fallback design decision, (b) the qdf unbound semantics,
+(c) jax-eager speed. All three are Jo-facing or large, none is a sweep.
