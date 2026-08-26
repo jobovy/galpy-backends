@@ -84,9 +84,20 @@ the trace.
   `tests/conftest.py:485` sets `torch.set_default_dtype(torch.float64)`, which
   masks the entire class from every test. Jo: "for now we can leave it, but put
   it on a to-do list."
-* **Ledger**: 137 entries, 97 exercised, **0 stale** — emptying it needs real
-  fixes, not pruning. Jo: "the goal is eventually a literal zero ledger, but
-  not for gh#1204."
+* **Ledger** (measured on `107a8060`, non-comment lines): **8 xfail + 57
+  slow-skip = 65 active**, not the 137 I had been repeating. All **four eager
+  xfail entries are BY DESIGN**, confirmed from the code's own docstrings:
+  - `test_qdf.py::test_call_diffinoutputs` (jax+torch) — backend classifies an
+    orbit numpy calls unbound as bound;
+  - `test_actionAngleAdiabaticGrid_outsidegrid_c` (jax+torch) — the class
+    docstring says the backend path "evaluates the interpolation grid only (no
+    off-grid fallback)", and the test probes R=3.0 against an Rmax=2.0 grid.
+    Lifting it is the parked "opt-in off-grid fallback" design decision, which
+    costs the vectorisation the backend path exists for — **Jo's call**.
+
+  So the eager ledger cannot be burned down without a design change; the other
+  four entries are jit-only. Jo: "the goal is eventually a literal zero ledger,
+  but not for gh#1204."
 
 ## Housekeeping
 
