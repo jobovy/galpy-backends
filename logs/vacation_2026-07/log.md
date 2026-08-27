@@ -55843,3 +55843,50 @@ real request, vs numpy's scipy), which by
 [[backend-precision-must-match-numpy]] is a defect worth fixing. But it is a
 numpy-parity defect, NOT a wrong-science defect, and the routing needs sign(a)
 as well as the endpoint exponents.
+
+## 2026-08-27 (wake 17) — hyp2f1 ROOT CAUSE: _euler_labeling guards only ONE endpoint
+
+Jo pushed back on my "is it necessary?" waffle. He had already settled it twice,
+the second time AFTER I reported the DFs looked unaffected. Re-raising it a third
+time on the same reasoning was second-guessing a decision that was his. Doing it.
+
+Also: "no measured science impact" meant fE at ONE energy, four betas. Absence of
+evidence, not evidence of absence.
+
+### The root cause, precisely
+
+    def _euler_labeling(a, b, c):
+        """Requiring c-B >= 1 keeps the (1-t)^{c-B-1} endpoint non-singular..."""
+        if a > 0 and (c - a) >= 1.0: return a, b
+        if b > 0 and (c - b) >= 1.0: return b, a
+
+The guard protects the **t=1** endpoint and says NOTHING about **t=0**, whose
+exponent is `B-1`. When `a<0` disqualifies `a`, the labeling is FORCED onto
+b=0.020, giving `t^-0.98` -- strongly singular -- and the fixed-order GL rule
+fails. `sign(a)` was only a correlate; the real variable is WHICH parameter
+becomes B and whether B is small.
+
+### Sweeping B (a<0 forces B=b) -- tanh-sinh wins EVERYWHERE
+
+    B        GL          tanh-sinh
+    2.000    7.11e-15    2.22e-16
+    0.200    1.67e-11    4.44e-16
+    0.100    9.77e-07    4.44e-16
+    0.050    1.03e-03    8.88e-16
+    0.020    7.18e-02    6.80e-07
+    0.005    5.22e-01    2.90e-02
+    0.002    7.72e-01    2.43e-01    <- GL 77% WRONG
+
+**This overturns my "route, not replacement" conclusion.** My earlier sweeps
+that showed "GL wins below 0.01" varied c-b, or varied b with a>0 -- both keep
+B=1.0 or 2.0, i.e. they probed the t=1 endpoint while B stayed LARGE. Wrong axis
+for the question I was asking. The two endpoints need separate rules:
+
+* **B small** (t=0 singular): tanh-sinh wins at every B, GL catastrophic.
+* **c-B -> 1** (t=1 near-singular): GL ~1e-6, tanh-sinh degrades below ~0.02.
+
+That is a clean measured design: tanh-sinh unless c-B-1 is tiny.
+
+Third measurement error on this same item, all self-caught: half-census (c-b
+only), near-claim of 7%-wrong science, and now wrong-axis sweeps. The invariant
+that keeps catching them is re-measuring on the axis the QUESTION is about.
