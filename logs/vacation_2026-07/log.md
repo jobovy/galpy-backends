@@ -56487,3 +56487,25 @@ Design notes baked into the tool, each from a past mistake:
   keeps the shard green either way);
 * slow-skip staleness requires the test to have **actually run** -- "skipped"
   proves nothing.
+
+### gh#1403: measured the class the reported repros do NOT cover
+
+The fix changes `oka`, which does two things, not one:
+  1. rescues cases where the first label was WRONGLY rejected (the reported
+     inf/nan repros -- all have b <= 0, i.e. only ONE admissible label);
+  2. **flips the traced label from b to a** wherever BOTH are admissible under
+     the new rule -- i.e. cases that already WORKED now take a different route.
+
+(2) is the risk, and no reported repro is in it. Constructed it explicitly:
+0 < c-a < 1 (a rejected by the old traced rule, accepted by the new) AND b > 0
+with c-b >= 1 (so the old fallback to b was valid). A/B, 60 cases, vs mpmath:
+
+    develop 8c320b39 (label b)   worst 2.220e-15
+    gh#1403          (label a)   worst 2.887e-15
+
+Both at the noise floor -- the flip is safe. Expected, since the tanh-sinh rule
+cancels EITHER endpoint analytically, so neither labelling is privileged.
+
+This is the [[reproduce-the-assertion-not-a-proxy]] / route-change lesson applied
+pre-emptively for once: a fix that moves a route needs the cases that CHANGE
+route, not just the cases that were broken.
