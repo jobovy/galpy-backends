@@ -56264,3 +56264,24 @@ comment.
 Rebased head `5d0a9e8d`: 2 files, 91 insertions / 156 deletions (still a net
 deletion). Re-gating on the rebased tree before opening -- the base moved, and
 [[measure-on-the-branch-you-ship-to]] says the earlier gate no longer counts.
+
+### gh#1402 evidence gap I found in my own PR — and it favours the change
+
+Relaxing `c - B >= 1` also moves `_in_regime`, so `0 < c - B < 1` now takes the
+Euler route instead of the **Pfaff series**. NEITHER sweep in the PR body
+covered that: the 900-case public-entry sweep used c-B in {1.0,1.3,1.7,2.5,4.0}
+(all >= 1), and the c-B in (0,1] sweep called `_euler_quad` DIRECTLY, bypassing
+route selection. The rerouted band was the one place a regression could hide
+and I had not measured it end-to-end.
+
+A/B through the public entry, 320 cases, c-B in (0,1), vs mpmath:
+
+    develop 00a7153c (Pfaff series)   worst 4.33e-03
+    gh#1402 (Euler / tanh-sinh)       worst 1.55e-15
+
+Large improvement, not a risk. Posted to gh#1402.
+
+The general lesson, which is the third time some version of it has come up:
+**a sweep that varies one axis does not test a change that moves a ROUTE.**
+Both my sweeps were over parameter values; the change was over which branch
+those values reach. Ask which cases change ROUTE, and measure exactly those.
