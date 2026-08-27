@@ -55890,3 +55890,101 @@ That is a clean measured design: tanh-sinh unless c-B-1 is tiny.
 Third measurement error on this same item, all self-caught: half-census (c-b
 only), near-claim of 7%-wrong science, and now wrong-axis sweeps. The invariant
 that keeps catching them is re-measuring on the axis the QUESTION is about.
+
+---
+
+## 2026-08-26 — review round 3 (comment 5433873179): two PR-local findings + the small-B floor is CLEARED
+
+Reviewer confirmed the round-2 fixes hold under their own stress tests, raised
+two new PR-local issues, and audited my hyp2f1 write-up. All three addressed on
+`backend/hyp2f1-tanh-sinh`.
+
+### 1. constantbetaHernquistdf.py:136 — traced beta under external jit
+
+`jax.jit(lambda b: constantbetaHernquistdf(pot=hp, beta=b).fE(...))` died at
+`if self._beta == 0.0`. The three exact-beta closed forms (0, +-0.5) cannot be
+selected from a tracer. Fixed with `concretely_true`, so a traced beta falls
+through to the general hyp2f1 branch.
+
+The thing worth checking was NOT that it stops crashing but that falling
+through is CORRECT -- the closed forms are special cases of the general branch,
+so I measured them against it before changing anything:
+
+    beta      general-vs-closed-form
+    +0.5      2.22e-16
+    -0.5      5.99e-15
+     0.0      1.01e-08   <- the hyp2f1 fallback's own accuracy at (5,1;3.5)
+
+jit-vs-numpy after the fix, over the parametrized betas: 1.3e-15 .. 7.8e-11.
+jit(grad) d f_E/d beta matches central differences of the numpy DF.
+
+### 2. quadrature.py:544 — mixed finite/infinite array limits
+
+`all(isfinite(b))` made the dispatch all-or-nothing, so ONE inf sent the whole
+array down the whole-line branch -- which ignores `b` entirely and returns a
+scalar. Reachable from the public API, not just the helper:
+
+    surfdens(R=1, z=[1.0, inf]) under torch
+      was:  0.059445025           (a 0-d scalar for a 2-element request)
+      now: [0.05917760 0.05944502]   matches numpy to 6.7e-16, grad intact
+
+Both rules are evaluated and selected elementwise; the infinite entries get a
+dummy finite limit so `abs(inf)` nodes cannot NaN-poison the gradient of the
+entries that DO take the finite branch.
+
+### 3. hyp2f1 small B — the floor I had documented as "not characterized" is GONE
+
+The reviewer said the small-B gap is reachable via `TwoPowerSphericalPotential`
+near beta=3 and worth tens of percent. **I measured it on my own branch and
+my first tanh-sinh commit did NOT fix it** -- beta=3.01 was still 8.4e-02 off
+in Phi. That case requests `hyp2f1(0.01, 2.01; 2.01; z)`, i.e. B = 0.01,
+exactly the floor I had shipped a docstring about.
+
+Root cause, and it is not quadrature error: I formed `t` explicitly. At
+B = 0.01, `t**B` is still 1e-3 where `t ~ 1e-300`, so the integrand matters
+until `t ~ exp(-3684)` -- thousands of orders below what a double holds. `t`
+underflows to 0, `t**B` with it, and the tail is silently discarded. That is
+why the error was insensitive to BOTH node count and half-width: widening the
+range is useless while `t` has already underflowed.
+
+Fix is two things that only work together: powers in log space
+(`log t = -softplus(-2v)`, finite where `t` is not) AND a half-width that
+scales with B. Measured vs mpmath (dps=50):
+
+    B        shipped GL   first tanh-sinh   now
+    0.200    1.8e-11      5.6e-16           4.4e-16
+    0.020    7.2e-02      6.8e-07           8.9e-16
+    0.010    ~1e-01       8.4e-04           4.4e-16
+    0.001    ~5e-01       4.9e-01           1.6e-15
+
+The rule also got CHEAPER: 130-290 nodes chosen from B, vs a flat 201.
+
+### Two defects in my own new code, both found by widening the test axis
+
+* `xp.maximum(x, 0.0)` -- torch rejects a Python scalar as the second operand.
+  jax-only probes could not see it; spelled with `where` now.
+* `_tanh_sinh_grid` reached for `float(B)`. Under `jax.grad` the parameters
+  have concrete truth values (so the route guard passes) but are still tracers,
+  and `float()` raises. The grid is now sized by comparisons only.
+  **The route had NO parameter-gradient coverage at all** -- exactly the
+  silent-detachment shape. Added; d/da, d/db, d/dc now match FD to
+  3.4e-10 .. 1.8e-07 on both backends.
+
+### FOR JO — measured, not acted on: the GL route should probably go entirely
+
+Sweeping 768 (A,B,c,z) cases with B ABOVE the 0.25 threshold:
+
+    GL (shipping)   worst rel err  1.5e-04
+    tanh-sinh       worst rel err  2.9e-15
+    cases where tanh-sinh is worse: 0
+
+So the threshold is only protecting the less accurate rule. I did NOT raise it
+in this PR: the traced-parameter path also routes through `_euler_quad`, and
+tanh-sinh there needs a fixed conservative grid (it cannot size from a tracer),
+which is its own design + measurement. Recommending it as the next PR, which
+would also let the whole `X = xi^k` grading machinery be deleted rather than
+left as dead code.
+
+Gates: numpy BYTE-IDENTICAL (sha256 `245bc0e3...` over 315 values on both arms
+-- hyp2f1 direct, TwoPowerSpherical Phi/Rforce/dens near beta=3, fE at five
+betas, symmetric_quad -- with the arms grep-asserted to differ).
