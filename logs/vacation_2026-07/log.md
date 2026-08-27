@@ -55988,3 +55988,64 @@ left as dead code.
 Gates: numpy BYTE-IDENTICAL (sha256 `245bc0e3...` over 315 values on both arms
 -- hyp2f1 direct, TwoPowerSpherical Phi/Rforce/dens near beta=3, fE at five
 betas, symmetric_quad -- with the arms grep-asserted to differ).
+
+---
+
+## 2026-08-27 — gh#1401 open; the follow-up turns out to DELETE the constraint too
+
+Cron 5451d57e verified alive (created 2026-08-24, expires ~2026-08-31).
+
+**gh#1401** (review round 3) open into `feat/backends-develop`, head `bae70b7c`.
+CI in progress. Local forced-backend gate on the consumer suite that my changes
+actually reach: `test_sphericaldf.py --backend torch` 223 passed,
+`--backend jax` 223 passed. Only codecov/patch+project red so far, with most
+shards still pending -- the incomplete-upload shape, not acted on yet.
+
+**Local: `backend/hyp2f1-single-rule` built (worktree /var/tmp/h2single).**
+
+The plan was "route everything to tanh-sinh", parked because the traced path
+also goes through `_euler_quad` and tanh-sinh could not size a grid from a
+tracer. That blocker dissolved on measurement: ONE FIXED grid is as accurate as
+the per-call adaptive one (worst 2.67e-15 vs 2.89e-15 over 720 cases,
+B = 0.001..5.0, nothing above 1e-13). No concreteness guard is needed at all, so
+`_TS_B_MAX`, the `X = xi^k` substitution, the k-cap, the expm1 crossover guard
+and the tiny-|z| series branch all delete.
+
+**Then the sweep through the PUBLIC entry found a case the direct-rule sweep
+could not see: 4.58e-03 at (A=5, B=0.001, c=1.001, z=-40).** A/B first:
+identical on gh#1401, so NOT a regression -- and develop is 8.8e-01 there.
+
+Cause is not quadrature. `_euler_labeling` refuses it because
+`1.001 - 0.001 == 0.9999999999999999 < 1.0` -- one ulp under the `c - B >= 1`
+guard -- so a much worse route ran instead. **That guard is a Gauss-Legendre
+artifact**: it exists to keep `(1-t)^{c-B-1}` non-singular for a fixed-order
+rule. tanh-sinh cancels that endpoint analytically and needs only `c - B > 0`.
+Measured across the whole block the old bound excluded (c-B in (0,1]): 2.3e-15.
+
+So the constraint goes with the rule. Worst error over 900 (A,B,c,z) cases
+through the public entry, incl. z=0:
+
+    develop        8.807e-01
+    gh#1401        4.577e-03
+    single-rule    2.665e-15
+
+**Two tests encoded the old contract; the second is the interesting one.**
+
+* `test_fallback_unsupported_regimes_raise` asserted `_euler_labeling(2,2,2.5)`
+  raises. c-P = 0.5 is now admissible, so it FAILED -- caught by the suite.
+  Replaced with both ways of being genuinely outside: `c - P <= 0` for every P,
+  and no positive P at all.
+* `test_hyp2f1_fallback_alt_labeling` still **PASSED** -- and had stopped
+  testing what it exists for. It used (2.0, 0.8, 2.5), chosen because c-a=0.5
+  failed the old `>= 1` test so labelling had to fall to b. Under `> 0` a is
+  admissible, so the case silently moved to the FIRST branch and the second
+  branch lost its only cover. Passing, because either labelling gives the right
+  value. Now (-1.0, 0.8, 2.5): a < 0 disqualifies a for good, whatever the
+  bound. [[audit-contract-invalidation]] earned its keep here -- a green suite
+  would not have said a word.
+* `test_hyp2f1_large_B_route_is_unchanged` guarded a route that no longer
+  exists, with bars up to 1e-08 set from GL's own accuracy. Renamed and
+  retightened to the measured 1e-14; (-1.6,1.2,3.6) goes 5.3e-08 -> 1.55e-15.
+
+Not opened: one PR at a time. Remaining before it can go up = numpy
+byte-identity + the full gate.
