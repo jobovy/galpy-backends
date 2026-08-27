@@ -1,136 +1,87 @@
-# Vacation status snapshot — 2026-08-25 (midday)
+# Vacation status snapshot — 2026-08-27
 
 **This file is OVERWRITTEN, not appended.** "Where are things now"; `log.md` is
-the trace.
+the trace. Refresh on every merge / branch change.
 
 ---
 
-## The gh#1204 review is fully addressed — five PRs, ledger delta 0
+## Now
 
-    batch 1 #1        -> gh#1381  206ccd78   gammainc endpoint gradient
-    batch 1 #2, #10   -> gh#1382  06267d1d   quadrature batching + AnyAxisym torch
-    batch 1 #3/#4/#6  -> gh#1383  4e2cc322   coords inverse galcen + f64/f32 promotion
-    batch 1 #5        -> CLOSED as working-as-intended (comment 5411848615)
-    batch 2 #1        -> gh#1383
-    batch 2 #2        -> gh#1388  107a8060   map_coordinates dispatches on the GRID
-    batch 2 #3, #4    -> gh#1391  cfe23abe   traceable constructors + hyp2f1/hyp1f1 params
+    develop  feat/backends-develop @ 00a7153c
+    open PR  gh#1402  backend/hyp2f1-single-rule -> develop   (CI running)
+    ledger   8 xfail + 57 slow-skip = 65 active
+    cron     5451d57e, hourly at :13, created 2026-08-24, expires ~2026-08-31
 
-Status comment posted to gh#1204: **comment 5422012558**.
+`/var/tmp/jitsafe` = worktree for the MERGED gh#1401 branch (keep until #1402
+lands; it is the byte-identity "branch" arm's sibling).
+`/var/tmp/h2single` = worktree for gh#1402.
+`/var/tmp/h2base` = detached at develop, the byte-identity BASE arm.
 
-## Merged into `feat/backends-develop` this cycle — six PRs, ledger delta 0 on every one
+## The gh#1204 review is fully addressed — three rounds
 
-    gh#1381  206ccd78   gammainc endpoint gradient
-    gh#1382  06267d1d   quadrature batching + AnyAxisym torch construction
-    gh#1383  4e2cc322   coords inverse galcen + f64/f32 promotion
-    gh#1388  107a8060   map_coordinates dispatches on the GRID too
-    gh#1391  cfe23abe   traceable constructors + hyp2f1/hyp1f1 parameters
-    gh#1392  8980402a   constantbetaHernquistdf d f_E/d beta
+    round 1+2  ->  gh#1381 gh#1382 gh#1383 gh#1388 gh#1391   (status comment 5422012558)
+    round 3    ->  gh#1401                                    (reply comment 5434247936)
 
-**No PR is open.** develop is at `8980402a`.
+Round 3 raised two PR-local findings (traced beta under external jit;
+symmetric_quad mixed finite/infinite limits) plus an audit note on small-B
+hyp2f1. All three are IN develop via gh#1401.
 
-The gh#1204 review is fully addressed (status comment 5422012558). The
-parameter-detachment class is closed package-wide: a deliberate
-`scipy.special.*` sweep finds no remaining site where a raw scipy special
-function is applied to a value that can be a backend parameter.
+## Merged into develop this cycle (ledger delta 0 on every one)
 
-## FOR JO — three decisions, none of which I made unilaterally
+    00a7153c  gh#1401  review round 3 + small-B hyp2f1 floor cleared
+    5c3c8671  gh#1399  actionAngleAdiabaticGrid exact off-grid actions
+    bc69771e  gh#1394  surfdens both routes on-backend under eager torch grad
+    366ffc04  gh#1393  Einasto d_n gradient un-gated to torch + f64 pin
+    8980402a  gh#1392  constantbetaHernquistdf d f_E/d beta
+    cfe23abe  gh#1391  traceable constructors + hyp2f1/hyp1f1 parameters
+    107a8060  gh#1388  map_coordinates dispatches on the GRID
+    4e2cc322  gh#1383  coords inverse galcen + f64/f32 promotion
+    06267d1d  gh#1382  quadrature batching + AnyAxisym torch construction
+    206ccd78  gh#1381  gammainc endpoint gradient
 
-1. **Finding 11, sharpened.** `surfdens` under torch is not "no gradient": with
-   `forcepoisson=True` it returns a Tensor with `requires_grad=True` and a
-   `grad_fn` whose gradient is **23% wrong in R, 72% wrong in z** (jax AD matches
-   the FD reference to 1.6e-10, so torch is the wrong one); with the default
-   `forcepoisson=False` it returns a bare float. Proposal: for a grad-tracking
-   eager tensor use the backend GL rule when `_force_accepts_arrays(pot)` and
-   RAISE otherwise. Behaviour change -> your call.
-2. **hyp2f1 direct-Euler value accuracy**, pre-existing and invisible to the
-   test grid: ~1e-6..1e-7 when `c - B` is not an integer, ~1e-14 when it is.
-   Gauss-Jacobi is the real fix.
-3. **actionAngleAdiabaticGrid off-grid fallback** (the parked opt-in decision) —
-   what its two xfail entries encode.
+Also merged to MAIN by Jo: gh#1398 (`3df11b96`), actionAngleAdiabatic `_justjr`
+scalar return.
 
-## Queued behind gh#1391
+## gh#1402 — what it claims, and the evidence
 
-2. Review batch-2 items 3 AND 4 — **BUILT AND COMMITTED LOCALLY, not
-   pushed**: branch `backend/constructor-jit-safety`, worktree `/var/tmp/jitsafe`,
-   head **`48a68247`** (4 commits) on develop `06267d1d`. PR body drafted at
-   `$SCRATCH/pr_body_jitsafe.md`. `git merge-tree` says it merges cleanly onto
-   the post-gh#1383 tree, so no rebase. Also carries the hyp2f1 + hyp1f1
-   parameter-gradient fixes and the silent-detachment audit. Traced-green
-   measured: 245 passed under `--backend jax --jit` AND `--backend torch --jit`. Adds
-   `galpy.backend.concretely_true` and applies it to `ExpTruncNFWPotential`
-   `min(a, rc)`, `TwoPowerTriaxialPotential`'s alpha/beta validation and its
-   two alpha == 2 branches, and `constantbetaPowerLawdf`'s four asserts; plus
-   hoists `sphericaldf._handle_rmin`'s explicit-rmin early return above the
-   non-traceable Phi(0) probe. Gates: jit(grad)-vs-FD 1e-11..1e-7 on four
-   parameters, torch autograd agreeing to ~1e-14, numpy byte-identity by
-   sha256 with a 1-ulp negative control, A/B 7-failed-on-base vs 14-passed,
-   numpy regressions 394 + 1288 passed. Forced-backend gate still running.
-3. Review batch-2 item 4 — `hyp2f1.py:51/92/156` scalar params. **Confirmed
-   still open by item 2's work**: `TwoPowerTriaxialPotential.__call__`
-   (`_psi` -> hyp2f1) dies at `_in_regime`'s `a > 0 and (c - a) >= 1.0` under
-   jit(grad), and at `float(math.ceil(6.0 / B))` under eager grad. Route
-   selection cannot be a concreteness guard, so this needs its own design:
-   either evaluate both routes and select (NaN-safety on the dead branch), or
-   pin the Euler quadrature's grading `k` to its finest value while traced.
-4. `_jit.py` docstring: "trace every boundary call" overstates it. Next review
-   PR, not gh#1383.
+One tanh-sinh rule for every B; the `c - B >= 1` constraint deleted with it.
 
-## Closed / retracted
+    768 cases, B ABOVE the old 0.25 threshold (the regime GL was kept for):
+        GL          worst 1.5e-04
+        tanh-sinh   worst 2.9e-15      cases where tanh-sinh is worse: 0
 
-* **finding 5 (`set_jit`) — CLOSED as working-as-intended** on Jo's
-  instruction ("leave set_jit as is and drop the branch"). Branch and worktree
-  deleted; the reasoning is posted as PR gh#1204 comment 5411848615: `set_jit`
-  runs before the data exists, so validating a backend there checks the
-  *ambient* backend, which is the wrong thing when the pattern is data-driven.
-* **RETRACTED: "pre-existing develop red in `test_galpypaper::test_orbmethods`".**
-  There was no red. `/var/tmp/rev1` had **no built C extension at all**, so the
-  test ran a different code path. Built it; passes locally under numpy and
-  torch, and CI passes it too. [[worktree-missing-c-ext-fakes-passes]] cuts
-  both ways — a missing `.so` also fakes FAILURES.
+    900 cases through the PUBLIC entry, incl. z=0:
+        develop (pre-1401)  8.807e-01
+        gh#1401             4.577e-03
+        gh#1402             2.665e-15
 
-## Still open, not started
+    numpy BYTE-IDENTICAL  sha256 245bc0e3... vs develop 00a7153c,
+                          arms grep-asserted to differ
+    gate                  385 passed / 1 skipped, re-run AFTER the rebase
+    size                  91 insertions, 156 deletions (NET DELETION)
 
-* **findings 8 & 9** — traced constructor params + `hyp2f1` scalar params
-  (= queue items 2 and 3 above); all four finding-8 sites reproduce
-  `TracerBoolConversionError`.
-* **finding 11 (mine, reported not fixed) — SHARPENED, and worse than
-  reported.** It is not "no torch gradient": with `forcepoisson=True` surfdens
-  returns a Tensor with `requires_grad=True` and a `grad_fn` whose gradient is
-  **23% wrong in R and 72% wrong in z** (MiyamotoNagai a=0.5 b=0.1 at R=1,
-  z=0.3; FD anchored by jax AD matching it to 1.6e-10 on both routes). With the
-  default `forcepoisson=False` it returns a bare Python float, severing the
-  graph. Cause: `_quad_needs_backend` gates on `under_trace`, False for eager
-  torch autograd, so scipy runs and the integrated piece detaches while the
-  algebraic prefactor keeps a graph. **Needs Jo's decision** (behaviour change):
-  for a grad-tracking eager tensor, use the backend GL rule when
-  `_force_accepts_arrays(pot)` and RAISE otherwise. Own PR.
-* **To-do, deferred by Jo**: systematic f32 / default-dtype sweep.
-  `tests/conftest.py:485` sets `torch.set_default_dtype(torch.float64)`, which
-  masks the entire class from every test. Jo: "for now we can leave it, but put
-  it on a to-do list."
-* **Ledger** (measured on `107a8060`, non-comment lines): **8 xfail + 57
-  slow-skip = 65 active**, not the 137 I had been repeating. All **four eager
-  xfail entries are BY DESIGN**, confirmed from the code's own docstrings:
-  - `test_qdf.py::test_call_diffinoutputs` (jax+torch) — backend classifies an
-    orbit numpy calls unbound as bound;
-  - `test_actionAngleAdiabaticGrid_outsidegrid_c` (jax+torch) — the class
-    docstring says the backend path "evaluates the interpolation grid only (no
-    off-grid fallback)", and the test probes R=3.0 against an Rmax=2.0 grid.
-    Lifting it is the parked "opt-in off-grid fallback" design decision, which
-    costs the vectorisation the backend path exists for — **Jo's call**.
+## FOR JO — open decisions, none taken unilaterally
 
-  So the eager ledger cannot be burned down without a design change; the other
-  four entries are jit-only. Jo: "the goal is eventually a literal zero ledger,
-  but not for gh#1204."
+1. **torch `surfdens(forcepoisson=True)` gradient is silently 23% wrong in R,
+   72% in z** (jax AD matches FD to 1.6e-10, so torch is the wrong one).
+   Reported, NOT fixed: the fix is a behaviour change (use the backend GL rule
+   when `_force_accepts_arrays(pot)`, else RAISE). Own PR when you decide.
+2. **Array beta on constantbetaHernquistdf** now raises a broadcasting error
+   rather than "truth value ambiguous". Both loud, neither clear; array beta was
+   never supported. A validation guard would be a small follow-up.
+3. **gh#1277 / gh#1276** filed as issues on your instruction (AnyAxisym R2deriv
+   at small R; RazorThinExpDisk force digits in a |z| band).
 
-## Housekeeping
+## Standing traps that keep re-biting (see log.md for the full list)
 
-* Cron `5451d57e` (hourly at :13) verified alive 2026-08-25; created
-  2026-08-24, expires ~2026-08-31.
-* Root filesystem hit 100% on 2026-08-25 and wedged every command with ENOSPC.
-  Freed ~10G from never-GC'd `torchinductor_*` caches; expect recurrence.
-* `coverage run -m pytest` is BROKEN in this env (numpy re-import dies with
-  "cannot load module more than once per process"). Workaround that works:
-  start `coverage.Coverage()` in-process AFTER pre-importing numpy/scipy/
-  pytest/jax/torch, with `sys.path.insert(0, os.getcwd())`, then call
-  `pytest.main([...])`. Driver kept at `$SCRATCH/covdrv.py`.
+* A worktree branched BEFORE a fix still runs the code you deleted. Bit me
+  twice this week; both times the symptom was a gate hanging, not failing.
+* After a SQUASH merge, a follow-up branched from an intermediate commit needs
+  `git rebase --onto <develop> <old-base> <branch>`, NOT a plain rebase.
+* `all-clear` CONCLUDES; it does not re-evaluate when the shard it gated on is
+  re-run. It needs its own targeted re-run.
+* codecov/patch and codecov/project are DIFFERENT signals. project self-heals
+  when uploads complete; patch can be a real uncovered-lines finding.
+* Local coverage tooling is broken in this env (numpy re-import). A branch whose
+  omission RAISES can be verified by the test passing at all — that trick does
+  NOT generalise to branches that silently return a different number.
