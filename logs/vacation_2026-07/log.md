@@ -56049,3 +56049,34 @@ through the public entry, incl. z=0:
 
 Not opened: one PR at a time. Remaining before it can go up = numpy
 byte-identity + the full gate.
+
+### The 3.14 backend shard red was infra -- but it exposed a real defect of MINE
+
+`build (ubuntu-latest, 3.14, tests/test_backend*.py)` failed with
+
+    ##[error]The runner has received a shutdown signal...
+    ##[error]Process completed with exit code 143
+
+Not a test failure: every test before it PASSED, including all five
+`test_fE_traceable_in_beta_under_external_jit` cases (~3 s each). Exit 143 is
+SIGTERM. The same-SHA pull_request twin of that shard was still pending, i.e. a
+free flake-vs-real A/B was available.
+
+**But it died inside `test_dfE_dbeta_survives_external_jit`, and that made me
+time a test I had already shipped without timing.** `jax.jit(jax.grad(...))`
+over this DF takes **>25 minutes** to compile -- verified as compute, not
+deadlock, via [[load-average-distinguishes-hung-from-slow]]: 102% CPU the whole
+time. Killed while still running.
+
+So the shard red was infra AND the test was unshippable. Both true; the second
+is the one that was mine. Removed in `308ef026`, with the measurement left in
+the test file so the gap is visible instead of quietly absent. Coverage kept:
+value-under-jit by the parametrized test, d f_E/d beta by the existing eager
+grad-vs-FD test. Genuinely lost: grad COMPOSED WITH jit -- real, works, and
+needs the compile cost brought down before it can live in a shard.
+`test_backend_constantbetadf.py` now 45 passed in 5m23s.
+
+**Self-inflicted measurement error, same wake**: ran the h2single suite plus two
+jit(grad) probes concurrently and the suite came back RC=137 (SIGKILL) at 98%.
+[[long-measurement-needs-a-quiet-box]] exists for exactly this and I broke it.
+Re-run needed on a quiet box.
