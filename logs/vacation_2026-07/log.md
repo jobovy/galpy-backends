@@ -56613,3 +56613,22 @@ spot-check.
 
 Folded into gh#1403 as `616c88aa` (same file, not yet merged). numpy
 byte-identical (245bc0e3... unchanged), 391 passed / 1 skipped.
+
+### Swept the whole cycle for the same coverage lapse — gh#1402 was the only one
+
+Jo caught gh#1402 by reading the table I skipped. The same "green check, +1
+miss" could have happened on any PR I merged, and I had only checked the one he
+pointed at. So I swept every merge in the cycle via the codecov totals API:
+
+    eabc3a5a  misses=15     206ccd78  misses=15     06267d1d  misses=15
+    4e2cc322  misses=15     107a8060  misses=15     cfe23abe  misses=15
+    8980402a  misses=15     366ffc04  misses=15     bc69771e  misses=15
+    5c3c8671  misses=15     00a7153c  misses=15
+    8c320b39  misses=16  <-- the only increase (gh#1402)
+
+Misses held at exactly 15 across all eleven earlier merges. Isolated lapse, not
+a pattern -- which is the answer I wanted to be able to give with evidence
+rather than by assertion.
+
+Saved as `tools/codecov_miss_sweep.py` and added to the PRE-MERGE CHECKLIST in
+STATUS.md, so the check happens before a merge rather than after Jo finds it.

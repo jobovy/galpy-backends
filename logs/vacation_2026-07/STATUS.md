@@ -61,6 +61,20 @@ One tanh-sinh rule for every B; the `c - B >= 1` constraint deleted with it.
     gate                  385 passed / 1 skipped, re-run AFTER the rebase
     size                  91 insertions, 156 deletions (NET DELETION)
 
+## PRE-MERGE CHECKLIST (added after gh#1402 landed a coverage regression)
+
+Before squash-merging, in addition to the diff audit:
+
+    tools/codecov_miss_sweep.py   # misses must NOT increase vs the base commit
+
+A GREEN codecov check is NOT the standard. gh#1402 passed both checks with
+"All modified and coverable lines are covered by tests" while Misses went
+15 -> 16: that phrasing covers MODIFIED lines only, and says nothing about a
+line that was covered before and is not now. Read the Hits/Misses table.
+
+Swept the whole cycle after the fact -- misses held at exactly 15 across all
+eleven earlier merges, so gh#1402 was an isolated lapse, not a pattern.
+
 ## Ledger status — verified, not assumed
 
     8 xfail + 57 slow-skip = 65 active
