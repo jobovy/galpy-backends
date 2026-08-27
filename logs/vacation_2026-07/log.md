@@ -56665,3 +56665,21 @@ Two deliberate choices, both from past mistakes:
 Done in the DETACHED `h2base` worktree, not the branch worktree: emptying
 `backend_slow_skip.txt` there cannot leak into a PR
 ([[stacked-pr-branch-surgery-leak]]). Backup at $SCRATCH/slow_backup.txt.
+
+### gh#1403: the coverage regression is VERIFIED repaired, by the number
+
+    8c320b39 (develop, gh#1402)   hits=48879  misses=16
+    616c88aa (gh#1403 head)       hits=48873  misses=15
+
+Back to the 15 that held across all eleven earlier merges. Both codecov checks
+also pass, but the number is what I am reading -- taking the check colour as the
+standard is exactly what let gh#1402 through.
+
+gh#1403 at 150 pass / 3 pending / 0 fail; the three are queued at 0s (runner
+contention), not stuck.
+
+Audit for the added dead-branch-removal commit:
+* **array-input class** — it REMOVES conditionals (`use_tr`, `ok_tr`) and adds
+  none; strictly fewer data-dependent branches.
+* **duplication** — removes a second route to the same result.
+* **helper placement** — untouched.
