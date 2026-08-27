@@ -55788,3 +55788,58 @@ Merged into develop this cycle: gh#1381, #1382, #1383, #1388, #1391, #1392,
 Next: the routed tanh-sinh for hyp2f1, with the min(b, c-b) threshold as a
 MEASURED constant rather than a guess -- envelope pinned last wake:
 >= 0.05 -> ~1e-16, 0.02 -> 6.8e-07 (vs GL's 7.18e-02), <= 0.005 -> GL wins.
+
+## 2026-08-27 (wake 16) — hyp2f1: the 7% is REAL but does NOT reach the DF
+
+Cron alive. No PRs of mine open.
+
+### The route depends on sign(a), not on min(b, c-b)
+
+The crossover sweep killed my planned routing rule. The two endpoints behave
+differently, and `a` matters more than either:
+
+    small c-b (b=2)   GL ~1e-6 at EVERY exponent; tanh-sinh wins down to 0.02
+    small b (c-b big) GL ~6e-15 everywhere;       tanh-sinh only wins >= 0.05
+
+and holding (b, c) fixed at the galpy request while varying `a`:
+
+    a=+1.0   GL 9.63e-10      a=-0.5   GL 7.19e-02
+    a=+0.5   GL 1.63e-09      a=-1.010 GL 7.18e-02
+                              a=-3.0   GL 7.11e-02
+
+An 8-order jump as `a` crosses zero. So it is a specific ROUTE being wrong, not
+a smooth function of the endpoint exponents -- `min(b, c-b)` alone cannot select
+the rule.
+
+### The 7% is real, verified against mpmath
+
+    mpmath(dps=50) = 1.0040294361293947
+    scipy          rel 1.46e-16     (arbiter sound)
+    galpy GL       rel 7.18e-02     <-- 7% WRONG
+    tanh-sinh      rel 6.80e-07
+
+### But it does NOT propagate to fE -- I nearly over-claimed AGAIN
+
+constantbetaHernquistdf fE(-0.1), numpy(scipy) vs the backends:
+
+    beta=-1.5   jax rel 2.20e-14   torch rel 2.24e-14
+    beta=-1.0   jax rel 1.11e-06   torch rel 1.11e-06
+    beta=-0.5   jax rel 3.33e-16   torch rel 0.00e+00
+    beta= 0.0   jax rel 0.00e+00   torch rel 0.00e+00
+
+beta=-1.5 is EXACTLY the case whose hyp2f1 request is (-1.010, 0.020, 3.010),
+the 7%-wrong one -- and the DF value agrees to 2.2e-14. So the bad hyp2f1 call
+either does not feed the fE value path or its contribution is negligible there.
+
+**Second over-claim avoided on the same item.** First I said "the DFs never
+enter the bad regime" from a census that tracked only c-b, missing b. Then,
+having found b=0.020 and a 7% hyp2f1 error, I was about to report "galpy returns
+7%-wrong DF values" -- and the DF is fine to 2e-14. The hyp2f1 error was a PROXY;
+fE is the thing that matters ([[reproduce-the-assertion-not-a-proxy]]). Largest
+DF-level discrepancy measured anywhere: **1.11e-06 at beta=-1.0**.
+
+Standing conclusion: hyp2f1's backend fallback IS measurably wrong (7e-2 on one
+real request, vs numpy's scipy), which by
+[[backend-precision-must-match-numpy]] is a defect worth fixing. But it is a
+numpy-parity defect, NOT a wrong-science defect, and the routing needs sign(a)
+as well as the endpoint exponents.
