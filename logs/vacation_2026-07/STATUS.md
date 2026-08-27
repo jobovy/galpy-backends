@@ -7,8 +7,8 @@ the trace. Refresh on every merge / branch change.
 
 ## Now
 
-    develop  feat/backends-develop @ 00a7153c
-    open PR  gh#1402  backend/hyp2f1-single-rule -> develop   (CI running)
+    develop  feat/backends-develop @ 8c320b39
+    open PR  NONE
     ledger   8 xfail + 57 slow-skip = 65 active
     cron     5451d57e, hourly at :13, created 2026-08-24, expires ~2026-08-31
 
@@ -42,7 +42,7 @@ hyp2f1. All three are IN develop via gh#1401.
 Also merged to MAIN by Jo: gh#1398 (`3df11b96`), actionAngleAdiabatic `_justjr`
 scalar return.
 
-## gh#1402 — what it claims, and the evidence
+## gh#1402 — MERGED `8c320b39`, 154/154 green. Evidence
 
 One tanh-sinh rule for every B; the `c - B >= 1` constraint deleted with it.
 

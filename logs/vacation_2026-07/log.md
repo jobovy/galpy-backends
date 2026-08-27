@@ -56347,3 +56347,37 @@ verified `C extension loaded: True`) and re-dispatched. Worth noting the
 staleness question CANNOT be answered from CI going green: the entries are
 `xfail(strict=False)`, so a landed fix shows up as XPASS and the shard still
 passes ([[ledger-delta-per-pr]]). It has to be measured.
+
+## 2026-08-27 — gh#1402 MERGED (`8c320b39`), 154/154 green
+
+    gh#1402 -> feat/backends-develop  8c320b39   ledger delta 0
+    net: 91 insertions, 156 deletions
+
+Audit before merge:
+* **array-input class** — only TWO added conditionals, and both are the RELAXED
+  form of pre-existing comparisons (`>= 1.0` -> `> 0.0`). The change *removes*
+  the `has_concrete_truth_value(B) and bool(B < _TS_B_MAX)` route guard and the
+  grid-sizing comparison ladder, so it strictly REDUCES data-dependent Python
+  branching. Right direction for a jit target.
+* **duplication** — folds `_tanh_sinh_quad` into `_euler_quad`, deleting a
+  two-function indirection, and deletes the GL body outright.
+* **helper placement** — `_log_sigmoid` unchanged, still beside its single
+  consumer.
+
+### The AdiabaticGrid staleness hypothesis is REFUTED
+
+I expected the two eager xfail entries for
+`test_actionAngleAdiabaticGrid_outsidegrid_c` to be stale now that gh#1399
+landed the off-grid fallback they were blocked on. Re-ran the whole file
+forced-backend, this time with the C extension actually built:
+
+    jax   184 passed, 25 skipped, 1 xfailed   XPASS count = 0
+    torch 185 passed, 24 skipped, 1 xfailed   XPASS count = 0
+    the xfail is, in both: test_actionAngleAdiabaticGrid_outsidegrid_c
+
+Still legitimately failing on both backends. The entries STAY; ledger remains
+8 xfail + 57 slow-skip = 65. Recording the negative result so the hypothesis is
+not re-tried: gh#1399's fallback did not make this particular `_c` test pass,
+and finding out required building the extension in the worktree first.
+
+**No PR is open.** develop is at `8c320b39`.
