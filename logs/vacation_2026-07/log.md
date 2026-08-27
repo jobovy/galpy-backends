@@ -56564,3 +56564,52 @@ To settle the slow-skips I need a run with the slow-skip list itself emptied
 and a per-test cap, classifying by measured DURATION
 ([[signal-timeout-misses-c-extension]]) -- not a regen dispatch. That is a
 branch + dispatch, not a toggle.
+
+## 2026-08-27 — Jo caught a coverage regression I merged in gh#1402
+
+Both codecov checks on gh#1402 PASSED and the summary said "All modified and
+coverable lines are covered by tests". The diff table underneath said:
+
+    Hits    48923 -> 48879
+    Misses     15 ->     16    (+1)
+
+**I read the check status and not the table.** A green check is not the
+standard; [[coverage-never-decreases]] is "not even one line". "All MODIFIED
+lines covered" says nothing about a line that was covered before and is not
+covered now -- which is exactly what happened.
+
+Located via the codecov API per-file totals at both SHAs: the whole +1 is
+`hyp2f1.py`, 0 -> 1 miss, at line 229 -- the Euler-TRANSFORM return.
+
+### It is dead code, and provably so
+
+    _in_regime(c-a, c-b, c) = (c-a > 0 and a > 0) or (c-b > 0 and b > 0)
+
+is `_in_regime(a, b, c)` with the conjuncts swapped. So under `c - P > 0` the
+transform can NEVER rescue a parameter set the direct route rejects. Brute force
+over a -3..5 grid:
+
+    old bound (c - P >= 1):  2031 parameter sets reach the transform
+    new bound (c - P >  0):     0
+
+Under the old bound they were not symmetric and the branch was live. **The
+relaxation subsumed it.** So the fix is to DELETE it -- covering dead code would
+be the wrong repair. The traced mirror had the same algebra (`use_tr` =
+`(~ok) & ok`, identically False; its `(1-z)^{c-a-b}` factor identically 1) and
+was dead computation in every traced call; gone too.
+
+### The same coverage-rot bit me twice in one PR
+
+`test_hyp2f1_fallback_euler_transformed` kept PASSING while no longer reaching
+the route it is named for -- its parameters (c-a=0.5, c-b=0.8) failed the old
+bound and now sail through the direct route. That is EXACTLY the
+`test_hyp2f1_fallback_alt_labeling` failure mode I caught and wrote up in
+gh#1402. I found one sibling and missed the other, in the same file, in the
+same PR. Renamed to `test_hyp2f1_fallback_small_c_minus_P`.
+
+Standing lesson, sharpened: when a predicate is relaxed, EVERY test whose name
+encodes the old predicate's consequence is suspect -- enumerate them, do not
+spot-check.
+
+Folded into gh#1403 as `616c88aa` (same file, not yet merged). numpy
+byte-identical (245bc0e3... unchanged), 391 passed / 1 skipped.
