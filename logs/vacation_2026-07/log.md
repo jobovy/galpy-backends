@@ -56169,3 +56169,58 @@ a slightly different number.
 
 gh#1401 head `f7f45ad2`: 121 pass / 30 pending / 2 codecov (uploads restarted
 with the push, expected). The windows flake shard passed this round.
+
+## 2026-08-27 — gh#1401 merge audit (done ahead of green, so the merge is one step)
+
+Cron 5451d57e alive. Both codecov checks now PASS -- the patch fix worked, and
+codecov/project self-healed as predicted. Remaining red was a windows-3.11
+orbit shard: three `test_from_name_*` failures, all
+`pyvo.dal.exceptions.DALServiceError` against **simbad.cds.unistra.fr**
+("Connection failed"). External-service outage, nothing to do with a diff that
+touches quadrature/hyp2f1/one DF -- and the same-SHA twin passed (15m4s vs
+41m12s, the extra time being network timeouts). Re-run dispatched.
+
+### Audit item 1 -- the if -> xp.where array-input class
+
+15 added conditionals in SOURCE files, all classified:
+
+* **quadrature.py (7)**: every `bool()` is applied to an `xp.all` / `xp.any`
+  REDUCTION, i.e. already 0-d and safe at any input shape. The rest are
+  `mixed is not None` (identity, never a truth value on data) and
+  `is_backend_array(b)` / `xp is not numpy` (type checks). Correct pattern
+  throughout.
+* **hyp2f1.py (4)**: `B`/`c` are scalar by the module's PRE-EXISTING labelling
+  contract -- `_euler_labeling` already does `if a > 0 and (c - a) >= 1.0`.
+  An array would raise loudly, not silently.
+* **constantbetaHernquistdf.py (4)**: the `concretely_true` guards. Checked by
+  A/B rather than reasoning, because `has_concrete_truth_value` reports a
+  MULTI-ELEMENT array as non-concrete, which could have turned a loud error
+  into a silent fallthrough:
+
+      base (h2base)  array beta -> ValueError "truth value ... ambiguous"
+      branch         array beta -> TypeError  "pow got incompatible shapes"
+
+  Both LOUD. No silent-wrong path introduced; only which error you get moves.
+  Array beta was never supported (the normalisation is inherently per-beta).
+  Noted as a possible follow-up: the new message is more cryptic than the old
+  one. Not a blocker, and out of scope for a review-response PR.
+
+### Audit item 2 -- duplication
+
+`_whole_line_quad` has exactly 2 call sites, both inside `symmetric_quad`; it
+was extracted because the new mixed branch needs the same whole-line value the
+infinite branch computes. No other site in galpy sums two semi-infinite halves
+-- the other ~15 `fixed_quad_semiinfinite` callers integrate a single half-line
+with a real limit. So this REMOVES duplication rather than adding a variant.
+
+### Audit item 3 -- helper placement
+
+`_log_sigmoid` is the only definition in the tree (no softplus/log-sigmoid
+duplicate anywhere) and has exactly one consumer. It is a math kernel of the
+tanh-sinh rule, not backend plumbing, so it stays next to its user rather than
+being hoisted to `galpy.backend` -- [[generic-helpers-go-in-backend]] is about
+namespace/as_numpy/exit_cast/anchor-style dispatch helpers. Hoist if a second
+consumer appears. `_whole_line_quad` lives in quadrature.py, where quadrature
+helpers belong.
+
+Audit clean. Merge is one step once the re-run lands.
