@@ -56285,3 +56285,25 @@ The general lesson, which is the third time some version of it has come up:
 **a sweep that varies one axis does not test a change that moves a ROUTE.**
 Both my sweeps were over parameter values; the change was over which branch
 those values reach. Ask which cases change ROUTE, and measure exactly those.
+
+## 2026-08-27 (later) — gh#1402 CI: one infra red, codecov not yet meaningful
+
+Cron 5451d57e alive. gh#1402 at 81 pass / 69 pending / 3 fail.
+
+**windows-3.14 orbit shard**: `CondaHTTPError: HTTP 403 Forbidden` for
+conda-forge/win-64/repodata.json, **31 seconds in**. The job died during
+DEPENDENCY INSTALL and never ran a test. Sibling shards pass. Re-run refused
+while the run is still `in_progress` -- retry next wake.
+
+**codecov/patch is NOT yet a signal.** Per-file query says hyp2f1.py is at
+22.22% with 63 missed lines, which would be alarming for a file that was ~100%.
+It is a partial upload: **both `tests/test_backend*.py` shards are pending with
+0s duration** -- not started -- and those are the ONLY shards that exercise
+hyp2f1's fallback at all, since numpy routes hyp2f1 to scipy.
+
+Note on method: I tried the session-count discriminator first
+([[codecov-session-count-discriminates-phantom]]) and it returned 0 sessions for
+BOTH base and head, i.e. told me nothing -- the API shape is not what that note
+assumes. The shard status answered it directly and is the better instrument for
+this question: ask whether the shard that COVERS the file has run, rather than
+asking codecov how confident it is.
