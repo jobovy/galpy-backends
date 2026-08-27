@@ -56307,3 +56307,43 @@ BOTH base and head, i.e. told me nothing -- the API shape is not what that note
 assumes. The shard status answered it directly and is the better instrument for
 this question: ask whether the shard that COVERS the file has run, rather than
 asking codecov how confident it is.
+
+## 2026-08-27 — gh#1402 near green; two dead ends worth recording
+
+Cron 5451d57e alive. gh#1402: **147 pass / 6 pending / 0 fail**. The conda-403
+windows job was re-run once its run completed and now passes; both codecov
+checks went green once the `tests/test_backend*.py` shard reported (1h37m),
+confirming last wake's "partial upload" call.
+
+### Dead end 1 — the hyp2f1 speedup unlocks NO ledger entries
+
+gh#1402 makes the fallback ~7x cheaper per eager call (1.96 ms vs GL's 14.35
+ms), so I checked whether any slow-skip entries are hyp2f1-bound and could be
+un-deferred. **Zero** constantbeta/sphericaldf entries in the slow-skip ledger.
+It is dominated by orbit / potential / noninertial:
+
+    9 jax test_orbit  ·  7 jax-jit test_orbit  ·  6 jax test_potential
+    5 jax test_noninertial  ·  4 jax-jit test_noninertial  ·  ...
+
+i.e. ODE INTEGRATION, not special functions. The speedup is real but pays
+nothing here. Falsified in ~30 seconds; recording so it is not re-tried.
+
+### Dead end 2 — my own worktree faked ~40 failures
+
+Checked whether the two eager xfail entries
+(`test_actionAngleAdiabaticGrid_outsidegrid_c`, jax + torch) are STALE now that
+gh#1399 landed the off-grid fallback they were blocked on. Ran the whole file
+forced-backend and got dozens of F's -- which would have looked like a gh#1402
+regression.
+
+It was not. **`/var/tmp/h2single` had no C extension built**, and these are
+`_c` tests. [[worktree-missing-c-ext-fakes-passes]] cuts both ways and this was
+the failure direction. What flagged it was CI: its own
+`backend jax tests/test_actionAngle.py` shard PASSES on this very PR, so a local
+wall of failures had to be the tree, not the code.
+
+Built the extension in the worktree (`python setup.py build_ext --inplace`,
+verified `C extension loaded: True`) and re-dispatched. Worth noting the
+staleness question CANNOT be answered from CI going green: the entries are
+`xfail(strict=False)`, so a landed fix shows up as XPASS and the shard still
+passes ([[ledger-delta-per-pr]]). It has to be measured.
