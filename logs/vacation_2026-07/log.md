@@ -56080,3 +56080,40 @@ needs the compile cost brought down before it can live in a shard.
 jit(grad) probes concurrently and the suite came back RC=137 (SIGKILL) at 98%.
 [[long-measurement-needs-a-quiet-box]] exists for exactly this and I broke it.
 Re-run needed on a quiet box.
+
+---
+
+## 2026-08-27 (later) — Windows red settled by the twin; single-rule follow-up fully gated
+
+Cron 5451d57e alive (created 2026-08-24).
+
+**gh#1401**: 138 pass / 12 pending / 3 fail on `308ef026`.
+
+The one non-codecov red -- `test_streamgapdf_sample`, windows-latest 3.14 --
+is settled two independent ways:
+
+1. **Structural**: the PR touches three source files. `streamgapdf` imports only
+   `fixed_quad` and `simpson` from `quadrature`, and NEITHER appears in the
+   diff -- every hunk is inside `symmetric_quad`. It references neither hyp2f1
+   nor constantbetaHernquistdf. The shard is numpy-only, where hyp2f1 routes to
+   scipy anyway. So the diff cannot reach it.
+2. **Same-SHA twin**: push run FAILED (4m26s), pull_request run PASSED (6m3s),
+   same commit, same shard. [[same-sha-duplicate-run-is-a-free-ab]] -- a
+   pass/fail split at one SHA is a flake by definition.
+
+Targeted re-run is refused while the runs are `in_progress`; nothing to force.
+
+**`backend/hyp2f1-single-rule` is now fully gated and committed (`a7d2e935`),
+held unopened -- one PR at a time.**
+
+    gate        383 passed, 1 skipped (special / constantbetadf / quadrature)
+    numpy       BYTE-IDENTICAL, sha256 245bc0e3..., arms grep-asserted to
+                differ (GL refs 2 -> 0, the ">= 1.0" guard 3 -> 0)
+    accuracy    worst over 900 public-entry cases incl. z=0:
+                  develop 8.807e-01 | gh#1401 4.577e-03 | here 2.665e-15
+    size        95 insertions, 171 deletions -- a NET DELETION
+
+**Own mistake, caught by the gate hanging**: the h2single worktree was branched
+BEFORE I removed the 25-minute jit(grad) test, so the gate sat at 74% running
+exactly the test I had just deleted for being too slow. Second time this stack
+has bitten me through a stale worktree; cheap to fix, worth watching.
