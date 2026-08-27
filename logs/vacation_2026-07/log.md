@@ -56117,3 +56117,29 @@ held unopened -- one PR at a time.**
 BEFORE I removed the 25-minute jit(grad) test, so the gate sat at 74% running
 exactly the test I had just deleted for being too slow. Second time this stack
 has bitten me through a stale worktree; cheap to fix, worth watching.
+
+### codecov/patch was NOT a phantom -- it found a real hole in my own new code
+
+`codecov/project` self-healed once the uploads completed (phantom, as suspected).
+`codecov/patch` did not, and it was right. Per-file query against the head sha:
+
+    galpy/backend/quadrature.py                 98.88   missed [580, 581]
+    galpy/backend/special/_fallback/hyp2f1.py  100.00   missed []
+    galpy/df/constantbetaHernquistdf.py        100.00   missed []
+
+580-581 are the coercion inside symmetric_quad's mixed branch. Unhit because
+every test in the file passes `b` through `xp.asarray` first -- so `b` is
+always already a backend array and the coercion is skipped. **But a raw numpy
+limit with a backend namespace is the DOCUMENTED convention**: the docstring
+says to pass the raw limit, "not one already mapped through the namespace",
+because the finite/infinite choice must be made before a namespace op turns it
+into a tracer. The untested shape was the one the docstring asks for.
+
+Checked the branch was load-bearing before writing a test for it:
+`torch.where` rejects a numpy mask ("got (numpy.ndarray, Tensor, Tensor)") and
+`torch.ones_like` rejects a numpy array, so without the coercion that shape
+raises TypeError instead of integrating. Not dead code, not pragma-hideable.
+Test added, `f7f45ad2` pushed. 93 passed.
+
+Worth recording: I had been treating both codecov checks as one phantom for
+three wakes. They were two different things, and only one of them was noise.
