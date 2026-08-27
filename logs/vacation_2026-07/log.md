@@ -56414,3 +56414,34 @@ matches FD to 3.2e-11 / 7.7e-11 on develop. gh#1394 closed it; my STATUS entry
 listing it as an OPEN decision was stale and has been corrected.
 
     gh#1403 open  backend/hyp2f1-traced-label -> develop   f16b0569
+
+## 2026-08-27 — ledger regen dispatched (the RIGHT instrument for slow-skips)
+
+Cron 5451d57e alive. gh#1403 CI running (149 pending / 2 pass / 0 fail).
+
+The xfail half of the ledger was already verified from artifacts last wake
+(4/4 eager entries still legitimately xfail, ZERO unledgered failures over 7432
+results). The **57 slow-skip** entries could not be verified that way: CI SKIPS
+them, so the junit can only ever say "skipped".
+
+The designed instrument for this turns out to already exist -- `workflow_dispatch`
+on backend-tests.yml takes a `regen` toggle, and in regen mode conftest does
+**NOT apply the slow-skip list**, so those tests actually RUN and a regenerated
+ledger is uploaded as an artifact:
+
+    conftest.py:306  "NOT applied in regenerate mode (GALPY_BACKEND_XFAIL_REGEN=1)"
+
+Dispatched on feat/backends-develop:
+
+    run 33087562112   workflow_dispatch   regen=true jit=false
+
+This is a dispatch of an EXISTING workflow, so it does not touch
+`.github/workflows/**` (the hard constraint holds).
+
+Expect it to be slow and possibly to time out shards -- the slow-skips are slow
+BY DEFINITION, which is why they are on the list. Per
+[[triage-gather-misses-timed-out-shards]] I will gather only from a COMPLETED
+run and treat a timed-out shard as "no data", not as "passed".
+
+Still owed after this: the `jit=true` arm, since the ledger has jax-jit /
+torch-jit entries that this eager dispatch does not cover.
