@@ -56224,3 +56224,43 @@ consumer appears. `_whole_line_quad` lives in quadrature.py, where quadrature
 helpers belong.
 
 Audit clean. Merge is one step once the re-run lands.
+
+---
+
+## 2026-08-27 — gh#1401 MERGED (`00a7153c`); follow-up rebased onto it
+
+Cron 5451d57e alive.
+
+Sequence to green: the windows-3.11 orbit shard passed on re-run (the three
+`test_from_name_*` failures were a SIMBAD outage, confirmed by the same-SHA
+twin passing). That left `all-clear` red -- it had already CONCLUDED failure
+and does not re-evaluate itself, so it needed its own targeted re-run. **154/154
+green**, then squash-merged.
+
+    gh#1401 -> feat/backends-develop  00a7153c   ledger delta 0
+
+Merged content: the two round-3 review findings (traced beta under external
+jit; symmetric_quad mixed finite/infinite limits), the small-B hyp2f1 floor
+cleared (B=0.001: 4.9e-01 -> 1.6e-15), the >25-min jit(grad) test removed with
+its measurement recorded in-file, and the one uncovered patch branch closed.
+numpy byte-identical throughout (sha256 245bc0e3...).
+
+### Follow-up rebase: the squash makes this NOT a plain rebase
+
+`backend/hyp2f1-single-rule` was branched from `bae70b7c`, an intermediate
+commit on the gh#1401 branch. After the squash that commit is no longer an
+ancestor of develop, so a plain `git rebase` would try to re-apply the whole of
+gh#1401 on top of itself. Correct form replays only the follow-up commit:
+
+    git rebase --onto origin/feat/backends-develop bae70b7c backend/hyp2f1-single-rule
+
+One conflict, in `tests/test_backend_constantbetadf.py`, and it resolved by
+INSPECTION rather than by picking a side blindly: `git show a7d2e935 -- <file>`
+shows its only change to that file was deleting the slow jit(grad) test -- which
+develop already has, with the fuller note from gh#1401. So develop's version is
+the right one; taking the follow-up's would have silently reverted the better
+comment.
+
+Rebased head `5d0a9e8d`: 2 files, 91 insertions / 156 deletions (still a net
+deletion). Re-gating on the rebased tree before opening -- the base moved, and
+[[measure-on-the-branch-you-ship-to]] says the earlier gate no longer counts.
