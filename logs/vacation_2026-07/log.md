@@ -56143,3 +56143,29 @@ Test added, `f7f45ad2` pushed. 93 passed.
 
 Worth recording: I had been treating both codecov checks as one phantom for
 three wakes. They were two different things, and only one of them was noise.
+
+### Verifying the coverage fix WITHOUT a coverage tool
+
+Tried to confirm lines 580-581 are now hit locally. Both attempts failed on the
+known env limitation ([[covdrv]]): an in-process `coverage.Coverage()` driver
+collected nothing, and `pytest --cov` died with an ImportError at test-module
+import -- the numpy re-import problem, not anything wrong with the test (the
+plain run passes 93).
+
+Did not need the tool. The branch is only reachable when `b` is raw numpy and
+`xp` is a backend, and I had already measured that WITHOUT the coercion
+`torch.where` raises TypeError on a numpy mask. So a PASSING torch
+parametrization is itself proof the coercion executed -- if those two lines had
+been skipped, the test could not have passed. Confirmed both arms run rather
+than skip:
+
+    test_symmetric_quad_mixed_limits_accept_a_raw_numpy_limit[jax]   PASSED
+    test_symmetric_quad_mixed_limits_accept_a_raw_numpy_limit[torch] PASSED
+
+Worth keeping: when the coverage tooling is broken, a branch whose omission
+RAISES can be verified by the test passing at all. That only works because the
+dead path fails loudly -- it would not work for a branch that silently returns
+a slightly different number.
+
+gh#1401 head `f7f45ad2`: 121 pass / 30 pending / 2 codecov (uploads restarted
+with the push, expected). The windows flake shard passed this round.
