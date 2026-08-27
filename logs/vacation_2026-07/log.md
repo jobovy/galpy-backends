@@ -56632,3 +56632,36 @@ rather than by assertion.
 
 Saved as `tools/codecov_miss_sweep.py` and added to the PRE-MERGE CHECKLIST in
 STATUS.md, so the check happens before a merge rather than after Jo finds it.
+
+## 2026-08-27 — slow-skip staleness: the list is ALREADY annotated with measurements
+
+gh#1403 at 124 pass / 27 pending; covering shards still pending so the miss
+count cannot be confirmed yet.
+
+Went to measure slow-skip staleness and found the premise was better than I
+thought: the list carries per-entry MEASURED durations from 2026-08-21, e.g.
+
+    jax test_potential.py::test_DehnenBinney98                 289.3s (CI~205s) -- 32% under cap
+    jax ...::test_poisson_surfdens_potential[mockOffsetMWP14]  >700s TIMEOUT
+    jax ...[mockRotatedAndTiltedTriaxialLogHalo...]            371.9s (CI~264s) -- 12% under cap
+
+So the question is not "are these unmeasured?" but "**has anything since made
+them faster?**" -- and there IS a mechanism: gh#1382 (finite_part_quad batching
++ symmetric_quad) and gh#1394 (surfdens both routes on-backend) touch exactly
+the poisson_surfdens path five of these six exercise. The two entries sitting
+only 12-32% under the cap are the plausible un-defer candidates.
+
+Dispatched the measurement LOCALLY rather than burning CI runners while gh#1403
+is in flight: whole `test_potential.py` under `--backend jax`, slow-skip list
+emptied, `--timeout=900 --timeout-method=signal --durations=0`.
+
+Two deliberate choices, both from past mistakes:
+* run the WHOLE FILE, not hand-picked nodeids ([[handpicked-nodeid-batch-is-not-a-context]]);
+* per-test cap with the SIGNAL method -- `thread` kills the session and yields
+  ZERO data ([[per-test-cap-not-per-file-timeout]]) -- and classify by measured
+  DURATION, since a signal timeout does not interrupt C-extension frames
+  ([[signal-timeout-misses-c-extension]]).
+
+Done in the DETACHED `h2base` worktree, not the branch worktree: emptying
+`backend_slow_skip.txt` there cannot leak into a PR
+([[stacked-pr-branch-surgery-leak]]). Backup at $SCRATCH/slow_backup.txt.
