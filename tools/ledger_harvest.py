@@ -17,6 +17,11 @@ def load_ledger(path):
         if not ln or ln.startswith("#"):
             continue
         arm, nodeid = ln.split(None, 1)
+        # ledger lines carry INLINE annotations, e.g.
+        #   jax tests/test_orbits.py::test_x  # 300s (failed)
+        # Keeping them in the nodeid makes every lookup miss and every entry
+        # read as MISSING -- which looks exactly like "not stale".
+        nodeid = nodeid.split("#", 1)[0].strip()
         out.append((arm, nodeid))
     return out
 
@@ -82,12 +87,28 @@ if __name__ == "__main__":
           f"{len(xfail_all) - len(xfail)} NOT COVERED (other arms)")
     print(f"  slow   {len(slow)}/{len(slow_all)} covered, "
           f"{len(slow_all) - len(slow)} NOT COVERED (other arms)")
-    stale_x = [(a, n) for a, n in xfail if status.get(key(a, n)) == "xpass"]
+    def lookup(a, n):
+        k = key(a, n)
+        if k in status:
+            return status[k]
+        # bare ledger name vs parametrized junit name
+        hits = {v for (b, f, nm), v in status.items()
+                if (b, f) == k[:2] and nm.startswith(k[2] + "[")}
+        if not hits:
+            return "MISSING"
+        for pref in ("fail", "xfail", "skip", "xpass", "pass"):
+            if pref in hits:
+                return pref
+        return hits.pop()
+
+    stale_x = [(a, n) for a, n in xfail if lookup(a, n) == "xpass"]
     print(f"\nxfail entries: {len(xfail)}   STALE (xpassed): {len(stale_x)}")
     for a, n in stale_x:
         print(f"    {a} {n}")
+    from collections import Counter
+    print("\n  slow-skip entry statuses:", dict(Counter(lookup(a, n) for a, n in slow)))
     ran = [(a, n, dur.get(key(a, n), -1.0)) for a, n in slow
-           if status.get(key(a, n)) in ("pass", "xpass")]
+           if lookup(a, n) in ("pass", "xpass")]
     print(f"\nslow-skip entries: {len(slow)}   actually RAN and PASSED: {len(ran)}")
     for a, n, t in sorted(ran, key=lambda r: r[2]):
         print(f"    {t:8.1f}s  {a} {n}")

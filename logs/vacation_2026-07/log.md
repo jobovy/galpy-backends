@@ -56509,3 +56509,58 @@ cancels EITHER endpoint analytically, so neither labelling is privileged.
 This is the [[reproduce-the-assertion-not-a-proxy]] / route-change lesson applied
 pre-emptively for once: a fix that moves a route needs the cases that CHANGE
 route, not just the cases that were broken.
+
+## 2026-08-27 — the regen run was the WRONG instrument, and my harvester hid it
+
+Regen run 33087562112 completed. Harvest says 0 stale, 0 unledgered failures.
+**Both halves of that need caveats, and one of them was nearly a false
+all-clear.**
+
+### I misread the conftest: regen does NOT run the slow-skips
+
+Last wake I quoted conftest.py:306 -- "NOT applied in regenerate mode
+(GALPY_BACKEND_XFAIL_REGEN=1)" -- as licence to use `regen=true` for the
+slow-skip sweep. That sentence belongs to the **xfail-ledger** paragraph. The
+slow-skip paragraph, three lines above, says the opposite:
+
+    "... are marked skip so they never run -- applied in BOTH normal and
+     regenerate mode, since we never want to spend the per-test timeout on them"
+
+and the code agrees: `# Slow-skip applies in all modes (incl. regen)`.
+
+So the dispatch confirmed the xfail half (which artifacts had already settled)
+and **cannot say anything about the slow-skips by construction**. Reading one
+line out of a docstring instead of the paragraph it belongs to.
+
+The tell was there in the data and I nearly walked past it: the regen run has
+the SAME skip count as the non-regen run (309), and the same 7432 results. If
+regen had unlocked 33 tests those numbers had to move.
+
+### And my harvester turned "skip" into "MISSING", which reads as "fine"
+
+Ledger lines carry inline annotations:
+
+    jax tests/test_orbits.py::test_ChandrasekharDynamicalFrictionForce_constLambda  # 300s (failed)
+
+`load_ledger` did `ln.split(None, 1)`, so the nodeid kept `# 300s (failed)` and
+EVERY annotated entry missed its lookup -- reported as MISSING, which the
+summary then rendered as "not stale". Third bug found in this harvester; the
+first two were the -jit/eager arm mismatch and (latent) parametrized names.
+
+Fixed: strip inline comments, plus a parametrized-name fallback. Statuses now
+read honestly:
+
+    slow-skip entry statuses: {'skip': 33}
+
+i.e. they were skipped, exactly as the conftest promises.
+
+### Where the ledger actually stands
+
+    xfail      8 total; 4 eager VERIFIED not stale (0 xpass) + 4 -jit NOT COVERED
+    slow-skip  57 total; 0 verified -- CI skips them in every mode
+    unledgered failures: 0
+
+To settle the slow-skips I need a run with the slow-skip list itself emptied
+and a per-test cap, classifying by measured DURATION
+([[signal-timeout-misses-c-extension]]) -- not a regen dispatch. That is a
+branch + dispatch, not a toggle.
