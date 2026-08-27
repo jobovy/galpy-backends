@@ -56381,3 +56381,36 @@ not re-tried: gh#1399's fallback did not make this particular `_c` test pass,
 and finding out required building the extension in the worktree first.
 
 **No PR is open.** develop is at `8c320b39`.
+
+## 2026-08-27 — review round 4: a REAL blocker in gh#1402, fixed in gh#1403
+
+`_nonpositive_traced` held a FOURTH copy of the admissibility predicate that
+gh#1402 relaxed in three places. Traced route rejected a valid first label when
+0 < c-a < 1, fell to a NON-POSITIVE second label, and returned inf/nan while
+eager was exact.
+
+**Why the audit missed it**: my grep was `c - a) >= 1.0`; the site spells the
+same predicate as `(c - ea) >= 1.0`. A predicate can be spelled with different
+variable names -- grep the SHAPE (`\(c - [a-z_]+\)`), not the instance. Re-swept
+that way: one site, now fixed.
+
+    (a,b,c,z)                 scipy          traced BEFORE  traced AFTER
+    (2.0,-0.2,2.5,-0.7)       1.09213476189  inf            rel 0.0
+    (2.0,-1.0,2.5,-0.7)       1.56           nan            rel 1.1e-16
+
+**The stale comments were not just cosmetic** -- the reviewer asked for cleanup
+and one comment encoded an assumption the relaxation had broken: "_euler_labeling
+guarantees c-B >= 1, so B is the binding one". Under c-B > 0 the t=1 exponent
+can now be the SMALL one. Measured: c-B down to 1e-4 -> 2.3e-15, because the
+tanh-sinh rule is SYMMETRIC in u. Code fine, stated reason wrong; comment now
+gives the true reason and a test pins it.
+
+Lesson worth keeping: **a stale comment can be the last trace of an invariant
+you broke.** Cleaning them is not tidying -- read each one and ask whether the
+code still earns it.
+
+Also re-measured for Jo: torch `surfdens(forcepoisson=True)` gradient now
+matches FD to 3.2e-11 / 7.7e-11 on develop. gh#1394 closed it; my STATUS entry
+listing it as an OPEN decision was stale and has been corrected.
+
+    gh#1403 open  backend/hyp2f1-traced-label -> develop   f16b0569
