@@ -56445,3 +56445,45 @@ run and treat a timed-out shard as "no data", not as "passed".
 
 Still owed after this: the `jit=true` arm, since the ledger has jax-jit /
 torch-jit entries that this eager dispatch does not cover.
+
+### Built the ledger harvester — and VALIDATING it caught a bug in the harvester
+
+Rather than wait idle for the regen run, built the harvest tool and validated it
+against artifacts I already had (the non-regen run on 00a7153c). Saved as
+`tools/ledger_harvest.py`.
+
+First run reported **4 slow-skip entries as stale**:
+
+    22.2s  torch-jit test_orbit.py::test_interprz_dxdv_3d
+    58.1s  torch-jit test_orbit.py::test_analytic_zmax
+    ...
+
+All four were FALSE. My `key()` mapped arm `torch-jit` -> backend `torch` via
+`arm.split("-")[0]`, so a **torch-jit ledger entry was being compared against a
+plain-torch RESULT**. That is precisely the -jit-vs-eager false-stale mode in
+[[ledger-sweep-two-false-stale-modes]], and I reproduced it in my own
+instrument on the first try.
+
+Had I run this on the regen data without validating, I would have proposed
+un-deferring four entries that were never tested. The fix is an explicit ARMS
+parameter: entries outside the arms a run actually covers are **NOT COVERED**,
+never "verified".
+
+Honest coverage of an EAGER dispatch, after the fix:
+
+    arms covered: ['jax', 'torch']
+      xfail  4/8  covered   (4 not covered: the -jit arms)
+      slow   33/57 covered  (24 not covered: the -jit arms)
+      stale: 0        unledgered failures: 0
+
+So the eager regen can at best settle 33 of the 57 slow-skips; the remaining 24
+need the `jit=true` dispatch. Not dispatching that yet -- gh#1403 is the active
+PR and three concurrent full-matrix runs would starve it for runners.
+
+Design notes baked into the tool, each from a past mistake:
+* a shard with no artifact or an unparseable/empty xml is **NO DATA**, never
+  "passed" -- a timed-out shard is otherwise indistinguishable from a fast one;
+* xfail staleness requires **XPASS**, not a green shard (xfail(strict=False)
+  keeps the shard green either way);
+* slow-skip staleness requires the test to have **actually run** -- "skipped"
+  proves nothing.
