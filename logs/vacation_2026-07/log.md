@@ -55763,3 +55763,28 @@ threshold, GL kept below. Crucially, at galpy's OWN worst DF request
 
 Nodes are fixed and parameter-independent, so it stays traceable and
 differentiable -- the property that made it preferable to Gauss-Jacobi.
+
+## 2026-08-27 — gh#1399 MERGED as `5c3c8671`
+
+Cron alive. gh#1399 reached 154/154 CLEAN.
+
+Audit, all three axes clean:
+* **placement** -- `set_at` is the only new helper, in `galpy/backend/_namespaces.py`
+  beside its siblings, not embedded in the actionAngle module.
+* **duplication** -- no other `.at[].set` anywhere in galpy; `_offgrid_fill` is
+  called twice with different closures rather than written twice.
+* **if->xp.where** -- three of the four new `if`s are dispatch (traced-or-not,
+  namespace, type). The one genuine data-value branch,
+  `if not bool(xp.any(off))`, is reachable ONLY after the `under_trace`
+  early-return, so it can never execute while traced. Design, not oversight.
+
+**gh#1398** (main): 151 SUCCESS + 3 SKIPPED, no reds. BLOCKED = the required
+review gate; it is Jo's to merge, so green-and-unmerged is the expected end
+state ([[main-prs-are-jos-to-merge]]).
+
+Merged into develop this cycle: gh#1381, #1382, #1383, #1388, #1391, #1392,
+#1393, #1394, **#1399**.
+
+Next: the routed tanh-sinh for hyp2f1, with the min(b, c-b) threshold as a
+MEASURED constant rather than a guess -- envelope pinned last wake:
+>= 0.05 -> ~1e-16, 0.02 -> 6.8e-07 (vs GL's 7.18e-02), <= 0.005 -> GL wins.
