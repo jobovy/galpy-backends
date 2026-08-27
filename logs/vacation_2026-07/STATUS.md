@@ -8,7 +8,8 @@ the trace. Refresh on every merge / branch change.
 ## Now
 
     develop  feat/backends-develop @ 8c320b39
-    open PR  NONE
+    open PR  gh#1403  backend/hyp2f1-traced-label -> develop  (CI running)
+    regen    run 33087562112 (workflow_dispatch, regen=true, eager) QUEUED
     ledger   8 xfail + 57 slow-skip = 65 active
     cron     5451d57e, hourly at :13, created 2026-08-24, expires ~2026-08-31
 
@@ -60,12 +61,30 @@ One tanh-sinh rule for every B; the `c - B >= 1` constraint deleted with it.
     gate                  385 passed / 1 skipped, re-run AFTER the rebase
     size                  91 insertions, 156 deletions (NET DELETION)
 
+## Ledger status — verified, not assumed
+
+    8 xfail + 57 slow-skip = 65 active
+
+xfail half VERIFIED from CI artifacts (7432 results, run on 00a7153c):
+  * all 4 EAGER entries still legitimately xfail, ZERO xpass;
+  * ZERO unledgered failures;
+  * the 2 AdiabaticGrid entries are NOT stale despite gh#1399 -- re-measured
+    with the C extension actually built (jax 1 xfailed / torch 1 xfailed,
+    XPASS count 0 in both).
+
+slow-skip half NOT yet verifiable: CI SKIPS them, so junit can only say
+"skipped". The `regen=true` dispatch runs them for real. An EAGER dispatch
+covers 33/57; the other 24 are `-jit` arms needing a second dispatch.
+
+Harvester: `tools/ledger_harvest.py`, arm-aware. Validating it caught a
+-jit-vs-eager false-stale bug IN THE HARVESTER (it read 4 torch-jit entries as
+stale by comparing them against plain-torch results).
+
 ## FOR JO — open decisions, none taken unilaterally
 
-1. **torch `surfdens(forcepoisson=True)` gradient is silently 23% wrong in R,
-   72% in z** (jax AD matches FD to 1.6e-10, so torch is the wrong one).
-   Reported, NOT fixed: the fix is a behaviour change (use the backend GL rule
-   when `_force_accepts_arrays(pot)`, else RAISE). Own PR when you decide.
+1. ~~torch surfdens(forcepoisson=True) gradient~~ **CLOSED** — re-measured on
+   develop: torch AND jax both match FD to 3.2e-11 (R) / 7.7e-11 (z). gh#1394
+   was the fix; my earlier "open decision" entry was stale.
 2. **Array beta on constantbetaHernquistdf** now raises a broadcasting error
    rather than "truth value ambiguous". Both loud, neither clear; array beta was
    never supported. A validation guard would be a small follow-up.
