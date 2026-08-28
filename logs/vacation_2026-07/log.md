@@ -57337,8 +57337,26 @@ pure-Python integrators under a forced backend) has anything left. It does not:
   against the `_c` arm's 1e-5, so the filter would trade 3 entries for the
   file's strictest assertion.
 
-I did NOT take that trade. Timing probe running to see whether it is even worth
-putting to Jo as an option.
+I did NOT take that trade -- and the timing probe (16m57s, quiet box, jax,
+C extension built) says it is not even worth offering:
+
+        funcomegaz             odeint  88.5s   dop853 264.3s   dop853_c  74.4s
+        arbitraryaxisrotation  odeint  50.9s   dop853 437.3s   dop853_c  92.3s
+
+        galpyWarning: Cannot use C integration because some of the potentials
+                      are not implemented in C (using odeint instead)
+
+`dop853_c` SILENTLY FALLS BACK to odeint for the non-inertial half. So the three
+arms are really odeint-vs-odeint (1e-5), dop853-vs-dop853 (**1e-9**, the only
+strict one), and dop853_c-vs-odeint (1e-5, MISMATCHED integrators -- which is
+exactly why the test loosened that arm's tolerance). Filtering to `_c` would
+keep the weakest, mismatched comparison and delete the strict one. Rejected.
+
+Chased the warning, because `NonInertialFrameForce` sets `hasC = True`
+unconditionally and HAS a C implementation (pot_type 39/45). The potential
+without C is `RotatingPotentialWrapperPotential` -- defined at
+tests/test_noninertial.py:2688, TEST-LOCAL, the independent Python
+rotating-frame reference the whole test is built around. By design, not a gap.
 
 The conclusion for the roadmap: the remaining 39 are structural. Eager backends
 pay ~5 ms per potential call vs ~27 us on numpy, a Python-stepped ODE makes ~1e4
