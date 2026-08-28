@@ -56683,3 +56683,666 @@ Audit for the added dead-branch-removal commit:
   none; strictly fewer data-dependent branches.
 * **duplication** — removes a second route to the same result.
 * **helper placement** — untouched.
+
+---
+
+## 2026-08-27 — gh#1403 merged; slow-skip ledger verified; two of my own findings refuted
+
+`26388056` merged into develop, 154/154. Misses back to 15.
+
+### The slow-skip half of the ledger, verified for the first time
+
+CI SKIPS these in every mode, so junit can only ever say "skipped" — and the
+`regen` toggle does NOT change that (it gates the xfail ledger only; I misread
+that once already). The only way is to empty the list locally and run. Done for
+the 6 jax `test_potential.py` entries, whole file, quiet box, 1h59m:
+
+    900.0s FAIL(timeout)  poisson_surfdens[mockRotatedAndTiltedMWP14Wrapper]
+    900.0s FAIL(timeout)  poisson_surfdens[...MWP14WrapperwInclination]
+    900.0s FAIL(timeout)  poisson_surfdens[mockRotatedTiltedOffsetMWP14Wrapper]
+    900.0s FAIL(timeout)  poisson_surfdens[mockOffsetMWP14Wrapper]
+    349.8s pass          poisson_surfdens[...TriaxialLogHalowInclination]
+    249.8s pass          test_DehnenBinney98
+
+All 6 reproduce their 2026-08-21 annotations. None stale. The 4 timeouts are
+SLOW, not hung — the same test passes on the single-component LogHalo wrapper,
+and cost scales with the wrapped component count.
+
+**5 of the 30 jax entries are ONE test function.** That is the biggest single
+cluster in the arm, and it made the next PR obvious.
+
+### TWO findings of mine, refuted by better measurement
+
+1. **"GL agrees with scipy to 3.5e-08"** — worthless. Measured at **float32**.
+   `tests/conftest.py:481` enables x64 inside the backend fixture, but a
+   standalone `python probe.py` inherits none of that and jax silently defaults
+   to f32. See [[f64-suite-hides-f32-defects]]. Compounding it, I grepped for
+   the x64 line with `| head -8`, the grep truncated, and I concluded the whole
+   suite ran f32 — a 10-second dtype probe under real pytest refuted that.
+
+2. **"The traced path ships a 5.1e-06 error at |z|=10"** — also wrong, and I had
+   already written it into STATUS.md before checking. It came from a hand-built
+   integrand handed straight to `symmetric_quad`. Through the PUBLIC API:
+
+       (R,z,phi)=(0.5,10,1.0)  eager(scipy) vs jit(GL)  rel 3.9e-16
+       (1.0,10,0.0)                                     rel 1.6e-14
+       (0.5, 1,1.0)                                     rel 6.1e-15
+
+   and instrumenting the real call confirms the routes (eager -> scipy.quad,
+   inner = 0.7916731834992983, the gold value; jit -> symmetric_quad). There is
+   no accuracy defect. [[reproduce-the-assertion-not-a-proxy]] — a proxy that
+   supports a mechanism is not evidence about a magnitude.
+
+### The real finding: eager backends take scipy where the batched rule works
+
+`_surfdens_poisson` sends eager jax/torch to `scipy.integrate.quad` — ~1113
+scalar integrand calls at ~48 ms for a wrapped MWPotential2014. Forcing the
+batched rule eagerly, through the real API, 3 wrappers x 18 (R,|z|,phi):
+
+    mockOffsetMWP14Wrapper        worst 1.6e-14   147 s -> 7 s   22x
+    mockRotatedAndTiltedMWP14     worst 4.2e-15   171 s -> 2 s   83x
+    mockRotatedTiltedOffsetMWP14  worst 8.4e-16   140 s -> 2 s   70x
+
+Machine precision, not a precision trade. numpy keeps scipy -> byte-identical.
+
+**The gate is not `_force_accepts_arrays`.** Gating on it did nothing, and the
+smoke test caught it (`symmetric_quad calls=0`): `_surfdens_poisson` runs on the
+inner `RotateAndTiltWrapperPotential`, whose force methods carry the scalar-only
+marker. Correct for the NUMPY contract — but that potential declares
+`_backend_accepts_arrays = True`, which is precisely the escape hatch
+`check_potential_inputs_not_arrays` implements for backend arrays. The gate now
+asks the question the guard itself asks.
+
+Audit of the change: adds no data-dependent branch (the gate reads Python
+attributes and namespace identity, both static); `_accepts_node_array` REDUCES
+duplication by factoring the marker scan `_force_accepts_arrays` already had;
+helpers sit beside the ones they generalise, and are potential-specific, so
+Potential.py is the right home, not galpy.backend.
+
+A/B on the new tests: 6 fail on base, pass with the fix; the 2 invariant tests
+(scalar-only stays on scipy, numpy never diverted) pass on both sides, as they
+must. numpy gate 1288 passed / 102 skipped.
+
+### gh#1406 — the review's last item, comments only
+
+Codex flagged comments describing the deleted Euler-transform route and the
+replaced GL/substitution rule as current. Two named `_TS_B_MAX`, a constant with
+ZERO occurrences in hyp2f1.py. Swept both files for the stale vocabulary and
+classified each hit present-tense-wrong vs correctly-past-tense; 8 fixed, the
+history passages kept. 253 passed. Opened, all 149 checks QUEUED.
+
+### Loop bookkeeping
+
+* cron `5451d57e`, created 2026-08-24, expires ~2026-08-31. Alive.
+* New trap recorded: my wait loops were no-ops. `read -t N -u 3 3</dev/null`
+  gets EOF instantly, so every "wait for the background job" spun and returned
+  at once, and I read half-written logs as final. Nap on a FIFO with no writer
+  and print the elapsed seconds to prove it. [[bash-poll-loop-fd-eof-noop]]
+
+### 2026-08-27 late — gh#1407 opened; torch arm measured; CI starved
+
+`08837947` -> gh#1407. Gate now covers all three backends on the whole file:
+
+    numpy   1288 passed, 102 skipped            14:24
+    jax     1288 passed, 102 skipped, 0 failed  45:33   (was 4 failed, 1:59:04)
+    torch   1288 passed, 102 skipped, 0 failed  17:02
+
+The torch arm mattered: `test_potential.py` has ZERO entries in either ledger
+for torch, so that arm runs the file unfiltered and was the real regression
+surface. Clean. Torch is ~5-6x faster than jax eager on these (surfdens 3.2 s
+vs 20.5 s).
+
+`-jit` arms unaffected by construction: the gate evaluates `_quad_needs_backend`
+first, which is True under a trace, so the traced route is byte-identical. The
+only two `-jit` entries touching this test are for
+AnyAxisymmetricRazorThinDiskPotential (xfail, both arms) — different potential,
+different reason, unchanged. Ledger delta exactly -6, all in `jax` (30 -> 24).
+
+**CI is starved, not broken.** Both PRs sat at 149/151 QUEUED with ZERO jobs
+started for over an hour. Diagnosed rather than assumed: runs from 23:34 (three
+hours old) are still in flight, and `aainv-staeckel-canonical-family` and
+`isochrone-inverse-vectorize` are holding slots. 44 queued / 5 running
+repo-wide, runners all busy -> CONTENTION, so wait; do NOT force-cancel
+([[all-clear-queued-rerun-and-ledger-rebase]]).
+
+Second liveness-check failure of the day, opposite direction to the first:
+`ps -eo pid,cmd | grep -F test_potential.py` reported the 45-minute jax run
+DEAD while it was alive at 317 s, and I nearly read its half-written log as the
+result. The missing junitxml is what stopped me. Capture the PID at launch and
+test `ps -p $PID`, and keep a completion check that does not depend on the
+process at all. [[bash-poll-loop-fd-eof-noop]]
+
+### 2026-08-28 ~03:30Z — queue moving; codecov phantom on gh#1406
+
+gh#1406: 28 SUCCESS / 1 FAILURE / 27 running / 95 queued. The failure is
+`codecov/project`, on a COMMENTS-ONLY diff:
+
+    head 0eb1c2f0   hits=33247  misses=15641  coverage=68.0
+    base 26388056   hits=48873  misses=15     coverage=99.96
+
+68% vs 99.96% cannot be a real change when nothing executable moved — only 28
+of 149 checks have finished, so most coverage uploads have not landed. Textbook
+upload phantom; it self-heals and then the gate needs its own targeted re-run
+([[codecov-project-blocks-via-all-clear]], [[codecov-stale-base-892-suppression]]).
+Read the NUMBERS, not the check colour — that is what let gh#1402 through.
+
+Ledger re-survey of the remaining 24 jax entries: no second cluster. 9
+test_orbit, 5 test_noninertial, 3 test_FDMdynamfric, 2 each streamTrack/orbits.
+All carry FRESH measurements (2026-08-21/24) with margins recorded, and all are
+orbit-integration-bound — i.e. the systemic jax-eager ODE project, not a quick
+burndown. Re-measuring now would only reconfirm.
+
+Measured follow-up instead: `Potential.mass` asks `_force_accepts_arrays`, the
+predicate gh#1407 shows is wrong for the backend path. DoubleExponentialDisk
+mass() eager jax 0.62 s -> 0.08 s, identical value. Only that one class is
+reachable (RotateAndTilt mass() raises for non-axisymmetric). Recorded as a
+ready follow-up rather than amending gh#1407, whose CI is queued behind a ~3 h
+backlog.
+
+### 2026-08-28 ~04:30Z — gh#1406 reds are a SIMBAD outage, not the diff
+
+79 SUCCESS / 8 FAILURE / 20 running / 44 queued. Seven of the eight failures are
+build shards across ubuntu 3.11-3.14 AND windows 3.10-3.12 — on a COMMENTS-ONLY
+PR. Read the FAILED lines rather than the job names:
+
+    FAILED tests/test_orbit.py::test_from_name_values
+    FAILED tests/test_orbit.py::test_from_name_errors
+    pyvo.dal.exceptions.DALServiceError: ... sim-tap/capabilities: Connection failed
+
+External SIMBAD outage, already a known family
+([[no-rerun-vizier-notebook-flakes]], SIMBAD section 2026-08-16). The eighth is
+the codecov/project upload phantom from the previous wake.
+
+Did NOT re-run: probed the service first and it is still down (HTTP 000 on four
+probes over ~10 min, 20-25 s timeouts). Re-running into a dead service re-fails
+AND re-queues behind the backlog. Refined the memory with the probe-first rule
+and the "7 shards across every OS/python at once = external, never the diff"
+signature. Run ids saved to $SCRATCH/simbad_runs.txt for a one-command
+`gh run rerun <id> --failed` when it recovers.
+
+gh#1407 still 149/149 QUEUED.
+
+### 2026-08-28 ~05:30Z — SIMBAD recovered, re-runs landing; jit verification in flight
+
+Confirmed ALL 19 build failures on gh#1406 were SIMBAD, by SAMPLING three
+different shards (windows 3.10, ubuntu 3.14, windows 3.13) rather than
+extrapolating from the one log I had read. Every one:
+
+    FAILED tests/test_orbit.py::test_from_name_values   - DALServiceError
+    FAILED tests/test_orbit.py::test_from_name_errors   - DALServiceError
+
+SIMBAD came back (HTTP 200 after ~2 h of 000). Re-ran `--failed` on the two
+runs that had COMPLETED; left the two still in_progress alone (re-running a
+live run is not a targeted re-run). Failures 20 -> 14 within minutes, which is
+the diagnosis confirming itself. The remaining ones are on the two runs that
+had not finished yet — same treatment when they do.
+
+**jit verification of gh#1407, in flight.** I claimed the traced route is
+byte-identical by construction (`_quad_needs_backend` is checked first and is
+True under a trace) but had never RUN it, and CI never runs jit mode
+([[ci-never-runs-jit-mode]]) — so local is the only place that claim can be
+tested. `tests/test_potential.py --backend jax --jit` on the committed content:
+88% after 56 min, with ONE unledgered `F` at ~10% still to identify. Next wake:
+read the junitxml, name the test, and A/B it against base before assuming it is
+mine — the jit arm has 20 slow-skip + 2 xfail entries and an unledgered failure
+there may well be pre-existing.
+
+### 2026-08-28 ~06:30Z — jit verification of gh#1407 CLEAN; found a WRONG de-ledgering
+
+`test_potential.py --backend jax --jit` on gh#1407's committed content:
+
+    1 failed, 1285 passed, 102 skipped, 2 xfailed   3650 s (1:00:49)
+
+The 2 xfailed are the AnyAxisymmetricRazorThinDisk jit entries I predicted would
+be untouched — they were. **The 1 failure is NOT mine**, established by A/B
+rather than by argument:
+
+    test_pickling_potential_unitful_dens
+      gh#1407 branch (with the Potential.py change)  FAILED
+      develop + comments-only (without it)           FAILED   <- identical
+
+So gh#1407 is jit-clean, and my "traced route is byte-identical by construction"
+claim now has a measurement behind it rather than only an argument.
+
+**The failure is a real ledger defect on develop.** Full matrix:
+
+    jax  --jit   FAIL (TracerArrayConversionError)
+    torch --jit  FAIL
+    jax  eager   pass
+    torch eager  pass
+
+which is exactly what `backend_xfail.txt`'s own comment predicts: a units-based
+density routes through `as_numpy()`, which a tracer cannot satisfy, while eager
+converts fine. Yet that comment DE-LEDGERED this test:
+
+  "`test_pickling_potential_unitful_dens` was ALSO ledgered here on that
+   reasoning and is now MEASURED PASSING traced -- the 2026-08-18
+   workflow_dispatch(jit=true, regen=true) run (32141815273) does not list it."
+
+"Does not list it" was read as "passes". It does not pass. Most likely the
+2026-08-18 regen never reached this test (shard timeout / missing artifact) and
+absence-of-data was read as evidence-of-pass — the exact rule
+`tools/ledger_harvest.py` bakes in (no artifact = NO DATA, not passed) and the
+one [[never-report-partial-run-as-result]] exists for.
+
+Zero CI impact ([[ci-never-runs-jit-mode]]) — it only reds a
+workflow_dispatch(jit=true). But it is wrong, and only a LOCAL jit run could
+ever have found it. READY follow-up: re-add 2 lines (jax-jit + torch-jit) and
+correct the comment. Not folded into gh#1407: its CI has started and a push
+would throw away a queue position worth hours.
+
+### 2026-08-28 ~07:50Z — fourth arm running; gh#1406 waiting on 5-hour jobs
+
+`torch --jit` on gh#1407's committed content now running (41% at ~28 min),
+completing the verification matrix numpy / jax / torch / jax-jit / torch-jit.
+It shows an `F` at the SAME ~10% position as the jax-jit run, which is the
+pre-existing `test_pickling_potential_unitful_dens` already A/B'd to develop on
+this very arm — consistent, and not a new finding.
+
+gh#1406: 117 pass / 14 fail / 11 running / 9 queued. The 14 are still the stale
+records from runs 33132393315 and 33132394056, which each have THREE jobs still
+in_progress — the same three as an hour ago. Oldest (macos-15-intel) started
+02:57 and is at 4.9 h.
+
+Deliberately NOT cancelling. Jo's standing correction is explicit ("sometimes
+the jobs just take a long time and they need to wait"), and I have cancelled
+prematurely before and had to re-run. These are the `from_name` shards, so a
+long run is exactly what a pyvo retry loop against a dead SIMBAD would produce.
+GitHub's 6 h job limit lands ~08:57 and resolves it either way; the re-run of
+`--failed` then covers whatever it kills. Waiting is the action.
+
+gh#1407: 35 pass, 2 codecov (the upload phantom, 35/149 reported), rest pending.
+
+### 2026-08-28 ~08:30Z — gh#1407 verification matrix COMPLETE (5 arms)
+
+    numpy        1288 passed, 102 skipped                      14:24
+    jax eager    1288 passed, 102 skipped, 0 failed            45:33
+    torch eager  1288 passed, 102 skipped, 0 failed            17:02
+    jax --jit    1285 passed, 102 skipped, 2 xfailed, 1 failed 60:49
+    torch --jit  1286 passed, 102 skipped, 1 xfailed, 1 failed 63:38
+
+Both traced failures are the SAME pre-existing
+`test_pickling_potential_unitful_dens`, A/B'd to develop on both arms. The
+xfail counts came out as predicted (AnyAxisym traced entries untouched), which
+is a small independent confirmation the change does not perturb the traced
+route. Posted to the PR.
+
+gh#1406: 124 pass / 15 fail / 13 running / 0 queued. The fails are still the
+stale records from the two runs whose 3+3 jobs are now at 5.5 h. The 6 h GH
+limit for the oldest lands ~08:57. Still not cancelling.
+
+### 2026-08-28 ~09:30Z — the pre-merge miss sweep paid for itself
+
+gh#1407 reached 141 pass / 0 fail, and BOTH codecov checks went SUCCESS (the
+upload phantom cleared exactly as predicted, patch and project). By the check
+colours it was ready to merge. The sweep says otherwise:
+
+    base 26388056  hits=48873  misses=15
+    head 08837947  hits=48878  misses=16
+
+Localised via the codecov report API: `galpy/potential/Potential.py` had ZERO
+misses at base and ONE at head, line 156 — `_quad_needs_backend`'s own
+`if xp is numpy: return False`.
+
+Dead by my own hand. `_vertical_quad_needs_backend` opened with a SECOND
+`if xp is numpy: return False`, and after this PR the only callers of
+`_quad_needs_backend` are inside it, always past that guard — so the original
+could never see numpy again. Exactly the gh#1403 shape (a refactor orphaning an
+existing line), and the same remedy: remove the duplication rather than cover
+it. Now:
+
+    return _quad_needs_backend(xp, *coords) or (
+        xp is not numpy and (opt-in or marker scan))
+
+Semantics identical on all three routes; one guard serves both. Verified
+REACHABLE rather than assumed — spying on `_quad_needs_backend` during a numpy
+`surfdens(forcepoisson=True)` shows 1 call where it was 0. Gate 103 passed.
+
+Pushed as a NEW commit `dfc184cd` (never force-push an open PR), which restarts
+CI and throws away the 141/152 position. That cost is accepted: "coverage never
+decreases, not even one line" is explicit, and gh#1402 landed a +1 miss exactly
+because I read the check colour instead of the table.
+
+gh#1406: the two stuck runs hit GH's 6 h limit -- 2 jobs CANCELLED. 131 pass /
+15 fail. Re-run `--failed` on both once they finish settling.
+
+### 2026-08-28 ~10:25Z — gh#1406 re-runs dispatched; gh#1407 restarted clean
+
+All three runs holding gh#1406's failures finally COMPLETED (the two 6 h
+stragglers plus 33132394088). Probed SIMBAD first (HTTP 200, per the
+probe-before-rerun rule) and re-ran `--failed` on all three; all now queued.
+
+SEQUENCING NOTE for the next wake: gh#1406's `all-clear` is itself FAILED. It
+CONCLUDES and does not re-evaluate when the shards it gated on are re-run
+([[all-clear-queued-rerun-and-ledger-rebase]]) — so once the three build
+re-runs are green, `all-clear` needs its OWN targeted re-run before the PR can
+merge. Doing it earlier just burns a runner.
+
+gh#1407 on the new head `dfc184cd`: 81 pass / 1 fail / 33 running / 36 queued.
+The single failure is codecov/project, and it is the upload phantom again on a
+fresh SHA — `dfc184cd` currently reads hits=41892 misses=7000 with only 81 of
+~152 checks reported. codecov/patch is already SUCCESS. Re-check the real
+miss count against base (15) once uploads finish; that is the gate that
+matters, not the colour.
+
+Ledger status unchanged: 8 xfail + 51 slow-skip = 59 after gh#1407 lands.
+Two follow-ups still measured and queued behind the 2-PR cap.
+
+### 2026-08-28 ~11:50Z — both PRs at ZERO failures
+
+The SIMBAD re-runs cleared everything.
+
+    gh#1406  149 SUCCESS, 0 FAILURE, 3 pending (all-clear + 2 macos-15-intel)
+    gh#1407  146 SUCCESS, 0 FAILURE, 6 pending (all-clear + macos shards)
+
+The macos-15-intel job that is still running started 11:30 and is ~21 min old —
+NORMAL pacing, not a repeat of this morning's 6 h stragglers. Checked the start
+time rather than pattern-matching on "macos-15-intel is in_progress again".
+
+Neither is mergeable yet: `all-clear` is the last gate and concludes only after
+its shards do. Next wake: confirm all checks SUCCESS, then squash-merge gh#1406
+first (comments-only, review response, simplest), then gh#1407.
+
+No rebase needed between them — disjoint files (hyp2f1.py + test_backend_special
+vs Potential.py + test_backend_quadrature + backend_slow_skip), so
+[[dont-reflexively-rebase-disjoint-prs]] applies.
+
+### 2026-08-28 ~12:30Z — gh#1406 MERGED `b1a8b03f`
+
+152/152 SUCCESS, MERGEABLE CLEAN. Pre-merge checklist run in full:
+
+    conflict markers   none
+    head == PR head    0eb1c2f0, base feat/backends-develop
+    files              only the 2 intended (hyp2f1.py, test_backend_special.py)
+    MISS SWEEP         base 26388056 hits=48873 misses=15
+                       head 0eb1c2f0 hits=48873 misses=15   <- identical
+
+Identical hits AND misses is exactly what a comments-only diff must produce, so
+the sweep is a real check here rather than a formality. Audit criteria
+(array-input class / duplication / helper placement) are trivially satisfied —
+no executable change on any path.
+
+gh#1407 after the base moved: merge-tree simulation gives ZERO conflict markers
+and the file sets are disjoint (Potential.py + test_backend_quadrature +
+backend_slow_skip vs hyp2f1 + test_backend_special), so NO rebase
+([[dont-reflexively-rebase-disjoint-prs]], [[simulate-the-merge-dont-assume-conflict]]).
+149 SUCCESS / 0 FAILURE, waiting on all-clear + 2 macos-15 shards.
+
+Cycle tally: 4 merged (gh#1401, gh#1402, gh#1403, gh#1406), gh#1407 next.
+
+### 2026-08-28 ~13:30Z — gh#1407 MERGED `852d69d6`; gh#1408 opened
+
+gh#1407 merged: 152/152 SUCCESS, MERGEABLE CLEAN, miss sweep head=15 (the
+dead-guard fix confirmed by the number: it was 16). The base b1a8b03f read
+7334 misses at merge time -- its OWN push-event uploads were still landing, so
+I compared against the last SETTLED value (15) rather than a mid-upload one.
+**LEDGER 65 -> 59.**
+
+gh#1408 opened, folding both queued follow-ups (they are disjoint files and
+both fell out of gh#1407's verification):
+
+* `Potential.mass` asked `_force_accepts_arrays` -- the NUMPY-contract question
+  -- so it drove opted-in potentials node-by-node. 0.62 s -> 0.08 s on
+  DoubleExpDisk, value BIT-IDENTICAL (0.19292490375107788 both ways). Extracted
+  `_accepts_node_array_on_backend` so mass() and the surfdens gate ask ONE
+  question; spelling it twice is what left dead code in gh#1407.
+* re-ledgered `test_pickling_potential_unitful_dens` (+2 xfail, 8 -> 10) and
+  corrected the comment that de-ledgered it. It fails BOTH traced arms and
+  passes both eager -- exactly what its own paragraph predicts.
+
+**A test-bar mistake caught by A/B, worth recording.** My first assertion
+compared the backend mass to the NUMPY value at rtol=1e-12 and failed at
+5.8e-09. The instinct was "the fix is wrong". The A/B said otherwise: base and
+fixed backend values are bit-identical, so the 5.8e-09 is the pre-existing
+GL-vs-scipy gap for mass() and my BAR was wrong. Fixed the test to compare like
+with like (batched vs node-by-node on the same rule), not backend vs numpy.
+[[ab-must-reproduce-before-it-can-clear]] cuts both ways: it also tells you when
+the code is fine and the test is not.
+
+numpy byte-identity verified by VALUE (3 potentials, identical to 17 digits),
+not by trusting the "ignored on the numpy path" docstring.
+
+### 2026-08-28 ~15:20Z — auditing the -jit arm for UNLEDGERED failures
+
+gh#1408 queued (149). Local work: the `-jit` arm has ZERO CI coverage
+([[ci-never-runs-jit-mode]]) and I found one genuinely wrong entry in it this
+morning, so it is worth auditing for OTHER wrong entries -- in both directions.
+
+Surveyed the 20 jax-jit slow-skip entries first: all carry fresh measured times
+(616s, 573s, 529s, 454s, 406.7s, 326.8s, ... 265s), all orbit-integration-bound
+under trace, no fix in hand. Re-measuring would only reconfirm, so I did not.
+
+Instead: run files under --jit and look for UNLEDGERED failures.
+
+    tests/test_actionAngle.py --backend jax --jit
+      184 passed, 25 skipped, 1 xfailed, 0 FAILED    16:14
+
+CLEAN. A real negative result -- it bounds where the -jit risk lives, and the AA
+traced arm is healthy after all the Staeckel/grid work.
+
+Next target `tests/test_sphericaldf.py`, chosen because it has ZERO ledger
+entries on ANY arm (so "green traced" is a pure untested assumption there) and
+it exercises the hyp2f1 paths gh#1401/1402/1403 rewrote -- validating that work
+on the arm CI cannot see. Run SERIAL ([[xdist-shared-state-artifacts]]).
+
+    tests/test_sphericaldf.py --backend jax --jit
+      223 passed, 0 FAILED, 0 skipped              12:41
+
+Also CLEAN -- and this one carries weight: the spherical DFs lean on hyp2f1
+heavily, so it validates the gh#1401/1402/1403 rewrite on the traced arm, which
+CI structurally cannot exercise. Two clean audits now (actionAngle, sphericaldf)
+plus test_potential.py earlier, whose single traced failure A/B'd to develop.
+
+Reading so far: the one wrong -jit entry found today (the pickling/units
+de-ledgering) looks ISOLATED rather than symptomatic of a rotten arm. That is a
+negative result worth having -- it says the -jit ledger is broadly trustworthy
+despite having no CI behind it, so the next burndown effort belongs elsewhere.
+
+Next: tests/test_diskdf.py --jit (Track F Pdf.3 work, zero ledger entries on any
+arm). Running serial.
+
+gh#1408: 2 pass / 1 fail / 135 queued; the fail is codecov/project with 2 of 152
+checks reported -- the upload phantom, same as every prior PR this cycle.
+
+    tests/test_diskdf.py --backend jax --jit
+      129 passed, 0 FAILED                         17:39
+
+THIRD clean audit. Tally for the -jit sweep this wake:
+
+    test_actionAngle.py    184 passed, 1 xfailed, 0 FAILED
+    test_sphericaldf.py    223 passed,            0 FAILED
+    test_diskdf.py         129 passed,            0 FAILED
+    (test_potential.py     1285 passed, 2 xfailed, 1 failed -- A/B'd to develop)
+
+536 traced tests across three files that had ZERO ledger entries on ANY arm, so
+"green under trace" there was a pure untested assumption. It holds.
+
+CONCLUSION, stated as a negative result because that is what it is: the one
+wrong -jit entry found today (the pickling/units de-ledgering, now re-ledgered
+in gh#1408) is ISOLATED, not symptomatic. The -jit ledger is broadly
+trustworthy despite having no CI behind it. Further blind auditing of that arm
+is NOT where the next burndown effort belongs -- the remaining 20 jax-jit
+entries are all freshly measured and orbit-integration-bound, which is the
+systemic jax-eager ODE project ([[ci-never-runs-jit-mode]], task #67/#79).
+
+### 2026-08-28 ~16:30Z — READY: 4 more ledger entries, measured A/B
+
+Chased the largest remaining ledger mass (orbit-integration entries) and found a
+contained lever rather than the systemic ODE problem.
+
+`tests/test_orbit.py` already has `_backend_integrators()`, whose own comment
+says the pure-Python integrators are "~95% of the runtime for ~0 unique backend
+coverage" under a non-numpy backend, and drops them. 16 call sites use it.
+`test_integrate_backwards` and `test_integrate_negative_time` DO NOT -- they
+hardcode a 10-integrator list including `odeint` and `leapfrog`. Both are
+ledgered on BOTH jax and jax-jit, i.e. 4 entries.
+
+Same-session A/B on the merged quadn worktree (C ext present):
+
+    test                            before      after
+    test_integrate_backwards        608.3 s     5.0 s    122x
+    test_integrate_negative_time    401.4 s     0.7 s    573x
+
+(the ledger annotations said >420 s and 389.7 s, so the "before" reproduces).
+CI ~0.71x puts them at ~3.5 s and ~0.5 s -- vastly under the 300 s cap.
+
+numpy is unaffected BY CONSTRUCTION: `_backend_integrators` returns its input
+unchanged when `backend() == "numpy"`, so the numpy run still exercises all 10.
+
+A near-miss worth noting: my first edit guarded on `count == 1` and REFUSED to
+apply, because the identical 10-integrator list appears TWICE. That guard is the
+only reason I did not blind-replace one site and silently leave the other -- or
+worse, mangle a third. Both sites are wanted here, so I replaced both
+deliberately after checking what the second one was.
+
+NOT opened yet: verify in FULL-FILE context first
+([[handpicked-nodeid-batch-is-not-a-context]]) -- these two ran clean as
+hand-picked nodeids, which is not proof for the whole file. Next wake.
+
+gh#1408: 72 pass / 2 fail. Both external: codecov/project (upload phantom,
+72/152) and a macos-15-intel `from_name` shard -- SIMBAD again, confirmed by
+reading the FAILED line. SIMBAD is back (HTTP 200) but that RUN is still
+in_progress (8/26), so the `--failed` re-run waits for it rather than hitting a
+live run.
+
+### 2026-08-28 ~18:30Z — gh#1408 clean; orbit full-file verification running
+
+gh#1408: 143 SUCCESS / 0 FAILURE, only the 8 long backend shards left.
+Got there by:
+
+* SIMBAD re-run. The macos-15-intel `from_name` shard failed again; confirmed by
+  READING the FAILED line (DALServiceError), probed SIMBAD (HTTP 200), checked
+  the run had actually COMPLETED (0/26 running) before `--failed`. Cleared.
+* the codecov pair self-healed as uploads landed -- patch AND project both
+  SUCCESS now, same as every prior PR this cycle.
+* MISS SWEEP passes: base 852d69d6 = 15, head 4cedf831 = 15. That is the
+  pre-merge item that caught the real +1 on gh#1407; here it is clean.
+
+Orbit full-file verification (test_orbit.py --backend jax, reduction applied,
+all 4 entries un-deferred): 37% and climbing, 0 FAILED so far. Deliberately
+paying ~2 h for this rather than opening the PR on two hand-picked nodeids --
+[[handpicked-nodeid-batch-is-not-a-context]]. The whole premise of the change is
+that these tests behave differently than the ledger assumed, so verifying them
+in the context the ledger actually applies to is the point, not a formality.
+
+### 2026-08-28 ~21:00Z — gh#1408 MERGED `b331faa0`; gh#1410 opened (ledger -4)
+
+gh#1408 merged 152/152, miss sweep 15 -> 15. Cycle: gh#1401, 1402, 1403, 1406,
+1407, 1408. Ledger 65 -> 59, then +2 correction -> 61.
+
+gh#1410 opened after the full-file verification came back clean:
+
+    whole test_orbit.py --backend jax, all 4 entries removed
+      567 passed, 15 skipped, 0 FAILED       2:28:36
+      test_integrate_negative_time  1.7 s pass
+      test_integrate_backwards      1.2 s pass
+
+I insisted on this rather than shipping on two hand-picked nodeids, because the
+claim IS that these tests behave differently than the ledger recorded -- so the
+context the ledger governs is the only place the claim can be tested.
+
+Also measured the jax-JIT pair before claiming those 2 entries (14.8 s / 9.5 s
+vs a ">300 s cap" annotation). Claiming 4 entries requires evidence for 4, not
+2 measured and 2 assumed to follow.
+
+numpy confirmed unaffected by VALUE (11.8 s / 7.7 s, all 10 integrators still
+run) rather than trusting the helper's numpy branch.
+
+LEDGER after gh#1410 lands: 10 xfail + 47 slow-skip = 57.
+
+### 2026-08-28 ~20:30Z — the _backend_integrators bypass is fully swept
+
+gh#1410 queued (149). Rather than assume gh#1410 caught them all, swept
+test_orbit.py + test_orbits.py for every hardcoded integrator list containing a
+pure-Python method:
+
+    tests/test_orbit.py:737  test_energy_symplec_longterm   <- the only other one
+    tests/test_orbits.py     none
+
+`test_energy_symplec_longterm` is NOT ledgered on any arm, so it already clears
+the 300 s cap. Applying the helper there would cut backend coverage for zero
+ledger gain -- an unforced change, so it stays as it is. The pattern therefore
+yields exactly the 4 entries gh#1410 claims and no more, which is a bounded
+result rather than "I found some".
+
+Ledger trajectory this cycle:
+
+    start                      8 xfail + 57 slow-skip = 65
+    gh#1407  surfdens          8 + 51 = 59   (-6)
+    gh#1408  ledger correction 10 + 51 = 61  (+2, correcting a WRONG entry)
+    gh#1410  orbit reduction   10 + 47 = 57  (-4, pending)
+
+Net -8 real entries, plus one wrong entry corrected. Six merged PRs
+(gh#1401/1402/1403/1406/1407/1408), gh#1410 open.
+
+### 2026-08-28 ~21:30Z — numpy-island survey: scoped, NOT concluded
+
+gh#1410 still 149/149 QUEUED. Contention again: 33 queued / 8 running, with
+aa-vertical-canonical, aa-vertical-canonical-pt and isochrone-inverse-vectorize
+holding slots since ~19:30. Wait.
+
+Started the numpy-island survey (mission goal 3, task #150). Got a real
+inventory but NOT a conclusion, and the distinction matters:
+
+    backend-aware modules with scipy call sites (top 10)
+      14  potential/Potential.py          14  df/streamdf.py
+      14  actionAngle/actionAngleSpherical.py
+      12  potential/AnyAxisymmetricRazorThinDiskPotential.py
+      11  df/diskdf.py                    10  actionAngle/actionAngleStaeckel.py
+       8  df/streamgapdf.py                7  actionAngle/actionAngleVertical.py
+       6  df/quasiisothermaldf.py          5  df/sphericaldf.py
+
+A raw count is NOT evidence of islands. The established dual-path shape
+(`xp is numpy` -> scipy, else backend) is explicitly NOT an island
+([[no-numpy-islands-eliminate-fast]]), and separating those from real islands
+needs per-site analysis. Recording the inventory; NOT claiming a finding.
+
+**Two grep-pattern errors on the way, both caught by disbelieving the output:**
+1. `scipy.integrate.tplquad` matched 12 hits in quasiisothermaldf.py that were
+   all DOCSTRING prose ("scipy.integrate.tplquad kwargs epsabs and epsrel").
+2. Then `scipy\.(integrate|...)\.[a-z_]+\(` returned ZERO -- because galpy does
+   `from scipy import integrate` and calls `integrate.quad(...)`, so the
+   fully-qualified form never appears.
+
+Both were caught because the number was implausible (12 call sites in one df
+module; then zero everywhere). CHECK THE IMPORT STYLE before grepping for a
+qualified name, and treat a suspiciously round zero as a broken pattern rather
+than a clean result.
+
+## 2026-08-28 — the ledger's remaining 39 are ONE cause, and the test-side lever is spent
+
+Cron `5451d57e` alive (created 2026-08-24, expires ~2026-08-31).
+
+gh#1410 (`backend/orbit-integrator-reduction` @ 39f2391e) is queued -- 23/153
+green, the only red being the `codecov/project` upload phantom that has
+self-healed on every PR this cycle.
+
+Spent the wait classifying what is actually LEFT in the ledger rather than
+hunting the next entry. After gh#1410: 10 xfail + 47 slow-skip = 57, and
+**39 of the 47 slow-skips are orbit-integration cost** in five files.
+
+Then asked whether gh#1410's own lever (`_backend_integrators()`, which drops
+pure-Python integrators under a forced backend) has anything left. It does not:
+
+* `test_orbit.py` -- 10 distinct tests behind 16 rows. 5 already use it. Of the
+  other 5, TWO exist specifically to exercise Python paths
+  (`test_dxdv_3d_c_vs_python`, `test_integrate_indiv_t_python_paths` -- the
+  names say it), one is already `_c`-only, one has a single Python method so
+  filtering deletes it. gh#1410 took the last clean pair.
+* `test_noninertial.py` -- checked call-by-call. `_omegadot` and `_omegafunc`
+  have exactly ONE `check_orbit` call each, at Python `dop853`.
+  `test_arbitraryaxisrotation` varies `zvec`/`omega` ACROSS methods, so the
+  method is confounded with the configuration. Only the two `linacc_changingacc`
+  tests have gh#1410's shape -- and there the Python arm asserts at tol=1e-9
+  against the `_c` arm's 1e-5, so the filter would trade 3 entries for the
+  file's strictest assertion.
+
+I did NOT take that trade. Timing probe running to see whether it is even worth
+putting to Jo as an option.
+
+The conclusion for the roadmap: the remaining 39 are structural. Eager backends
+pay ~5 ms per potential call vs ~27 us on numpy, a Python-stepped ODE makes ~1e4
+of them, and ODE steps are sequential so vectorizing cannot help. The exits are
+the C integrators (what the spent lever routed to) and the in-backend
+diffrax/torchdiffeq path. Not an opportunistic wake-time fix.
+
