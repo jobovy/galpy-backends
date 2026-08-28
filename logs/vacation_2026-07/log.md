@@ -57364,3 +57364,42 @@ of them, and ODE steps are sequential so vectorizing cannot help. The exits are
 the C integrators (what the spent lever routed to) and the in-backend
 diffrax/torchdiffeq path. Not an opportunistic wake-time fix.
 
+## 2026-08-28 (later) — numpy-island survey, scoped properly this time
+
+gh#1410 still queued (70/153 green, only the codecov/project phantom red), so
+turned to the third mission goal, "no numpy islands". Earlier I captured an
+inventory and correctly refused to conclude from it; this is the per-site pass.
+
+101 `as_numpy` sites in galpy/ outside galpy/backend/. Narrowed to the most
+suspicious class -- potentials and integrators, the core differentiable objects
+-- and read ALL 8 with context. **Every one is a documented, deliberate
+boundary**, not an island:
+
+    Einasto / ExpTruncNFW   _scale, a physical scale deliberately concretized
+    interpSphericalPotential splines are scipy -> parameter grads already gone
+    integratePlanarOrbit     C-extension argument boundary
+    symplecticode            step SCHEDULE, an explicit stop-gradient
+    AnySphericalPotential    user-supplied numpy density callback
+
+The exceptions are SCFPotential and MultipoleExpansionPotential, which cast
+density to numpy *so a numpy quadrature can run*. That is the real remaining
+potential-layer island, and it is already pending task #75.
+
+### #75 is much closer than it looks
+
+The coefficient routine is hardcoded numpy (`lpmn`, `_gaussianQuadrature`,
+`gammaln`, Gegenbauer `_C`). But every primitive it needs is ALREADY BUILT:
+
+    galpy.backend.special     assoc_legendre, gegenbauer, gammaln
+    galpy.backend.quadrature  gauss_legendre, nested_quad, fixed_quad
+
+and better: **SCFPotential already imports `assoc_legendre` and `gegenbauer`
+from `..backend.special`** and uses them at lines 1009/1345/1365. The potential
+EVALUATION path is fully backend-native already; only the coefficient SETUP
+(`scf_compute_coeffs*`) is pinned, still going through scipy `lpmn` /
+`compute_legendre` / `leggauss`.
+
+So #75 is a rewiring job onto proven in-file helpers, not a reimplementation
+needing new special functions. It is the natural PR after gh#1410 -- it closes
+the last potential-layer island AND unlocks differentiating SCF/Multipole with
+respect to density parameters. Not started: one PR at a time.
