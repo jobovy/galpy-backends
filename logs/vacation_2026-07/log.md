@@ -57953,3 +57953,38 @@ covered the migration.
 
 **Remaining before the PR:** per-routine gradient tests, the forced-backend gate
 (jax + torch on the touched suites), and the MultipoleExpansion sibling suite.
+
+## 2026-08-29 — option C source work COMPLETE and its goal demonstrated
+
+    test_scf.py                       numpy 95 / torch 95      0 failures
+    test_MultipoleExpansionPotential
+      + test_backend_multipole        numpy 195 / torch 195    0 failures
+
+Multipole needed NO source change -- confirming the earlier classification that
+its three pins are genuine boundaries (scipy splines, .tobytes() cache,
+parsing). I measured instead of assuming, because this session repeatedly showed
+that a TYPE change breaks READERS downstream, and Multipole consumes SCF output.
+
+### The payoff, measured on all three density routines
+
+d(coefficient)/d(density scale), jax grad vs central FD:
+
+        spherical   5.26e-11
+        axi         1.91e-09
+        general     1.36e-09      all is_backend_array=True
+
+All three return the SAME gradient, which is a free cross-routine consistency
+check rather than a coincidence: for a spherical density the (0,0,0) monopole
+must agree across routines, and the general case's (1 + 0.1 cos 2phi) factor
+averages out of the m=0 term.
+
+**This is what the whole arc was for.** SCF coefficients are now differentiable
+with respect to the density's own parameters -- i.e. a density model can be
+fitted through its SCF potential.
+
+### Remaining before the PR
+
+    per-routine gradient tests committed into test_backend_scf.py
+      (the checks above are a throwaway probe, not a test)
+    forced-backend gate: jax + torch on the touched suites
+    cron expires ~2026-08-31 -- RE-CREATE on the next wake, do not let it lapse
