@@ -57880,3 +57880,38 @@ methods were missed, so they still fail on `numpy.all(Tensor)`.
 
 **Remaining:** the 2-3 timedep integrand twins, widen the test sweep to the
 `from_*` constructors, then gradient tests + forced-backend gate + PR.
+
+## 2026-08-29 — twins + timedep density anchored. torch 30 -> 22 -> 17
+
+    babc4913  migrate the axi + general timedep TWINS
+    d06e2a41  anchor _timedep_dens_setup's numpy output before the backend base
+
+numpy unchanged throughout (95 full / 36 timedep); six-routine harness
+byte-identical after every commit.
+
+### The twins are the lesson of this arc
+
+`scf_compute_coeffs_axi` / `scf_compute_coeffs` each have a private
+time-dependent near-duplicate (`_scf_compute_coeffs_*_timedep`). I migrated the
+static copies and left the twins on the old scipy Legendre fork with unanchored
+prefactors.
+
+**My six-routine harness could not have caught this** -- it exercises the six
+PUBLIC routines, and the twins are private, reachable only through the
+time-dependent path. I found them by reading a traceback that displayed
+PRE-migration source and failing to recognise the code as mine. A byte-identity
+harness proves what it covers and is silent about everything else.
+
+Follow-on from the same root: `_timedep_dens_setup` returns a callable that
+evaluates the density over tgrid and hands back NUMPY, so `f(...) * base` was
+numpy-owned once `base` went backend. Anchored with `like` in both twins.
+
+### Remaining torch residue: 17, and now well-characterised
+
+    test-side  from_nbody / from_density / from_multipole tests -- my ast sweep
+               keyed on `scf_compute_coeffs*` call sites, so tests that reach
+               coefficients through the `from_*` CONSTRUCTORS were missed
+    test-side  `Ac.copy()` -- Tensor has no .copy(); same sweep gap
+
+Both are the same Gap 3, not new classes. Source-side is clean as far as the
+tracebacks show.
