@@ -57915,3 +57915,41 @@ numpy-owned once `base` went backend. Anchored with `like` in both twins.
 
 Both are the same Gap 3, not new classes. Source-side is clean as far as the
 tracebacks show.
+
+## 2026-08-29 — test_scf.py FULLY GREEN ON BOTH ARMS
+
+    numpy   95 passed
+    torch   95 passed        (30 failed when this arc began)
+
+11 commits on `backend/scf-coeff-native`, every one byte-identical on the
+six-routine harness. Still unpushed.
+
+### The two mistakes worth keeping
+
+**1. I called it "test-side" for four passes and it was source-side.** The
+constructor READS the coefficients back with numpy.all/any/triu to validate
+shapes and decide isNonAxi. I changed what the routines RETURN and never gated
+the readers ([[coercion-gate-the-readers-not-writers]]). Gating 8 sites in
+_init_static/_init_timedep removed ELEVEN failures at once.
+
+The evidence was countable and I was a pass late on it: only 3 numpy.all/any
+calls existed in the 13 failing test BODIES, which cannot explain 13 failures.
+Grepping summary lines kept me in the wrong layer; pulling ONE FULL traceback
+put the frame in galpy source immediately.
+
+**2. Three timedep twins, not two -- and a moved traceback nearly cost the fix.**
+After anchoring the spherical twin's integrand the count stayed at 2, which
+reads as "no effect". The traceback had MOVED FORWARD to the same function's
+tail. [[reread-failure-before-investigating]] is what separated finishing the
+fix from reverting a correct one.
+
+### What the harness could and could not do
+
+It caught nothing across 11 commits -- which is the point, every source edit was
+provably byte-identical. But it structurally could NOT see the three private
+timedep twins, and it says nothing about readers. A byte-identity harness proves
+what it covers and is silent elsewhere; I had been reporting it as though it
+covered the migration.
+
+**Remaining before the PR:** per-routine gradient tests, the forced-backend gate
+(jax + torch on the touched suites), and the MultipoleExpansion sibling suite.
