@@ -57731,3 +57731,33 @@ only reliable check.
 the plumbing pins (`from_density`, `_scf_coeffs_from_multipole`,
 `_batched_timedep`), 3 MultipoleExpansion pins, then ~20 test-side `as_numpy`
 call sites and per-routine gradient tests.
+
+## 2026-08-29 (cont) — option C at 5/6; axi_nbody needed a shape rewrite
+
+Cron alive. `backend/scf-coeff-native` (unpushed):
+
+    f74b651c  spherical
+    79cf6973  axi + general + galpy.backend.like
+    6d081973  spherical_nbody
+    64fc622a  axi_nbody
+
+`scf_compute_coeffs_axi_nbody` was the first routine needing real restructuring
+rather than dispatch swaps:
+
+* the per-l loop assigned into a preallocated numpy array
+  (`Acos[:, ll, 0] = ...`), which neither traces nor accepts a backend value ->
+  collect the columns, stack once. Same values, same order.
+* the associated-Legendre RECURSION is pure arithmetic on Python names, so it
+  carries over untouched -- no change needed, which is worth noting because it
+  looked like the hard part and was not.
+* `numpy.atleast_1d(mass)` -> explicit 0-d reshape; `atleast_1d` is not in the
+  array-API surface.
+
+Six-routine harness still byte-identical after every step, including
+post-commit (the formatters rewrite these files on every first commit attempt,
+so I now retry the commit in a loop and re-verify afterwards).
+
+**Remaining:** `scf_compute_coeffs_nbody`, the 3 plumbing pins
+(`from_density`, `_scf_coeffs_from_multipole`, `_batched_timedep`), 3
+MultipoleExpansion pins, ~20 test-side `as_numpy` sites, per-routine gradient
+tests. Then the forced-backend gate and the PR.
