@@ -57693,3 +57693,41 @@ the compute call, which is the established pattern
 (`from_density`, `_scf_coeffs_from_multipole`, `_batched_timedep`), 3
 MultipoleExpansion pins, then genuine test-side residue + per-routine gradient
 tests.
+
+## 2026-08-29 (cont) — option C: 4 of 6 routines migrated, all committed
+
+Cron `5451d57e` alive. Branch `backend/scf-coeff-native`, still NOT pushed
+(no CI spent yet):
+
+    f74b651c  spherical
+    79cf6973  axi + general + galpy.backend.like
+    6d081973  spherical_nbody
+
+Six-routine hash harness matches base EXACTLY at every checkpoint, including
+after the pre-commit formatters (isort/ruff) rewrote the files -- re-verified
+rather than assumed, since a reformat touching an expression could in principle
+have been a real edit.
+
+### einsum: keeping it was a correctness decision, not laziness
+
+`scf_compute_coeffs_spherical_nbody` reduces with `numpy.einsum("j,ij", ...)`.
+The tempting rewrite is a sum of products, but measured on representative data
+the alternatives are NOT byte-identical:
+
+        einsum vs (B*A).sum(-1)   3.6e-15
+        einsum vs B @ A           7.1e-15
+
+All three namespaces expose `einsum`, so `xp.einsum` keeps the numpy path on
+the identical call. Checked availability BEFORE designing around its absence.
+
+### Pre-commit rejects the first commit EVERY time here
+
+isort and ruff-format both rewrite these files, so the first `git commit`
+always fails with the SHA unmoved. Three commits this session, three rejections.
+[[precommit-hooks-reject-first-commit]] holds; verifying the SHA moved is the
+only reliable check.
+
+**Remaining for (C):** `scf_compute_coeffs_axi_nbody`, `scf_compute_coeffs_nbody`,
+the plumbing pins (`from_density`, `_scf_coeffs_from_multipole`,
+`_batched_timedep`), 3 MultipoleExpansion pins, then ~20 test-side `as_numpy`
+call sites and per-routine gradient tests.
