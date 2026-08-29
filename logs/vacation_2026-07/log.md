@@ -57670,11 +57670,24 @@ Smoke-tested numpy (no-op -> ndarray) / torch (Tensor) / jax (ArrayImpl).
 ### NEW COST SIGNAL, measured: the migration makes torch SLOW, not just green
 
 test_scf.py under torch took **75 s** when 36 tests crashed fast on TypeError.
-With `like()` fixing those, the same suite ran **>8.5 min and counting** at 112 %
-CPU (verified computing, not deadlocked: 9m41s CPU in 8m36s wall). The tests now
-actually execute the full quadrature under eager torch -- thousands of scalar
-integrand calls. Expect this to generate NEW slow-skip ledger entries, which is a
-real cost of (C) that was not visible when I scoped it.
+With `like()` fixing those, the same suite takes **528.95 s (8:48)** -- a 7x
+increase, and NOT a hang (verified 112 % CPU, 9m41s CPU in 8m36s wall). The tests
+now actually execute the full quadrature under eager torch: thousands of scalar
+integrand calls. Expect NEW slow-skip ledger entries; a real cost of (C) that was
+not visible when I scoped it.
+
+### FINAL state of the torch arm: 30 failed / 65 passed, ALL one class
+
+Down from 36, and the signature reverted to `all()/any() received an invalid
+combination` -- test-side `numpy.all(Tensor)` at assertion sites. Every
+`TypeError: unsupported operand` (the source-side class) is GONE, so `like()`
+closed that category completely.
+
+The residue is 39 `numpy.all/any` sites in test_scf.py, but only 4 sit in the two
+shared helpers (`spherical_coeffsTest`, `axi_coeffsTest`) -- so it is ~20
+individual tests needing a one-line `as_numpy` on the coefficients right after
+the compute call, which is the established pattern
+([[test-side-as-numpy-casts]]-style, 11 precedents). Mechanical, not subtle.
 
 **Remaining for (C):** 3 `*_nbody` particle sums, the plumbing pins
 (`from_density`, `_scf_coeffs_from_multipole`, `_batched_timedep`), 3
