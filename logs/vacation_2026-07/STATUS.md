@@ -8,7 +8,9 @@ the trace. Refresh on every merge / branch change.
 ## Now
 
     develop  feat/backends-develop @ ef360db0   (gh#1410 merged 2026-08-29)
-    open PR  NONE -- next is task #75, de-risked below
+    open PR  NONE
+    parked   backend/scf-coeff-native @ f74b651c (worktree /var/tmp/scfcoeff),
+             committed but NOT pushed -- BLOCKED on a contract decision, below
     ledger   10 xfail + 47 slow-skip = 57   (was 61)
     cron     5451d57e, hourly at :13, created 2026-08-24, expires ~2026-08-31
 
@@ -24,7 +26,38 @@ Mid-matrix the same sweep read `misses 15 -> 7002`; that was an upload phantom
 incl. C sources). **A miss sweep run mid-matrix is noise, not a gate** -- run it
 only after all uploads land. That belongs in the checklist below.
 
-## NEXT: task #75 — SCF/Multipole coefficient numpy pin. DE-RISKED
+## BLOCKED, NEEDS JO: what should SCF coefficient setup return?
+
+Task #75 says lift the SCF/Multipole numpy pin. Removing it from
+`scf_compute_coeffs_spherical` works -- numpy byte-identical across all three
+coefficient routines, 204 tests pass, grad-vs-FD 5.3e-11 -- but the
+**forced-backend gate caught 10 torch failures** before CI, and an A/B (base
+file swapped in) proves they are MY regression, not pre-existing.
+
+Under a FORCED backend `get_namespace` returns the forced namespace regardless
+of input type, so a pure-numpy density now yields Tensors, and test assertions
+doing `numpy.all(...)` raise.
+
+**The pin is deliberate and the suite documents it:** its own comment calls it
+"construction-time numerical setup", `_coeff_dens_numpy` exists to cast backend
+values INTO the numpy quadrature, and tests/test_backend_scf.py:564 asserts
+"from_density's coefficient quadrature runs on numpy".
+
+    (A) follow the AMBIENT backend   current branch; needs ~10 test_scf.py
+                                     assertion sites wrapped in as_numpy
+                                     (established pattern, 11 precedents)
+    (B) follow the DENSITY           numpy density -> numpy out even under a
+                                     forced backend; matches _RToxi's guard,
+                                     no test churn, but needs a probe valid for
+                                     EVERY density signature -- I got that
+                                     wrong (37 failures) and reverted
+    (C) migrate all six scf_compute_coeffs* at once   consistent, much bigger
+
+Under (A), ONE of six sibling routines returns backend arrays under a forced
+backend while five return numpy -- the inconsistency a reviewer should flag,
+and why I did not choose unilaterally.
+
+## SUPERSEDED scoping (kept for the measurements): task #75 — SCF/Multipole coefficient numpy pin. DE-RISKED
 
 The numpy-island survey (2026-08-28) read all 8 `as_numpy` sites in
 potentials/integrators: every one is a documented deliberate boundary EXCEPT
