@@ -57797,3 +57797,37 @@ ll >= mm half of two (N, L, L) arrays.
 gradient tests, then the forced-backend gate and the PR. Still unpushed -- the
 torch arm cannot be green until the test sweep lands, so CI would only burn the
 queue on a known-red branch.
+
+## 2026-08-29 — the plumbing pins: 4 of 5 are LEGITIMATE, 1 was a real blocker
+
+Cron alive. `619890aa` on `backend/scf-coeff-native`.
+
+Rather than migrating the 5 remaining pins on momentum, read each one first.
+Only ONE was defeating the migration:
+
+  **`_batched_timedep`  -- MIGRATED.** Pure orchestration (batch tgrid, call
+  `compute`, concatenate), but its numpy pin wrapped the `compute` calls, and
+  `compute` IS the coefficient quadrature. Every time-dependent build was
+  silently undoing what the six routines had just gained. Concatenation now goes
+  through the array-API `concat` (present on all three namespaces). 37
+  time-dependent tests pass; six-routine harness byte-identical.
+
+The other four are BOUNDARIES, not islands, and are staying:
+
+    _scf_coeffs_from_multipole   evaluates scipy InterpolatedUnivariateSpline
+                                 objects. A stored spline table carries no
+                                 gradient -- the interpSphericalPotential case
+    _multipoles_at               memo cache keyed on rr.tobytes(), which needs a
+                                 concrete numpy buffer (this file's own docstring
+                                 already notes its caches are numpy-only so
+                                 tracing never touches them)
+    _scf_density_multipoles      pin covers only the per-r _rhoTilde loop; its
+                                 output feeds scipy splines
+    from_density (SCF+Multipole) density parsing/validation + the arity probe
+
+**This matters for the remaining scope:** "5 pins left" overstated the work by
+4x. The source-side migration for (C) is now essentially COMPLETE -- 6 routines
+plus the one real plumbing blocker. What remains is test-side.
+
+**Remaining:** ~20 test-side `as_numpy` sites, per-routine gradient tests, the
+forced-backend gate, then the PR.
