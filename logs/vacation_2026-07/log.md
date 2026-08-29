@@ -57457,3 +57457,35 @@ Pre-merge diff audit (the three required criteria):
 Remaining: 3 in-progress + 9 queued, all long backend shards (~1.5 h) plus
 all-clear. Background watch armed to fire when they settle. Ledger 61 -> 57 on
 merge.
+
+## 2026-08-28 (fifth wake) — #75 de-risked: both special-fn swaps are BYTE-IDENTICAL
+
+gh#1410 at 151/153, zero non-green; only a jax orbit shard + all-clear left.
+Watch armed (PID 3592332, confirmed polling).
+
+Used the wait to test the load-bearing claim from the island survey -- that #75
+(SCF/Multipole coefficient numpy pin) is a REWIRING job, not a reimplementation.
+Measured rather than asserted, against the functions the coefficient path
+actually calls:
+
+        compute_legendre  ->  assoc_legendre      worst |dP| = 0.0
+                                                  worst |d dP/dx| = 0.0
+                                                  (6 costheta x 3 (L,M) shapes)
+
+        _C                ->  stacked gegenbauer  worst |dC| = 0.0
+                                                  (6 xi x 4 (N,L) shapes)
+
+BYTE-IDENTICAL both. That satisfies the hard numpy-byte-identity constraint for
+the two special-function swaps IN ADVANCE, before a line is written.
+
+**One correction to the earlier scoping:** `gegenbauer` is NOT a drop-in.
+Its signature is `gegenbauer(N, alpha, x)` -> C_n^alpha for a SINGLE alpha,
+shape x.shape+(N,); `_C(xi, N, L)` returns the (N, L) grid where alpha VARIES
+with l (alpha(l) = 2l + 3/2). So it needs a stack over l. That is composition,
+not reimplementation -- `_C` is already exactly that wrapper -- but the earlier
+log said "rewiring onto proven in-file helpers" without noting the wrapper.
+
+Residual risk for #75 is therefore concentrated in ONE place: the
+`_gaussianQuadrature` -> backend GL swap, where
+[[backend-precision-must-match-numpy]] applies and a less-accurate rule is a
+defect, not a tradeoff. That is the part to measure first when the PR opens.
