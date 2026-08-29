@@ -57521,3 +57521,51 @@ Two self-inflicted detours worth recording, both cheap but both avoidable:
 No PR open. Next is task #75, de-risked to a single residual risk (the
 `_gaussianQuadrature` -> backend GL swap); both special-function swaps are
 already proven byte-identical.
+
+## 2026-08-29 — task #75 STARTED: first forced-numpy pin removed (SCF spherical)
+
+Cron `5451d57e` alive. gh#1410 merged, so a PR slot was free; opened work on the
+one real potential-layer island. Branch `backend/scf-coeff-native`, worktree
+/var/tmp/scfcoeff on ef360db0 (C extension built, import-shadow checked).
+
+**The pin wrapped two unrelated things.** `_use_backend("numpy", force=True)` in
+`scf_compute_coeffs_spherical` covered BOTH the density-arity probe
+(`try: dens(0)`) and the coefficient quadrature. The probe genuinely needs
+numpy -- a forced backend can change which exception a wrong-arity call raises.
+The quadrature does not. Split them; only the probe stays pinned.
+
+Changes: drop `_coeff_dens_numpy` (the cast that severed the gradient); build
+`Acos` functionally instead of assigning into a preallocated numpy array; make
+`_xiToR` namespace-dispatched (bare `numpy.divide` on a backend array returns
+numpy and SILENTLY drops the gradient).
+
+    numpy byte-identity   IDENTICAL hashes vs base for ALL THREE coefficient
+                          routines (spherical, axi, general) -- necessary
+                          because the shared _gaussianQuadrature accumulator
+                          changed, which every caller uses
+    is_backend_array      True (jax + torch)
+    grad vs central FD    5.3e-11
+    test_scf.py numpy     95 passed
+    new backend tests     4 passed (jax + torch)
+
+### Three course-corrections, each of which would have shipped a defect
+
+1. **A zero-vs-zero A/B proves nothing.** My first probe density raised at r=0,
+   so the arity autodetect fell through to the 3-parameter branch and called it
+   with zeroed scale/mass -> all-zero coefficients on BOTH arms with matching
+   hashes. Caught only because A[0,0,0] was exactly 0. Wrote the trap into the
+   test's own comment. See [[ab-must-reproduce-before-it-can-clear]].
+2. **I duplicated existing routing.** Substituted `gegenbauer(N, 1.5, xi)` for
+   `_C(xi,N,1)[:,0]` -- byte-identical, but `_C` ALREADY dispatches to that same
+   gegenbauer stack for backends. Reverted; the earlier "measure the swap"
+   result was partly re-deriving what is implemented.
+3. **numpy owns `numpy ⊗ Tensor` and resolves it by calling `.numpy()`**, which
+   RAISES on a grad-tracking tensor. Two sites. Operand order alone was not
+   enough at the `K` site; anchoring K onto the result namespace/device via
+   `asarray_on_device(_xp, ..., device_of(integrated))` was -- the same idiom
+   already used at SCFPotential.py:883.
+
+**Scope is deliberately one routine.** `scf_compute_coeffs_axi` and
+`scf_compute_coeffs` keep their pins and `_coeff_dens_numpy` stays live for
+them, so this is a clean incremental boundary, not a partial rewrite of all
+nine pins. 8 pins remain in SCFPotential.py + 3 in MultipoleExpansion.
