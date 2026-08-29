@@ -57761,3 +57761,39 @@ so I now retry the commit in a loop and re-verify afterwards).
 (`from_density`, `_scf_coeffs_from_multipole`, `_batched_timedep`), 3
 MultipoleExpansion pins, ~20 test-side `as_numpy` sites, per-routine gradient
 tests. Then the forced-backend gate and the PR.
+
+## 2026-08-29 — MILESTONE: all SIX coefficient routines migrated, byte-identical
+
+    f74b651c  spherical
+    79cf6973  axi + general + galpy.backend.like
+    6d081973  spherical_nbody
+    64fc622a  axi_nbody
+    02c72871  nbody            <- 6/6
+
+Every commit re-verified against the six-routine hash harness, INCLUDING after
+the pre-commit formatters rewrite the files. Zero drift across the whole series.
+
+`scf_compute_coeffs_nbody` was the hardest: nested m/l loops filling only the
+ll >= mm half of two (N, L, L) arrays.
+
+* sparse assignment -> a [ll][mm] column list assembled by a new
+  `_stack_lm_grid`, which zero-fills the never-computed half exactly as the
+  preallocation did;
+* `Pll *= ...` made OUT-OF-PLACE: an in-place multiply on a grad-tracking
+  tensor breaks the autograd graph (silently, on torch);
+* the per-(l,m) `numpy.sqrt(...)` normalisation deliberately STAYS numpy --
+  it is a SCALAR, and scalars promote weakly against a backend array, so
+  carrying it across would be noise. Knowing which numpy values need `like`
+  and which do not is the distinction that keeps the diff small.
+
+### Pin inventory now
+
+    PROBE-only, correct, stays   SCF from_density, spherical, axi, general
+    still to migrate             SCF _scf_coeffs_from_multipole,
+                                 _batched_timedep; Multipole from_density,
+                                 _scf_density_multipoles, _multipoles_at
+
+**Remaining:** those 5 plumbing pins, ~20 test-side `as_numpy` sites, per-routine
+gradient tests, then the forced-backend gate and the PR. Still unpushed -- the
+torch arm cannot be green until the test sweep lands, so CI would only burn the
+queue on a known-red branch.
