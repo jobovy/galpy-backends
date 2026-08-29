@@ -57627,3 +57627,56 @@ picking unilaterally.
 pushed**, no PR open. numpy is byte-identical and 204 tests pass; the only
 issue is the torch contract question. My earlier "rewiring job" framing was too
 optimistic: removing the island is easy, deciding the contract is not.
+
+## 2026-08-29 — Jo chose (C): migrate ALL the coefficient routines
+
+Cron `5451d57e` alive. Decision received: option (C), the "all in" approach --
+migrate every `scf_compute_coeffs*` so the siblings stay consistent, rather than
+leaving one of six behaving differently under a forced backend.
+
+### Done: all three density-quadrature routines, byte-identical at every step
+
+Built a SIX-ROUTINE hash harness first (`/var/tmp/scf_verify.py`) and locked the
+base values, so each edit is checked against all six rather than the one touched:
+
+    spherical  axi  general  spherical_nbody  axi_nbody  nbody   -- all match base
+
+Two equivalences measured BEFORE writing code, both byte-identical, which is what
+made the Legendre swaps safe and let the `_SCIPY_VERSION < 1.15` forks go:
+
+    assoc_legendre(L,1,ct).T      == assoc_legendre_p_all(L-1,0,ct,bc=2)[0].T
+    assoc_legendre(L,L,ct)[na]    == the general routine's swapaxes(0,1).T form
+
+### The 36-failure spike was MINE, and the traceback said so
+
+I predicted the residue was test-side `as_numpy`. Wrong: the signature changed
+from `all() received an invalid combination` to `TypeError: unsupported operand`,
+and the frames pointed at my own new lines. The (n,l,m) prefactors are built with
+`numpy.arange`, so `prefactor * _C(...)` is numpy-meets-Tensor -- SOURCE-side
+defects. Reading the traceback instead of assuming is what caught it.
+
+### Fixed with ONE helper, placed in galpy.backend
+
+No existing "bring numpy constants onto a backend array's namespace/device"
+helper, so added `like(ref, *arrays)` to `galpy/backend/_namespaces.py` (NOT
+embedded in SCFPotential -- [[generic-helpers-go-in-backend]]). No-op when `ref`
+is numpy, so numpy stays byte-identical by construction, and it preserves operand
+ORDER and GROUPING deliberately: float multiplication is commutative but not
+associative, so the natural-looking regroup would perturb the last bits. Three
+earlier hand-rolled anchorings collapsed onto it -- one idiom, not four.
+
+Smoke-tested numpy (no-op -> ndarray) / torch (Tensor) / jax (ArrayImpl).
+
+### NEW COST SIGNAL, measured: the migration makes torch SLOW, not just green
+
+test_scf.py under torch took **75 s** when 36 tests crashed fast on TypeError.
+With `like()` fixing those, the same suite ran **>8.5 min and counting** at 112 %
+CPU (verified computing, not deadlocked: 9m41s CPU in 8m36s wall). The tests now
+actually execute the full quadrature under eager torch -- thousands of scalar
+integrand calls. Expect this to generate NEW slow-skip ledger entries, which is a
+real cost of (C) that was not visible when I scoped it.
+
+**Remaining for (C):** 3 `*_nbody` particle sums, the plumbing pins
+(`from_density`, `_scf_coeffs_from_multipole`, `_batched_timedep`), 3
+MultipoleExpansion pins, then genuine test-side residue + per-routine gradient
+tests.
