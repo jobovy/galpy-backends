@@ -57432,3 +57432,28 @@ Side note: I reached for the `sessions` discriminator on `commits/<sha>` and got
 the FILE list instead -- which is what settled it. Confirmed `report/?sha=` and
 `totals/?sha=` are equally empty, so `compare/?pullid=` is the only endpoint
 with sessions; memory updated so the detour is not repeated.
+
+## 2026-08-28 (fourth wake) — gh#1410 gate PASSED, audit done, awaiting last 12 shards
+
+CI 141/153, **zero non-green** -- `codecov/project` self-healed as predicted.
+Re-ran the miss sweep and the phantom converged EXACTLY to prediction:
+
+        b331faa0 (base)  hits=48879  misses=15
+        39f2391e (head)  hits=48879  misses=15      identical, both fields
+
+Pre-merge diff audit (the three required criteria):
+
+* **if -> xp.where array-input class** -- N/A. No source change at all; the diff
+  is 2 test files, zero `galpy/` files, and introduces no value-conditionals.
+* **duplication** -- checked properly instead of eyeballing. The 10-integrator
+  literal is inlined at each call site *by prevailing idiom*: 7 sites carry an
+  11-element list and 1 more a variant, ALL already wrapped in
+  `_backend_integrators`. My two sites now match those eight. Hoisting mine to a
+  module constant would make them the odd ones out; a de-dup sweep is a separate
+  PR over all 10 sites, not something to smuggle in here.
+* **helper placement** -- `_backend_integrators` already exists at
+  tests/test_orbit.py:109, module scope, now 16 users. No new helper.
+
+Remaining: 3 in-progress + 9 queued, all long backend shards (~1.5 h) plus
+all-clear. Background watch armed to fire when they settle. Ledger 61 -> 57 on
+merge.
