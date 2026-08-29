@@ -57831,3 +57831,52 @@ plus the one real plumbing blocker. What remains is test-side.
 
 **Remaining:** ~20 test-side `as_numpy` sites, per-routine gradient tests, the
 forced-backend gate, then the PR.
+
+## 2026-08-29 — test sweep applied; TWO gaps found, both mine
+
+`f69cc6f3`. torch test_scf.py: **30 -> 22 -> (nbody subset now 4/10)**.
+numpy unchanged at 95 passed throughout.
+
+### Test-side sweep: followed the house idiom, not my instinct
+
+~30 failures were `numpy.all(Tensor)` at assertion sites across 37 compute
+assignments in 10 different LHS shapes (`Acos, Asin`, `c[i], s[i]`, `Acos, _`,
+bare `A`), several multi-line. My instinct was an autouse fixture wrapping the
+six public functions -- one edit instead of 37. **Checked the repo first and it
+said otherwise:** explicit `as_numpy` at assertion sites, 568 uses in
+test_quantity.py, 320 in test_noninertial.py. Followed that.
+
+Used `ast` rather than regex for the edit: multi-line calls plus 10 LHS shapes
+would have made a pattern-match fragile, and a silently corrupted test file is
+worse than the bug. Verified it still parses before running anything.
+
+### GAP 1 (fixed): get_namespace follows the AMBIENT namespace
+
+The three nbody routines did `_xp = get_namespace(pos)` then `_xp.sqrt(pos...)`.
+Under a forced backend `_xp` is torch even for a NUMPY pos, so the first call
+raised. Coerce pos once (no-op on numpy). This is
+[[routed-helpers-follow-ambient-not-argument]] biting in new code -- I wrote the
+bug knowing the rule.
+
+### GAP 2 (open): the module has TIME-DEPENDENT TWINS of the integrands
+
+Chasing a traceback that showed PRE-migration code, I found the general
+integrand exists FOUR times, not once:
+
+        scf_compute_coeffs_axi          (migrated)
+        _scf_compute_coeffs_axi_timedep  line 2619   <- NOT migrated
+        scf_compute_coeffs               (migrated)
+        _scf_compute_coeffs_timedep      line 2681   <- NOT migrated
+
+Migrating one copy of duplicated logic leaves the twin silently divergent. This
+is exactly the "duplication" item on the pre-merge audit checklist, found by
+reading a traceback that did not match the code I thought I had changed.
+
+### GAP 3 (open): the test sweep keyed on the wrong entry point
+
+My ast pass matched `scf_compute_coeffs*` call sites. Tests that obtain
+coefficients through `from_nbody` / `from_density` / `from_multipole` class
+methods were missed, so they still fail on `numpy.all(Tensor)`.
+
+**Remaining:** the 2-3 timedep integrand twins, widen the test sweep to the
+`from_*` constructors, then gradient tests + forced-backend gate + PR.
