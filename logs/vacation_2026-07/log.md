@@ -57489,3 +57489,35 @@ Residual risk for #75 is therefore concentrated in ONE place: the
 `_gaussianQuadrature` -> backend GL swap, where
 [[backend-precision-must-match-numpy]] applies and a less-accurate rule is a
 defect, not a tradeoff. That is the part to measure first when the PR opens.
+
+## 2026-08-29 — gh#1410 MERGED `ef360db0`. Ledger 61 -> 57
+
+154/154 SUCCESS, MERGEABLE CLEAN. All three gates cleared before merging:
+
+    CI          154/154 green
+    coverage    misses 15 -> 15, hits 48879 -> 48879 (identical to base)
+    diff audit  passes all three criteria
+
+Verified on develop after the merge: slow-skip 47, xfail 10 = **57**, and zero
+residual entries for either test.
+
+The coverage story is the one worth keeping. Mid-matrix the same sweep read
+`misses 15 -> 7002`; I argued phantom on three grounds (the diff touches no
+`galpy/` file; hits FELL by the same ~7000; 106 files affected including C
+sources a test-only diff cannot reach) and it converged to EXACT base parity.
+Process consequence, now in STATUS.md: **a miss sweep run mid-matrix is noise,
+not a gate.**
+
+Two self-inflicted detours worth recording, both cheap but both avoidable:
+
+* I reached for the codecov `sessions` discriminator on `commits/<sha>` and got
+  0/0 -- my own memory already says that endpoint does not populate it and to
+  use the FILE list, which is what actually settled it. Confirmed `report/?sha=`
+  and `totals/?sha=` are equally empty; memory updated.
+* `gh pr view 1410` failed with "Could not resolve to a PullRequest" because I
+  ran it with cwd inside galpy-jax -- a DIFFERENT repo. `gh` resolves the repo
+  from cwd; a `cd` earlier in the same compound command silently retargets it.
+
+No PR open. Next is task #75, de-risked to a single residual risk (the
+`_gaussianQuadrature` -> backend GL swap); both special-function swaps are
+already proven byte-identical.

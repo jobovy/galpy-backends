@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-08-28
+# Vacation status snapshot — 2026-08-29
 
 **This file is OVERWRITTEN, not appended.** "Where are things now"; `log.md` is
 the trace. Refresh on every merge / branch change.
@@ -7,18 +7,44 @@ the trace. Refresh on every merge / branch change.
 
 ## Now
 
-    develop  feat/backends-develop @ b331faa0
-    open PR  gh#1406  backend/hyp2f1-stale-comments -> develop  (CI running)
-    in prog  backend/vertical-quad-order (/var/tmp/quadn) -- surfdens quadrature,
-             code written + numpy gate green, jax measurement running
-    regen    run 33087562112 (workflow_dispatch, regen=true, eager) QUEUED
-    ledger   8 xfail + 57 slow-skip = 65 active
+    develop  feat/backends-develop @ ef360db0   (gh#1410 merged 2026-08-29)
+    open PR  NONE -- next is task #75, de-risked below
+    ledger   10 xfail + 47 slow-skip = 57   (was 61)
     cron     5451d57e, hourly at :13, created 2026-08-24, expires ~2026-08-31
 
-`/var/tmp/jitsafe` = worktree for the MERGED gh#1401 branch (keep until #1402
-lands; it is the byte-identity "branch" arm's sibling).
-`/var/tmp/h2single` = worktree for gh#1402.
-`/var/tmp/h2base` = detached at develop, the byte-identity BASE arm.
+## gh#1410 — MERGED `ef360db0`, 154/154 green
+
+`test_integrate_backwards` / `test_integrate_negative_time` each iterated a
+hardcoded 10-integrator list, bypassing `_backend_integrators()`. Applying it:
+608.3s -> 5.0s and 401.4s -> 0.7s. Ledger 61 -> 57 (-2 jax, -2 jax-jit).
+
+Coverage gate: misses **15 -> 15**, hits **48879 -> 48879**, identical to base.
+Mid-matrix the same sweep read `misses 15 -> 7002`; that was an upload phantom
+(diff touches no `galpy/` file; hits FELL by the same ~7000; 106 files affected
+incl. C sources). **A miss sweep run mid-matrix is noise, not a gate** -- run it
+only after all uploads land. That belongs in the checklist below.
+
+## NEXT: task #75 — SCF/Multipole coefficient numpy pin. DE-RISKED
+
+The numpy-island survey (2026-08-28) read all 8 `as_numpy` sites in
+potentials/integrators: every one is a documented deliberate boundary EXCEPT
+SCF and MultipoleExpansion, which cast density to numpy so a numpy quadrature
+can run. That is the one real potential-layer island.
+
+Measured, before writing any code -- both swaps are **BYTE-IDENTICAL**:
+
+    compute_legendre -> assoc_legendre   worst |dP| = 0.0, |d dP/dx| = 0.0
+    _C               -> stacked gegenbauer   worst |dC| = 0.0
+
+Caveat: `gegenbauer(N, alpha, x)` takes ONE alpha (shape x.shape+(N,)), while
+`_C(xi,N,L)` varies alpha with l (alpha(l)=2l+3/2) and returns (N,L). So it is a
+stack over l, NOT a drop-in.
+
+SCFPotential already imports both from `..backend.special` and uses them on the
+EVALUATION path (lines 1009/1345/1365); only the coefficient SETUP is pinned.
+
+**Residual risk is one thing:** `_gaussianQuadrature` -> backend GL, where
+`backend-precision-must-match-numpy` applies. Measure that FIRST.
 
 ## The gh#1204 review is fully addressed — three rounds
 
