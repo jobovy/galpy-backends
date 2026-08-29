@@ -57569,3 +57569,61 @@ numpy and SILENTLY drops the gradient).
 `scf_compute_coeffs` keep their pins and `_coeff_dens_numpy` stays live for
 them, so this is a clean incremental boundary, not a partial rewrite of all
 nine pins. 8 pins remain in SCFPotential.py + 3 in MultipoleExpansion.
+
+## 2026-08-29 (cont) — #75 hits a CONTRACT decision. PARKED for Jo, not pushed
+
+The forced-backend gate did its job and stopped this before CI. jax clean;
+**torch 10 failed**, all `TypeError: all() received an invalid combination` --
+i.e. `numpy.all(Tensor)` at test assertion sites.
+
+A/B (base file swapped in, same command): base **passes** those under torch,
+my branch fails them. So they are MY regression, not pre-existing. Arms
+genuinely differ, so the comparison is valid.
+
+**Mechanism.** Under a FORCED backend `get_namespace` returns the forced
+namespace regardless of input type, so `_C(xi, ...)` yields a Tensor even for a
+pure-numpy density. Previously the whole body sat inside
+`use("numpy", force=True)`, so it could not.
+
+### My first fix attempt was worse -- reverted
+
+Tried a density-driven data guard (numpy density -> numpy quadrature, matching
+`_RToxi`'s guard in this same module). The idea is right, the implementation was
+not: it probes with `param[0] = 1.0; dens(*param, **dens_kw)`, and that call
+signature is not valid for every density this function accepts (the
+time-dependent ones differ). Result: **37 failed**, up from 10, including my own
+gradient test. Reverted to the committed f74b651c.
+
+### Why this is Jo's call, not mine
+
+The numpy pin is DELIBERATE, and the suite documents it:
+
+* the pin's own comment calls it "construction-time numerical setup";
+* `_coeff_dens_numpy` exists precisely to cast backend values INTO that numpy
+  quadrature;
+* `tests/test_backend_scf.py:564` asserts "from_density's coefficient quadrature
+  runs on numpy".
+
+So #75 ("lift the numpy pin") is sanctioned, but WHAT THE NEW CONTRACT IS is a
+public-API decision with real reach:
+
+    (A) coefficients follow the AMBIENT backend  -> current branch. Needs ~10
+        test_scf.py assertion sites wrapped in as_numpy (the established
+        pattern, 11 precedents). Consistent with how the rest of galpy behaves
+        under a forced backend.
+    (B) coefficients follow the DENSITY          -> numpy density gives numpy
+        out even under a forced backend. No test churn, matches _RToxi's guard,
+        but needs a probe that is valid for every density signature -- which is
+        what I got wrong above.
+    (C) do all six scf_compute_coeffs* routines at once, so siblings stay
+        consistent -- a much larger PR.
+
+**Under (A) one of six sibling `scf_compute_coeffs*` routines would return
+backend arrays under a forced backend while five return numpy.** That
+inconsistency is exactly what a reviewer should flag, and it is why I am not
+picking unilaterally.
+
+**State:** branch `backend/scf-coeff-native` committed at f74b651c, **NOT
+pushed**, no PR open. numpy is byte-identical and 204 tests pass; the only
+issue is the torch contract question. My earlier "rewiring job" framing was too
+optimistic: removing the island is easy, deciding the contract is not.
