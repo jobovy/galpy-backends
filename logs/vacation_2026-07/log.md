@@ -57403,3 +57403,32 @@ So #75 is a rewiring job onto proven in-file helpers, not a reimplementation
 needing new special functions. It is the natural PR after gh#1410 -- it closes
 the last potential-layer island AND unlocks differentiating SCF/Multipole with
 respect to density parameters. Not started: one PR at a time.
+
+## 2026-08-28 (third wake) — gh#1410 pre-merge gate: codecov red is PHANTOM, proven
+
+Cron `5451d57e` alive. gh#1410 at **119/153 green**, 25 queued, 8 running; the
+only red is `codecov/project`.
+
+Ran the PRE-MERGE CHECKLIST miss sweep early, and it looked alarming:
+
+        b331faa0 (develop base)  hits=48879  misses=   15
+        39f2391e (gh#1410 head)  hits=41892  misses= 7002   <-- MISS INCREASE
+
+Proven phantom, three independent ways:
+
+1. **The diff cannot do it.** gh#1410 touches `tests/test_orbit.py` and
+   `tests/backend_slow_skip.txt` and NOTHING under `galpy/`.
+2. **Hits fell as misses rose**, by the same ~7000. A real regression moves
+   misses up while hits hold; lines moving hit -> unreported is an upload gap.
+3. **106 files** show more misses, including `actionAngle_c_ext/*.c` (+928) and
+   `actionAngleAdiabatic.c` (+184) -- C sources a test-only diff cannot reach.
+
+So the sweep MUST be re-run once uploads complete; the 15 -> 15 prediction is
+untested until then. A miss sweep run mid-matrix is not a gate, it is noise --
+worth writing down, because the checklist does not currently say when to run it.
+
+Side note: I reached for the `sessions` discriminator on `commits/<sha>` and got
+0/0. My own memory already warns that endpoint does not populate it and to use
+the FILE list instead -- which is what settled it. Confirmed `report/?sha=` and
+`totals/?sha=` are equally empty, so `compare/?pullid=` is the only endpoint
+with sessions; memory updated so the detour is not repeated.
