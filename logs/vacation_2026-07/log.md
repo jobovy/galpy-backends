@@ -57988,3 +57988,40 @@ fitted through its SCF potential.
       (the checks above are a throwaway probe, not a test)
     forced-backend gate: jax + torch on the touched suites
     cron expires ~2026-08-31 -- RE-CREATE on the next wake, do not let it lapse
+
+## 2026-08-29 — CRON ROTATED + gradient tests committed
+
+**Cron rotated EARLY, on purpose.** `5451d57e` was 5 days old (threshold ~6) and
+would have expired ~2026-08-31. It has died silently twice before at real cost,
+so I rotated rather than cut it fine:
+
+    CronCreate 2b36be1c   FIRST, so there is never a gap
+    CronDelete 5451d57e   only then
+    CronList              verified exactly one job remains
+
+    created 2026-08-29 -> expires ~2026-09-05
+
+The replacement prompt carries the updated date so the next wake reads the right
+deadline rather than the stale one.
+
+### `76c6ade4` — gradient tests committed
+
+The differentiability numbers I had been reporting came from a THROWAWAY PROBE.
+The PR would have shipped its central claim unproven by anything that runs in
+CI. Now committed for axi and general (spherical already had one), parametrised
+over jax and torch: d A000 / d(density scale) vs central differences on the same
+code path. 6 passed.
+
+The general-case test doubles as a cross-routine check: the cos(2 phi) factor
+averages out of the m=0 monopole, so its A000 derivative MUST match the
+spherical and axi routines. That is why the three probe values agreeing earlier
+was a consistency signal rather than a suspicious coincidence.
+
+### Forced-backend gate running (jax THEN torch, 4 suites)
+
+Worth stating why this is not redundant with the per-suite runs: I have measured
+TORCH repeatedly, but **jax has not run across these suites since several
+commits ago** -- the reader gate, all three timedep twins, and both test sweeps
+landed since. jax and torch fail differently (jax tolerates some numpy/backend
+mixing that torch rejects outright), so a clean torch arm is NOT evidence about
+jax.
