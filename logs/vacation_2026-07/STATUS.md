@@ -1,334 +1,93 @@
-# Vacation status snapshot — 2026-08-29
+# Vacation status snapshot — 2026-09-12 (afternoon)
 
-**This file is OVERWRITTEN, not appended.** "Where are things now"; `log.md` is
-the trace. Refresh on every merge / branch change.
+**This file is OVERWRITTEN, not appended.** "Where are things now";
+`log.md` is the trace. Refresh on every merge / branch change.
 
 ---
 
 ## Now
 
-    develop  feat/backends-develop @ ef360db0   (gh#1410 merged 2026-08-29)
-    open PR  NONE
-    parked   backend/scf-coeff-native @ f74b651c (worktree /var/tmp/scfcoeff),
-             committed but NOT pushed -- BLOCKED on a contract decision, below
-    ledger   10 xfail + 47 slow-skip = 57   (was 61)
-    cron     5451d57e, hourly at :13, created 2026-08-24, expires ~2026-08-31
-
-## gh#1410 — MERGED `ef360db0`, 154/154 green
-
-`test_integrate_backwards` / `test_integrate_negative_time` each iterated a
-hardcoded 10-integrator list, bypassing `_backend_integrators()`. Applying it:
-608.3s -> 5.0s and 401.4s -> 0.7s. Ledger 61 -> 57 (-2 jax, -2 jax-jit).
-
-Coverage gate: misses **15 -> 15**, hits **48879 -> 48879**, identical to base.
-Mid-matrix the same sweep read `misses 15 -> 7002`; that was an upload phantom
-(diff touches no `galpy/` file; hits FELL by the same ~7000; 106 files affected
-incl. C sources). **A miss sweep run mid-matrix is noise, not a gate** -- run it
-only after all uploads land. That belongs in the checklist below.
-
-## BLOCKED, NEEDS JO: what should SCF coefficient setup return?
-
-Task #75 says lift the SCF/Multipole numpy pin. Removing it from
-`scf_compute_coeffs_spherical` works -- numpy byte-identical across all three
-coefficient routines, 204 tests pass, grad-vs-FD 5.3e-11 -- but the
-**forced-backend gate caught 10 torch failures** before CI, and an A/B (base
-file swapped in) proves they are MY regression, not pre-existing.
-
-Under a FORCED backend `get_namespace` returns the forced namespace regardless
-of input type, so a pure-numpy density now yields Tensors, and test assertions
-doing `numpy.all(...)` raise.
-
-**The pin is deliberate and the suite documents it:** its own comment calls it
-"construction-time numerical setup", `_coeff_dens_numpy` exists to cast backend
-values INTO the numpy quadrature, and tests/test_backend_scf.py:564 asserts
-"from_density's coefficient quadrature runs on numpy".
-
-    (A) follow the AMBIENT backend   current branch; needs ~10 test_scf.py
-                                     assertion sites wrapped in as_numpy
-                                     (established pattern, 11 precedents)
-    (B) follow the DENSITY           numpy density -> numpy out even under a
-                                     forced backend; matches _RToxi's guard,
-                                     no test churn, but needs a probe valid for
-                                     EVERY density signature -- I got that
-                                     wrong (37 failures) and reverted
-    (C) migrate all six scf_compute_coeffs* at once   consistent, much bigger
-
-Under (A), ONE of six sibling routines returns backend arrays under a forced
-backend while five return numpy -- the inconsistency a reviewer should flag,
-and why I did not choose unilaterally.
-
-## SUPERSEDED scoping (kept for the measurements): task #75 — SCF/Multipole coefficient numpy pin. DE-RISKED
-
-The numpy-island survey (2026-08-28) read all 8 `as_numpy` sites in
-potentials/integrators: every one is a documented deliberate boundary EXCEPT
-SCF and MultipoleExpansion, which cast density to numpy so a numpy quadrature
-can run. That is the one real potential-layer island.
-
-Measured, before writing any code -- both swaps are **BYTE-IDENTICAL**:
-
-    compute_legendre -> assoc_legendre   worst |dP| = 0.0, |d dP/dx| = 0.0
-    _C               -> stacked gegenbauer   worst |dC| = 0.0
-
-Caveat: `gegenbauer(N, alpha, x)` takes ONE alpha (shape x.shape+(N,)), while
-`_C(xi,N,L)` varies alpha with l (alpha(l)=2l+3/2) and returns (N,L). So it is a
-stack over l, NOT a drop-in.
-
-SCFPotential already imports both from `..backend.special` and uses them on the
-EVALUATION path (lines 1009/1345/1365); only the coefficient SETUP is pinned.
-
-**Residual risk is one thing:** `_gaussianQuadrature` -> backend GL, where
-`backend-precision-must-match-numpy` applies. Measure that FIRST.
-
-## The gh#1204 review is fully addressed — three rounds
-
-    round 1+2  ->  gh#1381 gh#1382 gh#1383 gh#1388 gh#1391   (status comment 5422012558)
-    round 3    ->  gh#1401                                    (reply comment 5434247936)
-
-Round 3 raised two PR-local findings (traced beta under external jit;
-symmetric_quad mixed finite/infinite limits) plus an audit note on small-B
-hyp2f1. All three are IN develop via gh#1401.
-
-## Merged into develop this cycle (ledger delta 0 on every one)
-
-    00a7153c  gh#1401  review round 3 + small-B hyp2f1 floor cleared
-    5c3c8671  gh#1399  actionAngleAdiabaticGrid exact off-grid actions
-    bc69771e  gh#1394  surfdens both routes on-backend under eager torch grad
-    366ffc04  gh#1393  Einasto d_n gradient un-gated to torch + f64 pin
-    8980402a  gh#1392  constantbetaHernquistdf d f_E/d beta
-    cfe23abe  gh#1391  traceable constructors + hyp2f1/hyp1f1 parameters
-    107a8060  gh#1388  map_coordinates dispatches on the GRID
-    4e2cc322  gh#1383  coords inverse galcen + f64/f32 promotion
-    06267d1d  gh#1382  quadrature batching + AnyAxisym torch construction
-    206ccd78  gh#1381  gammainc endpoint gradient
-
-Also merged to MAIN by Jo: gh#1398 (`3df11b96`), actionAngleAdiabatic `_justjr`
-scalar return.
-
-## gh#1403 — MERGED `26388056`, 154/154 green
-
-Fixed the review blocker (a FOURTH copy of the admissibility predicate, in
-`_nonpositive_traced`, still on the old `c - B >= 1`: eager exact, jit inf/nan)
-and removed the Euler-TRANSFORM branch, which gh#1402's relaxation made
-provably dead (2031 parameter sets reach it under the old bound, ZERO under the
-new one). That deletion is what repaired the coverage regression Jo flagged:
-misses 16 -> 15, back to the value held across all eleven earlier merges.
-
-## gh#1402 — MERGED `8c320b39`, 154/154 green. Evidence
-
-One tanh-sinh rule for every B; the `c - B >= 1` constraint deleted with it.
-
-    768 cases, B ABOVE the old 0.25 threshold (the regime GL was kept for):
-        GL          worst 1.5e-04
-        tanh-sinh   worst 2.9e-15      cases where tanh-sinh is worse: 0
-
-    900 cases through the PUBLIC entry, incl. z=0:
-        develop (pre-1401)  8.807e-01
-        gh#1401             4.577e-03
-        gh#1402             2.665e-15
-
-    numpy BYTE-IDENTICAL  sha256 245bc0e3... vs develop 00a7153c,
-                          arms grep-asserted to differ
-    gate                  385 passed / 1 skipped, re-run AFTER the rebase
-    size                  91 insertions, 156 deletions (NET DELETION)
-
-## PRE-MERGE CHECKLIST (added after gh#1402 landed a coverage regression)
-
-Before squash-merging, in addition to the diff audit:
-
-    tools/codecov_miss_sweep.py   # misses must NOT increase vs the base commit
-
-A GREEN codecov check is NOT the standard. gh#1402 passed both checks with
-"All modified and coverable lines are covered by tests" while Misses went
-15 -> 16: that phrasing covers MODIFIED lines only, and says nothing about a
-line that was covered before and is not now. Read the Hits/Misses table.
-
-Swept the whole cycle after the fact -- misses held at exactly 15 across all
-eleven earlier merges, so gh#1402 was an isolated lapse, not a pattern.
-
-## Ledger status — verified, not assumed
-
-    8 xfail + 57 slow-skip = 65 active
-
-xfail half VERIFIED from CI artifacts (7432 results, run on 00a7153c):
-  * all 4 EAGER entries still legitimately xfail, ZERO xpass;
-  * ZERO unledgered failures;
-  * the 2 AdiabaticGrid entries are NOT stale despite gh#1399 -- re-measured
-    with the C extension actually built (jax 1 xfailed / torch 1 xfailed,
-    XPASS count 0 in both).
-
-slow-skip half: CI SKIPS them in every mode, so junit can only ever say
-"skipped" -- the `regen` toggle does NOT change this (it gates the xfail ledger
-only). The only way to verify is to EMPTY the list locally and run.
-
-  Done for the 6 jax `test_potential.py` entries, 2026-08-27, in /var/tmp/h2base
-  (list emptied, C extension built, quiet box, whole file, 1h59m):
-
-      900.0s FAIL(timeout)  poisson_surfdens[mockRotatedAndTiltedMWP14Wrapper]
-      900.0s FAIL(timeout)  poisson_surfdens[...MWP14WrapperwInclination]
-      900.0s FAIL(timeout)  poisson_surfdens[mockRotatedTiltedOffsetMWP14Wrapper]
-      900.0s FAIL(timeout)  poisson_surfdens[mockOffsetMWP14Wrapper]
-      349.8s pass          poisson_surfdens[...TriaxialLogHalowInclination]
-      249.8s pass          test_DehnenBinney98
-
-  All 6 REPRODUCE their 2026-08-21 annotations (which recorded >700s timeouts
-  and 371.9s / 289.3s for the two passers; today's box was ~6-14% quieter).
-  So: none are stale, and the two passers stay deferred -- at CI~250s and
-  CI~180s they sit only 12-32% under the 300s cap.
-
-  The 4 timeouts are SLOW, not hung: the same test passes on the
-  single-component LogHalo wrapper, and cost scales with the wrapped
-  component count.
-
-Harvester: `tools/ledger_harvest.py`, arm-aware. Validating it caught a
--jit-vs-eager false-stale bug IN THE HARVESTER (it read 4 torch-jit entries as
-stale by comparing them against plain-torch results).
-
-## gh#1406 — review follow-up, comments only
-
-The codex review's last item: comments still describing the deleted
-Euler-transform route and the replaced GL/substitution rule as current. Two
-named `_TS_B_MAX`, a constant with ZERO occurrences in hyp2f1.py. Swept both
-files for the stale vocabulary and classified each hit present-tense-wrong vs
-correctly-past-tense; 8 fixed, the history passages left alone. 253 passed.
-
-## gh#1407 — surfdens vertical quadrature, MEASURED END TO END
-
-Eager jax/torch sent both vertical surface-density integrals to
-scipy.integrate.quad (1113 scalar integrand calls @ ~48 ms for a wrapped
-MWP2014). Routed to the batched GL rule the TRACED path already uses:
-22-83x faster at worst 1.6e-14 vs scipy converged to 1.4e-16.
-
-Whole test_potential.py under jax, the 6 entries un-deferred:
-
-    before   4 failed, 1284 passed, 102 skipped   7144 s (1:59:04)
-    after    0 failed, 1288 passed, 102 skipped   2733 s (0:45:33)
-
-    poisson_surfdens[mockRotatedAndTiltedMWP14]   >900 FAIL -> 20.5 s
-    poisson_surfdens[mockRotatedTiltedOffset..]   >900 FAIL -> 19.1 s
-    poisson_surfdens[mockOffsetMWP14Wrapper]      >900 FAIL -> 17.1 s
-    poisson_surfdens[..MWP14wInclination]         >900 FAIL -> 16.5 s
-    poisson_surfdens[..TriaxialLogHalowIncl]      349.8 s   ->  8.0 s
-    test_DehnenBinney98                           249.8 s   -> 77.9 s
-
-All six >80% under the 300 s cap -> all six un-deferred. The file is now FASTER
-with them running than it was with them skipped.
-
-THE GATE IS NOT `_force_accepts_arrays` -- using it did nothing, and the smoke
-test caught it (`symmetric_quad calls=0`). `_surfdens_poisson` runs on the inner
-RotateAndTiltWrapperPotential, whose forces carry the scalar-only marker (right
-for the NUMPY contract) while the potential declares `_backend_accepts_arrays`,
-the escape hatch `check_potential_inputs_not_arrays` implements for backend
-arrays. The gate now asks the question the guard asks.
-
-numpy byte-identical (gate returns False on its first line; a test pins it).
-
-## READY follow-ups (measured, not opened — 2 PRs already at the cap)
-
-**(a) A WRONG de-ledgering on develop.** `test_pickling_potential_unitful_dens`
-was de-ledgered 2026-08-18 as "MEASURED PASSING traced"; it FAILS on jax-jit AND
-torch-jit (passes both eager) — exactly what the ledger's own comment predicts
-for a units density hitting `as_numpy()`. The 2026-08-18 regen almost certainly
-never reached it and absence-of-data was read as a pass. Fix = re-add 2 lines +
-correct the comment. Zero CI impact (CI never runs jit mode); only a local jit
-run could find it.
-
-**(b) READY, MEASURED: 4 more ledger entries.** `test_integrate_backwards` and
-`test_integrate_negative_time` bypass `_backend_integrators()`, the existing
-helper that drops pure-Python integrators under a backend. Applying it:
-608.3 s -> 5.0 s and 401.4 s -> 0.7 s (same-session A/B). Burns 2 jax + 2
-jax-jit entries. numpy unaffected by construction. Verify full-file context
-before opening.
-
-**(c) `Potential.mass` asks the wrong array-safety predicate** -- SHIPPED in gh#1408
-
-`Potential.mass` asks `_force_accepts_arrays` for the same array-safety
-decision gh#1407 fixes for surfdens, so it inherits the same wrong answer: the
-predicate returns False for a potential that declares `_backend_accepts_arrays`,
-and mass() then drives its backend quadrature node-by-node.
-
-Only ONE class is actually affected -- the two opt-in classes are
-RotateAndTiltWrapper (mass() raises NotImplementedError for non-axisymmetric
-potentials, so it can never reach this) and DoubleExponentialDisk. Measured on
-the latter, eager jax:
-
-    vectorized=False (today)   0.62 s
-    vectorized=True  (fixed)   0.08 s      mass identical to 12 digits
-
-~8x, but 0.6 s absolute and NO ledger entry rides on it. So this is a
-consistency fix, not a burndown: after gh#1407 two call sites ask array-safety
-differently, which is exactly what a reviewer should flag. Open it when a PR
-slot frees up; do not amend gh#1407 for it (its CI is queued behind a ~3 h
-backlog and a new commit would throw that away).
-
-## WHERE THE LEDGER ACTUALLY STANDS — classified 2026-08-28
-
-After gh#1410 lands: **10 xfail + 47 slow-skip = 57**. By file:
-
-        16  test_orbit.py          9  test_noninertial.py     7  test_FDMdynamfric.py
-         4  test_orbits.py         4  test_streamTrack.py     3  test_dynamfric.py
-         2  test_qdf.py            2  test_actionAngle.py
-
-**39 of the 47 slow-skips are orbit-integration cost** (orbit + noninertial +
-FDMdynamfric + orbits + dynamfric). That is one cause, not thirty-nine.
-
-### The test-side integrator-reduction lever is SPENT
-
-`_backend_integrators()` (drop pure-Python integrators under a forced backend)
-is what burned entries all cycle, and gh#1410 took the last clean pair. Audited
-every remaining `test_orbit.py` entry -- 10 distinct tests behind the 16 rows:
-
-        5  ALREADY use it   ecc_rperi_rap, zmax, analytic_zmax,
-                            energy_jacobi_conservation, liouville_planar
-        2  BY DESIGN        test_dxdv_3d_c_vs_python,
-                            test_integrate_indiv_t_python_paths
-                            -- the Python path IS the subject; filtering guts them
-        1  already _c-only  lyapunov_spectrum_henonheiles_chaotic
-        1  single Python    test_interprz_dxdv_3d (dop853 only -> filter deletes it)
-        1  partial          lyapunov_spectrum_consistency (dop853 + dop853_c)
-
-`test_noninertial.py` is the same story, checked call-by-call. Of its 5 tests,
-`_omegadot` and `_omegafunc` have exactly ONE `check_orbit` call each, at pure-
-Python `dop853` -- filtering deletes the test. `test_arbitraryaxisrotation`
-varies `zvec`/`omega` ACROSS methods, so dropping the Python calls drops
-configurations, not just duplicate integrators. Only the two `linacc_changingacc`
-tests have gh#1410's shape (method+tol only), and even there the Python arm
-asserts at **tol=1e-9** while the `_c` arm asserts at **1e-5** -- so the filter
-would trade 3 ledger entries for the strictest assertion in the file. Timing
-probe running to see whether the trade is even worth proposing.
-
-### So the remaining 39 need a different lever
-
-Eager backends pay ~5 ms per potential call (task #79) against ~27 us on numpy.
-A Python-stepped ODE makes ~1e4 such calls per orbit, so these tests are ~200x
-slower *structurally*. Vectorizing cannot help -- ODE steps are sequential by
-construction -- and `no-internal-jit` rules out compiling inside galpy. The only
-two real exits are (a) the C integrators, which is exactly what the now-spent
-test-side lever routed to, and (b) the in-backend diffrax/torchdiffeq ODE path.
-
-**This is a roadmap item for Jo, not an opportunistic wake-time fix.** I am not
-proposing to weaken assertions or delete Python-path coverage to move the count.
-
-## FOR JO — open decisions, none taken unilaterally
-
-1. ~~torch surfdens(forcepoisson=True) gradient~~ **CLOSED** — re-measured on
-   develop: torch AND jax both match FD to 3.2e-11 (R) / 7.7e-11 (z). gh#1394
-   was the fix; my earlier "open decision" entry was stale.
-2. **Array beta on constantbetaHernquistdf** now raises a broadcasting error
-   rather than "truth value ambiguous". Both loud, neither clear; array beta was
-   never supported. A validation guard would be a small follow-up.
-3. **gh#1277 / gh#1276** filed as issues on your instruction (AnyAxisym R2deriv
-   at small R; RazorThinExpDisk force digits in a |z| band).
-
-## Standing traps that keep re-biting (see log.md for the full list)
-
-* A worktree branched BEFORE a fix still runs the code you deleted. Bit me
-  twice this week; both times the symptom was a gate hanging, not failing.
-* After a SQUASH merge, a follow-up branched from an intermediate commit needs
-  `git rebase --onto <develop> <old-base> <branch>`, NOT a plain rebase.
-* `all-clear` CONCLUDES; it does not re-evaluate when the shard it gated on is
-  re-run. It needs its own targeted re-run.
-* codecov/patch and codecov/project are DIFFERENT signals. project self-heals
-  when uploads complete; patch can be a real uncovered-lines finding.
-* Local coverage tooling is broken in this env (numpy re-import). A branch whose
-  omission RAISES can be verified by the test passing at all — that trick does
-  NOT generalise to branches that silently return a different number.
+    feat/backends  cff1a1dc1   main  (rebase landed 2026-09-12)
+    ledger         5 slow-skip, 5 xfail   (was 6 / 6 yesterday; 42 / 31 on 09-09)
+
+Jo is away for the weekend and reviews Monday. Instruction: keep stacking PRs,
+keep going, at least two open at a time.
+
+## The stack — gh stack #1488, all on feat/backends, all Jo's to merge
+
+    #1485  backend/oblatestaeckel-ntab-backend      -> feat/backends
+      OblateStaeckelWrapperPotential ntab= on the backend, differentiably.
+      Spline1D.from_ppoly keeps main's exact CubicSpline (refitting would break
+      numpy byte-identity AND the GSL-cspline/C agreement). Then, because CI
+      showed the cost of actually USING the tables under jax, eval_ppoly itself:
+      the table was re-uploaded per call, the 4 coefficient rows were gathered
+      separately, and unpacking + reshapes each cost a dispatch.
+        eval per spline    6.7 ms -> 0.7 ms   (~10x)
+        evaluateRforces   19.10 -> 7.22 ms    (2.6x)
+        the ntab test    464.7 -> 258.1 s     (so NO slow-skip row added)
+      bit-exact vs the old formulation on numpy/jax/torch, nu=0/1/2.
+
+    #1486  backend/orbit-returns-backend-array      -> #1485
+      A backend IC gets a backend trajectory back for EVERY integrator (symplectic
+      C incl. the default, ias15_c, the Python steppers), at 1.00-1.02x and with
+      0.0 difference from the numpy values. Routing them through the C-STM instead
+      was measured at 801x and rejected. Continuation made namespace-aware.
+
+    #1489  backend/cstm-continuation                -> #1486
+      The C-STM and in-backend routes silently DROPPED the first leg of a
+      continued integration (101 points where numpy gets 201). Pre-existing.
+      Merged trajectory stays differentiable: jacobian vs FD 1e-12.
+
+    #1490  backend/traced-ecc-tolerance             -> #1489
+      test_eccentricity traced-only bar. ledger -1.
+
+    #1491  backend/interp2d-dispatch                -> #1490
+      eval_rect_ppoly: 16 fancy gathers -> 1. 25.5 -> 1.8 ms; interpRZPotential
+      on backend coords 32.7 -> 2.8 ms for Rforce. Bit-exact.
+
+    READY, NOT PUSHED (waiting for the CI queue to drain):
+    backend/fdm-ledger-burn @ 2ac500eb1  -> #1491
+      slow-skip 6 -> 5, and three stale notes corrected.
+
+## Two bugs CI found in my own interpolation work
+
+Both in the Spline1D device cache / unstack, both invisible to the eager suite:
+
+1. a conversion made INSIDE a jax trace is a tracer, so caching it leaked one
+   trace into the next (`x = JitTracer(float64[499])`, surfacing a module away in
+   jacfwd over a friction force). Gated on `under_trace`.
+2. array-api-compat implements torch's `unstack` as `moveaxis`, which has no vmap
+   batching rule. The existing `vmap(grad)` guard PASSES with the bug — only
+   BARE vmap fails. `unstack` is now jax-only.
+
+## Measured constants earned today
+
+    torch CI/local      0.62   (median of 7, range 0.60-0.65) — was assumed 0.71
+    jax qdf shard       BIMODAL: 0.74-0.95 for python_vs_c/linacc/impulse,
+                        0.36-0.40 for the qdf family. The slow-skip file's claim
+                        that "a CI shard runs ~3x slower" is wrong by ~8x.
+
+## The 5 remaining xfail rows are at their floor, not their target
+
+    3  pickling / unitful dens — a units-based density routes through as_numpy(),
+       which a tracer cannot satisfy. Non-traceable BY CONSTRUCTION.
+    2  poisson_surfdens[AnyAxisym] — the memory said only the flag blocks these.
+       TESTED: not true yet. Setting _backend_accepts_arrays still dies in
+       _bk_split_quad ("Cannot stack arrays with different numbers of dimensions:
+       got (), (100,)"). Needs trailing node axes threaded through the panel
+       ladder and all six _gl integrands, THEN Jo's call on repointing the
+       negative test. Feasibility is good: the test's bar is 1e-4 and its z are
+       all >= 0.125, where the traced forces are exact to ~1e-15.
+
+## The 5 remaining slow-skip rows
+
+    torch     FDM central_limit        291.9s in-shard, FLIPS to a 300s timeout
+    torch-jit FDM central_limit        305.7s
+    jax       qdf sampleV_interpolate  2837.5s in-shard (244s isolated!)
+    jax-jit   qdf sampleV_interpolate
+    jax-jit   orbit ecc_rperi_rap[ExpTruncNFW]   296.2s  <- NOT yet re-measured
+
+FDM is fully characterised now: leg1 (dop853_c) is 4.7s on numpy AND torch; ALL
+the cost is leg2's 1001-step PYTHON stepper (55.5 -> 272.1 s). The force is down
+to 22 torch ops, so there is no eval_ppoly-style win left — retiring it needs
+fewer force evaluations or an in-backend stepper.

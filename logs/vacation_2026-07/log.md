@@ -58025,3 +58025,2317 @@ commits ago** -- the reader gate, all three timedep twins, and both test sweeps
 landed since. jax and torch fail differently (jax tolerates some numpy/backend
 mixing that torch rejects outright), so a clean torch arm is NOT evidence about
 jax.
+
+## 2026-08-29 — #1411 C-boundary fix, +3 ledger, and the quadrature lever measured
+
+* **Cron re-created 2026-08-29 (id 2b36be1c) -> expires ~2026-09-05.**
+* **Real red fixed (84540c2f).** `backend torch tests/test_actionAngle.py` failed on
+  `p._Acos.flatten(order="C")` in `integratePlanarOrbit._parse_scf_pot`: Tensor.flatten
+  has no `order` kwarg. Same "gate the readers" class as `_init_static` — I changed what
+  the coefficients ARE and missed a consumer. My forced-backend gate was scoped to the
+  suites whose FILES I edited; a type change propagates to CONSUMERS, and test_actionAngle
+  builds SCF potentials and integrates them in C. `grep -rn "_Acos\|_Asin" galpy/` finds
+  both sites in seconds and belonged at the moment the return type changed. The first
+  version of the fix raised NameError (as_numpy is imported in a DIFFERENT function) and
+  the failure count stayed at 2 — reading today's exception, not assuming, separated
+  "fix is wrong" from "fix is incomplete". 24 passed after.
+* **Ledger 57 -> 60 (+3), the first ADD this cycle**, all jax, all `test_scf.py` tdep-density.
+  Measured local -> CI at the 0.71 factor: 671->476s, 555->394s, 381->270s. torch worst
+  is 160->114s, so this is a jax-arm set. Verified honored (3 skipped, 1600s -> 17s).
+* **The speedup lever is measured, not guessed.** `_gaussianQuadrature` walks
+  `_cartesian(Ksample)` one node at a time: **8001 sequential scalar integrand calls** for
+  one N=3,L=3 solve. numpy 204us/call (84% of total); jax **4753us/call (95% of total)**,
+  i.e. 20.5x, entirely per-call overhead. Batching 8001 calls -> 1 addresses 95% of the
+  runtime and should RETIRE these 3 entries, not just trim them.
+  Constraint: a batched contraction changes numpy's summation ORDER, so it must be a dual
+  numpy/backend path (sanctioned — dual-path is not an island), numpy keeping its exact
+  sequential loop for byte-identity. Open question to settle first: whether each integrand
+  broadcasts over a leading batch axis, since they return the [n][l][m] grid already.
+* Two probe traps hit and worth re-reading: the script in /var/tmp imported the MAIN repo
+  (sys.path[0] is the SCRIPT's dir, not cwd), and `galpy.potential.SCFPotential` resolves
+  to the CLASS not the module. Both are in memory; both cost a cycle anyway. The
+  provenance assert now goes in the probe from the start.
+
+### 2026-08-29 (later) — batching question SETTLED, and it is not the easy version
+
+Probed the three integrands directly (scalar call vs 7-point batch):
+
+| integrand | scalar | batched | verdict |
+|---|---|---|---|
+| spherical 1D | (4,)      | (4,7)      | batches today, axis lands TRAILING |
+| axi 2D       | (4,3)     | ValueError | (7,) vs (1,3) collide |
+| general 3D   | (2,4,3,3) | ValueError | (4,3,3,7) vs (1,7,3,3) collide |
+
+**This corrects my previous entry's framing.** "Batch 8001 calls -> 1" is right about
+WHERE the time goes but wrong about the cost of getting it: the integrands build their
+(n,l,m) grid with `numpy.newaxis` at positions hardcoded for SCALAR xi/costheta/phi, so a
+batch axis collides with the coefficient axes. It is an integrand REWRITE, not a call-site
+change.
+
+And the cheap win is in the wrong place: the 1D spherical integrand batches for free but
+only runs K=20 calls. The 8000 calls are the 3D general case (K^3) — precisely the one
+that needs the rewrite. So there is no quick partial here worth landing on its own.
+
+Scope for the follow-up PR, in order:
+1. rewrite axi + general integrands to carry a LEADING batch axis (move newaxis to
+   trailing/ellipsis form), keeping scalar calls working;
+2. batched contraction in `_gaussianQuadrature` for backends only — numpy keeps its exact
+   sequential loop, since a vectorized sum changes summation ORDER and breaks byte-identity;
+3. re-measure the 3 ledgered tests and REMOVE the entries if they clear the cap.
+Expected payoff is large (95% of jax runtime is per-call overhead), which justifies the
+rewrite, but it is its own PR after #1411 lands — not a rider on it.
+
+### 2026-08-29 (wake 3) — codecov reds are the known phantom; C-boundary fix proven byte-identical
+
+* **codecov/project + codecov/patch both RED — phantom, not real.** API totals:
+  head 934e1e9e = 85.69%, misses **7002**; base ef360db0 = 99.96%, misses **15**, with
+  **46 checks still QUEUED**. Same signature as the earlier sweep that converged 7002 -> 15
+  once the matrix finished. Note `state: complete` in the API is misleading — it describes
+  that upload SESSION, not the matrix. Hold and re-read at completion; patch still needs a
+  real look then, since it measures MY new lines.
+* **C-boundary fix verified numpy byte-identical by a valid A/B.** Integrated an SCF orbit
+  on the 3D and planar C paths with the head file and the base file:
+  head/base both `full3d 3242675a644ec4bd  planar b77405b8a2995480`.
+  Arms grep-asserted to differ (`p._Acos.flatten` vs `as_numpy(p._Acos).flatten`) — the
+  base file's own 2 `as_numpy` hits are at 680/683 in `_finalize_pot_args`, a DIFFERENT
+  function, so they were not contamination.
+* **Harness-scope caveat worth keeping.** The 6-routine hash harness came back IDENTICAL,
+  but it covers the coefficient routines and structurally CANNOT see integratePlanarOrbit —
+  the same blind spot that hid the timedep twins. A green harness is evidence about what the
+  harness covers, nothing more; the orbit-level A/B above is what actually tests this change.
+
+### 2026-08-29 (wake 4) — REAL reds surfaced: test_scf_xiToR on BOTH backends
+
+CI on 934e1e9e: 120 green, 7 red. Two codecov (phantom, see above) + 5 real-looking.
+Read the failures out of the shard logs (per-test FAILED lines are truncated by the
+force-exit, but the shard's own CENSUS line survives and names them):
+
+* `tests/test_potential.py::test_scf_xiToR` — **FAILS ON BOTH jax AND torch**.
+  Backend census: jax "264 passed, ... 2 FAILED"; torch "265 passed, ... 1 FAILED".
+  A failure on BOTH backends of an SCF test is my change, not a backend quirk.
+  `_xiToR`/`_RToxi` are the r<->xi leaf helpers the coefficient integrands call, and
+  `_RToxi` uses a data-guard (`if not is_backend_array(r)`) while `_xiToR` dispatches on
+  `get_namespace(xi)` — i.e. AMBIENT. Under a forced backend those two disagree for numpy
+  input: _RToxi stays numpy, _xiToR follows the forced namespace. The test asserts they
+  are each other's inverse, which is exactly what an asymmetric dispatch pair breaks.
+  That is a hypothesis from reading, NOT yet confirmed — reproduction still running.
+* `tests/test_potential.py::test_DehnenBinney98` — jax only, not yet characterised.
+* `build (ubuntu 3.10, test_orbit -k 'test_energy_jacobi_conservation or from_name')` —
+  the known SIMBAD/from_name network shard; probe before spending a re-run.
+* `build (ubuntu 3.14, tests/test_backend*.py)` — not yet read.
+
+Two process notes worth keeping:
+* `nohup ... &` + `echo $!` makes the HARNESS report the task "completed" when the wrapper
+  exits; the real job runs on detached. Wait on an explicit sentinel (ALLDONE), never on
+  the completion notification.
+* `-k` does not make a 2-test run cheap: pytest still collects the whole file, so
+  test_potential.py pays full module setup. Budget minutes, not seconds.
+
+### 2026-08-29 (wake 5) — test_scf_xiToR ROOT-CAUSED and fixed (verification in flight)
+
+Reproduced: `ZeroDivisionError: float division by zero`, NOT the inverse-tolerance failure
+I hypothesised last wake. The mechanism is the asymmetry I *had* spotted, reached by a
+different route:
+
+    xi = 1.0                       # a plain PYTHON float, from the test
+    xp = get_namespace(xi)         # follows the AMBIENT namespace -> torch/jax when forced
+    if xp is numpy: ...            # FALSE under a forced backend
+    return a * ((1.0+xi)/(1.0-xi)) # plain PYTHON arithmetic: 2.0/0.0 -> ZeroDivisionError
+
+On numpy the same call is `numpy.divide(2.0, 0.0)` -> `inf`, which is exactly what the test
+asserts (`numpy.isinf(_xiToR(1.0))`) because xi=1 is the r->inf limit.
+
+**Fix: dispatch `_xiToR` on the DATA (`is_backend_array`), matching `_RToxi` immediately
+below it.** A Python float then takes numpy.divide (inf, byte-identical), a backend array
+takes the backend path (gradient preserved). This also removes the asymmetry between two
+adjacent leaf helpers that did the same job two different ways — the [[leaf-migration-data-guard]]
+pattern the codebase already uses.
+
+Note the gradient is NOT threatened by routing xi through numpy: xi is a quadrature NODE
+(a constant); the derivative enters via `dens(*param)`. The original ambient dispatch was
+guarding a path that does not carry gradient.
+
+Status: patched, UNCOMMITTED, verification running on 3 axes (xiToR both backends /
+test_backend_scf gradients / 6-routine byte-identity). Not committing until it reports.
+
+* SIMBAD probed: **200** -> the `from_name` build shard is worth re-running now.
+* `build (3.14, test_backend*.py)` red still unread — the jq filter found no matching job
+  in run 33265417613, so it likely sits on the twin (push-vs-pull_request) run.
+* Repeat of the wrapper trap: `nohup ... & ; grep` makes the harness report the GREP's exit
+  code as the task result ("failed exit code 1") while the real job runs on. The sentinel
+  is the only trustworthy signal.
+
+### 2026-08-29 (wake 6) — _xiToR fix LANDED on the branch (bb37413f), verified on all 3 namespaces
+
+* Committed + pushed `bb37413f`; remote SHA verified.
+* **jax confirmed by direct probe, not by pytest.** The forced-backend force-exit truncates
+  the junitxml too, not just the terminal summary — `/var/tmp/jaxjx.xml` was never written,
+  so the planned junitxml route returned nothing. Probing the assertion directly instead:
+
+      numpy  _xiToR(1.0)=inf  isinf=True  _xiToR(-1)=0  roundtrip(1.3)=1.300000
+      jax    _xiToR(1.0)=inf  isinf=True  _xiToR(-1)=0  roundtrip(1.3)=1.300000
+      torch  _xiToR(1.0)=inf  isinf=True  _xiToR(-1)=0  roundtrip(1.3)=1.300000
+
+  Extends [[forced-backend-log-has-no-summary]]: the force-exit kills junitxml as well, so
+  under a forced backend the ONLY reliable local verification is a direct probe or a CI
+  artifact — pytest's own reporting cannot be trusted to appear at all.
+* **`cd X && nohup ... &` backgrounds the WHOLE list.** The `git add/commit/log` that followed
+  ran in the MAIN repo, not the worktree, so HEAD read as an unrelated commit and the tree
+  looked clean — it read exactly like "my patch vanished". It had not. Harmless this time
+  (nothing staged in the main repo, so no stray commit onto feat/backends) but this is the
+  shape that commits a worktree diff onto the wrong branch. Existing memory
+  [[cd-does-not-survive-ampersand]] covers the read case; this is the WRITE case and is worse.
+* **No manual re-runs needed for the SIMBAD / 3.14 reds**: pushing bb37413f started a fresh
+  full run, which re-runs both. Re-running the old run's jobs would have been pure waste.
+  SIMBAD probed 200 beforehand, so that shard should now pass on its own.
+* CI on bb37413f: 42 green / 33 running / 76 queued, only the two codecov phantoms red.
+
+### 2026-08-29 (wake 7) — 3 collision fixes (0b6ef8f6) + DehnenBinney98 ledgered (fed8f6c9)
+
+**The `-W error` red was a real defect, and auditing the CLASS found two more.**
+`__array_wrap__` means numpy OWNED an op on a Tensor. Three sites assumed numpy:
+
+| site | op | consequence |
+|---|---|---|
+| `_init_static:219` | `Acos * NN[newaxis]` | numpy owns product; -W error red |
+| `_init_static:235` | `numpy.zeros_like(Acos)` | `_Asin` in a DIFFERENT namespace from `_Acos` |
+| `_from_density_timedep:793` | `numpy.repeat(Acos[newaxis])` | returns numpy -> **severs the gradient**, not just warns |
+
+Fixed with `like` / data-guards. The first is the helper THIS PR added for exactly
+this collision — applied at three integrand sites, missed here. My earlier
+`_init_static` pass hunted numpy fns that REJECT backend arrays (triu/all/any); the
+ones that silently ACCEPT them are the more dangerous half and only -W error shows them.
+
+**Scope correction, stated in the commit so the PR does not overclaim:**
+`_coeffs_to_timeseries:254` does `numpy.asarray(coeffs, dtype=float)`, so the
+TIME-DEPENDENT path is still NOT differentiable through its coefficients. PRE-EXISTING
+(coefficients were numpy-pinned before, so the cast was a no-op) and not a CI blocker,
+but this PR makes the STATIC coefficients differentiable, not all of them. The repeat
+fix is a prerequisite for closing that, not the closure.
+
+Found only because the probe used a `requires_grad` tensor: value tests pass straight
+through that cast. A green suite says nothing about whether a gradient survives.
+
+**DehnenBinney98 ledgered (+1, PR total 57 -> 61).** New call site of the eager-overhead
+class: importing mwpotentials CONSTRUCTS a DiskSCFPotential -> from_density -> the
+8000-call quadrature. A potential CONSTRUCTOR, not a test body — which is why the
+per-test duration sweep could not have predicted it. CI-measured (>300s timeout), not
+estimated. Verified honored: 300s timeout -> 8.6s skip.
+
+Verification for both commits: -W error clean under forced torch, `_Acos`/`_Asin` both
+Tensor, test_backend_scf 113 passed, 6-routine hash harness IDENTICAL.
+
+### 2026-08-30 (wake 8) — pre-merge audit of #1411 done while CI queues
+
+Diff vs base: 7 files, +750/-360 (SCFPotential.py +730/-...; backend/_namespaces.py +27
+for `like`; integratePlanarOrbit.py +10; ledger +21; 3 test files).
+
+* **if -> xp.where array-input class: CLEAN.** The only `numpy.any(numpy.triu(...))`
+  predicates run on `as_numpy` VIEWS and are deliberate STRUCTURAL decisions (shape
+  validation, the m>l warning, isNonAxi) at construction, not part of the differentiable
+  computation. Everything else gates on control params (`radial_order`) or Python ints
+  (`ll`, `batch`).
+* **Duplication: CLEAN, but I checked it twice on purpose.** The AST-structural-hash pass
+  reports no exact duplicates — and that pass would NOT have caught the timedep twins I hit
+  earlier this arc, which had diverged slightly. Re-ran with difflib at >=0.75 similarity
+  over all function pairs: no near-duplicates either. Recording both because "no exact
+  duplicates" is a much weaker statement than it reads as, and the twins are precisely the
+  failure this audit exists to catch.
+* **Helper placement: CLEAN.** `like` lives in `galpy/backend/_namespaces.py` (generic —
+  correct per [[generic-helpers-go-in-backend]]); `_stack_lm_grid` lives in SCFPotential.py
+  and all 3 call sites are in that file (SCF-specific — correct not to hoist).
+
+Audit is done ahead of the merge decision, so when the matrix reports green the only
+remaining step is the squash-merge itself. CI at time of audit: 2 green / 149 queued.
+
+### 2026-08-30 (wake 9) — attribution corrected; batching feasibility PROVEN (with a caveat)
+
+* **Self-inflicted CI cost, worth recording.** I pushed the attribution correction as a
+  comment-only commit, which re-triggered the whole ~1.5 h matrix at 11/151 done. Correcting
+  the record was right; doing it as its own immediate push was not — it should have ridden
+  along with the next code change. Rule going forward: documentation-only corrections WAIT
+  for the next code push unless CI is already idle.
+* **Attribution corrected (2059e920).** `git log -S` on the ledger shows gh#1407 (852d69d6,
+  "surfdens: eager backends take the batched vertical quadrature, ledger -6") had just
+  UN-DEFERRED test_DehnenBinney98, and this PR's base ledgers it nowhere. So this is a
+  RE-deferral giving back one of the six entries #1407 earned, not the "new call site" I
+  filed it as. A re-deferral reads very differently from a new find on a metric that IS the
+  progress measure.
+* **Batching feasibility: PROVEN for the index algebra, bit-exact.** Rewrote the axi
+  integrand with the batch axis LEADING (moving the hardcoded `numpy.newaxis` positions to
+  trailing) and compared against the scalar version stacked over 5 nodes:
+  shapes (5,4,3) both, **max abs diff 0.0, array_equal True**. Bit-exactness of the
+  integrand means the ONLY byte-identity risk in the real rewrite is the CONTRACTION's
+  summation order -- which is exactly what the numpy/backend dual path is for.
+* **Caveat, stated so the next wake does not over-trust this.** The experiment still loops
+  `numpy.stack([_C(x, N, L) for x in xi])`, so `_C`/gegenbauer runs per-node. What is proven
+  is that the (n,l,m) index algebra CAN carry a batch axis; batching `_C` over a vector of
+  nodes is a separate sub-problem and is where the remaining risk sits.
+* Also noted: Cautun20 and McMillan17 have the identical module-level DiskSCFPotential shape
+  and sit in the SAME shard as DehnenBinney98. NOT ledgered — no measurement on this branch
+  showing they cross the cap, and guessing would repeat the attribution error above. The
+  running matrix decides it.
+
+### 2026-08-30 (wake 10) — codecov/patch red is premature, not a finding
+
+CI on 2059e920: 37 green / 28 running / 87 queued. Sole red: `codecov/patch`.
+
+`patch` is the one that CAN be real (it measures the PR's new lines, unlike `project`),
+so I checked rather than assuming phantom — and the discriminator is cleaner than the
+session-count trick used earlier:
+
+    api.codecov.io/.../commits/2059e920  ->  coverage: None, misses: None, lines: None
+
+There is NO report for this SHA yet. The status is being computed against absent data
+while 87 checks are still queued and uploads are still arriving. So: premature, hold.
+Re-read it when the matrix drains, and only then treat a surviving red as a real
+uncovered-new-lines finding.
+
+Worth distinguishing from the earlier phantom: that one had a BUILT report with a partial
+7002-miss count (mid-matrix). This one has no report at all. Both are "wait", but the
+evidence is different, and "coverage: None" is the stronger signal that nothing has been
+measured yet.
+
+No push this wake, per the rule adopted last wake: nothing non-code goes up while a matrix
+is in flight, and there is no code change pending.
+
+### 2026-08-30 (wake 11) — torch test_quantity red FIXED (d39df6b6); 5th fix, 5th mechanism
+
+`backend torch tests/test_quantity.py tests/test_coords.py` failed on
+test_scfpotential_from_nbody_units: `numpy.max(Tensor)` dispatches to
+`Tensor.max(out=..., axis=...)`, which torch rejects. Test-side; as_numpy at the
+assertion (already imported in that file).
+
+**Two sites cleared the red; a grep found THREE MORE that were not failing, and why
+matters:** 11046/11062 compare `_Acos_all` -- the TIME-DEPENDENT path -- which survives
+only because `_coeffs_to_timeseries:254` does `numpy.asarray(coeffs, dtype=float)`. That
+cast is the differentiability gap from 0b6ef8f6, and it is currently MASKING those two
+assertions. Closing the gap breaks them. Hardened all three now, in the commit that names
+the dependency, rather than leaving a landmine for the follow-up PR.
+
+**The pattern across this PR is now the real finding.** Five fixes, each surfaced by a
+DIFFERENT mechanism, all from one architectural change (coefficients follow the ambient
+namespace):
+  1. flatten(order=) crash at the C boundary      -- ordinary shard
+  2. ZeroDivisionError in _xiToR                  -- BOTH backends, value test
+  3. numpy owning ops on Tensors (3 sites)        -- ONLY the -W error shard
+  4. DehnenBinney98                               -- ONLY a 300 s timeout
+  5. numpy.max(Tensor)                            -- ONLY torch's reduction signature
+No single test mode catches this class. Changing what a widely-READ attribute IS produces
+failures spread across crash / warning-as-error / timeout / dispatch-rejection, which is
+why the "gate the readers" sweep has had to be re-run from a new angle each time.
+
+* codecov/project went GREEN on its own on the previous SHA -> upload phantom confirmed,
+  as predicted. It is red again on d39df6b6 only because that run's uploads are incomplete.
+* torch test_potential g5 PASSED -> Cautun20/McMillan17 are fine on torch. The jax g5 arm
+  is the one that decides the timeout question and had not finished before this push
+  re-triggered it. Still open; still NOT pre-emptively ledgered.
+
+### 2026-08-30 (wake 12) — codecov/patch was REAL and is fixed (7285f53f); windows red is the known flake
+
+**codecov/patch: a genuine finding, not the phantom the other two were.** Waiting for the
+report to COMPLETE is what separated them -- head misses 17 vs base 15, both new misses in
+SCFPotential.py:
+
+  1688  `_xiToR`'s BACKEND arm             a * ((1+xi)/(1-xi))
+  1720  `_coeff_dens_numpy`'s cast body
+
+Backend-only branches, unreachable from the numpy coverage run, and the backend shards
+upload no coverage. `test_backend*.py` DOES run in the ordinary build matrix, so a test
+there is collected -- that is the lever. Both helpers are one-liners, so the new test pins
+their VALUES (closed form + a round-trip through _RToxi) rather than just touching lines; a
+smoke test would have satisfied codecov while proving nothing.
+
+Two costs on the way, both mine:
+* Invented `get_namespace_by_name` (does not exist; it is use(...) + get_namespace), then
+  guessed a SECOND fix before reading the error. Reading it took one command.
+* torch then failed at rtol=1e-15: 0.5666667222976685 vs 0.5666666666666667 -- **float32**.
+  `array_api_compat.torch.asarray` on a PYTHON LIST returns f32 even though conftest sets
+  torch's default dtype to float64. The tight tolerance CAUGHT it; at a loose rtol the test
+  would have passed while measuring f32 epsilon. dtype now pinned. Extends
+  [[f64-suite-hides-f32-defects]]: the suite-wide default does not reach asarray-of-list.
+
+**windows test_quantity red = the known streamgapdf flake, PROVEN not assumed.** Same SHA,
+push arm SUCCESS / pull_request arm FAILURE -- the free A/B from the duplicate run settles
+flake-vs-real without spending a speculative re-run. My edits to that file touched only SCF
+coefficient assertions, not streamgapdf. `gh run rerun --failed` is rejected while the run
+still has jobs in flight ("This workflow is already running"); re-run once it completes.
+
+Everything else on 7285f53f's predecessor was green (151/154) including the jax
+test_potential g5 shard -> Cautun20/McMillan17 pass on jax. Declining to pre-emptively
+ledger them was correct.
+
+### 2026-08-30 (wake 13) — codecov/patch GREEN; windows flake re-run dispatched
+
+Run on 7285f53f COMPLETED: **152 green / 2 red**.
+* **codecov/patch is GREEN** -- the two backend-only-branch tests from 7285f53f closed the
+  real coverage gap. Confirms the earlier call: patch was the ONE codecov signal worth
+  treating as real, and the discriminator was waiting for the report to exist rather than
+  reading a red against absent data.
+* Remaining reds: the proven windows streamgapdf flake, and `all-clear`, which is gated by
+  it (all-clear is the merge gate, so the flake alone blocks the merge).
+* `gh run rerun --failed` was REFUSED earlier with "This workflow is already running";
+  accepted now that the run has finished. Worth remembering: a targeted re-run has to wait
+  for the whole run to complete, so the right move on a mid-run flake is to note it and
+  come back, not to retry the command.
+
+Once the windows job passes, all-clear goes green and #1411 is mergeable. The pre-merge
+audit (if->xp.where class, duplication incl. a near-duplicate pass, helper placement) was
+completed at wake 8, so the merge is the only remaining step.
+
+## 2026-08-30 — #1411 MERGED (e9afe588). Task #75 done for the STATIC path.
+
+154/154 green at merge; ledger on develop verified 51 slow-skip + 10 xfail = 61, matching
+the stated delta exactly. Merge needed the windows streamgapdf flake re-run (proven a flake
+by the same-SHA push/pull_request split, not assumed) and then an `all-clear` re-run, since
+all-clear had recorded a STALE verdict from before its gating job passed.
+
+**What landed:** all six scf_compute_coeffs* + the three timedep twins follow the AMBIENT
+namespace, so the SCF expansion is differentiable w.r.t. the density's parameters under jax
+and torch. numpy byte-identical (hash harness vs locked base + an orbit-level A/B for the
+C-boundary change with arms grep-asserted to differ).
+
+**What did NOT land, stated in the merge commit so the title does not overclaim:** the
+TIME-DEPENDENT path is still non-differentiable (`_coeffs_to_timeseries:254` casts to
+numpy). Pre-existing, not a regression.
+
+**Ledger 57 -> 61 (+4)**, all one cause. One is a RE-deferral of an entry gh#1407 had just
+earned back -- said plainly, because the ledger is the progress metric.
+
+### NEXT PR set up: backend/scf-batch-quadrature (off e9afe588)
+Zero open PRs of mine (the ~10 open aainv/VerticalInverse PRs are ANOTHER session's --
+same `jobovy-agent` author, but NO Claude-Session trailer on their commits, and they touch
+permanently out-of-scope modules). So "one PR at a time" is satisfied by starting this now.
+
+Target: retire all 4 entries added by #1411 (lines 454-456, 473).
+Both feasibility questions already answered BIT-EXACTLY:
+  * the integrand's (n,l,m) index algebra carries a LEADING batch axis (max diff 0.0)
+  * `_C` needs only `moveaxis(_C(xs,N,L), -1, 0)` -- NO rewrite (max diff 0.0)
+  * 95% of jax runtime is per-call overhead over 8001 sequential integrand calls
+Design: numpy keeps its exact sequential loop (byte-identity); backends get the batched
+contraction. Dual-path is sanctioned; the only byte-identity risk is summation ORDER, and
+the integrand values are bit-identical so that is the ONLY risk.
+
+### 2026-08-30 (wake 15) — batching machinery written, deliberately UNCOMMITTED
+
+On `backend/scf-batch-quadrature` @ e9afe588. Added the opt-in batched path to
+`_gaussianQuadrature`: an integrand carrying `batchable = True` gets the whole cartesian
+product in ONE call, numpy keeps its exact sequential loop. Verified numpy BYTE-IDENTICAL
+(trivially so -- nothing opts in yet).
+
+**NOT committed, on purpose.** No integrand sets `batchable` yet, so the new branch is dead
+uncovered code; committing it alone would drop codecov/patch and repeat the exact defect I
+spent two wakes fixing on #1411. It lands WITH the first batchable integrand or not at all.
+Working tree left dirty on the branch; next wake resumes there.
+
+**Next concrete step (do this first):** make `scf_compute_coeffs_axi`'s integrand batchable.
+That is the one DiskSCFPotential calls -- confirmed from the DehnenBinney98 traceback
+(`from_density -> _symmetry_coeffs -> scf_compute_coeffs_axi -> _gaussianQuadrature`) -- so
+it is the integrand behind the timeout, not the 3-D one I first assumed.
+The transformation is already verified bit-exact (wake 9):
+  * move the hardcoded `numpy.newaxis` positions from leading to TRAILING
+  * `l` -> (1,1,L); `PP` -> (K,1,L); `dV`, `dens` -> [:,None,None]
+  * `_CC` -> `moveaxis(_C(xi,N,L), -1, 0)`  (K,N,L) -- _C already vectorizes
+Then: set `integrand.batchable = True`, re-measure the 4 ledgered tests, and un-defer
+whichever now clear the 300 s cap ([[un-defer-is-a-two-file-edit]]: ledger + durations).
+
+### 2026-08-30 (wake 16) — batching needs a DENSITY-VECTORIZABILITY probe; existing idiom found
+
+Reading the axi integrand before transforming it surfaced the real constraint I had not
+confronted: the integrand does `param[0] = R; param[1] = z; dens(*param)` with SCALARS.
+Batching passes ARRAYS, and an arbitrary user density need not accept them. So batching is
+not purely an index-algebra change -- it is conditional on the user's density.
+
+**Do NOT invent a mechanism: the codebase already has this idiom.**
+`_timedep_dens_setup` (SCFPotential.py:2585) probes vectorizability over `t` by calling
+`dens(*param, t=tgrid)`, checking the returned SHAPE against tgrid, and raising
+`_TimeDepDensityNotVectorized` to fall back. The ledgered
+`test_tdep_from_density_nonvectorizable_fallback` is that path's test. Spatial batching
+wants the same shape: probe -> mark `integrand.batchable` -> else keep the sequential loop.
+
+**And this is precisely the trap I already hit on this file** (see the earlier entry: a
+density-driven data guard turned 10 failures into 37, because `param[0] = 1.0;
+dens(*param, **dens_kw)` is not a valid probe for every density signature). So the probe
+must: run under try/except, VALIDATE the output shape (not just "it didn't raise"), and
+default to NOT batchable on any doubt. Cheap to get wrong, and I have the receipts.
+
+Stopping here rather than implementing hastily at the end of a wake -- a rushed version of
+the exact thing that burned me before is a bad trade. Machinery remains uncommitted (dead
+branch until an integrand opts in). Next wake: write the probe following
+_timedep_dens_setup's shape-validating pattern, then the axi transformation (already
+verified bit-exact), then re-measure the 4 entries.
+
+### 2026-08-30 (wake 17) — batched axi path WORKS (bit-exact); measurement in flight
+
+**Result: the batched axi coefficient path is EXACT and fast.**
+With `JAX_ENABLE_X64=1` and a warm-up: jax 2.32 s, torch 0.276 s, **max rel err 0.00e+00 on
+BOTH** vs numpy -- bit-exact, not merely within tolerance. numpy remains BYTE-IDENTICAL
+(hash harness) because the batched path is backend-only and the SCALAR integrand is
+untouched.
+
+Near-miss worth recording: my FIRST measurement reported jax err 8.99e-08 and I almost
+logged an accuracy gap. That is f32 epsilon -- a standalone script inherits none of the
+suite's `jax_enable_x64` ([[f64-suite-hides-f32-defects]], the mirror-image trap). Third
+time this session a documented probe trap has tried to manufacture a false finding.
+
+Design choices that held up:
+* `integrand.batched` as a CALLABLE, not a `batchable` flag -- the scalar integrand is then
+  literally untouched, so numpy byte-identity is by construction, not by argument.
+* `_dens_accepts_arrays` mirrors `_timedep_dens_setup`: probe, VALIDATE THE OUTPUT SHAPE,
+  default False on any doubt. Unit-tested on 5 cases (vectorizable / scalar-only /
+  wrong-shape / raising / 3-arg). A wrong True would silently corrupt coefficients; a wrong
+  False only costs speed.
+
+**!! STATE HAZARD -- next wake MUST resolve this first !!**
+To measure, I commented the 4 ledger entries out with a `#MEASURING ` prefix in
+tests/backend_slow_skip.txt. That file is currently WRONG on disk. Either un-defer them
+properly (if measured fast) or RESTORE the entries (if still slow). Do NOT commit the
+`#MEASURING` state -- it silently un-defers tests that may still time out.
+
+Measurement running: /var/tmp/scfmeas.log (sentinel MDONE), jax, the 3 tdep tests.
+**Expectation to check, not assume:** the tdep tests go through
+`_scf_compute_coeffs_*_timedep`, which have their OWN integrands (the timedep twins). I
+batched `scf_compute_coeffs_axi`. So this likely fixes DehnenBinney98 (DiskSCF -> axi,
+confirmed from its traceback) and likely does NOT fix the 3 tdep entries -- they would need
+the timedep integrands batched too. Read the numbers before claiming either way.
+
+### 2026-08-30 (wake 18) — tdep entries measured STILL SLOW and restored; DehnenBinney98 pending
+
+Measured under jax with the batched axi path in place (34 min run):
+
+| test | before | now | verdict |
+|---|---|---|---|
+| tdep_from_density_vectorized_matches_loop | 671 s | **659 s** | unchanged |
+| tdep_from_density_nonvectorizable_fallback | 555 s | **567 s** | unchanged |
+| tdep_from_density_time_batching | 381 s | **371 s** | unchanged |
+
+**The prediction held**: these go through `_scf_compute_coeffs_*_timedep`, whose integrands
+are the timedep twins -- NOT the `scf_compute_coeffs_axi` integrand I batched. So batching
+the axi path cannot help them, and I flagged that as a thing to CHECK rather than claim.
+Had I assumed the batching would retire all four entries, I would have un-deferred three
+tests that still take 6-11 minutes each and handed CI three guaranteed timeouts.
+
+**3 tdep entries RESTORED** in tests/backend_slow_skip.txt (they are genuinely still slow).
+
+**STATE HAZARD, partially resolved -- 1 `#MEASURING` line REMAINS** for
+`jax tests/test_potential.py::test_DehnenBinney98`, pending its measurement
+(/var/tmp/scfdb.log, sentinel DBDONE). That is the entry the axi batching SHOULD fix
+(DiskSCF -> from_density -> scf_compute_coeffs_axi, per its traceback). Next wake: read the
+number, then either un-defer it properly or restore the line. Do NOT commit with
+`#MEASURING` present.
+
+**Revised expectation for this PR:** it retires ONE of the four entries, not four. Retiring
+the tdep three additionally requires batching the timedep integrands -- a separate, larger
+piece of work, and a separate PR. Saying "the batching follow-up retires all four" was too
+optimistic; it was based on the shared eager-overhead CAUSE, not on which code each test
+actually runs.
+
+### 2026-08-30 (wake 19) — DehnenBinney98 measured 1380 s: PR retires ZERO entries. Ledger restored.
+
+`test_DehnenBinney98` under jax with the batched axi path: **1379.78 s**, down from ~2641 s.
+A real ~1.9x speedup -- and still 4.6x OVER the 300 s cap. Entry RESTORED; the ledger file
+is now byte-identical to develop, 0 `#MEASURING` lines. State hazard closed.
+
+**So this PR retires ZERO of the four entries, not four (my first claim) and not one (my
+revised claim).** Both earlier numbers were wrong in the same direction.
+
+**The mistake, worth naming precisely:** I attributed DehnenBinney98's cost to the
+coefficient quadrature from its TRACEBACK -- the frames present when pytest-timeout fired.
+A traceback says where execution WAS when the timer expired; it does NOT say where the time
+went. Only a profile does. The isolated axi solve is 2.3 s on jax, so the coefficient
+quadrature was never 2641 s of that test: DehnenBinney98 builds a composite MW model and
+then evaluates it, and the solve is a minority of the cost. Same family as
+[[reproduce-the-assertion-not-a-proxy]]: a plausible mechanism at the right location is not
+evidence of magnitude.
+
+**What the work IS worth, stated without inflation:** the batched axi path is bit-exact on
+both backends (0.00e+00), leaves numpy byte-identical, cuts a real 48% off the slowest
+SCF-building test, and is the machinery the timedep batching will need. It is a legitimate
+performance + infrastructure PR. It is NOT a ledger-burndown PR, and its description must
+not imply otherwise.
+
+**Before opening it:** it still needs a parity test (batched vs sequential) so the new
+branch is covered -- codecov/patch would otherwise flag it, exactly as it correctly did on
+#1411.
+
+## 2026-08-30 — PR #1416 OPENED: SCF axi batched quadrature (bit-exact, ~1.9x)
+
+https://github.com/jobovy/galpy/pull/1416 -> feat/backends-develop, commit 6883f942.
+CI at open: 76 green / 40 running / 35 queued; the 2 codecov reds are the usual
+incomplete-upload state, not findings.
+
+Contents: opt-in batched path in `_gaussianQuadrature` (`integrand.batched` CALLABLE, so
+the scalar integrand is untouched and numpy byte-identity is structural), the
+`_dens_accepts_arrays` shape-validating probe mirroring `_timedep_dens_setup`, the batched
+axi integrand, and a parity test that drives BOTH paths from mathematically identical
+densities and asserts they really diverge (a broken gate cannot make it pass vacuously).
+
+**The PR description says outright that it retires ZERO ledger entries**, and that I
+predicted four and then one and was wrong both times. That is deliberate: the ledger is the
+project's progress metric, so a PR claiming a burndown it does not deliver is a false
+report. Measured deltas are in the description (tdep 659/567/371 s unchanged;
+DehnenBinney98 2641 -> 1380 s, still 4.6x over cap).
+
+Ledger file verified byte-identical to develop -- the `#MEASURING` hazard is closed by
+diff, not by recollection.
+
+Next: drive #1416 green (known flake classes: windows streamgapdf, SIMBAD from_name;
+re-check codecov/patch only once the report EXISTS). Then the timedep-integrand batching
+as its own PR -- that is what can actually retire the 3 tdep entries.
+
+### 2026-08-30 (wake 21) — #1416 at 149/154; codecov reds are the MID-MATRIX phantom
+
+3 checks still running. codecov API for the head: `misses: 7005`, SCFPotential.py 83.36%.
+Develop sits at ~15 misses / 99.96%, so this is the incomplete-upload state, NOT a finding.
+`state: complete` refers to that upload SESSION, not the matrix -- third time that field has
+invited a misread.
+
+**Discriminator, now with both examples to compare:**
+* REAL (#1411): 17 misses vs base 15 -- a small, specific delta, localised to 2 lines.
+* PHANTOM (here, and #1411 mid-run): thousands of misses, whole-file coverage collapsed.
+A patch red is only worth reading once the head's miss count is in the same ORDER as the
+base's. Re-check when the last 3 checks land.
+
+No test reds anywhere on #1416 -- the batched quadrature, the probe, and the parity test are
+green across the matrix.
+
+### 2026-08-30 (wake 22) — !! #1416's BATCHED PATH IS DEAD CODE. Do not merge. !!
+
+codecov/patch was REAL (head 18 misses vs base ~15 -- small delta, my own readability
+criterion). The 3 uncovered lines are 2949-2953: the BODY of `if _bxp is not numpy:`, i.e.
+the batched contraction itself. Confirmed locally: `--cov=galpy` on my OWN parity test
+reports `2949-2953` MISSED while the test PASSES.
+
+**Mechanism:** `_gaussianQuadrature` builds its nodes with `numpy.zeros`, so `xi` is numpy
+-> `_C(xi)` is numpy -> `dens(...)` is numpy -> `vals` is NUMPY even under a forced
+backend. `_bxp is numpy` is TRUE, the branch is skipped, and execution falls through to the
+sequential loop. The batched path has never run.
+
+**Everything I reported from it is therefore unsupported:**
+* "bit-exact 0.00e+00 on both backends" -- that was the sequential path agreeing with
+  itself. Two arms, one code path.
+* the parity test is VACUOUS: `dens_vec` and `dens_scalar` differ in whether
+  `_dens_accepts_arrays` returns True, but BOTH then execute the same loop. It asserts the
+  premise (paths differ) at the PROBE level, which is true, and never verifies the probe
+  actually changed which code ran.
+* the "~1.9x" in the PR title/description is unattributed: DehnenBinney98 2641 -> 1380 s is
+  real but cannot be credited to batching that never executed. Most likely it is #1411's
+  other changes, or measurement conditions.
+
+This is [[value-checks-cannot-see-numpy-fallback]] in its purest form, and I walked into it
+while explicitly citing that lesson elsewhere. A passing value comparison cannot distinguish
+"both paths correct" from "only one path ran".
+
+**Actions:** #1416 must NOT be merged as described. Either (a) make the nodes cross into the
+backend namespace so the batched branch is live, then re-verify and RE-MEASURE, or (b) close
+it. The parity test must additionally assert the batched branch EXECUTED (count the calls,
+or assert `is_backend_array(vals)`), not merely that two results match.
+
+### 2026-08-31 (wake 25) — #1416 re-verified and out of draft (d1281809)
+
+Batched path now genuinely executes: **1 batched call replacing 401 scalar calls**, asserted
+by CALL COUNT. Re-measured from scratch: jax 0.032 s, torch 0.007 s, err ~1e-16, numpy hash
+IDENTICAL, test_backend_scf 117 passed. That is ~70x / ~40x -- the earlier "1.9x" and
+"0.00e+00" both came from the dead path.
+
+Two defects had kept it dead: (1) PRE-EXISTING `type(x).__name__ == "ndarray"` shape probe,
+false for every backend array; (2) MINE, `numpy.moveaxis` on a Tensor -> `transpose(list)`,
+which torch rejects -- a line I verified against numpy `_C` only.
+
+CI on the new head: 130 green / 21 running, only codecov (incomplete uploads).
+
+**Re-measuring DehnenBinney98 needs no ledger edit.** Running it under pytest just SKIPS
+(the entry is correctly restored). Timing the construction directly
+(`use("jax"); import mwpotentials; DehnenBinney98I`) measures the same work without
+re-introducing the `#MEASURING` hazard -- that hazard cost two wakes to open and close, and
+there was never a need to take it.
+
+### 2026-08-31 (wake 26) — DehnenBinney98 measured 290s; batching CHANGES THE USER DENSITY CONTRACT
+
+* **DehnenBinney98 build under jax: 290.1 s** (was ~2641 s). Measured by timing the
+  construction DIRECTLY -- no ledger edit, so no repeat of the `#MEASURING` hazard. The
+  test does more than the build, so it stays over the 300 s cap: **entry correctly stays**.
+* **3 new `-W error` reds on the 3.14 shard, all mine, all the numpy-owns-Tensor class I
+  fixed three times on #1411 and then reintroduced in new code.** Fixed two:
+  `numpy.sqrt/power` on Tensors -> namespace dispatch; and `Tensor ** ndarray` in the
+  `_pref` line, where `like` on the RESULT is too late -- it can only fix operands it is
+  given, not an expression numpy already evaluated. `l` now crosses BEFORE the power.
+* **The third is not a bug to patch -- it is a DESIGN problem I should not ship quietly.**
+  The remaining warning comes from `dens(*param)`: the user's density. Sequential passes it
+  numpy SCALARS; batched passes it BACKEND ARRAYS. So batching silently changes the contract
+  for every density written with `numpy.*` -- the documented, normal way to write one. They
+  would warn today and break on a future numpy.
+
+  Resolution (next wake): the scalar path proves the density does NOT need backend inputs
+  for differentiability -- gradients come from the density's CLOSED-OVER parameter tensors,
+  not from R/z. So the batched integrand should build R/z as NUMPY arrays exactly like the
+  sequential path, keep the basis numpy, and let the accumulation follow the data. Preserves
+  the contract AND the speedup.
+
+Pattern worth naming: three times now, copying the scalar integrand's expressions into a
+batched context silently inverted WHICH LIBRARY OWNS an op, because the same source line is
+correct when `xi` is numpy and wrong when it is a Tensor. Copied code carries its
+assumptions about operand types with it.
+
+### 2026-08-31 (wake 27) — -W error CLEAN; the real cause was NAMESPACE MIXING, named at last
+
+8 passed under `-W error` (was 3 failed). The four sites I had been fixing one at a time
+were all one thing, which I should have named two wakes earlier:
+
+**The batched integrand MIXES namespaces.** `_C` follows the AMBIENT namespace and returns a
+backend array; the nodes, `dV` and the density are numpy. Every mixing point lets numpy own
+a Tensor op unless something carries the numpy factors across. Patching site-by-site
+(`numpy.sqrt` -> `xp.sqrt`, then `l` before the power, then ...) was chasing symptoms of a
+single structural fact.
+
+Resolution, two parts:
+1. **Node arrays stay NUMPY**, exactly as the scalar twin passes numpy scalars. This is the
+   USER-CONTRACT fix: batching must not change what a user's density receives. A density
+   written with `numpy.*` -- the documented way -- would otherwise be handed Tensors.
+   Differentiability does not need backend R/z; it flows from the density's CLOSED-OVER
+   parameter tensors, exactly as the scalar path already demonstrates.
+2. **`like` at the final combination**, so the BACKEND owns the product. No-op on numpy.
+
+Verification in flight (suite / byte-identity / call-count acceptance). Nothing gets
+committed or claimed until it reports -- this PR has already shipped one round of results
+from code that never executed.
+
+### 2026-08-31 (wake 28) — verification re-dispatched; malformed nohup wasted a wake
+
+The wake-27 verification produced NOTHING because the `nohup bash -c '...'` heredoc lost its
+newlines: all four commands concatenated onto one line, so `tail -2` swallowed the
+subsequent commands as FILENAMES. pytest really was running (pid 344941) -- so "still
+running" looked plausible for two wakes -- but its result could never reach the log.
+
+Tell I should have caught sooner: **0 bytes** in the log after ~10 min. A job that is
+genuinely working still emits something; an empty file after the first expected output is
+due is a malformed pipeline, not a slow one. `pgrep -fa` showed the collapsed one-liner
+immediately.
+
+Fix: multi-line background work goes in a SCRIPT FILE (`/var/tmp/scfverify.sh`), never an
+inline multi-line `bash -c`. Re-dispatched.
+
+Code state (unpushed, on backend/scf-batch-quadrature): -W error CLEAN, 8 passed. The four
+sites were one structural fact -- the batched integrand MIXES namespaces (`_C` follows the
+ambient namespace; nodes/dV/density are numpy). Resolution: numpy nodes (preserves the user
+density contract) + `like` at the final combination (backend owns the product).
+
+### 2026-08-31 (wake 29) — 73420f49 pushed; BOTH backends verified live
+
+Verification that gated the commit (all four, none inferred):
+  batched path EXECUTES  jax 1 batched / torch 1 batched (call-counted)
+  -W error               8 passed (was 3 failed)
+  test_backend_scf       117 passed
+  numpy hash harness     IDENTICAL
+  accuracy               jax 3.16e-16, torch 9.88e-17 (~1 ulp, the correct
+                         signature for a different reduction ORDER)
+
+Closed a gap I had left: the call count was confirmed on TORCH only, and I was
+implicitly assuming jax matched. It does -- but assuming is exactly what produced the
+dead-path episode, so it is now measured on both.
+
+CI on the new head: 72 green / 22 running / 57 queued, only the codecov pair, which by the
+readability criterion (head misses in the same ORDER as base ~15) is not yet meaningful.
+
+Two recurring traps re-hit and now handled structurally:
+* multi-line inline `nohup bash -c` LOSES NEWLINES -> commands concatenate; a 0-byte log
+  after the first expected output is a MALFORMED PIPELINE, not a slow job. Background work
+  goes in a script file now.
+* a probe script under /var/tmp imports the MAIN repo (sys.path[0] is the script's dir).
+  Probes live in the worktree with a provenance assert.
+
+### 2026-08-31 (wake 30) — #1416 CLEAN: zero reds, codecov at base parity
+
+129 green / 5 running / 19 queued, **no failures**. codecov now readable and clean:
+head **15 misses / 99.96%** -- IDENTICAL to base. So the batched branch is genuinely
+covered, which is the same signal that (correctly) failed when the branch was dead code.
+
+That closes the loop on the codecov-readability criterion adopted earlier:
+  * unreadable: thousands of misses / whole-file collapse (mid-matrix)
+  * readable + REAL: small delta (17 vs 15 on #1411 -> 2 uncovered lines, fixed)
+  * readable + CLEAN: same count as base (here)
+All three states have now been observed and distinguished on real runs.
+
+Remaining: 24 checks to land, then audit + squash-merge.
+
+### 2026-08-31 (wake 31) — #1416 pre-merge audit CLEAN; 142 green, 0 red
+
+Diff vs e9afe588: +182 lines, 2 files (SCFPotential.py +108, test_backend_scf.py +74).
+No deletions.
+
+* **if -> xp.where class: CLEAN.** Only `if _dens_accepts_arrays(...)` added -- a boolean
+  from a CONSTRUCTION-TIME probe (structural setup), not a predicate on array VALUES.
+* **Duplication: CLEAN**, by difflib >=0.75 over all function pairs -- the near-duplicate
+  check, not just the exact-AST one that would have missed the timedep twins.
+* **Helper placement: CLEAN.** `_dens_accepts_arrays` lives beside `_timedep_dens_setup`,
+  the idiom it mirrors. It probes DENSITY FUNCTIONS (a galpy.potential concept), not array
+  namespaces, so it correctly stays local rather than moving to galpy.backend.
+
+Audit done ahead of the matrix finishing, so the merge is unblocked the moment it lands.
+
+## 2026-08-31 — DehnenBinney98 UN-DEFERRED (26551ae4): 2641s -> 218s. Ledger 51 -> 50.
+
+Jo pushed back on "it stays over the cap". Jo was right, and my reasoning was wrong in a
+way worth recording.
+
+**What I had done wrong, twice:** concluded "over the cap" from wall-clock totals without
+ever profiling. First from a TIMEOUT TRACEBACK (which shows where execution WAS, not where
+time WENT), then from a 290 s import measurement I treated as a floor. One cProfile run
+named the real cost immediately.
+
+**The real cost:** `gegenbauer` = **350 s of 396 s**, **70730 calls**, because `_C` calls it
+once per l and DehnenBinney98 has L~30. Entirely independent of the integrand batching this
+PR was built around -- which never even engages here, because DiskSCF's density has a
+scalar-only `if` and `_dens_accepts_arrays` correctly rejects it. The PR's headline feature
+was irrelevant to its biggest win.
+
+**The fix:** alpha enters the recurrence only as a coefficient, so pass the whole alpha
+vector. `_C` makes ONE call for all l; the fallback builds C_0 at the broadcast shape.
+
+**The twins pattern, third instance this session.** I fixed C_0 in the eager branch only and
+broke 9 backend tests -- `_gegenbauer_scan_jax` has its own `jnp.ones_like(x)`, so with an
+array alpha the lax.scan carry shapes diverged (`float64[1,1]` vs `[1,4]`). Previous two:
+the timedep coefficient twins, and `_init_static`'s readers. **Rule: a function with eager
+AND traced implementations must be edited together.** My `_C` value check passed on eager
+paths while the traced path was broken; only a GRADIENT test caught it -- the same
+"agreeing values don't prove the path runs" lesson as the dead-branch episode.
+
+Measured (all on the same passing code):
+  test_DehnenBinney98  2641s -> **218s**  (CI ~155s at 0.71, ~48% headroom)
+  build alone          290s  -> 66.9s
+  gegenbauer vs 30 scalar calls  max abs diff 0.0
+  _C vs the per-l loop           max abs diff 0
+  test_backend_scf 117 passed | test_scf 95 passed | numpy hash IDENTICAL
+
+Also: re-measured after fixing the 9 failures (54.8s -> 66.9s). A number taken from code
+that fails tests is not a measurement of what you are shipping.
+
+CI on 26551ae4: 58 green / 40 running / 53 queued, only the codecov pair (uploads incomplete).
+
+### 2026-08-31 (wake 34) — UN-DEFER VALIDATED IN CI
+
+149 green / 3 running. **`backend jax tests/test_potential.py --splits 5 --group 5`:
+SUCCESS** -- that is the shard holding test_DehnenBinney98, now RUNNING (not skipped) and
+passing under the real 300 s cap on CI hardware. The local 218 s measurement holds where it
+counts: an un-defer is only proven when the test actually runs green in CI, not when a local
+timer says it should.
+
+codecov still the mid-matrix phantom: head 7038 misses vs base ~15 -- not the same ORDER,
+so by the readability criterion it carries no information yet. 3 checks outstanding.
+
+### 2026-08-31 — tdep SCOPED, NOT STARTED. Pausing per Jo (#1204 closing in a day or few).
+
+Re-measured the 3 tdep entries on merged develop (d8098c7e), because the old numbers predate
+the gegenbauer vectorisation and those tests call `_C` too. Scoping on the stale numbers
+would have repeated the exact error Jo caught earlier.
+
+| test | before | now | CI est (x0.71) |
+|---|---|---|---|
+| nonvectorizable_fallback  | 567s | **517s** | ~367s OVER |
+| vectorized_matches_loop   | 659s | **516s** | ~366s OVER |
+| time_batching             | 371s | **328s** | ~233s under, only 22% margin |
+
+gegenbauer bought 9-22% -- real but not decisive. **2 of 3 stay clearly over**, so clearing
+them needs the timedep-integrand batching proper.
+
+**Decision: scoped, NOT started.** Rule fixed before seeing the number: outcome 3 = write up
+and stop. Reasons this is not a finish-before-pausing size:
+  * THREE separate integrands (spherical/axi/general timedep twins), each needing the
+    leading-batch-axis index rewrite
+  * the density contract must be preserved (nodes stay numpy) as in #1416
+  * eager AND traced twins must move together -- that has bitten three times this session
+  * `time_batching` at 22% margin is the [[test_SOS_3D]] precedent, which was KEPT deferred;
+    un-deferring it alone would be a coin-flip, not a burndown
+
+Also note: `_dens_accepts_arrays` may reject these densities too (as it correctly does for
+DiskSCF). That must be MEASURED per-density before assuming batching can apply -- exactly
+the assumption that made #1416's headline feature irrelevant to its biggest win.
+
+**State at pause:** develop d8098c7e, ledger 60 (50 slow-skip + 10 xfail). No PR of mine
+open. `backend/scf-tdep-batch` exists but is a bare pointer at develop with ZERO edits --
+the measurement script restored backend_slow_skip.txt via `git checkout --` on exit, so no
+half-state survives. Nothing for Jo to reason about mid-flight while closing #1204.
+
+### 2026-08-31 (pause, read-only) — tdep scope REFINED: batching can reach at most 2 of 3
+
+Respecting Jo's pause (no PR, no develop change), but the loop says never idle, so I ran the
+one READ-ONLY check that de-risks the future tdep work: what densities do those tests use?
+
+**`test_tdep_from_density_nonvectorizable_fallback` (517 s) defines
+`dens_scalar_t(R, z, phi, t=0.0)` and exists to exercise the NON-VECTORIZABLE path.**
+Batching cannot apply to it -- that is the point of the test. So the tdep batching ceiling
+is **2 of 3 entries**, not 3, and the biggest of the three is permanently out of reach by
+design.
+
+That changes the cost/benefit materially and should be settled BEFORE anyone starts:
+  * `nonvectorizable_fallback` 517 s -- unbatchable BY DESIGN, stays deferred regardless
+  * `vectorized_matches_loop`  516 s -- candidate
+  * `time_batching`            328 s (~233 s CI, 22 % margin) -- candidate, but on the
+    test_SOS_3D "within 20 % of the cap" precedent that was KEPT deferred
+
+So the realistic best case for the whole timedep-integrand rewrite is **1-2 entries**, for
+three integrand rewrites plus twin discipline. Worth knowing before committing to it.
+
+Caveat on confidence: this comes from the test's NAME and the `dens_scalar_t` signature, not
+from running `_dens_accepts_arrays` on each density. That per-density probe is still the
+right first step if the work is picked up -- it is cheap and it is the thing that made
+#1416's headline feature irrelevant to its own biggest win.
+
+State unchanged: develop d8098c7e, ledger 60, no PR of mine open, worktree clean.
+
+**CORRECTION, same day — Jo asked when the test was written, and the answer changes the plan.**
+
+Provenance: `832211d8 "Add time-dependent support to SCFPotential (#1058)"`, Jo Bovy,
+2026-07-03, **on main**. So NOT backends work -- it is a galpy feature test.
+
+But Jo's instinct was right anyway, for a better reason than "it's ours". Measured levers
+on the REAL fallback path (my first probe used `numpy.sqrt`, which accepts arrays, so it
+silently measured the VECTORIZED path and showed a misleading 1.5x -- the fallback needs a
+density that genuinely rejects arrays):
+
+    as-written  nt=9, order=20 (default) : 31.98 s   numpy
+    nt 9->3                              : 10.61 s   (3x -- LINEAR, confirms the time loop)
+    nt 9->3 + radial/costheta/phi 20->10 :  1.40 s   (another 7.6x)
+                                            => 23x total
+
+Cost is `Ksample**3` nodes x Nt SEQUENTIAL solves (that is what "fallback" means here), not
+N or L. 23x would take the jax entry ~517 s -> ~22 s, far under the 300 s cap.
+
+**Why the order cut is nearly free:** the test asserts
+`max|sp_fb._Acos_all - sp_vec._Acos_all| < 1e-12` -- fallback arm vs vectorized arm. It is a
+PATH-EQUIVALENCE test; it never checks coefficients against an analytic reference. The
+quadrature order sets how accurate BOTH arms are, identically, so lowering it moves both
+together and leaves the asserted difference untouched. Those 8000 nodes buy absolute
+accuracy this test does not examine.
+
+So the earlier "unbatchable by design -> permanently deferred" conclusion stands on the
+BATCHING axis but is the wrong frame: the entry is cheap to retire by shrinking, without
+batching at all, and without weakening the assertion. Same lever very likely applies to
+`vectorized_matches_loop` (516 s) and `time_batching` (328 s) -- all three use
+`symmetry=None`.
+
+This is a main-targeted change to Jo's feature test, so it is Jo's call and Jo's merge.
+Not started -- pause respected.
+
+### 2026-08-31 — codex review of d8098c7e: over-tight mass-batching assertion (VALID)
+
+`test_mass_batches_a_potential_that_opts_in` asserted `rtol=0, atol=0` between the batched
+and node-by-node quadrature drives, with a comment claiming "measured bit-identical". Codex
+sees it FAIL at 1.4e-16; it PASSES here and passed in CI. That split is the finding: the
+verdict depends on the jax build, so the assertion pinned a compiler accident as a contract.
+
+**Why bit-identity is not defensible here:** node-by-node evaluates f(x_i) in separate XLA
+calls; batched evaluates f(x) over the whole node array in one. Whether XLA emits identical
+arithmetic for the scalar and vectorized forms (fusion, FMA contraction, intermediate
+precision) is an implementation detail that moves between versions. The intent -- show this
+is a ROUTING change, not a numerical one -- was right; the instrument was wrong.
+
+I had already reached that conclusion for the sibling SCF test in the SAME PR
+(`atol=1e-15*scale`). The inconsistency was the tell.
+
+**The conflation:** the mission's byte-identity rule is about the NUMPY path vs before the
+change -- a fixed reference on deterministic hardware, legitimately rtol=0. This test is
+[jax]/[torch] comparing two routes WITHIN an accelerator backend. Different claim. I
+imported the standard from where it belongs to where it does not.
+
+FIXED on `fix/mass-batch-tolerance` (ed41c1f5): rtol=1e-14 (still ~5 orders tighter than
+this rule's own 5.8e-09 GL-vs-adaptive gap) + corrected comment. Full file 107 passed,
+1 skipped.
+
+**Audit for the same habit** -- 3 other exact comparisons, all sound: `x**2` at 3.0 and
+`v*2.0` are exactly representable (and those tests prove the HELPER, not numerics);
+`gammainc` int64-vs-float64 order is same-path-same-value, where exactness IS the assertion.
+Principle: exact is right for the SAME computation on the SAME values, wrong for DIFFERENT
+EXECUTION SHAPES of the same math.
+
+Not pushed -- pause respected; branch ready.
+
+### 2026-08-31 wake — PR #1417 OPEN (Jo: "do a PR to fix")
+
+Cron `2b36be1c` alive (created 2026-08-29 -> expires ~2026-09-05).
+
+gh#1417 `fix/mass-batch-tolerance` -> feat/backends-develop, head ed41c1f5 on origin head
+d8098c7e. One file (tests/test_backend_quadrature.py, +10/-6), ledger delta none.
+Verified head SHA == local, base correct, tree free of conflict markers.
+
+CI in flight: 46 SUCCESS / 104 pending / 1 FAILURE = `codecov/project`.
+**Diagnosed PHANTOM, not a real drop:** head 72.58% vs base 99.96%. A tolerance change in a
+test file cannot move production coverage 27 points; 104 of 153 checks are still queued so
+most upload sessions have not arrived. `codecov/patch` is SUCCESS -- the corroborating
+signal. Self-heals as uploads land; re-run all-clear afterwards if it does not.
+Next wake: re-check, then squash-merge if green.
+
+Open item recorded from the tdep thread (NOT started, needs Jo's go-ahead -- it is Jo's
+test on main): the 23x shrink lever measured for `nonvectorizable_fallback` is UNVERIFIED on
+`vectorized_matches_loop` and `time_batching`. `time_batching` asserts against `Ac * NN`,
+which looks like a reference rather than a path-equivalence pair, so the quadrature-order
+half of the lever may NOT be free there. Measure before proposing.
+
+### 2026-08-31 — NEW DIRECTIVE from Jo: speed up inherently-slow tests ON MAIN
+
+> "you should probably fix that 23x speed up on main so we can incorporate it. While I
+> finish the review, maybe you can more broadly determine for the remaining tests that are
+> too slow whether they are quite slow under numpy as well and whether we can do main
+> updates that basically keep the test but speed it up. Those would benefit everything"
+
+This reframes the ledger burndown: an entry that is slow **under numpy too** is a MAIN
+problem worth fixing for every galpy user, not a backend workaround. Two work streams:
+
+**(A) tdep test speedup -> main.** Worktree `/var/tmp/scfmain` (branch
+`main/tdep-test-speedup`, off origin/main) building in background.
+
+CRITICAL recipe detail found by reading main's version: `vectorized_matches_loop` compares
+the tgrid build against **per-timestep `potential.scf_compute_coeffs`** -- path-equivalence,
+NOT an analytic reference (my earlier `Ac * NN` worry was unfounded; NN is just
+`sph_harm_normalization`). So the quadrature-order cut IS available -- but the order must be
+lowered on **BOTH arms**, `from_density` AND the `scf_compute_coeffs` reference call, or they
+diverge for a non-bug reason. Lowering both preserves the assertion exactly and makes both
+sides cheaper. No branch depends on K, so no coverage is lost.
+
+**(B) numpy-slowness survey of the 52 slow-skip entries.** Background run in
+`/var/tmp/numpysurvey` (whole FILES + junitxml, since hand-picked nodeids do not reproduce
+fixture context): test_FDMdynamfric, test_dynamfric, test_scf, test_streamTrack,
+test_noninertial, test_actionAngle, then test_qdf serial (xdist shared-state).
+NOT yet covered: test_orbit.py (16 entries -- the biggest cluster) and test_orbits.py, both
+very large; queue them next.
+
+Ledger clusters: test_orbit 16, test_noninertial 9, test_FDMdynamfric 7, test_streamTrack 4,
+test_orbits 4, test_scf 3, test_dynamfric 3, test_qdf 2, test_actionAngle 2.
+
+Hypothesis to test with (B): FDM/dynamical-friction and streamTrack are heavy PHYSICS
+(orbit integration), so likely slow on numpy too -> main-fixable. The qdf entry is already
+known to be a nested per-pixel loop (task #130) -> main-fixable by vectorization.
+
+### 2026-08-31 — NUMPY-SLOWNESS SURVEY RESULTS (Jo's directive B)
+
+Ran the ledgered test FILES under plain numpy (`-n 8`, junitxml), then matched per-test
+durations against the 52 slow-skip entries. 7 files, all passed clean (9/7/95/45/53/210/56).
+
+    numpy    test                                                    deferred on
+   1033.9 s  test_dynamfric.py::test_dynamfric_c                      jax, jax-jit, torch
+    229.3 s  test_FDMdynamfric::..._central_limit                     jax, jax-jit, torch
+     98.0 s  test_actionAngle::..._Staeckel_python_c_freqsAngles      jax, jax-jit
+     89.4 s  test_streamTrack::..._plot_spread_non_cartesian          jax, jax-jit
+     82.1 s  test_FDMdynamfric::test_dynamfric_c                      jax
+     71.9 s  test_FDMdynamfric::..._const_FDMfactor                   jax, jax-jit, torch-jit
+     37.5 s  test_scf::..._vectorized_matches_loop                    jax
+     30.9 s  test_scf::..._nonvectorizable_fallback                   jax
+     22.1 s  test_scf::..._time_batching                              jax
+     16.4 s  test_qdf::test_sampleV_interpolate                       jax, jax-jit
+   <=15.4 s  5x test_noninertial, 1x test_streamTrack                 jax(-jit)
+
+**ANSWER TO JO: yes, emphatically for the top of the list.** `test_dynamfric_c` costs
+**17 MINUTES on plain numpy** -- a cost every galpy CI run pays on every platform, entirely
+independent of backends. The dynamical-friction cluster is 5 of the top 6. These are main
+speedups that benefit everything, exactly as Jo predicted.
+
+CAVEATS on these numbers: measured under `-n 8` xdist, so the box was loaded and absolute
+times are inflated somewhat (see [[long-measurement-needs-a-quiet-box]]); the RANKING is the
+usable product, not the absolute seconds. Re-time the chosen target on a quiet box before
+claiming a speedup factor.
+
+16 of 52 entries matched. The remainder live in test_orbit.py (16) + test_orbits.py (4),
+now running as phase 2.
+
+PR #1417: 117 SUCCESS / 32 pending / 2 FAILURE. `run-notebooks (3.13)` failed on
+`known_objects.ipynb` with DALServiceError x3 -- the SIMBAD network class, not the diff
+(a tolerance change in one test file cannot touch notebooks). Probed SIMBAD capabilities
+endpoint = 200, so re-ran the failed job. `codecov/project` still the upload phantom.
+
+### 2026-08-31 — survey phase 2 (orbit files) + COMBINED RANKING
+
+    numpy    test                                                  deferred on
+   1033.9 s  test_dynamfric::test_dynamfric_c                       jax, jax-jit, torch
+    254.9 s  test_orbit::test_lyapunov_spectrum_henonheiles_chaotic jax
+    229.3 s  test_FDMdynamfric::..._central_limit                   jax, jax-jit, torch
+     98.0 s  test_actionAngle::...Staeckel_python_c_freqsAngles     jax, jax-jit
+     95.6 s  test_orbit::test_lyapunov_spectrum_consistency         jax
+     89.4 s  test_streamTrack::..._plot_spread_non_cartesian        jax, jax-jit
+     82.1 s  test_FDMdynamfric::test_dynamfric_c                    jax
+     81.0 s  test_orbit::test_liouville_planar                      jax, jax-jit, torch-jit
+     80.5 s  test_orbit::test_analytic_ecc_rperi_rap                jax, jax-jit, torch
+     71.9 s  test_FDMdynamfric::..._const_FDMfactor                 jax, jax-jit, torch-jit
+     37.5 s  test_scf::..._vectorized_matches_loop                  jax
+     30.9 s  test_scf::..._nonvectorizable_fallback                 jax
+     27.3 s  test_orbit::test_analytic_zmax                         jax, jax-jit, torch-jit
+     22.1 s  test_scf::..._time_batching                            jax
+   <=16.4 s  qdf sampler, 5x noninertial, SOS_3D, 6 smaller orbit   various
+
+29 of 52 entries matched (the rest are -jit twins of the same test names).
+
+**TEN ledgered tests cost >=70 s EACH on plain numpy**, topped by a 17-minute one. This is
+a large, backend-independent chunk of galpy CI time -- exactly the class Jo asked me to
+find. The tdep tests I started from (22-37 s) are mid-pack, not the prize.
+
+NOTE: `test_orbit.py` numpy run reported `1 failed` -- `test_fixedstepsize`, which asserts
+on RUNTIME. It failed because my own `-n 8` survey loaded the box, not because anything is
+broken. Harness artifact, not a galpy defect; do not chase it.
+See [[long-measurement-needs-a-quiet-box]].
+
+Next: understand WHY test_dynamfric_c costs 1034 s before proposing anything -- the #1416
+lesson is that the obvious lever (batching) was irrelevant to that PR's actual win.
+
+### 2026-08-31 — test_dynamfric_c: my hypothesised lever is REFUTED (measured)
+
+Structure: `for p in pots:` (~25 potentials), each integrated TWICE -- `dop853_c` and pure
+Python `dop853` -- then `assert amax|o.r(t) - op.r(t)| < 10**ttol`. C-vs-Python parity.
+
+Hypothesis: `times = linspace(0, -100, 1001)` is the knob; fewer output points => less work.
+**WRONG.** Measured on a Hernquist + ChandrasekharDynamicalFrictionForce:
+
+    n=1001  C=0.005s  python=1.828s
+    n= 501  C=0.004s  python=1.686s
+    n= 251  C=0.006s  python=1.740s
+    n= 101  C=0.004s  python=1.601s
+
+A 10x cut in output points buys 12%. dop853 is ADAPTIVE -- internal step count follows the
+tolerance and the dynamics, not the output grid. The times array is not a lever at all.
+
+**The more useful number:** one potential costs 1.8 s in Python. ~25 potentials ~= 45 s,
+NOT 1034 s. So the cost is CONCENTRATED in a handful of expensive potentials (candidates:
+the tdep SCF built in-test, DoubleExponentialDisk, MultipoleExpansion, McMillan17,
+interpolated ones), not spread evenly across the loop.
+
+This is [[reproduce-the-assertion-not-a-proxy]] and the #1416 lesson repeating: the obvious
+global knob was irrelevant; the cost lives somewhere specific. Caught it BEFORE proposing
+this time.
+
+NEXT: per-potential attribution inside the loop (time each `pots` entry separately), then
+target the few that dominate. Do NOT propose a global resolution cut.
+
+### 2026-08-31 — gh#1417 MERGED; gh#1418 OPENED (main, tdep test speedup)
+
+**gh#1417 MERGED** (squash) into feat/backends-develop -> **5410ac6e**. all-clear SUCCESS,
+0 failures. Notebook flake cleared on rerun (SIMBAD back up); codecov/project phantom
+self-healed exactly as diagnosed. Audit before merge: 0 production files, 0 if->xp.where,
+0 new helpers -- a tolerance constant and its comment.
+
+**gh#1418 OPENED -> main**, branch `perf/tdep-test-speedup`, head 16ae98bb.
+
+**CORRECTION to the 23x I quoted Jo:** realized speedup is **6.9x**, not 23x. The 23x was an
+isolated single from_density build with BOTH nt 9->3 and the order cut. I deliberately did
+NOT cut nt on the fallback/vectorized tests -- that reduces how many time points are actually
+compared, i.e. a real coverage reduction rather than a free one. Clean A/B, same box, same
+command:
+
+    vectorized_matches_loop   30.67s -> 4.37s
+    nonvectorizable_fallback  26.42s -> 4.10s
+    time_batching             19.28s -> 2.52s
+    total                     76.37s -> 10.99s
+
+Recipe that makes it safe: all three are PATH-EQUIVALENCE tests, so the order must go to
+BOTH arms -- including the `scf_compute_coeffs` reference calls, which would otherwise keep
+the default rule and diverge for a non-bug reason.
+
+Two process notes:
+* pre-commit `ruff-format` REJECTED the first commit and rewrote the file; HEAD had not
+  moved (72f96783 == origin/main) and `gh pr create` said "No commits between main and ...".
+  Caught by checking the SHA, per [[precommit-hooks-reject-first-commit]]. Re-ran the tests
+  after the reformat before pushing.
+* I spliced inside function bodies, so I diffed the `def test_` SET before/after
+  ([[def-to-def-splice-deletes-methods]]): identical, 89 functions.
+
+### 2026-08-31 late — gh#1418 CI in flight; dynamfric attribution running
+
+gh#1418 (main, tdep test speedup): 3 SUCCESS / 122 pending / 1 FAILURE = `codecov/project`,
+head 35.87% vs base 99.93%. A 64-point drop from a TEST-FILE-ONLY change is impossible;
+3 of 153 checks done means almost no coverage uploads have landed. Same incomplete-upload
+phantom as gh#1417, which self-healed. Re-check next wake; if still red at CI completion,
+re-run all-clear rather than touching the diff.
+
+Local work meanwhile: instrumented `test_dynamfric_c` for PER-POTENTIAL attribution
+(/var/tmp/scfmain/dfattr.py -> /var/tmp/dfattr.log, running). Wraps `Orbit.integrate` with a
+timer keyed by the non-friction members of the potential list, then runs the test. This is
+the follow-up to the refuted resolution lever: a single potential costs 1.8 s in Python and
+there are ~25, so ~45 s is accounted for and the other ~1000 s must be concentrated in a few
+entries. Attribution first, then target those -- do NOT propose a global knob.
+
+CAVEAT on the attribution run: box load average is ~61 (72 cores) while it runs, so absolute
+seconds will be inflated. The RELATIVE ranking (which potentials dominate) is still valid --
+every potential in the loop sees the same contention -- but re-time the chosen target on a
+quiet box before quoting any speedup factor ([[long-measurement-needs-a-quiet-box]]).
+
+### 2026-08-31 — test_dynamfric_c ATTRIBUTED: the cost is the CDF CONSTRUCTOR, not integration
+
+Instrumented run (load ~61, so absolute seconds inflated; ranking is the product):
+
+    total 1295.1s across 74 Orbit.integrate calls
+    but ALL integrate calls sum to only ~300s  ->  ~77% of the test is NOT integration
+
+Within integration, SCF-family dominates (one DiskSCF+NFW+SCF python solve = 127.4s; SCF
+47.9s; Multipole 25.0s; DoubleExpDisk 12.9s). Everything else is 1-7s.
+
+**Where the other ~1000 s goes: `ChandrasekharDynamicalFrictionForce.__init__`.** Measured
+directly, one construction each:
+
+    Hernquist         7.46s
+    NFW               4.78s
+    DoubleExpDisk    38.47s
+    MWPotential2014  14.35s
+
+The test constructs a CDF **inside the loop, once per potential** (~40 potentials, several
+twice via `cdf_tmp`). 40 x ~15s ~= the missing time.
+
+**This is a real galpy performance issue, not a test artifact** -- every user who builds a
+ChandrasekharDynamicalFrictionForce pays it. Exactly the class Jo asked for: fix on main,
+benefits everything.
+
+HYPOTHESIS (needs confirming before any fix): the ctor builds an interpolated mass profile
+of `dens` by looping `scipy.integrate.quad` over a radial grid -- the run log is full of
+`galpy/df/jeans.py:58 ... integrate.quad` warnings, which points there. If so the fix is to
+vectorize that grid build, the same shape as the interpRZPotential grid work (task #211).
+CONFIRM BY READING THE CTOR FIRST -- two hypothesised levers have already been refuted in
+this investigation (times-array resolution; and batching in #1416).
+
+gh#1418: 100 SUCCESS / 45 pending / 2 FAILURE = codecov/project (still the upload phantom)
+plus a NEW `build (windows-latest, 3.13, tests/test_orbit.py tests/test_orbits.py ...)`.
+My diff touches ONLY tests/test_scf.py and cannot reach test_orbit.py, so this is a flake or
+pre-existing -- but I have NOT yet read its failure lines. Do that first next wake
+([[reread-failure-before-investigating]]), and check the same-SHA twin.
+
+### 2026-09-01 — CDF ctor hypothesis CONFIRMED by reading the code (not just timing)
+
+`ChandrasekharDynamicalFrictionForce.__init__` (ChandrasekharDynamicalFrictionForce.py:124):
+
+    self._sigmar_rs_4interp = numpy.linspace(self._minr, self._maxr, nr)   # nr=501 DEFAULT
+    self._sigmars_4interp = numpy.array(
+        [sigmar(x) for x in self._sigmar_rs_4interp]     # <- Python loop, ONE scipy quad each
+    )
+    ...
+    sigmar = lambda x: jeans.sigmar(self._dens_pot, x, beta=0.0, use_physical=False)
+
+and `jeans.sigmar` (jeans.py:57) is `integrate.quad(rho(x) * -rforce(x) * x**(2 beta), r, inf)`.
+
+So each CDF construction = **501 independent adaptive quadratures**, each evaluating the host
+density and forces dozens of times. That is the 5-38 s, and it is why DoubleExpDisk (costly
+density) is the worst at 38.47 s.
+
+**THE OPPORTUNITY:** the integrand is IDENTICAL across all 501 radii -- only the LOWER LIMIT
+changes. So instead of 501 separate quads from r_i to infinity, evaluate the integrand once
+on a grid and integrate CUMULATIVELY from the outside in: one pass instead of 501 adaptive
+integrations. Same shape as the interpRZPotential grid work where Jo chose VECTORIZE (#211).
+
+**Design caveat that must be settled before coding:** a cumulative rule on a fixed grid is
+NOT automatically as accurate as 501 adaptive quads. Per [[backend-precision-must-match-numpy]]
+a less-accurate path is a DEFECT, not a tradeoff -- so this needs either enough nodes or a
+composite high-order rule to match the current accuracy, validated against the existing
+per-radius result. That validation IS the PR, not an afterthought.
+Also note the tail: quad to `inf` needs a matching treatment in the cumulative form.
+
+Benefits every galpy user constructing dynamical friction, not just the test. This is the
+best target the numpy-slowness survey produced.
+
+gh#1418: 145 SUCCESS / 2 pending / 2 FAILURE. Windows failure READ (not assumed):
+`test_from_name_values`/`test_from_name_errors`/orbits twin, all
+`DALServiceError ... simbad.cds.unistra.fr ... Connection failed` -- the known SIMBAD network
+flake, and `all-clear` is red purely as a consequence. Probed SIMBAD = 200, re-ran the failed
+job (attempt 2, queued). codecov/project cleared on its own as predicted.
+
+### 2026-09-01 — CDF sigmar: PROTOTYPED, and the accuracy question answered by measurement
+
+Exact form (jeans.py:57, beta=0 in the CDF ctor):
+    sigmar(r) = sqrt( I(r) / (rho(r) r^2beta) ),  I(r) = int_r^inf -x^2beta rho(x) F_r(x) dx
+Only the LOWER LIMIT varies across the 501 radii => one cumulative integral + one tail quad.
+
+Prototype vs the current per-radius result (501 adaptive quads) as gold:
+
+    grid              speedup   max rel err
+    uniform  M=20001    ~240x     2.2e-01     <- NOT shippable
+    LOG      M= 4001    ~290x     2.2e-05
+    LOG      M=20001    ~230x     1.2e-06 (NFW) / 2.7e-06 (Hernquist)
+
+The uniform grid fails because rho ~ 1/r near minr=1e-4 varies over decades; a geomspace
+internal grid + interpolating I in log r fixes it, 4 orders better. So the accuracy caveat I
+flagged was REAL and the naive version would have shipped a 22% error.
+
+Residual ~1e-6 is trapezoid error, not method error -> try `cumulative_simpson` on the log
+grid before settling. Per [[backend-precision-must-match-numpy]] this must MATCH the adaptive
+result, not merely be close; measure the current quad's own accuracy to know what the bar is.
+
+**BLOCKER FOUND for the vectorized form:** `DoubleExponentialDiskPotential.rforce` RAISES
+"Methods in DoubleExponentialDiskPotential do not accept array input" (its `dens` is
+array-OK). And DoubleExpDisk is the WORST case (38.47 s ctor). So the design needs:
+  * vectorized integrand evaluation where rforce accepts arrays (most potentials) -> ~230x
+  * scalar-loop fallback otherwise -- still a big win (M evaluations vs 501 ADAPTIVE quads,
+    each of which costs dozens of evaluations), just not 230x
+This is the known array-input class ([[array-input-test-exclusion-list]]); do not assume the
+vectorized path is universally available.
+
+Not opened as a PR: gh#1418 is still the active main PR (SIMBAD rerun in flight), and
+one-PR-at-a-time. This is prototype + design only.
+
+### 2026-09-01 — gh#1418 MERGED (main a41eb8bd). CDF sigmar design SETTLED by measurement.
+
+**The accuracy bar is NOT machine precision — the current implementation is itself only
+~1e-6.** Measured against a tight-tolerance reference (epsabs=1e-14, epsrel=1e-13):
+
+                              Hernquist   NFW
+    CURRENT (default quad)     2.02e-06   7.42e-07     <- the bar
+    cumulative trapz M= 4001   2.15e-05   1.44e-05     worse than current
+    cumulative simpson M= 4001 1.18e-05   7.19e-06     worse than current
+    cumulative trapz M=20001   8.59e-07   5.77e-07     BEATS current
+    cumulative simpson M=20001 4.73e-07   2.88e-07     BEATS current by 2-4x
+
+So the cumulative form is **strictly MORE accurate than what galpy ships**, at ~230x the
+speed. Not a tradeoff -- it satisfies [[backend-precision-must-match-numpy]] by exceeding it.
+Node count matters: M=4001 is WORSE than current, M=20001 is better. Do not cheap out on M.
+
+Formulation that works (the first one failed): cumulate LEFT-TO-RIGHT so x stays strictly
+increasing -- `C = cumulative(g, x)`, then `I(r) = C[-1] - C(r) + tail`, tail = one tight
+quad from maxr to inf; interpolate I in LOG r. Reversing x raises
+"Input x must be strictly increasing".
+
+**Open design question for Jo — scipy floor.** galpy's setup.py:406 pins NO scipy minimum
+(`install_requires=[..., "scipy", ...]`), but `cumulative_simpson` needs scipy>=1.12. Options:
+  (a) hand-roll cumulative Simpson on the uniform-in-log grid (transform
+      int g dx = int g(x) x dln x, uniform spacing => textbook composite Simpson). No new
+      dependency, keeps the best accuracy. PREFERRED.
+  (b) use cumulative_trapezoid (ancient, always available) -- still beats current, but only
+      by ~2x rather than ~4x.
+  (c) add a scipy>=1.12 pin -- changes galpy's install requirements, Jo's call.
+Leaning (a).
+
+**Second constraint, already measured:** `DoubleExponentialDiskPotential.rforce` RAISES on
+array input (dens is fine), and it is the worst case (38.47 s). So the integrand evaluation
+needs a scalar-loop fallback; still a large win there (M plain evaluations vs 501 ADAPTIVE
+quads).
+
+Branch `perf/cdf-sigmar-cumulative` created off new main a41eb8bd. Not yet implemented.
+
+### 2026-09-01 — CDF sigmar: CATASTROPHIC CANCELLATION found and fixed (nearly shipped it)
+
+Implementing the design, MWPotential2014 refused to self-converge:
+    M=25k->50k 3.50e-06, 50k->100k 4.70e-06   (NOT shrinking)
+while the reference quad was stable to 16 digits across `limit=50..400`. So the REFERENCE was
+fine and MY METHOD was wrong -- the opposite of my first read.
+
+Integrand smoothness ruled out as the cause: relative 5th-differences on a tight cluster are
+~1e-14 (machine precision) for Hernquist, MWPot2014, PowSphwCutoff, MiyamotoNagai, NFW. Not
+noise.
+
+**Root cause: catastrophic cancellation in my own formulation.** I had switched to
+left-to-right cumulation (`I(r) = C[-1] - C(r) + tail`) purely to satisfy scipy's "x must be
+strictly increasing". At large r, C(r) ~= C[-1], so I(r) is a difference of two nearly-equal
+large accumulated sums. MWPotential2014's massive disk makes C large, so the cancellation is
+severe there.
+
+**Fix: accumulate FROM THE RIGHT over per-interval integrals** -- no differencing:
+    seg = 0.5*(g[1:]+g[:-1])*diff(xs)
+    I   = concatenate((cumsum(seg[::-1])[::-1], [0.0])) + tail
+Self-convergence after the fix:
+    MWPot2014  3.02e-07 -> 7.66e-08   (4x per doubling = clean O(h^2))
+    Hernquist  IDENTICAL either way
+
+**Why this nearly shipped:** Hernquist and NFW -- the two potentials I prototyped on -- are
+COMPLETELY INSENSITIVE to the bug. Only MWPotential2014 exposes it. A prototype validated on
+the obvious potentials would have landed a silent ~5e-06 regression on galpy's most-used
+potential. Generalises [[ab-must-reproduce-before-it-can-clear]]: a clean result on the easy
+case proves nothing about the hard one; pick the validation case that can FAIL.
+
+Method now clears the bar with margin (bar 7.37e-07 for MWPot2014; ~2.5e-08 actual at M=100k).
+Ready to implement: right-accumulation, geomspace internal grid, tail via one tight quad,
+interp in log r, scalar fallback where rforce rejects arrays.
+
+### 2026-09-01 — CDF sigmar fast path IMPLEMENTED (branch perf/cdf-sigmar-cumulative)
+
+`galpy/df/jeans.py`: new private `_sigmar_on_grid(Pot, rs, dens, beta, nquad=100001)` --
+sigma_r at every radius from ONE cumulative integral (geomspace grid, right-accumulation,
+tail via one tight quad, interp in log r). Returns None when the fast path does not apply so
+callers fall back unchanged. Plus `_eval_on_grid` for array-or-loop evaluation.
+
+`ChandrasekharDynamicalFrictionForce.__init__`: uses it ONLY when `sigmar is None` (the
+default Jeans case); a user-supplied sigmar keeps the per-radius loop.
+
+**Measured ctor times (was -> now):**
+    NFW              4.78s -> 0.04s   (120x)
+    MWPotential2014 14.35s -> 0.14s   (102x)
+    Hernquist        7.46s -> 2.18s   (first call, includes warm-up)
+    DoubleExpDisk   38.47s -> 33.55s  (DECLINES the fast path; no regression)
+
+**Agreement with the per-radius loop:** 2.05e-06 (Hernquist) / 7.57e-07 (NFW) / 7.47e-07
+(MWPot2014) -- which equals the LOOP's own error vs a tight reference (2.02e-06 / 7.42e-07 /
+7.37e-07). So the difference is entirely the old path's inaccuracy; the new values are at
+least as good.
+
+**Second regression avoided (caught by reasoning, before running):** my first cut looped the
+integrand for array-rejecting potentials. That is nquad=100001 SCALAR evaluations, MORE than
+the ~25k the 501 adaptive quads cost -- i.e. it would have made DoubleExpDisk, the worst
+case, ~4x SLOWER. Now an array-capability probe returns None and those potentials keep the
+existing loop. Two regressions avoided in this PR so far (the other: the cancellation).
+
+tests/test_dynamfric.py + test_FDMdynamfric.py running (/var/tmp/dftest.log). NOT committed
+until they pass.
+
+### 2026-09-01 — THIRD regression caught: the fast path is 3x SLOWER for SCF potentials
+
+test_dynamfric.py ran 30 min without finishing. I first misread it as a hang -- `ps` on the
+pgrep FIRST MATCH gave the `timeout` WRAPPER, which burns 0 CPU by definition. Measuring the
+real pytest PID: 30:03 CPU / 29:50 elapsed at 100%, state R. Not hung -- genuinely computing,
+and SLOWER than the ~17 min I was trying to beat. See
+[[measure-elapsed-time-never-assume-it]].
+
+Cause, measured directly:
+
+    SCFPotential   fast(nquad=100k) 81.60s   old-loop est 27.09s   ratio 0.33x
+
+**`nquad=100001` is a FIXED grid, but the adaptive quads use only ~25k evaluations total
+(~50 per radius x 501 radii).** So the fast path does 4x MORE evaluations, and only wins when
+vectorisation more than compensates. For cheap analytic potentials it does (NFW 120x,
+MWPot2014 102x); for SCF/Multipole, where every point costs spherical harmonics + Gegenbauer,
+it does not. test_dynamfric_c is full of SCF potentials -- hence the slowdown.
+
+Same error as the scalar-fallback one, one level up: I compared "vectorised vs looped"
+without comparing evaluation COUNTS.
+
+**Fix to implement: self-calibrate.** Time one `jeans.sigmar` call and one small vectorised
+chunk, project both to full size, take the fast path only if projected faster. Costs ~1
+sigmar call and removes the guesswork -- no per-potential allow-list, no fixed assumption.
+
+Killed the stale run. NOT committed -- the branch currently contains this regression.
+
+Tally for this PR: THREE regressions caught before landing (large-r cancellation; the
+100k-scalar fallback; fixed-nquad slower on expensive potentials). Every one was invisible
+on the potential I happened to prototype with.
+
+**FIX: self-calibrating guard (implemented, verified).** `_sigmar_on_grid` now times one
+vectorised 256-point chunk and one adaptive quad, projects both to full size, and returns
+None unless the grid is projected at least 2x cheaper. Decisions measured:
+
+    NFW              fast path   (0.03 s to decide)
+    MWPotential2014  fast path   (0.12 s)
+    SCFPotential     DECLINES    (0.27 s) -- vs its ~27 s loop, so the probe is noise
+
+The probe doubles as the array-capability check, so DoubleExponentialDiskPotential (whose
+rforce raises on arrays) falls out of the same branch -- one guard instead of two.
+
+Re-running test_dynamfric + test_FDMdynamfric to confirm no regression.
+
+### 2026-09-01 — CDF fix VERIFIED GREEN; clean A/B baseline running
+
+With the self-calibrating guard, both suites pass:
+
+    test_dynamfric     7 passed in 544.49s   (test_dynamfric_c = 537.62s)
+    test_FDMdynamfric  9 passed in 198.54s   (central_limit 135.35s, dynamfric_c 29.31s,
+                                              const_FDMfactor 27.32s)
+
+vs the survey figures (1033.9 / 229.3 / 82.1 / 71.9 s) -- BUT the survey ran under `-n 8`
+contention, so that is NOT a clean A/B and those ratios must not be quoted. Running the
+unpatched baseline on the same box, same command, now (/var/tmp/basetest.log; the script
+restores the patch automatically, copies kept at /var/tmp/keep_*.py).
+
+**Ledger implication to check once the A/B lands:** several FDM entries are now far under the
+300 s cap on numpy (135 / 29 / 27 s). They are ledgered for JAX though, where eager overhead
+dominates, so the numpy gain does NOT automatically un-defer them -- that needs a forced
+-backend measurement before any ledger edit ([[verify-burndown-flips-stash-rerun]]).
+
+### 2026-09-01 — CLEAN A/B: the test speedup is 7%, NOT 2-3x. Premise deflated.
+
+Same box, same command, patch applied/reverted around it:
+
+    BASELINE (unpatched)  test_dynamfric_c 576.69s   file 599.62s
+    PATCHED               test_dynamfric_c 537.62s   file 544.49s
+                          => 1.07x  (7%)
+
+**Two corrections to things I asserted earlier:**
+
+1. **"test_dynamfric_c costs 17 minutes" was CONTENTION, not cost.** That 1033.9 s came from
+   the `-n 8` survey; the true single-run baseline is 576.69 s (~9.6 min). My 1295 s
+   attribution run (load 61) was inflated the same way. Both were ranking-grade numbers that
+   I let harden into magnitudes -- exactly what [[long-measurement-needs-a-quiet-box]] warns
+   about, and I flagged the caveat at the time but then reasoned as if it did not apply.
+
+2. **The 7% is the guard working CORRECTLY, not failing.** The cheap analytic potentials get
+   ~100x but only cost ~5-7 s each; the expensive ones (DoubleExpDisk 38 s, the SCF family)
+   are precisely the ones calibration declines. So the dominant constructor cost is untouched
+   BY CONSTRUCTION. There is no version of this optimisation that fixes the slow test --
+   the slow parts are slow for reasons this change cannot address.
+
+**So the value proposition is different from the one I started with.** This is NOT a CI-time
+win. It IS a real user-facing win for the common case:
+
+    MWPotential2014  CDF ctor 14.35s -> 0.14s   (102x)
+    NFW                        4.78s -> 0.04s   (120x)
+
+MWPotential2014 is the standard host for dynamical-friction studies, so anyone building a
+ChandrasekharDynamicalFrictionForce interactively waits 14 s today and 0.14 s after. That is
+worth landing on its own merits -- but it must be described as a CONSTRUCTOR speedup for
+array-capable potentials, NOT as a test/CI speedup, and the PR must not quote the survey
+ratios.
+
+Open question for Jo (not blocking): worth landing a 7%-on-CI / 100x-for-users change? I
+think yes on the user-facing merit, but the framing has to be honest and it is a bigger diff
+than the win on CI justifies.
+
+### 2026-09-01 — gh#1422 OPENED (main): CDF ctor ~100x. Framed honestly as a ctor win.
+
+Jo's answer to my "worth landing?" question had not arrived and the question was explicitly
+non-blocking, so I acted on my own recommendation rather than idling
+([[loop-is-keepalive-not-pause]]). Review is the cheap place to say no.
+
+gh#1422 `perf/cdf-sigmar-cumulative` -> main, head 3302e62f on a41eb8bd.
+3 files: galpy/df/jeans.py, ChandrasekharDynamicalFrictionForce.py, tests/test_jeans.py.
+
+**The tests are A/B-verified to FAIL without their guard** -- and the first version was
+VACUOUS. My initial accuracy test sampled 5 radii and PASSED with the cancellation bug
+reintroduced. Locating the bug's actual footprint showed why: max divergence 1.48e-06 at
+r=19.5, while the 5 sampled radii saw 3.3e-15 / 1.0e-07 / 4.1e-08 / 1.0e-06 / 0.0 -- all
+under any threshold safe against the legitimate ~7.5e-07 spread. A value test CANNOT catch
+this bug.
+
+Replaced with a CONVERGENCE test (nquad 25001 vs 100001): good version drifts 7.7e-08, buggy
+3.38e-06. Verified: 3 passed with the fix, 1 failed with the bug. That is the property the
+cancellation actually destroys.
+
+Also corrects my earlier claim that the bug cost "~5e-06 on MWPotential2014" -- that was the
+SELF-CONVERGENCE failure, not the value error (1.5e-06). Different diagnostics.
+
+ruff-format rejected the first commit again (HEAD stayed at origin/main); caught by checking
+the SHA, same as gh#1418. Re-ran the tests after the reformat.
+
+### 2026-09-01 — gh#1422 codecov/patch was a REAL finding; fixed by DELETING, not back-filling
+
+137 SUCCESS / 2 FAILURE = codecov/patch AND codecov/project. patch failing with most uploads
+in is not the phantom -- it measures the NEW lines, so it was real.
+
+Local `--cov` measurement was impossible: pytest-cov's import machinery trips galpy's
+once-per-process module guard (`ImportError: cannot load module more than once per process`).
+Asked the codecov API for the lines instead -> 87, 88, 89, 115, 150 in galpy/df/jeans.py.
+
+Reviewed them rather than writing tests to hit them:
+
+* **87-89 `_eval_on_grid` fallback: DEAD.** It predates the calibration probe. Now that the
+  probe establishes array capability BEFORE the grid is built, the fallback can never fire.
+  Deleted; its one caller reads `dens(rs)` directly.
+* **150 shape-mismatch branch: unreachable.** A potential whose methods reject arrays RAISES
+  (already handled by the except); one that silently returned a scalar would violate galpy's
+  own method contract. I could not construct a case, so deleted rather than leave uncovered
+  or pragma-hide it ([[no-hiding-uncovered-code]]).
+* **115 early-return guard: genuinely untested.** Now covered
+  (r<=0 / empty range / callable beta).
+
+New commit dc309add pushed on top (never amend+force an open PR,
+[[no-force-push-open-prs]]). PR head verified = dc309add. tests/test_jeans.py 9 passed.
+
+Worth noting the pattern: two of the three uncovered regions were code that had become
+unnecessary as the design changed, and the coverage gate is what surfaced that. Back-filling
+tests would have preserved dead code and hidden the signal.
+
+### 2026-09-01 — gh#1422 codecov cleared; re-measuring the remaining targets CLEANLY first
+
+gh#1422 head dc309add: 137 SUCCESS, 0 FAILURE, ~14 still queued. Both codecov contexts
+cleared with the dead-code removal. Main PR -> Jo's to merge; I hold once green.
+
+Local work meanwhile: the survey's remaining targets are still ranked by CONTENTION-INFLATED
+numbers (`-n 8`), which is precisely what sent me down the CDF path expecting a large CI win
+that turned out to be 7%. So before ANY further investment, re-measuring them one at a time
+on a quiet box (/var/tmp/cleanbase.log):
+
+    test_orbit::lyapunov_spectrum_*            survey 254.9 + 95.6 s
+    test_actionAngle::Staeckel_python_c_freqsAngles   survey 98.0 s
+    test_streamTrack::plot_spread_non_cartesian       survey 89.4 s
+
+The CDF A/B showed the survey overstates by ~1.8x (1033.9 -> 576.7), so these may well be
+~50-140 s in reality -- and a 140 s test is not obviously worth optimising. Deciding that
+from real numbers this time, not from the ranking.
+
+Standing correction to carry forward: the numpy-slowness survey is a RANKING instrument
+only. Every absolute second in it is inflated. Any decision that depends on a magnitude needs
+its own quiet-box measurement first.
+
+### 2026-09-01 — CORRECTION: the survey does NOT systematically overstate. It is unreliable BOTH ways.
+
+Clean single-run baselines (quiet box, one test file at a time) vs the `-n 8` survey:
+
+    test                                        survey    clean    direction
+    lyapunov_spectrum_henonheiles_chaotic        254.9s   284.5s   UNDER-stated
+    lyapunov_spectrum_consistency                 95.6s   111.3s   UNDER-stated
+    lyapunov_spectrum_integrable              (unlisted)  130.0s   missed entirely
+    Staeckel_python_c_freqsAngles                 98.0s    82.8s   over-stated
+    streamTrack_plot_spread_non_cartesian         89.4s   109.8s   UNDER-stated
+    test_dynamfric_c                            1033.9s   576.7s   over-stated ~1.8x
+
+**So my "survey overstates by ~1.8x" rule from last wake was WRONG** -- that held for
+test_dynamfric_c and I over-generalised from a single case. Contention under xdist shifts
+times in EITHER direction depending on how the test is scheduled and what it contends for.
+The correct rule is only: survey magnitudes are unreliable, full stop; re-measure anything a
+decision rests on.
+
+Consequence for target selection: the lyapunov cluster is BIGGER than advertised --
+284.5 + 130.0 + 111.3 = 525.8s in one file, comparable to test_dynamfric_c's 576.7s, and
+`lyapunov_spectrum_integrable` was not even in the ledger-derived list. That is the largest
+remaining numpy-side target found so far.
+
+gh#1422: 147 SUCCESS, failure is `build (macos-15-intel, 3.14, test_orbit+test_orbits)` ->
+`test_from_name_values` / `DALServiceError` = the SIMBAD flake, plus `all-clear` red
+downstream of it. My diff (jeans.py + CDF + test_jeans.py) cannot reach test_orbits.py.
+Probed SIMBAD = 200, re-ran the failed job.
+
+### 2026-09-01 — gh#1422 GREEN (all-clear SUCCESS). Awaiting Jo; main PRs are Jo's to merge.
+
+macOS shard passed on rerun (SIMBAD back). `all-clear` had gone red purely downstream of it
+and needed its OWN rerun -- a failed all-clear does NOT re-evaluate when the underlying job
+is re-run and passes. Re-ran it; SUCCESS. gh#1422 head dc309add now fully green.
+
+**Lyapunov target, first real numbers (and a probe error worth recording):** I probed with
+`tend=100.0` when the test uses **`tend=25000.0`**. That mismatch turned out to be
+informative rather than wasted:
+
+    12501 samples @ tend=100     102.25 s   (my probe)
+    12501 samples @ tend=25000   284.48 s   (the real test)
+
+250x longer INTEGRATION for only 2.8x the cost => the cost is dominated by the fixed
+per-sample renormalisation (12501 of them), NOT by integration length. So `len(ts)` is the
+lever here -- unlike test_dynamfric_c, where the analogous `times` array turned out to be no
+lever at all because dop853 is adaptive.
+
+Scaling scan (n = 12501/6251/3126/1251) still running; do not act until it lands, and
+re-probe at the REAL tend=25000 before quoting any number.
+
+Caveat to carry: fewer samples means less frequent renormalisation, which changes the
+NUMERICS of the exponent estimate, not just the runtime. Any reduction has to keep the
+`0.02 < lam[0,-1] < 0.14` bound and the sum rule meaningful -- this is not the free
+path-equivalence situation the tdep tests had.
+
+### 2026-09-01 — lyapunov sample-count scan (tend=100 probe only; REAL tend still running)
+
+At tend=100 the cost is exactly linear in the sample count and the exponent does not move:
+
+    n=12501  102.25s   lam_max 0.00275
+    n= 6251   49.18s   lam_max 0.00275
+    n= 3126   25.61s   lam_max 0.00275
+    n= 1251    9.79s   lam_max 0.00275
+
+**Do NOT act on this yet.** lam_max=0.00275 at tend=100 is far outside the `0.02 < lam < 0.14`
+band the test asserts, i.e. the orbit has not entered the chaotic regime at that integration
+length -- so this is the WRONG regime and the invariance may not carry to tend=25000. Re-probe
+running at the real configuration (/var/tmp/lyap2.log), checking lam_max, the in-bound
+predicate, AND the sum rule at each n.
+
+This is the same shape as the earlier mistakes in this arc: a clean, linear, encouraging
+result measured in a configuration that is not the one that ships. Recording it as
+provisional rather than as a finding.
+
+gh#1422 fully green (149 SUCCESS, all-clear SUCCESS, mergeable) -- Jo's to merge.
+
+### 2026-09-01 — lyapunov sample-count lever REFUTED at the real tend. Sum rule forbids it.
+
+At the shipping configuration (tend=25000):
+
+    n      time      lam_max   in-bound   sum(lambda_i)
+    12501  104.15s   0.04439   True       1.76e-12
+     3126   26.21s   0.04439   True       1.58e-05
+     1251   10.97s   0.05327   True       4.18e-02
+      626    6.20s   0.04671   True       1.15e-01
+
+The test asserts `rel_s < 1e-6` on the sum rule (test_orbit.py, in the spectrum test). At
+n=3126 the sum is 1.58e-05 -- **15x over the test's own tolerance**. So even a 4x reduction
+BREAKS an existing assertion. No reduction is available.
+
+**The trap this dodged:** `lam_max` stays in-bound (0.044-0.053) at EVERY sample count, so the
+`0.02 < lam < 0.14` assertion alone would have passed all the way down to n=626 -- a 17x
+"speedup" that silently destroys the sum rule (1.15e-01 vs a required 1e-6). My tend=100
+probe printed ONLY lam_max, which is exactly why it looked like a free 10x. Adding the sum
+rule and the in-bound predicate to the probe is what caught it.
+Generalises [[value-checks-cannot-see-numpy-fallback]]: the quantity that is easy to print is
+often the one insensitive to the thing you are about to break.
+
+Also: the probe's 104.15s vs the test's measured 284.48s is explained -- the test does a
+SECOND lyapunov call (spectrum=False) for its consistency check, so ~2x plus overhead.
+
+**Standing conclusion for Jo's "speed up the slow tests" directive, top targets:**
+  * test_dynamfric_c  -- resolution lever REFUTED (adaptive); ctor lever real but only 7% here
+  * lyapunov cluster  -- sample-count lever REFUTED (sum rule); 525.8s stays
+  * tdep SCF tests    -- LANDED, 6.9x (gh#1418)
+These tests are mostly slow because the physics needs the work, not because of waste. That
+is a real answer to the directive, not a failure to find one.
+
+### 2026-09-01 — cleanup: `pkill -f` / `pgrep -f` self-match bit me THREE times in a row
+
+Trying to kill a background probe, `pkill -f lyap2` and then `pgrep -f lyap2 | xargs kill`
+both matched **my own shell**, because the pattern appears in the command line of the bash
+running it. Each attempt killed the command mid-way (exit 144, then exit 1), so the
+`rm` after it never ran -- which is why the stray `lyap2.py` survived two "cleanups" and left
+the worktree dirty with an untracked file on an open PR branch.
+
+Working forms:
+    ps -eo pid,cmd | grep -c "[l]yap2"     # bracket trick, cannot match itself
+    kill -9 <explicit PID>                  # never pkill -f with a pattern you just typed
+
+Generalises [[measure-elapsed-time-never-assume-it]] (where `pgrep -f` matched its own
+wrapper and I read the `timeout` process's 0 CPU as a hang). Same root cause, third
+occurrence: **any `-f` process match whose pattern I type in the same command can match that
+command.**
+
+Worktree now clean; branch perf/cdf-sigmar-cumulative @ dc309add, 0 changes.
+gh#1422 still 149 SUCCESS / 0 FAILURE / mergeable -- Jo's to merge.
+
+### 2026-09-01 — gh#1422: forced-backend gate I SKIPPED found a real torch-breaking defect
+
+I never ran [[forced-backend-gate-before-push]] on this branch. Doing it retroactively found
+a defect that CI on gh#1422 could not have caught:
+
+`_sigmar_on_grid` ended with `numpy.sqrt(Ir / dens(rs) / ...)`. `dens()` follows the ambient
+namespace, so under a forced backend it returns a Tensor/Array, and a numpy ufunc over a
+torch Tensor goes through `__array_wrap__` -- a DeprecationWarning, which CI escalates
+(`pytest -W error::DeprecationWarning`). Measured:
+
+    torch: RAISES DeprecationWarning: __array_wrap__ must accept context and return_scalar
+    jax:   fine (returns ndarray)
+
+**Why gh#1422's own CI was always going to be green:** main has NO `galpy.backend` at all
+(checked: `galpy/backend/__init__.py` absent, conftest has zero backend references). So the
+failure was invisible on the branch and would have appeared only after
+feat/backends-develop consumed main -- in the torch shard, in a file nowhere near this diff.
+Exactly the [[test-backend-W-error-deprecation]] shape: "numpy.fabs(Tensor) fails CI-only".
+
+Fix: cast `dens(rs)` with `numpy.asarray(..., dtype=float)`. The per-radius loop this
+replaces returned numpy too, so the return TYPE is also unchanged -- the cast restores the
+old contract rather than inventing one. Verified under both forced backends with
+-W error::DeprecationWarning; tests/test_jeans.py 9 passed with that flag.
+
+Commit 569629b5 pushed; PR head verified. Tested by porting the pattern into the DEVELOP
+worktree (which has the backend machinery) rather than modifying it -- /var/tmp/scfcoeff left
+at 0 changes.
+
+**Process note: "the PR is green" was not evidence here.** The branch cannot run the suite
+that would fail. Worth checking, for any main-targeted change touching code the backends
+branch also uses, whether main can even exercise the failure mode.
+
+### 2026-09-01 — ledger re-orientation + a HYPOTHESIS about gh#1422's backend impact
+
+Ledger on develop 5410ac6e: **52 slow-skip + 10 xfail = 62**.
+
+    jax       25   CI-gating
+    jax-jit   18   NOT CI-gating (CI never runs jit mode)
+    torch      3   CI-gating
+    torch-jit  4   NOT CI-gating
+
+So the CI-VISIBLE ledger is 28, not 62 -- and torch is nearly finished (3). The jax eager
+entries are the remaining bulk, which is task #79's "eager per-call overhead ~5 ms FLAT".
+
+**13 of the 62 entries are dynamfric-family** (6 CI-gating: 4 jax + 2 torch) -- 21% of the
+ledger sitting on exactly the constructor cost gh#1422 addresses.
+
+**HYPOTHESIS (not measured, do not quote):** the speedup should be LARGER under jax than the
+7% measured on numpy. The fast path replaces ~25k scalar potential evaluations (501 adaptive
+quads x ~50 each) with ONE vectorised call. On numpy a scalar call is cheap so the win is
+modest; under jax eager each call carries ~5 ms of dispatch, so 25k of them is where jax
+actually bleeds. Vectorising is precisely the jax-eager remedy.
+
+**How to test it, and why not yet:** requires the change on feat/backends-develop, which only
+gets it when develop consumes main after Jo merges gh#1422. Then: run the 6 CI-gating
+dynamfric entries under `--backend jax` / `--backend torch` and compare against the ledgered
+times. Only then is an un-defer justified ([[verify-burndown-flips-stash-rerun]]) -- the numpy
+gain does NOT transfer by assumption, which is the same error I would be repeating from the
+survey-magnitude mistake.
+
+gh#1422 head 569629b5: 136 SUCCESS / 13 queued / 0 FAILURE.
+
+### 2026-09-01 — Jo's question: interpolate the integrand? MEASURED: yes, and it beats gh#1422.
+
+Jo asked whether vectorising the slow potentials is really the only fix, and suggested
+interpolating the integrand. Measured, and it is materially better than what gh#1422 ships.
+
+Method: evaluate g(x)=-rho F_r on M log-spaced points, spline h(u)=g(x)x in u=ln x, take the
+ANALYTIC antiderivative (CubicSpline.antiderivative) -> I(r) at all 501 radii in closed form.
+~500-1000 evaluations instead of ~25k for 501 adaptive quads.
+
+    ACCURACY (vs tight reference)      M=501     M=1001    current ships
+    Hernquist                          1.1e-07   3.4e-09   2.02e-06   (600x BETTER)
+    MWPotential2014                    6.0e-07   9.5e-07   7.37e-07   (comparable)
+    DoubleExpDisk (vs loop)            1.9e-03   8.0e-04   --         (~1000x WORSE)
+
+    SPEED on SCF -- the case gh#1422's grid LOSES
+    per-radius loop (current)   25.55s
+    gh#1422 fine grid           81.60s   0.33x  (3x SLOWER -> calibration declines it)
+    spline M=501                 0.46s   55.1x
+    DoubleExpDisk, spline with a SCALAR loop      0.51s   44.3x
+
+So the spline wins where the grid loses, and would make BOTH guards in gh#1422 unnecessary --
+the speed calibration AND the array-capability probe (500 scalar evals still beat 25k).
+
+**But it is not free, and Jo's accuracy worry was right -- just not where I would have
+guessed.** DoubleExpDisk lands at 1.9e-03 and converges slowly (only 2.4x for 2x the points,
+nowhere near h^4): a double-exponential disk along the 45-degree ray has sharp vertical
+structure a uniform log-spline cannot resolve.
+
+This ALSO corrects my earlier "the integrand is smooth to machine precision" claim -- I
+measured 5th differences at ONE point (x=2.0). Local smoothness is not uniform resolvability
+across [1e-4, 25].
+
+**The principled fix: self-validating refinement.** Double M until |val(2M)-val(M)| < tol.
+Cost = 2 x final M, still far under 25k for the easy cases, and correct by construction for
+the hard ones -- no per-potential knowledge, no speed calibration, no array probe. That is a
+better design than gh#1422's, and simpler.
+
+NOT started: this is a rework of an open, green PR that Jo has said looks good. Jo's call
+whether to rework gh#1422 or land it and follow up.
+
+### 2026-09-01 — spline + bounded self-validating refinement: VALIDATED. Supersedes gh#1422's design.
+
+Jo's steer: pursue accuracy, but DoubleExponentialDisk is not really an application of the
+SPHERICAL Jeans equation, so do not be badly wrong there and do not over-invest. That reframes
+it: big wins in the valid (near-spherical) domain, cheap correct fallback outside it.
+
+Design: spline the integrand in u=ln x, take the ANALYTIC antiderivative, and refine
+M -> 2M-1 until the change is below tol. Accept at tol=1e-5 drift (galpy already ships ~1e-6);
+bail IMMEDIATELY if drift > 1e-2 (hopeless, i.e. not spherical-Jeans-friendly).
+
+    potential          verdict            drift     time     current ctor -> factor
+    Hernquist          ACCEPT M=2001      3.4e-09   0.01s     7.46s  ~750x
+    NFW                ACCEPT M=2001      1.2e-09   0.01s     4.78s  ~478x
+    MWPotential2014    ACCEPT M=2001      1.2e-06   0.04s    14.35s  ~359x
+    SCFPotential       ACCEPT M=2001      1.3e-07   2.35s    25.55s   10.9x
+    DoubleExpDisk      bail EARLY         1.2e+00   3.10s    falls back to the loop
+
+**SCF: 0.33x under gh#1422 -> 10.9x here.** And BOTH gh#1422 guards become unnecessary -- the
+speed calibration and the array-capability probe (the scalar path is fine at M~2001).
+
+Two tuning notes for the implementation:
+* tol MUST be ~1e-5 on the drift, not 1e-7. Drift is a Richardson-style OVER-estimate of the
+  true error (MWPot2014: drift 1.2e-06 vs true ~9.5e-07), and 1e-7 rejects MWPot2014 and SCF
+  even though both beat what galpy ships. Setting the bar tighter than the shipping accuracy
+  is how the first attempt rejected everything useful.
+* the early bail matters: without it DoubleExpDisk burns 15.6s doubling to M=8001 before
+  giving up (net REGRESSION vs today's 22.6s). With it, 3.10s. Could drop further by probing
+  at M=301/601 first -- ~1s -- if the ~14% ctor regression on a non-spherical potential is
+  judged too much.
+
+NOT implemented yet -- this is a rework of open green gh#1422 and wants a fresh context to do
+carefully, not a tired one. Numbers above are the spec.
+
+### 2026-09-01 — gh#1422 REWORKED to spline-the-integrand (commit 77b73469, not yet pushed)
+
+Replaced the fine-grid cumulative sum with: sample g(x) on ~1000 log-spaced points, spline in
+u=ln x, take the ANALYTIC antiderivative, refine M -> 2M-1 until the answer stops moving.
+
+    ctor                before    after (this rework)
+    NFW                  4.78s     0.01s     ~707x
+    MWPotential2014     14.35s     0.02s     ~665x
+    SCFPotential        25.55s     2.27s     ~11x   (was 0.33x, i.e. 3x SLOWER, under the grid)
+    Hernquist            7.46s     0.98s     (first call; 0.01s warm)
+    DoubleExpDisk       38.47s    18.74s     DECLINES -> unchanged per-radius loop
+
+**Do NOT read DoubleExpDisk as a 2x speedup.** It declines the fast path and runs exactly the
+old loop; the two numbers come from different sessions under different load. That is the same
+cross-run comparison error as the survey magnitudes -- flagged here so it does not get quoted
+later as a result.
+
+Both guards from the previous approach are GONE: the speed calibration and the
+array-capability probe. At ~1000 samples a scalar loop still beats 25k evaluations, so which
+case we are in stopped mattering. The code is shorter and has fewer branches than before.
+
+Tests: the old `converges_under_refinement` test is now MOOT -- it guarded a cancellation in a
+cumulative sum that no longer exists (the antiderivative is analytic), and convergence is
+enforced INSIDE the function. Replaced with an accuracy check on SCFPotential, the case newly
+admitted to the fast path. 9 passed under -W error::DeprecationWarning.
+
+Not pushed yet: tests/test_dynamfric.py + test_FDMdynamfric.py running first. The unit tests
+pass, but this is a substantial rework of a PR Jo is reviewing, so the integration check goes
+before the push rather than after.
+
+### 2026-09-01 — the rework turns 7% into ~2x on the real test. Pushed (77b73469).
+
+    tests/test_dynamfric.py       file total     test_dynamfric_c
+    baseline (unpatched main)       599.62s          576.69s
+    gh#1422 fine grid               544.49s          537.62s     1.07x  (7%)
+    spline rework                   307.51s          300.10s     1.95x
+
+7 passed. This is the direct answer to Jo's "disappointing that it doesn't always help": the
+grid approach had to DECLINE exactly the SCF potentials that dominated the test's cost, so it
+could not help where it mattered. Interpolating the integrand admits them (SCF ctor 25.55s ->
+2.27s), and the test nearly halves.
+
+All three numbers are same-box, same-command, and the two "before" rows were measured in the
+same A/B session, so this comparison is sound (unlike the survey magnitudes).
+
+test_FDMdynamfric still running; will confirm next wake.
+
+### 2026-09-01 — FDM suite confirms; both gh#1422 reds are INFRASTRUCTURE, re-run
+
+test_FDMdynamfric with the rework: **9 passed in 190.35s** (central_limit 125.12s,
+dynamfric_c 31.64s, const_FDMfactor 25.94s). Modest vs the grid version's 198.35s -- the FDM
+potentials benefit less than test_dynamfric's SCF-heavy list, which is expected.
+
+CI on 77b73469: 122 SUCCESS / 2 FAILURE, both diagnosed by READING them:
+
+* `Build wheel for cp313-manylinux-x86_64` -- failed at the step
+  **`Run actions/upload-artifact@v7`**. The wheel BUILT; the artifact upload failed. Pure CI
+  infrastructure. Worth recording as a NEW failure shape: a wheel-builder red is alarming for
+  a code change, but the failing STEP name settles it in one query
+  (`gh run view <id> --json jobs`), where the log grep returned nothing useful.
+* `build (ubuntu-latest, 3.13, test_orbit -k ...from_name)` -- `DALServiceError`, the usual
+  SIMBAD flake.
+
+Probed SIMBAD = 200, re-ran both; verified attempt=2 on each (the first status read showed
+attempt=1, i.e. the API had not caught up -- do not trust the immediate read).
+
+Also worth noting from the push: `gh pr view --json headRefOid` and `--json commits` BOTH
+served stale data for minutes after a successful push, still showing 569629b5. The
+authoritative check is `gh api repos/<o>/<r>/git/refs/heads/<branch>` (or `git ls-remote`),
+which showed 77b73469 immediately. Extends [[verify-pr-content-not-push-success]]: verify via
+the REF, not the PR object.
+
+### 2026-09-01 — gh#1422 back to green after the reruns; looked for siblings of the pattern
+
+Both reruns cleared: 134 SUCCESS / 0 FAILURE / 15 queued, head 77b73469 (confirmed via the
+git REF, not the PR object). Wheel-builder red was `upload-artifact`, Linux/Mac was SIMBAD --
+both infrastructure, both gone on attempt 2.
+
+Looked for other places the spline-the-integrand technique would apply, i.e. N adaptive
+quadratures that share an integrand and differ only in a limit:
+
+    grep for a comprehension of quad() calls over a grid  ->  NO other instance
+    files calling integrate.quad                          ->  12, but that alone proves nothing
+
+So: no obvious sibling on main. Twelve call sites is not evidence of twelve opportunities --
+confirming would mean reading each for the shared-integrand shape, which I am not doing on
+speculation. Recording the technique here so it is available if a similar hot spot shows up:
+
+    sample g on ~1000 log-spaced points -> CubicSpline in u=ln x -> .antiderivative()
+    -> every limit in closed form; refine M->2M-1 until it stops moving; bail if diverging.
+
+Candidates if it ever comes up (NOT checked, and they live on develop not main): eddingtondf
+/ sphericaldf build f(E) interpolation grids by quadrature, which is the same "grid of
+integrals" shape.
+
+### 2026-09-01 — the jax hypothesis is CONFIRMED and quantified (62.7x, ~200s absolute)
+
+Measured in the develop worktree (which has the backend machinery) WITHOUT modifying it --
+the spline pattern run by hand under `use(backend, force=True)`, vs develop's own
+`jeans.sigmar` loop:
+
+    backend   per-radius loop (est)   spline path   factor
+    numpy              5.28s            0.010s      551.5x
+    jax              203.52s            3.244s       62.7x
+
+**The absolute number is the point.** Under forced jax ONE CDF construction currently costs
+~204s -- 38x its numpy cost -- because the 25k scalar potential evaluations each carry jax's
+~5 ms eager dispatch. That is the mechanism behind task #79 ("eager per-call overhead is
+~5 ms FLAT"), showing up in a concrete place. test_dynamfric_c builds ~40 CDFs, which is
+plausibly WHY it is ledgered for jax at all.
+
+So gh#1422's rework should help the 6 CI-gating dynamfric ledger entries far more than it
+helps numpy (where it is already 1.95x on the test).
+
+**Caveats before anyone acts on this:**
+* one potential (Hernquist), and the loop time is EXTRAPOLATED from 6 radii, not measured in
+  full. Good enough to establish the mechanism and order of magnitude; NOT a basis for an
+  un-defer.
+* potentials that decline (DoubleExpDisk) pay the probe AND the full loop under jax, which is
+  much more expensive there than on numpy -- worth re-checking the early-bail cost under a
+  forced backend.
+* the orbit INTEGRATION in those tests is also slow under jax and is untouched by this.
+An un-defer still requires running the actual ledgered tests under `--backend jax` after the
+change reaches develop ([[verify-burndown-flips-stash-rerun]]).
+
+gh#1422: 145 SUCCESS / 0 FAILURE / 4 queued; all-clear still running.
+
+### 2026-09-01 — gh#1422 MERGED (main 02d589bf). Cleanup done; next step needs a decision.
+
+Jo merged gh#1422. main = 02d589bf, rework confirmed present (CubicSpline / _sigmar_on_grid).
+Worktree /var/tmp/scfmain reset to main, branch perf/cdf-sigmar-cumulative deleted locally,
+0 changes. No PR of mine open.
+
+**Landed across this arc (both main):**
+    gh#1418  tdep SCF coefficient tests   76.4s -> 11.0s   (6.9x)
+    gh#1422  CDF ctor via interpolation   MWPot2014 14.35s -> 0.02s; SCF 25.55s -> 2.27s;
+                                          test_dynamfric 599.6s -> 307.5s (1.95x)
+
+**Neither backend branch has it yet** -- verified: `feat/backends` and
+`feat/backends-develop` are both BEHIND main. So the measured 62.7x jax win cannot be
+realised, and the 6 CI-gating dynamfric ledger entries cannot be re-measured, until the fix
+reaches develop.
+
+Two ways forward, and they differ in who does what:
+
+(A) **Prepare the feat/backends rebase onto main.** This is the mechanism that gets the fix
+    (and everything else on main) to develop. Per [[no-merge-commits-rebase-only]] I PREPARE
+    it on a scratch branch and Jo applies -- it is not mine to land.
+(B) **Port-and-measure only.** `_sigmar_on_grid` plus the ctor hook are both ADDITIVE, so
+    they can be applied to a develop worktree temporarily to measure the ledgered dynamfric
+    tests under `--backend jax` without touching develop. That answers "can these 6 entries
+    be un-deferred" without waiting on (A).
+
+(B) is cheap and answers a question; (A) is the real unblock but wants Jo in the loop.
+Doing (B) first next wake, since it is measurement rather than a landing, and its answer
+tells us how much (A) is worth hurrying.
+
+### 2026-09-01 — cherry-pick onto develop (Jo's call): clean apply, but the forced-backend gate fires
+
+Jo: "Could you cherry-pick and then drop in the next rebase?" -> branch
+`backend/cdf-sigmar-cherrypick` off develop 5410ac6e, `git cherry-pick -x 02d589bf` applied
+CLEANLY (79344e63, 3 files, +210/-5; auto-merged both changed files, no conflicts).
+
+    numpy         9 passed
+    forced jax    1 FAILED  test_sigmar_on_grid_matches_the_loop_for_an_expensive_integrand
+    forced torch  (run cut short; re-run)
+
+**The failure is PRE-EXISTING backend disagreement, not the cherry-pick.** At r=25 (=maxr,
+where the value is entirely the tail integral) the fast path differs from the loop by
+6.1e-06. Checked the UNCHANGED `jeans.sigmar` loop directly:
+
+    SCFPotential, r=25, jeans.sigmar as it exists today
+      under numpy  0.174831455556
+      under jax    0.174832526535     -> 6.13e-06 relative
+
+i.e. galpy's numpy and jax SCF evaluations already disagree by exactly the amount my test
+flagged. `_sigmar_on_grid` computes in numpy/scipy, so it matches the NUMPY loop; under
+forced jax it is being compared against the JAX loop.
+
+**But that is not a free pass, and there is a real decision here.** Under a forced backend
+the CDF's sigma_r table today carries JAX-evaluated values; with the fast path it carries
+NUMPY-evaluated ones. So the change does shift sigma_r by ~6e-6 under forced backends --
+inside the backends' own disagreement, but a behavioural change nonetheless. Options:
+  (a) accept it and loosen the test to the backend-disagreement level (document why),
+  (b) make the test compare within a single basis (numpy-vs-numpy) so it measures MY code,
+  (c) treat the 6.13e-06 numpy-vs-jax SCF gap as a defect worth its own investigation.
+(b) is right for the test regardless. (a) vs (c) is Jo's call -- 6e-6 is looser than I would
+expect from a faithful backend migration, and it is worth knowing whether that is accepted.
+
+NOT pushed. No PR opened. Branch exists locally only.
+
+### 2026-09-01 — gh#1425 OPENED: cherry-pick of gh#1422 onto develop (drop in the next rebase)
+
+Branch `backend/cdf-sigmar-cherrypick` off develop 5410ac6e; `cherry-pick -x 02d589bf`
+applied cleanly, plus one commit (a29c7137) widening the SCF bar. PR title and body both say
+DROP THIS IN THE NEXT REBASE -- main already has it, and `-x` records the origin.
+
+Forced-backend gate, the thing main structurally could not run:
+
+    numpy         9 passed
+    forced jax    9 passed   (after the tolerance fix)
+    forced torch  9 passed
+
+**The jax failure was NOT the cherry-pick.** Verified against the UNCHANGED loop on develop:
+numpy 0.174831455556 vs jax 0.174832526535 at r=25 for SCFPotential = 6.13e-06 pre-existing
+disagreement. `_sigmar_on_grid` computes in numpy/scipy so it matches the NUMPY loop; under
+forced jax the reference is the JAX loop. Bar moved 2e-6 -> 1e-5 with the measurement in the
+code comment; the helper's own error is ~1e-07, so the test still fails loudly if it breaks.
+
+**Two things flagged for Jo in the PR body rather than decided silently:**
+  1. under a forced backend the CDF sigma_r table shifts from jax-evaluated to
+     numpy-evaluated values (~6e-6). Inside the backends' own disagreement, but a real
+     behavioural change.
+  2. the 6.13e-06 numpy-vs-jax SCF gap is PRE-EXISTING and looser than a faithful migration
+     suggests. Not this PR's doing; may deserve its own investigation.
+
+Ledger delta: none. The 13 dynamfric-family entries stay ledgered until measured under a
+forced backend after this lands ([[verify-burndown-flips-stash-rerun]]).
+
+### 2026-09-01 — gh#1425 CI + the jax ledger measurement is finally possible
+
+gh#1425: 87 SUCCESS / 63 queued / 1 FAILURE = codecov/project, head 85.03% vs base 99.96%.
+A 15-point drop from a 3-file change is impossible with 63 checks outstanding -- the usual
+incomplete-upload phantom, third occurrence, same signature. Self-heals.
+
+**Launched the measurement that has been blocked all along** (/var/tmp/jaxledger.log):
+test_dynamfric + test_FDMdynamfric under `--backend jax`, on the cherry-pick branch, which
+is the first time the ctor fix and the backend machinery have existed in the same tree.
+
+What it decides: the 13 dynamfric-family ledger entries (6 CI-gating). Prior evidence is a
+62.7x on ONE potential with an extrapolated loop -- mechanism, not verdict. This run gives
+the actual per-test times under jax, which is what an un-defer requires.
+
+Interpreting it, decided BEFORE seeing the numbers:
+  * under 300s with margin  -> propose the un-defer in its own PR, after a second run to
+    confirm (these are the tests whose timings started this whole arc, and I have been
+    burned by single-run numbers twice)
+  * near the cap            -> leave ledgered, cite the test_SOS_3D precedent
+  * still over              -> say so plainly; the ctor was only ever part of the cost, the
+    orbit integration under jax is untouched by any of this
+
+### 2026-09-01 — HOLLOW GREEN caught: the jax run skipped the very test I was measuring
+
+First jax run of test_dynamfric came back "6 passed, 1 skipped in 110.79s" and I nearly read
+that as the answer. The SKIPPED one is `test_dynamfric_c` -- the test the whole measurement
+is about. It is in backend_slow_skip.txt for jax, so the harness skipped it and I measured
+everything EXCEPT the target. Textbook [[hollow-green-numpy-island-gate]]: a green run that
+answers a different question than the one asked.
+
+There is no override flag -- conftest reads tests/backend_slow_skip.txt directly (no
+addoption/env escape hatch; checked). So measuring a ledgered entry REQUIRES temporarily
+removing its line. Running that now with an unconditional restore trap
+(/var/tmp/unledger.log; backup at /var/tmp/slowskip.bak).
+
+**Generalisable, and I have hit the shape before:** you cannot measure a ledgered test by
+running its suite -- the ledger is what makes the suite green. Any "is this entry still
+slow?" question needs the entry removed first. Worth remembering the next time a burndown
+sweep reports timings for ledgered nodeids.
+
+gh#1425: 144 SUCCESS / 6 queued / 1 FAILURE (codecov/project, still the upload phantom).
+
+## 2026-09-01 — AUTONOMOUS MODE ENDED (Jo's instruction)
+
+Jo: merging feat/backends-develop -> feat/backends, then switching to supervised stacked PRs
+that Jo merges. Loop ended.
+
+Cron 2b36be1c DELETED; CronList confirms no scheduled jobs. No further wakes.
+
+Cleanup done before stopping:
+  * killed the in-flight un-ledgered jax measurement (it had tests/backend_slow_skip.txt
+    edited); RESTORED the file from backup -- 52 entries, develop worktree 0 changes
+  * /var/tmp/scfmain on main @ 02d589bf, 0 changes
+  * /var/tmp/scfcoeff on backend/cdf-sigmar-cherrypick, 0 changes
+
+**OPEN AND NEEDS A DECISION BEFORE/AFTER THE MERGE: gh#1425.**
+It is the cherry-pick of main's CDF fix onto develop, and it exists ONLY because the backend
+branches are behind main. The merge Jo is about to do moves develop's content UP to
+feat/backends; it does NOT bring main down. So:
+  * merge gh#1425 into develop FIRST -> the fix rides up to feat/backends with the merge,
+    and must be DROPPED when feat/backends later rebases onto main
+  * or CLOSE gh#1425 -> feat/backends picks the fix up naturally at its next rebase onto
+    main, nothing to drop
+The second is cleaner if a main rebase is imminent. Jo's call; I am not merging it.
+
+Unfinished, all with state recorded above:
+  * the jax un-defer measurement for the 13 dynamfric ledger entries -- launched, killed
+    mid-run; the METHOD is written down (temporarily remove the slow-skip line; there is no
+    override flag) and the prior evidence is 62.7x on one potential, mechanism only
+  * two pre-existing findings surfaced but not chased: the 6.13e-06 numpy-vs-jax SCF
+    disagreement, and whether the CDF sigma_r shift from jax- to numpy-evaluated values
+    under a forced backend is acceptable
+
+## 2026-09-09/10 — supervised stacked PRs; ledger 42 -> 21
+
+Merged (all Jo's merges): #1463 (-9), #1464, #1465 (-10), #1467 (main), #1469,
+#1471 (Jo's CI fix), #1472, #1473 (-2).
+
+What actually moved the ledger — none of it was "vectorize the physics":
+
+  * **#1465 test_noninertial (-10).** The reference potential those tests
+    integrate against is defined IN THE TEST FILE, so it has no C implementation
+    and every arm Python-stepped under a backend, whatever `method=` said. Its
+    own frame arithmetic also left the namespace mid-force
+    (`numpy.dot(rot, numpy.array([x, y, z]))`), which is a device round-trip
+    eagerly and a hard stop under tracing. Component-wise products + namespace
+    -aware cos/sin unlocked the in-backend solver: 581.6 -> 15.7 s, and the four
+    jax-jit twins fell with them (616 -> 18.2 s).
+  * **#1473 the C bridge (-2).** `_parse_pot` built `pot_args` with
+    `extend(<array>)`, splatting a MovingObjectPotential's 10001-point
+    trajectory into 40,015 Python objects; under a forced backend each is a 0-d
+    backend array converted individually. ONE streamTrack call made 12,011,281
+    `is_backend_array` calls. Keeping arrays whole: 12,483. streamTrack(n=200)
+    165 -> 23 s on jax, 1.04 -> 0.83 s on numpy, byte-identical bytes to C.
+  * **#1469/#1467 per potential, not chunks.** Jo: "Generally we should be doing
+    per potential, not chunks... I didn't like it." Right call -- it also
+    exposed a silent bug: `test_liouville_planar` only assigned `ptp` when the
+    potential had `toPlanar`, so eight already-planar potentials had been
+    re-testing the potential before them.
+
+Measured constants worth keeping: eager per-op cost is numpy 0.5us / torch
+3.8us / jax 17us; diffrax jits the whole solve while torchdiffeq does not (so
+the in-backend swap is jax-only); jax eager cost is per-primitive COMPILATION,
+not op count.
+
+Process failure to not repeat: I gated #1465 on numpy + forced jax and pushed.
+The torch shard failed six tests -- `numpy.ndarray * Tensor` RAISES where
+`Tensor * ndarray` works, and `coords.*` coerce numpy inputs under a FORCED
+backend so the readback came back as Tensors. jax hides both. Run the torch gate.
+
+In flight: backend/perpot-walks (ports #1467 down, per-potential ledger pending a
+running sweep) and backend/sky-jac-batched (galsky_to_sky_jac /
+sky_to_customsky_jac batched over a leading axis, for the last streamTrack entry).
+
+## 2026-09-11 — the xfail ledger, and what "12/13 jax/torch failures" actually was
+
+Jo asked about "the 12/13 jax/torch failures". That is `backend_xfail.txt`:
+12 `jax`-keyed rows and 13 `torch`-keyed ones (plus 4 jax-jit, 2 torch-jit).
+Reading them before working them was the whole job:
+
+  * **11 of the 12 and 11 of the 13 were actionAngleVerticalInverse.** The
+    `exactpointtransform` / `ptonly` tests landed on main after the 48 older
+    VerticalInverse rows moved to `backend_skip.txt`, so they were auto-ledgered
+    as xfail. Ran all 22 under both backends: every one is
+    `NotImplementedError ... not yet migrated` from `_reject_backend`. Category
+    (b). Re-homed, not burned -- but they were never burndown-able, and while
+    they sat in the xfail file the ledger read 5x the real remaining work.
+  * **`test_call_diffinoutputs` (jax + torch) was a REAL defect**, and an
+    instructive one. `_staeckel_prep` raised `UnboundError` only when
+    `not is_backend_array(R)`. The comment justified it by tracing -- a traced
+    `unbound` has no truth value -- but that conflates "traced" with "on a
+    backend". Eager jax/torch have a concrete truth value; `concretely_true` is
+    the project's own helper for exactly this. The test's deliberately-unbound
+    orbit was coming back with jr = 2.8e47. Both jit modes ALSO raise after the
+    fix (dynamo specialises the branch, and jax's boundary hands this call
+    concrete values), so the two rows are burned outright, not moved to -jit.
+    Data-guard -> ambient-guard, again.
+  * **`test_sphericaldf_method_inputAsQuantity_percall_ro` (torch) was not a
+    galpy defect.** astropy converts a Tensor to numpy.float64 when the Quantity
+    is BUILT, so `dMdE(Quantity)` cannot return a Tensor; `exit_cast` is right.
+    Values identical to the last digit. `as_numpy` at the three mixed assertion
+    sites, like the other 573 in that file.
+
+xfail 31 -> 6, and all six are jit-only: after #1481 there is no eager jax/torch
+test expected to fail, which is the whole of what CI runs.
+
+### sici: the same rewrite as exp1, and it came out more accurate
+
+`sici_fallback` (torch-only -- jax has a native sici, numpy uses scipy) ran two
+40-term Python series loops, ~350 eager ops, and
+`FDMDynamicalFrictionForce._frictionFactor_backend` calls it TWICE per force
+evaluation inside a Python-stepped dop853. Replaced both loops with a single
+`cumulative_prod` over a precomputed ratio table, as #1477 did for exp1:
+
+    scalar call   1159 us -> 257 us   (4.5x)
+
+and summing the terms smallest-first -- which the sequential loop could not do --
+made Ci *more* accurate than the code it replaces: max relative error over
+x in (0, 6] goes 4.5e-13 -> 6.8e-14. That is worth remembering as a pattern: the
+vectorised form is not merely a faster rewrite, it buys a free choice of
+summation order.
+
+### A pre-existing local red, proven not mine
+
+torch `test_quantity::test_streamgapdf_sample` fails locally at 1.313e-5 against
+a 1e-5 bound. Before attributing it, I reverted both source commits in the SAME
+tree and re-ran: identical failure. The CI torch shard is green on it. Local-env
+artifact; flagged in the PR, not ledgered.
+
+### The FDM row, and three wrong guesses before the right measurement
+
+The torch FDM rows were the last CI-relevant slow-skip entries. Getting to the
+cause took three attempts, and the pattern in the failures is worth keeping.
+
+**Guess 1: sici.** `_frictionFactor_backend` calls `sici` twice per force
+evaluation, and the fallback ran two 40-term Python loops. Rewrote both as
+cumulative products: 1159 -> 257 us, and *more* accurate (summing smallest-first,
+which a sequential loop cannot do, took Ci's worst relative error from 4.5e-13 to
+6.8e-14). Effect on the test: **615.2 -> 615.2 s**. The numpy `_calc_force` runs
+on that path, so the backend friction factor -- and its sici -- is never reached.
+I had reasoned from op-count arithmetic instead of a profile.
+
+**Guess 2: the decorator stack.** A profile then showed
+`ChandrasekharDynamicalFrictionForce.__init__` wiring `self._dens_host` to the
+DECORATED `evaluateDensities`, called once per force evaluation inside an EOM
+where every other force uses a `_nodecorator` path -- because the density was the
+one member of the family with no undecorated twin. 98,800 `@backend_input`
+crossings for a five-point integration -> 0. Real fix, right fix, and only
+619 -> 507 s.
+
+**And a wrong inference from a good instrument.** The boundary counter said
+`boundary=0` for an ordinary orbit integration, and I told Jo that meant an
+integration under a forced backend does no backend work. It does not mean that:
+the potentials dispatch on the RESOLVED namespace, so the forces run on torch
+without ever crossing a coercion boundary. `boundary=0` measures crossings, not
+execution. I ran the control for instrument liveness and then drew a conclusion
+the instrument cannot support -- the exact failure the boundary-counter notes warn
+about, committed while quoting them.
+
+**The measurement that found it** was the one I should have run first:
+
+    same arm, same trajectory (max rel err 1.747e-04 both ways)
+      forced torch, dop853     459.5 s
+      plain numpy,  dop853     106.3 s
+
+4.3x on identical physics. Counting the internals then showed 1,423,884 `_dens`
+calls for 474,628 steps -- exactly 3x, and *identically on numpy*. The cache in
+`_Rforce`/`_phitorque`/`_zforce` computes a hash, compares it to
+`self._force_hash`, and never stores it; `_force_hash` is assigned `None` in three
+places and nowhere else. Wrong in the commit that introduced the class
+(32663f334) -- written that way, never edited wrong.
+
+    friction orbit    106.3 -> 49.9 s   numpy   (2.1x, for every galpy user)
+    central_limit     619.0 -> 299.7 s  torch
+
+Jo's call, correctly: main fix first (gh#1484), ledger burn after the rebase.
+
+**The rule this earns:** when a backend path is slow, measure it against the
+SAME code on numpy before profiling anything. The ratio localises the problem to
+backend-vs-not in one step; a profile of the backend run alone cannot, and both
+of my wrong guesses came from reading one profile without its numpy control.
+Here the ratio was 4.3x but the bug was backend-independent, which the numpy
+number said immediately and the profile never would have.
+
+---
+
+## 2026-09-12 — interpolation is dispatch, not arithmetic
+
+Jo, twice, and both steers changed what I did:
+
+> we want to avoid adding slow skips because we are burning down that ledger
+
+> Interpolation should be fast!
+
+I had just parked `test_oblatestaeckelwrapper_ntab_c` in the slow-skip ledger at
+464.7 s under jax. That was the wrong instinct. The test was not slow;
+`eval_ppoly` was — and it backs every frozen `Spline1D` on a backend, so this was
+`interpSphericalPotential`, `interpRZPotential`, the DF samplers and the
+tabulated wrapper alike.
+
+**None of the cost was arithmetic.** Measured on jax CPU, 3000-knot cubic:
+
+    4x per-row coefficient gathers        1274 us      1x gather along axis 1    87 us
+    4x ci[j] to unpack those rows          519 us      1x unstack                32 us
+    reshape + take + reshape (0-d index)   145 us      take with the index       14 us
+    re-uploading the (3000,)+(4,2999) table per call   170 us
+
+An integer index into a backend array is a dispatch. A reshape is a dispatch.
+Converting a stored numpy constant is a transfer. Each costs more than the gather
+or the multiply it exists to serve. Fixing those three — cache the table per
+(namespace, device), one batched gather, one unstack, no reshapes where the
+namespace does not need them:
+
+    per spline evaluation   6.7 ms -> 0.7 ms    (~10x)
+    evaluateRforces        19.10  -> 7.22 ms     (2.6x)
+    the test              464.7   -> 258.1 s     — no ledger row
+
+All three are pure data movement, so the bar was `assert_array_equal` against the
+old formulation, not a tolerance: 0.0 on numpy AND jax AND torch, nu=0/1/2,
+scalar and array, 7-knot and 3000-knot grids.
+
+The 2D evaluator was worse, because its Horner is nested: `cb[px,py,ix,iy]` in a
+4x4 loop is **16 fancy gathers**, 80% of a 25.5 ms evaluation. It pairs ix with
+iy rather than forming their outer product, so flattening the interval axes and
+gathering once at `ix*ny + iy` is exactly the same numbers in one dispatch:
+25.5 -> 1.8 ms, and `interpRZPotential` on backend coordinates 32.7 -> 2.8 ms.
+
+### Both follow-on bugs came from CI, not from me
+
+The eager backend suite cannot see either:
+
+1. **A conversion made inside a jax trace is a tracer.** jax lifts even a numpy
+   constant into the jaxpr, so my device cache stored a `DynamicJaxprTracer` and
+   handed one trace's tracers to the next call. It surfaced as `jax.jacfwd` over
+   a dynamical-friction force — `x = JitTracer(float64[499])` inside eval_ppoly,
+   a module away from the cause.
+2. **torch's `unstack` is a `moveaxis`, which vmap cannot batch.** There was
+   already a guard for this exact function under `vmap(grad(...))` and **it
+   passes with the bug present**. Enumerated: vmap(grad), vmap(grad(grad)),
+   vmap(jacrev) and vmap over 1-D slices all sail through; only BARE vmap raises.
+
+The lesson in (2) is the one worth keeping: a guard written for a composition
+does not cover the bare transform, and "there is already a test for that" is not
+the same as "that is tested".
+
+### Measuring before burning
+
+Jo asked for a weekend plan, so I went at the ledger with numbers rather than
+hope, and the numbers mostly said no:
+
+- **FDM.** The recorded 507.1 s IS stale (gh#1482 + gh#1484 roughly halved it),
+  but 291.85 s in its real shard **flipped to a 300 s timeout on the very next
+  run of the same shard on the same idle box**. A row already un-deferred once on
+  a bad reading (gh#1284 mistook a 6.47 s crash for speed) does not come out on a
+  number that flips. Splitting the test settled where the time is:
+
+           leg1 dop853_c   leg2 dop853 (Python)
+    numpy      4.73 s           55.54 s
+    torch      4.83 s          272.11 s
+
+  The C leg is genuinely C. All the cost is the Python stepper, and the force is
+  down to 22 torch ops — no dispatch fat left.
+
+- **qdf.** Its note said "244s isolated -> >300s in-shard" and blamed CI being
+  "~3x slower". In its real shard, alone on an idle box: **2837.5 s** — 11.6x its
+  isolated reading. And CI is ~2.7x *faster* than this box for that family
+  (ratio 0.36-0.40), so the stated reason is wrong by ~8x while the verdict is
+  right. Whether the 11.6x is intra-file or cross-file is still open.
+
+Net: slow-skip 6 -> 5, and three notes that were actively misleading are now
+true. Retiring one row and correcting three is a smaller result than I set out
+for, and it is the one the measurements support.
+
+Also earned: **torch CI/local = 0.62**, measured by pairing a shard's CI junit
+against the same shard locally, where the file had been falling back to jax's
+0.71.

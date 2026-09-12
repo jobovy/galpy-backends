@@ -1,0 +1,51 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index 7a09bf2..6c748e3 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -2,6 +2,12 @@ name: Linux/Mac build
+ 
+ on:
+   push:
++    # Only trunk/integration branches on push; every other branch gets CI via
++    # pull_request, so a PR branch is not built twice (push + pull_request).
++    branches:
++      - main
++      - feat/backends
++      - feat/backends-develop
+     paths:
+       - '**'
+       - '!*'
+diff --git a/.github/workflows/build_windows.yml b/.github/workflows/build_windows.yml
+index 1ac6205..ec293ef 100644
+--- a/.github/workflows/build_windows.yml
++++ b/.github/workflows/build_windows.yml
+@@ -2,6 +2,12 @@ name: Windows build
+ 
+ on:
+   push:
++    # Only trunk/integration branches on push; every other branch gets CI via
++    # pull_request, so a PR branch is not built twice (push + pull_request).
++    branches:
++      - main
++      - feat/backends
++      - feat/backends-develop
+     paths:
+       - '**'
+       - '!*'
+diff --git a/.github/workflows/test-doc-notebooks.yml b/.github/workflows/test-doc-notebooks.yml
+index 5432915..c49767c 100644
+--- a/.github/workflows/test-doc-notebooks.yml
++++ b/.github/workflows/test-doc-notebooks.yml
+@@ -2,6 +2,12 @@ name: Test documentation notebooks
+ 
+ on:
+   push:
++    # Only trunk/integration branches on push; every other branch gets CI via
++    # pull_request, so a PR branch is not built twice (push + pull_request).
++    branches:
++      - main
++      - feat/backends
++      - feat/backends-develop
+     paths:
+       - '**'
+       - '!*'
