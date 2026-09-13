@@ -33,6 +33,20 @@ keep going, at least two open at a time.
     #1494  sici-cumprod                  1860 -> 272 us (6.8x), accuracy unchanged.
            Fixed its cache guard: under_jax_trace -> under_trace, because
            sici_fallback is TORCH-only so the jax predicate guarded nothing.
+    #1495  mapcoords-onegather           map_coordinates (the StaeckelGrid
+           evaluator) 64 gathers -> 1: 102 -> 10.7 ms for ONE 3-D point. NOT
+           bit-identical (1e-14, reduction order) and does not claim to be;
+           1-D/2-D are exactly unchanged.
+
+## Build the C extension in EVERY new worktree, immediately
+
+Bitten twice today. /var/tmp/mapc had no libgalpy.so, so its first gate run read
+46 numpy + 23 jax failures -- which is an ENVIRONMENT result, not a code one
+(with the .so: 234 passed, matching base exactly, and 516 on jax). The audit
+that followed found /var/tmp/sici-w had the same hole, so #1494's first gate
+numbers were degraded too (re-run: 312 passed). There is a memory saying exactly
+this; I walked into it anyway. `pip install -e . --no-build-isolation --no-deps`
+in the same command as `git worktree add`.
 
 ## Two bugs CI found in my own interpolation work
 
