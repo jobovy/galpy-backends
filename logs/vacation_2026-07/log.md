@@ -60339,3 +60339,54 @@ for, and it is the one the measurements support.
 Also earned: **torch CI/local = 0.62**, measured by pairing a shard's CI junit
 against the same shard locally, where the file had been falling back to jax's
 0.71.
+
+### Later the same day — three more, and two of my own gates were invalid
+
+**actionsFreqsAnglesJac OpenMP (#1493).** Jo had flagged this with "that would
+have to be main, argh". It does not: the entry does not exist on main at all.
+Measuring first said which of the two candidates to touch --
+
+    N=4000                     OMP=1     OMP=16   scaling
+    actionsJac (parallel)      1.039 s   0.175 s    5.9x
+    actionsFreqsJac            1.554 s   0.208 s    7.5x
+    actionsFreqsAnglesJac      2.107 s   0.630 s    3.3x
+
+-- neither is fully serial (the inner helpers carry their own pragmas); what is
+serial is the 149-line Jacobian assembly, ~25% of the first and ~7.6% of the
+second by Amdahl. So one got the pragma and the other deliberately did not:
+2.107 -> 0.299 s, bit-identical 1-vs-16 threads AND vs base. The per-thread
+potentialArg copies were already allocated in that function and simply were not
+being sliced -- the exact omission that segfaulted during the rebase.
+
+**sici (#1494), and why parked work must be re-measured.** The commit had been
+sitting since 11 Sep claiming the rewrite made Ci 6.6x MORE accurate. Re-measured
+old-against-new on identical inputs, it does not: 3.49e-13 -> 3.58e-13, i.e.
+unchanged within noise. The speedup is real and bigger than recorded (6.8x). I
+dropped the claim rather than repeat it. It also had a cache guarded by
+`under_jax_trace` -- correct instinct, wrong predicate, since sici_fallback is
+reached ONLY on torch, so the jax-only check guards the case that cannot happen
+and misses torch.compile, which can.
+
+**map_coordinates (#1495).** The StaeckelGrid evaluator: 102 ms to interpolate
+at ONE 3-D point, 64 fancy gathers and 981 dispatches, because
+`itertools.product(range(4), repeat=D)` visited every tap separately and
+re-derived the per-dimension index inside each combo. Broadcasting the indices
+against C-order strides makes it one gather: 9.5x. Unlike the other two this is
+NOT bit-identical (1e-14, reduction order) and does not claim to be -- 1-D and
+2-D come out exactly unchanged, only 3-D moves.
+
+**Two of my own gate runs were invalid, and I nearly reported one as a
+regression.** /var/tmp/mapc had no libgalpy.so, so its first gate read 46 numpy
++ 23 jax failures. With the extension built: 234 passed, matching base exactly.
+The audit that followed found /var/tmp/sici-w had the same hole -- and I had
+already quoted its numbers in #1494's description, which had to be corrected.
+There is a memory documenting this trap in four different shapes; the fix is to
+stop treating it as a check to remember and make it part of `git worktree add`.
+
+**Where the ledger landed: 12 -> 10, and the rest is measured, not assumed.**
+Four rows I set out to retire turned out not to be retirable, which took longer
+than retiring them would have. Two of them FLIP pass/timeout between identical
+runs on an idle box (FDM central_limit 291.85 s then a 300 s timeout;
+ExpTruncNFW 285.41 s then 300.11 s). A row within ~5% of the cap is not
+retirable on one passing measurement -- which is precisely what gh#1284 got
+wrong, and what I would have repeated.
