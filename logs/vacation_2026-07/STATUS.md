@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-12 (evening)
+# Vacation status snapshot — 2026-09-16 (overnight)
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,93 +7,82 @@
 
 ## Now
 
-    feat/backends  cff1a1dc1   main  (rebase landed 2026-09-12)
-    ledger         5 slow-skip, 5 xfail   (was 6 / 6 yesterday; 42 / 31 on 09-09)
+    feat/backends  0c05087f3   main
+    merged today   #1496 #1497 #1498 #1499 #1500 #1503
 
-Jo is away for the weekend and reviews Monday. Instruction: keep stacking PRs,
-keep going, at least two open at a time.
+Jo is asleep; instruction is to keep pushing the streamdf work through the
+night. One PR at a time; Jo merges.
 
-## The stack — gh stack #1488, 8 PRs, all on feat/backends, all Jo's to merge
+## THE open blocker: a real red on feat/backends, from #1499
 
-    #1485  oblatestaeckel-ntab-backend   GREEN 106/106   ntab on the backend +
-           eval_ppoly ~10x (table cached per namespace/device, one batched gather,
-           unstack, no needless reshapes). Bit-exact vs the old formulation.
-    #1486  orbit-returns-backend-array   GREEN 106/106   every integrator hands a
-           backend IC a backend trajectory, 1.00-1.02x, 0.0 difference. Routing
-           them through the C-STM instead was 801x and rejected.
-    #1489  cstm-continuation             GREEN 106/106   backend routes silently
-           dropped the first leg of a continued integration. Jacobian vs FD 1e-12.
-    #1490  traced-ecc-tolerance          GREEN 106/106   xfail -1.
-    #1491  interp2d-dispatch             eval_rect_ppoly 16 gathers -> 1; 25.5 ->
-           1.8 ms; interpRZ on backend coords 32.7 -> 2.8 ms Rforce.
-    #1492  fdm-ledger-burn               slow-skip -1, three stale notes corrected.
-    #1493  jac-openmp                    actionsFreqsAnglesJac 2.107 -> 0.299 s at
-           16 threads; bit-identical 1-vs-16 and vs base. NOT a main PR: that
-           entry does not exist on main.
-    #1494  sici-cumprod                  1860 -> 272 us (6.8x), accuracy unchanged.
-           Fixed its cache guard: under_jax_trace -> under_trace, because
-           sici_fallback is TORCH-only so the jax predicate guarded nothing.
-    #1495  mapcoords-onegather           map_coordinates (the StaeckelGrid
-           evaluator) 64 gathers -> 1: 102 -> 10.7 ms for ONE 3-D point. NOT
-           bit-identical (1e-14, reduction order) and does not claim to be;
-           1-D/2-D are exactly unchanged.
+    backend jax  tests/test_quantity.py tests/test_coords.py
+    test_streamgapdf_sample  ->  1.7650297e-05  vs a 1e-05 bar
 
-## Build the C extension in EVERY new worktree, immediately
+* Bisected to **#1499** (streamdf C.3): `12f37425f` green, `8c99e2034` red,
+  and that range is exactly one commit.
+* **Deterministic, not a flake**: the base and #1503 produced the value
+  *byte-identically* (1.7650297e-05 both times, 19 h apart).
+* #1503 `9629bcc83` looked green only because that revision still had the
+  force-PROBE guard, whose cache side effect perturbed the sampled values.
+  Removing the probe (correct) un-masked the base red. #1503 was the
+  messenger, not the cause.
+* **jax-only**: the torch and plain-numpy shards pass the same test at the
+  same commit.
+* Does **not** reproduce locally: full shard at jax 0.10.1 = 344 passed;
+  isolated probe = 0.0 difference on BOTH numpy and jax, and still 0.0 after
+  upgrading to CI's jax 0.11.1 + numpy 2.5.3. The remaining untested cell,
+  full shard x jax 0.11.1, is running now (`/var/tmp/jax011` target-dir
+  install; does not touch any existing env).
+* On numpy the unitful and non-unitful objects agree to **exactly 0.0**, so
+  the 1.8e-5 is entirely a jax-path artifact, not a pre-existing tolerance.
 
-Bitten twice today. /var/tmp/mapc had no libgalpy.so, so its first gate run read
-46 numpy + 23 jax failures -- which is an ENVIRONMENT result, not a code one
-(with the .so: 234 passed, matching base exactly, and 516 on jax). The audit
-that followed found /var/tmp/sici-w had the same hole, so #1494's first gate
-numbers were degraded too (re-run: 312 passed). There is a memory saying exactly
-this; I walked into it anyway. `pip install -e . --no-build-isolation --no-deps`
-in the same command as `git worktree add`.
+## streamdf differentiable `__init__` — layers 9-16
 
-## Two bugs CI found in my own interpolation work
+Chain of `theta`-gradient blockers cleared tonight in `/var/tmp/spray`
+(branch `backend/aa-parse-args-backend`, uncommitted):
 
-Both in the Spline1D device cache / unstack, both invisible to the eager suite:
+     9  Orbits `_call_internal`      traced self.t kept off numpy.asarray
+    10  `_call_internal_backend_interp`  traced grid ordered by argsort, not a
+                                    concrete `descending` compare (concrete
+                                    path untouched -> numpy byte-identical)
+    11  `cubic_spline_coeffs`       backend knots kept; tridiagonal A built
+                                    from one-hot rows when the knots are traced
+    12  `_deltaAngleTrack`          dAT * linspace(0,1) (torch drops endpoint grad)
+    13  `Spline1D` + streamdf 2409  traced knots survive into the spline
+    14  coords `galcencyl_to_XYZ`,  marked @backendNative (innermost, under
+        `galcencyl_to_vxvyvz`      @scalarDecorator) -- their rect twins
+                                    already were
+    15  `_cart_and_interp_cov_backend`  the twin knot site
+    16  diffrax adaptive + traced t0/t1 -> `checkpointed_while_loop` cannot
+        reverse-differentiate. NOT a defect: galpy already documents that
+        constant stepping fixes this, and the backend track path already
+        forwards `self._aA._integrate_kwargs`. The probe just had to opt in
+        (`nsteps`).
 
-1. a conversion made INSIDE a jax trace is a tracer, so caching it leaked one
-   trace into the next (`x = JitTracer(float64[499])`, surfacing a module away in
-   jacfwd over a friction force). Gated on `under_trace`.
-2. array-api-compat implements torch's `unstack` as `moveaxis`, which has no vmap
-   batching rule. The existing `vmap(grad)` guard PASSES with the bug — only
-   BARE vmap fails. `unstack` is now jax-only.
+Verified along the way, against FD rather than finite-and-nonzero:
 
-## Measured constants earned today
+    traced-vs-concrete spline coeffs   5.55e-17  (both bc)
+    d(coeffs)/d(knots) AD vs FD        8.97e-10 -> 5.02e-11  (converges with h)
+    galcencyl_to_XYZ numpy-vs-jax      5.55e-17 ; d(XYZ)/dR AD-vs-FD 3.22e-10
+    galcencyl_to_vxvyvz numpy-vs-jax   3.47e-18
 
-    torch CI/local      0.62   (median of 7, range 0.60-0.65) — was assumed 0.71
-    jax qdf shard       BIMODAL: 0.74-0.95 for python_vs_c/linacc/impulse,
-                        0.36-0.40 for the qdf family. The slow-skip file's claim
-                        that "a CI shard runs ~3x slower" is wrong by ~8x.
+## Disk was at 98%; now 79%
 
-## The 5 remaining xfail rows are at their floor, not their target
+`/dev/sda6` on `/` had 780 MB free. **368 stale galpy worktrees** under
+/var/tmp (of 416) removed with plain `git worktree remove` -- no `--force`, so
+the **44 with uncommitted work were skipped and kept**; branches are all still
+in the repo. Plus the duplicate `venv-p23` (identical to `venv-p24`: py3.13 /
+numpy 2.4.6 / jax 0.10.1 / scipy 1.17.1). 780 MB -> 22 GB free.
 
-    3  pickling / unitful dens — a units-based density routes through as_numpy(),
-       which a tracer cannot satisfy. Non-traceable BY CONSTRUCTION.
-    2  poisson_surfdens[AnyAxisym] — the memory said only the flag blocks these.
-       TESTED: not true yet. Setting _backend_accepts_arrays still dies in
-       _bk_split_quad ("Cannot stack arrays with different numbers of dimensions:
-       got (), (100,)"). Needs trailing node axes threaded through the panel
-       ladder and all six _gl integrands, THEN Jo's call on repointing the
-       negative test. Feasibility is good: the test's bar is 1e-4 and its z are
-       all >= 0.125, where the traced forces are exact to ~1e-15.
+Still large, deliberately untouched: `galpy-gpu` 8.8 G (the pinned TITAN Xp
+env), `galax-src` + `galax-venv` 6.1 G, and ~4.3 G under /tmp belonging to
+other projects.
 
-## The 5 remaining slow-skip rows
+## Care note
 
-    torch     FDM central_limit        291.9s in-shard, FLIPS to a 300s timeout
-    torch-jit FDM central_limit        305.7s
-    jax       qdf sampleV_interpolate  2837.5s in-shard (244s isolated!)
-    jax-jit   qdf sampleV_interpolate
-    jax-jit   orbit ecc_rperi_rap[ExpTruncNFW]   285.4s PASS / 300.1s TIMEOUT
-
-EVERY row is now measured. Two of them FLIP: torch FDM central_limit read
-291.85 s then timed out, and ExpTruncNFW read 285.41 s then timed out, both on
-the same idle box in the same shard/group. A row within ~5% of the cap is not
-retirable on one passing measurement -- that is what gh#1284 got wrong.
-ExpTruncNFW has no dispatch win either: it is 19x plain NFW ON NUMPY
-(0.573 vs 0.030 ms per Rforce), so its cost is the truncated-mass computation.
-
-FDM is fully characterised now: leg1 (dop853_c) is 4.7s on numpy AND torch; ALL
-the cost is leg2's 1001-step PYTHON stepper (55.5 -> 272.1 s). The force is down
-to 22 torch ops, so there is no eval_ppoly-style win left — retiring it needs
-fewer force evaluations or an in-backend stepper.
+A heredoc `open(p,"w")` hit ENOSPC mid-write and **truncated**
+`galpy/backend/interpolate.py` to zero. Its diff vs HEAD was exactly 1655
+deletions / 0 insertions, so nothing uncommitted was lost and
+`git checkout --` restored it byte-for-byte. All three worktrees were then
+scanned for other zero-length files (none). Every edit since goes through
+write-temp + `os.replace`.
