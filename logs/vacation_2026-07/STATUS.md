@@ -141,3 +141,53 @@ which is why it was frozen) is the next real question, and it is yours.
 Even at nTrackChunks=3, tintJ=8, nsteps=40 the FORWARD pass alone is 359 s,
 over the 300 s per-test cap, before any gradient. PR B therefore tests the grid
 CONSTRUCTION (cheap, exact) and documents the end-to-end numbers instead.
+
+
+## Morning state (2026-09-16)
+
+    #1504  backend/traced-time-grid        GREEN 104/104, all-clear + codecov OK,
+                                           MERGEABLE/CLEAN.  Yours to merge.
+    #1505  backend/streamdf-traced-track   98 green / 1 red, stacked on #1504.
+           codecov/patch 100% (20/20), head misses == base misses == 14.
+
+### #1505's single red, stated carefully
+
+    feat/backends (base)   RED   1.7650297e-05
+    #1505 0af95e10e        RED   1.7650297e-05
+    #1505 2ff462090        GREEN (343 passed)
+    #1505 ca05b3f72        RED   1.7650297e-05   <- current
+
+The _deltaAngleTrack regression WAS real (CI caught it; _ns_coerce resolves the
+AMBIENT namespace, so a forced backend turned a derived scalar into a tensor and
+the numpy track path died). Fixing it is what made 2ff462090 green. Removing the
+unverified _firstFlip concat arm afterwards -- correct on its own terms -- put the
+value back to EXACTLY the base's 1.7650297e-05, 8 digits. At the measured ~7e8
+relative amplification an 8-digit coincidence is not plausible, so #1505 now
+reproduces the base's failure rather than a new one.
+
+Four hypotheses tried; three disproved by measurement (float() grid bits are
+identical; _bk_assemble; the numpy-path thetasTrack reader). No confirmed
+mechanism for each flip -- only the established fact that the test has ZERO
+tolerance margin, so its outcome tracks incidental arithmetic anywhere in the
+jax stream path.
+
+### Also landed
+
+* _firstFlip (a TRAILING stream) with a backend orbit now raises
+  NotImplementedError. It never worked -- it died with "JAX arrays are
+  immutable" before this branch existed -- and reproducing the numpy
+  reversed-buffer order on top of that is unverified (measured ~10% off). A
+  silently different orbit is worse than a refusal. Trailing streams with a
+  backend progenitor are an open follow-up.
+* _span_grid / _ns_sqrt helpers: the traced arms are now reachable by a 14 s
+  unit test instead of a 359 s streamdf build, and the three call sites no
+  longer duplicate the if/else. Both gate on TRACEDNESS, not backend-ness.
+
+### Unpushed: backend/unfreeze-stream-frame
+
+Unfreezes ONLY the well-separated decomposition (top eigenvalue separated by
+99.8% of the spectrum norm at q=0.9 and 0.95; the near-degenerate pair feeds
+nothing). AD -8.5110 -> -4.9518 against an FD-converged -5.008, identical to a
+FULL unfreeze to every digit -- so that one decomposition is the whole 70%.
+298 passed under jax; numpy digest unchanged. Held back because it reverses a
+deliberate #1499 design decision.
