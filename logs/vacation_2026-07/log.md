@@ -60390,3 +60390,31 @@ runs on an idle box (FDM central_limit 291.85 s then a 300 s timeout;
 ExpTruncNFW 285.41 s then 300.11 s). A row within ~5% of the cap is not
 retirable on one passing measurement -- which is precisely what gh#1284 got
 wrong, and what I would have repeated.
+
+## 2026-09-16 — audit day, and a record-keeping lapse
+
+Merged: #1496-#1500, #1503, #1504. Opened: #1505 (streamdf traced track +
+trailing-stream fix + real_eig unfreeze), #1506 (streamgapdf sky-frame
+tolerance).
+
+**Differentiability audit** — full write-up in
+`plan/differentiability_audit_2026-09-16.md`. Headline: potentials 49/50,
+orbits and action-angle clean, and the gap is DF **constructors**.
+
+Two claims of mine that the audit corrected, both of which I had stated too
+confidently:
+
+* "streamspraydf is differentiable" — true for construction and sampling
+  (1.2e-08), but the DEFAULT `return_orbit=True` output called `as_numpy` and
+  dropped the gradient. Orbit has taken a backend IC since #1498, so this is a
+  one-line fix; verified 1.21e-08 on the default path afterwards.
+* "MiyamotoNagai breaks under jit" — too broad. It is fine w.r.t. `amp` under
+  both grad and jit. The `if self._a == 0.0` branch only bites when `a` ITSELF
+  is traced AND the code is compiled (i.e. inside an ODE solve). The genuine
+  jit-only failure in the 50-potential sweep is `DiskSCFPotential`.
+
+**Record-keeping.** Jo asked whether the logging was in good shape. It was not:
+239 commits sat unpushed on galpy-jax main, the README's Status section had been
+stale since 2026-06-18, and its PR table stopped at #1380 while 89 PRs merged.
+Pushed, and rebuilt the table from the GitHub API rather than from notes.
+Committing without pushing is not record-keeping.

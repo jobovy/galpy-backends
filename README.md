@@ -18,6 +18,40 @@ Hessian) + **Lyapunov exponents** in C.
 
 ## Status
 
+**Status 2026-09-16.** The migration is essentially complete on the "does it
+run" axis: the backend xfail ledger is down to **3** entries and the slow-skip
+ledger to **5**, across 82 backend test modules. What remains is a
+*differentiability-correctness* tail, audited on 2026-09-16 and written up in
+[`plan/differentiability_audit_2026-09-16.md`](plan/differentiability_audit_2026-09-16.md).
+
+Measured differentiable (AD vs a finite difference that REBUILDS from the
+parameter, not an in-object perturbation):
+
+| area | verdict |
+|------|---------|
+| potentials | **49 of 50** instantiable potentials differentiable w.r.t. `amp` under both `grad` and `jit`; only `DiskSCFPotential` fails under `jit` |
+| orbits | `integrate` + accessors w.r.t. potential parameters — 1.3e-06 (Hernquist), 8.9e-06 (LogHalo q), 2.2e-08 (Plummer) |
+| action-angle | Staeckel(c=False) 1.7e-10, Adiabatic 1.9e-10, Spherical 2.7e-11 |
+| streamdf | `__init__` w.r.t. a potential parameter, after the `real_eig` unfreeze |
+| streamspraydf | construction + sampling 1.2e-08 |
+| diskdf | `dehnendf.surfacemass` d/d(hr) 6.7e-10 |
+
+Known gaps (all in `plan/differentiability_audit_2026-09-16.md`): DF
+**constructors** other than streamdf's are not traceable (streamgapdf, the
+spherical-DF family, qdf, kingdf); `actionAngleStaeckel(c=True)` differentiates
+w.r.t. initial conditions only, by design; a handful of potentials branch in
+Python on a stored parameter, which is fine under `grad` but breaks under `jit`;
+and two deliberate gradient freezes (`psd_project` eigenvectors, Staeckel `u0`)
+are still unmeasured.
+
+**Record-keeping note:** this README's per-PR table went un-updated between
+2026-08-24 and 2026-09-16 while 89 PRs merged; the rows below were rebuilt from
+the GitHub API rather than from notes, and the Status section above replaces one
+that had been stale since 2026-06-18.
+
+<details>
+<summary>Previous status (2026-06-18)</summary>
+
 **Status 2026-06-18:** Track B (3D variational equations + Lyapunov) is
 **complete and on main** — #891 (feat/variational3d → main) merged 2026-06-13,
 carrying the whole family (#898–#920, #926, #933–#941, #944/#945, #950–#952)
@@ -41,6 +75,8 @@ ledger prune** (#969) regenerated the ledger (torch 1684→1485, jax 335→292).
 functional interface (#972) and in-backend `Orbit.integrate` diffrax/torchdiffeq
 methods (#973) are merged; backend-aware accessors (#974) are open. Next:
 land #974/#975, then final review of #892 → main, then Tracks C/E/F.
+
+</details>
 
 | PR | Track | Branch | State | Tests | Notes |
 |----|-------|--------|-------|-------|-------|
@@ -282,3 +318,97 @@ reference itself validated per quantity before use (against galpy's own closed
 form at z=0 for `Rforce`, 3.5e-15; against FD-of-Hankel-`Rforce` for `R2deriv`,
 11 digits). An unvalidated arbiter would have been the third plausible-but-wrong
 number in the pair.
+
+## Merged PRs #1381-#1506 (rebuilt from the GitHub API, 2026-09-16)
+
+| PR | Base | Merged | Title |
+|----|------|--------|-------|
+| [#1381](https://github.com/jobovy/galpy/pull/1381) | feat/backends-develop | 2026-08-25 | special: guard the x=0 endpoint of d/dx gammainc on torch (#1204 review, 1/5) |
+| [#1382](https://github.com/jobovy/galpy/pull/1382) | feat/backends-develop | 2026-08-25 | backend: finite_part_quad batching + symmetric_quad eager-torch limit + AnyAxisym torch construction (#1204 review, 2/5) |
+| [#1383](https://github.com/jobovy/galpy/pull/1383) | feat/backends-develop | 2026-08-25 | coords: finish the inverse galcen transforms + fix the f64-constant/f32-data promotion (#1204 review, 3/4/6) |
+| [#1388](https://github.com/jobovy/galpy/pull/1388) | feat/backends-develop | 2026-08-26 | backend: map_coordinates must dispatch on the GRID too (#1204 review, batch 2 item 2) |
+| [#1391](https://github.com/jobovy/galpy/pull/1391) | feat/backends-develop | 2026-08-26 | backend: traceable constructors + differentiable hyp2f1/hyp1f1 parameters (#1204 review, batch 2 items 3+4) |
+| [#1392](https://github.com/jobovy/galpy/pull/1392) | feat/backends-develop | 2026-08-26 | constantbetaHernquistdf: route the gammas so d f_E/d beta works |
+| [#1393](https://github.com/jobovy/galpy/pull/1393) | feat/backends-develop | 2026-08-26 | tests: un-gate the Einasto d_n gradient to torch + pin float64 in test_backend_spherical |
+| [#1394](https://github.com/jobovy/galpy/pull/1394) | feat/backends-develop | 2026-08-26 | surfdens: keep both routes on the backend under eager torch autograd |
+| [#1398](https://github.com/jobovy/galpy/pull/1398) | main | 2026-08-27 | actionAngleAdiabatic: fix multi-point _justjr raising TypeError |
+| [#1399](https://github.com/jobovy/galpy/pull/1399) | feat/backends-develop | 2026-08-27 | actionAngleAdiabaticGrid: exact off-grid actions on jax/torch |
+| [#1400](https://github.com/jobovy/galpy/pull/1400) | main | 2026-08-27 | integrate_dxdv: transform the base state in C, restoring bit-identity with plain integrate |
+| [#1401](https://github.com/jobovy/galpy/pull/1401) | feat/backends-develop | 2026-08-27 | Review round 3: traced beta under jit, mixed quad limits, and the small-B hyp2f1 floor |
+| [#1402](https://github.com/jobovy/galpy/pull/1402) | feat/backends-develop | 2026-08-27 | hyp2f1: one tanh-sinh rule for every B, and drop the c-B >= 1 constraint |
+| [#1403](https://github.com/jobovy/galpy/pull/1403) | feat/backends-develop | 2026-08-27 | hyp2f1: the traced Euler-label selector must use the same rule as the concrete one |
+| [#1404](https://github.com/jobovy/galpy/pull/1404) | main | 2026-08-29 | actionAngleStaeckel: chi-anomaly quadrature at the turning points in C |
+| [#1405](https://github.com/jobovy/galpy/pull/1405) | main | 2026-08-29 | actionAngleIsochroneInverse: solve Kepler's equation for all angles at once |
+| [#1406](https://github.com/jobovy/galpy/pull/1406) | feat/backends-develop | 2026-08-28 | hyp2f1: bring the comments back in line with the code |
+| [#1407](https://github.com/jobovy/galpy/pull/1407) | feat/backends-develop | 2026-08-28 | surfdens: eager backends take the batched vertical quadrature (ledger -6) |
+| [#1408](https://github.com/jobovy/galpy/pull/1408) | feat/backends-develop | 2026-08-28 | mass(): ask the backend's array-safety question; re-ledger a wrong de-ledgering |
+| [#1409](https://github.com/jobovy/galpy/pull/1409) | main | 2026-08-28 | CI: fetch GSL from the nearest GNU mirror rather than ftp.gnu.org |
+| [#1410](https://github.com/jobovy/galpy/pull/1410) | feat/backends-develop | 2026-08-29 | test_orbit: two tests bypassed _backend_integrators (ledger -4) |
+| [#1411](https://github.com/jobovy/galpy/pull/1411) | feat/backends-develop | 2026-08-30 | SCF coefficients: lift the numpy pin so the expansion is differentiable w.r.t. the density |
+| [#1416](https://github.com/jobovy/galpy/pull/1416) | feat/backends-develop | 2026-08-31 | SCF axi coefficients: batched quadrature on backends (bit-exact, ~1.9x) |
+| [#1417](https://github.com/jobovy/galpy/pull/1417) | feat/backends-develop | 2026-08-31 | tests: roundoff tolerance for batched-vs-sequential mass quadrature |
+| [#1418](https://github.com/jobovy/galpy/pull/1418) | main | 2026-09-01 | tests: cut the time-dependent SCF coefficient tests from ~76s to ~11s |
+| [#1422](https://github.com/jobovy/galpy/pull/1422) | main | 2026-09-01 | Speed up ChandrasekharDynamicalFrictionForce construction ~100x for array-capable potentials |
+| [#1424](https://github.com/jobovy/galpy/pull/1424) | main | 2026-09-01 | actionAngleStaeckel C: frequencies and angles near turning points |
+| [#1428](https://github.com/jobovy/galpy/pull/1428) | feat/backends-develop | 2026-09-02 | backend: keep the jax isinstance out of dynamo's way (unblocks #1204 on torch 2.14) |
+| [#1431](https://github.com/jobovy/galpy/pull/1431) | main | 2026-09-03 | actionAngleStaeckel C: NaN and near-axis accuracy in the chi quadratures |
+| [#1432](https://github.com/jobovy/galpy/pull/1432) | feat/backends | 2026-09-04 | Backend shard split (1/n): trace the torch-compile sweep under eager |
+| [#1433](https://github.com/jobovy/galpy/pull/1433) | perf/backend-jit-eager | 2026-09-04 | Backend shard split (2/n): duration-balanced pytest-split |
+| [#1436](https://github.com/jobovy/galpy/pull/1436) | refactor/backend-tests-subdir | 2026-09-04 | Backend shard: eager torch.compile for jit tests (real ~10x on the heaviest) |
+| [#1437](https://github.com/jobovy/galpy/pull/1437) | feat/backends | 2026-09-04 | qdf: float the precomputed rg grid bound so forced-backend _rg survives |
+| [#1438](https://github.com/jobovy/galpy/pull/1438) | backend/qdf-rg-forced-coercion | 2026-09-04 | backend ledger: xfail the forced jax/torch reds the main rebase introduced |
+| [#1439](https://github.com/jobovy/galpy/pull/1439) | main | 2026-09-04 | jeans: don't let scipy.quad's default epsabs truncate sigma_r's small outer tail |
+| [#1442](https://github.com/jobovy/galpy/pull/1442) | feat/backends | 2026-09-04 | backend burndown 1: numpy sigmar byte-identity + drop 4 stale xfail entries |
+| [#1443](https://github.com/jobovy/galpy/pull/1443) | feat/backends | 2026-09-07 | qdf sampleV: backend-native inverse-CDF sampler (drop the numpy-forced rejection) |
+| [#1444](https://github.com/jobovy/galpy/pull/1444) | backend/qdf-inverse-cdf-sampler | 2026-09-07 | qdf sampleV_interpolate: inverse-CDF on the backends, rejection on numpy |
+| [#1446](https://github.com/jobovy/galpy/pull/1446) | feat/backends | 2026-09-06 | backend: vectorise the Staeckel c-vs-Python freqs/angles parity grid (slow-skip -1) |
+| [#1447](https://github.com/jobovy/galpy/pull/1447) | feat/backends | 2026-09-06 | test_actionAngle: platform-proof the Staeckel chi-quadrature bars (3e-11 -> 1e-10) |
+| [#1448](https://github.com/jobovy/galpy/pull/1448) | feat/backends | 2026-09-06 | sphericaldf: build the p(v\|r) inverse-CDF table on the backend (d(sample_v)/d(DF params)) |
+| [#1449](https://github.com/jobovy/galpy/pull/1449) | feat/backends | 2026-09-07 | sphericaldf: cover the p(v\|r) backend-build branches #1448 left untested |
+| [#1450](https://github.com/jobovy/galpy/pull/1450) | feat/backends | 2026-09-07 | backend: stop re-doing two pieces of eager work on every force evaluation |
+| [#1451](https://github.com/jobovy/galpy/pull/1451) | feat/backends | 2026-09-07 | slow-skip: drop the traced Staeckel parity grid (ledger -1), re-measure three stale jit notes |
+| [#1452](https://github.com/jobovy/galpy/pull/1452) | feat/backends | 2026-09-07 | Make the traced suite green: fix the vcirc probe, record the four traced timeouts |
+| [#1453](https://github.com/jobovy/galpy/pull/1453) | feat/backends | 2026-09-08 | SCF: batch the general (non-axi) coefficient quadrature (traced test_density1_Order 300s+ -> 13s, ledger -1) |
+| [#1454](https://github.com/jobovy/galpy/pull/1454) | backend/scf-batched-nonaxi | 2026-09-08 | SCF: contract the time-dependent coefficient quadrature over its nodes (jax 63s -> 4.3s, ledger -3) |
+| [#1455](https://github.com/jobovy/galpy/pull/1455) | backend/scf-tdep-contract | 2026-09-08 | Route the orbit integrator loops through _backend_integrators (SOS_3D 573s -> 12s, ledger -3) |
+| [#1456](https://github.com/jobovy/galpy/pull/1456) | main | 2026-09-08 | [pre-commit.ci] pre-commit autoupdate |
+| [#1458](https://github.com/jobovy/galpy/pull/1458) | main | 2026-09-08 | Do not fork a worker per task when numcores=1 (Orbit.lyapunov 94x faster) |
+| [#1459](https://github.com/jobovy/galpy/pull/1459) | feat/backends | 2026-09-08 | slow-skip: un-ledger three stale jax entries (ledger -3) |
+| [#1460](https://github.com/jobovy/galpy/pull/1460) | feat/backends | 2026-09-09 | test_backend_dynamfric: validate the in-backend integrators against analytic friction |
+| [#1461](https://github.com/jobovy/galpy/pull/1461) | backend/inbackend-friction-validator | 2026-09-09 | test_dynamfric_c: in-backend second arm under a backend, and chunk the loop |
+| [#1463](https://github.com/jobovy/galpy/pull/1463) | feat/backends | 2026-09-10 | dynamfric + FDM: in-backend non-C arm, and un-ledger what it earns (ledger -9) |
+| [#1464](https://github.com/jobovy/galpy/pull/1464) | feat/backends | 2026-09-09 | bessel_k: evaluate the ascending series in one pass (torch 2.3x on Bessel-K potentials) |
+| [#1465](https://github.com/jobovy/galpy/pull/1465) | backend/unledger-dynamfric | 2026-09-10 | noninertial + Chandrasekhar orbits: in-backend non-C arm, and un-ledger what it earns (ledger -6) |
+| [#1467](https://github.com/jobovy/galpy/pull/1467) | main | 2026-09-09 | test_orbit: one test case per potential for the four all-potentials walks |
+| [#1468](https://github.com/jobovy/galpy/pull/1468) | main | 2026-09-10 | OblateStaeckelWrapperPotential: optional tabulated C evaluation (ntab=), ~10-16x faster C integration |
+| [#1469](https://github.com/jobovy/galpy/pull/1469) | backend/unledger-noninertial | 2026-09-10 | dynamfric: one test case per potential, replacing the index chunks |
+| [#1470](https://github.com/jobovy/galpy/pull/1470) | main | 2026-09-10 | Avoid duplicate builds/tests on PRs |
+| [#1471](https://github.com/jobovy/galpy/pull/1471) | feat/backends | 2026-09-10 | CI: run the all-backend suite once per commit, not twice |
+| [#1472](https://github.com/jobovy/galpy/pull/1472) | main | 2026-09-10 | Delete copilot setup |
+| [#1473](https://github.com/jobovy/galpy/pull/1473) | backend/dynamfric-per-potential | 2026-09-10 | C bridge: keep a potential's tables whole in pot_args (streamTrack 7x under jax) |
+| [#1475](https://github.com/jobovy/galpy/pull/1475) | main | 2026-09-10 | actionAngle_c: parse one potentialArg copy per OpenMP thread |
+| [#1476](https://github.com/jobovy/galpy/pull/1476) | feat/backends | 2026-09-11 | streamTrack sky Jacobians batched + exp1 vectorized (ledger 18 -> 14) |
+| [#1477](https://github.com/jobovy/galpy/pull/1477) | backend/sky-jac-batched | 2026-09-11 | exp1: one quadrature instead of an 80-step recurrence (torch 7.3x on ExpTruncNFW, and 8x more accurate) |
+| [#1478](https://github.com/jobovy/galpy/pull/1478) | backend/sky-jac-batched | 2026-09-11 | torch-jit walks: retire both whole-walk rows (ledger 11 -> 9) |
+| [#1480](https://github.com/jobovy/galpy/pull/1480) | backend/jit-rows-torch | 2026-09-11 | traced rows: re-measure the three that never were, retire all three (ledger 9 -> 6) |
+| [#1481](https://github.com/jobovy/galpy/pull/1481) | feat/backends | 2026-09-11 | xfail ledger: the eager rows are gone (31 -> 6, and every survivor is jit-only) |
+| [#1482](https://github.com/jobovy/galpy/pull/1482) | backend/xfail-rehome | 2026-09-11 | the numpy/backend boundary in orbit integration: warn on the demotion, and stop the friction force paying for it |
+| [#1484](https://github.com/jobovy/galpy/pull/1484) | main | 2026-09-11 | ChandrasekharDynamicalFrictionForce: the force cache has never hit (2.1x on the friction path) |
+| [#1485](https://github.com/jobovy/galpy/pull/1485) | feat/backends | 2026-09-13 | OblateStaeckelWrapperPotential: ntab= works on the backend, differentiably |
+| [#1486](https://github.com/jobovy/galpy/pull/1486) | backend/oblatestaeckel-ntab-backend | 2026-09-13 | Orbit: a backend IC gets a backend trajectory back, whatever the integrator |
+| [#1489](https://github.com/jobovy/galpy/pull/1489) | backend/orbit-returns-backend-array | 2026-09-13 | Orbit: the backend integration routes continue an integration instead of replacing it |
+| [#1490](https://github.com/jobovy/galpy/pull/1490) | backend/cstm-continuation | 2026-09-13 | test_eccentricity: a traced-only bar for the one potential that integrates on GL |
+| [#1491](https://github.com/jobovy/galpy/pull/1491) | backend/traced-ecc-tolerance | 2026-09-13 | eval_rect_ppoly: one gather for the cell, not sixteen |
+| [#1492](https://github.com/jobovy/galpy/pull/1492) | backend/interp2d-dispatch | 2026-09-13 | slow-skip: retire one FDM row, and make three stale notes true |
+| [#1493](https://github.com/jobovy/galpy/pull/1493) | backend/fdm-ledger-burn | 2026-09-13 | actionAngleStaeckel: parallelise actionsFreqsAnglesJac's Jacobian loop |
+| [#1494](https://github.com/jobovy/galpy/pull/1494) | backend/jac-openmp | 2026-09-13 | sici: two cumulative products instead of two 40-term Python loops |
+| [#1495](https://github.com/jobovy/galpy/pull/1495) | backend/sici-cumprod | 2026-09-13 | map_coordinates: one gather for the whole cubic tap block, not 4**D |
+| [#1496](https://github.com/jobovy/galpy/pull/1496) | feat/backends | 2026-09-14 | AnyAxisymmetricRazorThinDisk: accept backend array input; xfail 5 -> 3 |
+| [#1497](https://github.com/jobovy/galpy/pull/1497) | feat/backends | 2026-09-14 | constantbetadf: make eta sampling differentiable in beta |
+| [#1498](https://github.com/jobovy/galpy/pull/1498) | feat/backends | 2026-09-14 | orbit: keep a backend Orbit on its backend through the no-time accessors and o() |
+| [#1499](https://github.com/jobovy/galpy/pull/1499) | feat/backends | 2026-09-15 | streamdf: run the progenitor/offset setup on the backend (Phase C.3) |
+| [#1500](https://github.com/jobovy/galpy/pull/1500) | feat/backends | 2026-09-14 | streamTrack: keep the accessor query axis on the backend so it can be differentiated |
+| [#1501](https://github.com/jobovy/galpy/pull/1501) | main | 2026-09-16 | EinastoPotential: use regularized P so n=6 force stays finite |
+| [#1502](https://github.com/jobovy/galpy/pull/1502) | main | 2026-09-15 | [auto] Update documentation notebook outputs (2026-09-15) |
+| [#1503](https://github.com/jobovy/galpy/pull/1503) | feat/backends | 2026-09-16 | orbit: a backend potential parameter must not take the C-STM |
+| [#1504](https://github.com/jobovy/galpy/pull/1504) | feat/backends | 2026-09-16 | backend: integrate, spline and read an orbit back on a TRACED time grid |
