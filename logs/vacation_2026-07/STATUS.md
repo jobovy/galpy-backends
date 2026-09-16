@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-16 (overnight)
+# Vacation status snapshot — 2026-09-16 (overnight, updated)
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -13,7 +13,24 @@
 Jo is asleep; instruction is to keep pushing the streamdf work through the
 night. One PR at a time; Jo merges.
 
-## THE open blocker: a real red on feat/backends, from #1499
+## RESOLVED as a diagnosis: the feat/backends jax red is a bit-identity test
+
+Perturbing `sigv` by 1 ulp and re-sampling moves `streamgapdf.sample(1, lb=True)`
+by 1.2e-5 - 5.4e-5 -- and the response is FLAT from 1 ulp to 1e6 ulp, six orders
+of magnitude. That is a discrete jump, not a derivative. So the 1e-5 bar has no
+margin at all: the test passes only while the two objects agree BIT-FOR-BIT, and
+any last-bit difference lands over the bar.
+
+Measured identically (numpy 1.24e14 apparent amplification) at 12f37425f and at
+8c99e2034, so the fragility is PRE-EXISTING -- #1499 only moved the last bit.
+Not reproducible off-CI in six configurations (isolated + full shard, each at
+jax 0.10.1 and CI's jax 0.11.1 + numpy 2.5.3, plus astropy 8).
+
+Conclusion: do NOT chase this as a precision regression in #1499. It is a
+test-design decision -- compare a stable quantity, or widen this one comparison.
+`_NUMPY_1_22` is not broken; 1e-5 is deliberate for modern numpy.
+
+## Original evidence trail: a real red on feat/backends, from #1499
 
     backend jax  tests/test_quantity.py tests/test_coords.py
     test_streamgapdf_sample  ->  1.7650297e-05  vs a 1e-05 bar
@@ -86,3 +103,41 @@ deletions / 0 insertions, so nothing uncommitted was lost and
 `git checkout --` restored it byte-for-byte. All three worktrees were then
 scanned for other zero-length files (none). Every edit since goes through
 write-temp + `os.replace`.
+
+
+## Tonight's landings
+
+* **#1504 opened** (`backend/traced-time-grid` -> feat/backends): orbit
+  integrate/spline/read-back on a TRACED time grid. Gates 498 passed under each
+  of numpy / jax / torch; numpy byte-identical (digest a0d3c99f6b0e6b845fc42ce6,
+  27 arrays).
+* **PR B committed** (`backend/streamdf-traced-track`, stacked on #1504):
+  streamdf track determination on a theta-dependent grid. Gate running.
+
+## streamdf __init__ now RUNS under jax.grad -- but the gradient is frozen-frame
+
+All 16 layers cleared; `jax.grad(loss)(0.9)` returns. Reverse-mode needs CONSTANT
+stepping (traced t0/t1 make the adaptive loop bound dynamic, which equinox's
+checkpointed_while_loop cannot reverse-differentiate); the backend track path
+already forwards `_aA._integrate_kwargs`, so a caller opts in with
+{"nsteps": 200, "adjoint": "direct", "max_steps": 260}.
+
+The number it returns is NOT the total derivative:
+
+    AD, eigenvectors frozen (current)     -8.5110
+    AD, eigenvectors unfrozen             -4.9518
+    central FD, Richardson-extrapolated   -5.008
+
+real_eig's stop_gradient on the eigenvector rotation costs **70%** of the
+derivative -- the code comment in test_backend_streamdf.py says "~10%", which
+understates it 7x. Unfreezing recovers the FD value to ~1%. stop_gradient is the
+identity in the forward pass, so both AD arms share those FD values.
+
+Deciding how to differentiate that rotation (it diverges as 1/gap at degeneracy,
+which is why it was frozen) is the next real question, and it is yours.
+
+## An end-to-end streamdf grad test is NOT CI-viable
+
+Even at nTrackChunks=3, tintJ=8, nsteps=40 the FORWARD pass alone is 359 s,
+over the 300 s per-test cap, before any gradient. PR B therefore tests the grid
+CONSTRUCTION (cheap, exact) and documents the end-to-end numbers instead.
