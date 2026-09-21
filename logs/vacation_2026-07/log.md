@@ -60418,3 +60418,47 @@ confidently:
 stale since 2026-06-18, and its PR table stopped at #1380 while 89 PRs merged.
 Pushed, and rebuilt the table from the GitHub API rather than from notes.
 Committing without pushing is not record-keeping.
+
+## 2026-09-21 — audit sweep completed; five PRs in flight
+
+Merged: #1530, #1531, #1532, #1533, #1534. Opened: #1538 (actionAngle grid
+classes delegate under a potential gradient), #1539 (evolveddiskdf torch
+`xp.where` guard). #1537 green at 106/106.
+
+**The audit sweep is finished.** Three areas remained; all three are now
+resolved or deliberately deferred with reasons recorded — see
+`plan/differentiability_audit_followups_2026-09-19.md` (T4g, T4i, T4i-b, T4j).
+`streamspraydf` turned out to need nothing: it already probes for a backend
+theta/mass/stripping_pdf and discriminates a merely-forced context, which is
+the exact distinction the rest of the session kept getting wrong elsewhere.
+
+**One trap caught me three times and is worth naming.** When a fix changes
+WHICH ALGORITHM the traced path takes, the naive numpy FD arm is measuring a
+different function, and the "mismatch" it reports is the algorithm gap, not a
+gradient bug. qdf (table vs root-find), then both grid classes (grid vs exact,
+which read as a 20% error). Each time the cure is the same: force the reference
+arm onto the same path before believing any number.
+
+**A correction to the record.** I reported to Jo that the jit CI had passed
+with no remaining jax-jit xfail. That was true of the narrow
+`workflow_dispatch` run it was based on, but not of the full per-PR matrix,
+which is a wider surface and immediately found a red shard. The lesson is the
+scope of the claim, not the claim: "the jit run is green" needed to say WHICH
+jit run.
+
+**The red shard was my own bug, and I nearly ledgered it.** 104 jax-jit
+`test_quantity` failures, matching a remembered "Quantity is not traceable"
+boundary. My own note on that boundary says in capitals not to ledger it — it
+records that this project already ledgered 33 of these off an error message
+once and had to retract. Today's symptom also did not match the remembered one
+(units silently absent with a correct value, not a tracer error). Real cause:
+#1536's own traced-share counter imports galpy in `pytest_configure`, before
+test modules load, locking in `astropy-units=False` against an import-time copy
+in `conversion.py`. Moved to `pytest_collection_finish`: 104 failed -> 344
+passed, counter still reporting 92.7% traced. Saved as a memory, because the
+transferable part is the reasoning habit: when a NEW CI dimension goes red,
+suspect the new dimension before the code it measures.
+
+**Record-keeping.** STATUS.md had gone five days stale (still showing
+`feat/backends 0c05087f3` and #1496-#1503). Refreshed. It exists to be read at
+wake instead of reconstructing state, which only works if it is current.
