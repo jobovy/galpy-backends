@@ -86,10 +86,32 @@ The intent behind the guard is sound and documented ("TRANSITIONAL ... a forced
 backend does NOT flip a numpy R", task #117): it stops the fast numpy suite
 being routed onto the unmigrated direct/hierarchical paths. But the predicate
 conflates *merely forced* with *carries a real gradient* — the same conflation
-`_pot_grad_namespace` was added for. Widening it is NOT free here: unlike qdf,
-flipping may land on genuinely unmigrated paths, so this needs its own PR that
-checks the direct/hierarchical routes accept a plain-float R first. Deliberately
-NOT folded into the grid PR.
+`_pot_grad_namespace` was added for. Widening it is feasible, and now MEASURED (torch eager, d/d(potential a) with
+R passed as a backend array so the gate opens):
+
+| path | carries the gradient? |
+|------|----------------------|
+| direct (`grid=False`) | yes, +0.0712 |
+| grid, non-hierarchical | yes, +0.1087 |
+| grid, **hierarchical** | NO -- returns a bare `float64` |
+
+So two of the three routes already work once taken; the hierarchical grid is the
+genuinely unmigrated one the code comment warns about. A correct fix therefore
+widens the gate for the direct and regular-grid routes and must NOT silently
+widen it for the hierarchical one -- there it should keep numpy (or say so)
+rather than return a detached float.
+
+Note the direct and grid numbers differ (0.071 vs 0.109) at `gridpoints=8`:
+that is the coarse grid's own quadrature error, the same different-algorithm
+caveat as everywhere else in this document, not a second defect. Any test must
+compare each route against ITSELF under FD.
+
+Also required: `xp` must come from the potential when R is a plain float --
+`get_namespace(R, sigmaR1, ...)` resolves numpy for an all-float argument list,
+so widening `_direct_backend` alone would run the "backend" path on numpy. Same
+two-part shape as the `rl`/`rE` fix in #1532.
+
+Deliberately NOT folded into #1539.
 
 ### T4i-b — evolveddiskdf direct path: torch crashes on ZERO initdf moments
 
