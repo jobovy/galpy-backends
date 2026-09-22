@@ -140,7 +140,33 @@ comparison, and add an odd-moment case to the direct-path tests. NOTE the
 comment on that line already says it is "kept OFF the numpy path deliberately"
 to preserve the float return type — so the fix must not touch numpy.
 
-### T4j — DF sample() crashes under a gradient-carrying potential
+### T4j — DF sample() under a gradient-carrying potential — FIXED (#1541)
+
+Five sites, one root cause: `sphericaldf` takes `self._scale` from
+`pot._scale`, so a differentiated potential parameter IS the sampling grid's
+scale, and every numpy op on it raised. Fixed for `isotropicHernquistdf`,
+`osipkovmerrittHernquistdf` and `isotropicNFWdf` -- sampling now runs on both
+backends and returns BIT-IDENTICAL values to numpy.
+
+Two things worth carrying forward:
+
+* **The extent may be frozen; the nodes may not.** The grid extent is a
+  discretisation choice in r/a units while the physical radii still carry
+  d/d(scale), so freezing it costs no gradient. That is the OPPOSITE of the
+  actionAngle grid case (T4g), where freezing nodes would have returned a
+  silently zero gradient. The distinction is whether the frozen quantity is
+  downstream of the differentiated parameter in the value being returned.
+* **A partial fix that MOVES the error is worse than no fix.** Making
+  `_RphiRootFind` backend-aware cleared one layer of the `constantbetadf`
+  construction failure and pushed it into that class's numpy-throughout
+  pipeline (`t ** ... + rmin` with a tensor rmin). Reverted: it could not be
+  covered by a test while the path still failed end to end.
+
+**Still open:** `constantbetadf` cannot be CONSTRUCTED under a gradient-carrying
+potential. That is the "DF constructors" gap the 2026-09-16 audit named, and it
+needs its own migration.
+
+### T4j (original finding, for the record)
 
 `isotropicHernquistdf.sample()` and `quasiisothermaldf.sampleV()` raise
 `RuntimeError: Can't call numpy() on Tensor that requires grad` when the
