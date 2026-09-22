@@ -175,22 +175,41 @@ structural blocker at the end:
 | 2 | `constantbetadf` construction call of `_rphi` | needs the `_evalpot_asnumpy` boundary coercion |
 | 3 | `TwoPowerSphericalPotential._ddenstwobetadr` | unguarded arithmetic leaf, `Tensor * ndarray` |
 | 4 | `sphericaldf._setup_rphi_interpolator` (~1407) | another `ndarray * Tensor` |
-| 5 | the `_gradfunc` chain | `torch.func` transform meets an eager autograd tensor: `Tensor * LinearizeTrace` |
+| 5 | `_autodiff_xp()` | picks the grad engine by AVAILABILITY, not by the potential's parameters |
 
-Layers 1-4 are operand lifts of the now-familiar kind. **Layer 5 is not** -- it
-is a torch.func-vs-autograd mixing limitation, and the honest fix is structural:
-the construction-time calibration is DELIBERATELY numpy (`with use("numpy",
-force=False)`, `_evalpot_asnumpy`, "not a compute island"), so it should run
-against a DETACHED view of the potential rather than the live traced one.
-galpy has no "numpy view of a potential" helper today; that is the real work
-item.
+**Layer 5 was misdiagnosed twice before it was measured.** The error is
+`Tensor * LinearizeTracer`, which reads like a torch.func-vs-autograd mixing
+limitation -- minimal repros of `torch.func.grad`, nested grad and
+`vmap(grad)` with a captured `requires_grad` tensor ALL pass, so that story was
+wrong. Printing `type(r).__module__` settled it: `LinearizeTracer` is a
+**jax** tracer (`jax._src.interpreters.ad`) appearing inside a forced-TORCH
+run. `_autodiff_xp()` prefers jax "whenever it is available", for byte-identity
+of the numpy fE path, and its docstring assumes the nested-grad closures are
+backend-agnostic -- true only while the potential's PARAMETERS are numpy. With
+a torch-differentiated potential a jax tracer meets a torch tensor and neither
+framework can lift the other.
 
-Fixing 1-4 alone makes **jax** construction work and leaves torch failing at 5.
-Shipping that would be a one-backend half-measure of exactly the kind reverted
-earlier the same day, so it was backed out unpushed rather than landed.
+Fix (identified, works): make the grad engine follow
+`_pot_grad_namespace(self._pot)` when the potential carries one, keeping the
+jax preference for a plain numpy potential. That clears layer 5.
 
-Next step when this is picked up: build the detached-potential construction path
-FIRST (layer 5), then layers 1-4 fall out as ordinary lifts.
+Underneath it, `TwoPowerSphericalPotential`'s arithmetic leaves (`_evaluate`,
+`_ddenstwobetadr`) are unguarded and hit the same `Tensor`/`ndarray` operand
+asymmetry -- so the remaining work is migrating those leaves, not a structural
+redesign.
+
+**For JAX specifically there IS a structural blocker, and it is the one that
+matters for differentiability.** To get d/d(potential parameter) the DF must be
+CONSTRUCTED under the gradient (the parameter is baked in at construction), and
+constantbetadf's construction cannot be traced: `_evalpot_asnumpy` calls
+`as_numpy` on a tracer (reproduced: TracerArrayConversionError), and the startt
+calibration is a `while numpy.any(startval == 0.0)` loop -- data-dependent
+control flow. Torch EAGER autograd hits neither (values stay concrete), so
+torch eager is the achievable route first.
+
+Plan: (a) migrate the TwoPowerSphericalPotential leaves, (b) land the
+grad-engine fix, (c) verify d(fE)/d(a) against FD under torch eager, (d) treat
+the jax calibration redesign as its own item.
 
 ### T4j (original finding, for the record)
 
