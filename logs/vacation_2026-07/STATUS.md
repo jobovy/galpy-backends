@@ -55,13 +55,30 @@ Torch EAGER autograd hits neither (values stay concrete), which is why #1543 is
 torch-only. Making jax work is a calibration redesign, not a lift.
 
 NEW (2026-09-22, unfiled): `constantbetadf.sample()` still fails under a
-gradient-carrying potential at `SCFPotential.py::_RToxi` (numpy branch), reached
-via `_make_cmf_interpolator`, even with #1541's operand lift in that same
-function. SITE known, MECHANISM not: the numpy branch only runs when neither
-operand is a backend array, yet a grad Tensor is in the expression, so the
-operand that carries it has not been identified. A monkeypatch probe of
-`_RToxi` did not intercept, so the call reaches it by some other binding --
-that is the next thing to chase.
+gradient-carrying potential at `SCFPotential.py::_RToxi`, reached via
+`_make_cmf_interpolator`, with `r=float` and `a=<grad Tensor>`.
+
+What IS established (measured, not inferred):
+
+* **`get_namespace` honours a FORCED namespace over the data.** Its own source
+  says so -- `if ctx is not None and ctx[1]:  # forced default beats the data`.
+  constantbetadf's construction runs inside `_numpy_ctx` =
+  `use("numpy", force=True)`, and there `get_namespace(<torch tensor>)` returns
+  **numpy**. Printed it: the `_RToxi` lift resolved `ns=<module numpy>` and
+  produced an `ndarray`, i.e. it coerced the operand the WRONG WAY.
+* So "lift x onto y's namespace" written as `get_namespace(y)` is fragile
+  wherever a forced context can be active. `namespace_from_arrays((y,))` is the
+  data-only resolver.
+
+What is NOT established: swapping in `namespace_from_arrays` did **not** fix
+sample() -- it still reaches the numpy branch -- so there is at least one more
+layer, and the experiment was discarded unpushed rather than carried as an
+unverified change. `_is_python_scalar` does not filter 0-d tensors, so the
+resolver *should* return torch; why it does not is the next thing to instrument.
+
+Note this does NOT make #1541 wrong on its tested paths (81 passed, samples
+bit-identical): the forced-numpy block is constantbetadf-specific. It makes the
+lift fragile, not incorrect there.
 
 ## Recurring traps this round (all cost real time)
 
