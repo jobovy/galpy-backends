@@ -54,31 +54,43 @@ blockers, both in the construction path:
 Torch EAGER autograd hits neither (values stay concrete), which is why #1543 is
 torch-only. Making jax work is a calibration redesign, not a lift.
 
-NEW (2026-09-22, unfiled): `constantbetadf.sample()` still fails under a
-gradient-carrying potential at `SCFPotential.py::_RToxi`, reached via
-`_make_cmf_interpolator`, with `r=float` and `a=<grad Tensor>`.
+### Next work item: constantbetadf.sample() under a gradient (scoped, not started)
 
-What IS established (measured, not inferred):
+`constantbetadf.sample()` fails under a gradient-carrying potential on BOTH
+entry points -- so it is a real gap, not a misuse of the numpy-key path:
 
-* **`get_namespace` honours a FORCED namespace over the data.** Its own source
-  says so -- `if ctx is not None and ctx[1]:  # forced default beats the data`.
-  constantbetadf's construction runs inside `_numpy_ctx` =
-  `use("numpy", force=True)`, and there `get_namespace(<torch tensor>)` returns
-  **numpy**. Printed it: the `_RToxi` lift resolved `ns=<module numpy>` and
-  produced an `ndarray`, i.e. it coerced the operand the WRONG WAY.
-* So "lift x onto y's namespace" written as `get_namespace(y)` is fragile
-  wherever a forced context can be active. `namespace_from_arrays((y,))` is the
-  data-only resolver.
+    key=None (forced-numpy path)   -> sphericaldf.py:995 _make_cmf_interpolator
+    backend key (follows the data) -> sphericaldf.py:906 sample
 
-What is NOT established: swapping in `namespace_from_arrays` did **not** fix
-sample() -- it still reaches the numpy branch -- so there is at least one more
-layer, and the experiment was discarded unpushed rather than carried as an
-unverified change. `_is_python_scalar` does not filter 0-d tensors, so the
-resolver *should* return torch; why it does not is the next thing to instrument.
+ROOT MECHANISM, measured and now in memory as
+`get-namespace-forced-beats-data`: `get_namespace` resolves the FORCED
+namespace ahead of the data ("forced default beats the data", its own source).
+constantbetadf runs both its construction and its numpy-key sampling inside
+`_numpy_ctx` = `use("numpy", force=True)`, so inside those blocks
+`get_namespace(<torch tensor>)` returns **numpy**:
 
-Note this does NOT make #1541 wrong on its tested paths (81 passed, samples
-bit-identical): the forced-numpy block is constantbetadf-specific. It makes the
-lift fragile, not incorrect there.
+| context | get_namespace(a) | namespace_from_arrays((a,)) |
+|---------|------------------|------------------------------|
+| none | torch | torch |
+| use("torch", force=True) | torch | torch |
+| nested use("numpy", force=True) | **numpy** | torch |
+
+So every "lift onto x's namespace" written `get_namespace(x)` coerces the wrong
+way there, and so does `xp = get_namespace(r)` at the top of a backend branch.
+Fixing the three sites in `_xiToR`/`_RToxi` advances the failure one step at a
+time -- it is a MULTI-SITE migration of the sampling path, and it wants its own
+scoped PR rather than more whack-a-mole. Those edits were made, seen to advance
+the failure, and then DISCARDED unpushed: untested on any passing path, so
+landing them would be untested code.
+
+Note the DESIGN is deliberate and worth preserving: numpy-key sampling forces
+numpy so the scipy interpolators never see torch scalars and the returned Orbit
+is numpy; a backend key is the differentiable route. The migration should keep
+that split.
+
+Does NOT affect #1541: its three DF families do not go through constantbetadf's
+forced-numpy wrap, and its samples are bit-identical with 81 backend tests
+passing.
 
 ## Recurring traps this round (all cost real time)
 
