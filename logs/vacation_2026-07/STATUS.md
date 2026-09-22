@@ -55,8 +55,13 @@ Torch EAGER autograd hits neither (values stay concrete), which is why #1543 is
 torch-only. Making jax work is a calibration redesign, not a lift.
 
 NEW (2026-09-22, unfiled): `constantbetadf.sample()` still fails under a
-gradient-carrying potential inside `_RToxi` via `_make_cmf_interpolator`, even
-with #1541's operand lift. Characterised but not yet fixed.
+gradient-carrying potential at `SCFPotential.py::_RToxi` (numpy branch), reached
+via `_make_cmf_interpolator`, even with #1541's operand lift in that same
+function. SITE known, MECHANISM not: the numpy branch only runs when neither
+operand is a backend array, yet a grad Tensor is in the expression, so the
+operand that carries it has not been identified. A monkeypatch probe of
+`_RToxi` did not intercept, so the call reaches it by some other binding --
+that is the next thing to chase.
 
 ## Recurring traps this round (all cost real time)
 
