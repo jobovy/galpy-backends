@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-21
+# Vacation status snapshot — 2026-09-22
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,64 +7,71 @@
 
 ## Now
 
-    feat/backends   1a1e2211d   (= #1534)
+    feat/backends   0172ce5c4   (= #1540)
     merged since the last snapshot:
-      #1530 dynfric v coercion
-      #1531 osipkovmerritt dM/dE (panel split + support edge + cosine map)
-      #1532 Orbit accessors (+ _pot_grad_namespace)
-      #1533 Spline1D vector-valued + bc default (not-a-knot for n>=4)
-      #1534 Spline1D consumers (streamTrack dual repr, SCF eval_ppoly clone)
+      #1535 interpRZPotential -> Spline2D, Orbits one-spline-per-orbit
+      #1536 jit as a CI matrix axis + traced-share reporting
+      #1537 qdf moments w.r.t. potential params + _rg array branch
+      #1538 actionAngle grids delegate under a potential gradient
+      #1539 evolveddiskdf torch xp.where guard (odd moments)
+      #1540 evolveddiskdf honours a gradient carried by the POTENTIAL
 
 ## Open PRs
 
 | PR | what | state |
 |----|------|-------|
-| #1535 | interpRZPotential -> Spline2D, Orbits one-spline-per-orbit | green; codecov phantom resolved (18 sessions, 99.97%), all-clear re-run |
-| #1536 | jit as a CI matrix axis + traced-share reporting | 104 jax-jit test_quantity failures FIXED (see below); re-running |
-| #1537 | qdf moments w.r.t. potential params + `_rg` array branch | **green 106/106** |
-| #1538 | actionAngle grid classes delegate under a potential gradient | building |
-| #1539 | evolveddiskdf: torch `xp.where` guard on odd moments | building |
+| #1541 | `sphericaldf.sample()` under a gradient-carrying potential | **green 150/150** |
+| #1542 | hierarchical velocity grid migrated to the backend | coverage fix pushed (nlevels=0 branch), rebuilding |
+| #1543 | constantbetadf fE differentiable w.r.t. the potential (stacked on #1541) | red was the transient JUnit-upload step; re-running |
 
-## The differentiability audit sweep is COMPLETE
+## The audit sweep is closed out
 
-Write-up: `plan/differentiability_audit_followups_2026-09-19.md`.
+Every finding is landed or has an open PR. `streamspraydf` needed nothing.
+The remaining known gap is jax differentiability for constantbetadf (below).
 
-Areas swept this round and what they produced:
+## What is actually differentiable now
 
-* **actionAngle grid variants** (T4g) — both raised in `__init__` for ANY
-  gradient-carrying potential. Fixed by delegating to the exact class (#1538).
-  `stop_gradient` on the nodes was rejected: it returns a silently ZERO
-  gradient, worse than the error.
-* **evolveddiskdf** (T4i, T4i-b) — two findings. T4i-b (torch `xp.where` on a
-  numpy-bool condition, odd moments only) fixed in #1539. T4i (the gate asks
-  `is_backend_array(R)`, so a potential-parameter gradient with a float R is
-  silently lost) is DEFERRED with its reasoning recorded: the guard's intent is
-  sound and documented (task #117), only the predicate is too narrow, and
-  widening it may route onto genuinely unmigrated paths.
-* **DF `sample()`** (T4j) — raises under a gradient-carrying potential. A crash,
-  not a wrong number; differentiable sampling is already a roadmap item.
-* **streamspraydf** — needs nothing. It already probes for a backend
-  theta/mass/stripping_pdf and discriminates a merely-forced context.
+* evolveddiskdf: direct, regular grid AND hierarchical grid all carry
+  d/d(potential parameter) (#1540, #1542).
+* actionAngle grid classes: delegate to the exact method (#1538).
+* qdf moments and `_rg` (#1537).
+* sphericaldf `sample()`: runs under a gradient-carrying potential for
+  isotropicHernquist / osipkovmerrittHernquist / isotropicNFW, BIT-IDENTICAL to
+  numpy (#1541).
+* constantbetadf `fE`: d(fE)/d(a) = +22213.654, FD-verified to 2.7e-05 (#1543),
+  **torch eager only**.
 
-## The one that nearly went wrong
+## The one structural gap left
 
-#1536's jax-jit `test_quantity` shard failed 104 tests. The shape matched a
-remembered "Quantity is not traceable" boundary and my first instinct was to
-ledger them. That would have repeated a mistake this project has already made
-and retracted once.
+**jax cannot construct constantbetadf under a trace**, and construction is where
+the potential parameter is baked in, so jax has no d/d(parameter) for it. Two
+blockers, both in the construction path:
 
-It was not a galpy defect at all: **this PR's own traced-share counter** imports
-galpy inside `pytest_configure`, which runs before test modules are imported,
-locking in the default `astropy-units=False`. `conversion.py` binds `_APY_UNITS`
-as an import-time copy, so `test_quantity.py`'s module-level config set never
-reaches it, and every `physical_conversion` returned a bare array with the
-CORRECT value and no units. Moved the install to `pytest_collection_finish`:
-104 failed -> 344 passed, and the counter still reports 92.7% traced.
+* `_evalpot_asnumpy` calls `as_numpy` on a tracer (TracerArrayConversionError),
+* the startt calibration is `while numpy.any(startval == 0.0)` -- data-dependent
+  control flow.
 
-Two discriminators did the work and are worth reusing: the pass/fail ribbon in
-file order (215 passes AFTER the first failure => not a leaked global), and
-checking that today's symptom actually matched the remembered one (it did not —
-units silently absent, not a tracer error).
+Torch EAGER autograd hits neither (values stay concrete), which is why #1543 is
+torch-only. Making jax work is a calibration redesign, not a lift.
+
+NEW (2026-09-22, unfiled): `constantbetadf.sample()` still fails under a
+gradient-carrying potential inside `_RToxi` via `_make_cmf_interpolator`, even
+with #1541's operand lift. Characterised but not yet fixed.
+
+## Recurring traps this round (all cost real time)
+
+* **A fix that changes WHICH ALGORITHM runs breaks the naive A/B.** The numpy FD
+  arm then measures a different function. Caught 4x: qdf table-vs-rootfind, both
+  actionAngle grids, and constantbetadf fE (scipy-adaptive vs GL: 5.1e-04 of
+  "error" that was pure quadrature difference).
+* **`Tensor * ndarray` returns NotImplemented** so numpy's `__rmul__` calls
+  `.numpy()`; jax accepts the same mix. Several sites were invisible on jax.
+  Test mixed arithmetic on TORCH.
+* **Read the error's TYPE, not its name.** `LinearizeTracer` looked like a
+  torch.func limit; `type(r).__module__` said `jax._src.interpreters.ad`.
+* **Coverage drops here are orphaned branches, not untested new code.** Three
+  this round (#1537, #1540, #1542), each one line or two, each caused by a
+  change making a previously-incidental path unreachable.
 
 ## Standing constraints
 
