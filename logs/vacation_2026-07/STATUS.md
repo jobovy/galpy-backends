@@ -54,43 +54,41 @@ blockers, both in the construction path:
 Torch EAGER autograd hits neither (values stay concrete), which is why #1543 is
 torch-only. Making jax work is a calibration redesign, not a lift.
 
-### Next work item: constantbetadf.sample() under a gradient (scoped, not started)
+### constantbetadf.sample(): WIP branch, NOT a PR -- blocked on a NaN gradient
 
-`constantbetadf.sample()` fails under a gradient-carrying potential on BOTH
-entry points -- so it is a real gap, not a misuse of the numpy-key path:
+Branch `backend/constantbetadf-sample` (9ec9e779e, stacked on #1543) is PUSHED
+WITHOUT a PR. Do not merge it.
 
-    key=None (forced-numpy path)   -> sphericaldf.py:995 _make_cmf_interpolator
-    backend key (follows the data) -> sphericaldf.py:906 sample
+**Works:** backend-key sampling runs under a gradient-carrying potential and
+returns a backend Orbit, where it previously raised. Five fixes, each scoped to
+ONE path so numpy and backend cannot bleed (details in the commit message). One
+of them is a REAL correctness fix to #1541's own code: `get_namespace` returns
+the FORCED namespace ahead of the data, so inside constantbetadf's
+`use("numpy", force=True)` it handed back numpy and the next line was
+`ndarray * Tensor`. `namespace_from_arrays` is the data-only resolver.
 
-ROOT MECHANISM, measured and now in memory as
-`get-namespace-forced-beats-data`: `get_namespace` resolves the FORCED
-namespace ahead of the data ("forced default beats the data", its own source).
-constantbetadf runs both its construction and its numpy-key sampling inside
-`_numpy_ctx` = `use("numpy", force=True)`, so inside those blocks
-`get_namespace(<torch tensor>)` returns **numpy**:
+numpy-key sampling with such a potential now raises a clear NotImplementedError
+naming the backend key; making it actually work needs a DETACHED view of the
+potential, which galpy has no construct for.
 
-| context | get_namespace(a) | namespace_from_arrays((a,)) |
-|---------|------------------|------------------------------|
-| none | torch | torch |
-| use("torch", force=True) | torch | torch |
-| nested use("numpy", force=True) | **numpy** | torch |
+**Blocked:** `d(sum r)/da` is **NaN** (FD = +57.417). Values are fine
+(`forward_nan=False`) -- only the backward is poisoned. Not shipped precisely
+because a NaN gradient is worse than the error it replaces: it propagates
+silently into an optimiser, where the original at least failed loudly.
 
-So every "lift onto x's namespace" written `get_namespace(x)` coerces the wrong
-way there, and so does `xp = get_namespace(r)` at the top of a backend branch.
-Fixing the three sites in `_xiToR`/`_RToxi` advances the failure one step at a
-time -- it is a MULTI-SITE migration of the sampling path, and it wants its own
-scoped PR rather than more whack-a-mole. Those edits were made, seen to advance
-the failure, and then DISCARDED unpushed: untested on any passing path, so
-landing them would be untested code.
+`torch.autograd.set_detect_anomaly` localises it to **DivBackward0** from
+`grad(func)(r) / rforce(r)` (constantbetadf ~636), evaluated by
+`_fEintegrand_smallr` at very small r during the construction-time startt
+calibration, where `rforce -> 0`.
 
-Note the DESIGN is deliberate and worth preserving: numpy-key sampling forces
-numpy so the scipy interpolators never see torch scalars and the returned Orbit
-is numpy; a backend key is the differentiable route. The migration should keep
-that split.
+`stop_gradient` at that calibration boundary was tried -- legitimate, since the
+loop only calibrates an integration LIMIT -- and did NOT clear the NaN, so
+there is at least one more path into that division. Next step: anomaly
+detection again, with the stop_gradient in place, to find the second path.
 
-Does NOT affect #1541: its three DF families do not go through constantbetadf's
-forced-numpy wrap, and its samples are bit-identical with 81 backend tests
-passing.
+Note this NaN is LATENT on the fE path too, yet #1543's FD check passes at
+2.7e-05: fE's value is integrated live by `_fE_backend`, so its backward does
+not traverse the calibration. Sampling's does.
 
 ## Recurring traps this round (all cost real time)
 
