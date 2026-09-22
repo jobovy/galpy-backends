@@ -162,9 +162,35 @@ Two things worth carrying forward:
   pipeline (`t ** ... + rmin` with a tensor rmin). Reverted: it could not be
   covered by a test while the path still failed end to end.
 
-**Still open:** `constantbetadf` cannot be CONSTRUCTED under a gradient-carrying
-potential. That is the "DF constructors" gap the 2026-09-16 audit named, and it
-needs its own migration.
+**Still open:** `constantbetadf` cannot be CONSTRUCTED under a backend-array
+scale. SCOPED 2026-09-21 -- attempted, then backed out deliberately.
+
+It is NOT a gradient problem: construction fails on torch for a plain
+backend-array `a` with no gradient at all. It is a multi-site migration with a
+structural blocker at the end:
+
+| layer | site | kind |
+|-------|------|------|
+| 1 | `sphericaldf._RphiRootFind.__call__` | namespace resolved from E only, bracket ignored |
+| 2 | `constantbetadf` construction call of `_rphi` | needs the `_evalpot_asnumpy` boundary coercion |
+| 3 | `TwoPowerSphericalPotential._ddenstwobetadr` | unguarded arithmetic leaf, `Tensor * ndarray` |
+| 4 | `sphericaldf._setup_rphi_interpolator` (~1407) | another `ndarray * Tensor` |
+| 5 | the `_gradfunc` chain | `torch.func` transform meets an eager autograd tensor: `Tensor * LinearizeTrace` |
+
+Layers 1-4 are operand lifts of the now-familiar kind. **Layer 5 is not** -- it
+is a torch.func-vs-autograd mixing limitation, and the honest fix is structural:
+the construction-time calibration is DELIBERATELY numpy (`with use("numpy",
+force=False)`, `_evalpot_asnumpy`, "not a compute island"), so it should run
+against a DETACHED view of the potential rather than the live traced one.
+galpy has no "numpy view of a potential" helper today; that is the real work
+item.
+
+Fixing 1-4 alone makes **jax** construction work and leaves torch failing at 5.
+Shipping that would be a one-backend half-measure of exactly the kind reverted
+earlier the same day, so it was backed out unpushed rather than landed.
+
+Next step when this is picked up: build the detached-potential construction path
+FIRST (layer 5), then layers 1-4 fall out as ordinary lifts.
 
 ### T4j (original finding, for the record)
 
