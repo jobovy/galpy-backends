@@ -319,7 +319,7 @@ form at z=0 for `Rforce`, 3.5e-15; against FD-of-Hankel-`Rforce` for `R2deriv`,
 11 digits). An unvalidated arbiter would have been the third plausible-but-wrong
 number in the pair.
 
-## Merged PRs #1381-#1506 (rebuilt from the GitHub API, 2026-09-16)
+## Merged PRs #1381-#1546 (rebuilt from the GitHub API, 2026-09-23)
 
 | PR | Base | Merged | Title |
 |----|------|--------|-------|
@@ -412,3 +412,37 @@ number in the pair.
 | [#1502](https://github.com/jobovy/galpy/pull/1502) | main | 2026-09-15 | [auto] Update documentation notebook outputs (2026-09-15) |
 | [#1503](https://github.com/jobovy/galpy/pull/1503) | feat/backends | 2026-09-16 | orbit: a backend potential parameter must not take the C-STM |
 | [#1504](https://github.com/jobovy/galpy/pull/1504) | feat/backends | 2026-09-16 | backend: integrate, spline and read an orbit back on a TRACED time grid |
+| [#1505](https://github.com/jobovy/galpy/pull/1505) | feat/backends | 2026-09-16 | streamdf: determine the track on a theta-dependent (traced) time grid |
+| [#1506](https://github.com/jobovy/galpy/pull/1506) | feat/backends | 2026-09-16 | tests: units-consistent bar for test_streamgapdf_sample's sky-frame comparison |
+| [#1507](https://github.com/jobovy/galpy/pull/1507) | feat/backends | 2026-09-19 | streamgapdf: build the impact coordinate transform on the backend |
+| [#1508](https://github.com/jobovy/galpy/pull/1508) | feat/backends | 2026-09-17 | potentials: branch on a stored parameter only when it is concrete |
+| [#1509](https://github.com/jobovy/galpy/pull/1509) | feat/backends | 2026-09-17 | linalg: make psd_project's gradient exact where nothing is clipped |
+| [#1510](https://github.com/jobovy/galpy/pull/1510) | main | 2026-09-17 | actionAngleVerticalInverse: select tori by their actual action with a polynomial point transformation |
+| [#1511](https://github.com/jobovy/galpy/pull/1511) | feat/backends | 2026-09-17 | sphericaldf: invert r(Phi) by root-find when the potential is traced |
+| [#1512](https://github.com/jobovy/galpy/pull/1512) | backend/streamgapdf-traceable-init | 2026-09-19 | streamgapdf: put the kick interpolation on the backend, completing d/d(potential) |
+| [#1514](https://github.com/jobovy/galpy/pull/1514) | feat/backends | 2026-09-18 | DFs: make the quasiisothermal and King constructors differentiable |
+| [#1515](https://github.com/jobovy/galpy/pull/1515) | aa-vertical-canonical-mm | 2026-09-18 | actionAngleVerticalInverse: speed up the momentum-matched evaluation (Newton on the closed-form derivative) and construction |
+| [#1516](https://github.com/jobovy/galpy/pull/1516) | main | 2026-09-18 | actionAngleVerticalInverse: compute the polynomial point transformation's action offset in closed form and apply it |
+| [#1517](https://github.com/jobovy/galpy/pull/1517) | aa-vertical-mm-speed | 2026-09-18 | actionAngleVerticalInverse: the map's action derivatives on each torus, stored as Hermite constraints of the family |
+| [#1519](https://github.com/jobovy/galpy/pull/1519) | main | 2026-09-18 | linearPotential: x2deriv and evaluatelinearx2derivs, the second derivative of 1D potentials |
+| [#1521](https://github.com/jobovy/galpy/pull/1521) | feat/backends | 2026-09-19 | streamdf/streamgapdf: fix the nan d/d(potential) through the kick, and test the perturber chain end to end |
+| [#1525](https://github.com/jobovy/galpy/pull/1525) | feat/backends | 2026-09-19 | Orbit: let the analytic ecc/zmax/rperi/rap differentiate w.r.t. potential parameters |
+| [#1527](https://github.com/jobovy/galpy/pull/1527) | main | 2026-09-21 | actionAngleSpherical: circular and near-circular orbits |
+| [#1528](https://github.com/jobovy/galpy/pull/1528) | feat/backends | 2026-09-20 | spherical DFs: differentiate w.r.t. potential parameters (construction + velocity moments) |
+| [#1529](https://github.com/jobovy/galpy/pull/1529) | feat/backends | 2026-09-20 | DFs: differentiate w.r.t. their own parameters (diskdf profile, qdf hr) |
+| [#1530](https://github.com/jobovy/galpy/pull/1530) | feat/backends | 2026-09-20 | dynamical friction: coerce the caller-supplied velocity triple onto the backend |
+| [#1531](https://github.com/jobovy/galpy/pull/1531) | feat/backends | 2026-09-20 | Osipkov-Merritt dM/dE: integrate fQ's support and split at the ceiling corners |
+| [#1532](https://github.com/jobovy/galpy/pull/1532) | feat/backends | 2026-09-21 | Orbit accessors: follow the gradient w.r.t. potential parameters |
+| [#1533](https://github.com/jobovy/galpy/pull/1533) | feat/backends | 2026-09-21 | Spline1D: vector-valued y, and default to the boundary condition numpy uses |
+| [#1534](https://github.com/jobovy/galpy/pull/1534) | feat/backends | 2026-09-21 | Spline1D consumers: streamTrack's dual representation and SCF's eval_ppoly clone |
+| [#1535](https://github.com/jobovy/galpy/pull/1535) | feat/backends | 2026-09-21 | interpRZPotential and Orbits: one spline object per grid, not a spline plus a derived cache |
+| [#1536](https://github.com/jobovy/galpy/pull/1536) | feat/backends | 2026-09-21 | CI: run the backend suite TRACED on every PR, as a matrix axis |
+| [#1537](https://github.com/jobovy/galpy/pull/1537) | feat/backends | 2026-09-21 | qdf: differentiate the moments w.r.t. potential parameters, and fix _rg's no-table array branch |
+| [#1538](https://github.com/jobovy/galpy/pull/1538) | feat/backends | 2026-09-21 | actionAngle grids: delegate to the exact method when the potential carries a gradient |
+| [#1539](https://github.com/jobovy/galpy/pull/1539) | feat/backends | 2026-09-21 | evolveddiskdf: fix the vanishing-normalisation guard on torch (odd moments) |
+| [#1540](https://github.com/jobovy/galpy/pull/1540) | feat/backends | 2026-09-22 | evolveddiskdf: honour a gradient carried by the POTENTIAL, not just by R |
+| [#1541](https://github.com/jobovy/galpy/pull/1541) | feat/backends | 2026-09-22 | sphericaldf: make sample() work when the potential carries a gradient |
+| [#1542](https://github.com/jobovy/galpy/pull/1542) | feat/backends | 2026-09-22 | evolveddiskdf: migrate the hierarchical velocity grid to the backend |
+| [#1543](https://github.com/jobovy/galpy/pull/1543) | feat/backends | 2026-09-22 | constantbetadf: differentiate fE w.r.t. the potential parameter |
+| [#1544](https://github.com/jobovy/galpy/pull/1544) | feat/backends | 2026-09-23 | backend: namespace_of() — resolve a value's own namespace, not the forced one |
+| [#1546](https://github.com/jobovy/galpy/pull/1546) | feat/backends | 2026-09-23 | constantbetadf: differentiable w.r.t. the potential under jax too (eager grad) |

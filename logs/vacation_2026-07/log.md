@@ -60462,3 +60462,52 @@ suspect the new dimension before the code it measures.
 **Record-keeping.** STATUS.md had gone five days stale (still showing
 `feat/backends 0c05087f3` and #1496-#1503). Refreshed. It exists to be read at
 wake instead of reconstructing state, which only works if it is current.
+
+## 2026-09-23 — constantbetadf under jax, sampling gradients, King W0, dynfric host, psd_project
+
+**#1546 merged** (constantbetadf differentiable under eager jax via
+`as_numpy_constant`). Jo merged it without knowing #1547 was stacked on it;
+GitHub's stack handling rebased #1547 onto the squash-merge (range-diff: patch
+identical), and I force-cancelled the one stale run left on the old head.
+
+**The sampling NaN was not where anomaly detection pointed.** For days the
+trace said DivBackward0 in the construction-time startt calibration. That
+frame was the FORWARD call site: anomaly mode checks the inner backward that
+`torch.func.grad` runs inside the forward, where non-finite values are
+expected and masked. With `check_nan` only on the outer backward, the NaN is a
+PowBackward0 from Hernquist's `mass` at the r=0 CMF knot (0*inf). Fixing that
+exposed three more defects, each silently wrong rather than NaN: a doubled
+d/d(scale) (radii detached, conversion attached), a frozen f(E) table in the
+velocity sampler (11% off), and a frozen p(v|r) extent at finite rmax (0.7%,
+confirmed by an A/B that changed only it). The final CMF design keeps knots
+fixed in xi with attached radii, which makes the scale derivative EXACT for a
+self-similar profile (d r_i/da = r_i/a to 1e-13) -- my first design (knots at
+fixed physical radii) was self-consistent but 8e-4 off that, and the test's
+exact-self-similarity assertion is what caught it. eddingtondf, which crashed
+outright on both backends, came along for free. -> #1547.
+
+**kingdf W0 (#1551)**: forward sensitivities of both ODE segments, including
+the pieces that move with W0 (rbreak, the second segment's starting Psi, both
+grids), grafted onto the scipy values. AD matched a tight-tolerance FD to
+<1e-7 but the default solve's own FD only to 1e-3: galpy solved the King ODE
+at scipy's default rtol=1e-3 (~1e-4 error in the tables). Jo approved
+tightening it (rtol=1e-10, ~10 ms per solve) -- a deliberate numpy-output
+change, stacked on #1551.
+
+**dynfric w.r.t. the host (#1549)**: the sigma_r table now comes from the
+backend jeans.sigmar under a gradient. That exposed a real precision defect:
+its GL order n=100 was 4.4e-6 off at r=1e-4 inside a large NFW (1000x the
+numpy table); n=200 matches scipy.
+
+**#1550**: psd_project's frozen-eigenvector gradient was 77-210% off (wrong
+sign) whenever it clipped; the existing tests only checked finite-and-nonzero.
+Daleckii-Krein divided differences give the exact derivative from the frozen
+eigenvectors, bounded (so no 1/gap). The Staeckel u0 "freeze" measured at the
+quadrature's own ~1e-5 level; left alone. Also: method='diffrax' now accepts a
+(deprecated) potential list.
+
+**Housekeeping**: MEMORY.md index consolidated into five hubs (233 -> 155
+lines, all memories reachable); stale branches `backend/constantbetadf-sample`
+and `backend/cdf-sigmar-cherrypick` deleted (the latter's test change was
+superseded by the ledger fix at backend_xfail.txt:368); three finished
+worktrees removed. README merged-PR table extended #1505-#1546.

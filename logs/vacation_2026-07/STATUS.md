@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-22
+# Vacation status snapshot — 2026-09-23
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,108 +7,70 @@
 
 ## Now
 
-    feat/backends   0172ce5c4   (= #1540)
+    feat/backends   87f4ec20b   (= #1546)
     merged since the last snapshot:
-      #1535 interpRZPotential -> Spline2D, Orbits one-spline-per-orbit
-      #1536 jit as a CI matrix axis + traced-share reporting
-      #1537 qdf moments w.r.t. potential params + _rg array branch
-      #1538 actionAngle grids delegate under a potential gradient
-      #1539 evolveddiskdf torch xp.where guard (odd moments)
-      #1540 evolveddiskdf honours a gradient carried by the POTENTIAL
+      #1541 sphericaldf.sample() under a gradient-carrying potential
+      #1542 hierarchical velocity grid on the backend
+      #1543 constantbetadf fE w.r.t. the potential (torch)
+      #1544 namespace_from_arrays for value-namespace lifts (alias dropped)
+      #1546 constantbetadf under jax too (eager grad; as_numpy_constant)
 
 ## Open PRs
 
-| PR | what | state |
-|----|------|-------|
-| #1541 | `sphericaldf.sample()` under a gradient-carrying potential | **green 150/150** |
-| #1542 | hierarchical velocity grid migrated to the backend | coverage fix pushed (nlevels=0 branch), rebuilding |
-| #1543 | constantbetadf fE differentiable w.r.t. the potential (stacked on #1541) | red was the transient JUnit-upload step; re-running |
+| PR | what | base | state |
+|----|------|------|-------|
+| #1547 | differentiable backend-key sampling w.r.t. the potential (constantbetadf + eddingtondf) | stack #1548 (bottom) | CI re-running on the rebased head a8836f09d (= d9faa198a) |
+| #1551 | kingdf differentiable w.r.t. W0 (forward sensitivities + graft) | stack on #1547 | CI running |
+| — | `backend/kingdf-tight-tol`: King ODE at rtol=1e-10 (Jo approved 2026-09-23); drops the tight-solve test fixture | stack on #1551, LOCAL, not yet submitted | tests running |
+| #1549 | dynamical friction w.r.t. the host potential; backend jeans.sigmar n=100->200 | feat/backends | one macOS network flake (SIMBAD/pypi); auto-rerun queued |
+| #1550 | psd_project exact gradient (Daleckii-Krein); diffrax accepts a potential list; Staeckel u0 measured | feat/backends | CI running |
 
-## The audit sweep is closed out
+## What is differentiable now (this round)
 
-Every finding is landed or has an open PR. `streamspraydf` needed nothing.
-The remaining known gap is jax differentiability for constantbetadf (below).
+* constantbetadf: fE and construction w.r.t. potential params, torch AND eager
+  jax (#1543, #1546). NOT under jax.jit (calibration loop).
+* spherical sampling with a backend key (constantbetadf, eddingtondf): r and v
+  vs FD to 4.3e-6 / 7.7e-5; constantbeta Hernquist d r_i/da = r_i/a to 1e-13
+  (#1547). Four defects: r=0 mass knot NaN, detached CMF radii (double
+  count), frozen f(E) table (11% off, silent), frozen p(v|r) extent (0.7%).
+* kingdf W0 (#1551): all tables vs tight FD to <1e-7.
+* dynamical friction w.r.t. host (#1549): sigma_r 9e-9, Rforce 1.4e-7.
+* psd_project (#1550): exact; the old frozen gradient was 77-210% off
+  (wrong sign) whenever it clipped.
 
-## What is actually differentiable now
+## Next (Jo: "the rest once CI clears")
 
-* evolveddiskdf: direct, regular grid AND hierarchical grid all carry
-  d/d(potential parameter) (#1540, #1542).
-* actionAngle grid classes: delegate to the exact method (#1538).
-* qdf moments and `_rg` (#1537).
-* sphericaldf `sample()`: runs under a gradient-carrying potential for
-  isotropicHernquist / osipkovmerrittHernquist / isotropicNFW, BIT-IDENTICAL to
-  numpy (#1541).
-* constantbetadf `fE`: d(fE)/d(a) = +22213.654, FD-verified to 2.7e-05 (#1543),
-  **torch eager only**.
+1. mass(r=0) / Phi(inf) NaN gradients in the potentials themselves (Jaffe,
+   Plummer, Dehnen, DehnenCore, PowerSphCut at 0; Hernquist Phi(inf)).
+2. Osipkov-Merritt general DF: p(v|r) via scipy -> velocity samples carry no
+   gradient (same class as the frozen f(E) table).
+3. eager-jax constantbetadf construction ~45 s (torch ~5 s): vectorize.
+4. constantbetadf under jax.jit: traceable calibration.
+5. Check CI durations of test_dynamfric_c[McMillan17] and
+   test_constantbetadf_against_hernquist (~255-280 s locally, near the cap).
 
-## The one structural gap left
+## Recurring traps this round
 
-**jax cannot construct constantbetadf under a trace**, and construction is where
-the potential parameter is baked in, so jax has no d/d(parameter) for it. Two
-blockers, both in the construction path:
-
-* `_evalpot_asnumpy` calls `as_numpy` on a tracer (TracerArrayConversionError),
-* the startt calibration is `while numpy.any(startval == 0.0)` -- data-dependent
-  control flow.
-
-Torch EAGER autograd hits neither (values stay concrete), which is why #1543 is
-torch-only. Making jax work is a calibration redesign, not a lift.
-
-### constantbetadf.sample(): WIP branch, NOT a PR -- blocked on a NaN gradient
-
-Branch `backend/constantbetadf-sample` (9ec9e779e, stacked on #1543) is PUSHED
-WITHOUT a PR. Do not merge it.
-
-**Works:** backend-key sampling runs under a gradient-carrying potential and
-returns a backend Orbit, where it previously raised. Five fixes, each scoped to
-ONE path so numpy and backend cannot bleed (details in the commit message). One
-of them is a REAL correctness fix to #1541's own code: `get_namespace` returns
-the FORCED namespace ahead of the data, so inside constantbetadf's
-`use("numpy", force=True)` it handed back numpy and the next line was
-`ndarray * Tensor`. `namespace_from_arrays` is the data-only resolver.
-
-numpy-key sampling with such a potential now raises a clear NotImplementedError
-naming the backend key; making it actually work needs a DETACHED view of the
-potential, which galpy has no construct for.
-
-**Blocked:** `d(sum r)/da` is **NaN** (FD = +57.417). Values are fine
-(`forward_nan=False`) -- only the backward is poisoned. Not shipped precisely
-because a NaN gradient is worse than the error it replaces: it propagates
-silently into an optimiser, where the original at least failed loudly.
-
-`torch.autograd.set_detect_anomaly` localises it to **DivBackward0** from
-`grad(func)(r) / rforce(r)` (constantbetadf ~636), evaluated by
-`_fEintegrand_smallr` at very small r during the construction-time startt
-calibration, where `rforce -> 0`.
-
-`stop_gradient` at that calibration boundary was tried -- legitimate, since the
-loop only calibrates an integration LIMIT -- and did NOT clear the NaN, so
-there is at least one more path into that division. Next step: anomaly
-detection again, with the stop_gradient in place, to find the second path.
-
-Note this NaN is LATENT on the fE path too, yet #1543's FD check passes at
-2.7e-05: fE's value is integrated live by `_fE_backend`, so its backward does
-not traverse the calibration. Sampling's does.
-
-## Recurring traps this round (all cost real time)
-
-* **A fix that changes WHICH ALGORITHM runs breaks the naive A/B.** The numpy FD
-  arm then measures a different function. Caught 4x: qdf table-vs-rootfind, both
-  actionAngle grids, and constantbetadf fE (scipy-adaptive vs GL: 5.1e-04 of
-  "error" that was pure quadrature difference).
-* **`Tensor * ndarray` returns NotImplemented** so numpy's `__rmul__` calls
-  `.numpy()`; jax accepts the same mix. Several sites were invisible on jax.
-  Test mixed arithmetic on TORCH.
-* **Read the error's TYPE, not its name.** `LinearizeTracer` looked like a
-  torch.func limit; `type(r).__module__` said `jax._src.interpreters.ad`.
-* **Coverage drops here are orphaned branches, not untested new code.** Three
-  this round (#1537, #1540, #1542), each one line or two, each caused by a
-  change making a previously-incidental path unreachable.
+* **Anomaly mode flags inner torch.func.grad backwards in the FORWARD pass.**
+  The "DivBackward0 in the startt calibration" chased for days was that; the
+  real NaN was a PowBackward0 in the outer backward (Hernquist mass at r=0).
+  Use check_nan=False forward, True only for the outer backward.
+* **A table built at a detached parameter + an attached conversion counts the
+  gradient twice.** Pick one parametrisation and attach consistently.
+* **Frozen knots are not free when the values are differentiated**: the knot
+  motion is an O(interpolation) derivative error that a small derivative
+  amplifies (7% on p(v|r)).
+* **FD on a noisy plain path** (scipy-adaptive fE) reads as several % at
+  h=1e-4; FD on the gradient-carrying path instead.
+* **Concurrent local suites cause 300 s cap timeouts** that look like
+  regressions; re-time the test alone on both branches before believing it.
 
 ## Standing constraints
 
 * Jo merges the main PRs. I can merge develop, not main.
 * I **cannot** edit `.github/workflows/**` — provide patches; Jo applies.
 * Never name a working branch `feat/...` — use `backend/...`.
-* numpy must stay byte-identical; coverage never decreases, not one line.
-* Rebase only, no merge commits. Cancel the PRIOR sha's CI on push.
+* numpy must stay byte-identical (flag any exception: the King tolerance is
+  one, approved); coverage never decreases, not one line.
+* Rebase only, no merge commits. Real `gh stack`s for dependent PRs. Cancel
+  the PRIOR sha's CI on push.
