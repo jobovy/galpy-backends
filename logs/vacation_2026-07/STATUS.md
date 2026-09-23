@@ -21,7 +21,7 @@
 |----|------|------|-------|
 | #1547 | differentiable backend-key sampling w.r.t. the potential (constantbetadf + eddingtondf) | stack #1548 (bottom) | CI re-running on the rebased head a8836f09d (= d9faa198a) |
 | #1551 | kingdf differentiable w.r.t. W0 (forward sensitivities + graft) | stack on #1547 | CI running |
-| — | `backend/kingdf-tight-tol`: King ODE at rtol=1e-10 (Jo approved 2026-09-23); drops the tight-solve test fixture | stack on #1551, LOCAL, not yet submitted | tests running |
+| #1552 | King ODE at rtol=1e-10 (Jo approved 2026-09-23); drops the tight-solve test fixture; one torch test gets a round-off atol | stack on #1551 | CI running |
 | #1549 | dynamical friction w.r.t. the host potential; backend jeans.sigmar n=100->200 | feat/backends | one macOS network flake (SIMBAD/pypi); auto-rerun queued |
 | #1550 | psd_project exact gradient (Daleckii-Krein); diffrax accepts a potential list; Staeckel u0 measured | feat/backends | CI running |
 
