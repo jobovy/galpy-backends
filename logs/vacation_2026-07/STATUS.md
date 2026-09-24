@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-23
+# Vacation status snapshot — 2026-09-24
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -19,11 +19,16 @@
 
 | PR | what | base | state |
 |----|------|------|-------|
-| #1547 | differentiable backend-key sampling w.r.t. the potential (constantbetadf + eddingtondf) | stack #1548 (bottom) | CI re-running on the rebased head a8836f09d (= d9faa198a) |
-| #1551 | kingdf differentiable w.r.t. W0 (forward sensitivities + graft) | stack on #1547 | CI running |
-| #1552 | King ODE at rtol=1e-10 (Jo approved 2026-09-23); drops the tight-solve test fixture; one torch test gets a round-off atol | stack on #1551 | CI running |
-| #1549 | dynamical friction w.r.t. the host potential; backend jeans.sigmar n=100->200 | feat/backends | one macOS network flake (SIMBAD/pypi); auto-rerun queued |
-| #1550 | psd_project exact gradient (Daleckii-Krein); diffrax accepts a potential list; Staeckel u0 measured | feat/backends | CI running |
+| #1547 | differentiable backend-key sampling (constantbeta + eddington) | stack #1548 (bottom) | green 150/150 |
+| #1551 | kingdf d/dW0 (forward sensitivities + graft) | stack on #1547 | green 150/150 |
+| #1552 | King ODE at rtol=1e-10 (approved) + monotone-repair coverage test | stack on #1551 | CI |
+| #1556 | osipkovmerrittdf differentiable velocity sampling (2-26% silent error; jax crashed) | stack on #1552 | CI |
+| #1557 | constantbetadf construction ~4-6x faster (fixed-shape calibration; PCR tridiagonal spline solve) | stack on #1556 | CI |
+| #1558 | constantbetadf under jax.jit (construction, fE, moments, sampling) | stack on #1557 | CI |
+| #1554 | potentials: finite parameter gradients at r=0/inf (radial_limits) | feat/backends | CI |
+| #1555 | backend hyp2f1 accurate at large negative z (TwoPower small r) | feat/backends | CI |
+
+Merged since last snapshot: #1549 (dynfric host), #1550 (psd_project, diffrax list).
 
 ## What is differentiable now (this round)
 
@@ -38,16 +43,13 @@
 * psd_project (#1550): exact; the old frozen gradient was 77-210% off
   (wrong sign) whenever it clipped.
 
-## Next (Jo: "the rest once CI clears")
+## Next
 
-1. mass(r=0) / Phi(inf) NaN gradients in the potentials themselves (Jaffe,
-   Plummer, Dehnen, DehnenCore, PowerSphCut at 0; Hernquist Phi(inf)).
-2. Osipkov-Merritt general DF: p(v|r) via scipy -> velocity samples carry no
-   gradient (same class as the frozen f(E) table).
-3. eager-jax constantbetadf construction ~45 s (torch ~5 s): vectorize.
-4. constantbetadf under jax.jit: traceable calibration.
-5. Check CI durations of test_dynamfric_c[McMillan17] and
-   test_constantbetadf_against_hernquist (~255-280 s locally, near the cap).
+1. Watch the 7-PR stack + #1554/#1555 through CI.
+2. Deferred for Jo's decision (listed in #1554/#1555): edge values NaN on numpy
+   too; TwoPower Phi cancellation below r/a~1e-5 (formula rewrite changes numpy).
+3. Clean up superseded local worktrees (/var/tmp/omdf, cbfast, cbjit, pedge,
+   misc, dynfric2, audit3 once the stack merges).
 
 ## Recurring traps this round
 
