@@ -319,7 +319,7 @@ form at z=0 for `Rforce`, 3.5e-15; against FD-of-Hankel-`Rforce` for `R2deriv`,
 11 digits). An unvalidated arbiter would have been the third plausible-but-wrong
 number in the pair.
 
-## Merged PRs #1381-#1546 (rebuilt from the GitHub API, 2026-09-23)
+## Merged PRs #1381-#1566 (rebuilt from the GitHub API, 2026-09-25)
 
 | PR | Base | Merged | Title |
 |----|------|--------|-------|
@@ -446,3 +446,18 @@ number in the pair.
 | [#1543](https://github.com/jobovy/galpy/pull/1543) | feat/backends | 2026-09-22 | constantbetadf: differentiate fE w.r.t. the potential parameter |
 | [#1544](https://github.com/jobovy/galpy/pull/1544) | feat/backends | 2026-09-23 | backend: namespace_of() — resolve a value's own namespace, not the forced one |
 | [#1546](https://github.com/jobovy/galpy/pull/1546) | feat/backends | 2026-09-23 | constantbetadf: differentiable w.r.t. the potential under jax too (eager grad) |
+| [#1547](https://github.com/jobovy/galpy/pull/1547) | feat/backends | 2026-09-24 | sphericaldf: differentiable backend-key sampling w.r.t. the potential |
+| [#1549](https://github.com/jobovy/galpy/pull/1549) | feat/backends | 2026-09-24 | dynamical friction: differentiable w.r.t. the host potential |
+| [#1550](https://github.com/jobovy/galpy/pull/1550) | feat/backends | 2026-09-24 | psd_project: exact gradient on clipped slices; diffrax accepts a potential list |
+| [#1551](https://github.com/jobovy/galpy/pull/1551) | feat/backends | 2026-09-24 | kingdf: differentiable w.r.t. W0 (forward sensitivities of the King ODE) |
+| [#1552](https://github.com/jobovy/galpy/pull/1552) | feat/backends | 2026-09-24 | kingdf: solve the King ODE at rtol=1e-10 (scipy's default left ~1e-4) |
+| [#1553](https://github.com/jobovy/galpy/pull/1553) | main | 2026-09-24 | actionAngleSpherical: decide boundedness at infinity, not at a fixed radius |
+| [#1554](https://github.com/jobovy/galpy/pull/1554) | feat/backends | 2026-09-24 | potentials: finite parameter gradients at r = 0 and r = inf |
+| [#1555](https://github.com/jobovy/galpy/pull/1555) | feat/backends | 2026-09-24 | special: accurate backend hyp2f1 at large negative z |
+| [#1556](https://github.com/jobovy/galpy/pull/1556) | feat/backends | 2026-09-25 | osipkovmerrittdf: differentiable velocity sampling w.r.t. the potential |
+| [#1557](https://github.com/jobovy/galpy/pull/1557) | feat/backends | 2026-09-25 | constantbetadf: ~4x faster construction; spline solves in O(n log n) |
+| [#1558](https://github.com/jobovy/galpy/pull/1558) | feat/backends | 2026-09-25 | constantbetadf: construct, evaluate and sample under jax.jit |
+| [#1559](https://github.com/jobovy/galpy/pull/1559) | feat/backends | 2026-09-25 | eddingtondf, kingdf (M, rt), osipkovmerrittdf: under jax.jit |
+| [#1560](https://github.com/jobovy/galpy/pull/1560) | main | 2026-09-25 | actionAngleStaeckel: the focal length from a potential that supplies one |
+| [#1561](https://github.com/jobovy/galpy/pull/1561) | staeckel-focal-length | 2026-09-25 | PerfectEllipsoidPotential: the focal length of an axisymmetric oblate perfect ellipsoid |
+| [#1566](https://github.com/jobovy/galpy/pull/1566) | feat/backends | 2026-09-25 | kingdf: d/dW0 under jax.jit (diffrax) and torch.compile |
