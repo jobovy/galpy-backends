@@ -7,27 +7,20 @@
 
 ## Now
 
-    feat/backends   87f4ec20b   (= #1546)
-    merged since the last snapshot:
-      #1541 sphericaldf.sample() under a gradient-carrying potential
-      #1542 hierarchical velocity grid on the backend
-      #1543 constantbetadf fE w.r.t. the potential (torch)
-      #1544 namespace_from_arrays for value-namespace lifts (alias dropped)
-      #1546 constantbetadf under jax too (eager grad; as_numpy_constant)
+    feat/backends   7236d252c   (= #1566)
+    merged since the last snapshot: stack #1548 -- #1556, #1557, #1558,
+    #1559, #1566 (all squash-merged by Jo)
 
-## Open PRs
-
-All GREEN, remaining layers of stack #1548 (merge with `gh stack merge`):
+## Open PRs -- stack #1570 (merge with `gh stack merge`)
 
 | PR | what | CI |
 |----|------|----|
-| #1556 | osipkovmerrittdf differentiable velocity sampling | 150/150 |
-| #1557 | constantbetadf ~4-6x faster; PCR spline solve (dense path removed) | 150/150 |
-| #1558 | constantbetadf under jax.jit | 150/150 |
-| #1559 | eddingtondf, kingdf (M, rt), OM (fQ/moments) under jax.jit | 296/296 |
-| #1566 | kingdf d/dW0 under jax.jit (diffrax) and torch.compile | 150/150 |
+| #1567 | torch.compile of C-integrator orbits (routing + no silent detach) + torch 2.14 singledispatchmethod recursion fix | running |
+| #1569 | `method="torchode"`: compilable torch in-backend integrator; inductor tensor-alpha rtol workaround; get_namespace torch fast path | running |
 
-Merged since last snapshot: #1547, #1551, #1552, #1554, #1555.
+#1569 NEEDS JO: workflow edit adding `torchode` to the torch install lines
+(build.yml:350, backend-tests.yml:290) -- patch in the PR body. Until then its
+tests self-skip on CI and the torchode lines show as uncovered.
 
 ## What is differentiable now (this round)
 
@@ -49,7 +42,10 @@ Merged since last snapshot: #1547, #1551, #1552, #1554, #1555.
    OM jit sampling. Fixing changes numpy output there.
 2. Jo's decision (from #1554/#1555): edge values NaN on numpy too; TwoPower
    Phi cancellation below r/a ~ 1e-5.
-3. After the stack merges: remove /var/tmp/audit3, edjit, kjit worktrees.
+3. Jo's decision (#1569): torchode in the galpy[torch] extra? (pins typeguard 2.x)
+4. Parked: kingdf torch path via torchode ("revisit kingdf later").
+5. torch 2.14 cannot compile torch.linalg.solve at all; streamTrack still uses
+   xp.linalg.solve -> compiled stream tracks on torch 2.14 will fail.
 
 ## Recurring traps this round
 
