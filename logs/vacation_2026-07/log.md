@@ -60511,3 +60511,31 @@ lines, all memories reachable); stale branches `backend/constantbetadf-sample`
 and `backend/cdf-sigmar-cherrypick` deleted (the latter's test change was
 superseded by the ledger fix at backend_xfail.txt:368); three finished
 worktrees removed. README merged-PR table extended #1505-#1546.
+
+### 2026-09-25 (later) -- stack #1548 landed; compiled torch orbits
+
+**Landed**: #1556-#1559 and #1566 (stack #1548), all squash-merged by Jo.
+
+**torch.compile of orbit integration (#1567)**: RK C methods were routed to
+torchdiffeq under compile (the jax-only `under_trace` guard also fires for
+compiled torch), and inductor cannot lower torchdiffeq; symplectic C methods
+came back DETACHED, because dynamo traces `numpy.asarray(tensor)` without the
+requires-grad check. After the fix, both run the C-STM as an opaque call, with
+value and grad exact. CI then showed torch 2.14 (py3.14) recursing forever in
+`functools.singledispatchmethod` once the dispatched method graph-breaks, which
+killed every compiled `Orbit.integrate`. The fix is `compilable_singledispatchmethod`
+(the dispatch frame runs eagerly, recursive=False). torch 2.14 also cannot
+compile `torch.linalg.solve` at all; #1557's PCR spline keeps the accessors
+clear of it.
+
+**method="torchode" (#1569, stacked)**: a torch in-backend integrator that
+inductor compiles. It matches dop853_c to ~1e-11, and its gradients (IC,
+potential parameters, Hessian) match FD to 1e-9. It surfaced a silent inductor
+bug: a 0-d TENSOR `alpha=` of torch.add gets baked in with no guard, and the FX
+graph cache serves it across processes. torchode passes rtol exactly that way,
+so a 1e-12 solve ran at the previous compile's 1e-10. galpy makes rtol a
+Python float. The bug only reproduced with a pre-seeded inductor cache, which
+is why it looked intermittent. Also: an all-torch fast path in
+`namespace_from_arrays` (array_namespace hashes modules into a set, a graph
+break per multi-array call): 34 -> 16 breaks. CI coverage needs Jo's workflow
+edit to install torchode.
