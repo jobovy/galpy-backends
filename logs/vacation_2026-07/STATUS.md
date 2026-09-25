@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-24
+# Vacation status snapshot — 2026-09-25
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -17,18 +17,17 @@
 
 ## Open PRs
 
-| PR | what | base | state |
-|----|------|------|-------|
-| #1547 | differentiable backend-key sampling (constantbeta + eddington) | stack #1548 (bottom) | green 150/150 |
-| #1551 | kingdf d/dW0 (forward sensitivities + graft) | stack on #1547 | green 150/150 |
-| #1552 | King ODE at rtol=1e-10 (approved) + monotone-repair coverage test | stack on #1551 | CI |
-| #1556 | osipkovmerrittdf differentiable velocity sampling (2-26% silent error; jax crashed) | stack on #1552 | CI |
-| #1557 | constantbetadf construction ~4-6x faster (fixed-shape calibration; PCR tridiagonal spline solve) | stack on #1556 | CI |
-| #1558 | constantbetadf under jax.jit (construction, fE, moments, sampling) | stack on #1557 | CI |
-| #1554 | potentials: finite parameter gradients at r=0/inf (radial_limits) | feat/backends | CI |
-| #1555 | backend hyp2f1 accurate at large negative z (TwoPower small r) | feat/backends | CI |
+All GREEN, remaining layers of stack #1548 (merge with `gh stack merge`):
 
-Merged since last snapshot: #1549 (dynfric host), #1550 (psd_project, diffrax list).
+| PR | what | CI |
+|----|------|----|
+| #1556 | osipkovmerrittdf differentiable velocity sampling | 150/150 |
+| #1557 | constantbetadf ~4-6x faster; PCR spline solve (dense path removed) | 150/150 |
+| #1558 | constantbetadf under jax.jit | 150/150 |
+| #1559 | eddingtondf, kingdf (M, rt), OM (fQ/moments) under jax.jit | 296/296 |
+| #1566 | kingdf d/dW0 under jax.jit (diffrax) and torch.compile | 150/150 |
+
+Merged since last snapshot: #1547, #1551, #1552, #1554, #1555.
 
 ## What is differentiable now (this round)
 
@@ -45,11 +44,12 @@ Merged since last snapshot: #1549 (dynfric host), #1550 (psd_project, diffrax li
 
 ## Next
 
-1. Watch the 7-PR stack + #1554/#1555 through CI.
-2. Deferred for Jo's decision (listed in #1554/#1555): edge values NaN on numpy
-   too; TwoPower Phi cancellation below r/a~1e-5 (formula rewrite changes numpy).
-3. Clean up superseded local worktrees (/var/tmp/omdf, cbfast, cbjit, pedge,
-   misc, dynfric2, audit3 once the stack merges).
+1. Jo's decision: eddingtondf numpy fE wrong within ~1e-3 of Emin (quad over
+   [0, 0.5/rphi]; NFW gives large NEGATIVE values at 63/202 knots). Blocks
+   OM jit sampling. Fixing changes numpy output there.
+2. Jo's decision (from #1554/#1555): edge values NaN on numpy too; TwoPower
+   Phi cancellation below r/a ~ 1e-5.
+3. After the stack merges: remove /var/tmp/audit3, edjit, kjit worktrees.
 
 ## Recurring traps this round
 
