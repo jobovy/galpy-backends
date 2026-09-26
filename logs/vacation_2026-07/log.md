@@ -60539,3 +60539,16 @@ is why it looked intermittent. Also: an all-torch fast path in
 `namespace_from_arrays` (array_namespace hashes modules into a set, a graph
 break per multi-array call): 34 -> 16 breaks. CI coverage needs Jo's workflow
 edit to install torchode.
+
+### 2026-09-26 -- correction: the torch 2.14 linalg "regression" was mine
+
+The entry above says torch 2.14 cannot compile `torch.linalg.solve`. It can. I had
+run torch's compiler bisector (to localise the inductor tensor-alpha bug) and
+killed it; it left `/tmp/torchinductor_bovy/bisect/`, which torch applies to
+every later compile using that cache dir -- even `backend="eager"`, even another
+torch version. Every local torch.compile afterwards showed bogus failures
+(`with_effects` on solve/inv/cholesky/eigvals, "double backward", in-place view
+errors). Surfaced because pytest (fresh cache dir via conftest) passed what a
+plain script failed. With a clean cache, 2.14 compiles all of them forward and
+backward. #1571 rests on it (recommend closing); #1567's corrected. The 2.14
+`singledispatchmethod` recursion is real (reproduces clean, and on CI).

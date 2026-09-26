@@ -44,8 +44,10 @@ tests self-skip on CI and the torchode lines show as uncovered.
    Phi cancellation below r/a ~ 1e-5.
 3. Jo's decision (#1569): torchode in the galpy[torch] extra? (pins typeguard 2.x)
 4. Parked: kingdf torch path via torchode ("revisit kingdf later").
-5. torch 2.14 cannot compile torch.linalg.solve at all; streamTrack still uses
-   xp.linalg.solve -> compiled stream tracks on torch 2.14 will fail.
+5. RETRACTED: "torch 2.14 cannot compile linalg.solve" was stale compiler-bisector
+   state in my local inductor cache (clean cache: compiles fine). #1571 built on
+   it -> recommend closing. Compiled torch stream tracks DO fail, for an older
+   reason (streamTrack's numpy fit path).
 
 ## Recurring traps this round
 
