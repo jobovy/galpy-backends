@@ -319,7 +319,7 @@ form at z=0 for `Rforce`, 3.5e-15; against FD-of-Hankel-`Rforce` for `R2deriv`,
 11 digits). An unvalidated arbiter would have been the third plausible-but-wrong
 number in the pair.
 
-## Merged PRs #1381-#1566 (rebuilt from the GitHub API, 2026-09-25)
+## Merged PRs #1381-#1573 (rebuilt from the GitHub API, 2026-09-25)
 
 | PR | Base | Merged | Title |
 |----|------|--------|-------|
@@ -461,3 +461,7 @@ number in the pair.
 | [#1560](https://github.com/jobovy/galpy/pull/1560) | main | 2026-09-25 | actionAngleStaeckel: the focal length from a potential that supplies one |
 | [#1561](https://github.com/jobovy/galpy/pull/1561) | staeckel-focal-length | 2026-09-25 | PerfectEllipsoidPotential: the focal length of an axisymmetric oblate perfect ellipsoid |
 | [#1566](https://github.com/jobovy/galpy/pull/1566) | feat/backends | 2026-09-25 | kingdf: d/dW0 under jax.jit (diffrax) and torch.compile |
+| [#1567](https://github.com/jobovy/galpy/pull/1567) | feat/backends | 2026-09-26 | orbit: C integrators under torch.compile (and no silent detach) |
+| [#1569](https://github.com/jobovy/galpy/pull/1569) | feat/backends | 2026-09-26 | orbit: method='torchode', a torch.compile-able in-backend integrator |
+| [#1572](https://github.com/jobovy/galpy/pull/1572) | feat/backends | 2026-09-26 | kingdf: correct second (and higher) W0-derivatives on jax and torch |
+| [#1573](https://github.com/jobovy/galpy/pull/1573) | feat/backends | 2026-09-26 | tests: whole workflows under jax.jit / torch.compile, value and gradient |

@@ -7,20 +7,15 @@
 
 ## Now
 
-    feat/backends   7236d252c   (= #1566)
-    merged since the last snapshot: stack #1548 -- #1556, #1557, #1558,
-    #1559, #1566 (all squash-merged by Jo)
+    feat/backends   ee3eff6c6   (= #1573)
+    merged: stack #1570 -- #1567 (compiled C-integrator orbits, 2.14
+    singledispatchmethod fix), #1569 (method="torchode" + CI install + extra),
+    #1572 (kingdf second W0-derivatives), #1573 (compile-workflow tests).
+    closed: #1571 (premise was stale bisect state).
 
-## Open PRs -- stack #1570 (merge with `gh stack merge`)
+## Open PRs
 
-| PR | what | CI |
-|----|------|----|
-| #1567 | torch.compile of C-integrator orbits (routing + no silent detach) + torch 2.14 singledispatchmethod recursion fix | running |
-| #1569 | `method="torchode"`: compilable torch in-backend integrator; inductor tensor-alpha rtol workaround; get_namespace torch fast path | running |
-
-#1569 NEEDS JO: workflow edit adding `torchode` to the torch install lines
-(build.yml:350, backend-tests.yml:290) -- patch in the PR body. Until then its
-tests self-skip on CI and the torchode lines show as uncovered.
+none.
 
 ## What is differentiable now (this round)
 
@@ -37,17 +32,14 @@ tests self-skip on CI and the torchode lines show as uncovered.
 
 ## Next
 
-1. Jo's decision: eddingtondf numpy fE wrong within ~1e-3 of Emin (quad over
-   [0, 0.5/rphi]; NFW gives large NEGATIVE values at 63/202 knots). Blocks
-   OM jit sampling. Fixing changes numpy output there.
-2. Jo's decision (from #1554/#1555): edge values NaN on numpy too; TwoPower
-   Phi cancellation below r/a ~ 1e-5.
-3. Jo's decision (#1569): torchode in the galpy[torch] extra? (pins typeguard 2.x)
-4. Parked: kingdf torch path via torchode ("revisit kingdf later").
-5. RETRACTED: "torch 2.14 cannot compile linalg.solve" was stale compiler-bisector
-   state in my local inductor cache (clean cache: compiles fine). #1571 built on
-   it -> recommend closing. Compiled torch stream tracks DO fail, for an older
-   reason (streamTrack's numpy fit path).
+1. Jo's decision: eddingtondf numpy fE wrong near Emin (blocks OM jit sampling).
+2. Jo's decision: numpy NaN edge values; TwoPower Phi cancellation r/a < 1e-5.
+3. Item 4: stream code (streamspraydf/streamgapdf/streamdf) on torchode for
+   compiled torch streams.
+4. The three strict xfails in test_backend_compile_workflows.py: torch spray ->
+   streamTrack (numpy fit path), torch qdf density (fake-tensor 0-d indexing in
+   interpolate.py), jax Orbit.E at a traced time.
+5. eager jax.grad of kingdf.fE takes ~2 min (pre-existing).
 
 ## Recurring traps this round
 

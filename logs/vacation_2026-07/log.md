@@ -60552,3 +60552,12 @@ errors). Surfaced because pytest (fresh cache dir via conftest) passed what a
 plain script failed. With a clean cache, 2.14 compiles all of them forward and
 backward. #1571 rests on it (recommend closing); #1567's corrected. The 2.14
 `singledispatchmethod` recursion is real (reproduces clean, and on CI).
+
+### 2026-09-26 -- stack #1570 landed
+
+#1567, #1569, #1572, #1573 merged; #1571 closed. #1573 adds
+tests/test_backend_compile_workflows.py (whole workflows under jax.jit /
+torch.compile, value + gradient; 13 pass, 3 strict-xfail gaps). Its first CI
+run killed the py3.14 shard: under --cov, a dynamo frame in an expected
+exception's traceback had tb_lineno=None and pytest's report crashed
+(INTERNALERROR); compile errors are now re-raised from the test frame.
