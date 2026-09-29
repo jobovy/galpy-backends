@@ -13,18 +13,17 @@
 
 ## Open PRs
 
-    stack #1581 (merge bottom-up, back to back):
-      #1578 backend/potential-edge-limits  5c7804e18  (+restore commit: the
-            rebuild had reverted stack #1577's 11 files)  -- alone red on
-            #1586's eddington tests (expected, fixed by #1579)
-      #1579 backend/eddington-fE-near-Emin a74306a18
-      #1594 backend/spherical-relative-problem 8372ca233 -- ports main's
-            #1527/#1553 relative radial problem; retires the 8 xfails
-    #1593 backend/replace-compile-optouts (streamTrack fit + qdf ctor compile)
-    pre-commit.ci adds 2 blank lines in actionAngleStaeckel.py to every PR
-    (my rebase merge dropped them): identical hunks, no conflict.
-    Remote scratch branches (ruleset blocks my delete): backend/feat-backends-
-    onto-main, backend/*-rebuilt -- Jo to delete.
+    stack #1581:
+      #1578 backend/potential-edge-limits  c603f266f -- backend side of main's
+            #1585 AND #1586 (#1579 folded in by fast-forward; GitHub marked
+            #1579 merged). Green on its own is required: feat/backends'
+            ruleset requires all-clear. Also drops main's dead _smallr.py
+            (uncovered 14 -> 49 otherwise).
+      #1594 backend/spherical-relative-problem 37dc7b6f1 (on #1578)
+    #1593 backend/replace-compile-optouts: red on feat/backends' base
+            failures until #1578 lands; then rebase + rerun.
+    pre-commit.ci adds 2 blank lines in actionAngleStaeckel.py to every PR.
+    Remote scratch branches (ruleset blocks my delete): Jo to delete.
 
 ## What is differentiable now (this round)
 
