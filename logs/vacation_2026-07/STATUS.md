@@ -30,16 +30,21 @@ none.
 * psd_project (#1550): exact; the old frozen gradient was 77-210% off
   (wrong sign) whenever it clipped.
 
-## Next
+## Next (2026-09-28, agreed with Jo)
 
-1. Jo's decision: eddingtondf numpy fE wrong near Emin (blocks OM jit sampling).
-2. Jo's decision: numpy NaN edge values; TwoPower Phi cancellation r/a < 1e-5.
-3. Item 4: stream code (streamspraydf/streamgapdf/streamdf) on torchode for
-   compiled torch streams.
-4. The three strict xfails in test_backend_compile_workflows.py: torch spray ->
-   streamTrack (numpy fit path), torch qdf density (fake-tensor 0-d indexing in
-   interpolate.py), jax Orbit.E at a traced time.
-5. eager jax.grad of kingdf.fE takes ~2 min (pre-existing).
+1. Jo lands stack #1577 (#1574, #1575, #1584). NOT #1578/#1579.
+2. Rebase feat/backends onto main (19 main commits incl. #1585/#1586; 32 files
+   changed on both sides, 194 of 467 commits touch them) on a scratch branch
+   backend/feat-backends-onto-main; #1585/#1586 files resolved to the
+   feat/backends side; verify (per-file diff vs main, full numpy + backend
+   suites, CI on the branch); then force-push with lease.
+3. Rebuild #1578/#1579 on the rebased branch as the backend-only delta (the
+   numpy/C parts are on main); land right after step 2.
+4. IMMEDIATELY after: replace the torch.compile opt-outs -- streamTrack fit
+   (#1575: run the jit-native recipe on torch) and the qdf constructor (#1574:
+   dynamo-safe setup). Tests differentiating the fit/constructor inputs.
+5. Open for Jo: TwoPower forces/second derivatives near beta=3 and at large r
+   (also on main).
 
 ## Recurring traps this round
 
