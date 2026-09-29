@@ -26,8 +26,9 @@
       backend/potential-edge-limits-rebuilt  ca3cd41ef  (-> #1578)
       backend/eddington-fE-near-Emin-rebuilt f9c566d11  (-> #1579; also
         main's Emin divergence criterion ported to the backend fE)
-    CI round 3 running (runs 36524300846/867/872/889). Rounds 1-2 failed on
-    the fixes above. All of main's new tests pass locally under jax+torch.
+    CI round 3 ALL GREEN on f9c566d11 (incl. all-clear, codecov). My
+    force-push of feat/backends was DECLINED by the branch ruleset
+    (non_fast_forward): WAITING ON JO to push ffd411667 with lease 60310a179.
 
     Prepared (local, not pushed): backend/replace-compile-optouts in
     /var/tmp/stc2, on ffd411667: streamTrack fit compiles (traced recipe;

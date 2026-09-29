@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-21
+# Vacation status snapshot — 2026-09-25
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,69 +7,67 @@
 
 ## Now
 
-    feat/backends   1a1e2211d   (= #1534)
-    merged since the last snapshot:
-      #1530 dynfric v coercion
-      #1531 osipkovmerritt dM/dE (panel split + support edge + cosine map)
-      #1532 Orbit accessors (+ _pot_grad_namespace)
-      #1533 Spline1D vector-valued + bc default (not-a-knot for n>=4)
-      #1534 Spline1D consumers (streamTrack dual repr, SCF eval_ppoly clone)
+    feat/backends   ee3eff6c6   (= #1573)
+    merged: stack #1570 -- #1567 (compiled C-integrator orbits, 2.14
+    singledispatchmethod fix), #1569 (method="torchode" + CI install + extra),
+    #1572 (kingdf second W0-derivatives), #1573 (compile-workflow tests).
+    closed: #1571 (premise was stale bisect state).
 
 ## Open PRs
 
-| PR | what | state |
-|----|------|-------|
-| #1535 | interpRZPotential -> Spline2D, Orbits one-spline-per-orbit | green; codecov phantom resolved (18 sessions, 99.97%), all-clear re-run |
-| #1536 | jit as a CI matrix axis + traced-share reporting | 104 jax-jit test_quantity failures FIXED (see below); re-running |
-| #1537 | qdf moments w.r.t. potential params + `_rg` array branch | **green 106/106** |
-| #1538 | actionAngle grid classes delegate under a potential gradient | building |
-| #1539 | evolveddiskdf: torch `xp.where` guard on odd moments | building |
+none.
 
-## The differentiability audit sweep is COMPLETE
+## What is differentiable now (this round)
 
-Write-up: `plan/differentiability_audit_followups_2026-09-19.md`.
+* constantbetadf: fE and construction w.r.t. potential params, torch AND eager
+  jax (#1543, #1546). NOT under jax.jit (calibration loop).
+* spherical sampling with a backend key (constantbetadf, eddingtondf): r and v
+  vs FD to 4.3e-6 / 7.7e-5; constantbeta Hernquist d r_i/da = r_i/a to 1e-13
+  (#1547). Four defects: r=0 mass knot NaN, detached CMF radii (double
+  count), frozen f(E) table (11% off, silent), frozen p(v|r) extent (0.7%).
+* kingdf W0 (#1551): all tables vs tight FD to <1e-7.
+* dynamical friction w.r.t. host (#1549): sigma_r 9e-9, Rforce 1.4e-7.
+* psd_project (#1550): exact; the old frozen gradient was 77-210% off
+  (wrong sign) whenever it clipped.
 
-Areas swept this round and what they produced:
+## Next (2026-09-28, agreed with Jo)
 
-* **actionAngle grid variants** (T4g) — both raised in `__init__` for ANY
-  gradient-carrying potential. Fixed by delegating to the exact class (#1538).
-  `stop_gradient` on the nodes was rejected: it returns a silently ZERO
-  gradient, worse than the error.
-* **evolveddiskdf** (T4i, T4i-b) — two findings. T4i-b (torch `xp.where` on a
-  numpy-bool condition, odd moments only) fixed in #1539. T4i (the gate asks
-  `is_backend_array(R)`, so a potential-parameter gradient with a float R is
-  silently lost) is DEFERRED with its reasoning recorded: the guard's intent is
-  sound and documented (task #117), only the predicate is too narrow, and
-  widening it may route onto genuinely unmigrated paths.
-* **DF `sample()`** (T4j) — raises under a gradient-carrying potential. A crash,
-  not a wrong number; differentiable sampling is already a roadmap item.
-* **streamspraydf** — needs nothing. It already probes for a backend
-  theta/mass/stripping_pdf and discriminates a merely-forced context.
+1. Jo lands stack #1577 (#1574, #1575, #1584). NOT #1578/#1579.
+2. Rebase feat/backends onto main (19 main commits incl. #1585/#1586; 32 files
+   changed on both sides, 194 of 467 commits touch them) on a scratch branch
+   backend/feat-backends-onto-main; #1585/#1586 files resolved to the
+   feat/backends side; verify (per-file diff vs main, full numpy + backend
+   suites, CI on the branch); then force-push with lease.
+3. Rebuild #1578/#1579 on the rebased branch as the backend-only delta (the
+   numpy/C parts are on main); land right after step 2.
+4. IMMEDIATELY after: replace the torch.compile opt-outs -- streamTrack fit
+   (#1575: run the jit-native recipe on torch) and the qdf constructor (#1574:
+   dynamo-safe setup). Tests differentiating the fit/constructor inputs.
+5. Open for Jo: TwoPower forces/second derivatives near beta=3 and at large r
+   (also on main).
 
-## The one that nearly went wrong
+## Recurring traps this round
 
-#1536's jax-jit `test_quantity` shard failed 104 tests. The shape matched a
-remembered "Quantity is not traceable" boundary and my first instinct was to
-ledger them. That would have repeated a mistake this project has already made
-and retracted once.
-
-It was not a galpy defect at all: **this PR's own traced-share counter** imports
-galpy inside `pytest_configure`, which runs before test modules are imported,
-locking in the default `astropy-units=False`. `conversion.py` binds `_APY_UNITS`
-as an import-time copy, so `test_quantity.py`'s module-level config set never
-reaches it, and every `physical_conversion` returned a bare array with the
-CORRECT value and no units. Moved the install to `pytest_collection_finish`:
-104 failed -> 344 passed, and the counter still reports 92.7% traced.
-
-Two discriminators did the work and are worth reusing: the pass/fail ribbon in
-file order (215 passes AFTER the first failure => not a leaked global), and
-checking that today's symptom actually matched the remembered one (it did not —
-units silently absent, not a tracer error).
+* **Anomaly mode flags inner torch.func.grad backwards in the FORWARD pass.**
+  The "DivBackward0 in the startt calibration" chased for days was that; the
+  real NaN was a PowBackward0 in the outer backward (Hernquist mass at r=0).
+  Use check_nan=False forward, True only for the outer backward.
+* **A table built at a detached parameter + an attached conversion counts the
+  gradient twice.** Pick one parametrisation and attach consistently.
+* **Frozen knots are not free when the values are differentiated**: the knot
+  motion is an O(interpolation) derivative error that a small derivative
+  amplifies (7% on p(v|r)).
+* **FD on a noisy plain path** (scipy-adaptive fE) reads as several % at
+  h=1e-4; FD on the gradient-carrying path instead.
+* **Concurrent local suites cause 300 s cap timeouts** that look like
+  regressions; re-time the test alone on both branches before believing it.
 
 ## Standing constraints
 
 * Jo merges the main PRs. I can merge develop, not main.
 * I **cannot** edit `.github/workflows/**` — provide patches; Jo applies.
 * Never name a working branch `feat/...` — use `backend/...`.
-* numpy must stay byte-identical; coverage never decreases, not one line.
-* Rebase only, no merge commits. Cancel the PRIOR sha's CI on push.
+* numpy must stay byte-identical (flag any exception: the King tolerance is
+  one, approved); coverage never decreases, not one line.
+* Rebase only, no merge commits. Real `gh stack`s for dependent PRs. Cancel
+  the PRIOR sha's CI on push.
