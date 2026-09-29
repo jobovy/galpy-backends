@@ -7,38 +7,24 @@
 
 ## Now
 
-    feat/backends   60310a179   (OLD tip; to be force-pushed, lease on this sha)
-    stack #1577 (#1574/#1575/#1584) merged.
-
-    REBASE IN CI: draft #1592 (head backend/eddington-fE-near-Emin-rebuilt,
-    base backend/feat-backends-onto-main). Stack of scratch branches:
-      backend/feat-backends-onto-main   ffd411667  (= new feat/backends)
-        470 replayed commits + port commit 778d8ed54 + fixes:
-        a6772dee9 _PVRInterpolator grid=True default (main #1568 test)
-        5c067f9cf backend n_new_pvr=1000 (#1568), x2deriv @backend_input
-                  (#1519), _force2deriv->_x2deriv in tests
-        2f7c66ac2 clamp backend inverse-CDF weight (XLA reciprocal ulp)
-        f8d27a601 test_potential: main's tests as_numpy under forced
-        98719c7c4 backend_skip: main's 12 new VerticalInverse tests
-        ffd411667 spherical: backend epicycle branch (#1527); 8 main
-                  near-circular/small-orbit tests LEDGERED (relative
-                  problem not ported -> NEXT PR)
-      backend/potential-edge-limits-rebuilt  ca3cd41ef  (-> #1578)
-      backend/eddington-fE-near-Emin-rebuilt f9c566d11  (-> #1579; also
-        main's Emin divergence criterion ported to the backend fE)
-    CI round 3 ALL GREEN on f9c566d11 (incl. all-clear, codecov). My
-    force-push of feat/backends was DECLINED by the branch ruleset
-    (non_fast_forward): WAITING ON JO to push ffd411667 with lease 60310a179.
-
-    Prepared (local, not pushed): backend/replace-compile-optouts in
-    /var/tmp/stc2, on ffd411667: streamTrack fit compiles (traced recipe;
-    inductor argmin/where-inf bug worked around), qdf ctor compiles (only
-    the constant rg table opt-out). Push after feat/backends is updated.
+    feat/backends   ffd411667   (rebased onto main; Jo force-pushed 2026-09-29)
+    RED on its own on main's #1585/#1586 tests until #1578 + #1579 land (the
+    rebase kept feat's side of those files; the ports ride in those PRs).
 
 ## Open PRs
 
-#1578, #1579 (to be force-updated to the rebuilt branches), #1592 (draft,
-close after the force-push).
+    stack #1581 (merge bottom-up, back to back):
+      #1578 backend/potential-edge-limits  5c7804e18  (+restore commit: the
+            rebuild had reverted stack #1577's 11 files)  -- alone red on
+            #1586's eddington tests (expected, fixed by #1579)
+      #1579 backend/eddington-fE-near-Emin a74306a18
+      #1594 backend/spherical-relative-problem 8372ca233 -- ports main's
+            #1527/#1553 relative radial problem; retires the 8 xfails
+    #1593 backend/replace-compile-optouts (streamTrack fit + qdf ctor compile)
+    pre-commit.ci adds 2 blank lines in actionAngleStaeckel.py to every PR
+    (my rebase merge dropped them): identical hunks, no conflict.
+    Remote scratch branches (ruleset blocks my delete): backend/feat-backends-
+    onto-main, backend/*-rebuilt -- Jo to delete.
 
 ## What is differentiable now (this round)
 

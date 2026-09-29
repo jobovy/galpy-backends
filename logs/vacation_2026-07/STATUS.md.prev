@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-25
+# Vacation status snapshot — 2026-09-29
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,15 +7,38 @@
 
 ## Now
 
-    feat/backends   ee3eff6c6   (= #1573)
-    merged: stack #1570 -- #1567 (compiled C-integrator orbits, 2.14
-    singledispatchmethod fix), #1569 (method="torchode" + CI install + extra),
-    #1572 (kingdf second W0-derivatives), #1573 (compile-workflow tests).
-    closed: #1571 (premise was stale bisect state).
+    feat/backends   60310a179   (OLD tip; to be force-pushed, lease on this sha)
+    stack #1577 (#1574/#1575/#1584) merged.
+
+    REBASE IN CI: draft #1592 (head backend/eddington-fE-near-Emin-rebuilt,
+    base backend/feat-backends-onto-main). Stack of scratch branches:
+      backend/feat-backends-onto-main   ffd411667  (= new feat/backends)
+        470 replayed commits + port commit 778d8ed54 + fixes:
+        a6772dee9 _PVRInterpolator grid=True default (main #1568 test)
+        5c067f9cf backend n_new_pvr=1000 (#1568), x2deriv @backend_input
+                  (#1519), _force2deriv->_x2deriv in tests
+        2f7c66ac2 clamp backend inverse-CDF weight (XLA reciprocal ulp)
+        f8d27a601 test_potential: main's tests as_numpy under forced
+        98719c7c4 backend_skip: main's 12 new VerticalInverse tests
+        ffd411667 spherical: backend epicycle branch (#1527); 8 main
+                  near-circular/small-orbit tests LEDGERED (relative
+                  problem not ported -> NEXT PR)
+      backend/potential-edge-limits-rebuilt  ca3cd41ef  (-> #1578)
+      backend/eddington-fE-near-Emin-rebuilt f9c566d11  (-> #1579; also
+        main's Emin divergence criterion ported to the backend fE)
+    CI round 3 ALL GREEN on f9c566d11 (incl. all-clear, codecov). My
+    force-push of feat/backends was DECLINED by the branch ruleset
+    (non_fast_forward): WAITING ON JO to push ffd411667 with lease 60310a179.
+
+    Prepared (local, not pushed): backend/replace-compile-optouts in
+    /var/tmp/stc2, on ffd411667: streamTrack fit compiles (traced recipe;
+    inductor argmin/where-inf bug worked around), qdf ctor compiles (only
+    the constant rg table opt-out). Push after feat/backends is updated.
 
 ## Open PRs
 
-none.
+#1578, #1579 (to be force-updated to the rebuilt branches), #1592 (draft,
+close after the force-push).
 
 ## What is differentiable now (this round)
 
