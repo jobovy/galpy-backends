@@ -7,23 +7,17 @@
 
 ## Now
 
-    feat/backends   ffd411667   (rebased onto main; Jo force-pushed 2026-09-29)
-    RED on its own on main's #1585/#1586 tests until #1578 + #1579 land (the
-    rebase kept feat's side of those files; the ports ride in those PRs).
+    feat/backends   03d417e9d   rebased onto main (ffd411667) + #1578 (backend
+    side of main's #1585/#1586, #1579 folded in) + #1594 (spherical relative
+    radial problem; the rebase's 8 xfails retired). Coverage 14 misses (as
+    before the rebase).
 
 ## Open PRs
 
-    stack #1581:
-      #1578 backend/potential-edge-limits  c603f266f -- backend side of main's
-            #1585 AND #1586 (#1579 folded in by fast-forward; GitHub marked
-            #1579 merged). Green on its own is required: feat/backends'
-            ruleset requires all-clear. Also drops main's dead _smallr.py
-            (uncovered 14 -> 49 otherwise).
-      #1594 backend/spherical-relative-problem 37dc7b6f1 (on #1578)
-    #1593 backend/replace-compile-optouts: red on feat/backends' base
-            failures until #1578 lands; then rebase + rerun.
-    pre-commit.ci adds 2 blank lines in actionAngleStaeckel.py to every PR.
-    Remote scratch branches (ruleset blocks my delete): Jo to delete.
+    #1593 backend/replace-compile-optouts 90ac68fd5 -- rebased onto 03d417e9d,
+          CI running (streamTrack fit + qdf ctor compile under torch.compile).
+    Remote scratch branches (ruleset blocks my delete): backend/feat-backends-
+    onto-main, backend/*-rebuilt, backend/eddington-fE-near-Emin -- Jo.
 
 ## What is differentiable now (this round)
 
