@@ -14,10 +14,18 @@
 
 ## Open PRs
 
-    #1593 backend/replace-compile-optouts 90ac68fd5 -- rebased onto 03d417e9d,
-          CI running (streamTrack fit + qdf ctor compile under torch.compile).
-    Remote scratch branches (ruleset blocks my delete): backend/feat-backends-
-    onto-main, backend/*-rebuilt, backend/eddington-fE-near-Emin -- Jo.
+    #1593 backend/replace-compile-optouts 8422e8ae4 -- streamTrack fit + qdf
+          ctor compile; inductor tol 1e-11/1e-9 (CI CPU vectorizes differently)
+    #1596 (main) backend/twopower-forces-main 8e576af03 -- TwoPower forces/2nd
+          derivs/mass from the incomplete beta (numpy+C); twin of #1597
+    #1597 backend/twopower-forces 1675c3c7a -- same + backends; C commit
+          byte-identical to #1596's (drops on next rebase)
+    #1598 backend/om-sample-jit 7663a8692 -- OM sample under jax.jit; traced
+          r(Phi) log-bisection; constantbetadf backend fE D-form (no calibration)
+    Adversarial review of #1596/#1597 running (background agent).
+    Known pre-existing: test_sphericaldf dehnencore_in_nfw_*_directint fail out
+    of file order (uses dfh._fE_interp built by an earlier test).
+    Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)
 
