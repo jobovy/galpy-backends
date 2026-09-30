@@ -60674,3 +60674,23 @@ to t = 0 and needs no lower limit. vs Hernquist's closed form: 7.7e-12 (was
 Orbit.rperi/rap/zmax(analytic=True) through the backend C-STM; vectorized
 stream track; kingdf under torch.compile if easy; then GPU validation. qdf
 sampler and SCF from_density later; the ledger does not need to reach zero.
+
+## 2026-09-30
+
+- #1596/#1597: codecov/patch flagged galpy/util/special.py:195 (all-NaN array
+  branch of incomplete_beta_k_series); added an all-NaN array case to
+  test_twopower_nan_and_infinite_radius on both (c07c3295c / a8eaee5e7).
+- #1602 opened (stream-track vmap, agent work reviewed). Root cause confirmed:
+  adaptive steps + DirectAdjoint under vmap -> 7% off d/dq; shared constant
+  steps (100/period) exact. C-STM pure_callback vmap_method -> "sequential"
+  (c_stm_forward loops orbits in python anyway, so no cost).
+- GPU validation (torch, TITAN Xp): per-file sweep of 22 backend files found
+  ~200 failures in ~15 classes; almost all "numpy reads a CUDA tensor"
+  (implicit numpy.asarray/numpy.array/ndarray+Tensor on CUDA). Fixed with a
+  strict galpy.backend.to_host (x.cpu(), keeps autograd so numpy still refuses
+  a grad tensor exactly as on CPU -- as_numpy would silently detach). Other
+  classes: autograd device thread ignores set_default_device (king_ode),
+  torch.Generator on CPU vs CUDA default, dynamo can't trace numpy under
+  set_default_device's TorchFunctionMode (torch 2.12 AND 2.14; harness sets
+  trace_numpy=False), test-side .numpy() on CUDA (42 sites -> .cpu().numpy()).
+  GPU memory: 12 GB fills with 5 concurrent workers -> OOM; don't overlap runs.

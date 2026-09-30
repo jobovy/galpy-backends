@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-29
+# Vacation status snapshot — 2026-09-30
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -14,15 +14,32 @@
 
 ## Open PRs
 
-    #1593 backend/replace-compile-optouts 8422e8ae4 -- streamTrack fit + qdf
+    #1593 backend/replace-compile-optouts 1ee4d6b08 -- streamTrack fit + qdf
           ctor compile; inductor tol 1e-11/1e-9 (CI CPU vectorizes differently)
-    #1596 (main) backend/twopower-forces-main 8e576af03 -- TwoPower forces/2nd
-          derivs/mass from the incomplete beta (numpy+C); twin of #1597
-    #1597 backend/twopower-forces 1675c3c7a -- same + backends; C commit
-          byte-identical to #1596's (drops on next rebase)
+    #1596 (main) backend/twopower-forces-main c07c3295c -- TwoPower forces/2nd
+          derivs/mass from the incomplete beta (numpy+C); Codex + adversarial
+          review fixed; twin of #1597
+    #1597 backend/twopower-forces a8eaee5e7 -- same + backends; util/C files
+          byte-identical to #1596's (drop on next rebase)
     #1598 backend/om-sample-jit 7663a8692 -- OM sample under jax.jit; traced
           r(Phi) log-bisection; constantbetadf backend fE D-form (no calibration)
-    Adversarial review of #1596/#1597 running (background agent).
+    #1599 backend/orbit-analytic-turning-points 62c241b59 -- Orbit.rperi/rap/
+          zmax/e(analytic=True) backend-native
+    #1600 backend/kingdf-compile 42656eaa1 -- kingdf under torch.compile
+          (stacked on #1593's branch; stack #1601)
+    #1602 backend/streamdf-vmap-track 822a21b51 -- stream track chunks under
+          jax.vmap; shared constant steps keep d/dparam exact (adaptive steps +
+          DirectAdjoint were the vmap gradient bug); grad 1.2-1.8x faster
+    GPU validation: branch backend/gpu-validation (/var/tmp/gpuv, local only).
+          conftest --device cuda; to_host helper (strict CPU move, keeps
+          autograd) at implicit numpy conversions; Orbit.E coerces thiso;
+          king_ode anchored on W0.device (autograd's device thread ignores
+          set_default_device); torch RNG generator on the default device;
+          dynamo trace_numpy=False under --device cuda (dynamo mis-traces numpy
+          under set_default_device, torch 2.12-2.14). OPEN QUESTIONS for Jo:
+          numpy python integrators (dop853/odeint/leapfrog) under forced torch
+          on CUDA; eddington near-Emin grad 2.9e-8 on CUDA vs 2e-8 bar.
+          Orbit._setup_EccZmaxRperiRap CUDA fix waits for #1599 (same lines).
     Known pre-existing: test_sphericaldf dehnencore_in_nfw_*_directint fail out
     of file order (uses dfh._fE_interp built by an earlier test).
     Remote scratch branches (ruleset blocks my delete): Jo.
