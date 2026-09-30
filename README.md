@@ -465,3 +465,10 @@ number in the pair.
 | [#1569](https://github.com/jobovy/galpy/pull/1569) | feat/backends | 2026-09-26 | orbit: method='torchode', a torch.compile-able in-backend integrator |
 | [#1572](https://github.com/jobovy/galpy/pull/1572) | feat/backends | 2026-09-26 | kingdf: correct second (and higher) W0-derivatives on jax and torch |
 | [#1573](https://github.com/jobovy/galpy/pull/1573) | feat/backends | 2026-09-26 | tests: whole workflows under jax.jit / torch.compile, value and gradient |
+| [#1574](https://github.com/jobovy/galpy/pull/1574) | feat/backends | 2026-09-29 | qdf under torch.compile; Orbit.E at a traced time under jax.jit |
+| [#1575](https://github.com/jobovy/galpy/pull/1575) | feat/backends | 2026-09-29 | streamTrack: spray -> track under torch.compile |
+| [#1584](https://github.com/jobovy/galpy/pull/1584) | feat/backends | 2026-09-29 | backend: torchode default; stream workflows fully compile under inductor |
+| [#1585](https://github.com/jobovy/galpy/pull/1585) | main | 2026-09-28 | potentials: machine-precision small r (NFW, Burkert, TwoPower), finite edge limits, Staeckel midplane vmin |
+| [#1586](https://github.com/jobovy/galpy/pull/1586) | main | 2026-09-28 | eddingtondf: f(E) accurate near Emin (NFW was NaN/negative there) |
+| [#1578](https://github.com/jobovy/galpy/pull/1578) | feat/backends | 2026-09-29 | potentials, eddingtondf: backend side of #1585 and #1586 (with #1579 folded in) |
+| [#1594](https://github.com/jobovy/galpy/pull/1594) | feat/backends | 2026-09-29 | actionAngleSpherical: the backend solves main's relative radial problem (retires the rebase's 8 xfails) |

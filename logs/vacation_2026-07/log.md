@@ -60561,3 +60561,116 @@ torch.compile, value + gradient; 13 pass, 3 strict-xfail gaps). Its first CI
 run killed the py3.14 shard: under --cov, a dynamo frame in an expected
 exception's traceback had tb_lineno=None and pytest's report crashed
 (INTERNALERROR); compile errors are now re-raised from the test frame.
+
+### 2026-09-27/28 -- compile workflows (#1574/#1575/#1584) and main's small-r pair (#1585/#1586)
+
+**Stack #1577 (#1574, #1575, #1584), merged 2026-09-29.** Filled the gaps
+test_backend_compile_workflows (#1573) exposed. #1574: qdf under torch.compile
+and Orbit.E at a traced time under jax.jit. #1575: spray -> track under
+torch.compile. #1584: torchode is the default torch in-backend integrator
+(`inbackend_ode_method`), and the stream workflows compile under inductor.
+Found an inductor miscompile on the way: the backward of clamped-index gathers
+(accumulating index_put with repeated edge indices) in a large graph, spray
+gradient 4e-6 off, value exact; fixed with pad+slice shifts in
+solve_tridiagonal. Located by counting "lowerings" in a patched
+CompilerBisector.disable_subsystem (torch's own bisector numbers are not stable
+across runs). #1574/#1575 used `@untraceable_setup` opt-outs for the qdf
+constructor and the streamTrack fit; Jo read those as giving up, landed the
+stack on condition they are replaced right after the rebase (-> #1593).
+
+**Main: #1585 (potentials small r) and #1586 (eddingtondf near Emin), merged
+2026-09-28.** The numpy/C halves of the old #1578/#1579 (Jo: numpy fixes must
+reach main, since feat/backends may never merge). Codex review points were
+fixed on both sides: TwoPower Phi as incomplete betas (was up to 4e5 off near
+beta = 3), alpha -> 2, mass(inf) at large beta, NFW speed, Burkert Rzderiv;
+eddingtondf rmax = inf, f(Emin) = +inf for a cusp, Plummer near Emin.
+
+### 2026-09-29 -- feat/backends rebased onto main
+
+470 feat commits replayed onto main's 19 (merge base d243f989b). Conflicts
+resolved by rule: take feat's side for files main changed only via
+#1585/#1586 (their ports ride in the rebuilt #1578/#1579), main's
+`_Delta -> _delta` rename in KuzminKutuzov, and five files deferred to one
+final port commit (actionAngleSpherical, sphericaldf, linearPotential,
+actionAngleVerticalInverse, test_sphericaldf) via `git merge-file`. numpy
+parity vs a clean main build: bit-identical except NFW (1-2 ulp, from #1578's
+formula text; 1.6e-9 in actions, 6e-5 in fE only within 1e-9 of Emin).
+
+CI needed three rounds on draft #1592 (the full stack). Every failure was
+locally predictable -- main's NEW tests running under --backend jax/torch:
+backend twin of a changed numpy constant (#1568 n_new_pvr 100 -> 1000), a jax
+reciprocal-multiply putting the p(v|r) table at 1 + 8e-12 (weight now clamped),
+x2deriv entry points without @backend_input, feat tests on the renamed
+`_force2deriv`, numpy reductions on tensors, 12 new VerticalInverse tests
+(backend_skip), and main's near-circular spherical algorithm with no backend
+side (ported its epicycle branch; 8 precision tests ledgered). Lesson saved:
+run every main-added test under both forced backends BEFORE pushing a rebase.
+
+My force-push of feat/backends was declined by the branch ruleset
+(non_fast_forward); Jo pushed it (ffd411667). Two misses surfaced after:
+(1) the rebuilt #1578 had silently REVERTED stack #1577's 11 files -- its net
+diff was taken against a pre-#1577 base, and #1592 stayed green because the
+matching tests were reverted too; restored in a new commit. (2) main's
+`galpy/potential/_smallr.py` came along unused (feat's potentials use the
+galpy.backend helpers): 35 uncovered lines, 14 -> 49; deleted. feat/backends
+was red on its own until #1578/#1579 landed (the ports live there); #1579 was
+then folded into #1578 by fast-forward so #1578 could pass all-clear alone,
+and the stack re-linked as #1578 -> #1594 (a merged middle PR blocks
+`gh stack merge`).
+
+### 2026-09-29 -- #1594: actionAngleSpherical backend solves main's relative problem
+
+Retired the 8 xfails: every orbit's radial problem relative to a reference
+radius (circular orbit for near-circular, the point itself otherwise; E_rel =
+v_r^2/2 exactly), GL of the force within a window, radicand anchored at the
+turning points, azimuthal integrals in u = 1/r. Backend bugs found on the way:
+pericentre floor was an absolute 1e-9 (a tiny L's pericentre became the
+centre; main's floor is 1e-12 r), bisection xtol an absolute 2e-12 (misplaced
+a 1e-12 pericentre), adiabatic peri/apo test used the UNmodified L (circular
+planar orbit with vertical motion got J_r = 0). Unbound orbits now NaN
+throughout (was J_r = 0, r_ap = -3e300). The exactly-circular radial phase
+is 0 or pi by the ulp sign of r_c - r even on numpy; backend pins 0 and the
+parity test compares it modulo pi. d/d(amp, a) of J_r, frequencies, angles vs
+h-converged numpy differences: 5e-9 .. 1e-6 (numpy's adaptive quadrature noise
+makes h = 1e-6 differences useless). Also: a dead `_radicand` (codecov's one
+line) removed.
+
+### 2026-09-29 -- open: #1593, #1596/#1597, #1598
+
+**#1593 (compile opt-outs replaced).** streamTrack: torch.compile routes the fit
+to the traced recipe (as jax.jit). Needed: `under_trace` (dynamo traces
+as_numpy rather than raising), interp_linear lifting a numpy query (torch
+searchsorted rejects ndarrays), math.sqrt for ntp. Found a torch 2.12 CPU
+inductor miscompile: argmin over where(mask, x, inf) returns wrong indices
+(37/40 standalone; fixed in 2.14) -- the closest-point search now selects the
+arm's columns. qdf ctor: only the constant rg table stays opaque. Inductor
+tolerance 1e-11/1e-9 (the traced fit measured 1.3e-13 locally, 2.0e-12 on a CI
+runner: per-CPU vectorization).
+
+**#1596 (main) / #1597 (feat): TwoPower forces, 2nd derivatives, mass from the
+incomplete beta** (background agent). dPhi/dr / r = M/(xa)^3 and Poisson for
+Phi''; alpha ~ 1 / 0 cancellations removed in closed form below the split.
+Before 6e-4..1e-3 off and 347 NaN over a 171 x 45 survey; after <= 3e-14 in
+python, C, jax, torch. Codex found alpha > beta near beta = 3 (log1p(-2) in the
+small-|q| series; python looped, C NaN) and an unbounded cache; fixed with a
+log-free recurrence for (R_k - 1)/q and LRU(256). Jo: custom special functions
+belong in utility modules -> galpy.util.special (numpy), galpy/util/
+incomplete_beta.c/.h (C), galpy.backend.special.incomplete_beta (jax/torch);
+the numpy/C files are byte-identical on both PRs so the next rebase drops them.
+
+**#1598: osipkovmerrittdf.sample under jax.jit.** The traced r(Phi) root-find
+(`_RphiRootFind`, used whenever the potential is traced) bisected linearly on
+[1e-6 a, 1e6 a] to an absolute 2e-12: within ~1e-6 of Emin it returned
+-1.2e12, so 26 f(Q) knots were non-finite and sample refused under jit. Now
+log-r bisection from 1e-12 below the grid: exact near Emin; jit vs eager 2.5e-8.
+The exact roots then flipped constantbetadf's traced calibration (first
+"nonzero" rung of a t-ladder -- a rounding detector, rungs at delta/r ~ 1e-13).
+Replaced it: the backend small-r integrand writes Phi(r) - E = delta * mean
+force (GL), which cancels the substitution's t-power exactly, so it is regular
+to t = 0 and needs no lower limit. vs Hernquist's closed form: 7.7e-12 (was
+1.7e-8 .. 2e-6; numpy 1e-8 .. 7e-5); jit vs eager 1e-15 (was 2.7e-8 / 7e-7).
+
+**Next (Jo, 2026-09-29):** remove the numpy islands that can be removed;
+Orbit.rperi/rap/zmax(analytic=True) through the backend C-STM; vectorized
+stream track; kingdf under torch.compile if easy; then GPU validation. qdf
+sampler and SCF from_density later; the ledger does not need to reach zero.
