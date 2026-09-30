@@ -7,43 +7,31 @@
 
 ## Now
 
-    feat/backends   03d417e9d   rebased onto main (ffd411667) + #1578 (backend
-    side of main's #1585/#1586, #1579 folded in) + #1594 (spherical relative
-    radial problem; the rebase's 8 xfails retired). Coverage 14 misses (as
-    before the rebase).
+    feat/backends   4599bdcba   rebased onto main (ffd411667) + #1578 + #1594 +
+    #1593 (streamTrack fit / qdf ctor compile) + #1600 (kingdf compile) +
+    #1598 (OM sample under jit; D-form constantbeta fE).
 
-## Open PRs
+## Open PRs (all CI green unless noted)
 
-    #1593 backend/replace-compile-optouts 1ee4d6b08 -- streamTrack fit + qdf
-          ctor compile; inductor tol 1e-11/1e-9 (CI CPU vectorizes differently)
     #1596 (main) backend/twopower-forces-main c07c3295c -- TwoPower forces/2nd
-          derivs/mass from the incomplete beta (numpy+C); Codex + adversarial
-          review fixed; twin of #1597
+          derivs/mass from the incomplete beta (numpy+C); twin of #1597
     #1597 backend/twopower-forces a8eaee5e7 -- same + backends; util/C files
           byte-identical to #1596's (drop on next rebase)
-    #1598 backend/om-sample-jit 7663a8692 -- OM sample under jax.jit; traced
-          r(Phi) log-bisection; constantbetadf backend fE D-form (no calibration)
     #1599 backend/orbit-analytic-turning-points 62c241b59 -- Orbit.rperi/rap/
           zmax/e(analytic=True) backend-native
-    #1600 backend/kingdf-compile 42656eaa1 -- kingdf under torch.compile
-          (stacked on #1593's branch; stack #1601)
     #1602 backend/streamdf-vmap-track 822a21b51 -- stream track chunks under
-          jax.vmap; shared constant steps keep d/dparam exact (adaptive steps +
-          DirectAdjoint were the vmap gradient bug); grad 1.2-1.8x faster
-    #1603 backend/gpu-validation 8efceee88 -- GPU (CUDA) validation: pytest
-          --device cuda; to_host (strict host move, keeps autograd) at ~20
-          implicit numpy conversions; device-independent torch draws (CPU
-          generator -> default device); Spline1D.derivative in-backend for
-          backend queries; Orbit.E thiso coercion; king_ode W0.device. torch
-          backend_* sweep: all green except hardware (no Triton on sm_61),
-          upstream torch (dynamo can't trace numpy under set_default_device --
-          torch 2.12 AND 2.14; torchode CUDA event under compile), fork+CUDA.
-          OPEN for Jo: python integrators under forced torch on CUDA; GPU
-          tolerances (eddington near-Emin 2.9e-8 vs 2e-8; sphericaldf jax-GPU
-          1-ulp bit-identity). rperi analytic on CUDA after #1599.
-          jax GPU sweep running; non-backend suites --device cuda not yet run.
-    CI 2026-09-30: #1593 #1598 #1599 #1600 green; #1596 Windows conda-403
-          flake rerun; #1597 #1602 running.
+          jax.vmap; shared constant steps keep d/dparam exact; grad 1.2-1.8x
+    #1603 backend/gpu-validation 6ec1706e8 (rebased onto 4599bdcba; CI running)
+          -- GPU (CUDA): pytest --device cuda; to_host (strict host move, keeps
+          autograd) at ~20 implicit numpy conversions; device-independent torch
+          draws; Spline1D.derivative in-backend for backend queries; Orbit.E
+          kinetic terms on the forced namespace; SCF alpha device anchor.
+          torch AND jax backend_* sweeps green except: hardware (no Triton on
+          sm_61), upstream torch (dynamo numpy under set_default_device, torch
+          2.12+2.14; torchode CUDA event), fork+CUDA. OPEN for Jo: python
+          integrators under forced torch on CUDA; GPU tolerances (eddington
+          near-Emin 2.9e-8 vs 2e-8; sphericaldf jax-GPU 1-ulp). rperi analytic
+          on CUDA after #1599. Non-backend suites --device cuda: running.
     Known pre-existing: test_sphericaldf dehnencore_in_nfw_*_directint fail out
     of file order (uses dfh._fE_interp built by an earlier test).
     Remote scratch branches (ruleset blocks my delete): Jo.

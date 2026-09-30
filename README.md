@@ -472,3 +472,6 @@ number in the pair.
 | [#1586](https://github.com/jobovy/galpy/pull/1586) | main | 2026-09-28 | eddingtondf: f(E) accurate near Emin (NFW was NaN/negative there) |
 | [#1578](https://github.com/jobovy/galpy/pull/1578) | feat/backends | 2026-09-29 | potentials, eddingtondf: backend side of #1585 and #1586 (with #1579 folded in) |
 | [#1594](https://github.com/jobovy/galpy/pull/1594) | feat/backends | 2026-09-29 | actionAngleSpherical: the backend solves main's relative radial problem (retires the rebase's 8 xfails) |
+| [#1593](https://github.com/jobovy/galpy/pull/1593) | feat/backends | 2026-09-30 | torch.compile: the streamTrack fit and the qdf constructor compile (replace the #1574/#1575 opt-outs) |
+| [#1600](https://github.com/jobovy/galpy/pull/1600) | feat/backends | 2026-09-30 | kingdf: W0 compiles under torch.compile (no opaque scipy solve) |
+| [#1598](https://github.com/jobovy/galpy/pull/1598) | feat/backends | 2026-09-30 | spherical DFs: osipkovmerrittdf.sample under jax.jit; exact traced r(Phi) near Emin; constantbetadf backend fE without the calibrated limit |
