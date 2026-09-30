@@ -13,11 +13,11 @@
 
 ## Open PRs
 
-    #1596 (main) backend/twopower-forces-main 0d08da2a9 -- TwoPower forces/2nd
+    #1596 (main) backend/twopower-forces-main 51ad82df4 -- TwoPower forces/2nd
           derivs/mass via incomplete beta; Codex rounds 1-4 addressed (alpha>beta
           hang, bounded caches, r=inf limits incl. beta=1 and beta=0, beta<0
-          rejected, amp=0, alpha>=beta+2 split, direct mass for alpha>=1.5)
-    #1597 backend/twopower-forces bc6efdb9b -- same + backends (beta<2 'hi'
+          NaN at r=inf only (round 5), amp=0, alpha>=beta+2 split, direct mass for alpha>=1.5)
+    #1597 backend/twopower-forces e44caac8b -- same + backends (beta<2 'hi'
           series sign fix; jit-vs-eager 3e-15 and alpha~3 forced-backend 1e-12
           bars approved by Jo)
     #1603 backend/gpu-validation 4b01c6fc3 -- GPU (CUDA) validation (rebased
@@ -25,7 +25,10 @@
           torchode/torchdiffeq; GPU-only tolerances OK; upstream issues NOT filed.
     Background agent: CUDA numpy-island removal from the main-suite GPU sweep
           (~90 library sites / 35 files), PRs grouped by module, stacked on #1603.
-    Parked until that agent finishes (file overlap): SCF from_density.
+    Parked until that agent finishes (file overlap): SCF from_density; FDM
+          dynfric torch slow-skip (564 s: python dop853 x 474k EOMs, ~40% of it
+          coerce_coords 2.3M / asarray_on_device 6.2M calls in the Chandrasekhar/
+          FDM force; torchode is SLOWER, >10 min) -> cut per-call coercion.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)
