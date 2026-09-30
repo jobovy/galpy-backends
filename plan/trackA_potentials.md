@@ -382,3 +382,10 @@ And friction (b) setup (Chandrasekhar sigma_r build) must itself be backend/trac
 Order: infra-2 (iv+sici) + infra-1 (interp+quad) -> (b) friction full -> (d) AnySpherical/
 AnyAxiRazorThin (quad) + interpRZ (2D interp). infra PRs target feat/backends (independent
 of #960).
+
+**2026-09-29 status.** Small-r accuracy and finite edge limits (NFW, Burkert,
+Einasto, TwoPower Phi) are on main (#1585) and feat/backends (#1578).
+TwoPower forces / second derivatives / mass from the incomplete beta:
+#1596 (main) and #1597 (feat), open; <= 3e-14 vs 50 digits in python, C, jax,
+torch. The incomplete beta lives in galpy.util.special /
+galpy/util/incomplete_beta.c / galpy.backend.special.incomplete_beta.

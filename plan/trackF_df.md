@@ -110,3 +110,10 @@ tests check shape/dtype only); spline caches = dual-path (scipy at init for nump
 **Milestones:** ledger prune after Pdf.1 (smoke), Pdf.2, Pdf.3+Pdf.4 (mid), Pdf.5 (final). ~11-15
 person-weeks total; ~6-8wk wall-clock if Pdf.2/3/4 run concurrently. After Pdf.5 = last breadth block
 → then the deferred speed-up roadmap (logs/backend_speedup_audit/).
+
+**2026-09-29 status.** eddingtondf f(E) exact near Emin on both paths (#1586
+main, #1578 feat). #1598 (open): osipkovmerrittdf.sample under jax.jit (traced
+r(Phi) now log-r bisection, exact near Emin); constantbetadf backend fE needs
+no calibrated lower limit (7.7e-12 vs Hernquist's closed form). #1593 (open):
+qdf constructor and streamTrack fit compile under torch.compile. Next: numpy
+islands in streamspraydf; vectorized stream track; kingdf under torch.compile.

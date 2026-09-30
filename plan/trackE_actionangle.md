@@ -36,3 +36,9 @@ Branch: `feat/backends`. Detail in master plan §"Track E".
 
 **OUT OF SCOPE:** `actionAngleTorus` (external C++ library `actionAngleTorus_c_ext/torus/`)
 — left numpy-only; streams differentiate via IsochroneApprox/Staeckel/Spherical instead.
+
+**2026-09-29 status.** actionAngleSpherical's backend path solves main's
+relative radial problem (#1527/#1553 ported, #1594 merged): epicycle branch,
+small-orbit and near-circular relative potentials, main's turning-point rules,
+u = 1/r azimuthal integrals. Parameter gradients vs h-converged FD 5e-9..1e-6.
+Next: Orbit.rperi/rap/zmax(analytic=True) through the backend C-STM.
