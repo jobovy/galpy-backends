@@ -7,33 +7,25 @@
 
 ## Now
 
-    feat/backends   4599bdcba   rebased onto main (ffd411667) + #1578 + #1594 +
-    #1593 (streamTrack fit / qdf ctor compile) + #1600 (kingdf compile) +
-    #1598 (OM sample under jit; D-form constantbeta fE).
+    feat/backends   8d5769a41   rebased onto main (ffd411667) + #1578 + #1594 +
+    #1593 + #1600 + #1598 + #1599 (analytic turning points backend-native) +
+    #1602 (vmapped stream track).
 
-## Open PRs (all CI green unless noted)
+## Open PRs
 
-    #1596 (main) backend/twopower-forces-main c07c3295c -- TwoPower forces/2nd
-          derivs/mass from the incomplete beta (numpy+C); twin of #1597
-    #1597 backend/twopower-forces a8eaee5e7 -- same + backends; util/C files
-          byte-identical to #1596's (drop on next rebase)
-    #1599 backend/orbit-analytic-turning-points 62c241b59 -- Orbit.rperi/rap/
-          zmax/e(analytic=True) backend-native
-    #1602 backend/streamdf-vmap-track 822a21b51 -- stream track chunks under
-          jax.vmap; shared constant steps keep d/dparam exact; grad 1.2-1.8x
-    #1603 backend/gpu-validation 6ec1706e8 (rebased onto 4599bdcba; CI running)
-          -- GPU (CUDA): pytest --device cuda; to_host (strict host move, keeps
-          autograd) at ~20 implicit numpy conversions; device-independent torch
-          draws; Spline1D.derivative in-backend for backend queries; Orbit.E
-          kinetic terms on the forced namespace; SCF alpha device anchor.
-          torch AND jax backend_* sweeps green except: hardware (no Triton on
-          sm_61), upstream torch (dynamo numpy under set_default_device, torch
-          2.12+2.14; torchode CUDA event), fork+CUDA. OPEN for Jo: python
-          integrators under forced torch on CUDA; GPU tolerances (eddington
-          near-Emin 2.9e-8 vs 2e-8; sphericaldf jax-GPU 1-ulp). rperi analytic
-          on CUDA after #1599. Non-backend suites --device cuda: running.
-    Known pre-existing: test_sphericaldf dehnencore_in_nfw_*_directint fail out
-    of file order (uses dfh._fE_interp built by an earlier test).
+    #1596 (main) backend/twopower-forces-main 0d08da2a9 -- TwoPower forces/2nd
+          derivs/mass via incomplete beta; Codex rounds 1-4 addressed (alpha>beta
+          hang, bounded caches, r=inf limits incl. beta=1 and beta=0, beta<0
+          rejected, amp=0, alpha>=beta+2 split, direct mass for alpha>=1.5)
+    #1597 backend/twopower-forces bc6efdb9b -- same + backends (beta<2 'hi'
+          series sign fix; jit-vs-eager 3e-15 and alpha~3 forced-backend 1e-12
+          bars approved by Jo)
+    #1603 backend/gpu-validation 4b01c6fc3 -- GPU (CUDA) validation (rebased
+          onto 8d5769a41). Decided: numpy integrators on CUDA -> error pointing to
+          torchode/torchdiffeq; GPU-only tolerances OK; upstream issues NOT filed.
+    Background agent: CUDA numpy-island removal from the main-suite GPU sweep
+          (~90 library sites / 35 files), PRs grouped by module, stacked on #1603.
+    Parked until that agent finishes (file overlap): SCF from_density.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)

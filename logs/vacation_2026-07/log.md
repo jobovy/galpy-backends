@@ -60702,3 +60702,13 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
   on the CPU generator and move (same numbers on every device). streamdf c3:
   cusolver vs LAPACK eigenvector sign; compare sign-invariant products.
   Opened #1603.
+- Landed: #1593, #1600, #1598, #1599, #1602. #1603 rebased twice (conflicts:
+  king_ode device fix duplicated by #1600; turning-point test reads from #1599).
+- #1596/#1597 Codex rounds 3-4: beta <= 0 at r = inf (beta = 0 exact:
+  -(R,z)/(3a^3), R2/z2 1/(3a^3), Rz 0; beta < 0 rejected), amp = 0 -> 0, split
+  = 0.9 when p+q+2 <= 0 (alpha >= beta + 2: python raised complex), backend
+  'hi' series sign bug for beta < 2 (math domain error at large r, eager+jit),
+  direct mass for alpha >= 1.5 (1 + G cancels near alpha = 3: 9.5e-13 ->
+  7.6e-14). mpmath reference must use the exact binary alpha (at 3 - alpha =
+  1e-4 a 1-ulp change moves it 1e-12).
+- Mistake: `git stash` in /var/tmp/tpf (forbidden); popped immediately, nothing lost.

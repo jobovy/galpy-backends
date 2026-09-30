@@ -475,3 +475,5 @@ number in the pair.
 | [#1593](https://github.com/jobovy/galpy/pull/1593) | feat/backends | 2026-09-30 | torch.compile: the streamTrack fit and the qdf constructor compile (replace the #1574/#1575 opt-outs) |
 | [#1600](https://github.com/jobovy/galpy/pull/1600) | feat/backends | 2026-09-30 | kingdf: W0 compiles under torch.compile (no opaque scipy solve) |
 | [#1598](https://github.com/jobovy/galpy/pull/1598) | feat/backends | 2026-09-30 | spherical DFs: osipkovmerrittdf.sample under jax.jit; exact traced r(Phi) near Emin; constantbetadf backend fE without the calibrated limit |
+| [#1599](https://github.com/jobovy/galpy/pull/1599) | feat/backends | 2026-09-30 | Orbit.rperi/rap/zmax/e(analytic=True): backend-native and differentiable w.r.t. the phase-space point |
+| [#1602](https://github.com/jobovy/galpy/pull/1602) | feat/backends | 2026-09-30 | streamdf: vmap the differentiable track's chunk loop (shared constant steps keep d/dparam exact) |
