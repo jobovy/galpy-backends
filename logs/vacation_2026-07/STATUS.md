@@ -30,16 +30,20 @@
     #1602 backend/streamdf-vmap-track 822a21b51 -- stream track chunks under
           jax.vmap; shared constant steps keep d/dparam exact (adaptive steps +
           DirectAdjoint were the vmap gradient bug); grad 1.2-1.8x faster
-    GPU validation: branch backend/gpu-validation (/var/tmp/gpuv, local only).
-          conftest --device cuda; to_host helper (strict CPU move, keeps
-          autograd) at implicit numpy conversions; Orbit.E coerces thiso;
-          king_ode anchored on W0.device (autograd's device thread ignores
-          set_default_device); torch RNG generator on the default device;
-          dynamo trace_numpy=False under --device cuda (dynamo mis-traces numpy
-          under set_default_device, torch 2.12-2.14). OPEN QUESTIONS for Jo:
-          numpy python integrators (dop853/odeint/leapfrog) under forced torch
-          on CUDA; eddington near-Emin grad 2.9e-8 on CUDA vs 2e-8 bar.
-          Orbit._setup_EccZmaxRperiRap CUDA fix waits for #1599 (same lines).
+    #1603 backend/gpu-validation 8efceee88 -- GPU (CUDA) validation: pytest
+          --device cuda; to_host (strict host move, keeps autograd) at ~20
+          implicit numpy conversions; device-independent torch draws (CPU
+          generator -> default device); Spline1D.derivative in-backend for
+          backend queries; Orbit.E thiso coercion; king_ode W0.device. torch
+          backend_* sweep: all green except hardware (no Triton on sm_61),
+          upstream torch (dynamo can't trace numpy under set_default_device --
+          torch 2.12 AND 2.14; torchode CUDA event under compile), fork+CUDA.
+          OPEN for Jo: python integrators under forced torch on CUDA; GPU
+          tolerances (eddington near-Emin 2.9e-8 vs 2e-8; sphericaldf jax-GPU
+          1-ulp bit-identity). rperi analytic on CUDA after #1599.
+          jax GPU sweep running; non-backend suites --device cuda not yet run.
+    CI 2026-09-30: #1593 #1598 #1599 #1600 green; #1596 Windows conda-403
+          flake rerun; #1597 #1602 running.
     Known pre-existing: test_sphericaldf dehnencore_in_nfw_*_directint fail out
     of file order (uses dfh._fE_interp built by an earlier test).
     Remote scratch branches (ruleset blocks my delete): Jo.

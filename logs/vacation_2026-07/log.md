@@ -60694,3 +60694,11 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
   set_default_device's TorchFunctionMode (torch 2.12 AND 2.14; harness sets
   trace_numpy=False), test-side .numpy() on CUDA (42 sites -> .cpu().numpy()).
   GPU memory: 12 GB fills with 5 concurrent workers -> OOM; don't overlap runs.
+- GPU sweep 2 (torch, all 81 backend files, fixes applied): remaining = Triton
+  sm_61 (hardware), dynamo numpy-under-set_default_device (upstream; even
+  numpy.float64 * tensor fails with trace_numpy=False -- torch 2.14 too),
+  torchode CUDA Event.record under dynamo, fork+CUDA in parallel_map. Random
+  draws: CUDA generator changed samples and broke FD-tuned tolerances -> draw
+  on the CPU generator and move (same numbers on every device). streamdf c3:
+  cusolver vs LAPACK eigenvector sign; compare sign-invariant products.
+  Opened #1603.
