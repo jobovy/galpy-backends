@@ -60736,3 +60736,4 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
 - #1610: _sky_to_galcen helper (numpy byte-identical, 17 probes); radec_to_lb and
   pmrapmdec_to_pmllpmbb backend-native (matrix; astropy for numpy). Found main
   bug: Orbit(arr, lb/radec, uvw=True) mutated the caller's array -> #1611.
+- Landed: #1596 (main), #1597 (feat): TwoPower forces via incomplete beta; Codex 1-7 + beta<<0 overflow (Python-float pow_or_inf; numpy.float64 hung torch-jit).
