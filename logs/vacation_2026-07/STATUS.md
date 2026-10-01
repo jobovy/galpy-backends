@@ -14,14 +14,15 @@
 
 ## Open PRs
 
-    none (#1596 main, #1597 feat landed 2026-10-01).
+    #1612 backend/scf-from-density-grad 155a5b9c5 -- SCF from_density differentiable
+          (static + tgrid, all symmetries); probes no longer force numpy (823s->34s).
     GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
           numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores
           still fastest for orbits (6s/1e5; jax-GPU 11s); jax-CPU gammainc
           fallback slow (PSwC 1.8s/1e6) -- perf follow-up.
-    jax main-suite GPU sweep: running (scratchpad gpuj5); so far only eager-GPU
-          900s timeouts + xdist order artifacts, no correctness failures.
-    Next candidates: SCF from_density differentiable (unblocked now), f32 sweep,
+    jax main-suite GPU sweep: DONE -- no correctness failures (Torus/amuse/nemo by
+          design; 900s eager-GPU timeouts; xdist order artifacts).
+    Next candidates: f32 sweep,
           jax gammainc CPU perf.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
