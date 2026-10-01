@@ -60727,3 +60727,12 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
 - #1603 CI: jax shard timeout = slow runner (3.4x across the shard; local A/B
   equal; rerun green). inductor kingdf_W0 CppCompileError on AVX-512/AMX
   runner, reproducible on CI only.
+- Landed: #1603, #1604-#1608, #1610 (feat), #1611 (main).
+- GPU benchmark (TITAN Xp vs 72-core): forces 1e7 jax-GPU 0.49s vs numpy 3.05s
+  vs jax-CPU 16.2s; value+grad same; sample 1e6: GPU 0.12-0.15s vs numpy 0.83s;
+  orbits 1e5: C 6.0s, jax-GPU 11.2s (flat ~2s to 1e4), torch-GPU ~30s (eager
+  per-step). Bench bug: jax.grad DCE'd the parameter-independent bulge force ->
+  value_and_grad. jax-CPU PSwC gammainc fallback 1.8s/1e6 (vs scipy) -> follow-up.
+- #1610: _sky_to_galcen helper (numpy byte-identical, 17 probes); radec_to_lb and
+  pmrapmdec_to_pmllpmbb backend-native (matrix; astropy for numpy). Found main
+  bug: Orbit(arr, lb/radec, uvw=True) mutated the caller's array -> #1611.

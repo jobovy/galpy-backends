@@ -7,31 +7,25 @@
 
 ## Now
 
-    feat/backends   8d5769a41   rebased onto main (ffd411667) + #1578 + #1594 +
-    #1593 + #1600 + #1598 + #1599 (analytic turning points backend-native) +
-    #1602 (vmapped stream track).
+    feat/backends   0724b62b9   ... + #1603 (GPU validation) + #1604-#1608 (CUDA
+    numpy islands) + #1610 (differentiable sky-coordinate ICs). main: + #1611
+    (uvw input mutation). Next feat rebase: conflict in Orbit._setup_parse_vxvv
+    (#1611 out-of-place lines vs #1610's _sky_to_galcen) -> keep feat's helper.
 
 ## Open PRs
 
-    #1596 (main) backend/twopower-forces-main d147959d4 -- TwoPower forces/2nd
-          derivs/mass via incomplete beta; Codex rounds 1-6 (6: Euler-transformed
-          2F1(1,b;c;z) for b<0 in C+python, force = E*F; beta<0 finite radii,
-          NaN only at r=inf; beta=0 exact limits). mpmath: beta in [-100,8]
-          <= 2.6e-14 python/C.
-    #1597 backend/twopower-forces a4dfdfde7 -- same + backends (backend Euler
-          series = cumprod of term ratios, like C; all <= 2.6e-14)
-    #1603 backend/gpu-validation d7a468530 -- GPU validation. Also refuses the
-          python dxdv integrators on CUDA. RED: inductor kingdf_W0 CppCompileError
-          on CI only (AVX-512/AMX runner; passes locally py3.13/3.14, torch
-          2.12/2.14, both on #1603 and feat/backends); error tail now kept --
-          waiting for the run to show the g++ message.
-    #1604-#1608 (stack #1609 on #1603): CUDA numpy islands (coords, potential,
-          actionAngle, orbit, df); adversarial review done; fixed: ExpTruncNFW
-          scalar-r float32, Orbit(backend, radec/lb) raw-sky IC (pre-existing;
-          now converted, differentiated -> NotImplementedError), fit_orbit lb
-          island, coords AD-vs-FD tests, tighter both-tails tol. Restacked on
-          d7a468530.
-    Slow-skip FDM central_limit torch: leave (0.85 vs 0.17 ms/EOM eager cost).
+    #1596 (main) backend/twopower-forces-main 2fe2275f2 -- TwoPower via incomplete
+          beta; Codex rounds 1-7 addressed.
+    #1597 backend/twopower-forces 5ac7ddc27 -- same + backends; merges cleanly
+          into 0724b62b9.
+    GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
+          numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores
+          still fastest for orbits (6s/1e5; jax-GPU 11s); jax-CPU gammainc
+          fallback slow (PSwC 1.8s/1e6) -- perf follow-up.
+    jax main-suite GPU sweep: running (scratchpad gpuj5); so far only eager-GPU
+          900s timeouts + xdist order artifacts, no correctness failures.
+    Next candidates: SCF from_density differentiable (unblocked now), f32 sweep,
+          jax gammainc CPU perf.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)

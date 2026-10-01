@@ -477,3 +477,11 @@ number in the pair.
 | [#1598](https://github.com/jobovy/galpy/pull/1598) | feat/backends | 2026-09-30 | spherical DFs: osipkovmerrittdf.sample under jax.jit; exact traced r(Phi) near Emin; constantbetadf backend fE without the calibrated limit |
 | [#1599](https://github.com/jobovy/galpy/pull/1599) | feat/backends | 2026-09-30 | Orbit.rperi/rap/zmax/e(analytic=True): backend-native and differentiable w.r.t. the phase-space point |
 | [#1602](https://github.com/jobovy/galpy/pull/1602) | feat/backends | 2026-09-30 | streamdf: vmap the differentiable track's chunk loop (shared constant steps keep d/dparam exact) |
+| [#1603](https://github.com/jobovy/galpy/pull/1603) | feat/backends | 2026-10-01 | GPU (CUDA) validation: --device cuda test option and CUDA fixes |
+| [#1604](https://github.com/jobovy/galpy/pull/1604) | feat/backends | 2026-10-01 | GPU numpy islands (1/5): coords + conversion; to_host for sequences, on_host |
+| [#1605](https://github.com/jobovy/galpy/pull/1605) | feat/backends | 2026-10-01 | GPU numpy islands (2/5): potential |
+| [#1606](https://github.com/jobovy/galpy/pull/1606) | feat/backends | 2026-10-01 | GPU numpy islands (3/5): actionAngle |
+| [#1607](https://github.com/jobovy/galpy/pull/1607) | feat/backends | 2026-10-01 | GPU numpy islands (4/5): Orbit |
+| [#1608](https://github.com/jobovy/galpy/pull/1608) | feat/backends | 2026-10-01 | GPU numpy islands (5/5): df, ars, scipy spline |
+| [#1610](https://github.com/jobovy/galpy/pull/1610) | feat/backends | 2026-10-01 | Orbit: backend ICs in sky coordinates convert differentiably (radec/lb) |
+| [#1611](https://github.com/jobovy/galpy/pull/1611) | main | 2026-10-01 | Orbit: setting up from sky coordinates with uvw=True no longer modifies the input |
