@@ -14,9 +14,9 @@
 
 ## Open PRs
 
-    #1596 (main) backend/twopower-forces-main 2fe2275f2 -- TwoPower via incomplete
-          beta; Codex rounds 1-7 addressed.
-    #1597 backend/twopower-forces 5ac7ddc27 -- same + backends; merges cleanly
+    #1596 (main) backend/twopower-forces-main 8e2311fa7 -- TwoPower via incomplete
+          beta; Codex rounds 1-7 addressed; beta<<0 overflow (jax-jit) fixed. GREEN.
+    #1597 backend/twopower-forces a9ec0d7f4 -- same + backends; GREEN; merges cleanly
           into 0724b62b9.
     GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
           numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores
