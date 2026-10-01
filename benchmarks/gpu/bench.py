@@ -16,6 +16,7 @@ import time
 import numpy
 
 backend, device, out = sys.argv[1], sys.argv[2], sys.argv[3]
+CASES = os.environ.get("BENCH_CASES", "orbits,forces,forcegrad,sample").split(",")
 SIZES = {
     "orbits": [100, 1000, 10000, 100000],
     "forces": [10**4, 10**5, 10**6, 10**7],
@@ -91,7 +92,7 @@ def record(name, n, fn, budget=600.0):
 
 # --- orbit integration: N orbits, 201 output times, MWPotential2014
 ts = numpy.linspace(0.0, 10.0, 201)
-for n in SIZES["orbits"]:
+for n in SIZES["orbits"] if "orbits" in CASES else []:
     ic = numpy.column_stack(
         [
             rng.uniform(0.8, 1.2, n),
@@ -129,7 +130,7 @@ for n in SIZES["orbits"]:
         break
 
 # --- force evaluation: MWPotential2014 R-force at N points
-for n in SIZES["forces"]:
+for n in SIZES["forces"] if "forces" in CASES else []:
     R = rng.uniform(0.1, 20.0, n)
     z = rng.uniform(-5.0, 5.0, n)
     if backend == "jax":
@@ -140,8 +141,10 @@ for n in SIZES["forces"]:
         f = lambda Ra=Ra, za=za: evaluateRforces(MWPotential2014, Ra, za)  # noqa: E731
     record("forces", n, f)
 
-# --- gradient of the summed force w.r.t. a potential parameter (NFW amp, MN a)
-for n in SIZES["forcegrad"]:
+# --- value AND gradient of the summed force w.r.t. potential parameters (NFW
+# amp, MN a): value_and_grad, so the forward pass of every component (incl. the
+# bulge, whose force does not depend on them) is always computed
+for n in SIZES["forcegrad"] if "forcegrad" in CASES else []:
     if backend == "numpy":
         break
     R = rng.uniform(0.1, 20.0, n)
@@ -156,7 +159,7 @@ for n in SIZES["forcegrad"]:
         return evaluateRforces(pots, xp_R, xp_z).sum()
 
     if backend == "jax":
-        _jg = jax.jit(jax.grad(tot, argnums=(0, 1)))
+        _jg = jax.jit(jax.value_and_grad(tot, argnums=(0, 1)))
         f = lambda R=R, z=z, _jg=_jg: _jg(jnp.asarray(4.0), jnp.asarray(3.0 / 8.0), jnp.asarray(R), jnp.asarray(z))  # noqa: E731
     else:
         Ra, za = torch.as_tensor(R), torch.as_tensor(z)
@@ -164,12 +167,13 @@ for n in SIZES["forcegrad"]:
         def f(Ra=Ra, za=za):
             amp = torch.tensor(4.0, requires_grad=True)
             a = torch.tensor(3.0 / 8.0, requires_grad=True)
-            return torch.autograd.grad(tot(amp, a, Ra, za), (amp, a))
+            v = tot(amp, a, Ra, za)
+            return v.detach(), torch.autograd.grad(v, (amp, a))
 
     record("forcegrad", n, f)
 
 # --- DF sampling: isotropic Hernquist, n positions + velocities
-for n in SIZES["sample"]:
+for n in SIZES["sample"] if "sample" in CASES else []:
     pot = HernquistPotential(amp=2.0, a=1.3)
     if backend == "numpy":
         df = isotropicHernquistdf(pot=pot)
