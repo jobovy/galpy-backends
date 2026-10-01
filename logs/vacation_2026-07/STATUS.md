@@ -13,22 +13,25 @@
 
 ## Open PRs
 
-    #1596 (main) backend/twopower-forces-main 51ad82df4 -- TwoPower forces/2nd
-          derivs/mass via incomplete beta; Codex rounds 1-4 addressed (alpha>beta
-          hang, bounded caches, r=inf limits incl. beta=1 and beta=0, beta<0
-          NaN at r=inf only (round 5), amp=0, alpha>=beta+2 split, direct mass for alpha>=1.5)
-    #1597 backend/twopower-forces e44caac8b -- same + backends (beta<2 'hi'
-          series sign fix; jit-vs-eager 3e-15 and alpha~3 forced-backend 1e-12
-          bars approved by Jo)
-    #1603 backend/gpu-validation 4b01c6fc3 -- GPU (CUDA) validation (rebased
-          onto 8d5769a41). Decided: numpy integrators on CUDA -> error pointing to
-          torchode/torchdiffeq; GPU-only tolerances OK; upstream issues NOT filed.
-    Background agent: CUDA numpy-island removal from the main-suite GPU sweep
-          (~90 library sites / 35 files), PRs grouped by module, stacked on #1603.
-    Parked until that agent finishes (file overlap): SCF from_density; FDM
-          dynfric torch slow-skip (564 s: python dop853 x 474k EOMs, ~40% of it
-          coerce_coords 2.3M / asarray_on_device 6.2M calls in the Chandrasekhar/
-          FDM force; torchode is SLOWER, >10 min) -> cut per-call coercion.
+    #1596 (main) backend/twopower-forces-main d147959d4 -- TwoPower forces/2nd
+          derivs/mass via incomplete beta; Codex rounds 1-6 (6: Euler-transformed
+          2F1(1,b;c;z) for b<0 in C+python, force = E*F; beta<0 finite radii,
+          NaN only at r=inf; beta=0 exact limits). mpmath: beta in [-100,8]
+          <= 2.6e-14 python/C.
+    #1597 backend/twopower-forces a4dfdfde7 -- same + backends (backend Euler
+          series = cumprod of term ratios, like C; all <= 2.6e-14)
+    #1603 backend/gpu-validation d7a468530 -- GPU validation. Also refuses the
+          python dxdv integrators on CUDA. RED: inductor kingdf_W0 CppCompileError
+          on CI only (AVX-512/AMX runner; passes locally py3.13/3.14, torch
+          2.12/2.14, both on #1603 and feat/backends); error tail now kept --
+          waiting for the run to show the g++ message.
+    #1604-#1608 (stack #1609 on #1603): CUDA numpy islands (coords, potential,
+          actionAngle, orbit, df); adversarial review done; fixed: ExpTruncNFW
+          scalar-r float32, Orbit(backend, radec/lb) raw-sky IC (pre-existing;
+          now converted, differentiated -> NotImplementedError), fit_orbit lb
+          island, coords AD-vs-FD tests, tighter both-tails tol. Restacked on
+          d7a468530.
+    Slow-skip FDM central_limit torch: leave (0.85 vs 0.17 ms/EOM eager cost).
     Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)

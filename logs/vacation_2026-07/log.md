@@ -60712,3 +60712,18 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
   7.6e-14). mpmath reference must use the exact binary alpha (at 3 - alpha =
   1e-4 a 1-ulp change moves it 1e-12).
 - Mistake: `git stash` in /var/tmp/tpf (forbidden); popped immediately, nothing lost.
+
+## 2026-10-01
+- Codex #1596 round 6: beta << 0 lower series 2F1(1, b; c; z) alternates and
+  cancels (C 12.9% off, wrong sign at -100) -> Euler's transformation (positive
+  terms, rescaled); force = E F (never E (1+G)). Python and C now share it;
+  positive-beta survey improved to 3.8e-15. Backend: the log-domain form had
+  ~|beta| eps per-term exponent error (1.65e-12 at -250) -> cumprod of ratios
+  (C's recurrence), half-prefactor start: all implementations ~2.6e-14.
+  Coverage: rescaling branch covered by beta = -250 row.
+- Island agent: #1604-#1608. Adversarial review: numpy byte-identical (241
+  probes); fixed ExpTruncNFW scalar-r dtype, radec/lb backend IC (pre-existing
+  silent wrong answer), fit_orbit island, added coords AD-vs-FD.
+- #1603 CI: jax shard timeout = slow runner (3.4x across the shard; local A/B
+  equal; rerun green). inductor kingdf_W0 CppCompileError on AVX-512/AMX
+  runner, reproducible on CI only.
