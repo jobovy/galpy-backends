@@ -14,8 +14,7 @@
 
 ## Open PRs
 
-    #1612 backend/scf-from-density-grad 155a5b9c5 -- SCF from_density differentiable
-          (static + tgrid, all symmetries); probes no longer force numpy (823s->34s).
+    none (#1612 landed 2026-10-01).
     GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
           numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores
           still fastest for orbits (6s/1e5; jax-GPU 11s); jax-CPU gammainc

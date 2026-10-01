@@ -60743,3 +60743,4 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
   cause: density shape probes used numpy.asarray -> raise on tracer/grad tensor -> per-node
   loop (jax general grad 823s -> 34s). Time splines fit in-backend (not-a-knot); n=2 spline.
   Grad test uses 5-point FD (central h=1e-5 was ~1e-9 off; h-converged).
+- Landed: #1612 (SCF from_density differentiable).

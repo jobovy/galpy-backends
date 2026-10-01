@@ -487,3 +487,4 @@ number in the pair.
 | [#1611](https://github.com/jobovy/galpy/pull/1611) | main | 2026-10-01 | Orbit: setting up from sky coordinates with uvw=True no longer modifies the input |
 | [#1596](https://github.com/jobovy/galpy/pull/1596) | main | 2026-10-01 | TwoPowerSphericalPotential forces via the incomplete beta function (accurate for all alpha, beta) |
 | [#1597](https://github.com/jobovy/galpy/pull/1597) | feat/backends | 2026-10-01 | TwoPowerSphericalPotential forces via the incomplete beta function, backend-native and differentiable |
+| [#1612](https://github.com/jobovy/galpy/pull/1612) | feat/backends | 2026-10-01 | SCFPotential.from_density: differentiable w.r.t. the density's parameters (static and time-dependent) |
