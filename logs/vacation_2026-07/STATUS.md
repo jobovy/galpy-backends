@@ -17,6 +17,9 @@
     #1613 backend/f32-sweep 858fcf497 -- float32 (torch default dtype) crash fixes; GREEN.
     #1614 backend/inductor-gcc-ice-workaround 664b8b568 -- simdlen=256 for kingdf_W0
           (GCC ICE gimple_duplicate_bb on AVX-512 runners); GREEN.
+    #1615 backend/gammainc-small-a 869e5ddef -- jax gammainc: series/CF for large staged
+          arrays (MW 1e6 forces 1.74s -> 0.062s jax-CPU), native otherwise; series/CF now
+          scipy-accurate (small-a Q, large-a Stirling log, x=inf grad); GREEN.
     Open question for Jo: python-float coords -> float32 under forced torch default.
     GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
           numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores

@@ -60747,3 +60747,7 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
 - 2026-10-02: #1613 (f32 sweep: 6 sites; at_least_float64; 12 A/B'd regression tests) and
   #1614 (GCC ICE workaround) green. Main-suite forced-torch f32 sweep: no dtype crashes.
   Pre-existing: constantbeta_dehnencore *_directint tests order-dependent (_fE_interp).
+- #1615 (gammainc on jax): first push red (eager per-op cost + 5x compile time of the
+  unrolled series/CF -> timeouts). Fix: native when eager (jax.core.is_concrete) or
+  <4096 elements; series/CF for large staged arrays. fori_loop rolling kept compiles
+  small but lost fusion (0.2-0.4s/1e6) -> rejected. GREEN after GCC-ICE rerun.
