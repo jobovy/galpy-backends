@@ -60744,3 +60744,6 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
   loop (jax general grad 823s -> 34s). Time splines fit in-backend (not-a-knot); n=2 spline.
   Grad test uses 5-point FD (central h=1e-5 was ~1e-9 off; h-converged).
 - Landed: #1612 (SCF from_density differentiable).
+- 2026-10-02: #1613 (f32 sweep: 6 sites; at_least_float64; 12 A/B'd regression tests) and
+  #1614 (GCC ICE workaround) green. Main-suite forced-torch f32 sweep: no dtype crashes.
+  Pre-existing: constantbeta_dehnencore *_directint tests order-dependent (_fE_interp).

@@ -14,14 +14,17 @@
 
 ## Open PRs
 
-    none (#1612 landed 2026-10-01).
+    #1613 backend/f32-sweep 858fcf497 -- float32 (torch default dtype) crash fixes; GREEN.
+    #1614 backend/inductor-gcc-ice-workaround 664b8b568 -- simdlen=256 for kingdf_W0
+          (GCC ICE gimple_duplicate_bb on AVX-512 runners); GREEN.
+    Open question for Jo: python-float coords -> float32 under forced torch default.
     GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
           numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores
           still fastest for orbits (6s/1e5; jax-GPU 11s); jax-CPU gammainc
           fallback slow (PSwC 1.8s/1e6) -- perf follow-up.
     jax main-suite GPU sweep: DONE -- no correctness failures (Torus/amuse/nemo by
           design; 900s eager-GPU timeouts; xdist order artifacts).
-    Next candidates: f32 sweep,
+    Next candidates:
           jax gammainc CPU perf.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
