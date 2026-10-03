@@ -60751,3 +60751,9 @@ sampler and SCF from_density later; the ledger does not need to reach zero.
   unrolled series/CF -> timeouts). Fix: native when eager (jax.core.is_concrete) or
   <4096 elements; series/CF for large staged arrays. fori_loop rolling kept compiles
   small but lost fusion (0.2-0.4s/1e6) -> rejected. GREEN after GCC-ICE rerun.
+- 2026-10-02: #1613 float64 policy pushed (scope + crash fixes; A/B clean). Opened #1617
+  (qdf ctor compile, last #1574 stopgap), #1618 (Multipole from_density differentiable),
+  #1619 (dynfric eager 4.3x), #1620 (CI CPU header for AVX-512 check), #1621 (qdf sampler
+  fixed shape; un-skips test_sampleV_interpolate; stacked on #1613). Islands: only
+  Multipole was removable; AA grids bypass under gradients. FDM central_limit slow-skip
+  stays (Python integrator dispatch; torchdiffeq slower).
