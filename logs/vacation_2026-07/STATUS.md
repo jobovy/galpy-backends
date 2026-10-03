@@ -17,10 +17,15 @@
           default dtype). +7db0d5954: py3.14 torch.compile fix (sys.modules closure)
           + sphericaldf._vmax_at_r numpy-2.5 __array_wrap__ deprecation; +7bd7305a8
           no-torch scope test (codecov patch miss). GREEN.
-    #1621 backend/qdf-samplev-fixed-shape bd0cd43c3 (stacked on #1613) -- qdf
-          sampler pow-4 buckets. Fixed shape (1st commit) regressed torch (CI 300s
-          timeouts); buckets: torch 21s, jax 217s (was 2837s) -- jax/jax-jit
-          slow-skips RESTORED (CI not faster than this box here). GREEN.
+    #1621 backend/qdf-samplev-fixed-shape edab25379 (stacked on #1613) -- qdf sampler:
+          pow-4 buckets (galpy.backend.bucket_size) for loop/maxVT grid/interp points +
+          jax C-bridges skip pure_callback for concrete inputs (fresh closure = 25 ms
+          compile/call). test_sampleV_interpolate jax 2837s -> 118s, jax-jit 87s:
+          both slow-skips REMOVED. CI running.
+    #1624 backend/islands-final aafa6527d -- islands: streamgapdf orbit-integration kick
+          routes forced backends to the in-backend twin; constantbetadf torch pin removed.
+          Kept (classified): diskdf._ssp, MovingObjectPotential, Staeckel-C/AA-grid/
+          streamspray/sphericaldf boundaries. CI running.
     #1623 backend/staeckel-defaultdelta-test 4e34284b4 -- test fix: 1-ulp
           jit-vs-eager delta difference amplified to 4.7e-11 vs a 1e-16 bar. GREEN.
     AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
