@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-09-30
+# Vacation status snapshot — 2026-10-03
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,28 +7,26 @@
 
 ## Now
 
-    feat/backends   0724b62b9   ... + #1603 (GPU validation) + #1604-#1608 (CUDA
-    numpy islands) + #1610 (differentiable sky-coordinate ICs). main: + #1611
-    (uvw input mutation). Next feat rebase: conflict in Orbit._setup_parse_vxvv
-    (#1611 out-of-place lines vs #1610's _sky_to_galcen) -> keep feat's helper.
+    feat/backends   1cffb1ca8   ... + #1610-#1620 all merged (sky ICs, TwoPower,
+    SCF/Multipole from_density, simdlen, gammainc, SIMBAD unskip, qdf _log_const,
+    dynfric, CPU header). main: + #1611.
 
 ## Open PRs
 
-    #1613 backend/f32-sweep 858fcf497 -- float32 (torch default dtype) crash fixes; GREEN.
-    #1614 backend/inductor-gcc-ice-workaround 664b8b568 -- simdlen=256 for kingdf_W0
-          (GCC ICE gimple_duplicate_bb on AVX-512 runners); GREEN.
-    #1615 backend/gammainc-small-a 869e5ddef -- jax gammainc: series/CF for large staged
-          arrays (MW 1e6 forces 1.74s -> 0.062s jax-CPU), native otherwise; series/CF now
-          scipy-accurate (small-a Q, large-a Stirling log, x=inf grad); GREEN.
-    Open question for Jo: python-float coords -> float32 under forced torch default.
-    GPU benchmark (galpy-jax benchmarks/gpu, results_2026-10-01): jax-GPU 6x
-          numpy / 31x jax-CPU on 1e7-point forces (+grad same cost); C on 72 cores
-          still fastest for orbits (6s/1e5; jax-GPU 11s); jax-CPU gammainc
-          fallback slow (PSwC 1.8s/1e6) -- perf follow-up.
-    jax main-suite GPU sweep: DONE -- no correctness failures (Torus/amuse/nemo by
-          design; 900s eager-GPU timeouts; xdist order artifacts).
-    Next candidates:
-          jax gammainc CPU perf.
+    #1613 backend/f32-sweep 7bd7305a8 -- float64-by-default policy (scoped torch
+          default dtype). +7db0d5954: py3.14 torch.compile fix (sys.modules closure)
+          + sphericaldf._vmax_at_r numpy-2.5 __array_wrap__ deprecation; +7bd7305a8
+          no-torch scope test (codecov patch miss). CI running.
+    #1621 backend/qdf-samplev-fixed-shape bd0cd43c3 (stacked on #1613) -- qdf
+          sampler pow-4 buckets. Fixed shape (1st commit) regressed torch (CI 300s
+          timeouts); buckets: torch 21s, jax 217s (was 2837s) -- jax/jax-jit
+          slow-skips RESTORED (CI not faster than this box here). CI running.
+    #1623 backend/staeckel-defaultdelta-test 4e34284b4 -- test fix: 1-ulp
+          jit-vs-eager delta difference amplified to 4.7e-11 vs a 1e-16 bar. CI running.
+    AVX-512 (#1614 retirement): still NO kingdf_W0 run on an avx512f runner; the
+          4 post-merge All-backend runs sat queued. Watching each test_backend shard.
+    Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
+    On hold per Jo: main merge prep, docs.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)
