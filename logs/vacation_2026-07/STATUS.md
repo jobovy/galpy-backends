@@ -16,15 +16,15 @@
     #1613 backend/f32-sweep 7bd7305a8 -- float64-by-default policy (scoped torch
           default dtype). +7db0d5954: py3.14 torch.compile fix (sys.modules closure)
           + sphericaldf._vmax_at_r numpy-2.5 __array_wrap__ deprecation; +7bd7305a8
-          no-torch scope test (codecov patch miss). CI running.
+          no-torch scope test (codecov patch miss). GREEN.
     #1621 backend/qdf-samplev-fixed-shape bd0cd43c3 (stacked on #1613) -- qdf
           sampler pow-4 buckets. Fixed shape (1st commit) regressed torch (CI 300s
           timeouts); buckets: torch 21s, jax 217s (was 2837s) -- jax/jax-jit
-          slow-skips RESTORED (CI not faster than this box here). CI running.
+          slow-skips RESTORED (CI not faster than this box here). GREEN.
     #1623 backend/staeckel-defaultdelta-test 4e34284b4 -- test fix: 1-ulp
-          jit-vs-eager delta difference amplified to 4.7e-11 vs a 1e-16 bar. CI running.
-    AVX-512 (#1614 retirement): still NO kingdf_W0 run on an avx512f runner; the
-          4 post-merge All-backend runs sat queued. Watching each test_backend shard.
+          jit-vs-eager delta difference amplified to 4.7e-11 vs a 1e-16 bar. GREEN.
+    AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
+          #1613 run) -- inductor-kingdf_W0 PASSED. Keep it (removing re-exposes the GCC ICE).
     Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
     On hold per Jo: main merge prep, docs.
     Remote scratch branches (ruleset blocks my delete): Jo.
