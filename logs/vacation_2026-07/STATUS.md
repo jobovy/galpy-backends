@@ -7,13 +7,19 @@
 
 ## Now
 
-    feat/backends   27e3c6499   ... + #1613/#1621/#1625 merged. MAIN REBASE PREPARED: #1626 (draft,
-    backend/rebase-main-2026-10-04 @767193159 onto main 7c675eb63; tip = old feat + main's HISTORY
-    entry + #1611 test, 0 deletions). Jo applies after CI: lease command in #1626.
+    feat/backends   767193159   rebased onto main 7c675eb63 (2026-10-04, Jo applied #1626).
+    actionAngleVerticalInverse NOW IN SCOPE (Jo 2026-10-04): 3-PR series in progress.
 
 ## Open PRs
 
-    (none open besides #1626)
+    #1627 backend/vi-mm-eval 6e858e7af -- VI (1/3): momentum-matched map evaluates natively
+          (eval_ppoly tables, brentq angle inversion w/ IFT, regular sin(eta)/sin(tau));
+          construction TEMPORARILY numpy-pinned; 17x2 skips removed. CI running.
+    #1628 backend/vi-mm-construct 02489d2cc (stacked on #1627, stack #1629) -- VI (2/3):
+          native construction, differentiable in potential params (batched GN + 1 IFT
+          step, cubic_hermite_coeffs), jit-able end to end. CI running.
+    NEXT: VI (3/3) legacy modes (momentum_matched=False / point transforms): native
+          evaluation; construction scope (numpy vs differentiable) = question for Jo.
     AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
           #1613 run) -- inductor-kingdf_W0 PASSED. Keep it (removing re-exposes the GCC ICE).
     Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
