@@ -14,15 +14,15 @@
     #1613 backend/f32-sweep 49b103882 (REBASED 2026-10-04 onto 2eea28def) -- float64-by-default policy (scoped torch
           default dtype). +7db0d5954: py3.14 torch.compile fix (sys.modules closure)
           + sphericaldf._vmax_at_r numpy-2.5 __array_wrap__ deprecation; +7bd7305a8
-          no-torch scope test (codecov patch miss). CI running (post-rebase).
+          no-torch scope test (codecov patch miss). GREEN (post-rebase).
     #1621 backend/qdf-samplev-fixed-shape 0023def9b (rebased) (stacked on #1613) -- qdf sampler:
           pow-4 buckets (galpy.backend.bucket_size) for loop/maxVT grid/interp points +
           jax C-bridges skip pure_callback for concrete inputs (fresh closure = 25 ms
           compile/call). test_sampleV_interpolate jax 2837s -> 118s, jax-jit 87s:
-          both slow-skips REMOVED. CI running.
+          both slow-skips REMOVED. GREEN (+ jax.jit primal test fde341441).
     #1625 backend/jit-structural-key ed0c9896a -- jit-mode static key by type+attributes:
           fixes STALE jax traces after a wrapped potential changes (2x wrong) + per-call
-          retraces (ExpTruncNFW jax-jit 501s -> 260s; stays skipped). CI running.
+          retraces (ExpTruncNFW jax-jit 501s -> 260s; stays skipped). ed75dbb4e: recurse galpy objects only (arrays have __dict__ -> false share). GREEN.
     AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
           #1613 run) -- inductor-kingdf_W0 PASSED. Keep it (removing re-exposes the GCC ICE).
     Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
