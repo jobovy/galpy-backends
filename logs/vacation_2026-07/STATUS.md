@@ -7,27 +7,22 @@
 
 ## Now
 
-    feat/backends   1cffb1ca8   ... + #1610-#1620 all merged (sky ICs, TwoPower,
-    SCF/Multipole from_density, simdlen, gammainc, SIMBAD unskip, qdf _log_const,
-    dynfric, CPU header). main: + #1611.
+    feat/backends   2eea28def   ... + #1623 (staeckel test) + #1624 (islands).
 
 ## Open PRs
 
-    #1613 backend/f32-sweep 7bd7305a8 -- float64-by-default policy (scoped torch
+    #1613 backend/f32-sweep 49b103882 (REBASED 2026-10-04 onto 2eea28def) -- float64-by-default policy (scoped torch
           default dtype). +7db0d5954: py3.14 torch.compile fix (sys.modules closure)
           + sphericaldf._vmax_at_r numpy-2.5 __array_wrap__ deprecation; +7bd7305a8
           no-torch scope test (codecov patch miss). GREEN.
-    #1621 backend/qdf-samplev-fixed-shape edab25379 (stacked on #1613) -- qdf sampler:
+    #1621 backend/qdf-samplev-fixed-shape 0023def9b (rebased) (stacked on #1613) -- qdf sampler:
           pow-4 buckets (galpy.backend.bucket_size) for loop/maxVT grid/interp points +
           jax C-bridges skip pure_callback for concrete inputs (fresh closure = 25 ms
           compile/call). test_sampleV_interpolate jax 2837s -> 118s, jax-jit 87s:
           both slow-skips REMOVED. CI running.
-    #1624 backend/islands-final aafa6527d -- islands: streamgapdf orbit-integration kick
-          routes forced backends to the in-backend twin; constantbetadf torch pin removed.
-          Kept (classified): diskdf._ssp, MovingObjectPotential, Staeckel-C/AA-grid/
-          streamspray/sphericaldf boundaries. CI running.
-    #1623 backend/staeckel-defaultdelta-test 4e34284b4 -- test fix: 1-ulp
-          jit-vs-eager delta difference amplified to 4.7e-11 vs a 1e-16 bar. GREEN.
+    #1625 backend/jit-structural-key ed0c9896a -- jit-mode static key by type+attributes:
+          fixes STALE jax traces after a wrapped potential changes (2x wrong) + per-call
+          retraces (ExpTruncNFW jax-jit 501s -> 260s; stays skipped). CI running.
     AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
           #1613 run) -- inductor-kingdf_W0 PASSED. Keep it (removing re-exposes the GCC ICE).
     Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
