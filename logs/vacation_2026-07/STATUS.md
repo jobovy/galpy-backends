@@ -14,7 +14,7 @@
     #1613 backend/f32-sweep 49b103882 (REBASED 2026-10-04 onto 2eea28def) -- float64-by-default policy (scoped torch
           default dtype). +7db0d5954: py3.14 torch.compile fix (sys.modules closure)
           + sphericaldf._vmax_at_r numpy-2.5 __array_wrap__ deprecation; +7bd7305a8
-          no-torch scope test (codecov patch miss). GREEN.
+          no-torch scope test (codecov patch miss). CI running (post-rebase).
     #1621 backend/qdf-samplev-fixed-shape 0023def9b (rebased) (stacked on #1613) -- qdf sampler:
           pow-4 buckets (galpy.backend.bucket_size) for loop/maxVT grid/interp points +
           jax C-bridges skip pure_callback for concrete inputs (fresh closure = 25 ms
