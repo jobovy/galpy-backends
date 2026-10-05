@@ -8,7 +8,7 @@
 ## Now
 
     feat/backends   767193159   rebased onto main 7c675eb63 (2026-10-04, Jo applied #1626).
-    actionAngleVerticalInverse NOW IN SCOPE (Jo 2026-10-04): 2 PRs; legacy modes stay numpy-only (Jo).
+    actionAngleVerticalInverse ON THE BACKENDS: stack #1629 = #1627 -> #1628 -> #1630.
 
 ## Open PRs
 
@@ -17,8 +17,10 @@
           construction TEMPORARILY numpy-pinned; 17x2 skips removed. GREEN.
     #1628 backend/vi-mm-construct 02489d2cc (stacked on #1627, stack #1629) -- VI (2/3):
           native construction, differentiable in potential params (batched GN + 1 IFT
-          step, cubic_hermite_coeffs), jit-able end to end. +legacy-permanent wording b108c23e3. CI running.
-    VI legacy modes: NOT migrated (Jo: "let's not worry about the legacy code"); skips permanent.
+          step, cubic_hermite_coeffs), jit-able end to end. GREEN (b108c23e3).
+    #1630 backend/vi-legacy-eval 9bb4d1d36 (stacked on #1628) -- VI (3/3): legacy modes evaluate
+          natively (brentq angle, _SplineXP, backend map_coordinates order 5 + mirror-fold fix);
+          construction numpy (no backend-param pots). All 49 VI tests in 4 backend modes. CI running.
     AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
           #1613 run) -- inductor-kingdf_W0 PASSED. Keep it (removing re-exposes the GCC ICE).
     Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
