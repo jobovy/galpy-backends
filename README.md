@@ -18,6 +18,38 @@ Hessian) + **Lyapunov exponents** in C.
 
 ## Status
 
+**Status 2026-10-06.** feat/backends is rebased onto main (7c675eb63, applied
+2026-10-04) and green. Ledgers: **3** xfail entries (all `--jit` pickling of unit
+wrappers), **3** slow-skips (FDM `central_limit` under torch/torch-jit: eager
+Python-integrator dispatch; ExpTruncNFW `analytic_ecc_rperi_rap` under jax-jit,
+260 s after #1625), **16** permanent skips (actionAngleTorus via streamdf useTM;
+four eager-jax per-op floors, measured not compile-bound), across 88 backend
+test modules.
+
+Since 2026-10-01:
+
+- **actionAngleVerticalInverse is on the backends** (#1627/#1628/#1630/#1631;
+  out of scope until it stabilized): the momentum-matched map is built and
+  evaluated natively, differentiable in the action, the angles and the
+  potential's parameters, and jit-able end to end; the legacy modes evaluate
+  natively on a numpy construction. All 49 tests run under jax/torch (+jit) and
+  on CUDA. Open: a backend-native (differentiable) legacy construction.
+- **float64 by default** (#1613): galpy's internals run in float64 at torch's
+  float32 default; a user's float32 tensor stays float32 in and out.
+- **jit-mode correctness** (#1625): static objects keyed by type + attributes;
+  an identity key had served stale traces (2x wrong forces) after a wrapped
+  potential's `normalize()`.
+- **eager-jax recompilation** (#1621): varying array lengths padded to
+  power-of-4 buckets; C bridges skip pure_callback for concrete inputs
+  (qdf sampleV_interpolate 2837 s -> 118 s under jax).
+- differentiable `from_density` for SCF (#1612) and Multipole (#1618);
+  TwoPower via the incomplete beta (#1597); jax gammainc ~100x faster (#1615).
+- CI: CPU/AVX-512 runner reported in the pytest header (#1620); the #1614
+  inductor SIMD cap confirmed necessary on an avx512f runner.
+
+<details>
+<summary>Previous status (2026-09-16)</summary>
+
 **Status 2026-09-16.** The migration is essentially complete on the "does it
 run" axis: the backend xfail ledger is down to **3** entries and the slow-skip
 ledger to **5**, across 82 backend test modules. What remains is a
@@ -48,6 +80,8 @@ are still unmeasured.
 2026-08-24 and 2026-09-16 while 89 PRs merged; the rows below were rebuilt from
 the GitHub API rather than from notes, and the Status section above replaces one
 that had been stale since 2026-06-18.
+
+</details>
 
 <details>
 <summary>Previous status (2026-06-18)</summary>
@@ -488,3 +522,20 @@ number in the pair.
 | [#1596](https://github.com/jobovy/galpy/pull/1596) | main | 2026-10-01 | TwoPowerSphericalPotential forces via the incomplete beta function (accurate for all alpha, beta) |
 | [#1597](https://github.com/jobovy/galpy/pull/1597) | feat/backends | 2026-10-01 | TwoPowerSphericalPotential forces via the incomplete beta function, backend-native and differentiable |
 | [#1612](https://github.com/jobovy/galpy/pull/1612) | feat/backends | 2026-10-01 | SCFPotential.from_density: differentiable w.r.t. the density's parameters (static and time-dependent) |
+| [#1614](https://github.com/jobovy/galpy/pull/1614) | feat/backends | 2026-10-02 | test_backend_compile_workflows: cap inductor SIMD at 256 bits for kingdf_W0 (GCC ICE on AVX-512 runners; confirmed on an avx512f runner 2026-10-03) |
+| [#1615](https://github.com/jobovy/galpy/pull/1615) | feat/backends | 2026-10-02 | gammainc/gammaincc on jax: vectorized series/CF (~100x faster on CPU), scipy-accurate everywhere |
+| [#1616](https://github.com/jobovy/galpy/pull/1616) | feat/backends | 2026-10-02 | Orbit.from_name (SIMBAD) tests run under forced jax/torch |
+| [#1617](https://github.com/jobovy/galpy/pull/1617) | feat/backends | 2026-10-03 | quasiisothermaldf: constructor compiles under torch.compile without an opt-out (last #1574 stopgap) |
+| [#1618](https://github.com/jobovy/galpy/pull/1618) | feat/backends | 2026-10-03 | MultipoleExpansionPotential.from_density: differentiable w.r.t. the density's parameters (static and time-dependent) |
+| [#1619](https://github.com/jobovy/galpy/pull/1619) | feat/backends | 2026-10-03 | Dynamical friction (backend, eager): one force factor per EOM step; FDM computes only its regime |
+| [#1620](https://github.com/jobovy/galpy/pull/1620) | feat/backends | 2026-10-03 | conftest: the runner's CPU (model, AVX2/AVX-512/AMX, inductor vec ISA) in the pytest header |
+| [#1613](https://github.com/jobovy/galpy/pull/1613) | feat/backends | 2026-10-04 | float64 by default: torch's float32 default no longer crashes galpy or degrades its internals (user float32 tensors stay float32) |
+| [#1621](https://github.com/jobovy/galpy/pull/1621) | feat/backends | 2026-10-04 | qdf sampler: power-of-4 buckets + no pure_callback for concrete inputs; test_sampleV_interpolate un-skipped under jax (2837 s -> 118 s) |
+| [#1623](https://github.com/jobovy/galpy/pull/1623) | feat/backends | 2026-10-04 | test_orbit_interface_staeckel_defaultdelta: compare at the Orbit's own delta (1-ulp jit/eager difference) |
+| [#1624](https://github.com/jobovy/galpy/pull/1624) | feat/backends | 2026-10-04 | numpy islands: streamgapdf orbit-integration kick + constantbetadf torch pin removed; rest classified |
+| [#1625](https://github.com/jobovy/galpy/pull/1625) | feat/backends | 2026-10-04 | jit mode: static objects keyed by type + attributes (stale traces after a wrapped potential changed; per-call retraces) |
+| [#1626](https://github.com/jobovy/galpy/pull/1626) | (draft) | 2026-10-04 | CI for feat/backends rebased onto main (applied by Jo; closed) |
+| [#1627](https://github.com/jobovy/galpy/pull/1627) | feat/backends | 2026-10-05 | actionAngleVerticalInverse (1/3): the momentum-matched map evaluates natively under jax/torch |
+| [#1628](https://github.com/jobovy/galpy/pull/1628) | feat/backends | 2026-10-05 | actionAngleVerticalInverse (2/3): momentum-matched family built natively, differentiable in the potential's parameters, jit-able end to end |
+| [#1630](https://github.com/jobovy/galpy/pull/1630) | feat/backends | 2026-10-05 | actionAngleVerticalInverse (3/3): the legacy modes evaluate natively (numpy construction); map_coordinates order 5 + multi-reflection mirror fix |
+| [#1631](https://github.com/jobovy/galpy/pull/1631) | feat/backends | 2026-10-06 | actionAngleVerticalInverse runs on CUDA (energy grid to host; tests CUDA-clean) |
