@@ -36,16 +36,39 @@ What runs on each backend is DIFFERENT, and that is the point of the figure:
         timing (stored separately as ``compile``); the warm call is timed.
       - torch (eager): torch.compile is not used (it does not support the sm_61
         TITAN Xp; on CPU the per-shape inductor compile is minutes). Eager torchode
-        is dispatch-bound: every adaptive step is ~a hundred small kernels, and
-        the number of steps is set by the hardest particle, not by N.
+        is dispatch-bound: the batch takes a common number of adaptive steps
+        (~2800 Dopri5 steps = ~17,000 force evaluations at rtol=1e-12, the SAME for
+        N=100 and N=1000 -- set by the hardest particle, not by N), each ~a hundred
+        small kernels. CPU torch runs with ONE intra-op thread: for these small
+        kernels 4 threads only add barrier syncs (N=1000: 17 s with 1 thread vs
+        38 s with 4, and 165-200 s with 4 under heavier contention).
   * GPU series (TITAN Xp): the same jax/torch code with the spdf built on the
-    device (jax.default_device / torch.device('cuda')); sync via
+    device (jax.default_device / a torch.device('cuda') context, which is how
+    galpy's own --device cuda test mode places torch work); sync via
     block_until_ready / cuda.synchronize.
+  * Not shown: a numpy-parameter spdf sampled under a merely FORCED backend
+    (``with use('torch')`` + a key) integrates the particles with the C
+    integrator + its state-transition matrix (C-STM: differentiable w.r.t. the
+    progenitor IC only, not the potential): ~4.3 ms/particle at N=1000 (torch),
+    i.e. ~2x the plain numpy/C cost.
 
-What it shows: (a) wall time per call vs N; (b) cost per particle. numpy/C is
-cheap per particle but strictly linear (no fixed cost to amortise); the backend
-paths have a large N-independent floor (adaptive-step dispatch) that amortises
-with N, so their per-particle cost falls ~1/N until the CPU (or GPU) saturates.
+What it shows (CPU numbers, measured 2026-10-05/06): (a) wall time per call vs N;
+(b) cost per particle. numpy/C costs ~2.1 ms/particle at every N (0.30 s at
+N=100, 21 s at 10^4), strictly linear. The jitted, differentiable jax spray has NO
+fixed floor on CPU and costs ~1.0-1.5 ms/particle (0.098 s at N=100, 13 s at
+10^4, 153 s at 10^5) -- i.e. it is as fast as or faster than the non-differentiable
+C path (whose cost is set by its 10001-point output grid per particle; the
+adaptive Dopri8 at 1e-12 needs fewer, larger steps). Eager jax adds a ~6 s per-call
+floor (per-call overhead of the un-jitted sampler around the diffrax solve) that is amortised by N~10^4. Eager torch
+has a ~12 s floor (the adaptive-step loop is dispatched from Python) and
+~7 ms/particle at 10^4. The compile of the jitted sampler (excluded) is ~36-50 s
+per shape up to N=10^4 (stored in the JSON).
+
+CAVEAT: the CPU numbers were measured on a heavily shared machine (load average
+~65-150 on 72 logical CPUs, other users' threads running on the same 4 pinned
+cores; the load is stamped in ``env_cpu``), so absolute CPU times are inflated
+and noisy at the tens-of-percent level; the orders of magnitude and the
+scalings are robust.
 
 Timing protocol: one warm-up call, median of 3 timed calls (bench.time_call), all
 CPU series pinned to the same 4 cores (taskset); a series stops once one call
@@ -57,6 +80,7 @@ it. Re-measure CPU: delete the JSON (or ``python -m paper.figures.gS5_streamspra
 --measure cpu``); GPU-only re-measure merged into the JSON: ``... --measure gpu``.
 """
 
+import contextlib
 import json
 import os
 import platform
@@ -78,6 +102,7 @@ _NS = [100, 300, 1000, 3000, 10000, 30000, 100000, 300000, 1000000]
 _NUMPY_CHUNK = 2000
 _TSTOP = 60.0  # stop a series once one call exceeds this (s)
 _SEED = 20261005
+_TORCH_CPU_THREADS = 1
 
 _STYLE = {  # colour, linestyle, marker
     "numpy (CPU, C)": ("#000000", "-", "s"),
@@ -110,13 +135,18 @@ def _env(torch, jax):
     except Exception:
         pass
     try:
+        env["loadavg_1_5_15"] = list(os.getloadavg())  # shared box: contention context
+        env["logical_cpus"] = os.cpu_count()
+    except Exception:
+        pass
+    try:
         env["gpu"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"
     except Exception:
         env["gpu"] = "?"
     return env
 
 
-def _measure(devices=("cpu",)):
+def _measure(devices=("cpu",), which=("numpy", "jax", "torch")):
     """Time the CPU and/or GPU series; merges into an existing JSON."""
     import jax
 
@@ -218,7 +248,26 @@ def _measure(devices=("cpu",)):
             _sweep(f"jax ({tag}, jit)", None, "jax", compile_for_N=compiled)
 
     def _torch_series(device, tag):
-        with torch.device(device):
+        # CPU is torch's default device: no torch.device() context there -- that
+        # context is a TorchFunctionMode that adds Python overhead to EVERY op
+        # (measured ~2x on this dispatch-bound path). On the GPU it is how the spdf
+        # is built on cuda (same mechanism as galpy's --device cuda test mode).
+        ctx = contextlib.nullcontext() if device == "cpu" else torch.device(device)
+        nthr = torch.get_num_threads()
+        if device == "cpu":
+            # one intra-op thread: these are small (N-element) kernels, so 4 threads
+            # only add barrier syncs -- at N=1000 measured 17 s (1 thread) vs 38 s
+            # (4 threads), and 165-200 s (4 threads) under heavier contention on
+            # this shared box.
+            torch.set_num_threads(_TORCH_CPU_THREADS)
+            data["torch_cpu_threads"] = _TORCH_CPU_THREADS
+        try:
+            _torch_body(device, tag, ctx)
+        finally:
+            torch.set_num_threads(nthr)
+
+    def _torch_body(device, tag, ctx):
+        with ctx:
             spdf, tb = _timed_build("torch", "torch" if device == "cuda" else "none")
             data["construct"][f"torch ({tag})"] = tb
             data["integrator"][f"torch ({tag})"] = spdf._bsamp[2]
@@ -230,7 +279,7 @@ def _measure(devices=("cpu",)):
             _sweep(f"torch ({tag}, eager)", eager,
                    "torch" if device == "cuda" else "none")
 
-    if "cpu" in devices:
+    if "cpu" in devices and "numpy" in which:
         print("numpy (CPU, C)", flush=True)
         spdf_np, tb = _timed_build("numpy", "none")
         data["construct"]["numpy (CPU)"] = tb
@@ -248,18 +297,20 @@ def _measure(devices=("cpu",)):
             return f
 
         _sweep("numpy (CPU, C)", numpy_call, "none")
-        cpu = jax.devices("cpu")[0]
+    if "cpu" in devices and "jax" in which:
         print("jax (CPU)", flush=True)
-        _jax_series(cpu, "CPU")
+        _jax_series(jax.devices("cpu")[0], "CPU")
+    if "cpu" in devices and "torch" in which:
         print("torch (CPU)", flush=True)
         _torch_series("cpu", "CPU")
+    if "cpu" in devices:
         data["env_cpu"] = _env(torch, jax)
     if "gpu" in devices:
         gpus = [d for d in jax.devices() if d.platform == "gpu"]
-        if gpus:
+        if gpus and "jax" in which:
             print("jax (GPU)", flush=True)
             _jax_series(gpus[0], "GPU")
-        if torch.cuda.is_available():
+        if torch.cuda.is_available() and "torch" in which:
             print("torch (GPU)", flush=True)
             _torch_series("cuda", "GPU")
         data["env_gpu"] = _env(torch, jax)
@@ -327,5 +378,7 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser()
     p.add_argument("--measure", choices=["cpu", "gpu", "all"], required=True)
+    p.add_argument("--which", default="numpy,jax,torch")
     a = p.parse_args()
-    _measure(devices=("cpu", "gpu") if a.measure == "all" else (a.measure,))
+    _measure(devices=("cpu", "gpu") if a.measure == "all" else (a.measure,),
+             which=tuple(a.which.split(",")))

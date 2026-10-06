@@ -441,6 +441,38 @@
     "sha256": "7e841cc1519bcf47536f3a8c653f475b11bb6be3def605f78534620ddcce7baa",
     "track": "G"
   },
+  "gS4_streamdf_speed": {
+    "description": "streamdf cost per backend: construction (incl. track) vs nTrackChunks, sampling and DF evaluation vs N; numpy/C vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "9f6c9d6f7",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "203ff88",
+    "sha256": "431be3454170f9edbbcb177324b41d570319e2effc32f358f5072bb6595a460b",
+    "track": "S"
+  },
+  "gS5_streamspray_speed": {
+    "description": "particle-spray stream generation (fardal15spraydf.sample) wall time and per-particle cost vs N: numpy/C vs differentiable jax (eager/jit) and torch, CPU & GPU [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "9f6c9d6f7",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "203ff88",
+    "sha256": "d4a2f18d66cf4836c3517a353a88cd2d722db688ebf36f98f553fe046f8beb87",
+    "track": "S"
+  },
   "gV1_vertical_inverse": {
     "description": "differentiable 1D inverse action-angle map (actionAngleVerticalInverse, momentum-matched): tori of an isothermal disk + AD d/dsigma through the native construction, AD vs rebuilt central FD per angle, FD h-convergence, Poisson bracket (jax, jit, CPU float64) [measure->json, plot byte-stable]",
     "env": {
