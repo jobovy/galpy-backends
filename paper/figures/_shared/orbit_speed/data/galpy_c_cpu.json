@@ -8,33 +8,33 @@
   "atol": 1e-08,
   "potential": "MWPotential2014",
   "host": "geir",
-  "galpy_version": "1.12.0.dev0",
-  "galpy_file": "/var/tmp/backends-merge/galpy/__init__.py",
+  "galpy_version": "1.12.1.dev0",
+  "galpy_file": "/var/tmp/figs/galpy/__init__.py",
   "results": [
     {
       "N": 1,
-      "wall_s": 0.0034365419996902347,
-      "per_orbit_ms": 3.4365419996902347
+      "wall_s": 0.0029255570843815804,
+      "per_orbit_ms": 2.9255570843815804
     },
     {
       "N": 10,
-      "wall_s": 0.03310688503552228,
-      "per_orbit_ms": 3.310688503552228
+      "wall_s": 0.005030357977375388,
+      "per_orbit_ms": 0.5030357977375388
     },
     {
       "N": 100,
-      "wall_s": 0.2600603169994429,
-      "per_orbit_ms": 2.6006031699944288
+      "wall_s": 0.015140159986913204,
+      "per_orbit_ms": 0.15140159986913204
     },
     {
       "N": 1000,
-      "wall_s": 2.1044887590105645,
-      "per_orbit_ms": 2.1044887590105645
+      "wall_s": 0.12332817795686424,
+      "per_orbit_ms": 0.12332817795686425
     },
     {
       "N": 10000,
-      "wall_s": 21.42428223398747,
-      "per_orbit_ms": 2.142428223398747
+      "wall_s": 1.0939738060114905,
+      "per_orbit_ms": 0.10939738060114905
     }
   ]
 }

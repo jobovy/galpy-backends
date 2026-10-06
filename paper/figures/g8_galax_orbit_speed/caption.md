@@ -12,11 +12,14 @@ to G12's**, so the two figures can be read on a common reference. nt convention
 save 16 (memory) — integration is adaptive-step-bound not save-bound, so per-orbit
 cost matches and the overlap points agree.
 
-galpy's compiled `dop853_c` (single-thread C loop) has ~zero startup and wins
-decisively at small N — a single orbit takes ~3–10 ms vs ~1.6–2 s of
-compile/kernel-launch overhead for the GPU backends — but its per-orbit cost is
-constant (~2.1 ms/orbit). The JAX backends amortise the vectorised solve across the
-batch and cross galpy-C around N≈100–300:
+galpy's compiled `dop853_c` (single-thread C, `numcores=1`) costs ~0.1 ms/orbit
+once past its ~3 ms per-call setup, and is the fastest line at every measured N on
+this GPU: the GPU backends start from ~1–2 s of compile/kernel-launch overhead and
+amortise down to ~0.21 ms/orbit (galpy in-backend, per-orbit steps) and ~0.07
+ms/orbit (galax, batched steps) at N≈3e5, where single-thread C would take about as
+long as galax's batched GPU line. The TITAN Xp is a consumer GPU that runs float64
+at 1/32 of its float32 rate; a datacenter GPU (H100) changes this picture (see the
+H100 lines, when added). The individual lines:
 
 * **galpy (JAX, CPU; per-orbit steps)** — galpy's in-backend diffrax integrator on
   the CPU: the framework/vectorisation cost without the device, the common galpy

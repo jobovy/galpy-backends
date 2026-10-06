@@ -44,12 +44,13 @@ and are byte-for-byte IDENTICAL to G8's -- same orbit (MWPotential2014, Sun-like
 convention (lowN regime nt=1000 dense saves; hiN regime nt=16 sparse saves; per-orbit
 cost matches and the overlap points agree), so G8 and G12 can be read together.
 
-The story mirrors G8: galpy-C has ~zero startup and wins at small N (one orbit
-~3-10 ms vs the GPU's ~1.5 s compile/launch-bound floor), but its per-orbit cost is
-constant (sequential); the jit-fused JAX-GPU lines amortise the vectorised solve
-across the batch (Dopri8 -> ~0.21-0.25 ms/orbit; the same-work Dopri5 -> ~0.13-0.14
-ms/orbit at large N -- cheaper-per-step Dopri5 wins on the GPU despite more steps),
-crossing galpy-C around N~few-hundred. The JAX-CPU line shows the device contribution.
+The story mirrors G8 (re-measured 2026-10-06): single-thread galpy-C costs ~0.1
+ms/orbit after a ~3 ms per-call setup and is the fastest line at every measured N
+on this float64-limited consumer GPU; the jit-fused JAX-GPU lines amortise their
+~1.5 s compile/launch floor down to ~0.21 ms/orbit (Dopri8) and ~0.13 ms/orbit
+(same-work Dopri5) at large N. (The June version had ~2.1 ms/orbit for C, ~20x too
+slow: a slow build in that environment.) The JAX-CPU line shows the device
+contribution.
 
 SAME-WORK VERDICT: at the matched 5th-order method, the jit+vmap jax-Dopri5 GPU line
 reaches its compute-bound asymptote ~0.13 ms/orbit at N=3e5; the eager torch-dopri5

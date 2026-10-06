@@ -10,9 +10,11 @@ The galpy-C and galpy-jax (CPU/GPU) series are loaded from the shared
 saves 16), so the two figures can be read together.
 
 * **galpy (C, CPU; sequential)** — the compiled `dop853_c` integrator, one orbit at
-  a time in a single-threaded C loop. ~zero startup, constant per-orbit cost
-  (~2.1 ms/orbit at 1e-8), so it wins decisively at small N — a single orbit is
-  ~3 ms vs the GPU lines' ~1.5 s compile/launch-bound floor — but never amortises.
+  a time in a single-threaded C loop (`numcores=1`). ~3 ms per-call setup, then
+  ~0.1 ms/orbit at 1e-8: on this float64-limited consumer GPU it is the fastest
+  line at every measured N (the in-backend GPU lines amortise their ~1.5 s
+  compile/launch floor only down to ~0.13–0.21 ms/orbit). The June version of this
+  figure had ~2.1 ms/orbit for C, ~20x too slow (a slow build in that environment).
 * **galpy in-backend (JAX, GPU; Dopri8, shipped)** — diffrax `Dopri8` (8th order) of
   the backend-agnostic forces, `jax.vmap`-ed over the batch and jit-fused, on the
   NVIDIA TITAN Xp (sm_61). This is **what galpy ships on jax**. The vectorised solve

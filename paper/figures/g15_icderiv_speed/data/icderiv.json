@@ -7,89 +7,88 @@
   },
   "scaling": {
     "1": {
-      "cstm_cpu": 0.09289847605396062,
-      "diffrax_cpu": 0.10938575700856745,
-      "diffrax_gpu": 2.0714382940204814,
-      "torchdiffeq_cpu": 2.931922093965113,
-      "torchdiffeq_gpu": 7.785159329068847
+      "cstm_cpu": 0.021915215998888016,
+      "diffrax_cpu": 0.14046847796998918,
+      "diffrax_gpu": 3.5468474980443716,
+      "torchdiffeq_cpu": 3.728563118027523,
+      "torchdiffeq_gpu": 9.150629765004851
     },
     "1000": {
-      "cstm_cpu": 58.184828977973666
+      "cstm_cpu": 13.729585947992746
     },
     "1024": {
-      "diffrax_cpu": 6.418649327009916,
-      "diffrax_gpu": 2.0068210440222174
-    },
-    "131072": {
-      "torchdiffeq_cpu": 60.50158424198162
+      "diffrax_cpu": 10.192929691984318,
+      "diffrax_gpu": 3.8056643969612196,
+      "torchdiffeq_gpu": 10.532079922035336
     },
     "16": {
-      "cstm_cpu": 0.9311089639086276,
-      "diffrax_cpu": 0.19727670203428715,
-      "diffrax_gpu": 2.1501541200559586,
-      "torchdiffeq_cpu": 3.008676904020831,
-      "torchdiffeq_gpu": 8.58980725100264
+      "cstm_cpu": 0.2662321929819882,
+      "diffrax_cpu": 0.35001885902602226,
+      "diffrax_gpu": 3.4124861729796976,
+      "torchdiffeq_cpu": 3.6050429079914466,
+      "torchdiffeq_gpu": 9.63068366900552
     },
     "16384": {
-      "diffrax_cpu": 180.92073027207516,
-      "diffrax_gpu": 7.839879419072531,
-      "torchdiffeq_cpu": 17.100770631921478,
-      "torchdiffeq_gpu": 6.544563979958184
+      "diffrax_cpu": 335.9079163139686,
+      "diffrax_gpu": 13.342305889935233,
+      "torchdiffeq_cpu": 28.245740427053533,
+      "torchdiffeq_gpu": 10.044782168930396
     },
     "256": {
-      "cstm_cpu": 13.81730678502936,
-      "diffrax_cpu": 1.3155904239974916,
-      "diffrax_gpu": 1.888407484977506,
-      "torchdiffeq_cpu": 2.6894876080332324,
-      "torchdiffeq_gpu": 7.372960205073468
+      "cstm_cpu": 3.551717243040912,
+      "diffrax_cpu": 2.207423225045204,
+      "diffrax_gpu": 3.5532778000924736,
+      "torchdiffeq_cpu": 5.941682043019682,
+      "torchdiffeq_gpu": 9.587256402010098
     },
     "3000": {
-      "cstm_cpu": 161.03164205304347
+      "cstm_cpu": 41.17495030950522
     },
     "4": {
-      "cstm_cpu": 0.23171689501032233,
-      "diffrax_cpu": 0.14049202797468752,
-      "diffrax_gpu": 1.7561025189934298,
-      "torchdiffeq_cpu": 2.2448724589776248,
-      "torchdiffeq_gpu": 8.44329263502732
+      "cstm_cpu": 0.060833113035187125,
+      "diffrax_cpu": 0.28945217095315456,
+      "diffrax_gpu": 3.199968537897803,
+      "torchdiffeq_cpu": 3.6579651959473267,
+      "torchdiffeq_gpu": 9.027354997000657
     },
     "4096": {
-      "diffrax_cpu": 46.77013009204529,
-      "diffrax_gpu": 6.628244200022891,
-      "torchdiffeq_cpu": 8.975094742025249,
-      "torchdiffeq_gpu": 10.82904010801576
+      "diffrax_cpu": 83.62051131599583,
+      "diffrax_gpu": 7.194425560068339,
+      "torchdiffeq_cpu": 9.717851814930327,
+      "torchdiffeq_gpu": 9.31499269104097
     },
     "64": {
-      "cstm_cpu": 3.7437187269097194,
-      "diffrax_cpu": 0.3482731649419293,
-      "diffrax_gpu": 1.8983264380367473,
-      "torchdiffeq_cpu": 2.3971569519490004,
-      "torchdiffeq_gpu": 7.515469609992579
+      "cstm_cpu": 0.8917750039836392,
+      "diffrax_cpu": 0.6484577410155907,
+      "diffrax_gpu": 3.6969858539523557,
+      "torchdiffeq_cpu": 4.65930945193395,
+      "torchdiffeq_gpu": 10.229307940928265
     },
     "65536": {
-      "torchdiffeq_cpu": 45.15953353594523
+      "diffrax_gpu": 44.89300564001314,
+      "torchdiffeq_cpu": 52.78649208298884
     }
   },
   "single": {
     "cstm": {
       "cpu": {
-        "grad": 0.06609100697096437
+        "grad": 0.013489959994331002
       }
     },
     "diffrax": {
       "cpu": {
-        "grad": 0.06141412700526416
+        "grad": 0.11707719997502863
       },
       "gpu": {
-        "grad": 2.130274179042317
+        "grad": 3.7991618680534884
       }
     },
     "torchdiffeq": {
       "cpu": {
-        "grad": 4.494244217989035
+        "grad": 16.417185375932604
       },
       "gpu": {
-        "grad": 13.42979440803174
+        "grad": 44.70805106800981
       }
     }
   }

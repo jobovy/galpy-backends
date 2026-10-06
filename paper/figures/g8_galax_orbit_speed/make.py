@@ -17,7 +17,7 @@ Shared parameterization (G8 == G12 on these series):
     same in both regimes and the overlap points agree -> one consistent curve each.
 
   * galpy (C, CPU): the compiled ``dop853_c`` integrator, one orbit at a time in a
-    sequential C loop (single-threaded build).  ~2.1 ms/orbit, constant.
+    sequential C loop (numcores=1).  ~0.1 ms/orbit after a ~3 ms per-call setup.
   * galpy (JAX, CPU) and galpy (JAX, GPU): galpy's OWN in-backend differentiable
     integrator (``galpy.backend._reference.integrate_orbit`` -> diffrax Dopri8),
     jit-fused and ``jax.vmap``-ed over the N ICs (compile excluded), per-orbit
@@ -26,11 +26,15 @@ Shared parameterization (G8 == G12 on these series):
     Dopri8), jit-compiled and batched over the N ICs (compile time excluded).
     GPU = NVIDIA TITAN Xp (sm_61).
 
-The story: galpy-C has ~zero startup, so it wins decisively at small N (a single
-orbit: ~3-10 ms vs the GPU lines' ~1.6 s of kernel-launch/compile-bound overhead).
-But its per-orbit cost is ~constant (sequential), while the JAX backends amortise the
-vectorised solve across the batch -- galax-GPU down to ~0.07 ms/orbit at N=3e5
-(batched stepping), galpy-in-backend-GPU to ~0.21 ms/orbit (per-orbit stepping).
+The story (TITAN Xp, float64 at 1/32 rate): single-thread galpy-C, ~0.1 ms/orbit,
+is the fastest line at every measured N; the JAX GPU backends amortise their ~1.6 s
+launch/compile floor down to ~0.07 ms/orbit (galax, batched stepping) and ~0.21
+ms/orbit (galpy in-backend, per-orbit stepping) at N=3e5, i.e. galax's batched GPU
+line only reaches C's per-orbit cost at the largest N.
+The galpy-C numbers were re-measured on 2026-10-06 at ~0.1 ms/orbit; the first
+version of this figure (June) had ~2.1 ms/orbit, ~20x too slow -- a slow build in
+that environment (both a June-25 and the current galpy measure ~0.1 ms/orbit today).
+
 The GPU lowN (dense) run OOMs at N=1e5 (12 GiB), saving 1000 dense steps x N x 6
 doubles; the hiN (sparse, 16 saves) run reaches N=3e5.
 
