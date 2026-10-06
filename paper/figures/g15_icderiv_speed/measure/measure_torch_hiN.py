@@ -30,8 +30,8 @@ _F = pathlib.Path(__file__).resolve().parent.parent / "data" / "icderiv.json"
 out = json.loads(_F.read_text())
 
 
-def _field(t, y):  # y (6,N); _eom_rhs componentwise -> vectorises over N
-    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch))
+def _field(t, y):  # y (N,6); _eom_rhs reads the trailing axis -> vectorises over N
+    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch), dim=-1)
 
 
 def _save():
@@ -47,9 +47,9 @@ for dname, dev in ([("gpu", "cuda")] if torch.cuda.is_available() else []):  # G
         icn = numpy.stack([_IC * (1 + 0.001 * (k % 97)) for k in range(n)])
         def _g(icn=icn, dev=dev):
             ics = torch.tensor(icn, device=dev, requires_grad=True)
-            y0 = _to_eom(torch, ics.T)
+            y0 = _to_eom(torch, ics)
             ys = odeint(_field, y0, ts_t, method="dopri5", rtol=1e-8, atol=1e-8)
-            (torch.sqrt(ys[-1][0] ** 2 + ys[-1][2] ** 2)).sum().backward()
+            (torch.sqrt(ys[-1][:, 0] ** 2 + ys[-1][:, 2] ** 2)).sum().backward()
             g = ics.grad
             del ics, y0, ys
             return g

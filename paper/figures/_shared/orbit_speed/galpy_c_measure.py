@@ -80,12 +80,12 @@ for N in Ns:
     rng = np.random.default_rng(N)
     ics = make_ics(N, rng)
     o = Orbit(ics if N > 1 else ics[0])  # warmup (caches)
-    o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8)
+    o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8, numcores=1)
     best = 1e18
     for _ in range(3):
         o = Orbit(ics if N > 1 else ics[0])
         t0 = time.perf_counter()
-        o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8)
+        o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8, numcores=1)
         best = min(best, time.perf_counter() - t0)
     out["results"].append({"N": N, "wall_s": best, "per_orbit_ms": best / N * 1e3})
     print(

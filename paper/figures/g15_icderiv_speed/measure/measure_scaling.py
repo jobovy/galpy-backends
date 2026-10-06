@@ -61,8 +61,8 @@ def _safe(fn, **kw):
         return None
 
 
-def _torch_field(t, y):  # y: (6,N); _eom_rhs componentwise -> vectorises over N
-    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch))
+def _torch_field(t, y):  # y: (N,6); _eom_rhs reads the trailing axis -> vectorises over N
+    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch), dim=-1)
 
 
 def _set(n, key, val):
@@ -88,10 +88,10 @@ for n in NS:
         ts_t = torch.as_tensor(_TS, device=tdev)
         def _tg(icn=icn, tdev=tdev, ts_t=ts_t):
             ics = torch.tensor(icn, device=tdev, requires_grad=True)  # (N,6)
-            y0 = _to_eom(torch, ics.T)                                # (6,N) rect EOM
+            y0 = _to_eom(torch, ics)                                  # (N,6) rect EOM
             ys = odeint(_torch_field, y0, ts_t, method="dopri5", rtol=1e-8, atol=1e-8)
-            final = ys[-1]                                            # (6,N): x,vx,y,vy,z,vz
-            R = torch.sqrt(final[0] ** 2 + final[2] ** 2)             # (N,) final R
+            final = ys[-1]                                            # (N,6): x,vx,y,vy,z,vz
+            R = torch.sqrt(final[:, 0] ** 2 + final[:, 2] ** 2)       # (N,) final R
             R.sum().backward()
             return ics.grad
         # torch CPU is very slow at large N; cap CPU at 256, allow GPU to push out

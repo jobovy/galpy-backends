@@ -77,8 +77,8 @@ def _tsync():
         torch.cuda.synchronize()
 
 
-def _torch_field(t, y):
-    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch))
+def _torch_field(t, y):  # y (N,6), batch-first
+    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch), dim=-1)
 
 
 # series: (key, kind, device)
@@ -104,10 +104,10 @@ for n in N_EXT:
                 ts_t = torch.as_tensor(_TS, device=dev)
                 def _tg():
                     ics = torch.tensor(icn, device=dev, requires_grad=True)
-                    y0 = _to_eom(torch, ics.T)
+                    y0 = _to_eom(torch, ics)
                     ys = odeint(_torch_field, y0, ts_t, method="dopri5", rtol=1e-8, atol=1e-8)
                     final = ys[-1]
-                    (torch.sqrt(final[0] ** 2 + final[2] ** 2)).sum().backward()
+                    (torch.sqrt(final[:, 0] ** 2 + final[:, 2] ** 2)).sum().backward()
                     g = ics.grad
                     del ics, y0, ys, final
                     return g
