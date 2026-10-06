@@ -67,11 +67,11 @@ scale = torch.tensor([0.05, 0.01, 0.0, 0.01, 0.01, 0.0], device=dev)
 def _y0(N):
     g = torch.Generator(device=dev).manual_seed(N)
     ics = ic0[None] + torch.randn(N, 6, generator=g, device=dev) * scale  # (N,6) Orbit
-    return _to_eom(torch, ics.T)  # -> (6,N) rectangular EOM state
+    return _to_eom(torch, ics)  # -> (N,6) rectangular EOM state (galpy's EOM helpers are batch-first)
 
 
-def _field(t, y):  # y shape (6,N); _eom_rhs is componentwise -> vectorises over N
-    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch))
+def _field(t, y):  # y shape (N,6); _eom_rhs reads the trailing axis -> vectorises over N
+    return torch.stack(_eom_rhs(y, MWPotential2014, t, torch), dim=-1)
 
 
 def _sync():

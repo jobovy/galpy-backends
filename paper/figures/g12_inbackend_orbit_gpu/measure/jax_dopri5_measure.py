@@ -89,7 +89,7 @@ def _integrate_dopri5(vxvv):
         stepsize_controller=diffrax.PIDController(rtol=1e-8, atol=1e-8),
         max_steps=100000,
     )
-    return _from_eom(jnp, sol.ys)
+    return _from_eom(jnp, sol.ys, 6)
 
 
 @jax.jit
