@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-10-03
+# Vacation status snapshot — 2026-10-06
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,23 +7,20 @@
 
 ## Now
 
-    feat/backends   767193159   rebased onto main 7c675eb63 (2026-10-04, Jo applied #1626).
-    actionAngleVerticalInverse ON THE BACKENDS: stack #1629 = #1627 -> #1628 -> #1630.
+    feat/backends   9f6c9d6f7   (#1631 merged 2026-10-06). Green after the 2026-10-05
+                    GitHub Actions outage (reruns: all 5 runs success).
+    actionAngleVerticalInverse DONE: #1627/#1628/#1630/#1631 merged; runs on CUDA
+          (torch + jax). Open: backend-native legacy construction (deferred by Jo).
+    CURRENT TASK (Jo 2026-10-06): galpy-jax notes current; RE-RUN all paper figures
+          + speed tests on the latest code (worktree /var/tmp/fbp @ origin/feat/backends);
+          NEW figures: spherical DFs, 1D inverse action-angle (VI), streamdf,
+          streamspraydf, incl. GPU timings. Autonomous.
 
 ## Open PRs
 
-    #1627 backend/vi-mm-eval 6e858e7af -- VI (1/3): momentum-matched map evaluates natively
-          (eval_ppoly tables, brentq angle inversion w/ IFT, regular sin(eta)/sin(tau));
-          construction TEMPORARILY numpy-pinned; 17x2 skips removed. GREEN.
-    #1628 backend/vi-mm-construct 02489d2cc (stacked on #1627, stack #1629) -- VI (2/3):
-          native construction, differentiable in potential params (batched GN + 1 IFT
-          step, cubic_hermite_coeffs), jit-able end to end. GREEN (b108c23e3).
-    #1630 backend/vi-legacy-eval 9bb4d1d36 (stacked on #1628) -- VI (3/3): legacy modes evaluate
-          natively (brentq angle, _SplineXP, backend map_coordinates order 5 + mirror-fold fix);
-          construction numpy (no backend-param pots). All 49 VI tests in 4 backend modes. CI running.
-    AVX-512: #1614's simdlen=256 workaround CONFIRMED on an avx512f runner (EPYC 9V74,
-          #1613 run) -- inductor-kingdf_W0 PASSED. Keep it (removing re-exposes the GCC ICE).
-    Eager-floor jax skips (4): measured NOT compile-bound (1-20%); they stay.
+    none of mine.
+    AVX-512: #1614's simdlen=256 workaround CONFIRMED needed (keep it).
+    Eager-floor jax skips (4): measured NOT compile-bound; they stay.
     On hold per Jo: main merge prep, docs.
     Remote scratch branches (ruleset blocks my delete): Jo.
 
