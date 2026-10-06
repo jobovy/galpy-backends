@@ -64,7 +64,7 @@
     "track": "G"
   },
   "g13_ledger_burndown": {
-    "description": "backend-port burndown per backend: tests still xfail-ledgered vs time",
+    "description": "backend port of the existing test suite: tests passing per backend (eager, jit) vs time, ledger expanded to the tests it covers; plus the dedicated backend-test modules",
     "env": {
       "galpy": "1.12.1.dev0",
       "galpy_git": "9f6c9d6f7",
@@ -75,8 +75,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "3c798693310a8b292c72351ddfde2a662e58a29f0937fee712b0aac93470c12b",
+    "git": "91b7559",
+    "sha256": "4130f898d05d69be089f42a6d2fa9d22ead6ae02bbbce521fffaf2cbf9e67ab6",
     "track": "G"
   },
   "g14_hvs_potential_fit": {

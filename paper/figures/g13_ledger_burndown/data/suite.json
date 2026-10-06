@@ -1,0 +1,4079 @@
+[
+ {
+  "sha": "cd3461692f",
+  "date": "2026-06-14",
+  "subject": "CI: all-backend existing-suite job (xfail-ledger, sharded, feat/backends+nightly+dispatch) + per-PR backend smoke (#956)",
+  "source": "pull/956/head",
+  "existing": 2489,
+  "backend_modules": 2545,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1042,
+   "torch": 1670,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 355,
+   "torch": 1670,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d0cc494616",
+  "date": "2026-06-15",
+  "subject": "SCF/Multipole jax/torch vectorization: kill the per-point hang (#39 PR1) (#959)",
+  "source": "pull/959/head",
+  "existing": 2489,
+  "backend_modules": 2545,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1011,
+   "torch": 1670,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 324,
+   "torch": 1670,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "f1609902c6",
+  "date": "2026-06-16",
+  "subject": "backend: central coordinate coercion \u2014 fix systemic torch scalar-input rejection (#960)",
+  "source": "pull/960/head",
+  "existing": 2489,
+  "backend_modules": 2567,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1022,
+   "torch": 1684,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 335,
+   "torch": 1684,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "afa662ee58",
+  "date": "2026-06-16",
+  "subject": "all-backend ledger: milestone-1 regen prune (torch 1684\u2192 1485, jax 335\u2192 292) (#969)",
+  "source": "pull/969/head",
+  "existing": 2489,
+  "backend_modules": 2695,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 979,
+   "torch": 1485,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 292,
+   "torch": 1485,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "f4ddbe35f4",
+  "date": "2026-06-17",
+  "subject": "Backend: migrate the straightforward potential/ tail (PseudoIso, KuzminKutuzov, Ferrers, RazorThinExp) (#962)",
+  "source": "pull/962/head",
+  "existing": 2489,
+  "backend_modules": 2762,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 980,
+   "torch": 1495,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 293,
+   "torch": 1495,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "339d0bebce",
+  "date": "2026-06-18",
+  "subject": "Potential: make the convenience methods + functional interface backend-agnostic (incl. backend root-find/quadrature) (#975)",
+  "source": "pull/975/head",
+  "existing": 2489,
+  "backend_modules": 3433,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1017,
+   "torch": 1514,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 330,
+   "torch": 1514,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "0a70fb0089",
+  "date": "2026-06-19",
+  "subject": "Orbit accessors: backend-aware time-evaluation for in-backend (diffrax/torchdiffeq) orbits [PR-B] (#974)",
+  "source": "pull/974/head",
+  "existing": 2489,
+  "backend_modules": 3503,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1024,
+   "torch": 1590,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 337,
+   "torch": 1590,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "19fad83513",
+  "date": "2026-06-19",
+  "subject": "all-backend ledger: regenerate test_potential at per-potential granularity (post-#977) (#978)",
+  "source": "pull/978/head",
+  "existing": 3583,
+  "backend_modules": 3503,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1020,
+   "torch": 2074,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 333,
+   "torch": 2074,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "f6ecdcab81",
+  "date": "2026-06-21",
+  "subject": "backend: coerce all-numpy operands in promote_scalars under a forced backend (#991)",
+  "source": "pull/991/head",
+  "existing": 3583,
+  "backend_modules": 3518,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1020,
+   "torch": 2080,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 333,
+   "torch": 2080,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "8cde0f6139",
+  "date": "2026-06-22",
+  "subject": "potential/backend: gate composites backend-compatible + make test harness backend-aware (#993)",
+  "source": "pull/993/head",
+  "existing": 3583,
+  "backend_modules": 3560,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1026,
+   "torch": 2080,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 339,
+   "torch": 2080,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "7474603ec9",
+  "date": "2026-06-22",
+  "subject": "All-backend ledger: potential closeout (\u22121017: torch 2079\u21921075, jax 284\u2192271) (#996)",
+  "source": "pull/996/head",
+  "existing": 3583,
+  "backend_modules": 3560,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1013,
+   "torch": 1076,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 326,
+   "torch": 1076,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d24d953943",
+  "date": "2026-06-23",
+  "subject": "Un-defer jax orbit (single + multi) + broaden in-backend diffrax/torchdiffeq tests (#998)",
+  "source": "pull/998/head",
+  "existing": 3583,
+  "backend_modules": 3639,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 469,
+   "torch": 1078,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 469,
+   "torch": 1078,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "7249677e06",
+  "date": "2026-06-23",
+  "subject": "Torch orbit regen: drop 35 xfails the C-integrator helper now flips to PASS (#1000)",
+  "source": "pull/1000/head",
+  "existing": 3583,
+  "backend_modules": 3639,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 469,
+   "torch": 1043,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 469,
+   "torch": 1043,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "a0819f5304",
+  "date": "2026-06-24",
+  "subject": "backend ledger: orbit-milestone prune \u2014 drop 70 now-passing tests (jax 289\u2192287, torch 1029\u2192961) (#1006)",
+  "source": "pull/1006/head",
+  "existing": 3583,
+  "backend_modules": 3684,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 467,
+   "torch": 975,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 467,
+   "torch": 975,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "1c9654e6e0",
+  "date": "2026-06-24",
+  "subject": "actionAngle: closed-form Harmonic + Isochrone (forward + HarmonicInverse) + d\u03b8/dt=\u03a9 tests (Track E / Paa-python) (#1005)",
+  "source": "pull/1005/head",
+  "existing": 3583,
+  "backend_modules": 3729,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 530,
+   "torch": 977,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 468,
+   "torch": 977,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d7fe1541fe",
+  "date": "2026-06-25",
+  "subject": "actionAngleStaeckel: vectorized C-consistent actions (Track E, PR-1 of 2) (#1013)",
+  "source": "pull/1013/head",
+  "existing": 3588,
+  "backend_modules": 4022,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 534,
+   "torch": 981,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 472,
+   "torch": 981,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "058b7399c8",
+  "date": "2026-06-27",
+  "subject": "actionAngle{VerticalInverse,Torus}: explicit not-backend-compatible guards (#1017)",
+  "source": "pull/1017/head",
+  "existing": 3588,
+  "backend_modules": 4059,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 540,
+   "torch": 981,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 478,
+   "torch": 981,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "bd35905ea9",
+  "date": "2026-06-30",
+  "subject": "AA backends run for real: resolved-namespace dispatch (replaces #1033 numpy_island) (#1038)",
+  "source": "pull/1038/head",
+  "existing": 3589,
+  "backend_modules": 4159,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 523,
+   "torch": 935,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 461,
+   "torch": 935,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "eff550a82c",
+  "date": "2026-06-30",
+  "subject": "Harmonic/Isochrone Inverse: backend-agnostic test reductions (un-ledger 5 torch) (#1039)",
+  "source": "pull/1039/head",
+  "existing": 3589,
+  "backend_modules": 4159,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 523,
+   "torch": 930,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 461,
+   "torch": 930,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "e89e09eafd",
+  "date": "2026-07-01",
+  "subject": "backend ledger: AA-wave-downstream prune (jax 273\u2192233, torch 916\u2192886) (#1045)",
+  "source": "pull/1045/head",
+  "existing": 3589,
+  "backend_modules": 4160,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 500,
+   "torch": 900,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 421,
+   "torch": 900,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "2d22391215",
+  "date": "2026-07-03",
+  "subject": "Track F Pdf.2 (base): sphericaldf + isotropicHernquist pilot + backend helpers (#1052)",
+  "source": "pull/1052/head",
+  "existing": 3589,
+  "backend_modules": 4238,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 507,
+   "torch": 909,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 430,
+   "torch": 909,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "671fe7e4dc",
+  "date": "2026-07-04",
+  "subject": "Track F Pdf.2 (osipkovmerritt): backend-migrate Osipkov\u2013Merritt DFs (base + Hernquist + NFW + PowerLaw) (#1055)",
+  "source": "pull/1055/head",
+  "existing": 3589,
+  "backend_modules": 4330,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 520,
+   "torch": 916,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 444,
+   "torch": 916,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "dceef9ec4e",
+  "date": "2026-07-04",
+  "subject": "Track F Pdf.2 (constantbeta): backend-migrate constant-\u03b2 DFs (base + Hernquist + PowerLaw) (#1054)",
+  "source": "pull/1054/head",
+  "existing": 3589,
+  "backend_modules": 4456,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 525,
+   "torch": 916,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 449,
+   "torch": 916,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "7d1523f64f",
+  "date": "2026-07-04",
+  "subject": "estimateDeltaStaeckel: resolved-namespace dispatch \u2014 runs on jax/torch (drop numpy island) [AA redesign #113, cluster 1] (#1067)",
+  "source": "pull/1067/head",
+  "existing": 3589,
+  "backend_modules": 4504,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 525,
+   "torch": 913,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 449,
+   "torch": 913,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "818d055a01",
+  "date": "2026-07-05",
+  "subject": "quasiisothermaldf: backend-migrate the moment engine + pv-projections (jax/torch) (#1071)",
+  "source": "pull/1071/head",
+  "existing": 3589,
+  "backend_modules": 4602,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 525,
+   "torch": 914,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 449,
+   "torch": 914,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "ebcde102aa",
+  "date": "2026-07-06",
+  "subject": "actionAngleStaeckel: route forced-backend inputs to the C-native path (gate on xp, not is_backend_array) (#1074)",
+  "source": "pull/1074/head",
+  "existing": 3589,
+  "backend_modules": 4666,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 525,
+   "torch": 910,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 449,
+   "torch": 910,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d49c30f655",
+  "date": "2026-07-06",
+  "subject": "backend xfail-ledger: DF+AA milestone prune (jax \u2212146, torch \u2212158) (#1077)",
+  "source": "pull/1077/head",
+  "existing": 3589,
+  "backend_modules": 4679,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 383,
+   "torch": 752,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 304,
+   "torch": 752,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "0e21398670",
+  "date": "2026-07-07",
+  "subject": "consume main: ledger new-feature backend gaps (ExpTruncNFW/SCF-time-dep Phase-2)",
+  "source": "rewritten",
+  "existing": 0,
+  "backend_modules": 0,
+  "collect_errors": 85,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 316,
+   "torch": 816,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "63d9d02cd9",
+  "date": "2026-07-07",
+  "subject": "ExpTruncNFWPotential: backend-migrate (jax/torch) + exp1 special function (#1081)",
+  "source": "pull/1081/head",
+  "existing": 3667,
+  "backend_modules": 4770,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 395,
+   "torch": 798,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 316,
+   "torch": 798,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "ac7fcbded1",
+  "date": "2026-07-07",
+  "subject": "Time-dependent SCF/Multipole: backend-migrate (jax/torch), differentiable in t (#1082)",
+  "source": "pull/1082/head",
+  "existing": 3667,
+  "backend_modules": 4759,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 385,
+   "torch": 787,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 306,
+   "torch": 787,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "7030f163c9",
+  "date": "2026-07-08",
+  "subject": "constantbetadf: backend-native differentiable fE (jax/torch) (#1087)",
+  "source": "pull/1087/head",
+  "existing": 3667,
+  "backend_modules": 4805,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 385,
+   "torch": 760,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 306,
+   "torch": 760,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "77297da2ee",
+  "date": "2026-07-08",
+  "subject": "Eliminate _rforce_jax; unify spherical-DF autodiff onto the backends (jax + torch) (#1089)",
+  "source": "pull/1089/head",
+  "existing": 3668,
+  "backend_modules": 4828,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 385,
+   "torch": 755,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 306,
+   "torch": 755,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "5cb40ea822",
+  "date": "2026-07-09",
+  "subject": "streamspraydf: backend-agnostic sampler core (jax/torch) \u2014 stacked on #1083 + #1084 (#1085)",
+  "source": "pull/1085/head",
+  "existing": 3667,
+  "backend_modules": 4845,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 387,
+   "torch": 760,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 308,
+   "torch": 760,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "9198dba48b",
+  "date": "2026-07-11",
+  "subject": "streamTrack: backend-aware StreamTrack class (differentiable public track) (#1100)",
+  "source": "pull/1100/head",
+  "existing": 3690,
+  "backend_modules": 5080,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 432,
+   "torch": 755,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 309,
+   "torch": 755,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "e62e252b6d",
+  "date": "2026-07-14",
+  "subject": "AnyAxisymmetricRazorThinDiskPotential: jit/grad-safe backend internals (numpy byte-identical) (#1121)",
+  "source": "pull/1121/head",
+  "existing": 3690,
+  "backend_modules": 5131,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 432,
+   "torch": 754,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 309,
+   "torch": 754,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "e0abb884e1",
+  "date": "2026-07-15",
+  "subject": "ledger: slow-skip 2 jax NonInertial func/vec-omega tests (eager-XLA timeout) (#1124)",
+  "source": "pull/1124/head",
+  "existing": 3690,
+  "backend_modules": 5374,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 434,
+   "torch": 754,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 311,
+   "torch": 754,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "a9222c6969",
+  "date": "2026-07-15",
+  "subject": "ledger: slow-skip the jax NonInertial func/vec-omega family (recurring eager-XLA timeout) (#1128)",
+  "source": "pull/1128/head",
+  "existing": 3690,
+  "backend_modules": 5714,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 446,
+   "torch": 754,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 323,
+   "torch": 754,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "3c2e254532",
+  "date": "2026-07-16",
+  "subject": "ledger: prune 86 stale torch/jax xfails (CI regen 2026-07-16) (#1137)",
+  "source": "pull/1137/head",
+  "existing": 3690,
+  "backend_modules": 5756,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 445,
+   "torch": 669,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 322,
+   "torch": 669,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "00921c3b3d",
+  "date": "2026-07-17",
+  "subject": "tests: fix 17 torch xfails via as_numpy casts + drop from ledger (burndown wave 1) (#1138)",
+  "source": "pull/1138/head",
+  "existing": 3690,
+  "backend_modules": 5756,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 445,
+   "torch": 610,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 322,
+   "torch": 610,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "164500b508",
+  "date": "2026-07-18",
+  "subject": "ledger: regen-milestone prune (jax 112\u219289, torch 596\u2192365; \u2212254) (#1147)",
+  "source": "pull/1147/head",
+  "existing": 3690,
+  "backend_modules": 5864,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 422,
+   "torch": 379,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 299,
+   "torch": 379,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "845a12dd2e",
+  "date": "2026-07-18",
+  "subject": "tests: slow-skip the jax scalarfuncomegaz noninertial timeout flake (#1153)",
+  "source": "pull/1153/head",
+  "existing": 3690,
+  "backend_modules": 5923,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 379,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 379,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b80244aa9f",
+  "date": "2026-07-19",
+  "subject": "tests: reclaim 28 torch test_quantity backend xfails (4 as_numpy fixes + 24 stale-passing prune) (#1154)",
+  "source": "pull/1154/head",
+  "existing": 3690,
+  "backend_modules": 5961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 351,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 351,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "2234af88b5",
+  "date": "2026-07-19",
+  "subject": "tests: reclaim 9 torch test_potential backend xfails (as_numpy fixes + in-shard stale prune) (#1158)",
+  "source": "pull/1158/head",
+  "existing": 3690,
+  "backend_modules": 5979,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 342,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 342,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "2888a665e7",
+  "date": "2026-07-19",
+  "subject": "tests: reclaim 20 torch scf-shard backend xfails (as_numpy fixes + in-shard stale prune) (#1159)",
+  "source": "pull/1159/head",
+  "existing": 3690,
+  "backend_modules": 5979,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 331,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 331,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "30e32c4079",
+  "date": "2026-07-19",
+  "subject": "tests: reclaim 4 torch test_sphericaldf backend xfails (as_numpy fixes + in-shard stale prune) (#1157)",
+  "source": "pull/1157/head",
+  "existing": 3690,
+  "backend_modules": 5979,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 347,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 347,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "fedd660bb4",
+  "date": "2026-07-19",
+  "subject": "tests: reclaim 23 torch test_orbit/test_orbits backend xfails (as_numpy fixes + in-shard stale prune) (#1156)",
+  "source": "pull/1156/head",
+  "existing": 3690,
+  "backend_modules": 5979,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 328,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 328,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "3695e0cee3",
+  "date": "2026-07-19",
+  "subject": "tests: run --backend torch in float64 (conftest) \u2014 was silently float32 (#1160)",
+  "source": "pull/1160/head",
+  "existing": 3690,
+  "backend_modules": 5979,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 423,
+   "torch": 297,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 300,
+   "torch": 297,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "f7e44ce705",
+  "date": "2026-07-19",
+  "subject": "ledger: regen-milestone prune after the float64 conftest fix (-81) (#1161)",
+  "source": "pull/1161/head",
+  "existing": 3690,
+  "backend_modules": 5979,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 421,
+   "torch": 218,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 298,
+   "torch": 218,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "1d49176ed2",
+  "date": "2026-07-20",
+  "subject": "qdf burndown: backend-coerce quasiisothermaldf leaves (+8 torch flips) (#1162)",
+  "source": "pull/1162/head",
+  "existing": 3690,
+  "backend_modules": 5997,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 421,
+   "torch": 210,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 298,
+   "torch": 210,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "86db1996f4",
+  "date": "2026-07-20",
+  "subject": "sphericaldf burndown: +23 backend flips (osipkov/constantbeta/eddington root-cause fixes) (#1164)",
+  "source": "pull/1164/head",
+  "existing": 3690,
+  "backend_modules": 5999,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 411,
+   "torch": 205,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 288,
+   "torch": 205,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "c7de1b2178",
+  "date": "2026-07-20",
+  "subject": "streamTrack burndown: torch accessor/plot flips (+6 torch) (#1165)",
+  "source": "pull/1165/head",
+  "existing": 3690,
+  "backend_modules": 6014,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 411,
+   "torch": 191,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 288,
+   "torch": 191,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "3ad9f92e8d",
+  "date": "2026-07-23",
+  "subject": "Milestone ledger regen: torch 177\u219299, jax 77\u219254 (\u2212101, 0 regressions) (#1188)",
+  "source": "pull/1188/head",
+  "existing": 3690,
+  "backend_modules": 6157,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 390,
+   "torch": 113,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 267,
+   "torch": 113,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "421718e17a",
+  "date": "2026-07-25",
+  "subject": "df: open the coercion boundary for sphericaldf (+ Quantity passthrough) (#1197)",
+  "source": "pull/1197/head",
+  "existing": 3692,
+  "backend_modules": 6257,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 390,
+   "torch": 113,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 267,
+   "torch": 113,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "acc92b6b15",
+  "date": "2026-07-26",
+  "subject": "backend: trace mode -- run the ENTIRE test suite under jax.jit / torch.compile (--jit) (#1202)",
+  "source": "pull/1202/head",
+  "existing": 3692,
+  "backend_modules": 6653,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 390,
+   "torch": 113,
+   "jax-jit": 100,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 267,
+   "torch": 113,
+   "jax-jit": 100,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "1a500814a4",
+  "date": "2026-07-27",
+  "subject": "Finish the 2nd-derivative migrations (log spirals, RazorThin) + prune the jax-jit ledger 100 -> 49 (#1206)",
+  "source": "pull/1206/head",
+  "existing": 3692,
+  "backend_modules": 6736,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 390,
+   "torch": 113,
+   "jax-jit": 49,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 267,
+   "torch": 113,
+   "jax-jit": 49,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "076b54a2c4",
+  "date": "2026-07-27",
+  "subject": "noGL ellipsoidals via backend quadrature + agnostic DiskSCF/Multipole fixtures; jax-jit ledger 49 -> 28 (#1208)",
+  "source": "pull/1208/head",
+  "existing": 3692,
+  "backend_modules": 6736,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 390,
+   "torch": 113,
+   "jax-jit": 28,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 267,
+   "torch": 113,
+   "jax-jit": 28,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "91196c4166",
+  "date": "2026-07-27",
+  "subject": "De-duplicate dePeriod: one backend-agnostic implementation (#1211)",
+  "source": "pull/1211/head",
+  "existing": 3692,
+  "backend_modules": 6743,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 28,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 28,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "43ad13d893",
+  "date": "2026-07-28",
+  "subject": "Make surfdens traceable end to end; jax-jit ledger 28 -> 15 (#1212)",
+  "source": "pull/1212/head",
+  "existing": 3692,
+  "backend_modules": 6747,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 15,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 15,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "531777295c",
+  "date": "2026-07-28",
+  "subject": "Unblock the two \"Pspecial-blocked\" closed-form masses (#1213)",
+  "source": "pull/1213/head",
+  "existing": 3692,
+  "backend_modules": 6747,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 14,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 14,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "4530a96813",
+  "date": "2026-07-28",
+  "subject": "One f(E) spline builder on sphericaldf, not two divergent copies (#1214)",
+  "source": "pull/1214/head",
+  "existing": 3692,
+  "backend_modules": 6747,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 19,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 19,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "dd7d761960",
+  "date": "2026-07-28",
+  "subject": "Keep the constant-beta fE integration limits on-backend (#1215)",
+  "source": "pull/1215/head",
+  "existing": 3692,
+  "backend_modules": 6748,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 14,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 14,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "746729e760",
+  "date": "2026-07-28",
+  "subject": "Reconcile the jax-jit ledger with reality: drop 8 inert, add 1 real (#1216)",
+  "source": "pull/1216/head",
+  "existing": 3692,
+  "backend_modules": 6748,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 7,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 7,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "cc585e244d",
+  "date": "2026-07-29",
+  "subject": "Whole-line surface density and the RazorThin degenerate radii, traceable (#1217)",
+  "source": "pull/1217/head",
+  "existing": 3692,
+  "backend_modules": 6759,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "e71c546bc6",
+  "date": "2026-07-29",
+  "subject": "Gate the traced quadrature on under_trace, not a concreteness probe (#1218)",
+  "source": "pull/1218/head",
+  "existing": 3692,
+  "backend_modules": 6759,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "4e4e1fb794",
+  "date": "2026-07-29",
+  "subject": "DoubleExponentialDisk: broadcast the Ogata quadrature over a node axis (#1219)",
+  "source": "pull/1219/head",
+  "existing": 3692,
+  "backend_modules": 6765,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 4,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 4,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "55b50d6026",
+  "date": "2026-07-29",
+  "subject": "jit ledger: un-ledger test_ExpDisk_special, record two measured interpRZPotential gaps (#1220)",
+  "source": "pull/1220/head",
+  "existing": 3692,
+  "backend_modules": 6765,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b82edc78b6",
+  "date": "2026-07-29",
+  "subject": "Ledger: state the reducible-vs-blocked split so the count reads honestly (#1222)",
+  "source": "pull/1222/head",
+  "existing": 3692,
+  "backend_modules": 6765,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 389,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 266,
+   "torch": 113,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "79bc14ceb1",
+  "date": "2026-07-30",
+  "subject": "test_quantity: express turn_physical_off's contract backend-agnostically (#1223)",
+  "source": "pull/1223/head",
+  "existing": 3692,
+  "backend_modules": 6765,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 386,
+   "torch": 110,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 263,
+   "torch": 110,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "72960852e0",
+  "date": "2026-07-30",
+  "subject": "ledger: drop 20 stale entries measured from CI JUnit artifacts (150 \u2192 130) (#1224)",
+  "source": "pull/1224/head",
+  "existing": 3692,
+  "backend_modules": 6765,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 386,
+   "torch": 90,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 263,
+   "torch": 90,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "48c48d6655",
+  "date": "2026-07-30",
+  "subject": "conversion: a 1D actionAngle __call__ is one action, not a sequence (fixes a plain-numpy IndexError) (#1225)",
+  "source": "pull/1225/head",
+  "existing": 3694,
+  "backend_modules": 6765,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 385,
+   "torch": 89,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 262,
+   "torch": 89,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "71651b9fde",
+  "date": "2026-07-30",
+  "subject": "hyp2f1 fallback: cover the parameter domains galpy's DFs request (unlocks constant-beta DFs for beta \u2265 0.5 on jax/torch) (#1226)",
+  "source": "pull/1226/head",
+  "existing": 3694,
+  "backend_modules": 6791,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 382,
+   "torch": 86,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 259,
+   "torch": 86,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "5a999a535a",
+  "date": "2026-07-30",
+  "subject": "staeckel_c backends: keep C's unbound sentinel out of the azimuth wrap (#1227)",
+  "source": "pull/1227/head",
+  "existing": 3694,
+  "backend_modules": 6793,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 381,
+   "torch": 85,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 258,
+   "torch": 85,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b80ef2bd1a",
+  "date": "2026-07-30",
+  "subject": "tests: land backend arrays on numpy where they enter, not where they fail (ledger 120 \u2192 109) (#1228)",
+  "source": "pull/1228/head",
+  "existing": 3694,
+  "backend_modules": 6793,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 381,
+   "torch": 75,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 258,
+   "torch": 75,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "9420a70d4f",
+  "date": "2026-07-31",
+  "subject": "Orbits: accept backend arrays in obs= (ledger 109 \u2192 107) (#1229)",
+  "source": "pull/1229/head",
+  "existing": 3694,
+  "backend_modules": 6793,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 381,
+   "torch": 73,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 258,
+   "torch": 73,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "6894ac2882",
+  "date": "2026-07-31",
+  "subject": "qdf: land the sampler's DF values on numpy where they enter numpy code (ledger 107 \u2192 101) (#1231)",
+  "source": "pull/1231/head",
+  "existing": 3694,
+  "backend_modules": 6797,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 381,
+   "torch": 67,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 258,
+   "torch": 67,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 6,
+   "torch": 6,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "30b14d7e24",
+  "date": "2026-08-01",
+  "subject": "streamTrack: backend-native cov() basis rotation (galcenrect/galcencyl differentiable; sky bases eager-only)",
+  "source": "rewritten",
+  "existing": 0,
+  "backend_modules": 0,
+  "collect_errors": 114,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 258,
+   "torch": 62,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "09d4f22fd0",
+  "date": "2026-08-02",
+  "subject": "tests: move actionAngleVerticalInverse out of the xfail ledger into backend_skip (#1238)",
+  "source": "pull/1238/head",
+  "existing": 3753,
+  "backend_modules": 6801,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 357,
+   "torch": 38,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 234,
+   "torch": 38,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "8c551a2e9e",
+  "date": "2026-08-03",
+  "subject": "tests: drop 3 stale torch ledger entries (48 \u2192 45) (#1241)",
+  "source": "pull/1241/head",
+  "existing": 3753,
+  "backend_modules": 6833,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 357,
+   "torch": 34,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 234,
+   "torch": 34,
+   "jax-jit": 5,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "5d567a3fe2",
+  "date": "2026-08-03",
+  "subject": "tests/interp_potential: backend-aware bound for the traced use_c grid compare (#1243)",
+  "source": "pull/1243/head",
+  "existing": 3753,
+  "backend_modules": 6833,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 357,
+   "torch": 34,
+   "jax-jit": 3,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 234,
+   "torch": 34,
+   "jax-jit": 3,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "216d06581f",
+  "date": "2026-08-04",
+  "subject": "test_quantity: relative bound for physical-vs-natural comparisons (-8 ledger entries) (#1250)",
+  "source": "pull/1250/head",
+  "existing": 3753,
+  "backend_modules": 6833,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 353,
+   "torch": 30,
+   "jax-jit": 3,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 230,
+   "torch": 30,
+   "jax-jit": 3,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d37654f55d",
+  "date": "2026-08-05",
+  "subject": "tests: un-defer 27 of the 28 jax spherical-DF slow-skips (slow-skip 230 -> 203) (#1252)",
+  "source": "pull/1252/head",
+  "existing": 3756,
+  "backend_modules": 6834,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 326,
+   "torch": 30,
+   "jax-jit": 3,
+   "torch-jit": 1
+  },
+  "entries": {
+   "jax": 203,
+   "torch": 30,
+   "jax-jit": 3,
+   "torch-jit": 1
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b2970e2b59",
+  "date": "2026-08-05",
+  "subject": "util: make parallel_map's forked children fork-safe under torch (#1256)",
+  "source": "pull/1256/head",
+  "existing": 3756,
+  "backend_modules": 6848,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 323,
+   "torch": 27,
+   "jax-jit": 3,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 200,
+   "torch": 27,
+   "jax-jit": 3,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d39612eff4",
+  "date": "2026-08-06",
+  "subject": "Make the backend ledger numbers mean what they say (2 source fixes, 3 re-homes, a prune, readable logs)",
+  "source": "rewritten",
+  "existing": 0,
+  "backend_modules": 0,
+  "collect_errors": 115,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 198,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "c064bdb644",
+  "date": "2026-08-06",
+  "subject": "interpolate: pair map_coordinates' boundary mode with the spline_filter prefilter (#1258)",
+  "source": "pull/1258/head",
+  "existing": 3756,
+  "backend_modules": 6855,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 320,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 197,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b1e89c0eb6",
+  "date": "2026-08-07",
+  "subject": "ledger: move the 3 torch-jit streamdf entries from xfail to slow-skip (they HANG) (#1263)",
+  "source": "pull/1263/head",
+  "existing": 3756,
+  "backend_modules": 6922,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 320,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 197,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "e9de6c3383",
+  "date": "2026-08-07",
+  "subject": "parallel_map: do not fork while galpy is running traced (#1266)",
+  "source": "pull/1266/head",
+  "existing": 3756,
+  "backend_modules": 6927,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 320,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 197,
+   "torch": 20,
+   "jax-jit": 5,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "4d47ac8d77",
+  "date": "2026-08-07",
+  "subject": "slow-skip: un-defer 100 stale jax orbit entries, 209 -> 109 (#1267)",
+  "source": "pull/1267/head",
+  "existing": 3756,
+  "backend_modules": 6927,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 220,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 97,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "47279ccacd",
+  "date": "2026-08-08",
+  "subject": "slow-skip: un-defer 5 measured-stale jax diskdf sampling entries (109 -> 104) (#1269)",
+  "source": "pull/1269/head",
+  "existing": 3756,
+  "backend_modules": 6927,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 215,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 92,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "8094b12749",
+  "date": "2026-08-08",
+  "subject": "slow-skip: un-defer 6 measured-stale jax entries (104 -> 98) (#1270)",
+  "source": "pull/1270/head",
+  "existing": 3756,
+  "backend_modules": 6943,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 209,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 86,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "fe7b35583e",
+  "date": "2026-08-08",
+  "subject": "actionAngleVertical: backend path forwards to the undecorated linear evaluators (244 -> 0 crossings) (#1273)",
+  "source": "pull/1273/head",
+  "existing": 3756,
+  "backend_modules": 6949,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 203,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 80,
+   "torch": 20,
+   "jax-jit": 6,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d35453306d",
+  "date": "2026-08-09",
+  "subject": "--jit gets its own slow-skip list, populated by measurement instead of inheritance (#1279)",
+  "source": "pull/1279/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 18,
+   "jax-jit": 27,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 18,
+   "jax-jit": 27,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 30,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "ec7e67e233",
+  "date": "2026-08-09",
+  "subject": "streamdf: out-of-place LB jacobian scaling (burns 10 jax-jit ledger entries) (#1280)",
+  "source": "pull/1280/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 18,
+   "jax-jit": 17,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 18,
+   "jax-jit": 17,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "1be681c366",
+  "date": "2026-08-09",
+  "subject": "--jit slow-skip: the measurement gh#1279 owed (10 files, ~2456 traced cases) (#1281)",
+  "source": "pull/1281/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 18,
+   "jax-jit": 39,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 18,
+   "jax-jit": 39,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "07deb9c1b1",
+  "date": "2026-08-09",
+  "subject": "KuijkenDubinski _mass: backend quadrature (2 traced defects; RotateAndTilt attempted + reverted) (#1283)",
+  "source": "pull/1283/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 18,
+   "jax-jit": 37,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 18,
+   "jax-jit": 37,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "19832bb146",
+  "date": "2026-08-09",
+  "subject": "torch --jit sweep: 15 eager slow-skip entries measured traced (delete 13, add 10) (#1284)",
+  "source": "pull/1284/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 4,
+   "jax-jit": 39,
+   "torch-jit": 14
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 4,
+   "jax-jit": 39,
+   "torch-jit": 14
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "60b14c0ac9",
+  "date": "2026-08-10",
+  "subject": "slow-skip: re-defer torch FDM central_limit (gh#1284's un-defer was wrong) (#1288)",
+  "source": "pull/1288/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 5,
+   "jax-jit": 37,
+   "torch-jit": 14
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 5,
+   "jax-jit": 37,
+   "torch-jit": 14
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "82aa6309e3",
+  "date": "2026-08-10",
+  "subject": "RotateAndTilt surfdens: split the vertical quadrature at the potential's mid-plane (clears 5 traced entries) (#1285)",
+  "source": "pull/1285/head",
+  "existing": 3757,
+  "backend_modules": 6971,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 202,
+   "torch": 5,
+   "jax-jit": 32,
+   "torch-jit": 14
+  },
+  "entries": {
+   "jax": 79,
+   "torch": 5,
+   "jax-jit": 32,
+   "torch-jit": 14
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "6e56330fb1",
+  "date": "2026-08-10",
+  "subject": "slow-skip: un-defer 24 measured-stale eager-jax entries (109 -> 85) (#1286)",
+  "source": "pull/1286/head",
+  "existing": 3757,
+  "backend_modules": 6961,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 178,
+   "torch": 5,
+   "jax-jit": 37,
+   "torch-jit": 14
+  },
+  "entries": {
+   "jax": 55,
+   "torch": 5,
+   "jax-jit": 37,
+   "torch-jit": 14
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "c1daacb72d",
+  "date": "2026-08-10",
+  "subject": "xfail: un-defer the 5 torch-jit poisson_surfdens wrapper entries (21 -> 16) (#1291)",
+  "source": "pull/1291/head",
+  "existing": 3757,
+  "backend_modules": 6971,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 178,
+   "torch": 5,
+   "jax-jit": 32,
+   "torch-jit": 9
+  },
+  "entries": {
+   "jax": 55,
+   "torch": 5,
+   "jax-jit": 32,
+   "torch-jit": 9
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "14edb38ab5",
+  "date": "2026-08-14",
+  "subject": "xfail: collect the AnyAxisym 2ndDeriv entry gh#1307 already fixed (#1312)",
+  "source": "pull/1312/head",
+  "existing": 3768,
+  "backend_modules": 7067,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 178,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "entries": {
+   "jax": 55,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "d7727e70b6",
+  "date": "2026-08-15",
+  "subject": "slow-skip: un-defer 3 measured-stale MW mass-model entries (168 -> 165) (#1319)",
+  "source": "pull/1319/head",
+  "existing": 3768,
+  "backend_modules": 7077,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 175,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "entries": {
+   "jax": 52,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "90303ab0a9",
+  "date": "2026-08-15",
+  "subject": "slow-skip: un-defer 6 measured jax orbit entries (167 -> 161) (#1322)",
+  "source": "pull/1322/head",
+  "existing": 3768,
+  "backend_modules": 7077,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 169,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "entries": {
+   "jax": 46,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "033684e1cc",
+  "date": "2026-08-17",
+  "subject": "interpRZPotential: stop the bit-for-bit grid guard falling back on every backend build (58x) (#1316)",
+  "source": "pull/1316/head",
+  "existing": 3769,
+  "backend_modules": 7084,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 168,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "entries": {
+   "jax": 45,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 9
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "77497f938c",
+  "date": "2026-08-18",
+  "subject": "ledger: un-xfail torch-jit test_eccentricity (measured stale after gh#1330/gh#1331) (#1332)",
+  "source": "pull/1332/head",
+  "existing": 3769,
+  "backend_modules": 7084,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 168,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 45,
+   "torch": 5,
+   "jax-jit": 31,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "dcc4c41061",
+  "date": "2026-08-18",
+  "subject": "ledger: un-xfail jax-jit test_pickling_potential_unitful_dens (-1 xfail) (#1338)",
+  "source": "pull/1338/head",
+  "existing": 3769,
+  "backend_modules": 7085,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 168,
+   "torch": 5,
+   "jax-jit": 30,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 45,
+   "torch": 5,
+   "jax-jit": 30,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "44c38e3e05",
+  "date": "2026-08-19",
+  "subject": "Port main's AnySpherical array + AnyAxisym midplane fixes to develop (-2 xfail) (#1336)",
+  "source": "pull/1336/head",
+  "existing": 3770,
+  "backend_modules": 7087,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 168,
+   "torch": 5,
+   "jax-jit": 29,
+   "torch-jit": 7
+  },
+  "entries": {
+   "jax": 45,
+   "torch": 5,
+   "jax-jit": 29,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "cae49223d2",
+  "date": "2026-08-21",
+  "subject": "tests: converge the stream-track gradient checks (fixes a py3.14 flake, and is faster) (#1352)",
+  "source": "pull/1352/head",
+  "existing": 3771,
+  "backend_modules": 7088,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 169,
+   "torch": 5,
+   "jax-jit": 29,
+   "torch-jit": 7
+  },
+  "entries": {
+   "jax": 46,
+   "torch": 5,
+   "jax-jit": 29,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "658d9d0bd8",
+  "date": "2026-08-21",
+  "subject": "ledger: un-defer the nine stale test_interp_potential slow-skips (79 \u2192 70) (#1359)",
+  "source": "pull/1359/head",
+  "existing": 3772,
+  "backend_modules": 7100,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 163,
+   "torch": 5,
+   "jax-jit": 28,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 40,
+   "torch": 5,
+   "jax-jit": 28,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "0ca6083fdf",
+  "date": "2026-08-21",
+  "subject": "ledger: un-defer 2 stale test_potential slow-skips, annotate 12 measured (70 \u2192 68) (#1360)",
+  "source": "pull/1360/head",
+  "existing": 3772,
+  "backend_modules": 7100,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 161,
+   "torch": 5,
+   "jax-jit": 28,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 38,
+   "torch": 5,
+   "jax-jit": 28,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "3950a8d24a",
+  "date": "2026-08-22",
+  "subject": "ledger: split the streamTrack whole-file defer \u2014 43 tests back into jax CI (#1363)",
+  "source": "pull/1363/head",
+  "existing": 3772,
+  "backend_modules": 7100,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 118,
+   "torch": 5,
+   "jax-jit": 28,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 39,
+   "torch": 5,
+   "jax-jit": 28,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "43caac605c",
+  "date": "2026-08-22",
+  "subject": "ledger: un-defer 8 noninertial entries measured under the #1364 guard (69 \u2192 61) (#1365)",
+  "source": "pull/1365/head",
+  "existing": 3772,
+  "backend_modules": 7105,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 115,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 36,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "18106d1952",
+  "date": "2026-08-22",
+  "subject": "ledger: replace a censored bound and 4 stale times with measurements (#1366)",
+  "source": "pull/1366/head",
+  "existing": 3772,
+  "backend_modules": 7105,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 115,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 36,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 30,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "49a9b47a2f",
+  "date": "2026-08-23",
+  "subject": "parallel_map: run serially under jax instead of forking into a deadlock (#1372)",
+  "source": "pull/1372/head",
+  "existing": 3772,
+  "backend_modules": 7155,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 35,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 35,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "c2744b7915",
+  "date": "2026-08-24",
+  "subject": "ledger: un-defer 3 measured-stale jax entries, measure the rest of Group 1 (#1380)",
+  "source": "pull/1380/head",
+  "existing": 3772,
+  "backend_modules": 7165,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 32,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 32,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "17597688a1",
+  "date": "2026-08-26",
+  "subject": "actionAngleAdiabaticGrid: exact off-grid actions on jax/torch (#1399)",
+  "source": "pull/1399/head",
+  "existing": 3773,
+  "backend_modules": 7271,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 32,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 32,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "dfc184cd24",
+  "date": "2026-08-28",
+  "subject": "surfdens: eager backends take the batched vertical quadrature (ledger -6) (#1407)",
+  "source": "pull/1407/head",
+  "existing": 3773,
+  "backend_modules": 7319,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 26,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 26,
+   "torch": 5,
+   "jax-jit": 23,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "4cedf83120",
+  "date": "2026-08-28",
+  "subject": "mass(): ask the backend's array-safety question; re-ledger a wrong de-ledgering (#1408)",
+  "source": "pull/1408/head",
+  "existing": 3773,
+  "backend_modules": 7323,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 26,
+   "torch": 5,
+   "jax-jit": 24,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 26,
+   "torch": 5,
+   "jax-jit": 24,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "5ed45669d8",
+  "date": "2026-08-28",
+  "subject": "test_orbit: route two integrator loops through _backend_integrators (ledger -4)",
+  "source": "rewritten",
+  "existing": 0,
+  "backend_modules": 0,
+  "collect_errors": 118,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 24,
+   "torch": 5,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "7285f53fbf",
+  "date": "2026-08-30",
+  "subject": "SCF coefficients: lift the numpy pin so the expansion is differentiable w.r.t. the density (#1411)",
+  "source": "pull/1411/head",
+  "existing": 3773,
+  "backend_modules": 7333,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 28,
+   "torch": 5,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 28,
+   "torch": 5,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "26551ae43b",
+  "date": "2026-08-31",
+  "subject": "SCF: batched axi quadrature + gegenbauer alpha-vectorisation (DehnenBinney98 2641s -> 218s, un-deferred) (#1416)",
+  "source": "pull/1416/head",
+  "existing": 3773,
+  "backend_modules": 7335,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 27,
+   "torch": 5,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 27,
+   "torch": 5,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "184d7c543f",
+  "date": "2026-09-04",
+  "subject": "backend ledger: xfail the forced jax/torch reds the main rebase introduced (#1438)",
+  "source": "pull/1438/head",
+  "existing": 3812,
+  "backend_modules": 7336,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 39,
+   "torch": 18,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 39,
+   "torch": 18,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "5361fb8c1c",
+  "date": "2026-09-04",
+  "subject": "backend burndown 1: numpy sigmar byte-identity + drop 4 stale xfail entries (#1442)",
+  "source": "pull/1442/head",
+  "existing": 3812,
+  "backend_modules": 7336,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 37,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 37,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b205637d96",
+  "date": "2026-09-05",
+  "subject": "backend: vectorise the Staeckel c-vs-Python freqs/angles parity grid (slow-skip -1) (#1446)",
+  "source": "pull/1446/head",
+  "existing": 3812,
+  "backend_modules": 7336,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "cf53613ebe",
+  "date": "2026-09-07",
+  "subject": "slow-skip: drop the traced Staeckel parity grid (ledger -1), re-measure three stale jit notes (#1451)",
+  "source": "pull/1451/head",
+  "existing": 3812,
+  "backend_modules": 7344,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 21,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 21,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "008946adf3",
+  "date": "2026-09-07",
+  "subject": "qdf sampleV_interpolate: inverse-CDF on the backends, rejection on numpy (#1444)",
+  "source": "pull/1444/head",
+  "existing": 3812,
+  "backend_modules": 7344,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 37,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "entries": {
+   "jax": 37,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 6
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "89a977e8d5",
+  "date": "2026-09-07",
+  "subject": "Make the traced suite green: fix the vcirc probe, record the four traced timeouts (#1452)",
+  "source": "pull/1452/head",
+  "existing": 3813,
+  "backend_modules": 7354,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 23,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 23,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "fe77694c3a",
+  "date": "2026-09-08",
+  "subject": "SCF: batch the general (non-axi) coefficient quadrature (traced test_density1_Order 300s+ -> 13s, ledger -1) (#1453)",
+  "source": "pull/1453/head",
+  "existing": 3813,
+  "backend_modules": 7356,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 36,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "824822f83e",
+  "date": "2026-09-08",
+  "subject": "SCF: contract the time-dependent coefficient quadrature over its nodes (jax 63s -> 4.3s, ledger -3) (#1454)",
+  "source": "pull/1454/head",
+  "existing": 3813,
+  "backend_modules": 7362,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 33,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 33,
+   "torch": 16,
+   "jax-jit": 22,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "1121df7735",
+  "date": "2026-09-08",
+  "subject": "Route the orbit integrator loops through _backend_integrators (SOS_3D 573s -> 12s, ledger -3) (#1455)",
+  "source": "pull/1455/head",
+  "existing": 3813,
+  "backend_modules": 7362,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 32,
+   "torch": 16,
+   "jax-jit": 20,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 32,
+   "torch": 16,
+   "jax-jit": 20,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "199e9468dd",
+  "date": "2026-09-08",
+  "subject": "slow-skip: un-ledger three stale jax entries (ledger -3) (#1459)",
+  "source": "pull/1459/head",
+  "existing": 3813,
+  "backend_modules": 7362,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 29,
+   "torch": 16,
+   "jax-jit": 20,
+   "torch-jit": 8
+  },
+  "entries": {
+   "jax": 29,
+   "torch": 16,
+   "jax-jit": 20,
+   "torch-jit": 8
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "7967830c46",
+  "date": "2026-09-10",
+  "subject": "dynamfric + FDM: in-backend non-C arm, and un-ledger what it earns (ledger -9) (#1463)",
+  "source": "pull/1463/head",
+  "existing": 3822,
+  "backend_modules": 7364,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 25,
+   "torch": 15,
+   "jax-jit": 17,
+   "torch-jit": 7
+  },
+  "entries": {
+   "jax": 25,
+   "torch": 15,
+   "jax-jit": 17,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "70c436e71f",
+  "date": "2026-09-10",
+  "subject": "noninertial + Chandrasekhar orbits: in-backend non-C arm, and un-ledger what it earns (ledger -6) (#1465)",
+  "source": "pull/1465/head",
+  "existing": 3822,
+  "backend_modules": 7364,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 19,
+   "torch": 15,
+   "jax-jit": 13,
+   "torch-jit": 7
+  },
+  "entries": {
+   "jax": 19,
+   "torch": 15,
+   "jax-jit": 13,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "645a1b299f",
+  "date": "2026-09-10",
+  "subject": "C bridge: keep a potential's tables whole in pot_args (streamTrack 7x under jax) (#1473)",
+  "source": "pull/1473/head",
+  "existing": 3856,
+  "backend_modules": 7364,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 18,
+   "torch": 15,
+   "jax-jit": 12,
+   "torch-jit": 7
+  },
+  "entries": {
+   "jax": 18,
+   "torch": 15,
+   "jax-jit": 12,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 34,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "10a67d661c",
+  "date": "2026-09-10",
+  "subject": "test_orbit: per-potential walks on feat/backends, and ledger the potentials (not the walks)",
+  "source": "rewritten",
+  "existing": 0,
+  "backend_modules": 0,
+  "collect_errors": 118,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 15,
+   "torch": 15,
+   "jax-jit": 12,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "1636db9712",
+  "date": "2026-09-11",
+  "subject": "streamTrack sky Jacobians batched + exp1 vectorized (ledger 18 -> 14) (#1476)",
+  "source": "pull/1476/head",
+  "existing": 4099,
+  "backend_modules": 7366,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 13,
+   "torch": 14,
+   "jax-jit": 8,
+   "torch-jit": 146
+  },
+  "entries": {
+   "jax": 13,
+   "torch": 14,
+   "jax-jit": 8,
+   "torch-jit": 7
+  },
+  "skipped": {
+   "jax": 38,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "46792bf036",
+  "date": "2026-09-11",
+  "subject": "torch-jit walks: retire both whole-walk rows (ledger 11 -> 9) (#1478)",
+  "source": "pull/1478/head",
+  "existing": 4099,
+  "backend_modules": 7366,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 13,
+   "torch": 14,
+   "jax-jit": 8,
+   "torch-jit": 5
+  },
+  "entries": {
+   "jax": 13,
+   "torch": 14,
+   "jax-jit": 8,
+   "torch-jit": 5
+  },
+  "skipped": {
+   "jax": 38,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "73311076fd",
+  "date": "2026-09-11",
+  "subject": "traced rows: re-measure the three that never were, retire all three (ledger 9 -> 6) (#1480)",
+  "source": "pull/1480/head",
+  "existing": 4099,
+  "backend_modules": 7366,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 13,
+   "torch": 14,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 13,
+   "torch": 14,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 38,
+   "torch": 34,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "735df8cdab",
+  "date": "2026-09-11",
+  "subject": "xfail ledger: the eager rows are gone (31 -> 6, and every survivor is jit-only) (#1481)",
+  "source": "pull/1481/head",
+  "existing": 4099,
+  "backend_modules": 7367,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 49,
+   "torch": 45,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "fc0ff81133",
+  "date": "2026-09-11",
+  "subject": "the numpy/backend boundary in orbit integration: warn on the demotion, and stop the friction force paying for it (#1482)",
+  "source": "pull/1482/head",
+  "existing": 4099,
+  "backend_modules": 7379,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 6,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 49,
+   "torch": 45,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "52748f06e5",
+  "date": "2026-09-12",
+  "subject": "test_eccentricity: a traced-only bar for the one potential that integrates on GL (#1490)",
+  "source": "pull/1490/head",
+  "existing": 4104,
+  "backend_modules": 7446,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 5,
+   "torch-jit": 4
+  },
+  "skipped": {
+   "jax": 49,
+   "torch": 45,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "ba06b7c24b",
+  "date": "2026-09-12",
+  "subject": "slow-skip: retire one FDM row, and make three stale notes true (#1492)",
+  "source": "pull/1492/head",
+  "existing": 4104,
+  "backend_modules": 7451,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 5,
+   "torch-jit": 3
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 5,
+   "torch-jit": 3
+  },
+  "skipped": {
+   "jax": 49,
+   "torch": 45,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "390a4f2952",
+  "date": "2026-09-14",
+  "subject": "AnyAxisymmetricRazorThinDisk: accept backend array input; xfail 5 -> 3 (#1496)",
+  "source": "pull/1496/head",
+  "existing": 4104,
+  "backend_modules": 7452,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 49,
+   "torch": 45,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "6875601507",
+  "date": "2026-09-28",
+  "subject": "backend_skip: main's new actionAngleVerticalInverse tests (out of scope, _reject_backend)",
+  "source": "rewritten",
+  "existing": 0,
+  "backend_modules": 0,
+  "collect_errors": 122,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "6861488320",
+  "date": "2026-09-29",
+  "subject": "actionAngleSpherical: the backend side of main's epicycle branch (#1527)",
+  "source": "pull/1527/head",
+  "existing": 4014,
+  "backend_modules": 0,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "78b7251940",
+  "date": "2026-09-29",
+  "subject": "actionAngleSpherical: the backend solves main's relative radial problem (retire the rebase's 8 xfails) (#1594)",
+  "source": "pull/1594/head",
+  "existing": 4239,
+  "backend_modules": 8218,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 63,
+   "torch": 59,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "4a46f97366",
+  "date": "2026-10-02",
+  "subject": "Run the Orbit.from_name (SIMBAD) tests under forced jax/torch (#1616)",
+  "source": "pull/1616/head",
+  "existing": 4274,
+  "backend_modules": 8469,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 57,
+   "torch": 53,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "fde3414419",
+  "date": "2026-10-04",
+  "subject": "qdf sampler: bucket varying lengths + skip pure_callback for concrete inputs; un-skip test_sampleV_interpolate under jax (2837 s -> 118 s) (#1621)",
+  "source": "pull/1621/head",
+  "existing": 4274,
+  "backend_modules": 8527,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 57,
+   "torch": 53,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "ed75dbb4e9",
+  "date": "2026-10-04",
+  "subject": "jit mode: key static objects by type + attributes (stale traces after a wrapped potential changes; per-call retraces) (#1625)",
+  "source": "pull/1625/head",
+  "existing": 4274,
+  "backend_modules": 8506,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 57,
+   "torch": 53,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "6e858e7aff",
+  "date": "2026-10-05",
+  "subject": "actionAngleVerticalInverse (1/3): the momentum-matched map evaluates natively under jax/torch (#1627)",
+  "source": "pull/1627/head",
+  "existing": 4275,
+  "backend_modules": 8545,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 40,
+   "torch": 36,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "b108c23e37",
+  "date": "2026-10-05",
+  "subject": "actionAngleVerticalInverse (2/3): build the momentum-matched family natively, differentiable in the potential's parameters (#1628)",
+  "source": "pull/1628/head",
+  "existing": 4275,
+  "backend_modules": 8561,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 40,
+   "torch": 36,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ },
+ {
+  "sha": "9bb4d1d36e",
+  "date": "2026-10-05",
+  "subject": "actionAngleVerticalInverse (3/3): the legacy modes evaluate natively under jax/torch (#1630)",
+  "source": "pull/1630/head",
+  "existing": 4275,
+  "backend_modules": 8585,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 1,
+   "jax-jit": 3,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 8,
+   "torch": 4,
+   "jax-jit": 4,
+   "torch-jit": 0
+  }
+ }
+]
