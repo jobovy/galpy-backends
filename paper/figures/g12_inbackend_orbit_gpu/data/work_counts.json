@@ -11,7 +11,7 @@
   "diffrax_version": "0.7.2",
   "torch_version": "2.12.0+cu126",
   "torchdiffeq_version": "0.2.5",
-  "galpy_version": "1.12.0.dev0",
+  "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.4.3",
   "diffrax_single": {
     "Dopri8": {

@@ -4,11 +4,27 @@
     "label": "all-backend tracking begins (ledger baseline)"
   },
   {
-    "date": "2026-06-15",
-    "label": "#959 SCF/Multipole jax vectorization"
+    "date": "2026-06-23",
+    "label": "#1000 Orbit via the C-integrator helper"
   },
   {
-    "date": "2026-06-16",
-    "label": "#960 coercion + P2.x/Pspecial (milestone-1 prune)"
+    "date": "2026-07-19",
+    "label": "#1161 float64 conftest fix + regen"
+  },
+  {
+    "date": "2026-07-25",
+    "label": "#1196 @backend_input coercion boundary"
+  },
+  {
+    "date": "2026-07-26",
+    "label": "--jit: whole suite under jax.jit / torch.compile"
+  },
+  {
+    "date": "2026-09-12",
+    "label": "#1492 eager ledgers ~0"
+  },
+  {
+    "date": "2026-10-05",
+    "label": "#1627-#1630 actionAngleVerticalInverse ported"
   }
 ]

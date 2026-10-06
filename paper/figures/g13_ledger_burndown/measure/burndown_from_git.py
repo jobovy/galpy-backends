@@ -25,6 +25,8 @@ from pathlib import Path
 REPO = os.environ.get("GALPY_REPO", "/home/bovy/Repos/galpy")
 REF = os.environ.get("GALPY_REF", "origin/feat/backends")
 LEDGERS = ["tests/backend_xfail.txt", "tests/backend_slow_skip.txt"]
+# eager modes, and (from the --jit CI rows on) the suite under jit
+_MODES = ("jax", "torch", "jax-jit", "torch-jit")
 OUT = Path(__file__).resolve().parents[1] / "data" / "burndown.json"
 
 
@@ -49,17 +51,17 @@ def _counts_at(sha, path):
         if len(parts) != 2:
             continue
         backend, nodeid = parts[0], parts[1]
-        if backend not in ("jax", "torch"):
+        if backend not in _MODES:
             continue
         fname = nodeid.split("::", 1)[0].replace("tests/", "")
-        per_file.setdefault(fname, {"jax": 0, "torch": 0})[backend] += 1
+        per_file.setdefault(fname, dict.fromkeys(_MODES, 0))[backend] += 1
     return per_file
 
 
 def main():
     # commits touching either ledger file on REF, oldest -> newest
     shas = _git(
-        "log", REF, "--reverse", "--format=%H\t%cI\t%s", "--", *LEDGERS
+        "log", REF, "--reverse", "--format=%H\t%aI\t%s", "--", *LEDGERS
     ).splitlines()
     records = []
     for line in shas:
@@ -68,11 +70,15 @@ def main():
         merged = {}
         for path in LEDGERS:
             for fname, c in _counts_at(sha, path).items():
-                m = merged.setdefault(fname, {"jax": 0, "torch": 0})
-                m["jax"] += c["jax"]
-                m["torch"] += c["torch"]
+                m = merged.setdefault(fname, dict.fromkeys(_MODES, 0))
+                for k in _MODES:
+                    m[k] += c[k]
         jax_total = sum(c["jax"] for c in merged.values())
         torch_total = sum(c["torch"] for c in merged.values())
+        jit_totals = {
+            f"{k.replace('-', '_')}_total": sum(c[k] for c in merged.values())
+            for k in ("jax-jit", "torch-jit")
+        }
         records.append(
             {
                 "sha": sha[:10],
@@ -81,6 +87,7 @@ def main():
                 "jax_total": jax_total,
                 "torch_total": torch_total,
                 "total": jax_total + torch_total,
+                **jit_totals,
                 "per_file": merged,
             }
         )

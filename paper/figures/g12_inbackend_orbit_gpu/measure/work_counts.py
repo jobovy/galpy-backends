@@ -120,12 +120,12 @@ def _count_torch():
         ic0_t = torch.tensor([1.0, 0.0, 1.0, 0.0125, 0.036, 0.0])
         scale_t = torch.tensor([0.05, 0.01, 0.0, 0.01, 0.01, 0.0])
         ics = ic0_t[None] + torch.randn(N, 6, generator=g) * scale_t  # (N,6)
-        y0 = _to_eom(torch, ics.T)  # (6,N)
+        y0 = _to_eom(torch, ics)  # (N,6): galpy's EOM helpers are batch-first
         calls = {"n": 0}
 
         def field(t, y):
             calls["n"] += 1
-            return torch.stack(_eom_rhs(y, MWPotential2014, t, torch))
+            return torch.stack(_eom_rhs(y, MWPotential2014, t, torch), dim=-1)
 
         ts = torch.linspace(0.0, 56.2, nt)
         odeint(field, y0, ts, method="dopri5", rtol=RTOL, atol=ATOL)

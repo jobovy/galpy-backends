@@ -251,7 +251,7 @@ def main():
     Mt = numpy.array(cols).transpose(1, 2, 0)
     detM = numpy.array([numpy.linalg.det(Mt[k]) for k in range(NT)])
 
-    print(f"[{MODE}] tr(dF/dv) along the orbit from the C Jacobian ...", flush=True)
+    print(f"[{MODE}] tr(dF/dv) along the orbit from the Python forces (central FD) ...", flush=True)
     trJv = numpy.array(
         [
             numpy.trace(fd_velocity_jacobian(frict, rect[k], t=times[k])[1])
