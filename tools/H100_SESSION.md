@@ -23,13 +23,42 @@ as extra lines. You do NOT change figure code, galpy, or galpy-jax's `main`.
   while the small-N, launch- and dispatch-bound end changes little. That
   contrast is the point of this run.
 
+## Where you are running: Trillium (Alliance / SciNet)
+
+- **You run on the GPU login node** `trillium-gpu.alliancecan.ca`, inside the
+  user's tmux. Login nodes have internet (for you, git, pip and conda);
+  **compute nodes do not**, so you can never run on a compute node yourself.
+  All GPU work goes to compute nodes as batch jobs that you submit and poll.
+  Don't run heavy computation on the login node: building galpy and installing
+  packages is fine, but measurements and tests are not.
+- **GPU nodes:** 4x H100 80 GB and 96 cores each. Jobs get **1 GPU** (a quarter
+  node) or a whole node. Max walltime is 24 h. A one-GPU job shares the node
+  with other users' jobs on the other GPUs; that's fine for us.
+- **Filesystems:** `$HOME` is **read-only on compute nodes**. Put everything
+  (clones, environment caches, outputs, logs) under `$SCRATCH/galpy-h100`;
+  scratch files expire after 2 months, which is plenty.
+  `tools/trillium_stage.sh` sets the cache variables (XDG, matplotlib,
+  inductor) to scratch.
+- **Python:** the user installed **miniconda**; use a conda environment (in
+  `$HOME` is fine, since compute nodes can read it). Install jax and torch from
+  PyPI with their pip-packaged CUDA libraries, which need only the node's
+  driver. The Alliance wheelhouse (`pip install --no-index`, `avail_wheels`)
+  is the alternative; don't mix the two in one environment.
+- **Slurm account:** GPU jobs need `--account=<...>`. Find the user's with
+  `sacctmgr show assoc user=$USER format=account%30` and ask the user which to
+  use if there's more than one.
+- **Batch jobs:** `tools/trillium_job.sbatch` runs one stage of
+  `tools/trillium_stage.sh` on one H100. Submit one stage at a time, poll with
+  `squeue -u $USER` / `sacct -j <id>`, read `$SCRATCH/galpy-h100/logs/<stage>.log`,
+  and commit + push from the login node after each stage, so nothing is lost if
+  a later one fails. A debugjob (`debugjob -g 1`, interactive, 60 min) is not
+  usable from your tool, since it opens an interactive shell.
+
 ## Hard rules
 
-1. **The GPU must be otherwise idle for every measurement.** Check
-   `nvidia-smi --query-compute-apps=pid --format=csv,noheader` is empty before
-   each step. Never run two GPU jobs at once, including test suites; timings
-   from a shared GPU are useless. `tools/rerun_figures_gpu.sh` waits for an
-   idle GPU itself.
+1. **One measurement at a time on the GPU.** A batch job's GPU is exclusive
+   to it, so never run two jobs that use the GPU concurrently, and don't run
+   tests while a measurement stage runs. Timings from a shared GPU are useless.
 2. **jax must not preallocate the whole GPU:** `export
    XLA_PYTHON_CLIENT_PREALLOCATE=false` for everything.
 3. Work on a **branch** `gpu-h100` of galpy-jax. Never push to galpy-jax `main`,
@@ -41,98 +70,62 @@ as extra lines. You do NOT change figure code, galpy, or galpy-jax's `main`.
 5. Before killing a process, look up its PID in one command and kill it by PID
    in a separate command. `pkill -f <pattern>` / `pgrep -f` match your own
    shell, which carries the pattern in its command line.
-6. Keep host-memory use modest: one measurement at a time, at most 4 pytest
-   workers.
+6. Keep host-memory use modest: at most 4 pytest workers.
+7. If you need something only the user can provide (a Slurm account choice, git
+   credentials, a quota problem), stop and ask; don't work around it.
 
-## Setup
+## Setup (on the login node)
 
 ```bash
-# galpy at the commit to measure. Use feat/backends' tip and RECORD the SHA.
-# (The TITAN data was measured on feat/backends 9f6c9d6f7 plus the fixes in
-# galpy #1634-#1637 and #1639; the first four are merged, and #1639 may be by
-# the time you run. If #1639 is still open, cherry-pick it: gammainc on CUDA.)
+mkdir -p $SCRATCH/galpy-h100 && cd $SCRATCH/galpy-h100
+# galpy at the commit to measure: feat/backends' tip; RECORD the SHA.
+# (The TITAN data was measured on feat/backends 9f6c9d6f7 plus galpy #1634-#1637
+# and #1639; the first four are merged. If #1639 is still open, cherry-pick it.)
 git clone -b feat/backends https://github.com/jobovy/galpy.git galpy-fb
-cd galpy-fb && git log --oneline -1
-# optional, only if PR #1639 is not merged yet:
-#   git fetch origin pull/1639/head && git cherry-pick FETCH_HEAD
-python setup.py build_ext --inplace     # needs GSL (libgsl-dev) and a C compiler
-cd ..
+git -C galpy-fb log --oneline -1
+#   only if #1639 is not merged:  (cd galpy-fb && git fetch origin pull/1639/head && git cherry-pick FETCH_HEAD)
+git clone https://github.com/jobovy/galpy-jax.git && git -C galpy-jax checkout -b gpu-h100
 
-git clone https://github.com/jobovy/galpy-jax.git && cd galpy-jax
-git checkout -b gpu-h100
-
-python -m venv ../venv && . ../venv/bin/activate
+conda create -y -n galpy-h100 -c conda-forge python=3.13 gsl compilers
+conda activate galpy-h100
 pip install "jax[cuda12]" torch torchode torchdiffeq diffrax equinox \
     numpy scipy matplotlib astropy array-api-compat pytest pytest-xdist
-python -c "import jax, torch; print(jax.devices(), torch.cuda.get_device_name(0))"
-export XLA_PYTHON_CLIENT_PREALLOCATE=false
+(cd galpy-fb && python setup.py build_ext --inplace)   # gsl-config from the env
+export CONDA_SH=$(conda info --base)/etc/profile.d/conda.sh CONDA_ENV=galpy-h100
 ```
 
 The H100 is sm_90: current `jax[cuda12]` and CUDA-12 torch wheels are right.
-Ignore the old-version pins in `paper/figures/_setup/`; those are for the TITAN
-Xp's sm_61.
+Ignore the old-version pins in `paper/figures/_setup/`, which are for the
+TITAN Xp's sm_61. jax can't see a GPU on the login node; check on the GPU in
+the smoke stage.
 
-## Step 0: smoke test, then the CUDA test suites (about 1 h)
-
-```bash
-cd ../galpy-fb
-python -m pytest -q -n 2 --backend jax --device cuda tests/test_backend_force.py
-python -m pytest -q -n 2 --backend torch --device cuda tests/test_backend_force.py
-```
-
-If both pass, also run the broader CUDA suites, which catch device bugs: every
-hidden CPU/GPU mixing raises on CUDA. Note that `--device cuda` sets torch's
-*default* device to cuda, which hides one class of bug, so also run
-`tests/test_backend_special.py` and
-`tests/test_backend_actionAngleVerticalInverse.py` without `--backend`. Their
-GPU-only tests keep the default device on the CPU deliberately.
+## Running the stages
 
 ```bash
-for bk in jax torch; do
-  python -m pytest -q -n 2 --backend $bk --device cuda \
-    tests/test_backend_*.py -p no:cacheprovider 2>&1 | tail -3
-done
-python -m pytest -q tests/test_backend_special.py tests/test_backend_actionAngleVerticalInverse.py -k cuda
+cd $SCRATCH/galpy-h100/galpy-jax
+sbatch --account=<ACCOUNT> --time=00:20:00 --export=ALL,STAGE=smoke tools/trillium_job.sbatch
 ```
 
-Record pass/fail counts and every failure's test id and error line. Don't try
-to fix galpy.
+Then, after each one finishes and its log looks right (`grep FAILED`), submit
+the next:
 
-## Step 1: the existing timing figures (about 5-7 h)
+| stage | walltime to request | what |
+|---|---|---|
+| `smoke` | 00:20:00 | jax/torch see the H100; tiny CUDA test |
+| `tests` | 02:00:00 | galpy's CUDA test suites (record counts + failures) |
+| `g2g5g6` | 01:00:00 | g2, g5, g6 |
+| `orbits` | 02:00:00 | GPU orbit speeds behind g8/g12; g12's Dopri5 + torch lines |
+| `bench` | 01:00:00 | `benchmarks/gpu`, jax + torch on the GPU |
+| `newfigs` | 04:00:00 | GPU series of gV2, gD3, gS5, gS4 |
+| `g15` | 08:00:00 | g15 (includes CPU parts) |
+| `g17` | 10:00:00 | g17 (one measurement, including CPU series) |
 
-From the galpy-jax root:
+The walltimes are generous estimates from the TITAN box; H100 GPU parts will be
+faster. If a stage times out, resubmit it with a longer walltime; every stage
+starts its measurements afresh. After each stage, commit its changed
+`data/*.json`, PDFs and logs to `gpu-h100` and push.
 
-```bash
-tools/rerun_figures_gpu.sh ../galpy-fb ../logs-h100
-```
-
-This runs, strictly serially: g2, g5, g6 (force/autodiff/jit throughput), g17
-(Staeckel action-angle), the shared orbit-speed data behind g8/g12, g12, g15,
-`benchmarks/gpu/run_all.sh` (writes `benchmarks/gpu/results_<date>/`), and
-re-renders. It also re-measures their CPU series, on this machine's CPU. That's
-fine: only the GPU series get folded in, and the CPU ones give context. Expect
-some large-N points to run out of GPU memory; they are recorded as NaN, which
-is intended. Look through `../logs-h100/*.log` for "FAILED" when it finishes.
-
-g17's "numpy per-object OLD" series needs an old galpy build at
-`/var/tmp/staeckel-old`. Without it that series is skipped. That's fine; say
-so in the report.
-
-## Step 2: the newer figures' GPU series (about 1-2 h)
-
-These measure only their GPU series and merge them into the existing JSON.
-
-```bash
-P="PYTHONPATH=../galpy-fb:."
-env $P python paper/figures/gV2_vertical_inverse_speed/make.py --devices gpu
-env $P python paper/figures/gD3_spherical_df_speed/make.py --gpu
-env $P python -m paper.figures.gS5_streamspray_speed.make --measure gpu
-env $P python -m paper.figures.gS4_streamdf_speed.make --measure gpu
-env $P python -m paper.figures._harness run gV2_vertical_inverse_speed \
-    gD3_spherical_df_speed gS5_streamspray_speed gS4_streamdf_speed
-```
-
-## Step 3 (optional, if time allows): galax on the H100 for g8
+## Optional, if time allows: galax on the H100 for g8
 
 g8 compares galpy's orbit integration with galax (github.com/GalacticDynamics/galax).
 Recipe: `paper/figures/_setup/galax_gpu_setup.md`, without the sm_61 caveats.
@@ -140,7 +133,9 @@ Use galax main's own `uv.lock` (`uv sync --frozen --no-dev`), then add the
 jax-cuda12 plugin **matching the locked jaxlib** with `--no-deps`. Then run
 `paper/figures/g8_galax_orbit_speed/measure/galax_measure_modern.py`,
 `galax_extended.py`, and `galax_perorbit_measure.py lowN` / `hiN` with that
-environment's python. They write to `/var/tmp/galax-bench/`; copy those JSONs
+environment's python, in a batch job of their own (a copy of
+`tools/trillium_job.sbatch` that runs those four commands; build the galax
+environment on the login node first, in `$SCRATCH`). They write to `/var/tmp/galax-bench/`; copy those JSONs
 into `paper/figures/g8_galax_orbit_speed/data/`. Record galax's git SHA.
 
 ## Deliverables
@@ -149,7 +144,7 @@ into `paper/figures/g8_galax_orbit_speed/data/`. Record galax's git SHA.
    `benchmarks/gpu/results_<date>/`, and `logs/h100/report.md` containing:
    - machine (GPU, driver, CUDA, CPU model), galpy SHA, jax/torch/diffrax
      versions, galax SHA if run;
-   - Step 0 test counts and failures;
+   - the `tests` stage counts and failures;
    - per figure: measured OK, failed (with the error), or skipped (why);
    - a short table of headline GPU numbers next to the TITAN Xp values from
      `main`, e.g. g12 jax GPU ms/orbit at the largest N, g2 forces at N=1e7,
