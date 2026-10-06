@@ -125,6 +125,7 @@ _STYLE = {  # colour, linestyle, marker
     "numpy (CPU)": ("#000000", "-", "s"),
     "jax (CPU, eager cold)": ("#56B4E9", ":", "^"),
     "jax (CPU, eager)": ("#56B4E9", "--", "^"),
+    "jax (CPU, jit cold)": ("#56B4E9", "-.", "P"),
     "jax (CPU, jit)": ("#56B4E9", "-", "P"),
     "torch (CPU, eager)": ("#E69F00", "--", "v"),
     "jax (GPU, eager cold)": ("#0072B2", ":", "o"),
@@ -153,21 +154,33 @@ from galpy.potential import LogarithmicHaloPotential
 from galpy.util import conversion
 bk, nch, ic, q, sigv, tdg, tintJ = sys.argv[1], int(sys.argv[2]), json.loads(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6]), int(sys.argv[7])
 td = tdg / conversion.time_in_Gyr(220.0, 8.0)
-def build():
+def build(qq=None):
     if bk == "numpy":
         lp = LogarithmicHaloPotential(normalize=1.0, q=q)
         aA = actionAngleIsochroneApprox(pot=lp, b=0.8, tintJ=tintJ)
         prog = Orbit(ic)
+    elif bk == "torch":
+        import torch
+        torch.set_default_dtype(torch.float64)
+        lp = LogarithmicHaloPotential(normalize=1.0, q=torch.tensor(q))
+        aA = actionAngleIsochroneApprox(pot=lp, b=0.8, tintJ=tintJ, integrate_method="torchode")
+        prog = Orbit(torch.tensor(ic))
     else:
-        lp = LogarithmicHaloPotential(normalize=1.0, q=jnp.asarray(q))
+        lp = LogarithmicHaloPotential(normalize=1.0, q=jnp.asarray(q) if qq is None else qq)
         aA = actionAngleIsochroneApprox(pot=lp, b=0.8, tintJ=tintJ, integrate_method="diffrax")
         prog = Orbit(jnp.asarray(ic))
     s = streamdf(sigv, progenitor=prog, pot=lp, aA=aA, leading=True, nTrackChunks=nch,
                  nTrackIterations=0, tdisrupt=td)
-    jax.block_until_ready(s._interpolatedObsTrackXY) if bk != "numpy" else None
+    jax.block_until_ready(s._interpolatedObsTrackXY) if bk == "jax" else None
     return s
 ts = []
-for i in range(2 if bk != "numpy" else 4):
+if bk == "jaxjit":  # the whole construction under jax.jit: cold = trace+compile+run
+    f = jax.jit(lambda qq: build(qq)._ObsTrack)
+    for i in range(2):
+        t0 = time.perf_counter(); jax.block_until_ready(f(jnp.asarray(q))); ts.append(time.perf_counter() - t0)
+    print("RESULT", json.dumps({"times": ts, "track_type": "jax", "device": "jit"}))
+    sys.exit(0)
+for i in range({"numpy": 4, "torch": 1}.get(bk, 2)):  # torch: ~20 min a build
     t0 = time.perf_counter(); s = build(); ts.append(time.perf_counter() - t0)
 print("RESULT", json.dumps({"times": ts, "track_type": type(s._interpolatedObsTrackXY).__module__,
       "device": str(getattr(s._ObsTrack, "devices", lambda: ["cpu"])())}))
@@ -254,7 +267,9 @@ def _measure(devices=("cpu",), parts=("construct", "sample", "eval"),
     if "construct" in parts:
         runs = []
         if "cpu" in devices:
-            runs += [("numpy", "CPU", False), ("jax", "CPU", False)]
+            # --which jax measures eager jax; jaxjit (the whole construction under
+            # jax.jit) is opt-in by name
+            runs += [(b, "CPU", False) for b in ("numpy", "jax", "jaxjit", "torch") if b in which]
         if "gpu" in devices and any(d.platform == "gpu" for d in jax.devices()):
             runs += [("jax", "GPU", True)]
         for bk, tag, gpu in runs:
@@ -269,18 +284,27 @@ def _measure(devices=("cpu",), parts=("construct", "sample", "eval"),
                 if bk == "numpy":  # one warm-up, median of 3
                     warm.append(float(numpy.median(ts[1:])))
                     cold.append(ts[0])
+                elif bk == "torch":  # no compile to separate: one build
+                    cold.append(ts[0])
+                    warm.append(ts[0])
                 else:
                     cold.append(ts[0])
                     warm.append(ts[1])
                 print(f"  construct {bk} ({tag}) nch={nch}: {ts} [{r['device']}]", flush=True)
             if bk == "numpy":
                 data["construct"]["numpy (CPU)"] = warm
+            elif bk == "torch":
+                data["construct"][f"torch ({tag}, eager)"] = warm
+            elif bk == "jaxjit":
+                data["construct"][f"jax ({tag}, jit cold)"] = cold
+                data["construct"][f"jax ({tag}, jit)"] = warm
             else:
                 data["construct"][f"jax ({tag}, eager cold)"] = cold
                 data["construct"][f"jax ({tag}, eager)"] = warm
             save()
-        data["notes"]["construct_torch"] = "not measured: BUG_torch_streamdf_construct.md"
-        data["notes"]["construct_jit"] = "not measured: BUG_jax_streamdf_construct_traced.md"
+        for k, key in (("construct_torch", "torch (CPU, eager)"), ("construct_jit", "jax (CPU, jit)")):
+            if key in data["construct"]:
+                data["notes"].pop(k, None)
 
     if not ({"sample", "eval"} & set(parts)):
         save()
@@ -467,8 +491,12 @@ def make():
     axa.set_ylabel("wall time (s)")
     axa.set_title("(a) construction incl. stream track")
     axa.legend(fontsize=6.5, loc="center left", framealpha=0.92)
-    axa.text(0.97, 0.03, "torch: construction fails (bug)\njax.jit: construction not traceable (bug)",
-             transform=axa.transAxes, fontsize=6.0, color="0.45", va="bottom", ha="right")
+    notes = [data["notes"][k] for k in ("construct_torch", "construct_jit") if data["notes"].get(k)]
+    if notes:
+        import textwrap
+
+        axa.text(0.97, 0.03, "\n".join(textwrap.fill(n, 48) for n in notes),
+                 transform=axa.transAxes, fontsize=5.6, color="0.45", va="bottom", ha="right")
     _panel(axb, Ns, data["sample"], _ORDER)
     axb.set_xlabel(r"number of sampled stars $N$")
     axb.set_ylabel("wall time (s)")

@@ -51,7 +51,7 @@
     "description": "MWPotential2014 in-backend orbit integration wall time vs batch size N: galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "5fc401dc6",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "77db912",
-    "sha256": "1cbfc26459e311dd2f23943e1d7f11092ca90b060147f5fe1487d08c0a056d86",
+    "git": "cdb1ccf",
+    "sha256": "b6c615eb78ab9262656bf91d4719fe25eba12fcf030ae8928aff0a89ba656958",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -99,7 +99,7 @@
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "5fc401dc6",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "77db912",
-    "sha256": "5b6036d8afcaadbadb54ad5926ce4ba10ecf97d951e0c5c75c38a7fa40a745f3",
+    "git": "cdb1ccf",
+    "sha256": "1862a333e49abc57d162ed4697125562e7ad52d1a6ce7bce41d4910048eaf7a2",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -290,7 +290,7 @@
     "description": "MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "5fc401dc6",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -298,8 +298,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "77db912",
-    "sha256": "f4989f814b4c1d0dcfebed8287cf332c3fe9dfc626aadc61fcdcae4467bc9579",
+    "git": "91b7559",
+    "sha256": "c581a51b2d629ed7d465cf38cab6614d2d8ccaf10971f060cf8c0a3d3e1fc49c",
     "track": "G"
   },
   "g9_variational_validity": {
@@ -450,7 +450,7 @@
     "description": "streamdf cost per backend: construction (incl. track) vs nTrackChunks, sampling and DF evaluation vs N; numpy/C vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "a3300d5a0",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -458,8 +458,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "3034e39",
-    "sha256": "c9be5b8849647f648564f67bd5486f0236ae1f8a20ff141c430c8a38e7134799",
+    "git": "cc6c98c",
+    "sha256": "0b7fa382fc8a29354ffa52d3e2b3f5b6a13bf90513a098047fa78b5c86b4d050",
     "track": "S"
   },
   "gS5_streamspray_speed": {
