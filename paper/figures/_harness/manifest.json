@@ -2,7 +2,8 @@
   "g0_smoke": {
     "description": "harness smoke test (parabola) -- validates run/verify/manifest",
     "env": {
-      "galpy": "1.12.0.dev0",
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -10,7 +11,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "097e8e7",
+    "git": "37ab5ae",
     "sha256": "348235458993e9904d37f31e76c26aeb4e6d7170405ecb4d96863ab0736cc552",
     "track": "G"
   },

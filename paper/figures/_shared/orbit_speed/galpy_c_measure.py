@@ -38,7 +38,9 @@ import galpy  # noqa: E402
 from galpy.orbit import Orbit  # noqa: E402
 from galpy.potential import MWPotential2014  # noqa: E402
 
-assert galpy.__file__.startswith("/var/tmp/backends-merge"), galpy.__file__
+assert galpy.__file__.startswith(
+    os.environ.get("GALPY_WORKTREE", "/var/tmp/backends-merge")
+), galpy.__file__
 
 mode = sys.argv[1] if len(sys.argv) > 1 else "lowN"  # 'lowN' or 'hiN'
 if mode == "hiN":

@@ -43,7 +43,9 @@ import galpy  # noqa: E402
 from galpy.backend._reference.inbackend_ode import _eom_rhs, _to_eom  # noqa: E402
 from galpy.potential import MWPotential2014  # noqa: E402
 
-assert galpy.__file__.startswith("/var/tmp/backends-merge"), galpy.__file__
+assert galpy.__file__.startswith(
+    os.environ.get("GALPY_WORKTREE", "/var/tmp/backends-merge")
+), galpy.__file__
 
 _DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 dev = "cuda" if torch.cuda.is_available() else "cpu"

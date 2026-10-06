@@ -105,6 +105,20 @@ def _env_stamp():
             stamp[mod] = __import__(mod).__version__
         except Exception:
             pass
+    try:  # the galpy commit the figure was rendered against
+        import galpy
+
+        stamp["galpy_git"] = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=str(Path(galpy.__file__).resolve().parent),
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+    except Exception:
+        pass
     return stamp
 
 
@@ -158,24 +172,36 @@ def cmd_list(_args):
         print(f"{name:28s} {str(s['track'] or '-'):6s} {s['description']}")
 
 
+def _record(name, entry):
+    """Locked read-modify-write of one manifest entry (parallel runs are safe)."""
+    import fcntl
+
+    with open(str(MANIFEST) + ".lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        manifest = _load_manifest()
+        manifest[name] = entry
+        _save_manifest(manifest)
+
+
 def cmd_run(args):
     names = _targets(args.names)
-    manifest = _load_manifest()
     for name in names:
         outdir = FIGURES_DIR / name
         outdir.mkdir(parents=True, exist_ok=True)
         out = outdir / f"{name}.pdf"
         _render_to(name, out)
         digest = _sha256(out.read_bytes())
-        manifest[name] = {
-            "sha256": digest,
-            "git": _git_sha(),
-            "env": _env_stamp(),
-            "track": _REGISTRY[name]["track"],
-            "description": _REGISTRY[name]["description"],
-        }
+        _record(
+            name,
+            {
+                "sha256": digest,
+                "git": _git_sha(),
+                "env": _env_stamp(),
+                "track": _REGISTRY[name]["track"],
+                "description": _REGISTRY[name]["description"],
+            },
+        )
         print(f"[run]    {name:28s} -> {out.relative_to(REPO_DIR)}  sha256={digest[:12]}")
-    _save_manifest(manifest)
 
 
 def cmd_verify(args):
