@@ -28,6 +28,16 @@ fusions -- with all 72 hardware threads available the N>=1e4 calls are several
 times faster, which is why an unpinned run sees "N=1e5 at 17 us/angle" but
 "N=1e3 at 0.27 ms/angle". That part is XLA, not galpy.)
 
+Single-threaded (OPENBLAS/OMP/torch/XLA = 1 thread; the gV2 measurement),
+`xvFreqs(J=0.5, N angles)` is linear in N for every backend, and jit is SLOWER
+than eager beyond N~1e3 (100 vs 43 kernel passes):
+
+| N | numpy | torch (eager) | jax eager | jax jit |
+|---|---|---|---|---|
+| 10 | 1.5e-3 s | 3.9e-2 s | 0.25 s | 6.5e-3 s |
+| 1e3 | 1.7e-2 s | 8.2e-2 s | 0.43 s | 0.43 s |
+| 1e5 | 2.1 s | 5.1 s | 16.5 s | 30 s |
+
 ## Defect 1: traced bisection count = maxiter (100) instead of 43
 
 `galpy.backend.optimize.n_bisect_steps` computes the halving count from the

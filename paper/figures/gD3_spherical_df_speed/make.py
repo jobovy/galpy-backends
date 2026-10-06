@@ -45,8 +45,13 @@ This figure measures what that costs and buys.
 Float64 throughout (galpy's policy: ``jax_enable_x64``, and torch computes in
 float64 internally). Timings: ``bench.time_call`` medians (warmup 1, 3
 repeats; device-synchronised), a series stops once a call exceeds ~60 s. CPU:
-pinned to 4 cores (``taskset``); torch uses its default intra-op threads on
-those cores, numpy/scipy are single-threaded, jax uses XLA's CPU threadpool.
+pinned to 4 cores (``taskset``) of a SHARED 72-thread box; numpy/scipy are
+single-threaded, jax uses XLA's CPU threadpool on those cores, and torch runs
+with ONE intra-op thread (``GD3_TORCH_THREADS``, default 1): with 4 threads its
+OpenMP workers spin-wait against busy hyperthread siblings and the timings were
+5-15x slower and load-dependent (N = 1e5: 0.5 s at 4 threads vs 0.08 s at 1 on
+the loaded box; 0.03 s at 4 on a quiet one). Absolute CPU numbers vary with the
+box load by up to ~2x; the ratios between backends are the robust content.
 GPU series are measured only when a GPU is visible: re-measure them with
 ``python paper/figures/gD3_spherical_df_speed/make.py --gpu`` (merges into the
 JSON), then ``python -m paper.figures._harness run gD3_spherical_df_speed``.
@@ -102,6 +107,8 @@ def _setup():
     import torch
 
     torch.set_default_dtype(torch.float64)
+    # torch CPU intra-op threads: 1 by default (see module docstring)
+    torch.set_num_threads(int(os.environ.get("GD3_TORCH_THREADS", "1")))
     import warnings
 
     warnings.filterwarnings("ignore")
@@ -331,16 +338,20 @@ def _measure_construction(modes, errors):
 
 
 # ------------------------------------------------------------ measure/merge ---
-def _measure(gpu_only=False):
+def _measure(gpu_only=False, only=None):
+    """Measure all available modes, or only the GPU ones / the given ``only``
+    modes, merging the latter two into an existing JSON."""
     _setup()
     dev = _devices()
     gpu_modes = [m for m in _GPU_MODES
                  if (dev["jax_gpu"] is not None if m.startswith("jax") else dev["torch_gpu"])]
     modes = gpu_modes if gpu_only else _CPU_MODES + gpu_modes
+    if only is not None:
+        modes = [m for m in only if m in _CPU_MODES or m in gpu_modes]
     errors = []
     sample, comp = _measure_sampling(modes, dev, errors)
     construct = _measure_construction(modes, errors)
-    if gpu_only and os.path.exists(_JSON):
+    if (gpu_only or only is not None) and os.path.exists(_JSON):
         with open(_JSON) as fh:
             data = json.load(fh)
     else:
@@ -353,9 +364,14 @@ def _measure(gpu_only=False):
         data["construct"].setdefault(name, {}).update(construct[name])
     data["errors"] = [e for e in data.get("errors", []) if not any(m in e for m in modes)] + errors
     env = _env()
-    data["env_gpu" if gpu_only else "env"] = env
-    if not gpu_only:
+    if gpu_only:
+        data["env_gpu"] = env
+    elif only is None or "env" not in data:
+        data["env"] = env
         data.setdefault("env_gpu", {"gpu": env["gpu"]})
+    data.setdefault("modes_measured", {})
+    for m in modes:
+        data["modes_measured"][m] = env
     os.makedirs(_DATA, exist_ok=True)
     with open(_JSON, "w") as fh:
         json.dump(data, fh, indent=2, sort_keys=True)
@@ -364,6 +380,10 @@ def _measure(gpu_only=False):
 
 
 # --------------------------------------------------------------------- plot ---
+def _fmt(t):
+    return f"{t:.0f}" if t >= 10 else f"{t:.2g}"
+
+
 @figure(
     name="gD3_spherical_df_speed",
     track="F",
@@ -422,10 +442,10 @@ def make():
             ax.bar(x, first, w * 0.92, color="none", edgecolor=col, hatch="////", lw=0.8)
             ax.bar(x, warm, w * 0.92, color=col, edgecolor="k", lw=0.4)
             if numpy.isfinite(warm):
-                ax.text(x, warm * 0.8, f"{warm:.2g}", ha="center", va="top", fontsize=5.6,
+                ax.text(x, warm * 0.8, _fmt(warm), ha="center", va="top", fontsize=5.6,
                         rotation=90, color="w" if mode in ("numpy", "jax-gpu", "jax-gpu-jit", "torch-gpu", "jax-jit") else "k")
             if numpy.isfinite(first):
-                ax.text(x, first * 1.15, f"{first:.2g}", ha="center", va="bottom", fontsize=5.6,
+                ax.text(x, first * 1.15, _fmt(first), ha="center", va="bottom", fontsize=5.6,
                         rotation=90, color="0.35")
     ax.set_yscale("log")
     ax.set_xticks(range(len(_CONSTRUCT_DFS)))
@@ -457,5 +477,7 @@ if __name__ == "__main__":
         _construct_worker(sys.argv[2], sys.argv[3])
     elif len(sys.argv) >= 2 and sys.argv[1] == "--gpu":
         _measure(gpu_only=True)
+    elif len(sys.argv) >= 3 and sys.argv[1] == "--modes":
+        _measure(only=sys.argv[2].split(","))
     else:
         _measure()

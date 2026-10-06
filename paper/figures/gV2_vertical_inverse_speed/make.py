@@ -27,12 +27,17 @@ construction). float64 throughout.
     (galpy.backend.optimize.brentq) -- 43 halvings eagerly, 100 under jit (the
     traced bracket hides its width, so the halving count falls back to maxiter)
     -- each a full pass of the (N, 40)-harmonic kernel, whereas numpy uses a
-    safeguarded Newton iteration that converges in a handful of passes. Hence
-    numpy beats jax-jit on the CPU by ~10x per angle; see
-    BUG_vi_backend_eval_bisection.md (an in-process A/B with the eager count
-    under jit is 2.35x faster at identical values). The per-angle cost of the
-    jitted path is not constant in N on the CPU because XLA only multi-threads
-    the larger fusions.
+    safeguarded Newton iteration that converges in a handful of passes. Hence,
+    single-threaded at N=1e5: numpy 2.1 s, torch 5.1 s, jax eager 16.5 s, jax
+    jit 30 s -- jit is SLOWER than eager beyond N~1e3 because it does 100
+    halvings instead of 43 (an in-process A/B with the eager count under jit is
+    2.35x faster at identical values); see BUG_vi_backend_eval_bisection.md.
+    jit wins only at small N (N=10: 6.5 ms vs 0.25 s eager, where eager is
+    per-op dispatch bound). Per kernel pass at N=1e5, XLA's float64 trig
+    (0.30 s) is also ~2.5x slower than torch's (0.12 s). The many-tori vmap
+    costs the same per point as the one-torus jit (one batched root find); the
+    numpy per-torus loop pays ~1.7 ms of Python overhead per torus but its
+    Newton inversion still wins at large M on the CPU.
 
 (b) Construction: wall time to build the family vs the number of energies nE,
     numpy vs native jax (eager and jitted) and torch, CPU and GPU. Open markers
@@ -423,10 +428,12 @@ def make():
         x = (numpy.asarray(data["Ms"], dtype=float) * data["nang_vmap"]
              if ("vmap" in name or "loop" in name) else Ns)
         axa.loglog(x, t, ls=ls, marker=mk, ms=4, color=col, label=name, lw=1.4)
+    axa.set_ylim(5e-4, 400.0)
     # constant cost-per-point references (1 us and 10 us per point)
     for us, lab in ((1e-6, r"1 $\mu$s/point"), (1e-5, r"10 $\mu$s/point")):
         axa.plot(Ns, us * Ns, ":", color="0.75", lw=0.9, zorder=0)
-        axa.text(Ns[-1], us * Ns[-1], lab, fontsize=6, color="0.55", ha="right", va="bottom")
+        axa.text(Ns[-1] / 1.3, us * Ns[-1] / 1.3, lab, fontsize=6, color="0.55",
+                 ha="right", va="top", rotation=0)
     axa.set_xlabel(r"points per call $N$ (angles on one torus; vmap/loop: $N/%d$ tori $\times$ %d angles)"
                    % (data["nang_vmap"], data["nang_vmap"]), fontsize=8)
     axa.set_ylabel("wall time per call (s)")
@@ -449,16 +456,17 @@ def make():
     axb.set_xlabel(r"number of energies $n_E$ in the family")
     axb.set_ylabel("construction wall time (s)")
     axb.set_title(r"(b) construction (setup_interp=True, mm_npt=40)")
-    axb.legend(fontsize=6.5, loc="upper left", framealpha=0.92)
+    axb.set_ylim(top=axb.get_ylim()[1] * 25.0)
+    axb.legend(fontsize=6.5, loc="upper left", framealpha=0.92, ncol=2)
     axb.grid(True, which="both", alpha=0.25)
     env = data.get("env", {})
     cpu_env = env.get("cpu_run", {})
     gpu_env = env.get("gpu_run", cpu_env)
-    axb.text(0.98, 0.02,
+    axa.text(0.98, 0.02,
              f"CPU: {cpu_env.get('cpu', '?')}, 1 thread\n"
              f"GPU: {gpu_env.get('gpu', cpu_env.get('gpu', 'none'))}\n"
              f"jax {cpu_env.get('jax', '?')} · torch {cpu_env.get('torch', '?')} · float64",
-             transform=axb.transAxes, fontsize=5.8, color="0.45", ha="right", va="bottom")
+             transform=axa.transAxes, fontsize=5.8, color="0.45", ha="right", va="bottom")
     fig.tight_layout()
     return fig
 

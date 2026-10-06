@@ -191,6 +191,7 @@
     "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU), compute-only vs end-to-end transfer [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
+      "galpy_git": "809f4e460",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -198,8 +199,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "a0a03b1",
-    "sha256": "34df6dce1eb6b3229c7ea85ae20c38ab5e17ef5bf8cd82adf117b64a1ae0681d",
+    "git": "87202e3",
+    "sha256": "508776c6c3aea2e8ffc64e1f3cd3d66f1f49bb21998fde4fbed5210950f8358e",
     "track": "G"
   },
   "g2b_transfer": {
@@ -237,6 +238,7 @@
     "description": "gradient vs value throughput (reverse-mode AD overhead), jax/torch GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
+      "galpy_git": "809f4e460",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -244,14 +246,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "a0a03b1",
-    "sha256": "e062de0ad4b3b765c07eff24e264cc598b504483c12ac486586d3dd4913fe879",
+    "git": "87202e3",
+    "sha256": "456ad50fd4c41bae78372cf9ac9fcd17b2b16cb2f884265109fa651741c53bc1",
     "track": "G"
   },
   "g6_jit_amortization": {
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
+      "galpy_git": "809f4e460",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -259,8 +262,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "a0a03b1",
-    "sha256": "ec7ffbde8a6f6d46115a560b5a2380c6e8ecf239aee021049a53859ca021f4ba",
+    "git": "87202e3",
+    "sha256": "4f5d7756b7e5150076e02c817330b3ba519a6ab16ea373c386cebb25a22d3c05",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -342,6 +345,22 @@
     "sha256": "70c417b2d2c8e280e153f4073d51ff77594c57e8a996ce7fe788c16dfd5c700c",
     "track": "G"
   },
+  "gD3_spherical_df_speed": {
+    "description": "spherical-DF speed: sample(n=N) wall time vs N for four DFs and DF construction (+first 1000 draws) time, numpy vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "9f6c9d6f7",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "87202e3",
+    "sha256": "72eb32f17076646e7f099b05dfbecdc08db3498b490b45cdd59eb9747f5d7ac5",
+    "track": "F"
+  },
   "gD4_spherical_df_param": {
     "description": "derivatives through spherical-DF construction and sampling: King d/dW0 through the ODE solve (eager graft & jit/diffrax) and Osipkov-Merritt d(sample)/d(scale) with common random numbers vs FD and Jeans (CPU float64) [measure->json, plot byte-stable]",
     "env": {
@@ -354,8 +373,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "9c909866354ac6bfe5713ef43164176407b284cfd5cbaefdf6d538e44c0bb84c",
+    "git": "87202e3",
+    "sha256": "9fdaff8099e5baa5d2d82b15962206a0d1c80b87b41b5309707a88f37fb073d3",
     "track": "F"
   },
   "gF1_autodiff_forces": {
@@ -436,6 +455,22 @@
     },
     "git": "10744df",
     "sha256": "1f1cdd1021ace97566282a57970d419f0b1f171645fefd2af3c0209fec15b189",
+    "track": "E"
+  },
+  "gV2_vertical_inverse_speed": {
+    "description": "actionAngleVerticalInverse speed: xvFreqs evaluation wall time vs N angles (numpy, jax eager/jit/vmap, torch; CPU & GPU) and family construction time vs nE [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "9f6c9d6f7",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "87202e3",
+    "sha256": "a10c9b88a969b23212500beaa8673a3c19aa6631338f600643d083439a4ff4df",
     "track": "E"
   }
 }

@@ -21,8 +21,11 @@ Row 1 -- King models: d/dW0 through the King ODE solve.
     AD (dashed) vs a central finite difference that REBUILDS ``kingdf(W0 +- h)``
     on the plain numpy/scipy path (open circles, h = 1e-3); (c) the max-over-r
     |AD - FD| vs h: the V-shape (truncation ~h^2 on the right, ODE-tolerance
-    noise ~1/h on the left) bottoming out at ~1e-7 is the signature of a
-    correct derivative. W0 = 2 is avoided on purpose: the scipy solve switches its
+    noise ~1/h on the left) bottoming out at 5e-8 .. 1.3e-7 (eager) and
+    7e-8 .. 1.9e-7 (jit) -- against |d ln rho/dW0| up to 1.6 -- is the signature
+    of a correct derivative. jit (diffrax) vs eager (scipy + sensitivities) agree
+    to <= 2.3e-7, and torch eager (``torch.autograd``, same graft) matches jax
+    eager to 1e-14. W0 = 2 is avoided on purpose: the scipy solve switches its
     inner/outer split radius at W0 = 2 (rbreak = r0/100 below, r0 above), which
     moves the interpolation nodes and makes rho jump by ~5e-7 there.
 
@@ -49,20 +52,30 @@ Row 2 -- differentiable SAMPLING (common random numbers).
     includes the drift dr_i/da of the drawn radii. (d) sigma_r,bin from the
     sample vs this expectation; (e) d sigma_r,bin / da: jvp through the sample
     (filled), FD of the sample with the same key (crosses), expectation (open
-    squares); error bars are the scatter of 16 independent keys / sqrt(16).
-    (f) AD vs FD vs h: per-particle (median and 99.9th percentile of
-    |FD - AD| / rms(AD)) and for the binned d sigma_r/da (max over bins).
+    squares); error bars are the scatter of 16 independent keys / sqrt(16); the
+    inset shows (sample - expectation)/|expectation| in % (dots) and the AD-FD
+    difference of the sample (crosses, ~1e-6 %). (f) AD vs FD of the sample vs
+    h: per particle (median and 99.9th percentile of |FD - AD| / rms(dv_r/da))
+    and for the binned d sigma_r/da (max relative error over bins).
 
-    What (e) shows, and what it does not. AD == FD of the sample to ~1e-8 is a
-    statement about the pathwise derivative of THIS sample (exact, no noise);
-    sample vs expectation agrees to within MC noise, which is the statement that
-    the pathwise (reparameterization) derivative is an unbiased estimator of
-    d E[sigma_r] / da. A few particles in 1e3 sit within ~1e-5 of a kink of the
-    piecewise-linear inverse-CDF tables (a CDF knot crossing a tabulated u level
-    as a changes): there the FD straddles the kink while AD gives the one-sided
-    derivative (at h = 1e-6 the FD converges onto AD for them too), which is
-    what lifts the 99.9th percentile in (f) at small h. The kinks average out in
-    the binned estimator.
+    What the derivative row shows, and what it does not. AD == FD of the SAME
+    sample is a statement about the pathwise derivative of this sample (no MC
+    noise involved): the per-particle median error follows the h^2 truncation
+    down to ~5e-11 at h = 1e-5. Sample vs expectation agreeing to within MC noise
+    (|pull| <~ 2) is the statement that the pathwise (reparameterization)
+    derivative is an unbiased estimator of d E[sigma_r] / da.
+
+    Kinks. Each particle's velocity is a piecewise-SMOOTH function of a: the
+    p(v|r) inverse CDF is a piecewise-linear table, and as a changes a CDF knot
+    can cross one of the tabulated u levels the particle interpolates between.
+    For a particle within h of such a crossing, the central FD straddles the kink
+    while AD gives the one-sided derivative (shrinking h onto the particle's side
+    of the kink, the FD converges onto AD). The fraction of particles affected is
+    proportional to h (~2e-4 at h = 1e-5), which is what lifts the 99.9th
+    percentile in (f) and makes the binned FD error converge only ~linearly in h
+    (to 6e-8 at h = 1e-6) rather than as h^2. Expectation-level quantities are
+    smooth; the kinks are a property of the tabulated sampler, not a defect of
+    the derivative.
 
 Reproducibility: the jit compiles (~20 s each) and the 16 x (1 jvp + 22 FD)
 construct-and-sample calls dominate (~10 min on 4 cores), so measure->json and
@@ -352,7 +365,7 @@ def make():
     eb = numpy.array(S["err_bin"])
     hsS = numpy.array(S["hs"])
     jmin = int(numpy.argmin(eb))
-    ax_e.text(0.03, 0.62,
+    ax_e.text(0.03, 0.70,
               f"AD vs FD, same key (max over bins):\n"
               f"{eb[list(hsS).index(S['h_show'])]:.0e} at $h$={S['h_show']:g}, "
               f"{eb[jmin]:.0e} at $h$={hsS[jmin]:g}",
@@ -366,9 +379,11 @@ def make():
     ax_f.loglog(hs, S["err_bin"], "o-", color=_C_S, ms=4, label=r"binned $d\sigma_r/da$ (max rel. over bins)")
     ax_f.loglog(hs, S["pp_med"], "s-", color=_C_FD, ms=4, label="per particle, median")
     ax_f.loglog(hs, S["pp_999"], "^--", color=_C_FD, ms=4, mfc="none", label="per particle, 99.9th pct")
-    for c, p, lab in ((3e-1, 2, r"$\propto h^2$"), (6e-2, 1, r"$\propto h$")):
-        ax_f.loglog(hs, c * hs**p, ":", color="0.6", lw=0.9)
-        ax_f.text(hs[0] * 0.9, c * hs[0] ** p, lab, fontsize=6.5, color="0.5", ha="right", va="center")
+    for c, p, lo, hi, lab in ((4e-2, 2, 1e-3, 1e-1, r"$\propto h^2$"),
+                              (3e-1, 1, 1e-6, 1e-3, r"$\propto h$")):
+        hh = numpy.array([lo, hi])
+        ax_f.loglog(hh, c * hh**p, ":", color="0.45", lw=1.0)
+        ax_f.text(hi * 1.15, c * hi**p, lab, fontsize=6.5, color="0.4", ha="left", va="center")
     ax_f.set_xlabel(r"FD step $h$ in $a$")
     ax_f.set_ylabel(r"$|{\rm FD}-{\rm AD}|$ (per particle: / rms $dv_r/da$)")
     ax_f.set_title("(f) sampling: AD vs FD, same key")
