@@ -1,4 +1,4 @@
-# Vacation status snapshot — 2026-10-06
+# Vacation status snapshot — 2026-10-06 (03:45)
 
 **This file is OVERWRITTEN, not appended.** "Where are things now";
 `log.md` is the trace. Refresh on every merge / branch change.
@@ -7,22 +7,28 @@
 
 ## Now
 
-    feat/backends   9f6c9d6f7   (#1631 merged 2026-10-06). Green after the 2026-10-05
-                    GitHub Actions outage (reruns: all 5 runs success).
-    actionAngleVerticalInverse DONE: #1627/#1628/#1630/#1631 merged; runs on CUDA
-          (torch + jax). Open: backend-native legacy construction (deferred by Jo).
-    CURRENT TASK (Jo 2026-10-06): galpy-jax notes current; RE-RUN all paper figures
-          + speed tests on the latest code (worktree /var/tmp/fbp @ origin/feat/backends);
-          NEW figures: spherical DFs, 1D inverse action-angle (VI), streamdf,
-          streamspraydf, incl. GPU timings. Autonomous.
+    feat/backends   9f6c9d6f7 (#1631). Figure re-run + 6 new figures in progress
+    (logs/figure_rerun_2026-10-06/log.md). CPU phase DONE + committed.
+    Timing chain 1 (/var/tmp/figs = feat/backends + #1634/#1635/#1636 commits):
+        g2 g5 g6 done; g17 running (since 01:10); then shared orbit_speed, g12, g15,
+        benchmarks/gpu, re-render g8/g12/g15, gV2 cpu.
+    Chain 2 (after chain 1): figs += #1637, #1636 torch-cuda re-verify, GPU series
+        gV2 gD3 gS5 gS4, render.
 
 ## Open PRs
 
-    none of mine.
-    AVX-512: #1614's simdlen=256 workaround CONFIRMED needed (keep it).
-    Eager-floor jax skips (4): measured NOT compile-bound; they stay.
+    #1633 (main) Chandrasekhar sigma_r log grid + natural spline. Pyodide wheel jobs
+          fail on the ftp.gnu.org outage; prwatch.sh reruns when reachable.
+    #1634 backend side of #1633. GREEN.
+    #1635 brentq bracket_width= (VI jit 2.5-3.7x). GREEN.
+    #1636 VI tables follow the potential's CUDA device (+ test as_numpy). GREEN.
+          torch-cuda re-verify of the test commit queued in chain 2.
+    #1637 streamdf torch progenitor constructs; misalignment traceable; jax.jit of
+          construction works (723 s; 1.1e-5 rel from eager -- follow-up); jax.grad of
+          the constructor fails in diffrax adaptive backward (follow-up).
+          1 CI job timed out (kuzminkutuzov leapfrog, load) -> rerun requested.
+    Decisions: constantbetadf numpy fE stays (outside jit is faster; Jo).
     On hold per Jo: main merge prep, docs.
-    Remote scratch branches (ruleset blocks my delete): Jo.
 
 ## What is differentiable now (this round)
 
