@@ -69,6 +69,10 @@ def _measure():
     from galpy.util import conversion
 
     td = _TD_GYR / conversion.time_in_Gyr(220.0, 8.0)
+    # ONE stream frame for every fit (phi1 along the progenitor's orbital plane,
+    # phi2 across it), from the q-independent initial condition: differences
+    # between tracks are then differences in the same coordinates
+    T = numpy.asarray(Orbit(_IC).align_to_orbit(), dtype=float)
     mass = 2.0e4 / conversion.mass_in_msol(220.0, 8.0)
     key = grandom.key(_SEED, backend="jax")
 
@@ -98,12 +102,25 @@ def _measure():
         track shift being predicted.
         """
         tr = make_df(q, ikw=None).streamTrack(particles=jnp.asarray(xv),
-                                              smoothing=smoothing)
+                                              smoothing=smoothing,
+                                              custom_sky_transform=T)
         tp = numpy.asarray(tr.tp_grid(), dtype=float)
         return ({"tp": tp.tolist(),
                  "R": numpy.asarray(tr.R(tp), dtype=float).tolist(),
-                 "z": numpy.asarray(tr.z(tp), dtype=float).tolist()},
+                 "z": numpy.asarray(tr.z(tp), dtype=float).tolist(),
+                 "phi1": numpy.asarray(tr.phi1(tp), dtype=float).tolist(),
+                 "phi2": numpy.asarray(tr.phi2(tp), dtype=float).tolist()},
                 tr.smoothing_s)
+
+    def dphi2(t1, t2):
+        """max |phi2_1 - phi2_2| [deg] at matched phi1, over the common range."""
+        def srt(t):
+            o = numpy.argsort(t["phi1"])
+            return numpy.asarray(t["phi1"])[o], numpy.asarray(t["phi2"])[o]
+        x1, y1 = srt(t1)
+        x2, y2 = srt(t2)
+        g = numpy.linspace(max(x1[0], x2[0]), min(x1[-1], x2[-1]), 400)
+        return float(numpy.max(numpy.abs(numpy.interp(g, x1, y1) - numpy.interp(g, x2, y2))))
 
     base, smooth = fit(_Q0, p0)          # GCV once; every other fit reuses it
     out = {"q0": _Q0, "n": _N, "dqs": list(_DQS), "dqs_err": list(_DQS_ERR),
@@ -132,6 +149,8 @@ def _measure():
         out.setdefault("moved", {})[f"{dq:+.3f}"] = float(
             numpy.max(numpy.hypot(mR, mz)) / scale
         )
+        out.setdefault("err_phi2", {})[f"{dq:+.3f}"] = dphi2(a, d)
+        out.setdefault("moved_phi2", {})[f"{dq:+.3f}"] = dphi2(d, b)
     return out
 
 
@@ -160,23 +179,37 @@ def make():
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
     b = data["base"]
-    ax1.plot(b["R"], b["z"], "-", color=_CB, lw=2.4, label=rf"$q_0={data['q0']}$")
+    ax1.plot(b["phi1"], b["phi2"], "-", color=_CB, lw=2.4, label=rf"$q_0={data['q0']}$")
     for k in [f"{d:+.3f}" for d in data["dqs"]]:
         d, a = data["direct"][k], data["ad"][k]
         c = _CD[k]
-        ax1.plot(d["R"], d["z"], "-", color=c, lw=1.6, alpha=0.95,
+        ax1.plot(d["phi1"], d["phi2"], "-", color=c, lw=1.6, alpha=0.95,
                  label=rf"$q={data['q0'] + float(k):.1f}$")
-        ax1.plot(a["R"], a["z"], "--", color=c, lw=1.5, dashes=(4, 2))
-    ax1.set_xlabel("$R$")
-    ax1.set_ylabel("$z$")
+        ax1.plot(a["phi1"], a["phi2"], "--", color=c, lw=1.5, dashes=(4, 2))
+    ax1.set_xlabel(r"$\phi_1$ [deg] (along the progenitor's orbital plane)")
+    ax1.set_ylabel(r"$\phi_2$ [deg]")
     ax1.set_title(rf"solid: direct re-run   dashed: one AD pass ($N={data['n']}$)")
     ax1.legend(fontsize=7, framealpha=0.92, ncol=2)
 
     dqs = numpy.array(sorted(data.get("dqs_err", [abs(float(k)) for k in data["err"]])))
-    errs = numpy.array([max(data["err"][f"{+d:+.3f}"], data["err"][f"{-d:+.3f}"])
-                        for d in dqs])
-    moved = numpy.array([max(data["moved"][f"{+d:+.3f}"], data["moved"][f"{-d:+.3f}"])
-                         for d in dqs])
+    def _rms_dphi2(t1, t2):
+        """rms |phi2_1 - phi2_2| [deg] at matched phi1 over the common range:
+        the max is dominated by the sparse far tail ends, where any two spline
+        fits scatter."""
+        def srt(t):
+            o = numpy.argsort(t["phi1"])
+            return numpy.asarray(t["phi1"])[o], numpy.asarray(t["phi2"])[o]
+        x1, y1 = srt(t1)
+        x2, y2 = srt(t2)
+        g = numpy.linspace(max(x1[0], x2[0]), min(x1[-1], x2[-1]), 400)
+        r = numpy.interp(g, x1, y1) - numpy.interp(g, x2, y2)
+        return float(numpy.sqrt(numpy.mean(r**2)))
+
+    def _worst(d, fn):  # worse of +/- dq
+        return max(fn(f"{+d:+.3f}"), fn(f"{-d:+.3f}"))
+
+    errs = numpy.array([_worst(d, lambda k: _rms_dphi2(data["ad"][k], data["direct"][k])) for d in dqs])
+    moved = numpy.array([_worst(d, lambda k: _rms_dphi2(data["direct"][k], data["base"])) for d in dqs])
     # the error only means something next to the shift it is predicting
     ax2.loglog(dqs, moved, "s-", color="#111827", ms=5, lw=1.4,
                label="track shift being predicted")
@@ -186,8 +219,9 @@ def make():
         ax2.annotate(f"{100 * (1 - e / m):.0f}%", (x, e), textcoords="offset points",
                      xytext=(0, -13), ha="center", fontsize=7, color="#1d4ed8")
     ax2.set_xlabel(r"$|\Delta q|$")
-    ax2.set_ylabel("max offset / track extent")
-    ax2.set_title("one AD pass removes 50-75% of the shift")
+    ax2.set_ylabel(r"rms $\Delta\phi_2$ at fixed $\phi_1$ [deg]")
+    frac = 100.0 * (1.0 - errs / moved)
+    ax2.set_title(f"one AD pass removes {frac.min():.0f}-{frac.max():.0f}% of the shift")
     ax2.legend(fontsize=7, framealpha=0.92, loc="upper left")
     ax2.grid(True, which="both", alpha=0.25)
 
