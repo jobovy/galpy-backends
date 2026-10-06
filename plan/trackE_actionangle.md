@@ -42,3 +42,46 @@ relative radial problem (#1527/#1553 ported, #1594 merged): epicycle branch,
 small-orbit and near-circular relative potentials, main's turning-point rules,
 u = 1/r azimuthal integrals. Parameter gradients vs h-converged FD 5e-9..1e-6.
 Next: Orbit.rperi/rap/zmax(analytic=True) through the backend C-STM.
+
+**2026-10-06 status — actionAngleVerticalInverse is ON the backends.** It had been
+out of scope (`_reject_backend`) while under development; Jo brought it in once
+stable (2026-10-04). Stack #1629: #1627 → #1628 → #1630, plus #1631 (CUDA).
+
+- **#1627 — momentum-matched evaluation.** Tables (Hermite splines in J: D_m(J),
+  K(J), E(J)) are scipy PPolys evaluated with `eval_ppoly` (values + exact
+  J-derivatives). Angle → anomaly by backend `brentq` on the monotone angle
+  relation over [0, 2π] (Newton polish = implicit-function gradient). Shared
+  kernel `_mm_kernel` (numpy byte-identical). **Dead end:** autodiff of
+  p = 2J sin²η η′/(x_max sin τ) cancels catastrophically where sin τ ≈ 1e-16
+  (τ = π): dv/dθ off by 8e-5 at θ = π/2. Fix: sin η/sin τ = cos δ + cos τ ·
+  sinc δ · q(τ), with q = Σ D_m sin(mτ)/sin τ = cos-series via
+  sin(mτ)/sin τ = 2 Σ_{odd l<m} cos(lτ) (tail-summed coefficients). Values vs
+  numpy ≤ 7.9e-15; d(x,v)/dJ 1.3e-11, d(x,v)/dθ 1.7e-12 (FD floor), {x,v} = 1.
+- **#1628 — native construction, differentiable in potential parameters.**
+  x_max by backend brentq; spectral sweep (FFT antiderivative); anomaly map by
+  batched Gauss–Newton from D=0 (resolved tori ≤ 4 iterations, under-resolved
+  ~11; 14 fixed) without the gradient + ONE differentiable step (IFT); slopes by
+  normal equations; `cubic_hermite_coeffs` (new, == scipy CubicHermiteSpline.c).
+  Whole pipeline traces under jax.jit; jit(jacfwd) == eager to 1e-12.
+  d(x,v,Ω)/d(param) vs FD of the backend construction ≤ 9e-11 (numpy's calcxmax
+  roots, E−Φ(x_max) ~ 2e-14, are too noisy for a sharper reference than ~1e-8;
+  backend-built vs numpy-built values 7e-12 for that reason — backend more
+  accurate). **Found:** an unbound energy (E > Φ(∞)) made the backend bracket run
+  off to x_max = 1e38 silently → residual check → NaN action → same RuntimeError
+  as numpy. Bottom tori use the exact √Φ″(0) (numpy approximates by the torus
+  at E+1e-5 when Φ(0) ≠ 0; galpy's own potentials all have Φ(0)=0).
+- **#1630 — legacy modes evaluate natively** (momentum_matched=False, polynomial
+  and exact point transforms, ± setup_interp); construction stays numpy (a legacy
+  mode can't take a backend-parameter potential). `_SplineXP` wraps setup_interp's
+  1D splines; nSn/dSndJ/pt_coeffs via backend map_coordinates (scipy 'constant'
+  == 'mirror' for in-grid queries). map_coordinates: **order 5** (quintic
+  B-spline, 6 taps) + **mirror fold generalized to period 2(n−1)** (a 2-column
+  table reflected a tap twice → index out of range; affects every backend
+  user). Legacy values vs numpy ≤ 4.8e-14; derivatives ≤ 5e-11.
+  E=300 isothermal: numpy calcxmax gives up (RuntimeError), backend finds the
+  turning point → "not converged" warning; test expects each.
+- **#1631 — CUDA.** Library: the energy grid went to numpy as CUDA tensors →
+  `to_host`. Tests: numpy-side arithmetic on outputs → `as_numpy`. On the TITAN
+  Xp all 49 main-suite VI tests pass under torch and jax; dedicated file (52) too.
+
+Open: backend-native (differentiable) legacy construction — deferred by Jo.

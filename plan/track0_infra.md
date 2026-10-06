@@ -98,3 +98,34 @@ returning NaN for a coerced radius (breaks kingdf); (2) migrate
 inside `_evaluate`/`_Rforce`, reachable WITHOUT a decorated entry point (Python
 integrator, wrappers, `_nodecorator`), so most are NOT redundant; (5) boundary-jit
 test dimension (jit the whole public method; the decorators trace away).
+
+## 2026-10-06 — dtype policy, jit-mode key, CI runner header
+
+- **float64 by default (#1613).** Policy (Jo): Python floats, numpy inputs and
+  everything galpy creates are float64; a USER float32 tensor stays float32 in and
+  out (compute in f64 where needed: `at_least_float64` / `match_input_dtype`).
+  Mechanism: scoped default dtype (`float64_default`, nesting-safe, skipped under
+  torch.compile) entered by `use("torch")`, the `@backend_input` wrapper and
+  `float64_default_if_torch_args` on df/actionAngle/Orbit entry points. Found via
+  a TorchFunctionMode detector of dtype-less factory calls (local tool).
+  CI-only failures fixed: a closure over `sys.modules` made dynamo trip typing's
+  `_UnionGenericAlias` DeprecationWarning on py3.14; tensor-amp * ndarray via the
+  deprecated `__array_wrap__` (numpy 2.5) in sphericaldf._vmax_at_r.
+- **jit-mode static key (#1625).** `_object_key` was id(obj) + own scalars:
+  (1) stale jax traces after a WRAPPED potential's normalize() (2x wrong
+  forces); (2) a retrace per call from fresh toPlanar() wrappers
+  (vcirc/epifreq: 293/466 compiles for ExpTruncNFW analytic_ecc). Now type +
+  attributes: scalars by value, galpy sub-objects recursively, everything else
+  by HELD identity (`_Ident`). **Dead end, caught by CI:** recursing into
+  anything with `__dict__` recursed into jax arrays/torch tensors (data held
+  elsewhere) -> every array keyed alike -> time-dep vs static SCF/Multipole
+  shared traces (0.7 wrong). ExpTruncNFW jax-jit 501 s -> 260 s.
+- **CI runner header (#1620).** pytest header prints CPU model, SIMD
+  (avx2/avx512f/amx) and inductor vec ISA; ~40% of jobs land on AVX-512 runners;
+  #1614's inductor simdlen=256 cap confirmed needed (kingdf_W0 passed on EPYC
+  9V74 avx512f).
+- **Rebase onto main (2026-10-04, #1626 draft for CI).** main 2 ahead (#1596,
+  #1611), feat 505 ahead. Plain replay stops at 3/505; used `rebase -X theirs`
+  + a hand-resolved reference merge tree; `-X theirs` silently dropped main's
+  EOF-appended #1611 test at #1336 (329/505) — fixed at that commit. Tip ==
+  old feat + main's HISTORY entry + #1611 test, 0 deletions.

@@ -117,3 +117,18 @@ r(Phi) now log-r bisection, exact near Emin); constantbetadf backend fE needs
 no calibrated lower limit (7.7e-12 vs Hernquist's closed form). #1593 (open):
 qdf constructor and streamTrack fit compile under torch.compile. Next: numpy
 islands in streamspraydf; vectorized stream track; kingdf under torch.compile.
+
+**2026-10-06 status.** qdf: the constructor compiles under torch.compile without
+an opt-out (#1617, the last #1574 stopgap). `sampleV_interpolate` under eager jax
+(#1621): its 2837 s in-shard was RECOMPILATION — the rejection loop proposed for
+the outstanding points only (a new array size every round; eager jax compiles
+every op per shape, ~5 s per DF call). **Dead end:** one fixed shape (propose
+for all, mask) fixed jax but made torch re-evaluate the full DF every round
+(55 s vs 15 s; CI timed torch out) — the loop's own comment had warned of it.
+Shipped: power-of-4 buckets (`galpy.backend.bucket_size`) for the loop inputs,
+the maxVT grid nodes and the interpolation points, plus the jax C bridges
+skipping pure_callback for concrete inputs (a fresh closure per call compiled
+anew, ~25 ms each; 680 of 1718 compiles). jax 2837 s -> 118 s in-file, jax-jit
+87 s, torch 22 s; slow-skips removed. constantbetadf's torch numpy pin and
+streamgapdf's orbit-integration data-guard removed (#1624). Spherical DFs on
+the float64 policy (#1613): float32-default sampling == float64-default.
