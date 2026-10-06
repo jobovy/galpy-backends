@@ -1,5 +1,7 @@
 # Re-running the speed figures on another GPU (e.g. an H100)
 
+> For a separate Claude session doing this, see `tools/H100_SESSION.md` (complete instructions).
+
 The measure scripts write their machine-dependent timings into each figure's
 `data/` directory, stamped with the GPU name; the plots are byte-stable from
 those JSONs. To measure on another machine without touching the TITAN Xp data,
