@@ -1,0 +1,1580 @@
+% refs.bib -- verified bibliography for the galpy jax/PyTorch-backends paper.
+% Every entry was checked against a primary source (Crossref record of the DOI, the arXiv API,
+% the publisher's page, or the software's GitHub/Zenodo record); see notes/BIB_NOTES.md.
+% Journal macros (\apj, \apjs, \apjl, \mnras, \aj, \aap, \araa, \nat, \jcap, \pasp, \pasj, \prl) are defined by AASTeX.
+
+@article{Bovy2015,
+  author = {Bovy, Jo},
+  title = {{galpy: A {P}ython Library for Galactic Dynamics}},
+  journal = {\apjs},
+  year = {2015},
+  volume = {216},
+  pages = {29},
+  doi = {10.1088/0067-0049/216/2/29},
+  archivePrefix = {arXiv},
+  eprint = {1412.3451}
+}
+
+@article{Bovy2014,
+  author = {Bovy, Jo},
+  title = {{Dynamical Modeling of Tidal Streams}},
+  journal = {\apj},
+  year = {2014},
+  volume = {795},
+  pages = {95},
+  doi = {10.1088/0004-637X/795/1/95},
+  archivePrefix = {arXiv},
+  eprint = {1401.2985}
+}
+
+@article{BovyRix2013,
+  author = {Bovy, Jo and Rix, Hans-Walter},
+  title = {{A Direct Dynamical Measurement of the {M}ilky {W}ay's Disk Surface Density Profile, Disk Scale Length, and Dark Matter Profile at 4 kpc $\lesssim$ R $\lesssim$ 9 kpc}},
+  journal = {\apj},
+  year = {2013},
+  volume = {779},
+  pages = {115},
+  doi = {10.1088/0004-637X/779/2/115},
+  archivePrefix = {arXiv},
+  eprint = {1309.0809}
+}
+
+@article{Binney2010,
+  author = {Binney, James},
+  title = {{Distribution functions for the {M}ilky {W}ay}},
+  journal = {\mnras},
+  year = {2010},
+  volume = {401},
+  pages = {2318-2330},
+  doi = {10.1111/j.1365-2966.2009.15845.x}
+}
+
+@article{Binney2012,
+  author = {Binney, James},
+  title = {{Actions for axisymmetric potentials}},
+  journal = {\mnras},
+  year = {2012},
+  volume = {426},
+  pages = {1324-1327},
+  doi = {10.1111/j.1365-2966.2012.21757.x}
+}
+
+@article{SchonrichBinney2012,
+  author = {Sch{\"o}nrich, Ralph and Binney, James},
+  title = {{A new formula for disc kinematics}},
+  journal = {\mnras},
+  year = {2012},
+  volume = {419},
+  pages = {1546-1556},
+  doi = {10.1111/j.1365-2966.2011.19816.x}
+}
+
+@article{BinneyMcMillan2011,
+  author = {Binney, James and McMillan, Paul},
+  title = {{Models of our {G}alaxy -- {II}}},
+  journal = {\mnras},
+  year = {2011},
+  volume = {413},
+  pages = {1889-1898},
+  doi = {10.1111/j.1365-2966.2011.18268.x}
+}
+
+@article{SandersBinney2016,
+  author = {Sanders, Jason L. and Binney, James},
+  title = {{A review of action estimation methods for galactic dynamics}},
+  journal = {\mnras},
+  year = {2016},
+  volume = {457},
+  pages = {2107-2121},
+  doi = {10.1093/mnras/stw106}
+}
+
+@article{McMillanBinney2008,
+  author = {McMillan, Paul J. and Binney, James J.},
+  title = {{Disassembling the {G}alaxy with angle-action coordinates}},
+  journal = {\mnras},
+  year = {2008},
+  volume = {390},
+  pages = {429-437},
+  doi = {10.1111/j.1365-2966.2008.13767.x}
+}
+
+@article{BinneyMcMillan2016,
+  author = {Binney, James and McMillan, Paul J.},
+  title = {{Torus mapper: a code for dynamical models of galaxies}},
+  journal = {\mnras},
+  year = {2016},
+  volume = {456},
+  pages = {1982-1998},
+  doi = {10.1093/mnras/stv2734}
+}
+
+@article{Sanders2016,
+  author = {Sanders, Jason L. and Bovy, Jo and Erkal, Denis},
+  title = {{Dynamics of stream-subhalo interactions}},
+  journal = {\mnras},
+  year = {2016},
+  volume = {457},
+  pages = {3817-3835},
+  doi = {10.1093/mnras/stw232}
+}
+
+@article{Fardal2015,
+  author = {Fardal, Mark A. and Huang, Shuiyao and Weinberg, Martin D.},
+  title = {{Generation of mock tidal streams}},
+  journal = {\mnras},
+  year = {2015},
+  volume = {452},
+  pages = {301-319},
+  doi = {10.1093/mnras/stv1198}
+}
+
+@article{Qian2022,
+  author = {Qian, Yansong and Arshad, Yumna and Bovy, Jo},
+  title = {{The structure of accreted stellar streams}},
+  journal = {\mnras},
+  year = {2022},
+  volume = {511},
+  pages = {2339-2348},
+  doi = {10.1093/mnras/stac238}
+}
+
+@article{Chen2025,
+  author = {Chen, Yingtian and Valluri, Monica and Gnedin, Oleg Y. and Ash, Neil},
+  title = {{Improved Particle Spray Algorithm for Modeling Globular Cluster Streams}},
+  journal = {\apjs},
+  year = {2025},
+  volume = {276},
+  pages = {32},
+  doi = {10.3847/1538-4365/ad9904},
+  archivePrefix = {arXiv},
+  eprint = {2408.01496}
+}
+
+@article{Petts2015,
+  author = {Petts, J. A. and Gualandris, A. and Read, J. I.},
+  title = {{A semi-analytic dynamical friction model that reproduces core stalling}},
+  journal = {\mnras},
+  year = {2015},
+  volume = {454},
+  pages = {3778-3791},
+  doi = {10.1093/mnras/stv2235}
+}
+
+@article{Petts2016,
+  author = {Petts, J. A. and Read, J. I. and Gualandris, A.},
+  title = {{A semi-analytic dynamical friction model for cored galaxies}},
+  journal = {\mnras},
+  year = {2016},
+  volume = {463},
+  pages = {858-869},
+  doi = {10.1093/mnras/stw2011}
+}
+
+@article{Chandrasekhar1943,
+  author = {Chandrasekhar, S.},
+  title = {{Dynamical Friction. {I}. General Considerations: the Coefficient of Dynamical Friction}},
+  journal = {\apj},
+  year = {1943},
+  volume = {97},
+  pages = {255},
+  doi = {10.1086/144517}
+}
+
+@article{Bovy2011,
+  author = {Bovy, Jo and Hogg, David W. and Roweis, Sam T.},
+  title = {{Extreme deconvolution: Inferring complete distribution functions from noisy, heterogeneous and incomplete observations}},
+  journal = {Annals of Applied Statistics},
+  year = {2011},
+  volume = {5},
+  pages = {1657-1677},
+  doi = {10.1214/10-AOAS439},
+  archivePrefix = {arXiv},
+  eprint = {0905.2979}
+}
+
+@article{Trick2016,
+  author = {Trick, Wilma H. and Bovy, Jo and Rix, Hans-Walter},
+  title = {{Action-based Dynamical Modeling for the {M}ilky {W}ay Disk}},
+  journal = {\apj},
+  year = {2016},
+  volume = {830},
+  pages = {97},
+  doi = {10.3847/0004-637X/830/2/97}
+}
+
+@article{MackerethBovy2018,
+  author = {Mackereth, J. Ted and Bovy, Jo},
+  title = {{Fast Estimation of Orbital Parameters in {M}ilky {W}ay-like Potentials}},
+  journal = {\pasp},
+  year = {2018},
+  volume = {130},
+  pages = {114501},
+  doi = {10.1088/1538-3873/aadcdd},
+  archivePrefix = {arXiv},
+  eprint = {1802.02592}
+}
+
+@article{Mackereth2019,
+  author = {Mackereth, J Ted and Bovy, Jo and Leung, Henry W and Schiavon, Ricardo P and Trick, Wilma H and Chaplin, William J and Cunha, Katia and Feuillet, Diane K and Majewski, Steven R and Martig, Marie and Miglio, Andrea and Nidever, David and others},
+  title = {{Dynamical heating across the {M}ilky {W}ay disc using {APOGEE} and {G}aia}},
+  journal = {\mnras},
+  year = {2019},
+  volume = {489},
+  pages = {176-195},
+  doi = {10.1093/mnras/stz1521}
+}
+
+@article{Bovy2016,
+  author = {Bovy, Jo and Bahmanyar, Anita and Fritz, Tobias K. and Kallivayalil, Nitya},
+  title = {{The Shape of the Inner {M}ilky {W}ay Halo from Observations of the {P}al 5 and {GD}-1 Stellar Streams}},
+  journal = {\apj},
+  year = {2016},
+  volume = {833},
+  pages = {31},
+  doi = {10.3847/1538-4357/833/1/31},
+  archivePrefix = {arXiv},
+  eprint = {1609.01298}
+}
+
+@article{Bovy2016b,
+  author = {Bovy, Jo},
+  title = {{Detecting the Disruption of Dark-Matter Halos with Stellar Streams}},
+  journal = {\prl},
+  year = {2016},
+  volume = {116},
+  pages = {121301},
+  doi = {10.1103/PhysRevLett.116.121301},
+  archivePrefix = {arXiv},
+  eprint = {1512.00452}
+}
+
+@article{Bovy2017a,
+  author = {Bovy, Jo},
+  title = {{Stellar inventory of the solar neighbourhood using {G}aia {DR1}}},
+  journal = {\mnras},
+  year = {2017},
+  volume = {470},
+  pages = {1360-1387},
+  doi = {10.1093/mnras/stx1277},
+  archivePrefix = {arXiv},
+  eprint = {1704.05063}
+}
+
+@article{Bovy2017b,
+  author = {Bovy, Jo},
+  title = {{Galactic rotation in {G}aia {DR1}}},
+  journal = {\mnras},
+  year = {2017},
+  volume = {468},
+  pages = {L63-L67},
+  doi = {10.1093/mnrasl/slx027},
+  archivePrefix = {arXiv},
+  eprint = {1610.07610}
+}
+
+@article{Bovy2020,
+  author = {Bovy, Jo},
+  title = {{A purely acceleration-based measurement of the fundamental {G}alactic parameters}},
+  journal = {arXiv e-prints},
+  year = {2020},
+  pages = {arXiv:2012.02169},
+  archivePrefix = {arXiv},
+  eprint = {2012.02169}
+}
+
+@article{BovyTremaine2012,
+  author = {Bovy, Jo and Tremaine, Scott},
+  title = {{On the Local Dark Matter Density}},
+  journal = {\apj},
+  year = {2012},
+  volume = {756},
+  pages = {89},
+  doi = {10.1088/0004-637X/756/1/89},
+  archivePrefix = {arXiv},
+  eprint = {1205.4033}
+}
+
+@article{BovyRixHogg2012,
+  author = {Bovy, Jo and Rix, Hans-Walter and Hogg, David W.},
+  title = {{The {M}ilky {W}ay Has No Distinct Thick Disk}},
+  journal = {\apj},
+  year = {2012},
+  volume = {751},
+  pages = {131},
+  doi = {10.1088/0004-637X/751/2/131},
+  archivePrefix = {arXiv},
+  eprint = {1111.6585}
+}
+
+@article{McMillan2017,
+  author = {McMillan, Paul J.},
+  title = {{The mass distribution and gravitational potential of the {M}ilky {W}ay}},
+  journal = {\mnras},
+  year = {2017},
+  volume = {465},
+  pages = {76-94},
+  doi = {10.1093/mnras/stw2759}
+}
+
+@book{BinneyTremaine2008,
+  author = {Binney, James and Tremaine, Scott},
+  title = {{Galactic Dynamics: Second Edition}},
+  publisher = {Princeton University Press},
+  address = {Princeton, NJ},
+  year = {2008},
+  doi = {10.1515/9781400828722},
+  isbn = {9780691130279}
+}
+
+@article{PriceWhelan2017,
+  author = {Price-Whelan, Adrian M.},
+  title = {{Gala: A {P}ython package for galactic dynamics}},
+  journal = {The Journal of Open Source Software},
+  year = {2017},
+  volume = {2},
+  pages = {388},
+  doi = {10.21105/joss.00388}
+}
+
+@misc{PriceWhelan2026,
+  author = {Price-Whelan, Adrian and Garrison, Lehman and Wagg, Tom and Souchereau, Harrison and Sip{\H{o}}cz, Brigitta and others},
+  title = {{adrn/gala: v1.12.0}},
+  publisher = {Zenodo},
+  year = {2026},
+  month = sep,
+  doi = {10.5281/zenodo.23003195},
+  version = {v1.12.0},
+  url = {https://doi.org/10.5281/zenodo.23003195}
+}
+
+@article{Vasiliev2019,
+  author = {Vasiliev, Eugene},
+  title = {{{AGAMA}: action-based galaxy modelling architecture}},
+  journal = {\mnras},
+  year = {2019},
+  volume = {482},
+  pages = {1525-1544},
+  doi = {10.1093/mnras/sty2672}
+}
+
+@misc{Starkman2026,
+  author = {Starkman, Nathaniel and Price-Whelan, Adrian and Nibauer, Jacob and Chen, Yingtian},
+  title = {{{GalacticDynamics/galax}: v0.0.3}},
+  publisher = {Zenodo},
+  year = {2026},
+  month = aug,
+  doi = {10.5281/zenodo.21985205},
+  version = {v0.0.3},
+  url = {https://github.com/GalacticDynamics/galax},
+  note = {Galactic and gravitational dynamics in Python (+ GPU and autodiff)}
+}
+
+@article{Dehnen2000,
+  author = {Dehnen, Walter},
+  title = {{A Very Fast and Momentum-conserving Tree Code}},
+  journal = {\apjl},
+  year = {2000},
+  volume = {536},
+  pages = {L39-L42},
+  doi = {10.1086/312724}
+}
+
+@article{Dehnen2002,
+  author = {Dehnen, Walter},
+  title = {{A Hierarchical $\mathcal{O}(N)$ Force Calculation Algorithm}},
+  journal = {Journal of Computational Physics},
+  year = {2002},
+  volume = {179},
+  pages = {27-42},
+  doi = {10.1006/jcph.2002.7026}
+}
+
+@inproceedings{Teuben2025,
+  author = {Teuben, Peter},
+  title = {{A Retrospective View of {NEMO}}},
+  booktitle = {Astronomical Data Analysis Software and Systems XXXII},
+  series = {Astronomical Society of the Pacific Conference Series},
+  year = {2025},
+  volume = {538},
+  pages = {226-229},
+  doi = {10.26624/qvuj7010}
+}
+
+@misc{Teuben2026,
+  author = {Teuben, Peter and others},
+  title = {{{NEMO}: A Stellar Dynamics Toolbox}},
+  year = {2026},
+  url = {https://github.com/teuben/nemo},
+  note = {\url{https://github.com/teuben/nemo}; documentation at \url{https://astronemo.readthedocs.io}}
+}
+
+@article{Nibauer2022,
+  author = {Nibauer, Jacob and Belokurov, Vasily and Cranmer, Miles and Goodman, Jeremy and Ho, Shirley},
+  title = {{Charting Galactic Accelerations with Stellar Streams and Machine Learning}},
+  journal = {\apj},
+  year = {2022},
+  volume = {940},
+  pages = {22},
+  doi = {10.3847/1538-4357/ac93ee},
+  archivePrefix = {arXiv},
+  eprint = {2205.11767}
+}
+
+@article{Nibauer2023,
+  author = {Nibauer, Jacob and Bonaca, Ana and Johnston, Kathryn V.},
+  title = {{Constraining the Gravitational Potential from the Projected Morphology of Extragalactic Tidal Streams}},
+  journal = {\apj},
+  year = {2023},
+  volume = {954},
+  pages = {195},
+  doi = {10.3847/1538-4357/ace9bc},
+  archivePrefix = {arXiv},
+  eprint = {2303.17406}
+}
+
+@article{Nibauer2025,
+  author = {Nibauer, Jacob and Bonaca, Ana and Spergel, David N. and Price-Whelan, Adrian M. and Greene, Jenny E. and Starkman, Nathaniel and Johnston, Kathryn V.},
+  title = {{{StreamSculptor}: Hamiltonian Perturbation Theory for Stellar Streams in Flexible Potentials with Differentiable Simulations}},
+  journal = {\apj},
+  year = {2025},
+  volume = {983},
+  pages = {68},
+  doi = {10.3847/1538-4357/adb8e8},
+  archivePrefix = {arXiv},
+  eprint = {2410.21174}
+}
+
+@article{Nibauer2026,
+  author = {Nibauer, Jacob and Bonaca, Ana and Price-Whelan, Adrian M. and Spergel, David N. and Greene, Jenny E.},
+  title = {{Measurement of Substructure from the Kinematics of the {GD}-1 Stellar Stream}},
+  journal = {\apj},
+  year = {2026},
+  volume = {1004},
+  pages = {62},
+  doi = {10.3847/1538-4357/ae6776},
+  archivePrefix = {arXiv},
+  eprint = {2510.02247}
+}
+
+@article{Starkman2023,
+  author = {Starkman, Nathaniel and Nibauer, Jacob and Bovy, Jo and Webb, Jeremy J. and Tavangar, Kiyan and Price-Whelan, Adrian and Bonaca, Ana},
+  title = {{Stream Members Only: Data-Driven Characterization of Stellar Streams with Mixture Density Networks}},
+  journal = {arXiv e-prints},
+  year = {2023},
+  pages = {arXiv:2311.16960},
+  archivePrefix = {arXiv},
+  eprint = {2311.16960}
+}
+
+@article{GreenTing2020,
+  author = {Green, Gregory M. and Ting, Yuan-Sen},
+  title = {{Deep Potential: Recovering the gravitational potential from a snapshot of phase space}},
+  journal = {arXiv e-prints},
+  year = {2020},
+  pages = {arXiv:2011.04673},
+  archivePrefix = {arXiv},
+  eprint = {2011.04673},
+  note = {Machine Learning and the Physical Sciences workshop, NeurIPS 2020}
+}
+
+@article{Green2023,
+  author = {Green, Gregory M. and Ting, Yuan-Sen and Kamdar, Harshil},
+  title = {{Deep Potential: Recovering the Gravitational Potential from a Snapshot of Phase Space}},
+  journal = {\apj},
+  year = {2023},
+  volume = {942},
+  pages = {26},
+  doi = {10.3847/1538-4357/aca3a7}
+}
+
+@article{Buckley2023,
+  author = {Buckley, Matthew R and Lim, Sung Hak and Putney, Eric and Shih, David},
+  title = {{Measuring {G}alactic dark matter through unsupervised machine learning}},
+  journal = {\mnras},
+  year = {2023},
+  volume = {521},
+  pages = {5100-5119},
+  doi = {10.1093/mnras/stad843}
+}
+
+@article{Lim2025,
+  author = {Lim, Sung Hak and Putney, Eric and Buckley, Matthew R. and Shih, David},
+  title = {{Mapping dark matter in the {M}ilky {W}ay using normalizing flows and {G}aia {DR3}}},
+  journal = {\jcap},
+  year = {2025},
+  volume = {2025},
+  number = {1},
+  pages = {021},
+  doi = {10.1088/1475-7516/2025/01/021},
+  archivePrefix = {arXiv},
+  eprint = {2305.13358}
+}
+
+@article{An2021,
+  author = {An, J and Naik, A P and Evans, N W and Burrage, C},
+  title = {{Charting galactic accelerations: when and how to extract a unique potential from the distribution function}},
+  journal = {\mnras},
+  year = {2021},
+  volume = {506},
+  pages = {5721-5730},
+  doi = {10.1093/mnras/stab2049}
+}
+
+@article{Naik2022,
+  author = {Naik, A P and An, J and Burrage, C and Evans, N W},
+  title = {{Charting galactic accelerations -- {II}. How to `learn' accelerations in the solar neighbourhood}},
+  journal = {\mnras},
+  year = {2022},
+  volume = {511},
+  pages = {1609-1621},
+  doi = {10.1093/mnras/stac153}
+}
+
+@article{Alvey2023,
+  author = {Alvey, James and Gerdes, Mathis and Weniger, Christoph},
+  title = {{Albatross: a scalable simulation-based inference pipeline for analysing stellar streams in the {M}ilky {W}ay}},
+  journal = {\mnras},
+  year = {2023},
+  volume = {525},
+  pages = {3662-3681},
+  doi = {10.1093/mnras/stad2458}
+}
+
+@article{Hermans2021,
+  author = {Hermans, Joeri and Banik, Nilanjan and Weniger, Christoph and Bertone, Gianfranco and Louppe, Gilles},
+  title = {{Towards constraining warm dark matter with stellar streams through neural simulation-based inference}},
+  journal = {\mnras},
+  year = {2021},
+  volume = {507},
+  pages = {1999-2011},
+  doi = {10.1093/mnras/stab2181}
+}
+
+@article{Li2022,
+  author = {Li, Yin and Lu, Libin and Modi, Chirag and Jamieson, Drew and Zhang, Yucheng and Feng, Yu and Zhou, Wenda and Kwan, Ngai Pok and Lanusse, Fran{\c{c}}ois and Greengard, Leslie},
+  title = {{pmwd: A Differentiable Cosmological Particle-Mesh $N$-body Library}},
+  journal = {arXiv e-prints},
+  year = {2022},
+  pages = {arXiv:2211.09958},
+  archivePrefix = {arXiv},
+  eprint = {2211.09958}
+}
+
+@article{Li2024,
+  author = {Li, Yin and Modi, Chirag and Jamieson, Drew and Zhang, Yucheng and Lu, Libin and Feng, Yu and Lanusse, Fran{\c{c}}ois and Greengard, Leslie},
+  title = {{Differentiable Cosmological Simulation with the Adjoint Method}},
+  journal = {\apjs},
+  year = {2024},
+  volume = {270},
+  pages = {36},
+  doi = {10.3847/1538-4365/ad0ce7},
+  archivePrefix = {arXiv},
+  eprint = {2211.09815}
+}
+
+@article{Modi2021,
+  author = {Modi, C. and Lanusse, F. and Seljak, U.},
+  title = {{{FlowPM}: Distributed {TensorFlow} implementation of the {FastPM} cosmological {N}-body solver}},
+  journal = {Astronomy and Computing},
+  year = {2021},
+  volume = {37},
+  pages = {100505},
+  doi = {10.1016/j.ascom.2021.100505}
+}
+
+@article{Campagne2023,
+  author = {Campagne, Jean-Eric and Lanusse, Fran{\c{c}}ois and Zuntz, Joe and Boucaud, Alexandre and Casas, Santiago and Karamanis, Minas and Kirkby, David and Lanzieri, Denise and Peel, Austin and Li, Yin},
+  title = {{{JAX-COSMO}: An End-to-End Differentiable and {GPU} Accelerated Cosmology Library}},
+  journal = {The Open Journal of Astrophysics},
+  year = {2023},
+  volume = {6},
+  pages = {15},
+  doi = {10.21105/astro.2302.05163},
+  archivePrefix = {arXiv},
+  eprint = {2302.05163}
+}
+
+@article{Hahn2024,
+  author = {Hahn, Oliver and List, Florian and Porqueres, Natalia},
+  title = {{{DISCO-DJ} {I}: a differentiable {E}instein-{B}oltzmann solver for cosmology}},
+  journal = {\jcap},
+  year = {2024},
+  volume = {2024},
+  number = {6},
+  pages = {063},
+  doi = {10.1088/1475-7516/2024/06/063}
+}
+
+@article{JascheWandelt2013,
+  author = {Jasche, Jens and Wandelt, Benjamin D.},
+  title = {{Bayesian physical reconstruction of initial conditions from large-scale structure surveys}},
+  journal = {\mnras},
+  year = {2013},
+  volume = {432},
+  pages = {894-913},
+  doi = {10.1093/mnras/stt449}
+}
+
+@article{JascheLavaux2019,
+  author = {Jasche, J. and Lavaux, G.},
+  title = {{Physical {B}ayesian modelling of the non-linear matter distribution: New insights into the nearby universe}},
+  journal = {\aap},
+  year = {2019},
+  volume = {625},
+  pages = {A64},
+  doi = {10.1051/0004-6361/201833710}
+}
+
+@misc{Bradbury2018,
+  author = {Bradbury, James and Frostig, Roy and Hawkins, Peter and Johnson, Matthew James and Leary, Chris and Maclaurin, Dougal and Necula, George and Paszke, Adam and VanderPlas, Jake and Wanderman-Milne, Skye and Zhang, Qiao},
+  title = {{{JAX}: composable transformations of {P}ython+{N}um{P}y programs}},
+  year = {2018},
+  version = {0.11.2},
+  url = {http://github.com/jax-ml/jax},
+  note = {\url{http://github.com/jax-ml/jax}}
+}
+
+@inproceedings{Paszke2019,
+  author = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and K{\"o}pf, Andreas and others},
+  title = {{{PyTorch}: An Imperative Style, High-Performance Deep Learning Library}},
+  booktitle = {Advances in Neural Information Processing Systems 32},
+  year = {2019},
+  archivePrefix = {arXiv},
+  eprint = {1912.01703},
+  url = {https://arxiv.org/abs/1912.01703}
+}
+
+@phdthesis{Kidger2021,
+  author = {Kidger, Patrick},
+  title = {{On Neural Differential Equations}},
+  school = {University of Oxford},
+  year = {2021},
+  archivePrefix = {arXiv},
+  eprint = {2202.02435},
+  url = {https://arxiv.org/abs/2202.02435}
+}
+
+@article{KidgerGarcia2021,
+  author = {Kidger, Patrick and Garcia, Cristian},
+  title = {{Equinox: neural networks in {JAX} via callable {PyTrees} and filtered transformations}},
+  journal = {arXiv e-prints},
+  year = {2021},
+  pages = {arXiv:2111.00254},
+  archivePrefix = {arXiv},
+  eprint = {2111.00254},
+  note = {Differentiable Programming workshop at Neural Information Processing Systems 2021}
+}
+
+@inproceedings{Chen2018,
+  author = {Chen, Ricky T. Q. and Rubanova, Yulia and Bettencourt, Jesse and Duvenaud, David},
+  title = {{Neural Ordinary Differential Equations}},
+  booktitle = {Advances in Neural Information Processing Systems 31},
+  year = {2018},
+  archivePrefix = {arXiv},
+  eprint = {1806.07366},
+  url = {https://arxiv.org/abs/1806.07366}
+}
+
+@article{LienenGunnemann2022,
+  author = {Lienen, Marten and G{\"u}nnemann, Stephan},
+  title = {{torchode: A Parallel {ODE} Solver for {PyTorch}}},
+  journal = {arXiv e-prints},
+  year = {2022},
+  pages = {arXiv:2210.12375},
+  archivePrefix = {arXiv},
+  eprint = {2210.12375},
+  note = {The Symbiosis of Deep Learning and Differential Equations II workshop, NeurIPS 2022}
+}
+
+@article{Harris2020,
+  author = {Harris, Charles R. and Millman, K. Jarrod and van der Walt, St{\'e}fan J. and Gommers, Ralf and Virtanen, Pauli and Cournapeau, David and Wieser, Eric and Taylor, Julian and Berg, Sebastian and Smith, Nathaniel J. and Kern, Robert and Picus, Matti and others},
+  title = {{Array programming with {NumPy}}},
+  journal = {\nat},
+  year = {2020},
+  volume = {585},
+  pages = {357-362},
+  doi = {10.1038/s41586-020-2649-2}
+}
+
+@article{Virtanen2020,
+  author = {Virtanen, Pauli and Gommers, Ralf and Oliphant, Travis E. and Haberland, Matt and Reddy, Tyler and Cournapeau, David and Burovski, Evgeni and Peterson, Pearu and Weckesser, Warren and Bright, Jonathan and van der Walt, St{\'e}fan J. and Brett, Matthew and others},
+  title = {{{SciPy} 1.0: fundamental algorithms for scientific computing in {P}ython}},
+  journal = {Nature Methods},
+  year = {2020},
+  volume = {17},
+  pages = {261-272},
+  doi = {10.1038/s41592-019-0686-2}
+}
+
+@article{Hunter2007,
+  author = {Hunter, John D.},
+  title = {{Matplotlib: A {2D} Graphics Environment}},
+  journal = {Computing in Science \& Engineering},
+  year = {2007},
+  volume = {9},
+  pages = {90-95},
+  doi = {10.1109/MCSE.2007.55}
+}
+
+@article{Astropy2013,
+  author = {{Astropy Collaboration} and Robitaille, Thomas P. and Tollerud, Erik J. and Greenfield, Perry and Droettboom, Michael and Bray, Erik and Aldcroft, Tom and Davis, Matt and Ginsburg, Adam and Price-Whelan, Adrian M. and Kerzendorf, Wolfgang E. and Conley, Alexander and others},
+  title = {{Astropy: A community {P}ython package for astronomy}},
+  journal = {\aap},
+  year = {2013},
+  volume = {558},
+  pages = {A33},
+  doi = {10.1051/0004-6361/201322068}
+}
+
+@article{Astropy2018,
+  author = {{Astropy Collaboration} and Price-Whelan, A. M. and Sip{\H{o}}cz, B. M. and G{\"u}nther, H. M. and Lim, P. L. and Crawford, S. M. and Conseil, S. and Shupe, D. L. and Craig, M. W. and Dencheva, N. and Ginsburg, A. and VanderPlas, J. T. and others},
+  title = {{The Astropy Project: Building an Open-science Project and Status of the v2.0 Core Package}},
+  journal = {\aj},
+  year = {2018},
+  volume = {156},
+  pages = {123},
+  doi = {10.3847/1538-3881/aabc4f}
+}
+
+@article{Astropy2022,
+  author = {The Astropy Collaboration and Price-Whelan, Adrian M. and Lim, Pey Lian and Earl, Nicholas and Starkman, Nathaniel and Bradley, Larry and Shupe, David L. and Patil, Aarya A. and Corrales, Lia and Brasseur, C. E. and N{\"o}the, Maximilian and Donath, Axel and others},
+  title = {{The Astropy Project: Sustaining and Growing a Community-oriented Open-source Project and the Latest Major Release (v5.0) of the Core Package}},
+  journal = {\apj},
+  year = {2022},
+  volume = {935},
+  pages = {167},
+  doi = {10.3847/1538-4357/ac7c74}
+}
+
+@article{Phan2019,
+  author = {Phan, Du and Pradhan, Neeraj and Jankowiak, Martin},
+  title = {{Composable Effects for Flexible and Accelerated Probabilistic Programming in {NumPyro}}},
+  journal = {arXiv e-prints},
+  year = {2019},
+  pages = {arXiv:1912.11554},
+  archivePrefix = {arXiv},
+  eprint = {1912.11554}
+}
+
+@article{Bingham2019,
+  author = {Bingham, Eli and Chen, Jonathan P. and Jankowiak, Martin and Obermeyer, Fritz and Pradhan, Neeraj and Karaletsos, Theofanis and Singh, Rohit and Szerlip, Paul and Horsfall, Paul and Goodman, Noah D.},
+  title = {{Pyro: Deep Universal Probabilistic Programming}},
+  journal = {Journal of Machine Learning Research},
+  year = {2019},
+  volume = {20},
+  number = {28},
+  pages = {1-6},
+  archivePrefix = {arXiv},
+  eprint = {1810.09538},
+  url = {http://jmlr.org/papers/v20/18-403.html}
+}
+
+@article{Cabezas2024,
+  author = {Cabezas, Alberto and Corenflos, Adrien and Lao, Junpeng and Louf, R{\'e}mi and Carnec, Antoine and Chaudhari, Kaustubh and Cohn-Gordon, Reuben and Coullon, Jeremie and Deng, Wei and Duffield, Sam and Dur{\'a}n-Mart{\'i}n, Gerardo and Elantkowski, Marcin and others},
+  title = {{{BlackJAX}: Composable {B}ayesian inference in {JAX}}},
+  journal = {arXiv e-prints},
+  year = {2024},
+  pages = {arXiv:2402.10797},
+  archivePrefix = {arXiv},
+  eprint = {2402.10797}
+}
+
+@article{HoffmanGelman2014,
+  author = {Hoffman, Matthew D. and Gelman, Andrew},
+  title = {{The No-U-Turn Sampler: Adaptively Setting Path Lengths in {H}amiltonian {M}onte {C}arlo}},
+  journal = {Journal of Machine Learning Research},
+  year = {2014},
+  volume = {15},
+  number = {47},
+  pages = {1593-1623},
+  archivePrefix = {arXiv},
+  eprint = {1111.4246},
+  url = {http://jmlr.org/papers/v15/hoffman14a.html}
+}
+
+@article{Duane1987,
+  author = {Duane, Simon and Kennedy, A.D. and Pendleton, Brian J. and Roweth, Duncan},
+  title = {{Hybrid {M}onte {C}arlo}},
+  journal = {Physics Letters B},
+  year = {1987},
+  volume = {195},
+  pages = {216-222},
+  doi = {10.1016/0370-2693(87)91197-X}
+}
+
+@incollection{Neal2011,
+  author = {Neal, Radford M.},
+  title = {{{MCMC} Using {H}amiltonian Dynamics}},
+  booktitle = {Handbook of Markov Chain Monte Carlo},
+  editor = {Brooks, Steve and Gelman, Andrew and Jones, Galin and Meng, Xiao-Li},
+  publisher = {Chapman and Hall/CRC},
+  year = {2011},
+  pages = {113-162},
+  doi = {10.1201/b10905-6},
+  archivePrefix = {arXiv},
+  eprint = {1206.1901}
+}
+
+@article{Baydin2018,
+  author = {Baydin, Atilim Gunes and Pearlmutter, Barak A. and Radul, Alexey Andreyevich and Siskind, Jeffrey Mark},
+  title = {{Automatic Differentiation in Machine Learning: a Survey}},
+  journal = {Journal of Machine Learning Research},
+  year = {2018},
+  volume = {18},
+  number = {153},
+  pages = {1-43},
+  archivePrefix = {arXiv},
+  eprint = {1502.05767},
+  url = {http://jmlr.org/papers/v18/17-468.html}
+}
+
+@book{GriewankWalther2008,
+  author = {Griewank, Andreas and Walther, Andrea},
+  title = {{Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation}},
+  edition = {Second},
+  publisher = {Society for Industrial and Applied Mathematics},
+  address = {Philadelphia, PA},
+  year = {2008},
+  doi = {10.1137/1.9780898717761}
+}
+
+@book{Hairer1993,
+  author = {Hairer, Ernst and N{\o}rsett, Syvert P. and Wanner, Gerhard},
+  title = {{Solving Ordinary Differential Equations {I}: Nonstiff Problems}},
+  series = {Springer Series in Computational Mathematics},
+  edition = {Second Revised},
+  publisher = {Springer},
+  address = {Berlin, Heidelberg},
+  year = {1993},
+  volume = {8},
+  doi = {10.1007/978-3-540-78862-1}
+}
+
+@article{DormandPrince1980,
+  author = {Dormand, J.R. and Prince, P.J.},
+  title = {{A family of embedded {R}unge-{K}utta formulae}},
+  journal = {Journal of Computational and Applied Mathematics},
+  year = {1980},
+  volume = {6},
+  pages = {19-26},
+  doi = {10.1016/0771-050X(80)90013-3}
+}
+
+@article{Yoshida1990,
+  author = {Yoshida, Haruo},
+  title = {{Construction of higher order symplectic integrators}},
+  journal = {Physics Letters A},
+  year = {1990},
+  volume = {150},
+  pages = {262-268},
+  doi = {10.1016/0375-9601(90)90092-3}
+}
+
+@book{LeimkuhlerReich2004,
+  author = {Leimkuhler, Benedict and Reich, Sebastian},
+  title = {{Simulating {H}amiltonian Dynamics}},
+  series = {Cambridge Monographs on Applied and Computational Mathematics},
+  publisher = {Cambridge University Press},
+  address = {Cambridge},
+  year = {2004},
+  doi = {10.1017/CBO9780511614118}
+}
+
+@article{Hernquist1990,
+  author = {Hernquist, Lars},
+  title = {{An analytical model for spherical galaxies and bulges}},
+  journal = {\apj},
+  year = {1990},
+  volume = {356},
+  pages = {359},
+  doi = {10.1086/168845}
+}
+
+@article{Navarro1997,
+  author = {Navarro, Julio F. and Frenk, Carlos S. and White, Simon D. M.},
+  title = {{A Universal Density Profile from Hierarchical Clustering}},
+  journal = {\apj},
+  year = {1997},
+  volume = {490},
+  pages = {493-508},
+  doi = {10.1086/304888}
+}
+
+@article{MiyamotoNagai1975,
+  author = {Miyamoto, Masanori and Nagai, Ryuzaburo},
+  title = {{Three-Dimensional Models for the Distribution of Mass in Galaxies}},
+  journal = {\pasj},
+  year = {1975},
+  volume = {27},
+  pages = {533-543},
+  doi = {10.1093/pasj/27.4.533}
+}
+
+@article{Plummer1911,
+  author = {Plummer, H. C.},
+  title = {{On the Problem of Distribution in Globular Star Clusters}},
+  journal = {\mnras},
+  year = {1911},
+  volume = {71},
+  pages = {460-470},
+  doi = {10.1093/mnras/71.5.460}
+}
+
+@article{Dehnen1993,
+  author = {Dehnen, W.},
+  title = {{A family of potential-density pairs for spherical galaxies and bulges}},
+  journal = {\mnras},
+  year = {1993},
+  volume = {265},
+  pages = {250-256},
+  doi = {10.1093/mnras/265.1.250}
+}
+
+@article{King1966,
+  author = {King, Ivan R.},
+  title = {{The structure of star clusters. {III}. Some simple dynamical models}},
+  journal = {\aj},
+  year = {1966},
+  volume = {71},
+  pages = {64},
+  doi = {10.1086/109857}
+}
+
+@article{Eddington1916,
+  author = {Eddington, A. S.},
+  title = {{The Distribution of Stars in Globular Clusters}},
+  journal = {\mnras},
+  year = {1916},
+  volume = {76},
+  pages = {572-585},
+  doi = {10.1093/mnras/76.7.572}
+}
+
+@article{Merritt1985,
+  author = {Merritt, D.},
+  title = {{Spherical stellar systems with spheroidal velocity distributions}},
+  journal = {\aj},
+  year = {1985},
+  volume = {90},
+  pages = {1027},
+  doi = {10.1086/113810}
+}
+
+@article{Cuddeford1991,
+  author = {Cuddeford, P.},
+  title = {{An analytic inversion for anisotropic spherical galaxies}},
+  journal = {\mnras},
+  year = {1991},
+  volume = {253},
+  pages = {414-426},
+  doi = {10.1093/mnras/253.3.414}
+}
+
+@article{Vasiliev2021,
+  author = {Vasiliev, Eugene and Belokurov, Vasily and Erkal, Denis},
+  title = {{Tango for three: {S}agittarius, {LMC}, and the {M}ilky {W}ay}},
+  journal = {\mnras},
+  year = {2021},
+  volume = {501},
+  pages = {2279-2304},
+  doi = {10.1093/mnras/staa3673}
+}
+
+@article{Erkal2019,
+  author = {Erkal, D and Belokurov, V and Laporte, C F P and Koposov, S E and Li, T S and Grillmair, C J and Kallivayalil, N and Price-Whelan, A M and Evans, N W and Hawkins, K and Hendel, D and Mateu, C and others},
+  title = {{The total mass of the {L}arge {M}agellanic {C}loud from its perturbation on the {O}rphan stream}},
+  journal = {\mnras},
+  year = {2019},
+  volume = {487},
+  pages = {2685-2700},
+  doi = {10.1093/mnras/stz1371}
+}
+
+@article{Gaia2016,
+  author = {{Gaia Collaboration} and Prusti, T. and de Bruijne, J. H. J. and Brown, A. G. A. and Vallenari, A. and Babusiaux, C. and Bailer-Jones, C. A. L. and Bastian, U. and Biermann, M. and Evans, D. W. and Eyer, L. and Jansen, F. and others},
+  title = {{The {G}aia mission}},
+  journal = {\aap},
+  year = {2016},
+  volume = {595},
+  pages = {A1},
+  doi = {10.1051/0004-6361/201629272}
+}
+
+@article{Gaia2018,
+  author = {{Gaia Collaboration} and Brown, A. G. A. and Vallenari, A. and Prusti, T. and de Bruijne, J. H. J. and Babusiaux, C. and Bailer-Jones, C. A. L. and Biermann, M. and Evans, D. W. and Eyer, L. and Jansen, F. and Jordi, C. and others},
+  title = {{{G}aia Data Release 2. Summary of the contents and survey properties}},
+  journal = {\aap},
+  year = {2018},
+  volume = {616},
+  pages = {A1},
+  doi = {10.1051/0004-6361/201833051}
+}
+
+@article{Gaia2023,
+  author = {{Gaia Collaboration} and Vallenari, A. and Brown, A. G. A. and Prusti, T. and de Bruijne, J. H. J. and Arenou, F. and Babusiaux, C. and Biermann, M. and Creevey, O. L. and Ducourant, C. and Evans, D. W. and Eyer, L. and others},
+  title = {{{G}aia Data Release 3. Summary of the content and survey properties}},
+  journal = {\aap},
+  year = {2023},
+  volume = {674},
+  pages = {A1},
+  doi = {10.1051/0004-6361/202243940}
+}
+
+@article{Ivezic2019,
+  author = {Ivezi{\'c}, {\v{Z}}eljko and Kahn, Steven M. and Tyson, J. Anthony and Abel, Bob and Acosta, Emily and Allsman, Robyn and Alonso, David and AlSayyad, Yusra and Anderson, Scott F. and Andrew, John and P. Angel, James Roger and Angeli, George Z. and others},
+  title = {{{LSST}: From Science Drivers to Reference Design and Anticipated Data Products}},
+  journal = {\apj},
+  year = {2019},
+  volume = {873},
+  pages = {111},
+  doi = {10.3847/1538-4357/ab042c}
+}
+
+@article{Kollmeier2017,
+  author = {Kollmeier, Juna A. and Zasowski, Gail and Rix, Hans-Walter and Johns, Matt and Anderson, Scott F. and Drory, Niv and Johnson, Jennifer A. and Pogge, Richard W. and Bird, Jonathan C. and Blanc, Guillermo A. and Brownstein, Joel R. and Crane, Jeffrey D. and others},
+  title = {{{SDSS-V}: Pioneering Panoptic Spectroscopy}},
+  journal = {arXiv e-prints},
+  year = {2017},
+  pages = {arXiv:1711.03234},
+  archivePrefix = {arXiv},
+  eprint = {1711.03234}
+}
+
+@article{deJong2019,
+  author = {de Jong, Roelof S. and Agertz, Oscar and Berbel, Alex Agudo and others},
+  title = {{{4MOST}: Project overview and information for the First Call for Proposals}},
+  journal = {The Messenger},
+  year = {2019},
+  volume = {175},
+  pages = {3-11},
+  doi = {10.18727/0722-6691/5117}
+}
+
+@article{Jin2024,
+  author = {Jin, Shoko and Trager, Scott C and Dalton, Gavin B and Aguerri, J Alfonso L and Drew, J E and Falc{\'o}n-Barroso, Jes{\'u}s and G{\"a}nsicke, Boris T and Hill, Vanessa and Iovino, Angela and Pieri, Matthew M and Poggianti, Bianca M and Smith, D J B and others},
+  title = {{The wide-field, multiplexed, spectroscopic facility {WEAVE}: Survey design, overview, and simulated implementation}},
+  journal = {\mnras},
+  year = {2024},
+  volume = {530},
+  pages = {2688-2730},
+  doi = {10.1093/mnras/stad557}
+}
+
+@article{Benettin1980a,
+  author = {Benettin, Giancarlo and Galgani, Luigi and Giorgilli, Antonio and Strelcyn, Jean-Marie},
+  title = {{Lyapunov Characteristic Exponents for smooth dynamical systems and for {H}amiltonian systems; a method for computing all of them. {P}art 1: Theory}},
+  journal = {Meccanica},
+  year = {1980},
+  volume = {15},
+  pages = {9-20},
+  doi = {10.1007/BF02128236}
+}
+
+@article{Benettin1980b,
+  author = {Benettin, Giancarlo and Galgani, Luigi and Giorgilli, Antonio and Strelcyn, Jean-Marie},
+  title = {{Lyapunov Characteristic Exponents for smooth dynamical systems and for {H}amiltonian systems; a method for computing all of them. {P}art 2: Numerical application}},
+  journal = {Meccanica},
+  year = {1980},
+  volume = {15},
+  pages = {21-30},
+  doi = {10.1007/BF02128237}
+}
+
+@incollection{Skokos2010,
+  author = {Skokos, Ch.},
+  title = {{The {L}yapunov Characteristic Exponents and Their Computation}},
+  booktitle = {Dynamics of Small Solar System Bodies and Exoplanets},
+  series = {Lecture Notes in Physics},
+  publisher = {Springer},
+  address = {Berlin, Heidelberg},
+  year = {2010},
+  volume = {790},
+  pages = {63-135},
+  doi = {10.1007/978-3-642-04458-8_2}
+}
+
+@book{LichtenbergLieberman1992,
+  author = {Lichtenberg, A. J. and Lieberman, M. A.},
+  title = {{Regular and Chaotic Dynamics}},
+  series = {Applied Mathematical Sciences},
+  edition = {Second},
+  publisher = {Springer},
+  address = {New York},
+  year = {1992},
+  volume = {38},
+  doi = {10.1007/978-1-4757-2184-3}
+}
+
+@article{Brown2015,
+  author = {Brown, Warren R.},
+  title = {{Hypervelocity Stars}},
+  journal = {\araa},
+  year = {2015},
+  volume = {53},
+  pages = {15-49},
+  doi = {10.1146/annurev-astro-082214-122230}
+}
+
+@article{Hills1988,
+  author = {Hills, J. G.},
+  title = {{Hyper-velocity and tidal stars from binaries disrupted by a massive {G}alactic black hole}},
+  journal = {\nat},
+  year = {1988},
+  volume = {331},
+  pages = {687-689},
+  doi = {10.1038/331687a0}
+}
+
+@article{Brown2005,
+  author = {Brown, Warren R. and Geller, Margaret J. and Kenyon, Scott J. and Kurtz, Michael J.},
+  title = {{Discovery of an Unbound Hypervelocity Star in the {M}ilky {W}ay Halo}},
+  journal = {\apjl},
+  year = {2005},
+  volume = {622},
+  pages = {L33-L36},
+  doi = {10.1086/429378}
+}
+
+@article{Gnedin2005,
+  author = {Gnedin, Oleg Y. and Gould, Andrew and MiraldaEscude, Jordi and Zentner, Andrew R.},
+  title = {{Probing the Shape of the {G}alactic Halo with Hypervelocity Stars}},
+  journal = {\apj},
+  year = {2005},
+  volume = {634},
+  pages = {344-350},
+  doi = {10.1086/496958}
+}
+
+@article{Rossi2017,
+  author = {Rossi, Elena M. and Marchetti, T. and Cacciato, M. and Kuiack, M. and Sari, R.},
+  title = {{Joint constraints on the {G}alactic dark matter halo and {G}alactic {C}entre from hypervelocity stars}},
+  journal = {\mnras},
+  year = {2017},
+  volume = {467},
+  pages = {1844-1856},
+  doi = {10.1093/mnras/stx098},
+  archivePrefix = {arXiv},
+  eprint = {1608.02000}
+}
+
+@article{Contigiani2019,
+  author = {Contigiani, O and Rossi, E M and Marchetti, T},
+  title = {{On measuring the {G}alactic dark matter halo with hypervelocity stars}},
+  journal = {\mnras},
+  year = {2019},
+  volume = {487},
+  pages = {4025-4036},
+  doi = {10.1093/mnras/stz1547}
+}
+
+@article{Hattori2018,
+  author = {Hattori, Kohei and Valluri, Monica and Bell, Eric F. and Roederer, Ian U.},
+  title = {{Old, Metal-poor Extreme Velocity Stars in the Solar Neighborhood}},
+  journal = {\apj},
+  year = {2018},
+  volume = {866},
+  pages = {121},
+  doi = {10.3847/1538-4357/aadee5}
+}
+
+@article{Johnston1998,
+  author = {Johnston, Kathryn V.},
+  title = {{A Prescription for Building the {M}ilky {W}ay's Halo from Disrupted Satellites}},
+  journal = {\apj},
+  year = {1998},
+  volume = {495},
+  pages = {297-308},
+  doi = {10.1086/305273}
+}
+
+@article{HelmiWhite1999,
+  author = {Helmi, A. and White, S. D. M.},
+  title = {{Building up the stellar halo of the {G}alaxy}},
+  journal = {\mnras},
+  year = {1999},
+  volume = {307},
+  pages = {495-517},
+  doi = {10.1046/j.1365-8711.1999.02616.x}
+}
+
+@article{EyreBinney2011,
+  author = {Eyre, Andy and Binney, James},
+  title = {{The mechanics of tidal streams}},
+  journal = {\mnras},
+  year = {2011},
+  volume = {413},
+  pages = {1852-1874},
+  doi = {10.1111/j.1365-2966.2011.18270.x}
+}
+
+@article{SandersBinney2013a,
+  author = {Sanders, Jason L. and Binney, James},
+  title = {{Stream-orbit misalignment -- {I}. The dangers of orbit-fitting}},
+  journal = {\mnras},
+  year = {2013},
+  volume = {433},
+  pages = {1813-1825},
+  doi = {10.1093/mnras/stt806}
+}
+
+@article{SandersBinney2013b,
+  author = {Sanders, Jason L. and Binney, James},
+  title = {{Stream-orbit misalignment -- {II}. A new algorithm to constrain the {G}alactic potential}},
+  journal = {\mnras},
+  year = {2013},
+  volume = {433},
+  pages = {1826-1836},
+  doi = {10.1093/mnras/stt816}
+}
+
+@article{BonacaHogg2018,
+  author = {Bonaca, Ana and Hogg, David W.},
+  title = {{The Information Content in Cold Stellar Streams}},
+  journal = {\apj},
+  year = {2018},
+  volume = {867},
+  pages = {101},
+  doi = {10.3847/1538-4357/aae4da}
+}
+
+@article{Koposov2010,
+  author = {Koposov, Sergey E. and Rix, Hans-Walter and Hogg, David W.},
+  title = {{Constraining the {M}ilky {W}ay Potential with a Six-Dimensional Phase-Space Map of the {GD}-1 Stellar Stream}},
+  journal = {\apj},
+  year = {2010},
+  volume = {712},
+  pages = {260-273},
+  doi = {10.1088/0004-637X/712/1/260}
+}
+
+@article{PriceWhelanBonaca2018,
+  author = {Price-Whelan, Adrian M. and Bonaca, Ana},
+  title = {{Off the Beaten Path: {G}aia Reveals {GD}-1 Stars outside of the Main Stream}},
+  journal = {\apjl},
+  year = {2018},
+  volume = {863},
+  pages = {L20},
+  doi = {10.3847/2041-8213/aad7b5}
+}
+
+@article{Bonaca2019,
+  author = {Bonaca, Ana and Hogg, David W. and Price-Whelan, Adrian M. and Conroy, Charlie},
+  title = {{The Spur and the Gap in {GD}-1: Dynamical Evidence for a Dark Substructure in the {M}ilky {W}ay Halo}},
+  journal = {\apj},
+  year = {2019},
+  volume = {880},
+  pages = {38},
+  doi = {10.3847/1538-4357/ab2873}
+}
+
+@article{ErkalBelokurov2015,
+  author = {Erkal, Denis and Belokurov, Vasily},
+  title = {{Forensics of subhalo-stream encounters: the three phases of gap growth}},
+  journal = {\mnras},
+  year = {2015},
+  volume = {450},
+  pages = {1136-1149},
+  doi = {10.1093/mnras/stv655}
+}
+
+@article{Pearson2017,
+  author = {Pearson, Sarah and Price-Whelan, Adrian M. and Johnston, Kathryn V.},
+  title = {{Gaps and length asymmetry in the stellar stream {P}alomar 5 as effects of {G}alactic bar rotation}},
+  journal = {Nature Astronomy},
+  year = {2017},
+  volume = {1},
+  pages = {633-639},
+  doi = {10.1038/s41550-017-0220-3}
+}
+
+@article{Nibauer2025b,
+  author = {Nibauer, Jacob and Bonaca, Ana},
+  title = {{Galactic Accelerations from the {GD}-1 Stream Suggest a Tilted Dark Matter Halo}},
+  journal = {\apjl},
+  year = {2025},
+  volume = {985},
+  pages = {L22},
+  doi = {10.3847/2041-8213/add0a9},
+  archivePrefix = {arXiv},
+  eprint = {2504.07187}
+}
+
+@article{Frankel2020,
+  author = {Frankel, Neige and Sanders, Jason and Ting (), Yuan-Sen and Rix, Hans-Walter},
+  title = {{Keeping It Cool: Much Orbit Migration, yet Little Heating, in the {G}alactic Disk}},
+  journal = {\apj},
+  year = {2020},
+  volume = {896},
+  pages = {15},
+  doi = {10.3847/1538-4357/ab910c},
+  archivePrefix = {arXiv},
+  eprint = {2002.04622}
+}
+
+@article{Xiang2022,
+  author = {Xiang, Maosheng and Rix, Hans-Walter},
+  title = {{A time-resolved picture of our {M}ilky {W}ay's early formation history}},
+  journal = {\nat},
+  year = {2022},
+  volume = {603},
+  pages = {599-603},
+  doi = {10.1038/s41586-022-04496-5},
+  archivePrefix = {arXiv},
+  eprint = {2203.12110}
+}
+
+@article{Belokurov2020,
+  author = {Belokurov, Vasily and Sanders, Jason L and Fattahi, Azadeh and Smith, Martin C and Deason, Alis J and Evans, N Wyn and Grand, Robert J J},
+  title = {{The biggest splash}},
+  journal = {\mnras},
+  year = {2020},
+  volume = {494},
+  pages = {3880-3898},
+  doi = {10.1093/mnras/staa876},
+  archivePrefix = {arXiv},
+  eprint = {1909.04679}
+}
+
+@article{Lane2023,
+  author = {Lane, James M M and Bovy, Jo and Mackereth, J Ted},
+  title = {{The stellar mass of the {G}aia-{S}ausage/{E}nceladus accretion remnant}},
+  journal = {\mnras},
+  year = {2023},
+  volume = {526},
+  pages = {1209-1234},
+  doi = {10.1093/mnras/stad2834},
+  archivePrefix = {arXiv},
+  eprint = {2306.03084}
+}
+
+@article{Fritz2018,
+  author = {Fritz, T. K. and Battaglia, G. and Pawlowski, M. S. and Kallivayalil, N. and van der Marel, R. and Sohn, S. T. and Brook, C. and Besla, G.},
+  title = {{{G}aia {DR2} proper motions of dwarf galaxies within 420 kpc. Orbits, {M}ilky {W}ay mass, tidal influences, planar alignments, and group infall}},
+  journal = {\aap},
+  year = {2018},
+  volume = {619},
+  pages = {A103},
+  doi = {10.1051/0004-6361/201833343},
+  archivePrefix = {arXiv},
+  eprint = {1805.00908}
+}
+
+@article{Pace2022,
+  author = {Pace, Andrew B. and Erkal, Denis and Li, Ting S.},
+  title = {{Proper Motions, Orbits, and Tidal Influences of {M}ilky {W}ay Dwarf Spheroidal Galaxies}},
+  journal = {\apj},
+  year = {2022},
+  volume = {940},
+  pages = {136},
+  doi = {10.3847/1538-4357/ac997b},
+  archivePrefix = {arXiv},
+  eprint = {2205.05699}
+}
+
+@article{Boubert2018,
+  author = {Boubert, D and Guillochon, J and Hawkins, K and Ginsburg, I and Evans, N W and Strader, J},
+  title = {{Revisiting hypervelocity stars after {G}aia {DR2}}},
+  journal = {\mnras},
+  year = {2018},
+  volume = {479},
+  pages = {2789-2795},
+  doi = {10.1093/mnras/sty1601},
+  archivePrefix = {arXiv},
+  eprint = {1804.10179}
+}
+
+@article{Marchetti2022,
+  author = {Marchetti, Tommaso and Evans, Fraser A and Rossi, Elena Maria},
+  title = {{{G}aia {DR3} in 6D: the search for fast hypervelocity stars and constraints on the {G}alactic {C}entre environment}},
+  journal = {\mnras},
+  year = {2022},
+  volume = {515},
+  pages = {767-774},
+  doi = {10.1093/mnras/stac1777},
+  archivePrefix = {arXiv},
+  eprint = {2206.06962}
+}
+
+@article{ODoherty2023,
+  author = {O’Doherty, Tyrone N and Bahramian, Arash and Miller-Jones, James C A and Goodwin, Adelle J and Mandel, Ilya and Willcox, Reinhold and Atri, Pikky and Strader, Jay},
+  title = {{An observationally derived kick distribution for neutron stars in binary systems}},
+  journal = {\mnras},
+  year = {2023},
+  volume = {521},
+  pages = {2504-2524},
+  doi = {10.1093/mnras/stad680},
+  archivePrefix = {arXiv},
+  eprint = {2303.01059}
+}
+
+@article{Zucker2022,
+  author = {Zucker, Catherine and Goodman, Alyssa A. and Alves, Jo{\~a}o and Bialy, Shmuel and Foley, Michael and Speagle, Joshua S. and Groschedl, Josefa and Finkbeiner, Douglas P. and Burkert, Andreas and Khimey, Diana and Swiggum, Cameren},
+  title = {{Star formation near the {S}un is driven by expansion of the {L}ocal {B}ubble}},
+  journal = {\nat},
+  year = {2022},
+  volume = {601},
+  pages = {334-337},
+  doi = {10.1038/s41586-021-04286-5},
+  archivePrefix = {arXiv},
+  eprint = {2201.05124}
+}
+
+@article{Swiggum2024,
+  author = {Swiggum, Cameren and Alves, Jo{\~a}o and Benjamin, Robert and Ratzenb{\"o}ck, Sebastian and Miret-Roig, N{\'u}ria and Großschedl, Josefa and Meingast, Stefan and Goodman, Alyssa and Konietzka, Ralf and Zucker, Catherine and Hunt, Emily L. and Reffert, Sabine},
+  title = {{Most nearby young star clusters formed in three massive complexes}},
+  journal = {\nat},
+  year = {2024},
+  volume = {631},
+  pages = {49-53},
+  doi = {10.1038/s41586-024-07496-9},
+  archivePrefix = {arXiv},
+  eprint = {2406.06510}
+}
+
+@article{Stefansson2023,
+  author = {Stef{\'a}nsson, Guðmundur and Mahadevan, Suvrath and Miguel, Yamila and Robertson, Paul and Delamer, Megan and Kanodia, Shubham and Ca{\~n}as, Caleb I. and Winn, Joshua N. and Ninan, Joe P. and Terrien, Ryan C. and Holcomb, Rae and Ford, Eric B. and others},
+  title = {{A {N}eptune-mass exoplanet in close orbit around a very low-mass star challenges formation models}},
+  journal = {Science},
+  year = {2023},
+  volume = {382},
+  pages = {1031-1035},
+  doi = {10.1126/science.abo0233},
+  archivePrefix = {arXiv},
+  eprint = {2303.13321}
+}
+
+@article{Forbes2025,
+  author = {Forbes, John C. and Bannister, Michele T. and Lintott, Chris and Forrest, Angus and Portegies Zwart, Simon and Dorsey, Rosemary C. and Albrow, Leah and Hopkins, Matthew J.},
+  title = {{He Awa Whiria: The Tidal Streams of Interstellar Objects}},
+  journal = {\apj},
+  year = {2025},
+  volume = {988},
+  pages = {121},
+  doi = {10.3847/1538-4357/adc9ac},
+  archivePrefix = {arXiv},
+  eprint = {2411.14577}
+}
+
+@article{Tonnesen2019,
+  author = {Tonnesen, Stephanie},
+  title = {{The Journey Counts: The Importance of Including Orbits when Simulating Ram Pressure Stripping}},
+  journal = {\apj},
+  year = {2019},
+  volume = {874},
+  pages = {161},
+  doi = {10.3847/1538-4357/ab0960},
+  archivePrefix = {arXiv},
+  eprint = {1903.08178}
+}
+
+@article{Malhan2019,
+  author = {Malhan, Khyati and Ibata, Rodrigo A},
+  title = {{Constraining the {M}ilky {W}ay halo potential with the {GD}-1 stellar stream}},
+  journal = {\mnras},
+  year = {2019},
+  volume = {486},
+  pages = {2995-3005},
+  doi = {10.1093/mnras/stz1035},
+  archivePrefix = {arXiv},
+  eprint = {1807.05994}
+}
+
+@article{Banik2021,
+  author = {Banik, Nilanjan and Bovy, Jo and Bertone, Gianfranco and Erkal, Denis and deBoer, T J L},
+  title = {{Evidence of a population of dark subhaloes from {G}aia and {P}an-{STARRS} observations of the {GD}-1 stream}},
+  journal = {\mnras},
+  year = {2021},
+  volume = {502},
+  pages = {2364-2380},
+  doi = {10.1093/mnras/stab210},
+  archivePrefix = {arXiv},
+  eprint = {1911.02662}
+}
+
+@article{Hunt2018,
+  author = {Hunt, Jason A S and Bovy, Jo},
+  title = {{The 4:1 outer {L}indblad resonance of a long-slow bar as an explanation for the {H}ercules stream}},
+  journal = {\mnras},
+  year = {2018},
+  volume = {477},
+  pages = {3945-3953},
+  doi = {10.1093/mnras/sty921},
+  archivePrefix = {arXiv},
+  eprint = {1803.02358}
+}
+
+@article{Lucey2023,
+  author = {Lucey, Madeline and Pearson, Sarah and Hunt, Jason A S and Hawkins, Keith and Ness, Melissa and Petersen, Michael S and Price-Whelan, Adrian M and Weinberg, Martin D},
+  title = {{Dynamically constraining the length of the {M}ilky {W}ay bar}},
+  journal = {\mnras},
+  year = {2023},
+  volume = {520},
+  pages = {4779-4792},
+  doi = {10.1093/mnras/stad406},
+  archivePrefix = {arXiv},
+  eprint = {2206.01798}
+}
+
+@article{Cautun2020,
+  author = {Cautun, Marius and Ben{\'i}tez-Llambay, Alejandro and Deason, Alis J and Frenk, Carlos S and Fattahi, Azadeh and G{\'o}mez, Facundo A and Grand, Robert J J and Oman, Kyle A and Navarro, Julio F and Simpson, Christine M},
+  title = {{The {M}ilky {W}ay total mass profile as inferred from {G}aia {DR2}}},
+  journal = {\mnras},
+  year = {2020},
+  volume = {494},
+  pages = {4291-4313},
+  doi = {10.1093/mnras/staa1017},
+  archivePrefix = {arXiv},
+  eprint = {1911.04557}
+}
+
+@inproceedings{Teuben1995,
+  author = {Teuben, Peter J.},
+  title = {{The Stellar Dynamics Toolbox {NEMO}}},
+  booktitle = {Astronomical Data Analysis Software and Systems IV},
+  editor = {Shaw, R. A. and Payne, H. E. and Hayes, J. J. E.},
+  series = {Astronomical Society of the Pacific Conference Series},
+  year = {1995},
+  volume = {77},
+  pages = {398}
+}
+
+@BOOK{Galassi2009,
+   author = {{Galassi}, M. and {Davies}, J. and {Theiler}, J. and {Gough}, B. and {Jungman}, G. and {Alken}, P. and {Booth}, M. and {Rossi}, F.},
+    title = "{GNU Scientific Library Reference Manual}",
+  edition = {3rd},
+publisher = {Network Theory Ltd.},
+     year = 2009,
+     isbn = {0954612078},
+     note = {Verified against the galpy paper's bibliography (Bovy 2015, \texttt{Galassi09a}) and the GSL project page}
+}
+
+@ARTICLE{Shu1969,
+   author = {{Shu}, F.~H.},
+    title = "{Models of Partially Relaxed Stellar Disks}",
+  journal = {\apj},
+     year = 1969,
+   volume = {158},
+    pages = {505},
+      doi = {10.1086/150214}
+}
+
+@ARTICLE{Dehnen1999,
+   author = {{Dehnen}, W.},
+    title = "{Simple Distribution Functions for Stellar Disks}",
+  journal = {\aj},
+     year = 1999,
+   volume = {118},
+    pages = {1201},
+      doi = {10.1086/301010}
+}
+
+@ARTICLE{Evans1997,
+   author = {{Evans}, N.~W. and {H{\"a}fner}, R.~M. and {de Zeeuw}, P.~T.},
+    title = "{Simple three-integral scale-free galaxy models}",
+  journal = {\mnras},
+     year = 1997,
+   volume = {286},
+    pages = {315},
+      doi = {10.1093/mnras/286.2.315}
+}
