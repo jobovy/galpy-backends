@@ -58,8 +58,8 @@ differentiable with respect to the phase-space coordinates and the
 potential's parameters,
 \begin{code}
 def jr_of_a(a):
-    aAS= actionAngleStaeckel(pot=MiyamotoNagaiPotential(a=a,b=0.3),
-                             delta=0.4,c=False)
+    mp= MiyamotoNagaiPotential(a=a,b=0.3)
+    aAS= actionAngleStaeckel(pot=mp,delta=0.4,c=False)
     return aAS(R,vR,vT,z,vz)[0].sum()
 djr_da= jax.grad(jr_of_a)(0.5)
 \end{code}
@@ -93,10 +93,12 @@ this Jacobian is attached to the result as a custom derivative rule,
 such that \texttt{jax.grad} or \torch's \texttt{backward} through a
 \texttt{c=True} call costs one \cc\ call and a matrix product,
 \begin{code}
-aAS= actionAngleStaeckel(pot=MWPotential2014,delta=0.45,c=True)
+aAS= actionAngleStaeckel(pot=MWPotential2014,
+                         delta=0.45,c=True)
 def total_jr(R):
     return aAS(R,vR,vT,z,vz)[0].sum()
-djr_dR= jax.jit(jax.grad(total_jr))(jnp.asarray([1.1,0.9]))
+dJ= jax.jit(jax.grad(total_jr))
+djr_dR= dJ(jnp.asarray([1.1,0.9]))
 \end{code}
 As for the orbit integrators, the \cc\ path gives derivatives with
 respect to the phase-space position only, to first order, and the focal
@@ -106,9 +108,12 @@ focal length from the potential, \texttt{estimateDeltaStaeckel}, runs on
 the backends and traces, such that a focal length estimated along an
 integrated orbit can be part of a compiled program,
 \begin{code}
-delta= estimateDeltaStaeckel(MWPotential2014,o.R(ts),o.z(ts))
-aAS= actionAngleStaeckel(pot=MWPotential2014,delta=delta,c=False)
-jr,lz,jz= aAS(o.R(ts),o.vR(ts),o.vT(ts),o.z(ts),o.vz(ts))
+delta= estimateDeltaStaeckel(MWPotential2014,
+                             o.R(ts),o.z(ts))
+aAS= actionAngleStaeckel(pot=MWPotential2014,
+                         delta=delta,c=False)
+jr,lz,jz= aAS(o.R(ts),o.vR(ts),o.vT(ts),
+              o.z(ts),o.vz(ts))
 \end{code}
 The grid-based interpolated version,
 \texttt{actionAngleStaeckelGrid}, builds its grid on the backend, such
@@ -158,9 +163,9 @@ parametrized by their velocity dispersion are differentiated as
 \begin{code}
 def torus(sigma):
     disk= IsothermalDiskPotential(amp=1.,sigma=sigma)
-    aAVI= actionAngleVerticalInverse(pot=disk,Es=Es,nta=128,
-                                      setup_interp=True)
-    return aAVI.xvFreqs(J,angles)[:2]  # (z, v_z) on the torus
+    aAVI= actionAngleVerticalInverse(
+        pot=disk,Es=Es,nta=128,setup_interp=True)
+    return aAVI.xvFreqs(J,angles)[:2] # (z,v_z)
 z,vz= torus(0.5)
 dz_dsigma,dvz_dsigma= jax.jacfwd(torus)(0.5)
 \end{code}

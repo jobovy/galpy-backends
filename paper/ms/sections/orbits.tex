@@ -22,7 +22,8 @@ derivatives with respect to the parameters of the potential,
 \begin{code}
 def final_R(b):
     o= Orbit(jnp.asarray(ic))
-    o.integrate(ts,PlummerPotential(amp=1.,b=b),method='diffrax')
+    pp= PlummerPotential(amp=1.,b=b)
+    o.integrate(ts,pp,method='diffrax')
     return o.R(ts[-1])
 dR_db= jax.grad(final_R)(0.6)
 \end{code}
@@ -87,13 +88,14 @@ method,
 \begin{code}
 def end_point(ic):
     o= Orbit(ic)
-    o.integrate(ts,MWPotential2014,method='dop853_c') # C + variational
+    o.integrate(ts,MWPotential2014,
+                method='dop853_c') # C + variational
     return jnp.stack([o.R(ts[-1]),o.z(ts[-1])])
-M= jax.jacrev(end_point)(jnp.asarray(ic))  # = rows of the STM
+M= jax.jacrev(end_point)(jnp.asarray(ic)) # STM rows
 \end{code}
 and a batch of orbits is differentiated with \texttt{jax.vmap},
 \begin{code}
-Ms= jax.vmap(jax.jacrev(end_point))(ics)   # ics.shape == (N,6)
+Ms= jax.vmap(jax.jacrev(end_point))(ics) # ics: (N,6)
 \end{code}
 This path gives derivatives with respect to the initial
 conditions only, and to first order only; the variational equations do
@@ -154,10 +156,11 @@ deviation vector or with the full state-transition matrix, and
 the spectrum, by the renormalization method of \citet{Benettin1980a,Benettin1980b},
 \begin{code}
 o= Orbit([0.8,0.3,0.75,0.,0.2,0.])
-o.integrate_dxdv([1.,0.,0.,0.,0.,0.],ts,MWPotential2014,
-                 method='dop853_c')  # orbit + deviation vector
-o.getOrbit_dxdv()                   # the deviation along the orbit
-o.lyapunov(ts,MWPotential2014,method='dop853_c',renorm_every=10)
+o.integrate_dxdv([1.,0.,0.,0.,0.,0.],ts,
+                 MWPotential2014,method='dop853_c')
+o.getOrbit_dxdv() # the deviation along the orbit
+o.lyapunov(ts,MWPotential2014,method='dop853_c',
+           renorm_every=10)
 \end{code}
 For
 the H\'enon--Heiles potential at $E=1/8$, the exponent of a chaotic orbit

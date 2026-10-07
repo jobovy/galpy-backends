@@ -37,26 +37,28 @@ array of the same kind; a function that receives \numpy\ arrays or
 \python\ scalars computes with \numpy\ as before. Thus, the radial force
 of the standard Milky-Way model is evaluated on a \jax\ array as
 \begin{code}
-from galpy.potential import MWPotential2014, evaluateRforces
+from galpy.potential import (MWPotential2014,
+                             evaluateRforces)
 R= jnp.linspace(0.5,2.,1001)
-FR= evaluateRforces(MWPotential2014,R,0.) # jax array, on R's device
+FR= evaluateRforces(MWPotential2014,R,0.) # jax array
 \end{code}
 without any further instruction, and with a \torch\ tensor the same
 call returns a tensor. When there is no array to dispatch on, as when
-a user sets up an \orb\ instance from \python\ floats, the default
+a potential is evaluated at \python\ floats, the default
 backend is used; it is \numpy\ unless a different one is set in the
 configuration file or through a context manager,
 \begin{code}
 import galpy.backend
 with galpy.backend.use('jax'):
-    o= Orbit([1.,0.1,1.1,0.,0.05,0.]) # IC becomes a jax array
-    o.integrate(ts,MWPotential2014)   # ... integrated in jax
+    Phi= evaluatePotentials(MWPotential2014,1.,0.) # jax
 \end{code}
-and an \orb\ set up from a tensor on a GPU is integrated there,
+and an \orb\ set up from a tensor on a GPU is integrated there by an
+in-backend solver (the default \cc\ integrators run on the host),
 \begin{code}
-o= Orbit(torch.tensor([1.,0.1,1.1,0.,0.05,0.],device='cuda'))
-o.integrate(ts,MWPotential2014) # torchode on the GPU
-o.R(ts)                           # a CUDA tensor
+o= Orbit(torch.tensor([1.,0.1,1.1,0.,0.05,0.],
+                      device='cuda'))
+o.integrate(ts,MWPotential2014,method='torchode')
+o.R(ts) # a CUDA tensor
 \end{code}
 The resolution order is therefore: an explicit \texttt{xp=} argument,
 the array arguments, the context or configured default, and finally
@@ -188,10 +190,11 @@ explicit: a \jax\ key or its \torch\ equivalent is passed as
 samples as before:
 \begin{code}
 from galpy.backend import random as grandom
-df= isotropicHernquistdf(pot=HernquistPotential(amp=2.,a=1.3))
-sam= df.sample(n=10**6)                       # numpy, as before
+hp= HernquistPotential(amp=2.,a=1.3)
+df= isotropicHernquistdf(pot=hp)
+sam= df.sample(n=10**6)          # numpy, as before
 key= grandom.key(42,backend='jax')
-sam= df.sample(n=10**6,key=key)               # jax, differentiable
+sam= df.sample(n=10**6,key=key)  # jax, differentiable
 \end{code}
 
 \subsection{Compilation and differentiation from the outside}\label{sec:design-jit}

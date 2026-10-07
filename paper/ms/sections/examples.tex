@@ -32,17 +32,20 @@ which the \cc\ path cannot provide; the recovered $q=0.851$ matches the
 true $0.85$ from which the mock star was generated. In code, the first fit uses the derivative of the backward orbit with
 respect to the star's observed coordinates,
 \begin{code}
-def closest_approach_ic(vxvv):  # (ra,dec,d,pmra,pmdec,vlos)
+def closest_approach_ic(vxvv):
+    # vxvv: (ra,dec,d,pmra,pmdec,vlos)
     o= Orbit(vxvv,radec=True,ro=8.,vo=220.)
-    o.integrate(-ts,pot,method='dop853_c')  # C + variational eqs.
+    o.integrate(-ts,pot,method='dop853_c') # C + STM
     return jnp.min(o.r(-ts))
-J= jax.jacrev(closest_approach_ic)(jnp.asarray(vxvv_obs))
+J= jax.jacrev(closest_approach_ic)(
+    jnp.asarray(vxvv_obs))
 \end{code}
 which a Gauss--Newton step then combines with the covariance of the
 observations; the second fit is
 \begin{code}
 def closest_approach(q):
-    pot= LogarithmicHaloPotential(normalize=1.,core=0.2,q=q)
+    pot= LogarithmicHaloPotential(normalize=1.,
+                                  core=0.2,q=q)
     o= Orbit(jnp.asarray(vxvv),radec=True,ro=8.,vo=220.)
     o.integrate(-ts,pot,method='diffrax')
     return jnp.min(o.r(-ts))
@@ -97,9 +100,10 @@ a GPU returns actions on the round trip with a scatter of $7\times10^{-3}$
 and reconstructs the meridional orbits that it has never seen. The training step is a few lines, whatever the framework,
 \begin{code}
 def loss(params,J,theta):
-    z,vz= net.apply(params,J,theta)          # the network's inverse
-    Jp,_,thetap= aAV.actionsFreqsAngles(z,vz) # galpy's forward map
-    return jnp.mean((Jp-J)**2/J**2)+jnp.mean(wrap(thetap-theta)**2)
+    z,vz= net.apply(params,J,theta) # the network
+    Jp,_,thetap= aAV.actionsFreqsAngles(z,vz) # galpy
+    return (jnp.mean((Jp-J)**2/J**2)
+            +jnp.mean(wrap(thetap-theta)**2))
 grads= jax.jit(jax.grad(loss))(params,J,theta)
 \end{code}
 where \texttt{net} is a small multi-layer perceptron and \texttt{wrap}

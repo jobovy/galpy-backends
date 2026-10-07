@@ -104,11 +104,13 @@ inversion is a fixed-shape quadrature that compiles well. As an example,
 the derivative of a set of sampled radii with respect to the scale
 radius of a Hernquist potential under \torch\ is obtained as
 \begin{code}
-a= torch.tensor(1.,requires_grad=True)
+a= torch.tensor(1.,dtype=torch.float64,
+                requires_grad=True)
 with galpy.backend.use('torch'):
-    df= constantbetadf(pot=HernquistPotential(amp=2.,a=a),beta=-0.2)
+    hp= HernquistPotential(amp=2.,a=a)
+    df= constantbetadf(pot=hp,beta=-0.2)
     key= galpy.backend.random.key(7,backend='torch')
-    sam= df.sample(n=1000,rmin=0.1,key=key)
+    sam= df.sample(n=1000,key=key)
 dr_da= torch.autograd.grad(sam.r().sum(),a)
 \end{code}
 and for a Hernquist sphere this derivative is $r_i/a$, which the sampler
@@ -117,16 +119,20 @@ sampling of these DFs run under \texttt{jax.jit}, and for the King
 model so does the derivative with respect to $W_0$,
 \begin{code}
 def sigmar(W0):
-    return kingdf(W0=W0,M=2.3,rt=1.4).sigmar(jnp.asarray(0.5))
-jax.grad(sigmar)(3.)
-jax.jit(jax.grad(sigmar))(3.)  # the ODE is solved by diffrax here
+    with galpy.backend.use('jax'):
+        kdf= kingdf(W0=W0,M=2.3,rt=1.4)
+        return kdf.sigmar(jnp.asarray(0.5))
+dsig= jax.jit(jax.grad(sigmar)) # ODE by diffrax
+dsig(3.)
 \end{code}
 A DF built from a density that is not the one generating the
-potential is differentiable with respect to the parameters of both,
+potential is differentiable with respect to the parameters of the
+density,
 \begin{code}
 def dispersion(a_tracer):
+    hp= HernquistPotential(amp=0.1,a=a_tracer)
     df= eddingtondf(pot=NFWPotential(amp=1.,a=2.),
-                    denspot=HernquistPotential(amp=0.1,a=a_tracer))
+                    denspot=hp)
     return df.sigmar(jnp.asarray(1.))
 jax.grad(dispersion)(0.7)
 \end{code}
@@ -149,14 +155,19 @@ velocity grid rather than a loop. The quasi-isothermal DF of
 differentiably with respect to the parameters of the potential and the
 DF's scale lengths, and its velocity sampler at a given position draws
 by inverse transformation on a three-dimensional velocity mesh, such
-that a sample is differentiable in the DF's parameters for a fixed key;
+that a sample drawn with a fixed key is a function of the DF's
+parameters; %TODO: derivative NaN for MWPotential2014 (galpy bug being fixed); restore 'differentiable' once fixed
+
 this sampler replaced a rejection sampler on the \numpy\ path as well,
 which is the second place where \numpy\ output changed (the distribution
 is the same, the particular draws are not). In code,
 \begin{code}
-qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,pot=MWPotential2014,aA=aAS)
-vs= qdf.sampleV(0.9,0.05,n=10**4,key=grandom.key(0,backend='jax'))
-sigma_R= jnp.std(vs[:,0])   # differentiable in qdf's parameters
+qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,
+                       pot=MWPotential2014,aA=aAS)
+with galpy.backend.use('jax'):
+    vs= qdf.sampleV(0.9,0.05,n=10**4,
+                    key=grandom.key(0,backend='jax'))
+sigma_R= jnp.std(vs[:,0])
 \end{code}
 Its construction is a \numpy\
 computation, and its interpolated velocity

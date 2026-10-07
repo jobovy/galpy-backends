@@ -56,7 +56,8 @@ and the same with \torch\ reads
 \begin{code}
 a= torch.tensor(0.5,requires_grad=True)
 mp= MiyamotoNagaiPotential(amp=1.,a=a,b=0.3)
-mp.Rforce(torch.tensor(1.2),torch.tensor(0.1)).backward()
+mp.Rforce(torch.tensor(1.2),
+          torch.tensor(0.1)).backward()
 a.grad # dFR/da
 \end{code}
 Forty-nine of the fifty potentials that can be constructed from
@@ -132,7 +133,8 @@ from galpy.potential import Potential
 from galpy.backend import get_namespace
 class MNLikePotential(Potential):
     # a Miyamoto-Nagai disk written for every backend
-    def __init__(self,amp=1.,a=1.,b=0.1,normalize=False):
+    def __init__(self,amp=1.,a=1.,b=0.1,
+                 normalize=False):
         Potential.__init__(self,amp=amp)
         self._a= a
         self._b2= b**2
@@ -153,8 +155,8 @@ class MNLikePotential(Potential):
 # differentiate an orbit in it w.r.t. the scale length a
 def final_z(a):
     o= Orbit(jnp.asarray([1.,0.1,1.1,0.1,0.05,0.]))
-    o.integrate(ts,MNLikePotential(a=a,b=0.3,normalize=1.),
-                method='diffrax')
+    mp= MNLikePotential(a=a,b=0.3,normalize=1.)
+    o.integrate(ts,mp,method='diffrax')
     return o.z(ts[-1])
 jax.grad(final_z)(0.5)
 \end{codefig}
