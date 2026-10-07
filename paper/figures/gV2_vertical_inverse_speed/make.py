@@ -18,32 +18,32 @@ construction). float64 throughout.
     jax-jit and torch. "Many tori" (dash-dot): ``jax.jit(jax.vmap(...))`` over
     M = N/16 actions of the per-torus map at 16 fixed angles (works as is: one
     batched root find over all tori), against a Python loop over the M tori on
-    numpy. (``torch.func.vmap`` of the same map fails: the bisection's
-    ``xp.sign`` is array_api_compat.torch's sign, which indexes with a boolean
-    mask -- a dynamic-shape op torch's vmap cannot batch.)
+    numpy. (``torch.func.vmap`` of the same map failed when measured before
+    #1641: the root finder's ``xp.sign`` is array_api_compat.torch's sign, which
+    indexes with a boolean mask -- a dynamic-shape op torch's vmap cannot batch;
+    the Newton step still calls ``xp.sign``, so no torch vmap series.)
 
-    What dominates the backend evaluation is the anomaly root find: the backend
-    path inverts the angle relation with the generic bracketed bisection
-    (galpy.backend.optimize.brentq) -- 43 halvings eagerly, 100 under jit (the
-    traced bracket hides its width, so the halving count falls back to maxiter)
-    -- each a full pass of the (N, 40)-harmonic kernel, whereas numpy uses a
-    safeguarded Newton iteration that converges in a handful of passes. Hence,
-    single-threaded at N=1e5: numpy 2.1 s, torch 5.1 s, jax eager 16.5 s, jax
-    jit 30 s -- jit is SLOWER than eager beyond N~1e3 because it does 100
-    halvings instead of 43 (an in-process A/B with the eager count under jit is
-    2.35x faster at identical values); see BUG_vi_backend_eval_bisection.md.
-    jit wins only at small N (N=10: 6.5 ms vs 0.25 s eager, where eager is
-    per-op dispatch bound). Per kernel pass at N=1e5, XLA's float64 trig
-    (0.30 s) is also ~2.5x slower than torch's (0.12 s). The many-tori vmap
-    costs the same per point as the one-torus jit (one batched root find); the
-    numpy per-torus loop pays ~1.7 ms of Python overhead per torus but its
-    Newton inversion still wins at large M on the CPU.
+    The anomaly root find dominates the evaluation. Since galpy #1641 the backend
+    inverts the angle relation with a safeguarded Newton iteration started at the
+    requested angle (backend brentq(guess=...), 8 steps; numpy does the same),
+    replacing the fixed-schedule bisection (43 halvings eagerly, 100 under jit)
+    of BUG_vi_backend_eval_bisection.md. Single-threaded, re-measured 2026-10-07
+    on an idle box: numpy is fastest up to N~3000 (N=10: numpy 0.8 ms, jax jit
+    2.3 ms, torch 22 ms, jax eager 0.20 s); jax jit overtakes numpy at N~1e4 and
+    at N=1e6 takes 2.0 s vs numpy 9.6 s, jax eager 14 s, torch 51 s. jit beats
+    eager at every N. The many-tori vmap costs ~4.5x the one-torus jit per point
+    on the CPU (9.1 s at N=1e6) but beats the numpy per-torus loop (~0.9 ms per
+    torus, 57 s) from ~200 tori on; on the GPU it costs nearly the same as the
+    one-torus jit. N=1e6 on the GPU: jax jit 0.31 s (TITAN Xp) / 11 ms (H100),
+    torch 0.94 s / 70 ms.
 
 (b) Construction: wall time to build the family vs the number of energies nE,
     numpy vs native jax (eager and jitted) and torch, CPU and GPU. Open markers
     are the FIRST call at each nE: for eager jax this includes compiling every
     op for the new shapes, for jit the full trace+compile (both one-time per
-    shape); filled markers are warm calls.
+    shape); filled markers are warm calls. At nE=256 (warm, CPU): numpy 2.5 s,
+    torch 0.25 s, jax eager 0.36 s, jax jit 0.48 s; jax jit on the GPU: 9-54 ms
+    (TITAN Xp) and 3.6-5.8 ms (H100) over the whole nE range.
 
 Plot: colours from _harness/palette.py (framework x device; jit solid, eager
 dashed, many-tori variants dash-dot), lines labelled directly. The GPU series
@@ -51,11 +51,12 @@ re-measured on an H100 (data/h100/, Trillium) are drawn as extra lines.
 
 CPU threading: every CPU series is SINGLE-THREADED (OPENBLAS_NUM_THREADS=
 OMP_NUM_THREADS=1, torch.set_num_threads(1), XLA eigen/intra-op threads = 1).
-The measuring box is shared and was heavily oversubscribed (load average
-~160 on 72 hardware threads); there, multi-threaded BLAS and torch thrash
-(measured: numpy construction nE=31 0.6 s -> 19 s with 4 OpenBLAS threads, torch
-N=1e3 evaluation 0.08 s -> 3.3 s with 4 torch threads), so single-thread numbers
-are the only stable, comparable per-core measure. GPU series are unaffected.
+The measuring box is shared; when it is oversubscribed, multi-threaded BLAS and
+torch thrash (measured at load ~160 on 72 hardware threads: numpy construction
+nE=31 0.6 s -> 19 s with 4 OpenBLAS threads, torch N=1e3 evaluation 0.08 s ->
+3.3 s with 4 torch threads), so single-thread numbers are the stable, comparable
+per-core measure. The current data were measured with the box idle (load ~5).
+GPU series are unaffected.
 
 Timing protocol: one warm-up (jit compile timed separately and excluded), then
 the median of 3 calls (bench.time_call, device-synchronised); a call longer
@@ -86,13 +87,16 @@ import time
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import bench, palette
+from paper.figures._harness import bench, layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "gV2_vertical_inverse_speed.json")
 # the GPU series re-measured on an H100 (Trillium), drawn as extra lines
 _JSON_H100 = os.path.join(_DATA, "h100", "gV2_vertical_inverse_speed.json")
+# journal version (default): printed size, no env stamp / long notes; the caption
+# carries them. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 _AMP, _SIG = 1.0, 0.5
 _EMIN, _EMAX = 0.05, 2.0
@@ -134,6 +138,8 @@ def _style(name, dev):
     if var:
         st["ls"] = "-."
         st["marker"] = "x" if fw == "numpy" else st["marker"]
+    if PAPER:  # short variant tags; the caption explains them
+        var = {"loop over tori": "loop", "vmap over tori": "vmap"}.get(var, var)
     return st, palette.label(fw, dev, mode, var or "")
 
 
@@ -482,8 +488,17 @@ def make():
     data = _data()
     srcs = _sources(data)
     Ns = numpy.asarray(data["Ns"], dtype=float)
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(13.4, 5.0),
-                                   gridspec_kw={"width_ratios": [1.2, 1.0]})
+    # PAPER: printed width of a figure* (7.0 in); the panels are stacked so each
+    # keeps a column of direct labels at its right
+    figsize = layout.figsize(PAPER, (7.0, 6.4), (13.4, 5.0))
+    if PAPER:
+        fig, (axa, axb) = plt.subplots(2, 1, figsize=figsize,
+                                       gridspec_kw={"height_ratios": [1.25, 1.0]})
+    else:
+        fig, (axa, axb) = plt.subplots(1, 2, figsize=figsize,
+                                       gridspec_kw={"width_ratios": [1.2, 1.0]})
+    fs_line = layout.FS["line"] if PAPER else 6.2
+    fs_note = layout.FS["note"] if PAPER else 6.3
     for src, override in srcs:
         for name in _EVAL:
             if name not in src["eval"]:
@@ -498,14 +513,21 @@ def make():
             x = (numpy.asarray(src["Ms"], dtype=float) * src["nang_vmap"]
                  if ("vmap" in name or "loop" in name) else numpy.asarray(src["Ns"], dtype=float))
             axa.loglog(x, t, ms=3.5, label=lab, lw=1.3, **st)
-    axa.set_ylim(2e-4, 400.0)
+    axa.set_ylim(1.5e-4 if PAPER else 2e-4, 400.0)
     # constant cost-per-point references (1 us and 10 us per point)
     for us, lab in ((1e-6, r"1 $\mu$s/point"), (1e-5, r"10 $\mu$s/point")):
         axa.plot(Ns, us * Ns, ":", color="0.75", lw=0.9, zorder=0, label="_ref")
-    axa.set_xlabel(r"points per call $N$ (angles on one torus; vmap/loop: $N/%d$ tori $\times$ %d angles)"
-                   % (data["nang_vmap"], data["nang_vmap"]), fontsize=8)
+    if PAPER:
+        axa.set_xlabel(r"points per call $N$ (vmap/loop: $N/%d$ tori $\times$ %d angles)"
+                       % (data["nang_vmap"], data["nang_vmap"]))
+        axa.set_title("(a) evaluation")
+        axa.text(0.02, 0.97, r"dotted: 1, 10 $\mu$s per point", transform=axa.transAxes,
+                 fontsize=fs_note, color="0.45", ha="left", va="top")
+    else:
+        axa.set_xlabel(r"points per call $N$ (angles on one torus; vmap/loop: $N/%d$ tori $\times$ %d angles)"
+                       % (data["nang_vmap"], data["nang_vmap"]), fontsize=8)
+        axa.set_title(rf"(a) evaluation: xvFreqs($J={data['J']:g}$, angles)")
     axa.set_ylabel("wall time per call (s)")
-    axa.set_title(rf"(a) evaluation: xvFreqs($J={data['J']:g}$, angles)")
     axa.grid(True, which="both", alpha=0.25)
 
     nEs = numpy.asarray(data["nEs"], dtype=float)
@@ -524,28 +546,37 @@ def make():
             if "first" in c:
                 fst = dict(st, ls=":")
                 axb.loglog(nEs, _nan(c["first"]), ms=4, mfc="w", lw=0.8, label="_first", **fst)
-    axb.text(0.02, 0.98, "thin dotted, open markers: first call at each $n_E$\n"
+    axb.text(0.02, 0.97, "open markers: first call" if PAPER else
+             "thin dotted, open markers: first call at each $n_E$\n"
              "(eager jax: op compiles; jit: trace+compile)",
-             transform=axb.transAxes, fontsize=6.3, color="0.4", va="top", ha="left")
+             transform=axb.transAxes, fontsize=fs_note, color="0.4", va="top", ha="left")
     axb.set_xlabel(r"number of energies $n_E$ in the family")
-    axb.set_ylabel("construction wall time (s) [warm]")
-    axb.set_title(r"(b) construction (setup_interp=True, mm_npt=40)")
-    axb.set_ylim(top=axb.get_ylim()[1] * 8.0)
+    axb.set_ylabel("construction wall time (s)" if PAPER
+                   else "construction wall time (s) [warm]")
+    axb.set_title("(b) construction" if PAPER
+                  else r"(b) construction (setup_interp=True, mm_npt=40)")
+    axb.set_ylim(top=axb.get_ylim()[1] * (3.0 if PAPER else 8.0))
     axb.grid(True, which="both", alpha=0.25)
-    env = data.get("env", {})
-    cpu_env = env.get("cpu_run", {})
-    gpu_env = env.get("gpu_run", cpu_env)
-    stamp = (f"CPU: {cpu_env.get('cpu', '?')}, 1 thread\n"
-             f"{gpu_env.get('gpu', cpu_env.get('gpu', 'none'))}: jax {gpu_env.get('jax', '?')}"
-             f" · torch {gpu_env.get('torch', '?')}")
-    if len(srcs) > 1:
-        he = srcs[1][0].get("env", {}).get("gpu_run", {})
-        stamp += f"\n{he.get('gpu', 'H100')}: jax {he.get('jax', '?')} · torch {he.get('torch', '?')}"
-    axa.text(0.02, 0.98, stamp + "\nfloat64 · dotted grey: 1 and 10 $\\mu$s per point",
-             transform=axa.transAxes, fontsize=5.8, color="0.45", ha="left", va="top")
-    fig.tight_layout(w_pad=12.0)
-    palette.label_lines(axa, fontsize=6.2)
-    palette.label_lines(axb, fontsize=6.2)
+    if not PAPER:
+        env = data.get("env", {})
+        cpu_env = env.get("cpu_run", {})
+        gpu_env = env.get("gpu_run", cpu_env)
+        stamp = (f"CPU: {cpu_env.get('cpu', '?')}, 1 thread\n"
+                 f"{gpu_env.get('gpu', cpu_env.get('gpu', 'none'))}: jax {gpu_env.get('jax', '?')}"
+                 f" · torch {gpu_env.get('torch', '?')}")
+        if len(srcs) > 1:
+            he = srcs[1][0].get("env", {}).get("gpu_run", {})
+            stamp += f"\n{he.get('gpu', 'H100')}: jax {he.get('jax', '?')} · torch {he.get('torch', '?')}"
+        axa.text(0.02, 0.98, stamp + "\nfloat64 · dotted grey: 1 and 10 $\\mu$s per point",
+                 transform=axa.transAxes, fontsize=5.8, color="0.45", ha="left", va="top")
+        fig.tight_layout(w_pad=12.0)
+    else:
+        fig.tight_layout()
+    sep = 1.3 * fs_line if PAPER else None
+    palette.label_lines(axa, fontsize=fs_line, min_sep_pt=sep)
+    palette.label_lines(axb, fontsize=fs_line, min_sep_pt=sep)
+    if PAPER:
+        layout.fit_right(fig)
     return fig
 
 

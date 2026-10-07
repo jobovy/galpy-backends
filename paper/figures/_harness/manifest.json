@@ -131,7 +131,7 @@
     "description": "Staeckel actionsFreqsAngles throughput vs N -- jax (eager vs jit, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -139,15 +139,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "c4548bd",
-    "sha256": "3b443369faaffe6568f7b563299d699e95fa65300a5e90bbbe70adf3e042bab7",
+    "git": "84f346a",
+    "sha256": "ea134d9145b2e9f66c0c5f40fb0dca68aea2c3b151ec678691d51cbc92842dab",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_torch": {
     "description": "Staeckel actionsFreqsAngles throughput vs N -- torch (eager, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -155,8 +155,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "c4548bd",
-    "sha256": "0cca172af53428706f6ad51c1c5f4f23444bbe80b06d46f755f7e225834af405",
+    "git": "84f346a",
+    "sha256": "f3ef70d7eb277678988fcefc7f60bf02e3a960a595626b9d4741eb8c1731ffaa",
     "track": "G"
   },
   "g18_actionangle_sensitivity": {
@@ -514,7 +514,7 @@
     "description": "actionAngleVerticalInverse speed: xvFreqs evaluation wall time vs N angles (numpy, jax eager/jit/vmap, torch; CPU & GPU) and family construction time vs nE [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -522,8 +522,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "b0ab51c4139ac25670a1b7f77141ae29e858f8fc7b71100f53857ed9a15adcc0",
+    "git": "84f346a",
+    "sha256": "1dcf73246ffcdf5a34dc4f9c4e5022d1d1083d6ca8ba4efcc3f0b35293d8628a",
     "track": "E"
   }
 }
