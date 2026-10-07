@@ -362,7 +362,10 @@ def make():
     if os.path.exists(_JSON_H100):
         with open(_JSON_H100) as fh:
             h100 = json.load(fh)
-    fig, (axw, axp) = plt.subplots(1, 2, figsize=(10.4, 4.3))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt direct labels).
+    fig, (axw, axp) = plt.subplots(1, 2, figsize=(7.0, 3.4) if PAPER else (10.4, 4.3))
+    _ts = {"fontsize": 10} if PAPER else {}
     for name in _ORDER:
         fw, dev, mode, extra = _SERIES[name]
         runs = [(data, dev)]
@@ -381,12 +384,12 @@ def make():
             axp.loglog(Ns, 1e3 * t / Ns, ms=4, label=lab, zorder=3, **st)
     axw.set_xlabel(r"number of sprayed particles $N$")
     axw.set_ylabel(r"wall time for spdf.sample($N$)  (s)")
-    axw.set_title("(a) wall time per call")
+    axw.set_title("(a) wall time per call", **_ts)
     if not PAPER:
         axw.set_ylim(top=2e3)  # headroom for the stamp
     axp.set_xlabel(r"number of sprayed particles $N$")
     axp.set_ylabel(r"cost per particle  (ms)")
-    axp.set_title("(b) per-particle cost")
+    axp.set_title("(b) per-particle cost", **_ts)
     ec, eg = data.get("env_cpu", {}), data.get("env_gpu", {})
     eh = (h100 or {}).get("env_gpu", {})
     txt = (
@@ -395,8 +398,8 @@ def make():
         f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
         + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
     )
-    if PAPER:
-        fig.tight_layout()
+    if PAPER:  # right margin for the direct-label column
+        fig.subplots_adjust(left=0.09, right=0.805, bottom=0.14, top=0.92, wspace=0.3)
     else:
         axw.text(0.03, 0.97, txt, transform=axw.transAxes, fontsize=6.0, color="0.45",
                  va="top", ha="left")
@@ -406,11 +409,12 @@ def make():
         fig.tight_layout(rect=[0, 0, 1, 0.96])
     # direct labels on (b) (same lines as (a)); (a) carries the stamp
     # the CPU lines end early (series stop at ~60 s/call): label them inline
-    inline = {
-        "torch CPU eager": (1e4, 8), "numpy (C integrator)": (1e3, 9),
+    inline = {  # PAPER (8 pt): spots clear of the other lines at 7 in
+        "torch CPU eager": (5e3, 8) if PAPER else (1e4, 8),
+        "numpy (C integrator)": (1e3, 9),
         "jax CPU eager": (1.5e5, 9), "jax CPU jit": (3e3, -9),
     }
-    palette.label_lines(axp, inline=inline)
+    palette.label_lines(axp, inline=inline, fontsize=8 if PAPER else 7)
     for t in axp.texts:
         if t.get_text() in inline:
             t.set_bbox(dict(fc="white", ec="none", alpha=0.85, pad=0.4))

@@ -430,10 +430,20 @@ def make():
     Ns = numpy.array(data["Ns"], dtype=float)
     order = _CPU_MODES + _GPU_MODES
 
-    fig = plt.figure(figsize=(14.6, 8.4))
-    gs = GridSpec(2, 4, figure=fig, height_ratios=[1.0, 1.0], hspace=0.42, wspace=0.08,
-                  left=0.06, right=0.86, top=0.95, bottom=0.12)
-    axs = [fig.add_subplot(gs[0, i]) for i in range(4)]
+    if PAPER:  # final printed width of a figure* (7.0 in), printed text sizes: the
+        # four sampling panels as a 2x2 grid (a 1x4 row is too narrow for the names)
+        fig = plt.figure(figsize=(6.8, 8.0))
+        gs = GridSpec(3, 4, figure=fig, height_ratios=[1.0, 1.0, 1.3], hspace=0.5, wspace=0.08,
+                      left=0.085, right=0.80, top=0.965, bottom=0.145)
+        axs = [fig.add_subplot(gs[i // 2, 2 * (i % 2):2 * (i % 2) + 2]) for i in range(4)]
+        _bar_gs, _left = gs[2, :], (0, 2)
+    else:
+        fig = plt.figure(figsize=(14.6, 8.4))
+        gs = GridSpec(2, 4, figure=fig, height_ratios=[1.0, 1.0], hspace=0.42, wspace=0.08,
+                      left=0.06, right=0.86, top=0.95, bottom=0.12)
+        axs = [fig.add_subplot(gs[0, i]) for i in range(4)]
+        _bar_gs, _left = gs[1, :], (0,)
+    _fs_note, _fs_bar, _fs_leg, _fs_lab = (8, 8, 8, 8) if PAPER else (6.5, 5.2, 7, 6.5)
     for i, (ax, name) in enumerate(zip(axs, _SAMPLE_DFS)):
         for mode in order:
             fw, _, md = _MODES[mode]
@@ -448,18 +458,20 @@ def make():
         ax.set_ylim(3e-5, 200)
         ax.set_xlabel(r"$N$ particles")
         ax.set_title(f"({'abcd'[i]}) {name}", fontsize=10)
-        if i == 0:
-            ax.set_ylabel(r"wall time of $\tt sample(n=N)$  (s)")
+        if i in _left:
+            ax.set_ylabel("wall time of\n$\\tt sample(n=N)$  (s)" if PAPER
+                          else r"wall time of $\tt sample(n=N)$  (s)")
         else:
             ax.tick_params(labelleft=False)
     axs[0].text(0.03, 0.97, "dotted: constant particles/s" if PAPER
                 else "dotted: $10^5$..$10^8$ particles/s", transform=axs[0].transAxes,
-                fontsize=6.5, color="0.5", va="top")
+                fontsize=_fs_note, color="0.5", va="top")
 
     # (e) bars: colour = backend x device; filled = warm (white-hatched = eager, the
     # bar analogue of a dashed line); hollow outline = first call in a fresh process
-    ax = fig.add_subplot(gs[1, :])
+    ax = fig.add_subplot(_bar_gs)
     bars = []  # (mode, source, device)
+    labels = []  # deferred value labels: (x, y, text, va, colour), drawn once ylim is set
     for mode in order:
         for d, dev in _runs(mode, data, h100):
             if any(mode in d["construct"].get(dn, {}) for dn in _CONSTRUCT_DFS):
@@ -482,11 +494,9 @@ def make():
             if numpy.isfinite(warm):
                 rgb = matplotlib.colors.to_rgb(col)
                 dark = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 0.5
-                ax.text(x, warm * 0.8, _fmt(warm), ha="center", va="top", fontsize=5.2,
-                        rotation=90, color="w" if dark else "k")
+                labels.append((x, warm, _fmt(warm), "top", "w" if dark else "k"))
             if numpy.isfinite(first):
-                ax.text(x, first * 1.15, _fmt(first), ha="center", va="bottom", fontsize=5.2,
-                        rotation=90, color="0.35")
+                labels.append((x, first, _fmt(first), "bottom", "0.35"))
     ax.set_yscale("log")
     ax.set_xticks(range(len(_CONSTRUCT_DFS)))
     ax.set_xticklabels(_CONSTRUCT_DFS)
@@ -502,13 +512,26 @@ def make():
         handles.append(Patch(facecolor=palette.style(fw, dev, md)["color"], edgecolor="w",
                              hatch="////" if md == "eager" else None, label=palette.label(fw, dev, md)))
     handles.append(Patch(facecolor="none", edgecolor="0.3", label="first call (outline)"))
-    ax.legend(handles=handles, fontsize=7, ncol=6, loc="upper center",
-              bbox_to_anchor=(0.5, -0.1), framealpha=0.92)
+    ax.legend(handles=handles, fontsize=_fs_leg, ncol=4 if PAPER else 6, loc="upper center",
+              bbox_to_anchor=(0.5, -0.12 if PAPER else -0.1), framealpha=0.92)
     recs = [r[m] for src in ([data] + ([h100] if h100 else [])) for r in src["construct"].values()
             for m in r]
     lo = min(r["warm"] for r in recs if numpy.isfinite(r["warm"]))
     hi = max(r["first"] for r in recs if numpy.isfinite(r["first"]))
     ax.set_ylim(lo / 4.0, hi * 12.0)
+    # value labels (rotated): a warm label goes inside its bar, hanging from 0.8x
+    # the top, and is dropped when the bar is shorter than the text (PAPER sizes)
+    ax_h_pt = ax.get_position().height * fig.get_figheight() * 72.0
+    dec = numpy.log10(hi * 12.0 / (lo / 4.0))
+    for x, y, txt, va, c in ([] if PAPER else labels):  # PAPER: too narrow to read at 7 in
+        if va == "top":
+            bar_pt = numpy.log10(y * 0.8 / (lo / 4.0)) / dec * ax_h_pt
+            if PAPER and bar_pt < 0.8 * _fs_bar * len(txt) + 8:
+                continue
+            ax.text(x, y * 0.8, txt, ha="center", va="top", fontsize=_fs_bar, rotation=90, color=c)
+        else:
+            ax.text(x, y * 1.15, txt, ha="center", va="bottom", fontsize=_fs_bar, rotation=90,
+                    color=c)
     env = data.get("env", {})
     eg, eh = data.get("env_gpu", {}), (h100 or {}).get("env_gpu", {})
     if not PAPER:
@@ -520,7 +543,7 @@ def make():
                  + "  ·  float64",
                  fontsize=6, color="0.5", ha="right", va="bottom")
     # the four sampling panels share their series: label them once, beside (d)
-    palette.label_lines(axs[-1], fontsize=6.5)
+    palette.label_lines(axs[-1], fontsize=_fs_lab)
     return fig
 
 

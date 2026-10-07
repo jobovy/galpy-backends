@@ -25,6 +25,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -46,7 +47,11 @@ def _load():
 )
 def make():
     d = _load()
-    fig, axes = plt.subplots(2, 2, figsize=(7.6, 5.8))
+    # print size: 7.0 in wide (figure*; a 2x2 grid is illegible at column width),
+    # text 8-10 pt
+    fig, axes = plt.subplots(2, 2, figsize=layout.figsize(PAPER, (7.0, 5.2), (7.6, 5.8)))
+    fs_leg = layout.FS["legend"] if PAPER else 7.5
+    fs_note = layout.FS["note"] if PAPER else 8
 
     # ---- (a) Liouville: |det M(t) - 1| ----
     ax = axes[0, 0]
@@ -64,7 +69,7 @@ def make():
     ax.set_ylabel(r"$|\det M(t) - 1|$")
     ax.set_title("(a) Liouville invariant", fontsize=10)
     ax.set_ylim(1e-15, 1e-5)
-    ax.legend(fontsize=7.5, loc="lower right")
+    ax.legend(fontsize=fs_leg, loc="lower right")
 
     # ---- (b) symplecticity ----
     ax = axes[0, 1]
@@ -80,7 +85,7 @@ def make():
     ax.set_ylabel(r"$\|M^{\mathsf{T}}\Omega M - \Omega\|_{\max}$")
     ax.set_title("(b) symplecticity defect", fontsize=10)
     ax.set_ylim(1e-14, 1e-5)
-    ax.legend(fontsize=7.5, loc="lower right")
+    ax.legend(fontsize=fs_leg, loc="lower right")
 
     # ---- (c) FD of the flow: the V-curve ----
     ax = axes[1, 0]
@@ -100,11 +105,14 @@ def make():
     ax.loglog(g2, cen[4] * (g2 / eps[4]) ** 2, ls=":", lw=0.9, color="0.65")
     g3 = numpy.array([1e-11, 1e-6])
     ax.loglog(g3, cen[-3] * (eps[-3] / g3), ls=":", lw=0.9, color="0.65")
-    ax.annotate(r"$\propto\varepsilon$", xy=(8e-4, 4e-2), fontsize=8, color="0.45")
-    ax.annotate(r"$\propto\varepsilon^{2}$", xy=(8e-4, 2e-4), fontsize=8,
+    # print version: the slope notes sit off their arms (at 8 pt they would
+    # overlap them)
+    ax.annotate(r"$\propto\varepsilon$", xy=(1e-6, 6e-4) if PAPER else (8e-4, 4e-2),
+                fontsize=fs_note, color="0.45")
+    ax.annotate(r"$\propto\varepsilon^{2}$", xy=(8e-4, 2e-4), fontsize=fs_note,
                 color="0.45")
-    ax.annotate(r"$\propto\varepsilon^{-1}$", xy=(1e-9, 1.2e-6), fontsize=8,
-                color="0.45")
+    ax.annotate(r"$\propto\varepsilon^{-1}$", xy=(1e-10, 1.5e-6) if PAPER else (1e-9, 1.2e-6),
+                fontsize=fs_note, color="0.45")
     if not PAPER:
         ax.annotate(
             "STM matches the best FD\n" r"at its floor ($\sim$10$^{-8}$)",
@@ -118,7 +126,7 @@ def make():
     ax.set_title(r"(c) finite differences vs STM ($t=10$)" if PAPER
                  else r"(c) FD of the flow vs STM ($t=10$)", fontsize=10)
     ax.set_ylim(1e-9, 3e0)
-    ax.legend(fontsize=7.5, loc="upper center")
+    ax.legend(fontsize=fs_leg, loc="upper center")
 
     # ---- (d) 2D-reduction bridge ----
     ax = axes[1, 1]
@@ -134,7 +142,7 @@ def make():
                  else "(d) 2D-reduction bridge (planar IC)", fontsize=10)
     ax.set_ylim(1e-14, 1e-5)
     if not PAPER:  # one line; the y-label names it
-        ax.legend(fontsize=7.5, loc="lower right")
+        ax.legend(fontsize=fs_leg, loc="lower right")
         ax.text(
             0.03, 0.92,
             f"out-of-plane leakage = {pd_['max_leak_err']:.0f} (exact)",

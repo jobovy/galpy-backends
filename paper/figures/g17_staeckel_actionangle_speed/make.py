@@ -120,10 +120,10 @@ def _measure():
     # N ranges: C/numpy are cheap (-> 1e6); the eager backends are dispatch-heavy
     # (root-find + quadrature = hundreds of ops/call) so cap CPU eager lower; the
     # old O(N) Python loop is capped hardest.
-    Ns = [1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000]
+    Ns = [1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 100000, 300000, 1000000]
     # extend the rising backend curves until throughput flattens: GPU to a few e6
     # (compute saturates the device), CPU eager as far as is affordable.
-    Ns_gpu = Ns + [300000, 1000000]  # 3e6 OOMs the 12 GB GPU (quadrature (N,order) arrays)
+    Ns_gpu = Ns  # 3e6 OOMs the 12 GB GPU (quadrature (N,order) arrays)
     Ns_jaxcpu = [n for n in Ns if n <= 30000]  # jax eager is dispatch-bound + slow
     Ns_torchcpu = [n for n in Ns if n <= 100000]
     Ns_old = [1, 3, 10, 30, 100, 300, 1000, 3000]
@@ -152,14 +152,14 @@ def _measure():
         g = _grid(N)
         aC.actionsFreqsAngles(*g)
         series["C (c=True)"].append(_med(lambda g=g: aC.actionsFreqsAngles(*g),
-                                         warmup=1, repeats=5))
+                                         warmup=1, repeats=5 if N <= 100000 else 3))
     # --- numpy (CPU), vectorised ---
     series["numpy (CPU)"] = []
     for N in Ns:
         g = _grid(N)
         aF.actionsFreqsAngles(*g)
         series["numpy (CPU)"].append(_med(lambda g=g: aF.actionsFreqsAngles(*g),
-                                          warmup=1, repeats=5))
+                                          warmup=1, repeats=5 if N <= 100000 else 3))
 
     # --- jax CPU / GPU (explicit device placement; one process) ---
     def _jax_series(dev, Nlist, sync):

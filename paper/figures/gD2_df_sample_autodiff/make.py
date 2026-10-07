@@ -184,7 +184,11 @@ def make():
             fh.write("\n")
 
     r = numpy.array(data["r_grid"])
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends).
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 3.3) if PAPER else (9.8, 4.0))
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fs_leg = 8 if PAPER else 7
 
     ax1.plot(r, data["sigma_analytic"], "-", color="0.6", lw=3.0,
              label="Hernquist (1990) analytic")
@@ -195,8 +199,8 @@ def make():
                  label=r"MC sample ($N=4\times10^6$)")
     ax1.set_xlabel("$r$")
     ax1.set_ylabel(r"$\sigma_r(r)$")
-    ax1.set_title("(a) the value" if PAPER else "the value")
-    ax1.legend(fontsize=7, framealpha=0.92)
+    ax1.set_title("(a) the value" if PAPER else "the value", **_ts)
+    ax1.legend(fontsize=_fs_leg, framealpha=0.92)
 
     ax2.plot(r, data["dsigma_jeans"], "-", color=_C_TH, lw=1.8,
              label=r"$\tt jax.grad$ of the quadrature")
@@ -205,8 +209,8 @@ def make():
                  label=r"$\tt jax.grad$ through the sample")
     ax2.set_xlabel("$r$")
     ax2.set_ylabel(r"$d\sigma_r/dr$")
-    ax2.set_title("(b) the derivative" if PAPER else "the derivative, two independent ways")
-    ax2.legend(fontsize=7, framealpha=0.92)
+    ax2.set_title("(b) the derivative" if PAPER else "the derivative, two independent ways", **_ts)
+    ax2.legend(fontsize=_fs_leg, framealpha=0.92)
 
     d1 = numpy.array(data["dsigma_mc"])
     d2 = numpy.array(data["dsigma_jeans"])

@@ -16,7 +16,11 @@ ledger entry counts as the number of collected tests it matches:
     torch entries) changes nothing.
 
 passing = suite - ledgered (xfail + slow-skip) - permanently skipped, per mode
-(eager; --jit dashed, from that mode's introduction). The suite grows from 2466
+(eager; --jit dashed, from that mode's introduction). CAVEAT: the --jit series
+subtracts only the "<backend>-jit" rows, but under --jit the conftest also applies
+the eager xfail and permanent-skip rows (and, before #1279 on 2026-08-09, the eager
+slow-skip rows); suite.json does not record that union, so the --jit line is an
+upper bound and sits on the suite line where the real one would follow the eager. The suite grows from 2466
 (the pre-migration anchor) to 4275 tests: new tests that passed straight away
 never entered the ledger, which a ledger count alone cannot show. The bottom
 panel is the separate, dedicated backend-test modules (8585 tests in 88 files
@@ -34,6 +38,7 @@ from pathlib import Path
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = Path(__file__).resolve().parent / "data"
@@ -80,7 +85,10 @@ def make_panel(ax, dates, vals, color, label, total, milestones, show_xticks,
 def _pts():
     """Snapshots with a successful collection (the few rewritten-history commits
     without a PR head to collect at collected nothing; they are dropped)."""
-    rows = [r for r in _load("suite.json") if r["existing"] > 0]
+    rows = [r for r in _load("suite.json") if r["existing"] > 0
+            # a PR head without the ledger files (#1527, main-based): no entries
+            # in any mode, so its counts are not of the ledgered branch
+            and sum(r["entries"].values()) > 0]
     # author dates are not monotonic in commit order across rebases: sort (stable)
     return sorted(rows, key=lambda r: r["date"])
 
@@ -99,13 +107,21 @@ def make():
     dates = [_d(r["date"]) for r in rows]
     suite = [r["existing"] for r in rows]
 
+    # print size: 7.0 in wide (figure*), text 8-10 pt
     fig, axes = plt.subplots(
-        3, 1, figsize=(6.4, 7.4), sharex=True,
+        3, 1, figsize=layout.figsize(PAPER, (7.0, 5.6), (6.4, 7.4)), sharex=True,
         gridspec_kw={"hspace": 0.12, "height_ratios": [1, 1, 0.6]},
     )
-    for ax, mode, color, label in (
-        (axes[0], "torch", "#d1495b", "torch"),
-        (axes[1], "jax", "#1f77b4", "jax"),
+
+    def _f(paper_pt, detailed_pt):
+        return paper_pt if PAPER else detailed_pt
+
+    # --jit mode exists from the first snapshot with a jit row in either backend
+    j0 = next(i for i, r in enumerate(rows)
+              if any(r["ledgered"][m] + r["skipped"][m] for m in ("jax-jit", "torch-jit")))
+    for ax, mode, color, jcolor, label in (
+        (axes[0], "torch", "#d1495b", "#6b1422", "torch"),
+        (axes[1], "jax", "#1f77b4", "#0b2f52", "jax"),
     ):
         passing = [r["existing"] - r["ledgered"][mode] - r["skipped"][mode] for r in rows]
         # anchor: before the backend infrastructure nothing ran under jax/torch
@@ -117,24 +133,24 @@ def make():
         # no data between the pre-migration anchor and the first ledger snapshot
         ax.plot([a, dates[0]], [0, passing[0]], ":", color=color, lw=1.0)
         ax.plot(a, 0, "o", mfc="white", mec=color, ms=6)
-        j0 = next(i for i, r in enumerate(rows)
-                  if r["ledgered"][f"{mode}-jit"] + r["skipped"][f"{mode}-jit"] > 0)
         pj = [r["existing"] - r["ledgered"][f"{mode}-jit"] - r["skipped"][f"{mode}-jit"]
               for r in rows[j0:]]
-        ax.plot(dates[j0:], pj, "--", color=color, lw=1.1, alpha=0.8,
+        # on top of the eager and suite lines, which it meets for long stretches:
+        # a darker shade, a short dash, a thinner line
+        ax.plot(dates[j0:], pj, ls=(0, (2.5, 1.5)), color=jcolor, lw=0.9, zorder=5,
                 label=f"passing under {label} --jit")
         last = rows[-1]
         ax.annotate(
             f"{passing[-1]} / {suite[-1]}" + ("" if PAPER else
             f"\n({last['ledgered'][mode]} ledgered, {last['skipped'][mode]} skipped)"),
             (dates[-1], passing[-1]), textcoords="offset points",
-            xytext=(-4, -16 if PAPER else -26), ha="right", fontsize=7, color=color,
+            xytext=(-4, -16 if PAPER else -26), ha="right", fontsize=_f(8, 7), color=color,
         )
         for m in milestones:
             ax.axvline(_d(m["date"]), color="0.82", lw=0.7, ls="--", zorder=0)
         ax.set_ylim(0, max(ss) * 1.12)
         ax.set_ylabel(f"{label}\nexisting-suite tests")
-        ax.legend(loc="lower right", fontsize=6.5, frameon=False)
+        ax.legend(loc="lower right", fontsize=_f(8.5, 6.5), frameon=False)
     bkrows = [(dt, r["backend_modules"]) for dt, r in zip(dates, rows) if r["backend_modules"] > 0]
     bkd, bk = [x for x, _ in bkrows], [y for _, y in bkrows]
     axes[2].plot(bkd, bk, "-", color="#2a9d8f", lw=1.8)
@@ -143,21 +159,27 @@ def make():
     axes[2].annotate(f"{bk[-1]}" if PAPER
                      else f"{bk[-1]} tests in {_N_BACKEND_MODULES} test_backend_*.py modules",
                      (bkd[-1], bk[-1]), textcoords="offset points", xytext=(-4, -14),
-                     ha="right", fontsize=7, color="#2a9d8f")
+                     ha="right", fontsize=_f(8, 7), color="#2a9d8f")
     for m in milestones:
         axes[2].axvline(_d(m["date"]), color="0.82", lw=0.7, ls="--", zorder=0)
 
     # milestones: numbered at the top of the upper panel, keyed below the axes
     ms = [{"date": anchor["date"], "label": anchor["label"]}] + milestones
     for i, m in enumerate(ms, 1):
+        # milestones days apart (5, 6): pull the two numbers apart sideways
+        dx = 0
+        if i > 1 and (_d(m["date"]) - _d(ms[i - 2]["date"])).days < 4:
+            dx = 3
+        elif i < len(ms) and (_d(ms[i]["date"]) - _d(m["date"])).days < 4:
+            dx = -3
         axes[0].annotate(str(i), (_d(m["date"]), 1.0), xycoords=("data", "axes fraction"),
-                         xytext=(0, 2), textcoords="offset points", ha="center",
-                         va="bottom", fontsize=6.5, color="0.35")
+                         xytext=(dx, 2), textcoords="offset points", ha="center",
+                         va="bottom", fontsize=_f(8, 6.5), color="0.35")
     key = [f"{i}: {m['label']}" if PAPER else f"{i}: {m['date']}  {m['label']}"
            for i, m in enumerate(ms, 1)]
     half = (len(key) + 1) // 2
     for col, chunk in enumerate((key[:half], key[half:])):
-        fig.text(0.02 + 0.5 * col, 0.005, "\n".join(chunk), fontsize=6,
+        fig.text(0.02 + 0.5 * col, 0.005, "\n".join(chunk), fontsize=_f(8, 6),
                  color="0.3", va="bottom", ha="left")
     if not PAPER:
         fig.suptitle(
@@ -167,8 +189,8 @@ def make():
     loc = mdates.AutoDateLocator(minticks=3, maxticks=8)
     axes[2].xaxis.set_major_locator(loc)
     axes[2].xaxis.set_major_formatter(mdates.ConciseDateFormatter(loc))
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.97 if PAPER else 0.93,
-                        bottom=0.14 if PAPER else 0.17)
+    fig.subplots_adjust(left=0.11 if PAPER else 0.14, right=0.97, top=0.97 if PAPER else 0.93,
+                        bottom=0.18 if PAPER else 0.17)
     return fig
 
 

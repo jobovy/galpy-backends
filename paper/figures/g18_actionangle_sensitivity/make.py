@@ -72,7 +72,12 @@ def make():
     GM = (B0 + _rb) ** 2 * _rb
     EPS = 1e-6  # central finite-difference step
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt notes/legends).
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 3.3) if PAPER else (9.8, 4.0))
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fs_leg = 8 if PAPER else 7.3
+    _fs_note = 8 if PAPER else 7.2
 
     # ---- (a) initial-condition sensitivity: dJ/dv_R -----------------------------
     R, vT, z, vz = 1.0, 0.85, 0.15, 0.10
@@ -124,10 +129,10 @@ def make():
     ax1r.plot(vRc, fdJz, ls="none", marker="o", ms=5, mfc="none", mec=_C_DJZ, mew=1.3)
     ax1r.axhline(0, color="0.8", lw=0.8, zorder=0)
     ax1r.set_ylabel(r"sensitivity  $\partial J/\partial v_R$")
-    ax1.set_title("(a) initial-condition sensitivity")
-    ax1.legend(handles=[l_jr, l_jz, l_djr, l_djz], fontsize=7.3, ncol=1,
+    ax1.set_title("(a) initial-condition sensitivity", **_ts)
+    ax1.legend(handles=[l_jr, l_jz, l_djr, l_djz], fontsize=_fs_leg, ncol=1,
                loc="upper center", framealpha=0.9)
-    ax1.text(0.03, 0.05, r"$\circ$ = finite-diff", transform=ax1.transAxes,
+    ax1.text(0.03, 0.15 if PAPER else 0.05, r"$\circ$ = finite-diff", transform=ax1.transAxes,
              fontsize=8, va="bottom", ha="left")
     # worst autodiff-vs-FD residual across both panels (filled in after panel b)
     _resid_ax = ax1
@@ -165,7 +170,7 @@ def make():
                           label=r"$\partial J_r/\partial b$ (autodiff)")
     ax2r.plot(bc, fdJrb, ls="none", marker="o", ms=5, mfc="none", mec=_C_DJR, mew=1.3)
     ax2r.set_ylabel(r"sensitivity  $\partial J_r/\partial b$")
-    ax2.set_title("(b) potential-parameter sensitivity")
+    ax2.set_title("(b) potential-parameter sensitivity", **_ts)
     ax2.legend(handles=[l_jrb, l_djrb], fontsize=8, loc="upper left", framealpha=0.9)
     ax2.text(0.03, 0.86, r"$\circ$ = finite-diff", transform=ax2.transAxes,
              fontsize=8, va="bottom", ha="left")
@@ -173,7 +178,7 @@ def make():
     # clear lower-right corner of panel (a)
     _resid_ax.text(0.97, 0.04,
                    r"$\max\,|{\rm AD}-{\rm FD}|/|{\rm FD}| = %.0e$" % max(res_a, res_b),
-                   transform=_resid_ax.transAxes, fontsize=7.2, va="bottom",
+                   transform=_resid_ax.transAxes, fontsize=_fs_note, va="bottom",
                    ha="right", color="0.35")
 
     if not PAPER:

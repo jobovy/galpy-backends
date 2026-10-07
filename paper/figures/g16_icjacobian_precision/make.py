@@ -10,9 +10,11 @@ M(t)=∂x(t)/∂x0 of a representative orbit (MWPotential2014, 3 Gyr) computed b
 
 all agree. (a) a representative element ∂R(t)/∂v_{R0} the four ways — visually
 indistinguishable. (b) the per-time relative Frobenius residual of each method vs
-C-STM: FD matches to ~1e-10 (same C integrator, finite-difference truncation),
-the AD paths to ~1e-8 (different integrators at matched tolerance). The autodiff
-gradients ARE the variational state-transition matrix, to solver precision.
+C-STM (t>0): FD at 2e-10-6e-10 (same C integrator; the eps=1e-6 central-difference
+truncation sets the floor), the AD paths at 2e-11-6e-10 (jax 3e-11-3e-10, torch
+2e-11-6e-10; different integrators at rtol=atol=1e-10) -- no worse than FD despite
+the different integrator. The autodiff gradients ARE the variational
+state-transition matrix, to solver precision.
 
 Reads data/precision.json (machine-stamped); plot byte-stable.
 """
@@ -24,6 +26,7 @@ import pathlib
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = pathlib.Path(__file__).resolve().parent / "data" / "precision.json"
@@ -39,12 +42,14 @@ _LAB = {"cstm": "C-STM (C variational)", "fd": "finite difference (C)",
     name="g16_icjacobian_precision",
     track="G",
     seed=0,
-    description="IC-Jacobian dx(t)/dx0 four ways (C-STM, FD, jax/torch AD) agree to ~1e-8..1e-10",
+    description="IC-Jacobian dx(t)/dx0 four ways (C-STM, FD, jax/torch AD) agree to ~1e-11..6e-10",
 )
 def make():
     d = json.loads(_DATA.read_text())
     ts = numpy.array(d["ts"])
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 4.1))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.0), (10.2, 4.1)))
+    fs_leg = layout.FS["legend"] if PAPER else 7.8
 
     # ---- (a) one representative element, four ways (they coincide) -------------
     el = d["elem_dR_dvR0"]
@@ -56,7 +61,7 @@ def make():
     ax1.set_ylabel(r"$\partial R(t)/\partial v_{R0}$")
     ax1.set_title("(a) one matrix element" if PAPER
                   else "(a) a state-transition-matrix element, 4 ways")
-    ax1.legend(fontsize=7.8, loc="best")
+    ax1.legend(fontsize=fs_leg, loc="best")
 
     # ---- (b) relative Frobenius residual vs C-STM, per time --------------------
     rf = d["rel_frob"]
@@ -66,10 +71,15 @@ def make():
         ax2.semilogy(ts[1:], numpy.array(rf[k])[1:], color=_C[k], lw=1.8,
                      marker="o", ms=3, label=f"{_LAB[k]} vs C-STM")
     ax2.set_xlabel("time")
-    ax2.set_ylabel(r"rel. Frobenius residual  $\|M_x-M_{\rm CSTM}\|/\|M_{\rm CSTM}\|$")
+    ax2.set_ylabel(r"$\|M_x-M_{\rm CSTM}\|_F\,/\,\|M_{\rm CSTM}\|_F$" if PAPER
+                   else r"rel. Frobenius residual  $\|M_x-M_{\rm CSTM}\|/\|M_{\rm CSTM}\|$")
     ax2.set_title("(b) residual vs C-STM" if PAPER
                   else "(b) agreement with the C variational STM")
-    ax2.legend(fontsize=7.6, loc="best")
+    if PAPER:  # headroom above the FD line for the legend, off the data
+        ax2.set_ylim(1.2e-11, 7e-9)
+        ax2.legend(fontsize=fs_leg, loc="upper left")
+    else:
+        ax2.legend(fontsize=fs_leg, loc="best")
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
 
     if not PAPER:

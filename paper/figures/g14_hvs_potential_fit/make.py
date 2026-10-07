@@ -27,6 +27,7 @@ import pathlib
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = pathlib.Path(__file__).resolve().parent / "data" / "fit.json"
@@ -44,7 +45,11 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 def make():
     d = json.loads(_DATA.read_text())
     _RO = 8.0  # kpc: galpy default ro; natural-unit positions -> physical kpc
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.4, 4.3))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.2), (10.4, 4.3)))
+
+    def _f(paper_pt, detailed_pt):
+        return paper_pt if PAPER else detailed_pt
 
     # ---- (a) C-STM IC fit: backward orbits obs vs fitted, threading to the GC -----
     ob, ft = d["orbit_obs"], d["orbit_fit"]
@@ -53,12 +58,12 @@ def make():
     ax1.plot(obx, oby, color="#bbbbbb", lw=1.3, label="observed IC")
     ax1.plot(ftx, fty, color="#0072B2", lw=1.8, label="C-STM-fitted IC")
     ax1.plot([0], [0], marker="*", ms=15, color="k", zorder=5)
-    ax1.text(0.0, 0.0, "  Sgr A*", fontsize=7.5, va="center")
+    ax1.text(0.0, 0.0, "  Sgr A*", fontsize=_f(8, 7.5), va="center")
     ax1.set_xlabel("x  [kpc]")
     ax1.set_ylabel("y  [kpc]")
     ax1.set_title("(a) initial-condition fit" if PAPER
                   else "(a) C-STM IC fit: backward orbit -> Galactic Centre")
-    ax1.legend(fontsize=7.8, loc="best")
+    ax1.legend(fontsize=_f(8.5, 7.8), loc="best")
     ax1.set_aspect("equal", adjustable="datalim")
     # inset: zoom on the GC showing the closest-approach improvement (kpc)
     icf = d["ic_fit"]
@@ -67,8 +72,14 @@ def make():
     axin.plot(ftx, fty, color="#0072B2", lw=1.3)
     axin.plot([0], [0], marker="*", ms=9, color="k")
     axin.set_xlim(-0.5, 0.5); axin.set_ylim(-0.5, 0.5)
-    axin.set_title(f"closest: {_RO * icf['r_obs']:.2f}->{_RO * icf['r_fit']:.2f} kpc", fontsize=6.6)
-    axin.tick_params(labelsize=5.5)
+    if PAPER:  # the orbits pass over an inset title; the inset's upper left is empty
+        axin.text(0.05, 0.95, "closest approach\n"
+                  rf"{_RO * icf['r_obs']:.2f} $\rightarrow$ {_RO * icf['r_fit']:.2f} kpc",
+                  transform=axin.transAxes, fontsize=8, va="top", ha="left")
+        axin.set_xticks([-0.4, 0.0, 0.4]); axin.set_yticks([-0.4, 0.0, 0.4])
+    else:
+        axin.set_title(f"closest: {_RO * icf['r_obs']:.2f}->{_RO * icf['r_fit']:.2f} kpc", fontsize=6.6)
+    axin.tick_params(labelsize=_f(7, 5.5))
 
     # ---- (b) in-backend AD potential fit: GC closest-approach vs q + Adam path -----
     # black = the objective landscape (one backward integration per q on a grid);
@@ -89,7 +100,11 @@ def make():
     ax2.set_ylabel("closest approach to the GC  [kpc]")
     ax2.set_title("(b) halo flattening" if PAPER
                   else "(b) in-backend AD: recover the halo flattening")
-    ax2.legend(fontsize=7.2, loc="best")
+    if PAPER:  # headroom above the landscape for the legend
+        ax2.set_ylim(None, 2.0)
+        ax2.legend(fontsize=8.5, loc="upper right")
+    else:
+        ax2.legend(fontsize=7.2, loc="best")
 
     if not PAPER:
         fig.suptitle("Hypervelocity-star constraint on the Milky Way: C-STM IC fit + "

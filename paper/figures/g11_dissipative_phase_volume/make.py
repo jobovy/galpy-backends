@@ -28,6 +28,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -53,7 +54,9 @@ def _load(fname):
     description="Dissipative phase-volume law det M(t)=exp(int tr(dF/dv) dt'): STM determinant vs C-Jacobian trace integral for Chandrasekhar and FDM friction in MWPotential2014 [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.3))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, axes = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.0), (7.6, 3.3)))
+    fs_leg = layout.FS["legend"] if PAPER else 7.5
 
     ax = axes[0]
     envs = []
@@ -75,7 +78,7 @@ def make():
     ax.set_xlabel(r"$t$")
     ax.set_ylabel(r"$\det M(t)$")
     ax.set_title("(a) phase-space volume contraction", fontsize=10)
-    ax.legend(fontsize=7.5, loc="lower left")
+    ax.legend(fontsize=fs_leg, loc="lower left")
 
     ax = axes[1]
     ax.set_xlabel(r"$t$")
@@ -91,7 +94,7 @@ def make():
         )
     ax.set_ylim(1e-11, 1e-4)
     if not PAPER:  # duplicates the legend of (a)
-        ax.legend(fontsize=7.5, loc="upper left")
+        ax.legend(fontsize=fs_leg, loc="upper left")
 
     if not PAPER:
         env = envs[0]

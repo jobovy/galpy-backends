@@ -298,8 +298,13 @@ def make():
             fh.write("\n")
     K, S = data["king"], data["sampling"]
 
-    fig, axs = plt.subplots(2, 3, figsize=(13.2, 7.6))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends/notes).
+    fig, axs = plt.subplots(2, 3, figsize=(7.0, 5.6) if PAPER else (13.2, 7.6))
+    _lk = dict(handlelength=1.2, handletextpad=0.5, borderaxespad=0.3) if PAPER else {}
     (ax_a, ax_b, ax_c), (ax_d, ax_e, ax_f) = axs
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fl = (lambda d: 8) if PAPER else (lambda d: d)  # legend / note sizes
 
     # ---------------- King -----------------------------------------------------
     r = numpy.array(K["r"])
@@ -311,44 +316,51 @@ def make():
         ax_b.semilogx(r, d["ad_eager"], "-", color=col, lw=1.6)
         ax_b.semilogx(r, d["ad_jit"], "--", color="k", lw=0.8, dashes=(3, 3))
         ax_b.semilogx(r[sub], numpy.array(d["fd_show"])[sub], "o", mfc="none", mec=col, ms=5)
-        ax_c.loglog(hs, d["err_eager"], "o-", color=col, ms=3.5, label=rf"$W_0={W0:g}$, eager")
+        ax_c.loglog(hs, d["err_eager"], "o-", color=col, ms=3.5,
+                    label=rf"$W_0={W0:g}$" if PAPER else rf"$W_0={W0:g}$, eager")
         ax_c.loglog(hs, d["err_jit"], "s--", color=col, ms=3.5, mfc="none", lw=1.0)
     ax_a.set_xlabel(r"$r$")
     ax_a.set_ylabel(r"$\rho(r)$")
     ax_a.set_title("(a) King models" if PAPER
-                   else rf"(a) King models, $M={K['M']:g}$, $r_t={K['rt']:g}$")
-    ax_a.legend(fontsize=7.5, loc="lower left")
+                   else rf"(a) King models, $M={K['M']:g}$, $r_t={K['rt']:g}$", **_ts)
+    ax_a.legend(fontsize=_fl(7.5), loc="lower left")
     ax_a.set_ylim(1e-6, None)
     ax_b.set_xlabel(r"$r$")
     ax_b.set_ylabel(r"$\partial\ln\rho/\partial W_0$ at fixed $(M, r_t)$")
-    ax_b.set_title(r"(b) $d/dW_0$ through the ODE solve" if PAPER
-                   else r"(b) $d/dW_0$ through the King ODE solve")
+    ax_b.set_title("(b) $d/dW_0$ through\nthe ODE solve" if PAPER
+                   else r"(b) $d/dW_0$ through the King ODE solve", **_ts)
     ax_b.plot([], [], "-", color="0.3", label="AD, eager" if PAPER
               else r"AD, eager ($\tt jacfwd$; scipy + sensitivities)")
     ax_b.plot([], [], "--", color="k", lw=0.8, dashes=(3, 3), label=r"AD, $\tt jax.jit$" if PAPER
               else r"AD, $\tt jax.jit$ (diffrax solve)")
     ax_b.plot([], [], "o", mfc="none", mec="0.3", label=rf"FD ($h={K['h_show']:g}$)" if PAPER
               else rf"FD, rebuilt on numpy ($h={K['h_show']:g}$)")
-    ax_b.legend(fontsize=7, loc="lower left", framealpha=0.92)
+    if PAPER:  # headroom: the curves fill the panel at this size
+        ax_b.set_ylim(top=2.75)
+    ax_b.legend(fontsize=_fl(7), loc="upper right" if PAPER else "lower left", framealpha=0.92)
     ax_c.set_xlabel(r"FD step $h$ in $W_0$")
-    ax_c.set_ylabel(r"$\max_r\,|{\rm FD}-{\rm AD}|$ in $\partial\ln\rho/\partial W_0$")
-    ax_c.set_title("(c) AD vs FD: eager solid, jit dashed" if PAPER
-                   else "(c) King: AD vs FD (solid eager, dashed jit)")
-    ax_c.legend(fontsize=7, loc="upper center", ncol=2, framealpha=0.92)
+    ax_c.set_ylabel("$\\max_r\\,|{\\rm FD}-{\\rm AD}|$\nin $\\partial\\ln\\rho/\\partial W_0$" if PAPER
+                    else r"$\max_r\,|{\rm FD}-{\rm AD}|$ in $\partial\ln\rho/\partial W_0$")
+    if PAPER:  # headroom for the legend
+        ax_c.set_ylim(top=ax_c.get_ylim()[1] * 300.0)
+    ax_c.set_title("(c) AD vs FD:\neager solid, jit dashed" if PAPER
+                   else "(c) King: AD vs FD (solid eager, dashed jit)", **_ts)
+    ax_c.legend(fontsize=_fl(7), loc="upper center", ncol=2, framealpha=0.92)
 
     # ---------------- sampling -------------------------------------------------
     rm = numpy.array(S["r_med"])
     ax_d.semilogx(S["jeans_r"], S["jeans_sig"], "-", color="0.7", lw=2.6,
                   label="Jeans" if PAPER else "Jeans (Osipkov-Merritt)")
     ax_d.semilogx(rm, S["sig_exp"], "s", mfc="none", mec=_C_E, ms=6,
-                  label="expectation for the drawn radii")
+                  label="expectation for\nthe drawn radii" if PAPER
+                  else "expectation for the drawn radii")
     ax_d.errorbar(rm, S["sig"], yerr=S["sig_err"], fmt="o", color=_C_S, ms=4.5,
                   capsize=2, label=rf"sample ($N={S['nch'] * S['nper'] / 1e6:g}\times10^6$)")
     ax_d.set_xlabel(r"$r$ (bin median)")
     ax_d.set_ylabel(r"$\sigma_r$ in enclosed-mass bins")
     ax_d.set_title("(d) Osipkov-Merritt Hernquist" if PAPER
-                   else rf"(d) OM Hernquist, $a={S['a0']:g}$, $r_a={S['ra']:g}$")
-    ax_d.legend(fontsize=7.5, loc="lower left", framealpha=0.92)
+                   else rf"(d) OM Hernquist, $a={S['a0']:g}$, $r_a={S['ra']:g}$", **_ts)
+    ax_d.legend(fontsize=_fl(7.5), loc="lower left", framealpha=0.92)
 
     dsig, dexp, err = (numpy.array(S[k]) for k in ("dsig", "dsig_exp", "dsig_err"))
     ax_e.semilogx(rm, dexp, "s", mfc="none", mec=_C_E, ms=7, label="expectation (Jeans)")
@@ -356,13 +368,13 @@ def make():
                   label=r"AD ($\tt jax.jvp$)" if PAPER
                   else r"$\tt jax.jvp$ through construct + sample")
     ax_e.semilogx(rm, S["dsig_fd_show"], "x", color=_C_FD, ms=7, mew=1.2,
-                  label=rf"FD, same key ($h={S['h_show']:g}$)" if PAPER
+                  label=f"FD, same key\n($h={S['h_show']:g}$)" if PAPER
                   else rf"FD of the sample, same key ($h={S['h_show']:g}$)")
     pull = (dsig - dexp) / err
     fdv = numpy.array(S["dsig_fd_show"])
-    ax_e.set_ylim(-0.175, -0.045)
+    ax_e.set_ylim((-0.30, 0.04) if PAPER else (-0.175, -0.045))  # room: legend, inset
     ax_e.set_xlim(0.04, 40.0)
-    ins = ax_e.inset_axes([0.47, 0.07, 0.5, 0.3])
+    ins = ax_e.inset_axes([0.47, 0.04, 0.5, 0.25] if PAPER else [0.47, 0.07, 0.5, 0.3])
     ins.axhline(0.0, color="0.6", lw=0.8)
     ins.errorbar(rm, (dsig - dexp) / numpy.abs(dexp) * 100, yerr=err / numpy.abs(dexp) * 100,
                  fmt="o", color=_C_S, ms=3, capsize=1.5, elinewidth=0.9)
@@ -370,11 +382,14 @@ def make():
     ins.set_xscale("log")
     ins.set_xlim(0.04, 40.0)
     ins.set_ylim(-1.2, 1.2)
-    ins.tick_params(labelsize=6)
-    ins.set_ylabel(r"$\Delta$ (%)", fontsize=6.5)
+    ins.tick_params(labelsize=_fl(6))
+    if PAPER:  # same r axis as the panel; its 8 pt decade labels collide here
+        ins.tick_params(axis="x", which="both", labelbottom=False)
+    ins.set_ylabel(r"$\Delta$ (%)", fontsize=_fl(6.5))
     ins.set_title("sample $-$ expectation" if PAPER else
                   f"sample $-$ expectation: |pull| max {numpy.max(numpy.abs(pull)):.1f}, "
-                  f"median {numpy.median(numpy.abs(pull)):.1f}", fontsize=6.3)
+                  f"median {numpy.median(numpy.abs(pull)):.1f}", fontsize=_fl(6.3),
+                  **({"loc": "right"} if PAPER else {}))
     eb = numpy.array(S["err_bin"])
     hsS = numpy.array(S["hs"])
     jmin = int(numpy.argmin(eb))
@@ -385,24 +400,34 @@ def make():
                   f"{eb[jmin]:.0e} at $h$={hsS[jmin]:g}",
                   transform=ax_e.transAxes, ha="left", va="top", fontsize=6.8, color="0.25")
     ax_e.set_xlabel(r"$r$ (bin median)")
-    ax_e.set_ylabel(r"$d\sigma_r/da$ (bins fixed in enclosed mass)")
-    ax_e.set_title(r"(e) $d/da$ through construction and sampling" if PAPER
-                   else r"(e) $d/da$ through DF construction AND sampling")
-    ax_e.legend(fontsize=7, loc="upper left", framealpha=0.92)
+    ax_e.set_ylabel("$d\\sigma_r/da$\n(bins fixed in enclosed mass)" if PAPER
+                    else r"$d\sigma_r/da$ (bins fixed in enclosed mass)")
+    ax_e.set_title("(e) $d/da$ through\nconstruction and sampling" if PAPER
+                   else r"(e) $d/da$ through DF construction AND sampling", **_ts)
+    ax_e.legend(fontsize=_fl(7), loc="upper left", framealpha=0.92, **_lk)
 
     hs = numpy.array(S["hs"])
-    ax_f.loglog(hs, S["err_bin"], "o-", color=_C_S, ms=4, label=r"binned $d\sigma_r/da$ (max rel. over bins)")
+    ax_f.loglog(hs, S["err_bin"], "o-", color=_C_S, ms=4,
+                label="binned $d\\sigma_r/da$\n(max rel. over bins)" if PAPER
+                else r"binned $d\sigma_r/da$ (max rel. over bins)")
     ax_f.loglog(hs, S["pp_med"], "s-", color=_C_FD, ms=4, label="per particle, median")
     ax_f.loglog(hs, S["pp_999"], "^--", color=_C_FD, ms=4, mfc="none", label="per particle, 99.9th pct")
     for c, p, lo, hi, lab in ((4e-2, 2, 1e-3, 1e-1, r"$\propto h^2$"),
                               (3e-1, 1, 1e-6, 1e-3, r"$\propto h$")):
         hh = numpy.array([lo, hi])
         ax_f.loglog(hh, c * hh**p, ":", color="0.45", lw=1.0)
-        ax_f.text(hi * 1.15, c * hi**p, lab, fontsize=6.5, color="0.4", ha="left", va="center")
+        if not PAPER:  # PAPER: in the legend (inline labels collide with the data)
+            ax_f.text(hi * 1.15, c * hi**p, lab, fontsize=_fl(6.5), color="0.4", ha="left",
+                      va="center")
+    if PAPER:
+        ax_f.plot([], [], ":", color="0.45", lw=1.0, label=r"$\propto h$, $\propto h^2$")
     ax_f.set_xlabel(r"FD step $h$ in $a$")
-    ax_f.set_ylabel(r"$|{\rm FD}-{\rm AD}|$ (per particle: / rms $dv_r/da$)")
-    ax_f.set_title("(f) AD vs FD, same key" if PAPER else "(f) sampling: AD vs FD, same key")
-    ax_f.legend(fontsize=7, loc="upper left", framealpha=0.92)
+    ax_f.set_ylabel("$|{\\rm FD}-{\\rm AD}|$\n(per particle: / rms $dv_r/da$)" if PAPER
+                    else r"$|{\rm FD}-{\rm AD}|$ (per particle: / rms $dv_r/da$)")
+    if PAPER:  # headroom for the legend (above the data and the h-scaling labels)
+        ax_f.set_ylim(top=ax_f.get_ylim()[1] * 1e7)
+    ax_f.set_title("(f) AD vs FD, same key" if PAPER else "(f) sampling: AD vs FD, same key", **_ts)
+    ax_f.legend(fontsize=_fl(7), loc="upper left", framealpha=0.92, **_lk)
 
     fig.tight_layout()
     return fig

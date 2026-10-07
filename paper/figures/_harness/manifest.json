@@ -19,7 +19,7 @@
     "description": "Largest-Lyapunov-exponent running estimates (Orbit.lyapunov): chaotic vs regular Henon-Heiles at E=1/8 with the literature band, and a regular MWPotential2014 orbit [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -27,15 +27,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "5bf3451912bebe3363c230881985235ae794600902593ad6517ceb82a8bac7c2",
+    "git": "05bc13b",
+    "sha256": "9160e4dc58bb3d211c6573a229958f47ae336d5b07a1f30017d52efcf667ee67",
     "track": "G"
   },
   "g11_dissipative_phase_volume": {
     "description": "Dissipative phase-volume law det M(t)=exp(int tr(dF/dv) dt'): STM determinant vs C-Jacobian trace integral for Chandrasekhar and FDM friction in MWPotential2014 [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -43,15 +43,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "df992a2a262ca5e0901ebbe856b91a8b2412a874daee4b84b5a2074701761fa9",
+    "git": "05bc13b",
+    "sha256": "d47f3e0a78be984390f64b2d4443807930fced45a0c810b187d66415a2716780",
     "track": "G"
   },
   "g12_inbackend_orbit_gpu": {
     "description": "MWPotential2014 in-backend orbit integration wall time vs batch size N: galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -59,15 +59,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "98ffb141a98c698e48f4766d8af759f2dac4079f94599bd82a1e46f734078ecb",
+    "git": "05bc13b",
+    "sha256": "f334fe9082d259579e8ee527dae7b7bd3aefc53f7739331fe797eacb2485d935",
     "track": "G"
   },
   "g13_ledger_burndown": {
     "description": "backend port of the existing test suite: tests passing per backend (eager, jit) vs time, ledger expanded to the tests it covers; plus the dedicated backend-test modules",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -75,15 +75,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "848c8e6aebba9b2f4142f3b61b6bd0695c48835ada1a07933e98a216ee246460",
+    "git": "f1864f2",
+    "sha256": "e1547adbc50a41b5ff57fdbfc3556f1a68bb2b3a07fecf596a7f72cce010d16f",
     "track": "G"
   },
   "g14_hvs_potential_fit": {
     "description": "HVS 'Great Escape' hybrid fit: C-STM IC fit + in-backend AD halo-flattening fit",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -91,15 +91,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "e95247a9428aa8a14a3c3ac8fdff9d043945e3a48206632d02e0856080b74842",
+    "git": "05bc13b",
+    "sha256": "7f2f6a1df53078c45d6795e57884c4d04c0e4f461588f7ada09c808cafcef2dd",
     "track": "G"
   },
   "g15_icderiv_speed": {
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -107,15 +107,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "8078815c1a046867a2133698ca6a39f89a2adb2bea5f664e6f4d0cf96c1e4bb5",
+    "git": "05bc13b",
+    "sha256": "b6d9c6db3ac4c0fe14e001622d4366d643a07c535c6e946fccd63c06f6d2847d",
     "track": "G"
   },
   "g16_icjacobian_precision": {
-    "description": "IC-Jacobian dx(t)/dx0 four ways (C-STM, FD, jax/torch AD) agree to ~1e-8..1e-10",
+    "description": "IC-Jacobian dx(t)/dx0 four ways (C-STM, FD, jax/torch AD) agree to ~1e-11..6e-10",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -123,8 +123,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "cb8d9b94e6ad64a17dbbe9957fa65d186f363898a01da0860e488bbe7ab64082",
+    "git": "f1864f2",
+    "sha256": "005c442cd459bae1f1cf414cb21c986ab5dd58db96885da36cfba4fa7c1385b1",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_jax": {
@@ -163,7 +163,7 @@
     "description": "differentiable action-angle: IC sensitivity dJ/dv_R + potential-parameter sensitivity dJ_r/db (jax.grad vs finite-diff, CPU float64)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -171,8 +171,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "7a8f178777cbe0a5be85350a94e860736fda020f58ddd1d3b03960f9e3c9f3d7",
+    "git": "79a6585",
+    "sha256": "2e199cf8af3a08dbbd2a3c19eada7502a2400283675e857c346b9b96c0c66ef7",
     "track": "G"
   },
   "g1_backend_parity": {
@@ -195,7 +195,7 @@
     "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU), compute-only vs end-to-end transfer [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -203,8 +203,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "55657d84691a5cdef5423498e9897c93d425c37cddcbf8369c5034f91e5afea8",
+    "git": "05bc13b",
+    "sha256": "a9606944884b481b71a255374ac130e2b6a05f47fa86f2f397c820323e55aab4",
     "track": "G"
   },
   "g2b_transfer": {
@@ -226,7 +226,7 @@
     "description": "autodiff w.r.t. potential parameters (d/dtheta): jax/torch vs FD + a gradient-descent fit",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -234,15 +234,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "ef13892e66a16c7f9f1205c80c8504c441dfa27a0d573c3e3913c8304ccc55b8",
+    "git": "f1864f2",
+    "sha256": "ff5e73eca2f1d8819035bc6062ecedf3dd4f3213deccb10b394c2baee08c84c7",
     "track": "G"
   },
   "g5_autodiff_overhead": {
     "description": "gradient vs value throughput (reverse-mode AD overhead), jax/torch GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -250,15 +250,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "2d00956c7b2f871cf4098664cd966ab1a0b257623cb01fd362119646c3a54433",
+    "git": "05bc13b",
+    "sha256": "a9532b7f78560a12365056a4b402072b9a559b0320fbf0d0baab6a625c59abc9",
     "track": "G"
   },
   "g6_jit_amortization": {
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -266,15 +266,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "9168db0230605ed8bc898df9486806931d97ab1096e4e0a02330a7c7b235215f",
+    "git": "05bc13b",
+    "sha256": "cdd5e1f19a79acd283dc0fcf090771737847b2294b518f836c02ef10a5a09ebe",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
     "description": "in-backend differentiable orbit integration: STM sensitivity vs time + gradient-descent orbit fit",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -282,15 +282,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "0ef92e5a02a77242e5d61598ad6ab82295df77c947f7451e886271bbff47e54c",
+    "git": "f1864f2",
+    "sha256": "ca3adef91521d77987cafbc3ee183b107a4ffc96625acb225d564fb12439dfe4",
     "track": "G"
   },
   "g8_galax_orbit_speed": {
     "description": "MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -298,15 +298,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "a9545fce505005ea36792c00d070fcc99a7c64ba69170d79a86e565e06ffe92e",
+    "git": "f1864f2",
+    "sha256": "660b3e7e30e59aa2cee422d9ec1c8bbeaeb51c363761c7fec9892ed4d5bc2e32",
     "track": "G"
   },
   "g9_variational_validity": {
     "description": "Variational-equation validity: Liouville det M, symplecticity, FD-of-the-flow V-curve, 2D-reduction bridge (MWPotential2014, dop853_c) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -314,9 +314,25 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "6a8a45936568de243a1e25ea85c4533698d1546097164b62652f8352bc2891c5",
+    "git": "05bc13b",
+    "sha256": "57ed757c34c1ac21a33380ae84188536c5034e8516b3225f54cde0d3a96f8a99",
     "track": "G"
+  },
+  "gA1_staeckel_param_sensitivity": {
+    "description": "Staeckel actions (c=False) differentiated w.r.t. the halo flattening q: jax.grad dJ/dq vs numpy finite differences along a q sweep + the |AD-FD|/|FD| vs h V-curve [cross-env measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "9a877712e",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "6c86aca",
+    "sha256": "1d3774355b1623616d48c9bdd64258b84823564b403c6a905ea050763f218e69",
+    "track": "A"
   },
   "gD1_df_sensitivity": {
     "description": "differentiable DFs: jeans.sigmar and the isotropic Hernquist spherical DF, autodiff sensitivities vs finite difference (CPU float64) [measure->json, plot byte-stable]",
@@ -338,7 +354,7 @@
     "description": "autodiff through a 4e6-particle sample of the isotropic Hernquist DF: d(sigma_r)/dr from the sample vs autodiff of the Jeans quadrature (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -346,15 +362,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "1ab2722d94ff7a7f924f5e22c13d726b4f9349aaf9a8cf5ece80d793fe414002",
+    "git": "79a6585",
+    "sha256": "b89cc4f05d88540fee88abea151b0076676963720e7a2fe7955f98b8244441c3",
     "track": "G"
   },
   "gD3_spherical_df_speed": {
     "description": "spherical-DF speed: sample(n=N) wall time vs N for four DFs and DF construction (+first 1000 draws) time, numpy vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -362,15 +378,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "5aff7f7d964ea40ebbc1896b57f17c525c426495df1364782e3e831e7d5d5bfe",
+    "git": "6c86aca",
+    "sha256": "56e7f4a7555efe01c7484887b3ae1fc1acef1c89f9e7948af1d389b72fb8971d",
     "track": "F"
   },
   "gD4_spherical_df_param": {
     "description": "derivatives through spherical-DF construction and sampling: King d/dW0 through the ODE solve (eager graft & jit/diffrax) and Osipkov-Merritt d(sample)/d(scale) with common random numbers vs FD and Jeans (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -378,15 +394,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "23fb1cd1ffa97b62464bb76165487d26cccd75cf2561b0a2727030e35170f9ff",
+    "git": "6c86aca",
+    "sha256": "710d56f6725fe0a698234b1a34c63db49134a658596490f3244337f7c00fef91",
     "track": "F"
   },
   "gF1_autodiff_forces": {
-    "description": "F_R by autodiff vs the exact analytic force for complicated potentials (SCF, DiskSCF, spiral, bar, composites): agreement at a few ULP of float64",
+    "description": "F_R by autodiff vs the exact analytic force for complicated potentials (SCF, DiskSCF, spiral, bar, composites): agreement to <=4e-15 relative (<=18 float64 eps)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -394,15 +410,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "c745f76c22377ea377267b3492869dac9ec401e5f040790ccb3c4ed6af57a521",
+    "git": "f1864f2",
+    "sha256": "13692da8973c7331b59376bc3180d7f492c54b3317ea85855559fb7253b3674a",
     "track": "G"
   },
   "gS1_stream_track_sensitivity": {
     "description": "differentiable stream track: d(track)/d(halo q) by AD (jax.jvp) with an on-figure finite-difference cross-check [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -410,8 +426,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "3992b21e943b8b5632c041f3351f2791354b1513ac38360d969cdda5564a97ce",
+    "git": "79a6585",
+    "sha256": "2a2dec765f5a36bad20a0116e7a04b88079e5d5f770a9b449d45a9c499d0d225",
     "track": "G"
   },
   "gS2_streamspray_sensitivity": {
@@ -434,7 +450,7 @@
     "description": "one forward-mode AD pass predicts the streamspraydf smooth track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -442,15 +458,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "042ef33a1aafd3e0fc16669314fc970dbcbfdbf8add66de8a01b841bbea0c524",
+    "git": "79a6585",
+    "sha256": "9160ba80b9a14ad240060cad98e3e9be4d3091c588ae9e784056361b4661eccb",
     "track": "G"
   },
   "gS4_streamdf_speed": {
     "description": "streamdf cost per backend: construction (incl. track) vs nTrackChunks, sampling and DF evaluation vs N; numpy/C vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -458,15 +474,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "1f202a1",
-    "sha256": "dbf025db0a12165fad7de6a96adcf56144979fa7154746ef3ee2da7bb6ca54a1",
+    "git": "79a6585",
+    "sha256": "52f6f373154e2d98210e5dccc352f45da284c3271c43afb8a8c9a3fc5d968d8b",
     "track": "S"
   },
   "gS5_streamspray_speed": {
     "description": "particle-spray stream generation (fardal15spraydf.sample) wall time and per-particle cost vs N: numpy/C vs differentiable jax (eager/jit) and torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -474,15 +490,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "1d54a4e493c9fc6a780e6c107eaa23c6bc322c48f42a0c49ea63bffceaf4d692",
+    "git": "6c86aca",
+    "sha256": "b67652b641cce163c17043a600fcf7d68cbc1938c9f8d9dc8f3548b6568d4045",
     "track": "S"
   },
   "gV1_vertical_inverse": {
     "description": "differentiable 1D inverse action-angle map (actionAngleVerticalInverse, momentum-matched): tori of an isothermal disk + AD d/dsigma through the native construction, AD vs rebuilt central FD per angle, FD h-convergence, Poisson bracket (jax, jit, CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9f6c9d6f7",
+      "galpy_git": "9a877712e",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -490,8 +506,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "33eb9aa",
-    "sha256": "dc2e537407c605cec9a570c053d5746ddca34080bf96945765886374afd63d52",
+    "git": "79a6585",
+    "sha256": "8431d3df9482024d31131bcae6dbb1ddd0b1ae686ca0ddf26dadc562a5459f3b",
     "track": "E"
   },
   "gV2_vertical_inverse_speed": {

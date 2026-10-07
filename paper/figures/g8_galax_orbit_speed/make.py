@@ -17,24 +17,31 @@ Shared parameterization (G8 == G12 on these series):
     same in both regimes and the overlap points agree -> one consistent curve each.
 
   * galpy (C, CPU): the compiled ``dop853_c`` integrator, one orbit at a time in a
-    sequential C loop (numcores=1).  ~0.1 ms/orbit after a ~3 ms per-call setup.
+    sequential C loop (numcores=1).  ~0.1 ms/orbit after a ~3 ms per-call setup,
+    ~0.08 ms/orbit at N>=1e5 (measured to N=1e6).
   * galpy (JAX, CPU) and galpy (JAX, GPU): galpy's OWN in-backend differentiable
     integrator (``galpy.backend._reference.integrate_orbit`` -> diffrax Dopri8),
     jit-fused and ``jax.vmap``-ed over the N ICs (compile excluded), per-orbit
     adaptive stepping -- the common galpy reference against which to place galax.
   * galax (JAX, CPU) and galax (JAX, GPU): the modern ``OrbitSolver`` (diffrax
     Dopri8), jit-compiled and batched over the N ICs (compile time excluded).
-    GPU = NVIDIA TITAN Xp (sm_61).
+    GPU = NVIDIA TITAN Xp (sm_61) and NVIDIA H100 (data/h100/, galpy and galax).
 
-The story (TITAN Xp, float64 at 1/32 rate): single-thread galpy-C, ~0.1 ms/orbit,
-is the fastest line at every measured N; the JAX GPU backends amortise their ~1.6 s
-launch/compile floor down to ~0.07 ms/orbit (galax, batched stepping) and ~0.21
-ms/orbit (galpy in-backend, per-orbit stepping) at N=3e5, i.e. galax's batched GPU
-line only reaches C's per-orbit cost at the largest N.  On an H100 (Trillium,
-data/h100 of the shared orbit data; galpy's jax GPU line only -- galax was not run
-there) galpy's per-orbit in-backend line reaches ~0.025 ms/orbit at N=3e5 (~4x
-single-thread C, crossing it near N~2e4).  Line convention: _harness/palette.py
-(colour = framework x device, jit solid; galax per-orbit dash-dotted).
+The story, per orbit at each line's largest N (all GPU lines end at N=3e5):
+  * galpy C (single thread): 0.079 ms/orbit at N=1e6 (79 s); 0.084 at 3e5 (25 s).
+  * TITAN Xp (float64 at 1/32 rate), ~1-2 s launch/compile floor: galpy jax
+    per-orbit 0.215 ms/orbit (64 s), galax per-orbit 0.209 (63 s), galax batched
+    0.068 (20 s).  galax batched is level with C from N=3e4 to 1e5 (2.8 vs 3.1 s,
+    8.0 vs 8.1 s) and faster at 3e5 (20 vs 25 s); the per-orbit TITAN lines stay
+    ~2.5x slower than C.
+  * H100 (Trillium; galpy in _shared/orbit_speed/data/h100, galax in data/h100):
+    galpy jax per-orbit 0.0247 ms/orbit (7.4 s; ~3.4x faster than C, ~9x the TITAN
+    Xp), galax per-orbit 0.0246 (7.4 s; equal to galpy), galax batched 0.0130
+    (3.9 s; ~6x C).  All three H100 lines cross below C at N~1-3e4.
+So C is the fastest line only up to N~1e4; past that the H100 lines are faster
+and galax's batched TITAN line is level with it, then faster at N=3e5.
+Line convention: _harness/palette.py (colour = framework x device, jit solid;
+galax per-orbit dash-dotted).
 The galpy-C numbers were re-measured on 2026-10-06 at ~0.1 ms/orbit; the first
 version of this figure (June) had ~2.1 ms/orbit, ~20x too slow -- a slow build in
 that environment (both a June-25 and the current galpy measure ~0.1 ms/orbit today).
@@ -56,7 +63,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import palette
+from paper.figures._harness import layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -128,7 +135,15 @@ def _load(fnames, sub=""):
     description="MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    fig, ax = plt.subplots(figsize=(6.6, 4.6))
+    # print size: 7.0 in wide (figure*; nine directly-labelled lines do not fit a
+    # 3.4 in column), text 8-10 pt, two-line labels
+    fig, ax = plt.subplots(figsize=layout.figsize(PAPER, (7.0, 3.8), (6.6, 4.6)))
+    fs_line = layout.FS["line"] if PAPER else 6.5
+    fs_note = layout.FS["note"] if PAPER else 6.5
+
+    def _lab(lab, dev):
+        lab = lab.format(dev=palette.DEVICE_NAME[palette._device(dev)])
+        return lab.replace(" (", "\n(") if PAPER else lab
 
     h100_meta = _load_one("jax_gpu.json", "h100") or {}
     for fnames, fw, dev, mode, lab, ls in _SERIES:
@@ -144,8 +159,7 @@ def make():
             st = palette.style(fw, d_, mode)
             if ls:
                 st["ls"] = ls
-            ax.loglog(Ns, wall, ms=4, zorder=3,
-                      label=lab.format(dev=palette.DEVICE_NAME[palette._device(d_)]), **st)
+            ax.loglog(Ns, wall, ms=4, zorder=3, label=_lab(lab, d_), **st)
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")
@@ -163,7 +177,7 @@ def make():
         0.025, 0.975,
         "dotted: constant cost per orbit" if PAPER
         else "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
-        transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
+        transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
     )
     # env stamp from the GPU JSON (the headline machine)
     if not PAPER:
@@ -172,9 +186,12 @@ def make():
             "galpy C: dop853_c, single thread\n"
             "all lines: diffrax Dopri8 / dop853, rtol=atol=1e-8 (matched)\n"
             f"TITAN Xp: jax {_load_one('jax_gpu.json').get('jax_version', '?')}"
-            + (f"  ·  H100 (galpy only): jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
+            + (f"  ·  H100: jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
             transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
         )
     fig.tight_layout()
-    palette.label_lines(ax, fontsize=6.5, inline={"galpy C (dop853_c)": (300.0, 9)})
+    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None,
+                        inline={_lab("galpy C (dop853_c)", "cpu"): (300.0, 14 if PAPER else 9)})
+    if PAPER:
+        layout.fit_right(fig)
     return fig

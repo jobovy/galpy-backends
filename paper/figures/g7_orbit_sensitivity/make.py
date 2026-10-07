@@ -22,6 +22,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 from paper.figures._harness.style import BACKEND_COLORS
 
@@ -49,7 +50,11 @@ def make():
     p = PlummerPotential(amp=1.0, b=0.6)
     ic0 = numpy.array([1.0, 0.1, 0.9, 0.2, 0.05, 0.3])  # R,vR,vT,z,vz,phi
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.1), (9.8, 4.0)))
+
+    def _f(paper_pt, detailed_pt):
+        return paper_pt if PAPER else detailed_pt
 
     # ---- (a) orbit sensitivity: STM elements d x(t)/d x0 vs time -----------------
     with jax.default_device(_CPU):
@@ -96,7 +101,9 @@ def make():
     ax1.set_ylabel(r"sensitivity  $\partial x(t)/\partial x_0$")
     ax1.set_title("(a) orbit sensitivity" if PAPER
                   else "(a) orbit sensitivity (autodiff STM; o = finite-diff)")
-    ax1.legend(fontsize=7.5, ncol=2, loc="upper left", framealpha=0.9)
+    if PAPER:  # headroom so the legend does not cover the dR/dR0 peak
+        ax1.set_ylim(-1.6, 6.3)
+    ax1.legend(fontsize=_f(8.5, 7.5), ncol=2, loc="upper left", framealpha=0.9)
 
     # ---- (b) gradient-descent orbit fit: recover (vR0, vz0) ----------------------
     with jax.default_device(_CPU):
@@ -131,22 +138,32 @@ def make():
         path = numpy.array(path)
 
     it = numpy.arange(n_it)
-    ax2.semilogy(it, numpy.array(ls) + 1e-20, marker="o", ms=3,
+    ls = numpy.array(ls)
+    # past convergence the miss sits at the ~1e-27 round-off floor, far below the
+    # axis: show only the iterations above the floor
+    y_floor = 1e-18
+    n_show = int(numpy.nonzero(ls >= y_floor)[0][-1]) + 1
+    ax2.semilogy(it[:n_show], ls[:n_show], marker="o", ms=3,
                  color=BACKEND_COLORS["jax"], lw=2)
+    ax2.set_xlim(-0.5, n_show - 0.5)
+    ax2.set_xticks(it[:n_show])
     ax2.set_xlabel("Gauss-Newton iteration")
     ax2.set_ylabel(r"end-point miss  $\|(R,z)_f-(R,z)_f^{\rm target}\|^2$")
     ax2.set_title("(b) launch-velocity fit" if PAPER
                   else "(b) fit launch velocity: autodiff Jacobian through the solver")
-    ax2.set_ylim(1e-18, None)
+    ax2.set_ylim(y_floor, None)
     # inset: optimizer path in (vR0, vz0)
-    axin = ax2.inset_axes([0.50, 0.50, 0.46, 0.44])
+    # lower left: the loss curve runs top-left -> bottom-right
+    axin = ax2.inset_axes([0.21, 0.25, 0.33, 0.32])
     axin.plot(path[:, 0], path[:, 1], "-o", ms=2.5, color=BACKEND_COLORS["jax"], lw=1)
     axin.plot([vR_true], [vz_true], marker="*", ms=11, color="k", zorder=5)
-    axin.text(vR_true, vz_true, "  truth", fontsize=6.5, va="center")
-    axin.set_xlabel(r"$v_{R0}$", fontsize=7)
-    axin.set_ylabel(r"$v_{z0}$", fontsize=7)
-    axin.tick_params(labelsize=6)
-    axin.set_title("optimizer path", fontsize=7)
+    axin.margins(0.15)  # the truth sits at a corner of the path's range
+    axin.annotate("truth", (vR_true, vz_true), xytext=(7, 0), textcoords="offset points",
+                  fontsize=_f(8, 6.5), va="center")
+    axin.set_xlabel(r"$v_{R0}$", fontsize=_f(8, 7))
+    axin.set_ylabel(r"$v_{z0}$", fontsize=_f(8, 7))
+    axin.tick_params(labelsize=_f(7, 6))
+    axin.set_title("optimizer path", fontsize=_f(8, 7))
 
     if not PAPER:
         fig.suptitle("Differentiable orbit integration (in-backend diffrax; Plummer, "

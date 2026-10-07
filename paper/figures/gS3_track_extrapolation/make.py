@@ -180,7 +180,11 @@ def make():
             json.dump(data, fh, indent=2, sort_keys=True)
             fh.write("\n")
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends/notes).
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 3.3) if PAPER else (9.8, 4.0))
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fs_leg = 8 if PAPER else 7
     b = data["base"]
     ax1.plot(b["phi1"], b["phi2"], "-", color=_CB, lw=2.4, label=rf"$q_0={data['q0']}$")
     for k in [f"{d:+.3f}" for d in data["dqs"]]:
@@ -193,8 +197,8 @@ def make():
                    else r"$\phi_1$ [deg] (along the progenitor's orbital plane)")
     ax1.set_ylabel(r"$\phi_2$ [deg]")
     ax1.set_title("(a) direct (solid) vs AD (dashed)" if PAPER
-                  else rf"solid: direct re-run   dashed: one AD pass ($N={data['n']}$)")
-    ax1.legend(fontsize=7, framealpha=0.92, ncol=2)
+                  else rf"solid: direct re-run   dashed: one AD pass ($N={data['n']}$)", **_ts)
+    ax1.legend(fontsize=_fs_leg, framealpha=0.92, ncol=2)
 
     dqs = numpy.array(sorted(data.get("dqs_err", [abs(float(k)) for k in data["err"]])))
     def _rms_dphi2(t1, t2):
@@ -222,15 +226,20 @@ def make():
                label="residual after one AD pass")
     for x, m, e in zip(dqs, moved, errs):
         ax2.annotate(f"{100 * (1 - e / m):.0f}%", (x, e), textcoords="offset points",
-                     xytext=(0, -13), ha="center", fontsize=7, color="#1d4ed8")
+                     xytext=(0, -13), ha="center", fontsize=_fs_leg, color="#1d4ed8")
     ax2.set_xlabel(r"$|\Delta q|$")
     ax2.set_ylabel(r"rms $\Delta\phi_2$ at fixed $\phi_1$ [deg]")
     frac = 100.0 * (1.0 - errs / moved)
     ax2.set_title("(b) shift and residual" if PAPER
-                  else f"one AD pass removes {frac.min():.0f}-{frac.max():.0f}% of the shift")
-    ax2.legend(fontsize=7, framealpha=0.92, loc="upper left")
+                  else f"one AD pass removes {frac.min():.0f}-{frac.max():.0f}% of the shift", **_ts)
+    ax2.legend(fontsize=_fs_leg, framealpha=0.92, loc="upper left")
     ax2.grid(True, which="both", alpha=0.25)
     ax2.set_ylim(bottom=0.6 * errs.min())  # room for the lowest "%" callout
+    if PAPER:  # plain ticks at the measured |dq| (the auto log labels overlap)
+        ax2.set_xticks(dqs)
+        ax2.set_xticklabels([f"{d:g}" for d in dqs])
+        ax2.xaxis.set_minor_formatter(plt.NullFormatter())
+        ax2.set_xlim(dqs.min() / 1.3, dqs.max() * 1.3)
 
     fig.tight_layout()
     return fig

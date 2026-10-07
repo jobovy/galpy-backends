@@ -37,7 +37,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import bench, h100, palette
+from paper.figures._harness import bench, h100, layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -148,8 +148,13 @@ def make():
     panels = [("titan", data, "(a) TITAN Xp" if PAPER else "(a) dev box: NVIDIA TITAN Xp")]
     if hdata:
         panels.append(("h100", hdata, "(b) H100" if PAPER else "(b) Trillium: NVIDIA H100"))
-    fig, axes = plt.subplots(1, len(panels), figsize=(5.2 * len(panels) + 1.4, 4.3),
-                             sharey=True, squeeze=False)
+    # print size: 7.0 in wide (figure*), text 8-10 pt; the two-line labels and the
+    # device-free labels (the titles name the device) keep the label columns narrow
+    fig, axes = plt.subplots(1, len(panels), sharey=True, squeeze=False,
+                             figsize=layout.figsize(PAPER, (7.0, 3.2),
+                                                    (5.2 * len(panels) + 1.4, 4.3)))
+    fs_line = layout.FS["line"] if PAPER else 6.5
+    fs_note = layout.FS["note"] if PAPER else 6.3
     for ax, (dev, d, title) in zip(axes[0], panels):
         Nd = numpy.asarray(d["Ns"], dtype=float)
         for name in [k for k in _ORDER if k in d["series"]]:
@@ -158,11 +163,12 @@ def make():
             st = palette.style(fw, "cpu" if fw == "numpy" else dev, _MODE[fw])
             if transfer:
                 st.update(ls=":", mfc="white")
-            lab = palette.label(fw, dev, _MODE[fw], "+transfer" if transfer else "")
+            lab = (layout.label(fw, None, _MODE[fw], "+transfer" if transfer else "") if PAPER
+                   else palette.label(fw, dev, _MODE[fw], "+transfer" if transfer else ""))
             thr = Nd / numpy.asarray(d["series"][name], dtype=float)
             ax.loglog(Nd, thr, ms=3.5, label=lab, zorder=3, **st)
         ax.set_xlabel(r"array length $N$  (points per $F_R$ call)")
-        ax.set_title(title, fontsize=10)
+        ax.set_title(title, fontsize=layout.FS["title"])
         # Constant-wall-time reference lines: throughput = N / t0 is a slope-1 line
         # in log-log; the GPU curves hug them at small N (launch-bound).
         Nlo, Nhi = float(Nd.min()), float(Nd.max())
@@ -174,7 +180,8 @@ def make():
             ax.text(0.97, 0.03, f"{e.get('gpu', '?')}\njax {e.get('jax', '?')} · torch {e.get('torch', '?')}"
                     "\nnumpy on this machine's CPU",
                     transform=ax.transAxes, fontsize=6.3, color="0.5", va="bottom", ha="right")
-    axes[0][0].set_ylabel(r"throughput  (points evaluated / second)")
+    axes[0][0].set_ylabel(r"throughput  (points / second)" if PAPER
+                          else r"throughput  (points evaluated / second)")
     thr_all = [numpy.asarray(d["Ns"], float) / numpy.asarray(v, float)
                for _, d, _ in panels for v in d["series"].values()]
     lo = 0.4 * min(t.min() for t in thr_all)
@@ -183,12 +190,15 @@ def make():
         ax.set_ylim(lo, hi)
     axes[0][0].text(0.03, 0.97, "dotted: constant time per call" if PAPER
                     else "dotted grey: constant wall-time / call\n(0.1, 1, 10, 100 ms)",
-                    transform=axes[0][0].transAxes, fontsize=6.3, color="0.5", va="top", ha="left")
+                    transform=axes[0][0].transAxes, fontsize=fs_note, color="0.5", va="top", ha="left")
     if not PAPER:
         fig.suptitle(r"Plummer $F_R$ throughput: compute-only vs end-to-end (+transfer, dotted)",
                      fontsize=11)
     fig.tight_layout()
     for ax in axes[0]:
-        palette.label_lines(ax, fontsize=6.5)
-    fig.tight_layout()
+        palette.label_lines(ax, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None)
+    if PAPER:
+        layout.fit_right(fig)
+    else:
+        fig.tight_layout()
     return fig

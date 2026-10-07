@@ -476,6 +476,8 @@ def _data():
 def _panel(ax, xs, part, data, h100):
     for name in _ORDER:
         fw, dev, mode, extra, ls = _SERIES[name]
+        if PAPER and extra == "numpy-built sdf":  # one in-panel note instead (width)
+            extra = ""
         runs = [(data, dev)]
         if dev == "gpu" and h100 is not None:
             runs.append((h100, "h100"))
@@ -505,7 +507,21 @@ def make():
     if os.path.exists(_JSON_H100):
         with open(_JSON_H100) as fh:
             h100 = json.load(fh)
-    fig, (axa, axb, axc) = plt.subplots(1, 3, figsize=(15.5, 4.6))
+    if PAPER:
+        # final printed width of a figure* (7.0 in) with printed text sizes. Three
+        # panels plus two 8 pt direct-label columns do not fit in one row, so (a)
+        # sits above (b) with its labels beside it; (c)'s labels take the right margin.
+        fig = plt.figure(figsize=(7.0, 5.0))
+        _l, _r, _gap = 0.085, 0.80, 0.09
+        _pw = (_r - _l - _gap) / 2.0
+        _b0, _h, _hgap = 0.075, 0.37, 0.14
+        axa = fig.add_axes([_l, _b0 + _h + _hgap, _pw, _h])
+        axb = fig.add_axes([_l, _b0, _pw, _h])
+        axc = fig.add_axes([_l + _pw + _gap, _b0, _pw, _h])
+    else:
+        fig, (axa, axb, axc) = plt.subplots(1, 3, figsize=(15.5, 4.6))
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fs_note, _fs_lab = (8, 8) if PAPER else (6.5, 6.5)
     nchs = numpy.asarray(data["nchs"], dtype=float)
     Ns = numpy.asarray(data["Ns"], dtype=float)
     _panel(axa, nchs, "construct", data, h100)
@@ -515,7 +531,7 @@ def make():
     axa.axvline(data.get("nch_default", 10), color="0.8", lw=0.8, zorder=0)
     axa.set_xlabel("number of track chunks (nTrackChunks)")
     axa.set_ylabel("wall time (s)")
-    axa.set_title("(a) construction" if PAPER else "(a) construction incl. stream track")
+    axa.set_title("(a) construction" if PAPER else "(a) construction incl. stream track", **_ts)
     notes = [data["notes"][k] for k in ("construct_torch", "construct_jit") if data["notes"].get(k)]
     if notes and not PAPER:
         import textwrap
@@ -525,11 +541,14 @@ def make():
     _panel(axb, Ns, "sample", data, h100)
     axb.set_xlabel(r"number of sampled stars $N$")
     axb.set_ylabel("wall time (s)")
-    axb.set_title(r"(b) sampling $N$ stars" if PAPER else r"(b) sdf.sample($N$)")
+    axb.set_title(r"(b) sampling $N$ stars" if PAPER else r"(b) sdf.sample($N$)", **_ts)
     _panel(axc, Ns, "eval", data, h100)
     axc.set_xlabel(r"number of phase-space points $N$")
     axc.set_ylabel("wall time (s)")
-    axc.set_title("(c) DF evaluation" if PAPER else r"(c) log DF at $N$ points")
+    axc.set_title("(c) DF evaluation" if PAPER else r"(c) log DF at $N$ points", **_ts)
+    if PAPER:
+        axc.text(0.03, 0.97, "torch: numpy-built sdf", transform=axc.transAxes,
+                 fontsize=_fs_note, color="0.45", va="top", ha="left")
     ec, eg = data.get("env_cpu", {}), data.get("env_gpu", {})
     eh = (h100 or {}).get("env_gpu", {})
     if not PAPER:
@@ -539,17 +558,21 @@ def make():
                  f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
                  + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else ""),
                  transform=axb.transAxes, fontsize=5.6, color="0.45", va="top", ha="left")
-    axb.text(0.97, 0.03, "lines labelled in (c)", transform=axb.transAxes, fontsize=6.5,
-             color="0.45", va="bottom", ha="right")
+    if PAPER:  # the lower right holds the GPU lines at this size
+        axb.text(0.03, 0.97, "lines labelled in (c)", transform=axb.transAxes,
+                 fontsize=_fs_note, color="0.45", va="top", ha="left")
+    else:
+        axb.text(0.97, 0.03, "lines labelled in (c)", transform=axb.transAxes,
+                 fontsize=_fs_note, color="0.45", va="bottom", ha="right")
     if not PAPER:
         for ax in (axb, axc):
             ax.set_ylim(top=ax.get_ylim()[1] * 8)  # headroom for the stamp
         fig.suptitle("streamdf (action-angle stream model): build once, then sample / evaluate",
                      y=0.99)
-    fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86 if not PAPER else 0.92,
-                        wspace=0.62)
-    palette.label_lines(axa, fontsize=6.5)
-    palette.label_lines(axc, fontsize=6.5)
+    if not PAPER:
+        fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86, wspace=0.62)
+    palette.label_lines(axa, fontsize=_fs_lab)
+    palette.label_lines(axc, fontsize=_fs_lab)
     return fig
 
 

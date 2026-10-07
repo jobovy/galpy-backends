@@ -99,7 +99,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import palette
+from paper.figures._harness import layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -162,7 +162,11 @@ def _load(fnames, sub=""):
     description="MWPotential2014 in-backend orbit integration wall time vs batch size N: galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    fig, ax = plt.subplots(figsize=(9.0, 4.5))
+    # print size: 7.0 in wide (figure*), text 8-10 pt, two-line labels
+    fig, ax = plt.subplots(figsize=layout.figsize(PAPER, (7.0, 3.8), (9.0, 4.5)))
+    fs_line = layout.FS["line"] if PAPER else 7
+    fs_note = layout.FS["note"] if PAPER else 6.5
+    _label = layout.label if PAPER else palette.label
 
     gpu_meta = _load_one("jax_gpu.json") or _load_one("jax_gpu_hiN.json") or {}
     torch_meta = _load_one("torch_cuda.json") or {}
@@ -180,7 +184,7 @@ def make():
             st = palette.style(fw, d_, mode)
             if ls:
                 st["ls"] = ls
-            ax.loglog(Ns, wall, ms=4, zorder=3, label=palette.label(fw, d_, mode, extra), **st)
+            ax.loglog(Ns, wall, ms=4, zorder=3, label=_label(fw, d_, mode, extra), **st)
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")
@@ -201,9 +205,10 @@ def make():
         0.025, 0.975,
         "dotted: constant cost per orbit" if PAPER
         else "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
-        transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
+        transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
     )
-    palette.label_lines(ax, inline={"galpy C (dop853_c, sequential)": (300.0, 9)})
+    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None,
+                        inline={_label("c", "cpu", None, "dop853_c, sequential"): (300.0, 14 if PAPER else 9)})
     # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator
     # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,
     # controller architecture, compile amortization) live in caption.md.
@@ -218,4 +223,6 @@ def make():
             transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
         )
     fig.tight_layout()
+    if PAPER:
+        layout.fit_right(fig)
     return fig

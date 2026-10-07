@@ -10,8 +10,10 @@ and multi-component composites.
 (a) F_R(R) from autodiff (lines) with the exact analytic force overplotted (open
     circles). They are indistinguishable, which is the point.
 (b) The residual |AD - exact| / |exact|, log scale, against the float64 epsilon.
-    Everything sits within a few ULP: autodiff is not an approximation to the
-    analytic force here, it IS the analytic force, evaluated by the chain rule.
+    The maximum is 4.0e-15 relative (18 eps; SpiralArms at R~2.4, where its F_R
+    passes near zero, |F_R|~6e-6); every other potential stays <=1.6e-15 (<=7 eps),
+    medians 2-5e-16. Autodiff is not an approximation to the analytic force here,
+    it IS the analytic force, evaluated by the chain rule, to round-off.
 
 Cheap to compute, but cached anyway -- data/gF1_autodiff_forces.json -- so the
 plot is byte-stable. Re-measure by deleting the JSON.
@@ -22,6 +24,7 @@ import os
 
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -77,7 +80,7 @@ def _measure():
     name="gF1_autodiff_forces",
     track="G",
     seed=0,
-    description="F_R by autodiff vs the exact analytic force for complicated potentials (SCF, DiskSCF, spiral, bar, composites): agreement at a few ULP of float64",
+    description="F_R by autodiff vs the exact analytic force for complicated potentials (SCF, DiskSCF, spiral, bar, composites): agreement to <=4e-15 relative (<=18 float64 eps)",
 )
 def make():
     import matplotlib.pyplot as plt
@@ -92,7 +95,10 @@ def make():
             fh.write("\n")
 
     R = numpy.array(data["R"])
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 4.1))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.0), (10.2, 4.1)))
+    fs_leg = layout.FS["legend"] if PAPER else 6.8
+    fs_note = layout.FS["note"] if PAPER else 7.5
 
     for name, d in data["pots"].items():
         c = _STYLE.get(name, "0.4")
@@ -106,17 +112,22 @@ def make():
     ax1.set_xlabel(r"$R$"); ax1.set_ylabel(r"$F_R$")
     ax1.set_title("(a) autodiff vs analytic" if PAPER else
                   r"lines: $-\partial\Phi/\partial R$ by autodiff   ·   circles: analytic")
-    ax1.legend(fontsize=6.8, framealpha=0.92, loc="best")
+    if not PAPER:  # print version: the legend sits in the empty top of (b)
+        ax1.legend(fontsize=fs_leg, framealpha=0.92, loc="best")
     ax1.axhline(0, color="0.8", lw=0.7, zorder=0)
 
     ax2.axhline(_EPS, color="0.35", ls="--", lw=1.0, zorder=1)
-    ax2.text(R[0] * 1.05, _EPS * 1.35, r"float64 $\epsilon$", fontsize=7.5, color="0.35")
+    ax2.text(R[0] * 1.05, _EPS * 1.35, r"float64 $\epsilon$", fontsize=fs_note, color="0.35",
+             zorder=5, **({"bbox": dict(fc="white", ec="none", alpha=0.85, pad=0.6)} if PAPER else {}))
     ax2.set_xscale("log"); ax2.set_ylim(1e-18, 1e-12)
     ax2.set_xlabel(r"$R$"); ax2.set_ylabel(r"$|{\rm AD}-{\rm exact}|\,/\,|{\rm exact}|$")
     ax2.set_title("(b) relative residual" if PAPER else "residual against the hand-coded force")
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
-    if not PAPER:  # duplicates the legend of (a)
-        ax2.legend(fontsize=6.8, framealpha=0.92, loc="upper right", ncol=2)
+    if PAPER:  # one legend for both panels, in (b)'s empty upper half
+        ax2.set_ylim(1e-18, 1e-10)
+        ax2.legend(fontsize=fs_leg, framealpha=0.92, loc="upper right")
+    else:  # duplicates the legend of (a)
+        ax2.legend(fontsize=fs_leg, framealpha=0.92, loc="upper right", ncol=2)
 
     fig.tight_layout()
     return fig

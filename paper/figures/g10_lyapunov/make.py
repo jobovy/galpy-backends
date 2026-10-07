@@ -22,6 +22,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -43,7 +44,10 @@ def _load():
 )
 def make():
     d = _load()
-    fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.3))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, axes = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.0), (7.6, 3.3)))
+    fs_leg = layout.FS["legend"] if PAPER else 7.5
+    fs_note = layout.FS["note"] if PAPER else 7.5
 
     # ---- (a) Henon-Heiles ----
     ax = axes[0]
@@ -53,10 +57,13 @@ def make():
     lamF = numpy.array(hh["lam_chaotic"])
     lamE = numpy.array(hh["lam_regular"])
     ax.axhspan(band[0], band[1], color="#E69F00", alpha=0.25, lw=0, zorder=0)
+    # print version: just above the band at the right (the legend moves to the
+    # empty lower left), clear of every line
     ax.text(
-        3.2e3, 0.062,
+        *((3.0e4, 0.095) if PAPER else (3.2e3, 0.062)),
         r"literature $\lambda\simeq0.04$--$0.08$",
-        fontsize=7, color="#9c6c00", va="center",
+        fontsize=fs_note, color="#9c6c00", va="bottom" if PAPER else "center",
+        ha="right" if PAPER else "left",
     )
     ax.loglog(t[1:], lamF[1:], color="#D55E00",
               label="orbit F (chaotic)", zorder=3)
@@ -69,10 +76,10 @@ def make():
     ax.set_title("(a) Hénon–Heiles, $E=1/8$", fontsize=10)
     ax.set_xlim(10.0, 4e4)
     ax.set_ylim(1e-4, 1.0)
-    ax.legend(fontsize=7.5, loc="upper right")
+    ax.legend(fontsize=fs_leg, loc="lower left" if PAPER else "upper right")
     ax.annotate(
         rf"$\lambda(3\times10^4)={hh['lam_chaotic_final']:.3f}$",
-        xy=(t[-1], lamF[-1]), xytext=(7e2, 7e-3), fontsize=7.5,
+        xy=(t[-1], lamF[-1]), xytext=(7e2, 7e-3), fontsize=fs_note,
         arrowprops=dict(arrowstyle="->", lw=0.8, color="0.3"), color="0.3",
     )
 
@@ -90,7 +97,7 @@ def make():
     ax.set_title("(b) MWPotential2014, regular orbit", fontsize=10)
     ax.set_xlim(2.0, 4e3)
     ax.set_ylim(1e-3, 1.0)
-    ax.legend(fontsize=7.5, loc="upper right")
+    ax.legend(fontsize=fs_leg, loc="upper right")
     lam_mantissa = mw["lam_final"] / 10.0 ** numpy.floor(
         numpy.log10(mw["lam_final"])
     )
@@ -99,7 +106,7 @@ def make():
         0.03, 0.05,
         rf"$\lambda(3\times10^3)={lam_mantissa:.1f}\times10^{{{lam_exp}}}$"
         + ("" if PAPER else "\n" r"(upper limit, still $\propto \ln(t)/t$)"),
-        transform=ax.transAxes, fontsize=7.5, color="0.3",
+        transform=ax.transAxes, fontsize=fs_note, color="0.3",
     )
 
     if not PAPER:

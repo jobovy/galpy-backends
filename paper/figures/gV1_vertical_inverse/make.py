@@ -330,37 +330,45 @@ def make():
             json.dump(data, fh, indent=1, sort_keys=True)
             fh.write("\n")
 
-    fig, axs = plt.subplots(2, 2, figsize=(10.4, 8.6))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends/notes).
+    fig, axs = plt.subplots(2, 2, figsize=(7.1, 7.0) if PAPER else (10.4, 8.6))
     ax1, ax2, ax3, ax4 = axs.ravel()
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fl = (lambda d: 8) if PAPER else (lambda d: d)  # legend / note sizes
 
     # (a) the tori, the rebuilt tori, and the first-order AD prediction
     s0, ds = data["sig0"], data["dsig"]
     cols = plt.cm.viridis(numpy.linspace(0.05, 0.85, len(data["tori"])))
-    ins = ax1.inset_axes([0.60, 0.10, 0.38, 0.62])
+    ins = ax1.inset_axes([0.665, 0.08, 0.325, 0.60] if PAPER else [0.60, 0.10, 0.38, 0.62])
     for t, c in zip(data["tori"], cols):
         for ax, ev in ((ax1, 8), (ins, 2)):
             ax.plot(t["x0"], t["v0"], "-", color=c, lw=1.4)
             ax.plot(t["x1"], t["v1"], "--", color=c, lw=1.0)
             ax.plot(t["x_ad"][::ev], t["v_ad"][::ev], "o", color=c, ms=2.4, mew=0)
-        ax1.text(0.0, max(t["v1"]) * 1.02, rf"$J={t['J']:g}$", color=c, fontsize=6.5,
-                 ha="center", va="bottom")
+        if PAPER:  # below each torus: the legend takes the top
+            ax1.text(0.0, min(t["v1"]) * 1.02, rf"$J={t['J']:g}$", color=c, fontsize=_fl(6.5),
+                     ha="center", va="top")
+        else:
+            ax1.text(0.0, max(t["v1"]) * 1.02, rf"$J={t['J']:g}$", color=c, fontsize=_fl(6.5),
+                     ha="center", va="bottom")
     ins.set_xlim(0.27, 0.49)
     ins.set_ylim(-0.42, 0.42)
-    ins.tick_params(labelsize=6)
+    ins.tick_params(labelsize=_fl(6))
     ins.set_title(r"$+z$ turning points" if PAPER else r"zoom: $+z$ turning points",
-                  fontsize=6.5, pad=2)
+                  fontsize=_fl(6.5), pad=2)
     ax1.indicate_inset_zoom(ins, edgecolor="0.4")
     ax1.plot([], [], "-", color="0.3", label=rf"$\sigma_0={s0:g}$")
     ax1.plot([], [], "--", color="0.3", label=rf"rebuilt at $\sigma_0+{ds:g}$")
     ax1.plot([], [], "o", color="0.3", ms=3,
              label=r"AD: torus$(\sigma_0)+\Delta\sigma\,\partial_\sigma$torus")
-    ax1.set_xlim(-0.47, 1.12)
+    ax1.set_xlim((-0.5, 2.05) if PAPER else (-0.47, 1.12))
     ax1.set_xlabel(r"$z$")
     ax1.set_ylabel(r"$v_z$")
     ax1.set_title(r"(a) tori and their $\sigma$-derivative" if PAPER else
                   "(a) isothermal-disk tori at fixed $J$ and their\n"
-                  rf"AD sensitivity to $\sigma$ ($\Delta\sigma={ds / s0:.1f}\,\sigma_0$)")
-    ax1.legend(fontsize=6.5, loc="upper right", framealpha=0.92)
+                  rf"AD sensitivity to $\sigma$ ($\Delta\sigma={ds / s0:.1f}\,\sigma_0$)", **_ts)
+    ax1.legend(fontsize=_fl(6.5), loc="upper right", framealpha=0.92)
     ax1.margins(y=0.12)
 
     # (b) per-angle AD vs central FD (best h each) + Poisson bracket
@@ -386,8 +394,8 @@ def make():
     ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|\,/\,\max|{\rm AD}|$")
     ax2.set_title(rf"(b) AD vs FD along the $J={data['Jchk']:g}$ torus" if PAPER else
                   rf"(b) AD vs 5-point central FD along the $J={data['Jchk']:g}$ torus" "\n"
-                  r"($\sigma$-FD rebuilds the family at $\sigma_0\pm h$)")
-    ax2.legend(fontsize=6.0, ncol=2, framealpha=0.92, loc="upper center")
+                  r"($\sigma$-FD rebuilds the family at $\sigma_0\pm h$)", **_ts)
+    ax2.legend(fontsize=_fl(6.0), ncol=2, framealpha=0.92, loc="upper center")
     ax2.set_ylim(1e-17, 1e-4)
 
     # (c) h-convergence of the FD onto AD
@@ -399,8 +407,8 @@ def make():
     ax3.set_ylabel(r"$\max_\theta |{\rm AD}-{\rm FD}(h)|\,/\,\max|{\rm AD}|$")
     ax3.set_title("(c) FD convergence onto AD" if PAPER else
                   "(c) the 5-point central FD converges onto AD\n"
-                  r"($\propto h^4$) down to its round-off floor")
-    ax3.legend(fontsize=6.0, ncol=2, framealpha=0.92, loc="upper center")
+                  r"($\propto h^4$) down to its round-off floor", **_ts)
+    ax3.legend(fontsize=_fl(6.0), ncol=2, framealpha=0.92, loc="upper center")
     ax3.grid(True, which="both", alpha=0.25)
 
     # (d) the fit in the (sigma, amp) plane
@@ -411,6 +419,8 @@ def make():
 
 
 def _plot_fit(fig, ax, ft):
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fl = (lambda d: 8) if PAPER else (lambda d: d)
     best, cov = numpy.asarray(ft["best"]), numpy.asarray(ft["cov_log"])
     # 1- and 2-sigma (68/95% for 2 parameters) ellipses of (ln sigma, ln amp),
     # mapped to (sigma, amp)
@@ -432,15 +442,15 @@ def _plot_fit(fig, ax, ft):
             rf"$\sigma={best[0]:.3f}\pm{best[0] * es[0]:.3f}$" "\n"
             rf"amp$\,={best[1]:.3f}\pm{best[1] * es[1]:.3f}$" "\n"
             rf"$\chi^2={ft['chi2'][-1]:.1f}$ for {ft['ndof']} dof",
-            transform=ax.transAxes, ha="right", va="top", fontsize=7.5,
+            transform=ax.transAxes, ha="right", va="top", fontsize=_fl(7.5),
             bbox=dict(fc="w", ec="0.8", alpha=0.9))
     ax.set_xlabel(r"$\sigma$")
     ax.set_ylabel(r"amp")
     ax.set_title("(d) Levenberg-Marquardt fit" if PAPER else
                  "(d) fitting the disk from noisy $(z, v_z)$ on 3 tori:\n"
                  r"Levenberg-Marquardt on the AD Jacobian ($\partial_\sigma$, "
-                 r"$\partial_{\rm amp}$, $\partial_{\theta_i}$)")
-    ax.legend(fontsize=7, loc="lower left", framealpha=0.92)
+                 r"$\partial_{\rm amp}$, $\partial_{\theta_i}$)", **_ts)
+    ax.legend(fontsize=_fl(7), loc="lower left", framealpha=0.92)
     # inset: the data and the fitted tori
     ins = ax.inset_axes([0.62, 0.36, 0.36, 0.34])
     xd, vd, n = numpy.asarray(ft["xd"]), numpy.asarray(ft["vd"]), ft["np"]
@@ -450,5 +460,6 @@ def _plot_fit(fig, ax, ft):
         ins.plot(xd[k * n:(k + 1) * n], vd[k * n:(k + 1) * n], ".", color=cols[k], ms=2.2)
     ins.set_xticks([])
     ins.set_yticks([])
-    ins.set_title(rf"{3 * n} stars, $J={', '.join(f'{j:g}' for j in ft['J'])}$",
-                  fontsize=6.0, pad=2)
+    _js = ', '.join(f'{j:g}' for j in ft['J'])
+    ins.set_title((rf"{3 * n} stars" "\n" rf"$J={_js}$") if PAPER
+                  else rf"{3 * n} stars, $J={_js}$", fontsize=_fl(6.0), pad=2)

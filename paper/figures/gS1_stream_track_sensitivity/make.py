@@ -158,7 +158,11 @@ def make():
     fd = numpy.array(data["d_fd"])
     dq = data["dq_show"]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
+    # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends).
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 3.3) if PAPER else (9.8, 4.0))
+    _ts = {"fontsize": 10} if PAPER else {}
+    _fs_leg = 8 if PAPER else 7
 
     # (a) track in the (R, z) plane + first-order AD prediction for +-dq
     R, z = tr[:, 0], tr[:, 3]
@@ -169,8 +173,8 @@ def make():
              label=rf"AD: $q-{dq}$", zorder=2)
     ax1.set_xlabel(r"$R$"); ax1.set_ylabel(r"$z$")
     ax1.set_title("(a) track and AD prediction" if PAPER
-                  else r"stream track and its AD sensitivity to halo $q$")
-    ax1.legend(fontsize=7, framealpha=0.92)
+                  else r"stream track and its AD sensitivity to halo $q$", **_ts)
+    ax1.legend(fontsize=_fs_leg, framealpha=0.92)
 
     # (b) the cross-check: AD vs central FD, per track component
     lbl = [r"$R$", r"$v_R$", r"$v_T$", r"$z$", r"$v_z$", r"$\phi$"]
@@ -179,9 +183,13 @@ def make():
         ax2.semilogy(numpy.arange(tr.shape[0]), rel[:, j], "o-", ms=4, lw=1.0, label=lbl[j])
     ax2.set_xlabel("track chunk"); ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|/|{\rm FD}|$")
     ax2.set_title("(b) AD vs finite difference" if PAPER
-                  else rf"AD vs central FD ($h={data['h']}$)")
+                  else rf"AD vs central FD ($h={data['h']}$)", **_ts)
     ax2.set_xticks(numpy.arange(tr.shape[0]))
-    ax2.legend(fontsize=7, ncol=2, framealpha=0.92)
+    if PAPER:  # the y-range spans < 1 decade: label the minor ticks too
+        from matplotlib.ticker import LogFormatterSciNotation
+        ax2.yaxis.set_minor_formatter(LogFormatterSciNotation(minor_thresholds=(2, 0.5)))
+        ax2.tick_params(axis="y", which="minor", labelsize=9)
+    ax2.legend(fontsize=_fs_leg, ncol=2, framealpha=0.92)
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
 
     fig.tight_layout()

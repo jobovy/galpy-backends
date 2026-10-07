@@ -6,9 +6,10 @@ here the differentiation is w.r.t. the potential's *constructor parameters*
 
 (a) *Correctness.* For Plummer and Isochrone, the parameter gradient of Phi and of
     F_R w.r.t. amp and the scale length b, under jax and torch. Two checks per
-    quantity: jax-vs-torch (two independent AD engines agree to ~1e-15 -- both
-    compute the *exact* derivative), and AD-vs-finite-difference (agree to ~1e-9,
-    the central-difference accuracy floor -- AD is exact, FD is the noisy one).
+    quantity: jax-vs-torch (two independent AD engines agree to <=2e-16, half of
+    them bit-identically -- drawn on the axis; both compute the *exact*
+    derivative), and AD-vs-finite-difference (agree to ~1e-11-1e-10, the
+    central-difference accuracy floor -- AD is exact, FD is the noisy one).
 
 (b) *A worked example.* Recover a Plummer scale length by gradient descent: fit b
     to a target F_R(R) profile, the gradient dLoss/db supplied by autodiff. Both
@@ -23,6 +24,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import layout
 from paper.figures._harness.figure import figure
 from paper.figures._harness.style import BACKEND_COLORS
 
@@ -98,7 +100,11 @@ def make():
         fm = numpy.asarray(fn(ctor(**{**fixed, pname: theta - h}), _R, _Z))
         return (fp - fm) / (2 * h)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.6, 3.9))
+    # print size: 7.0 in wide (figure*), text 8-10 pt
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.1), (9.6, 3.9)))
+
+    def _f(paper_pt, detailed_pt):
+        return paper_pt if PAPER else detailed_pt
 
     # ---- (a) parameter-gradient correctness ------------------------------------
     xpos, xlab, xcol = [], [], []
@@ -108,25 +114,29 @@ def make():
             jacj = param_jac(fn, ctor, fixed, pname, th, "jax")
             jact = param_jac(fn, ctor, fixed, pname, th, "torch")
             jfd = param_jac(fn, ctor, fixed, pname, th, "fd")
-            d_jt = max(float(numpy.max(numpy.abs(jacj - jact))), 1e-20)  # AD vs AD
+            d_jt = float(numpy.max(numpy.abs(jacj - jact)))  # AD vs AD
             d_fd = float(numpy.max(numpy.abs(jacj - jfd)))  # AD vs FD
-            ax1.scatter(x, d_jt, marker="o", s=40, facecolors=col, edgecolors=col,
-                        zorder=3)
+            if d_jt > 0:
+                ax1.scatter(x, d_jt, marker="o", s=40, facecolors=col, edgecolors=col,
+                            zorder=3, clip_on=False)
+            else:  # bit-identical: no place on a log axis -> a marker on the axis
+                ax1.scatter(x, 0.025, marker="v", s=40, facecolors=col, edgecolors=col,
+                            zorder=3, clip_on=False, transform=ax1.get_xaxis_transform())
             ax1.scatter(x, d_fd, marker="^", s=46, facecolors="none", edgecolors=col,
                         linewidths=1.4, zorder=3)
             xpos.append(x)
             xlab.append(qlab)
             xcol.append(col)
     ax1.axhline(EPS, ls="--", lw=1, color="0.4")
-    ax1.text(len(SPECS) - 0.5, EPS * 1.3, r"float64 $\epsilon$", fontsize=8,
+    ax1.text(len(SPECS) - 0.5, EPS * 1.3, r"float64 $\epsilon$", fontsize=_f(8, 8),
              color="0.4", ha="right", va="bottom")
     ax1.set_yscale("log")
-    ax1.set_ylim(3e-17, 1e-6)
+    ax1.set_ylim(5e-18, 1e-6)
     ax1.set_xticks(xpos)
-    ax1.set_xticklabels(xlab, fontsize=8)
+    ax1.set_xticklabels(xlab, fontsize=_f(9, 8))
     ax1.set_xlim(-0.6, len(SPECS) - 0.4)
     for si, (pn, _, _, pname, _, col) in enumerate(SPECS):
-        ax1.text(si, 1.5e-7, f"{pn}\n" + r"$\partial_{%s}$" % pname, fontsize=7.5,
+        ax1.text(si, 1.5e-7, f"{pn}\n" + r"$\partial_{%s}$" % pname, fontsize=_f(8, 7.5),
                  color=col, ha="center", va="top")
     ax1.set_ylabel(r"max$_R$ |gradient difference|")
     ax1.set_title("(a) gradient agreement" if PAPER else "(a) parameter-gradient correctness")
@@ -136,7 +146,11 @@ def make():
                      label="AD vs finite-diff")
     # centre-left: clear of the per-potential labels along the top and of the
     # markers (triangles ~1e-10, circles ~1e-16)
-    ax1.legend(handles=[h1, h2], fontsize=7.5, loc="center left", framealpha=0.9)
+    # print version: in the empty band between the triangles and the circles
+    h0 = ax1.scatter([], [], marker="v", s=40, color="0.3",
+                     label="on axis: identical (0)")
+    ax1.legend(handles=[h1, h0, h2], fontsize=_f(8.5, 7.5), loc="center left", framealpha=0.9,
+               **({"bbox_to_anchor": (0.0, 0.36)} if PAPER else {}))
 
     # ---- (b) gradient-descent recovery of a Plummer scale length ---------------
     # start above b_true so the descent is monotone (clean convergence curve)
@@ -185,19 +199,23 @@ def make():
     ax2.set_title("(b) gradient-descent fit of $b$" if PAPER
                   else "(b) recover Plummer $b$ by autodiff gradient descent")
     ax2.set_ylim(1e-18, 1.0)
-    ax2.legend(fontsize=8, loc="upper right")
+    ax2.legend(fontsize=_f(8.5, 8), loc="upper right")
     # parameter-recovery inset, bottom-left (the loss curve runs top-left ->
     # bottom-right, leaving the lower-left corner empty)
     axin = ax2.inset_axes([0.13, 0.14, 0.40, 0.38])
     axin.plot(it, bj_hist, color=BACKEND_COLORS["jax"], lw=1.5)
     axin.axhline(b_true, ls=":", color="0.4", lw=1)
-    axin.text(n_it * 0.97, b_true, " $b_{\\rm true}$", fontsize=7, color="0.4",
-              va="center", ha="left")
-    axin.set_xlabel("iter", fontsize=7)
-    axin.set_ylabel("$b$", fontsize=7)
-    axin.tick_params(labelsize=6)
+    if PAPER:  # inside the inset, above the line (the right edge clips into the curve)
+        axin.text(n_it * 0.7, b_true, "$b_{\\rm true}$", fontsize=8, color="0.4",
+                  va="bottom", ha="center")
+    else:
+        axin.text(n_it * 0.97, b_true, " $b_{\\rm true}$", fontsize=7, color="0.4",
+                  va="center", ha="left")
+    axin.set_xlabel("iter", fontsize=_f(8, 7))
+    axin.set_ylabel("$b$", fontsize=_f(8, 7))
+    axin.tick_params(labelsize=_f(7, 6))
     axin.text(0.95, 0.9, f"recovered\n$b={float(bj):.6f}$", transform=axin.transAxes,
-              fontsize=6.5, ha="right", va="top", color=BACKEND_COLORS["jax"])
+              fontsize=_f(8, 6.5), ha="right", va="top", color=BACKEND_COLORS["jax"])
 
     if not PAPER:
         fig.suptitle("Parameter-gradient autodiff: correctness & a worked fit "
