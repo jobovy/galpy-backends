@@ -5,18 +5,85 @@ GPU login node, every stage as a one-GPU Slurm batch job (`def-bovy`), one job
 at a time. Logs of every stage are in this directory (`<stage>.log` = the
 stage's command output, `<stage>.slurm.out` = the job's stdout).
 
+## Follow-up run (2026-10-07)
+
+`gpu-h100` was rebased onto `origin/main` (the pre-rebase tip is kept locally as tag
+`gpu-h100-run1`). Every conflict was a data file, PDF or the manifest, and was
+resolved to this branch's version; main's copies of the run-1 data live in
+`data/h100/`. New stages in `tools/trillium_stage.sh`: `g17torch`, `gV2`,
+`triage`. Everything below ran on galpy "follow-up" (table above).
+
+**g17 (stage `g17`, run 2; 46 min instead of run 1's 4 h 31 min, because of #1642).**
+The run-1 numbers further down are stale for g17.
+
+| series | N | run 1 | run 2 | |
+|---|---|---|---|---|
+| jax GPU jit | 1e5 | 0.325 s | 0.161 s | 2.0x |
+| jax GPU eager | 3e5 | 13.3 s | 6.63 s | 2.0x |
+| jax GPU eager | 1e6 | OOM | 12.5 s | now fits |
+| torch GPU, in-process | 1e5 / 3e5 / 1e6 | OOM / OOM / OOM | 0.786 / 1.38 s / OOM | |
+| **torch GPU, alone** (`g17torch`, `torch_gpu_only.py`) | 1e5 / 3e5 / 1e6 | – | 0.778 / 1.37 / **3.50 s** | TITAN 1e6 (pre-#1642): 8.36 s |
+| numpy CPU (EPYC node) | 1e5 | 424 s | 46.5 s | 9.1x (the #1642 mesh) |
+| C (c=True) | 1e5 | 1.04 s | 1.03 s | unchanged |
+
+After `g17torch`, the torch GPU series in the g17 JSON are the torch-alone
+ones, complete to N=1e6. `nvidia-smi` sampled every 5 s
+(`g17torch_mem.csv`) peaked at 43.9 of 81.6 GB. This much lower peak (run 1's
+diagnostic saw 65 GB at 1e6) is #1642's doing. The `g17` job's output lacks
+the final `>>> done` line, because I edited `tools/trillium_stage.sh` while that
+job was running (reverted within a minute). The measurement itself completed
+and exited 0.
+
+**gV2 after #1641 (stage `gV2`, gV2 only, 2 min).** GPU series only; CPU
+series untouched.
+
+| eval, N=1e6 | before (#1635 bisection) | after #1641 (Newton) | |
+|---|---|---|---|
+| jax GPU jit | 30.0 ms | 10.9 ms | 2.8x |
+| jax GPU jit, vmap over tori | 39.3 ms | 11.3 ms | 3.5x |
+| torch GPU | 99.9 ms | 69.8 ms | 1.4x |
+| jax GPU jit, small N (floor) | 0.6 ms | 0.3 ms | |
+
+Construction times are unchanged (warm jit at n_E=256: 5.8 ms).
+
+**Test triage:** see `tests_triage.md`. In short, **there is no torch-2.14
+regression**: all 42 torch failures also fail on torch 2.12. They break down
+as:
+- 28 galpy CUDA bugs: 26 are a numpy operand reaching dynamo next to a CUDA
+  tensor; one is `parallel_map` forking after CUDA init; one is the dop853_c
+  handoff calling `.numpy()` on a grad tensor.
+- 7 test-suite `.numpy()` calls on CUDA results.
+- 7 torchode + `torch.compile` on CUDA (third-party).
+
+The 2 jax evolveddiskdf gradient tests are **nondeterministic** (the autodiff
+value takes at least three values across 9 runs; the FD value is stable), as
+is the atol=0 `finite_part_quad` test. 2 tests (`test_misalignment_traces`)
+are fixed upstream.
+
+**Optional larger-N stage (hiN2): not run.** The scripts have no size
+arguments: `_shared/orbit_speed/galpy_jax_measure.py`,
+`g12/measure/jax_dopri5_measure.py` and `g12/measure/torch_measure.py`
+hard-code their N lists (only `gpu|cpu` and `lowN|hiN` positional arguments).
+`gV2/make.py` takes only `--devices`, and `gD3/make.py` only
+`--gpu`/`--modes`. Extending N would mean editing the figure code, which the
+rules forbid. Adding an `--Ns` option to these five scripts would make it a
+one-job stage.
+
 ## Machine and software
 
 | | |
 |---|---|
 | GPU | NVIDIA H100 80GB HBM3 (sm_90), 1 of 4 on the node; driver 580.173.02 (CUDA 13.0) |
 | CPU | AMD EPYC 9654 96-core; a 1-GPU job gets 24 cores and 187.5 GB host RAM |
-| galpy | `feat/backends` @ 70165d10 (#1637 merge) + #1639 cherry-picked (`1478b68f`, still open) |
+| galpy, run 1 | `feat/backends` @ 70165d10 (#1637 merge) + #1639 cherry-picked (`1478b68f`, then still open) |
+| galpy, follow-up | `feat/backends` @ 3d9ac516 (#1639, #1640, #1641 merged) + #1642 cherry-picked (`0465ad32`; its second commit, the misalignment atol, was already on the tip and is empty) |
 | jax | 0.11.2, jaxlib 0.11.2, jax-cuda12-plugin/pjrt 0.11.2 (nvidia cu12 12.9 wheels) |
 | torch | 2.14.1+cu130, triton 3.8.0; torchdiffeq 0.2.5, torchode 1.0.1 |
 | diffrax / equinox | 0.7.2 / 0.13.8 |
 | numpy / scipy / python | 2.5.3 / 1.18.1 / 3.13.16 (conda-forge env `galpy-h100`, gsl from conda-forge) |
 | galax (g8) | main @ 16a7e636b, its own `uv.lock` (jax/jaxlib 0.8.0) + jax-cuda12-plugin 0.8.0 `--no-deps` |
+
+Torch-2.12 triage env `galpy-h100-t212`: a clone of `galpy-h100` with torch 2.12.0+cu126.
 
 TITAN Xp reference (on `main`): jax 0.10.1, torch 2.12.0+cu126, numpy 2.4.3,
 same galpy commits.
@@ -31,7 +98,7 @@ same galpy commits.
    `defaults` channels require accepting Anaconda's terms of service.
 2. **`~/.triton` is read-only on compute nodes.** Every torch inductor compile
    failed with `PermissionError`. Fixed in `tools/trillium_stage.sh` (commit
-   612d58e: `TRITON_HOME`, `TRITON_CACHE_DIR`, `CUDA_CACHE_PATH` moved to
+   4ee9309 after the rebase: `TRITON_HOME`, `TRITON_CACHE_DIR`, `CUDA_CACHE_PATH` moved to
    scratch). All measurement stages ran after this fix.
 3. **galax writes to node-local `/var/tmp`.** Its job script
    (`galax_job.sbatch`, here) copies the JSONs back to scratch.
@@ -115,10 +182,10 @@ below), so take only the GPU series from this branch.
 | g8 galax GPU (1000 saves), ms/orbit, N=3e4 | 0.0916 | 0.0494 | 1.9x (H100 now reaches N=1e5: 0.0181) |
 | g15 diffrax GPU grad, N=16384 | 7.84 s | 5.28 s | 1.5x |
 | g15 torchdiffeq GPU grad, N=4096 | 10.8 s | 3.64 s | 3.0x |
-| g17 jax GPU jit, N=1e5 | 4.45 s | 0.325 s | 14x |
+| g17 jax GPU jit, N=1e5 (run 1; run 2: 0.161 s) | 4.45 s | 0.325 s | 14x |
 | g17 jax GPU eager, N=3e5 | 17.9 s | 13.3 s | 1.3x |
 | gS5 jax GPU jit, ms/particle, N=1e6 | – (no TITAN series on `main`) | 0.00719 | |
-| gV2 jax GPU jit eval, N=1e6 | – (no TITAN series on `main`) | 30.0 ms (torch GPU 99.9 ms; numpy CPU on the TITAN box, untouched: 16.5 s) | |
+| gV2 jax GPU jit eval, N=1e6 (run 1; after #1641: 10.9 ms) | – (no TITAN series on `main`) | 30.0 ms (torch GPU 99.9 ms; numpy CPU on the TITAN box, untouched: 16.5 s) | |
 | gD3 eddingtondf (NFW) sample, jax GPU jit, N=1e7 | – (no TITAN series on `main`) | 6.24 ms (torch GPU 0.50 s) | |
 
 The GPU series of gV2, gD3, gS4 and gS5 were never measured on the TITAN
