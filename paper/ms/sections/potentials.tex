@@ -25,9 +25,9 @@ $N$-body snapshots through \texttt{pynbody} and the \texttt{AMUSE}
 interface, which have no backend code; the adiabatic-contraction
 wrapper, whose construction is a \scipy\ root-find, declares itself
 incompatible and is computed on \numpy. The convenience functions that
-act on potentials---the circular velocity and epicycle frequencies, the
+act on potentials (the circular velocity and epicycle frequencies, the
 radius of a circular orbit of given angular momentum or energy, the
-enclosed mass, the tidal radius and tidal tensor---are backend-aware as
+enclosed mass, the tidal radius and tidal tensor) are backend-aware as
 well; those that require a root are solved with the shared root finder
 and those that require an integral use Gauss--Legendre quadrature.
 

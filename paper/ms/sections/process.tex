@@ -15,8 +15,8 @@ correct.
 Work started on 2026 June 1 with a design discussion between me and
 Claude, Anthropic's AI coding agent, used through the \texttt{Claude
   Code} environment, which has access to a shell, to the \galpy\
-repository, and to \github. The discussion settled the scope---all of
-\galpy, on both \jax\ and \torch---and the constraints described in
+repository, and to \github. The discussion settled the scope (all of
+\galpy, on both \jax\ and \torch) and the constraints described in
 \sectionname~\ref{sec:design}: byte-identity of the \numpy\ path, an
 unchanged interface, no compilation inside \galpy, and the existing test
 suite as the acceptance test. The first code was a pilot that made two
@@ -47,8 +47,8 @@ explicitly left out, such that the description can be reviewed without
 re-deriving it from the diff.
 
 A few rules were fixed early and enforced throughout. The \numpy\ path
-has to remain byte-identical, and any deviation---there is one, a
-tolerance in the King DF---is flagged in the PR rather than absorbed.
+has to remain byte-identical, and any deviation (there is one, a
+tolerance in the King DF) is flagged in the PR rather than absorbed.
 The jax and torch paths have to pass the same tests at the same
 tolerances; a tolerance may be loosened only for one test, only
 slightly, and with a justification in the PR. Test coverage may not

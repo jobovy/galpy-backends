@@ -40,9 +40,9 @@ adjoint through the \texttt{inbackend\_kwargs} keyword, and
 discussed below.
 
 The second way uses \galpy's compiled \cc\ integrators. These are much
-faster than a solver that runs inside \jax\ or \torch\ on a CPU---for a
+faster than a solver that runs inside \jax\ or \torch\ on a CPU (for a
 single orbit in the Milky-Way model, about ten times faster than the
-\diffrax\ solve and a hundred times faster than \texttt{torchdiffeq}---but
+\diffrax\ solve and a hundred times faster than \texttt{torchdiffeq}), but
 they are opaque to AD. What they can provide is the derivative of the
 orbit with respect to its initial condition, through the variational
 equations that \galpy\ integrates alongside the orbit in \cc\
