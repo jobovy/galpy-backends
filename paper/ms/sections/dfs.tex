@@ -1,1 +1,158 @@
-% dfs
+\section{Distribution functions}\label{sec:df}
+
+\subsection{General approach}\label{sec:df-general}
+
+A DF in \galpy\ is constructed from a potential and a set of parameters,
+evaluated at phase-space points, integrated for its moments, and sampled.
+On the backends, evaluation and the moments are differentiable for
+essentially every DF, sampling is differentiable wherever it is done by
+inverse transformation, and construction is differentiable for the DFs
+whose construction is itself a numerical computation that could be
+migrated---the spherical DFs obtained by inverting a density, the King
+model, and the stream models of \sectionname~\ref{sec:streams}---and
+remains a \numpy\ computation for the others, chiefly the quasi-isothermal
+disk DF, whose construction tabulates a guiding-center relation with
+\scipy. The parameters of a DF, like those of a potential, can be given
+as backend arrays and are then differentiated through everything that
+follows.
+
+Sampling deserves a word. Every sampler in \galpy\ takes a \texttt{key=}
+argument; \texttt{key=None} reproduces the previous behavior, drawing
+from \numpy's global generator with the previous algorithm, while a
+backend key selects the inverse-cumulative samplers of
+\sectionname~\ref{sec:design-numerics} and returns backend arrays. For a
+fixed key, the sample is then a smooth function of the DF's and the
+potential's parameters, and its derivative is the pathwise, or
+reparameterization, derivative that is familiar from variational
+inference: differentiating a statistic of the sample with respect to a
+parameter gives an unbiased estimate of the derivative of the
+expectation of that statistic. \figurename~\ref{fig:dfparam} shows this
+for an Osipkov--Merritt DF of a Hernquist sphere constructed and sampled
+inside a single compiled function of the scale radius: the derivative of
+the sampled velocity dispersion with respect to the scale radius agrees
+with the derivative of the Jeans-equation prediction to within the
+Monte-Carlo noise, and with a finite difference of the same sample to
+$10^{-7}$. The same figure shows the other kind of derivative of a DF's
+construction, that of the King model's density profile with respect to
+the dimensionless central potential $W_0$ at fixed mass and tidal
+radius, which passes through the solution of the Poisson equation. In
+eager mode this ODE is solved with \scipy\ and the derivative is
+attached from the forward sensitivity equations; under compilation the
+same ODE is solved in the backend.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/gD4_spherical_df_param/gD4_spherical_df_param.pdf}
+  \caption{Derivatives through the construction and sampling of
+    spherical DFs. Top row: King models of unit mass and tidal radius
+    $r_t=10$ for four values of $W_0$ (a); the derivative $\partial\ln\rho/\partial W_0$
+    at fixed $(M,r_t)$ through the solution of the Poisson equation,
+    eagerly with \scipy\ and under \texttt{jax.jit} with \diffrax, compared
+    with a finite difference in which the model is rebuilt (b), and the
+    convergence of that finite difference onto the automatic derivative
+    (c). Bottom row: an Osipkov--Merritt DF of a Hernquist sphere with
+    anisotropy radius $r_a=1.5$, constructed and sampled ($4\times10^6$
+    particles) in one compiled function of the scale radius $a$; the
+    sampled velocity dispersion matches the Jeans equation (d), its
+    derivative with respect to $a$ through construction and sampling
+    matches both a finite difference of the same sample and the Jeans
+    expectation within the Monte-Carlo noise (e), and the per-particle
+    derivatives converge onto the automatic ones as $h$ and $h^2$
+    (f).}\label{fig:dfparam}
+\end{figure*}
+
+\subsection{Spherical DFs}\label{sec:df-spherical}
+
+The spherical DFs of \galpy---the Eddington inversion for isotropic
+systems, the Osipkov--Merritt and constant-anisotropy inversions, the
+King model, and the closed-form Hernquist and NFW DFs---share one
+sampler, which draws radii by inverting the cumulative mass profile and
+velocities by inverting a tabulated $p(v|r)$, and which on the backends
+does both by interpolation in tables that are differentiable in their
+knots. The inversions themselves, which are integrals of a derivative
+of the density over the potential, use fixed-order Gauss--Legendre
+quadrature in substituted variables and are differentiable through the
+integrand, such that the DF can be differentiated with respect to the
+parameters of the density and potential that it is built from. The
+constant-anisotropy DF is the one place where \jax\ was already present
+in \galpy, as an optional dependency for the fractional derivative in its
+inversion, and its \numpy\ result is one of the three places where
+byte-identity with the previous version was not kept: the force in its
+integrand is now obtained from the generic force routine rather than a
+private one, which reorders floating-point operations. Its construction
+is also much faster than it was, by about a factor of four on \numpy\
+and by orders of magnitude under compilation, because the $f(E)$
+inversion is a fixed-shape quadrature that compiles well. As an example,
+the derivative of a set of sampled radii with respect to the scale
+radius of a Hernquist potential under \torch\ is obtained as
+\begin{code}
+a= torch.tensor(1.,requires_grad=True)
+with galpy.backend.use('torch'):
+    df= constantbetadf(pot=HernquistPotential(amp=2.,a=a),beta=-0.2)
+    sam= df.sample(n=1000,rmin=0.1,key=galpy.backend.random.key(7,backend='torch'))
+dr_da= torch.autograd.grad(sam.r().sum(),a)
+\end{code}
+and for a Hernquist sphere this derivative is $r_i/a$, which the sampler
+reproduces to $10^{-13}$. Under \jax, construction, evaluation, and
+sampling of these DFs run under \texttt{jax.jit}, and for the King
+model so does the derivative with respect to $W_0$,
+\begin{code}
+def sigmar(W0):
+    return kingdf(W0=W0,M=2.3,rt=1.4).sigmar(jnp.asarray(0.5))
+jax.grad(sigmar)(3.)
+jax.jit(jax.grad(sigmar))(3.)  # the ODE is solved by diffrax here
+\end{code}
+Not everything is differentiable: the energy derivative of the mass
+profile of the closed-form DFs is a \numpy\ computation, and the
+analytic DFs of \citet{Evans1997} for power-law spheres were added to
+\galpy\ on \numpy\ only.
+
+\subsection{Disk DFs}\label{sec:df-disk}
+
+The two-dimensional disk DFs of \citet{Dehnen1999} and \citet{Shu1969}
+and their moments are evaluated with nested Gauss--Legendre quadrature
+on the backends and are differentiable with respect to the parameters of
+their surface-density and velocity-dispersion profiles; the moments of
+the evolved disk DF, which integrates orbits backwards through a
+non-axisymmetric perturbation, differentiate through that integration,
+which on the backends is one vectorized in-backend solve over the
+velocity grid rather than a loop. The quasi-isothermal DF of
+\citet{Binney2010} is evaluated and its moments computed on the backends,
+differentiably with respect to the parameters of the potential and the
+DF's scale lengths, and its velocity sampler at a given position draws
+by inverse transformation on a three-dimensional velocity mesh, such
+that a sample is differentiable in the DF's parameters for a fixed key.
+Its construction is a \numpy\ computation, and its interpolated velocity
+sampler, which samples many positions at once, is a rejection sampler
+with \numpy\ proposals that runs on the backends, with its shrinking
+arrays padded to fixed sizes, but is not differentiable. The corrections
+of the disk DFs for the difference between the input and output
+profiles are not migrated.
+
+\subsection{Speed}\label{sec:df-speed}
+
+Sampling is where the backends change what is practical.
+\figurename~\ref{fig:dfspeed} displays the time to draw $N$ particles
+from four spherical DFs. On the CPU, eager \jax\ and \torch\ are slower
+than \numpy\ for small samples, because every one of the hundreds of
+array operations in a draw is dispatched separately and each costs a few
+to tens of microseconds, and only at $N\gtrsim10^5$ do they catch up;
+compiled \jax\ is faster than \numpy\ at every size, by a factor of a
+few to twenty at $N=10^7$. On a GPU the sample of $10^7$ particles takes
+tens of milliseconds on the consumer card and a few milliseconds on the
+H100, three orders of magnitude faster than \numpy. The lower panel
+shows the cost of constructing a DF, which for the inversions is
+dominated by the $f(E)$ integral: minutes on \numpy\ for the
+constant-anisotropy DF, a fraction of a second once compiled, with the
+compilation itself costing seconds and paid once.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/gD3_spherical_df_speed/gD3_spherical_df_speed.pdf}
+  \caption{Speed of sampling and constructing spherical DFs. Top: wall
+    time of \texttt{sample(n=N)} for the isotropic Hernquist DF, the
+    Eddington inversion of an NFW profile, an Osipkov--Merritt DF, and a
+    King model, on \numpy\ and on the backends on the CPU, the TITAN~Xp,
+    and the H100; solid lines are compiled, dashed eager. Bottom: time to
+    construct each DF and draw a first thousand particles, warm (filled)
+    and including compilation on the first call in a fresh process
+    (outline); hatched bars are eager.}\label{fig:dfspeed}
+\end{figure*}

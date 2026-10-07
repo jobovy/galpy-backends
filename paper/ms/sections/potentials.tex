@@ -1,1 +1,112 @@
-% potentials
+\section{Potentials}\label{sec:potential}
+
+The \pot\ classes are the foundation of \galpy\ and were the first part
+of the code to be migrated. The approach is the one of
+\sectionname~\ref{sec:design-agnostic}: every private compute method
+(\texttt{\_evaluate}, \texttt{\_Rforce}, \texttt{\_zforce},
+\texttt{\_phitorque}, \texttt{\_dens}, \texttt{\_surfdens}, and the six
+second derivatives) resolves the array namespace from its coordinates
+and uses it throughout, and the public methods, through the coercion
+decorator, bring scalar and \numpy\ inputs onto the namespace of any
+backend input. For the majority of \galpy's potentials this was the
+whole change, because they are elementary functions of the coordinates.
+The remainder use special functions or tabulated quantities: the
+basis-function and multipole expansions (\texttt{SCFPotential},
+\texttt{MultipoleExpansionPotential}, and their disk variants) use the
+associated Legendre and Gegenbauer polynomials; the power-law potential
+with an exponential cutoff and the Einasto profile use incomplete gamma
+functions; the double-exponential disk uses Bessel functions in a
+Hankel-type integral; and the interpolated potentials and the King
+profile evaluate splines. These go through the special-function router
+and the interpolation layer of \sectionname~\ref{sec:design-numerics}.
+All of the potentials, forces, and wrappers in \texttt{galpy.potential}
+run on both backends, with the exception of the potentials that read
+$N$-body snapshots through \texttt{pynbody} and the \texttt{AMUSE}
+interface, which have no backend code; the adiabatic-contraction
+wrapper, whose construction is a \scipy\ root-find, declares itself
+incompatible and is computed on \numpy. The convenience functions that
+act on potentials---the circular velocity and epicycle frequencies, the
+radius of a circular orbit of given angular momentum or energy, the
+enclosed mass, the tidal radius and tidal tensor---are backend-aware as
+well; those that require a root are solved with the shared root finder
+and those that require an integral use Gauss--Legendre quadrature.
+
+The derivatives of a potential with respect to the coordinates are, of
+course, its forces and second derivatives, which \galpy\ implements by
+hand. Under a backend these can also be obtained by differentiating the
+potential, and the agreement between the two is a strong test of both:
+for the basis-function expansions, the spiral arms, a rotating bar, and
+composite potentials, the force by AD agrees with the hand-coded force
+to within a few units in the last place, that is, the derivative that
+AD produces is the analytic force up to rounding. The test suite checks
+these identities for every potential, under both backends and in both
+modes. For the user, the relevant derivatives are those with respect to
+the parameters. A potential constructed with a backend array as a
+parameter is differentiable with respect to that parameter through
+every method,
+\begin{code}
+from galpy.potential import MiyamotoNagaiPotential
+def Rforce_of_a(a):
+    mp= MiyamotoNagaiPotential(amp=1.,a=a,b=0.3)
+    return mp.Rforce(1.2,0.1)
+dFR_da= jax.grad(Rforce_of_a)(0.5)
+\end{code}
+and the same with \torch\ reads
+\begin{code}
+a= torch.tensor(0.5,requires_grad=True)
+mp= MiyamotoNagaiPotential(amp=1.,a=a,b=0.3)
+mp.Rforce(torch.tensor(1.2),torch.tensor(0.1)).backward()
+a.grad # dFR/da
+\end{code}
+Forty-nine of the fifty potentials that can be constructed from
+parameters alone are differentiable with respect to their amplitude in
+this way, both eagerly and under compilation; the one exception is the
+disk basis-function expansion under \texttt{jax.jit}. \figurename~\ref{fig:paramgrad}
+displays the accuracy of these parameter derivatives and a small
+example of their use, the recovery of the scale length of a Plummer
+potential from its force by gradient descent. The parameters of a
+potential constructed from a density, as the basis-function and
+multipole expansions can be, carry the derivative through the expansion
+coefficients.
+
+\begin{figure}[t!]
+  \includegraphics[width=0.48\textwidth,clip=]{../figures/g3_param_gradients/g3_param_gradients.pdf}
+  \caption{Derivatives of potentials with respect to their parameters.
+    The left panel shows, for the Plummer and isochrone potentials, the
+    largest difference between the derivatives of the potential and of
+    the radial force with respect to the amplitude and scale parameters
+    computed with \jax\ and with \torch\ (circles, at the level of the
+    double-precision rounding error) and between either of these and a
+    central finite difference (triangles, at the level of the
+    finite-difference error). The right panel displays the recovery of
+    the scale length of a Plummer potential from the radial force at a
+    set of points by gradient descent on the derivative, starting from
+    $b=1.5$ and converging to the true $b=0.85$, with both
+    backends.}\label{fig:paramgrad}
+\end{figure}
+
+A few things are worth stating plainly. Where \galpy\ computes an
+integral over a potential adaptively on the \numpy\ path, as for the
+enclosed mass of a general density or the surface density, the backend
+computes a fixed-order Gauss--Legendre approximation; the order was set
+such that the two agree, but the backend result is an approximation of
+fixed cost rather than an adaptive one. Interpolated potentials evaluate
+the same spline as \scipy\ does, to within one unit in the last place,
+by converting the fitted spline to a piecewise-polynomial table; they are
+differentiable in the evaluation point, but not in the tabulated values.
+A potential that moves along a precomputed orbit, as the
+\texttt{MovingObjectPotential}, keeps that orbit on \numpy\ and
+computes the field at backend coordinates. And a \python\ branch on the
+value of a stored parameter, such as the special case of a vanishing
+scale length, is harmless when the parameter is differentiated eagerly
+but fails when the parameter is traced inside a compiled ODE solve;
+such branches have been replaced where they were found, but the
+behavior is worth knowing when a new potential is written.
+
+New potentials are written as before: a class that inherits from
+\pot\ and implements \texttt{\_evaluate}, \texttt{\_Rforce}, and
+\texttt{\_zforce}. If these are written with the resolved namespace
+rather than with \numpy\ directly, the new potential runs on every
+backend and can be differentiated, and the test suite's automatic checks
+of new potentials are run under every backend. A test checks that no
+migrated potential calls \numpy\ directly in a compute method.

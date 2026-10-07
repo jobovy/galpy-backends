@@ -1,34 +1,55 @@
-% Macros (conventions follow the galpy paper, Bovy 2015)
+% Macros; conventions follow the galpy paper (Bovy 2015, ms.in)
+\setlength{\emergencystretch}{5em}
+\allowdisplaybreaks
+\raggedbottom
 \newcommand{\ie}{i.e.}
 \newcommand{\eg}{e.g.}
 \newcommand{\etal}{et al.}
 \newcommand{\dd}{\mathrm{d}}
 \newcommand{\sectionname}{$\mathsection$}
-\newcommand{\flag}[1]{\texttt{#1}}
-\newcommand{\galpy}{\flag{galpy}}
-\newcommand{\numpy}{\flag{numpy}}
-\newcommand{\scipy}{\flag{scipy}}
-\newcommand{\jax}{\flag{jax}}
-\newcommand{\torch}{\flag{PyTorch}}
-\newcommand{\python}{\flag{Python}}
-\newcommand{\cc}{\texttt{C}}
-\newcommand{\diffrax}{\flag{diffrax}}
-\newcommand{\pot}{\texttt{Potential}}
-\newcommand{\orb}{\texttt{Orbit}}
+\newcommand{\figurenames}{\figurename s}
+\newcommand{\eqnname}{equation}
+\newcommand{\Eqnname}{Equation}
+\newcommand{\equationname}{\eqnname}
+\renewcommand{\vec}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\unitvec}[1]{\ensuremath{\mathbf{\hat{#1}}}}
 \newcommand{\vecx}{\ensuremath{\vec{x}}}
 \newcommand{\vecv}{\ensuremath{\vec{v}}}
 \newcommand{\vecw}{\ensuremath{\vec{w}}}
 \newcommand{\vecj}{\ensuremath{\vec{J}}}
 \newcommand{\veco}{\ensuremath{\vec{\Omega}}}
 \newcommand{\veca}{\ensuremath{\boldsymbol\theta}}
-\newcommand{\paramspot}{\ensuremath{\vec{p}_\Phi}}
+\newcommand{\paramspot}{\ensuremath{\vec{p}}}
+\newcommand{\inv}{\ensuremath{^{-1}}}
 \newcommand{\kpc}{\ensuremath{\,\mathrm{kpc}}}
 \newcommand{\pc}{\ensuremath{\,\mathrm{pc}}}
 \newcommand{\kms}{\ensuremath{\,\mathrm{km\ s}^{-1}}}
 \newcommand{\Gyr}{\ensuremath{\,\mathrm{Gyr}}}
 \newcommand{\Myr}{\ensuremath{\,\mathrm{Myr}}}
+\newcommand{\yr}{\ensuremath{\,\mathrm{yr}}}
 \newcommand{\msun}{\ensuremath{\,\mathrm{M}_{\odot}}}
-% code
+\newcommand{\mas}{\ensuremath{\,\mathrm{mas}}}
+% code names
+\newcommand{\flag}[1]{\texttt{#1}}
+\newcommand{\galpy}{\flag{galpy}}
+\newcommand{\numpy}{\flag{numpy}}
+\newcommand{\scipy}{\flag{scipy}}
+\newcommand{\matplotlib}{\flag{matplotlib}}
+\newcommand{\astropy}{\flag{astropy}}
+\newcommand{\jax}{\flag{jax}}
+\newcommand{\torch}{\flag{PyTorch}}
+\newcommand{\python}{\flag{Python}}
+\newcommand{\cc}{\texttt{C}}
+\newcommand{\diffrax}{\flag{diffrax}}
+\newcommand{\torchode}{\flag{torchode}}
+\newcommand{\git}{\texttt{git}}
+\newcommand{\github}{\texttt{GitHub}}
+\newcommand{\pot}{\texttt{Potential}}
+\newcommand{\orb}{\texttt{Orbit}}
+\newcommand{\claude}{Claude}
+% code listings: inline snippets use \begin{minted}{python}; listings shown as
+% numbered figures use the galpy-paper options below
 \newminted{python}{fontsize=\small,autogobble,breaklines}
 \newenvironment{code}{\VerbatimEnvironment\begin{pythoncode}}{\end{pythoncode}}
+\newenvironment{codefig}{\VerbatimEnvironment\begin{minted}[mathescape,linenos,numbersep=5pt,autogobble,frame=lines,framesep=2mm,fontsize=\small]{python}}{\end{minted}}
 \newcommand{\pycode}[1]{\mintinline{python}{#1}}

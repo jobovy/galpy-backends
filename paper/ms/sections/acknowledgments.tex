@@ -1,1 +1,42 @@
-% acknowledgments
+\begin{acknowledgments}
+It is a pleasure to thank %TODO(JB): people to thank
+the many users of \galpy\ whose bug reports and questions over the past
+decade shaped the code that is extended here. JB acknowledges financial
+support from NSERC (funding reference number RGPIN-2020-04712) and an
+Ontario Early Researcher Award (ER16-12-061). %TODO(JB): check current grants
+This work was made possible by the open-source codes \numpy\
+\citep{Harris2020}, \scipy\ \citep{Virtanen2020}, \matplotlib\
+\citep{Hunter2007}, \astropy\ \citep{Astropy2022}, \jax\
+\citep{Bradbury2018}, \torch\ \citep{Paszke2019}, \diffrax\ and
+\texttt{equinox} \citep{Kidger2021,KidgerGarcia2021}, \texttt{torchdiffeq}
+\citep{Chen2018}, \torchode\ \citep{LienenGunnemann2022}, and the GNU Scientific
+Library \citep{Galassi2009}. Computations on the H100 GPU were performed
+on the Trillium supercomputer at the SciNet HPC Consortium; SciNet is
+funded by Innovation, Science and Economic Development Canada, the
+Digital Research Alliance of Canada, the Ontario Research Fund: Research
+Excellence, and the University of Toronto. %TODO(JB): verify Trillium acknowledgment text
+Version-control, continuous-integration, coverage, and documentation
+services are provided by GitHub, Codecov, and Read the Docs and are
+gratefully acknowledged.
+\end{acknowledgments}
+
+\section*{Statement on the use of AI}
+
+The code described in this paper was written by Claude, an AI coding
+agent developed by Anthropic and used through the \texttt{Claude Code}
+environment, under my direction and review, between 2026 June 1 and
+October 6; successive versions of the Claude models were used over this
+period, and each commit records the model that produced it. I set the
+goals, the constraints, and the acceptance criteria, reviewed the pull
+requests, directed the design where the agent's choices were not what I
+wanted, and merged the code; the agent wrote the code, the tests, the
+documentation, and the working notes, and ran the measurements. For
+about two weeks in the summer the agent worked without supervision, as
+described in \sectionname~\ref{sec:process-autonomous}, and its work
+from that period was reviewed afterwards. I also used OpenAI's Codex to
+review the agent's code at several points. The figures of this paper
+and the analysis behind them were produced by the agent from scripts
+that are part of the accompanying repository. The text of this paper was
+drafted by the agent from the working notes of the project and from my
+instructions and was then edited by me; I am responsible for its
+content. %TODO(JB): adjust to what actually happened with the text

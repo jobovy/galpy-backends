@@ -1,1 +1,181 @@
-% orbits
+\section{Orbit integration}\label{sec:orbit}
+
+\subsection{Three ways to integrate an orbit}\label{sec:orbit-paths}
+
+\orb\ instances are set up and integrated as before, but an orbit whose
+initial condition is a backend array, or whose potential carries a
+backend parameter, is integrated in one of two new ways, depending on
+what is to be differentiated. The first is to integrate the equations
+of motion inside the backend, with the backend's own ODE solver:
+\diffrax\ \citep{Kidger2021} for \jax, with an eighth-order
+Dormand--Prince method, and \texttt{torchdiffeq} \citep{Chen2018} or
+\torchode\ \citep{LienenGunnemann2022} for \torch, with a fifth-order method.
+The equations of motion are those of \galpy's \cc\ integrators,
+evaluated in rectangular coordinates through the backend force layer,
+and the default tolerances are $10^{-12}$. Because the whole integration
+is then a backend program, everything that enters it can be
+differentiated: the initial condition, the potential's parameters, the
+integration times. $N$ orbits are integrated in a single solve along a
+batch axis, with per-orbit time grids if desired, and the solve runs on
+a GPU when the initial conditions do. This is the path to use for
+derivatives with respect to the parameters of the potential,
+\begin{code}
+def final_R(b):
+    o= Orbit(jnp.asarray(ic))
+    o.integrate(ts,PlummerPotential(amp=1.,b=b),method='diffrax')
+    return o.R(ts[-1])
+dR_db= jax.grad(final_R)(0.6)
+\end{code}
+and under \torch\
+\begin{code}
+b= torch.tensor(0.6,requires_grad=True)
+o= Orbit(torch.as_tensor(ic))
+o.integrate(torch.as_tensor(ts),PlummerPotential(amp=1.,b=b),
+            method='torchode')
+o.R(ts[-1]).backward() # b.grad = dR/db
+\end{code}
+Second derivatives are available under \jax\ with the direct adjoint
+(\texttt{inbackend\_kwargs=\{'adjoint':\,'direct'\}}), and
+\texttt{jax.vmap} over initial conditions works, with one caveat
+discussed below.
+
+The second way uses \galpy's compiled \cc\ integrators. These are much
+faster than a solver that runs inside \jax\ or \torch\ on a CPU---for a
+single orbit in the Milky-Way model, about ten times faster than the
+\diffrax\ solve and a hundred times faster than \texttt{torchdiffeq}---but
+they are opaque to AD. What they can provide is the derivative of the
+orbit with respect to its initial condition, through the variational
+equations that \galpy\ integrates alongside the orbit in \cc\
+(\appendixname~\ref{app:dxdv}). When a \galpy\ orbit with a backend
+initial condition is integrated with a \cc\ method, the \cc\ integrator
+returns both the orbit and the state-transition matrix
+$\vec{M}(t) = \partial \vecw(t)/\partial \vecw(0)$, and the backend is
+told, through a custom derivative rule, that the derivative of the orbit
+with respect to the initial condition is $\vec{M}$; the reverse-mode
+derivative of any function of the orbit is then a single product of
+$\vec{M}^T$ with the cotangent, without a second call to \cc. For a
+six-dimensional orbit and a Runge--Kutta method, the six columns of
+$\vec{M}$ are integrated together with the orbit as a 42-component
+state; for the symplectic methods, the deviation vectors are propagated
+through the same drift and kick steps as the orbit. The derivative is
+exact to the precision of the solver: \figurename~\ref{fig:icjacobian}
+compares the state-transition matrix of a Milky-Way orbit over 3\,Gyr
+from the \cc\ variational equations with reverse-mode AD through
+\diffrax\ and through \texttt{torchdiffeq} and with finite differences
+of independently integrated orbits, and the four agree to a few parts in
+$10^{10}$. This path gives derivatives with respect to the initial
+conditions only, and to first order only; the variational equations do
+not carry derivatives with respect to the parameters of the potential,
+which must come from the in-backend solve.
+
+\begin{figure}[t!]
+  \includegraphics[width=0.48\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
+  \caption{The derivative of an orbit with respect to its initial
+    condition, four ways. For a Sun-like orbit in \texttt{MWPotential2014}
+    integrated for 3\,Gyr, the left panel shows one element of the
+    state-transition matrix, $\partial R(t)/\partial v_{R,0}$, from the
+    \cc\ variational equations, from a finite difference of the \cc\
+    orbit, and from reverse-mode automatic differentiation through the
+    \diffrax\ and \texttt{torchdiffeq} solvers. The right panel shows the
+    relative Frobenius norm of the difference between each of the
+    latter three and the variational result; all agree to a few parts in
+    $10^{10}$.}\label{fig:icjacobian}
+\end{figure}
+
+The choice between the two is made automatically. An \orb\ with a
+backend initial condition that is integrated with a Runge--Kutta \cc\
+method, in a potential that has \cc\ second derivatives, with
+non-traced times and non-traced potential parameters, uses the \cc\
+integrator and its variational equations; the symplectic \cc\ methods
+do so only when the initial condition is being differentiated, because
+the variational integration doubles their cost. In every other case, in
+particular whenever a potential parameter is traced or when the
+integration is to run on a GPU, the in-backend solver is used, under the
+name \texttt{method='diffrax'}, \texttt{'torchode'}, or
+\texttt{'torchdiffeq'}, which can also be requested directly. The third
+way is the old one: an orbit with a concrete backend initial condition
+and a method that is not routed is integrated in \cc\ and returned as a
+backend array that is not differentiable, with a warning.
+
+After integration, the orbit's methods work as before on backend
+arrays: positions and velocities at the integration times or, by
+interpolation with an in-backend spline, between them; energies and
+angular momenta; peri- and apocenter radii and maximum height, both
+from the integrated orbit and analytically through the action--angle
+code of \sectionname~\ref{sec:aa}; and the transformations to observed
+coordinates. Initializing an orbit from observed coordinates with
+backend arrays works as well, such that a derivative with respect to a
+star's distance or proper motion is available.
+
+\subsection{Variational equations and chaos}\label{sec:orbit-dxdv}
+
+The variational equations that the \cc\ state-transition matrix relies
+on were part of \galpy\ for planar orbits since 2011; they were extended
+to three-dimensional orbits, to all of the \cc\ integrators including
+the symplectic ones, to one-dimensional orbits, and to dissipative,
+velocity-dependent forces, as part of this work and were released in
+\galpy\ \flag{v1.12}. The equations and the checks that were applied to
+them are given in \appendixname~\ref{app:dxdv}. Their user-facing form is
+\texttt{Orbit.integrate\_dxdv}, which integrates an orbit together with a
+deviation vector or with the full state-transition matrix, and
+\texttt{Orbit.lyapunov}, which computes the largest Lyapunov exponent, or
+the spectrum, by the renormalization method of \citet{Benettin1980a,Benettin1980b}. For
+the H\'enon--Heiles potential at $E=1/8$, the exponent of a chaotic orbit
+converges into the range quoted in the literature while that of a
+regular orbit at the same energy decays as $\ln t/t$. These are \numpy\
+and \cc\ features; they do not run on the backends.
+
+\subsection{Limitations}\label{sec:orbit-limitations}
+
+The derivative of an in-backend solve with respect to its inputs is
+taken, by default, by differentiating through the solver's adaptive
+steps. This is correct for a single orbit, but when a batch of orbits is
+differentiated under \texttt{jax.vmap}, the adaptive steps of one orbit
+depend on the others and the derivative is wrong by several percent.
+The remedy is to integrate with a fixed number of steps when
+differentiating a batch, which \galpy\ does where it integrates batches
+internally and which the user should do as well. \texttt{torchdiffeq}
+has no batching rule, such that a batch of orbits under \torch\ is a
+\python\ loop unless \torchode\ is used, and the eighth-order method of
+\texttt{torchdiffeq} carries a gradient error of about $10^{-5}$ in its
+backward pass, such that \galpy\ uses its fifth-order method. The
+pure-\python\ integrators that \galpy\ retains for reference run on the
+backends but are slow there, because each step is a separate set of
+array operations. And the \cc\ integrators cannot be used on a GPU at
+all; their derivative rule runs the integration on the host.
+
+\subsection{Speed}\label{sec:orbit-speed}
+
+\figurename~\ref{fig:orbitspeed} compares the wall time of integrating
+$N$ orbits for 2\,Gyr in the Milky-Way model with the \cc\ integrator,
+one orbit at a time on one core, with the in-backend solvers on a CPU
+and on two GPUs. The \cc\ path costs about $0.1$\,ms per orbit after a
+few milliseconds of setup and is the fastest option for up to about
+$10^4$ orbits on any hardware. The backend solvers start from a floor of
+one to a few seconds, set by compilation and kernel launches, and
+amortize it over the batch; on the consumer GPU they never quite reach
+the \cc\ cost per orbit, because that card executes double-precision
+arithmetic at one thirty-second of its single-precision rate, while on
+the H100 they pass single-threaded \cc\ near $N\approx3\times10^4$ and are
+several times cheaper per orbit at the largest batches. The \cc\ path
+also runs in parallel over cores, which divides its line by the number
+of cores. Compilation of the in-backend solve takes seconds and is paid
+once per shape of the problem. The derivative of an orbit with respect
+to its initial condition follows the same pattern: the \cc\ variational
+integrator computes it for a single orbit in about $10$\,ms, where the
+backend solvers take 0.1 to 10\,s, and the GPU overtakes it at batches
+of a few thousand orbits.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g12_inbackend_orbit_gpu/g12_inbackend_orbit_gpu.pdf}
+  \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
+    \texttt{MWPotential2014} with relative and absolute tolerances of
+    $10^{-8}$. The grey line is \galpy's \cc\ integrator \texttt{dop853\_c},
+    one orbit at a time on a single core. The blue lines are the
+    in-backend \diffrax\ solve under \jax\ on a CPU and on the two GPUs,
+    compiled, with the eighth-order method that \galpy\ uses by default
+    and, dash-dotted, with a fifth-order method that performs the same
+    number of force evaluations as the \torch\ solve; the orange lines are
+    the eager \texttt{torchdiffeq} solve on the GPUs. Dotted lines mark a
+    constant cost per orbit.}\label{fig:orbitspeed}
+\end{figure*}
