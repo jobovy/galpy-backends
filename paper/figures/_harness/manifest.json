@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "b90daf0d47ac501a0ba2874efed01b246dca0c3d694e9c30f95eccc70f675ff2",
+    "git": "2c67c22",
+    "sha256": "77ad11370e0607a68bf2d7e2e8469cb3e7db51b3d54d91cb37a40eb9ba843ff5",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -91,8 +91,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "3cfd8f6e3a3b378c1d69dff5a68b2db48f7518542b0b80fca3b34e5cb3b1757c",
+    "git": "5ee8d2a",
+    "sha256": "84ebd68d68b150770a9a9060c683bebf309da148baa42abfa4387296f218d182",
     "track": "G"
   },
   "g15_icderiv_speed": {
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "b9b00a40c5aabdf689d148a4691bb8de5b0f0d020b5d49fede522ca1a0c20b64",
+    "git": "ab37edd",
+    "sha256": "c66f3df0ca6d84d0fe1dbfd225cff6a518c11e44afb857f2fe5b8c85aa8512bd",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -123,8 +123,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "c316032b64befa3ee820495a6329e72404e787204ce4b5980b88eca70b8857b9",
+    "git": "5ee8d2a",
+    "sha256": "602ce165475f43e957faf48335993573a5b7b52d60b6cee092fe7f22b8da88c8",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_jax": {
@@ -171,8 +171,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "932f6c98725ae567b5a89d1b5cbd2022936d664319147e0bf35054a9f6a582dc",
+    "git": "5ee8d2a",
+    "sha256": "cd12b257d0197ff1e5c3a1a4e3f9bc55a3c24d0d0ad7e59b40a6b89ead650897",
     "track": "G"
   },
   "g1_backend_parity": {
@@ -203,8 +203,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "bf9b6d8295a6f08870223b5249576c1948326a60414140e3179656098a7e5f02",
+    "git": "ab37edd",
+    "sha256": "477e0119e491404eace2cd47182b37f840e6da3d964002c5a7d3bcbe5b2e0d66",
     "track": "G"
   },
   "g2b_transfer": {
@@ -234,8 +234,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "aff224cfefd9fcd7e2fdc189dfd4806961bda8645a16b562b3881df1577c9f6f",
+    "git": "5ee8d2a",
+    "sha256": "cc1213b9d4cb0a7fcebc36301ec5a8122b5e546a2f065b5d2f9a41c90e61f8c8",
     "track": "G"
   },
   "g5_autodiff_overhead": {
@@ -250,8 +250,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "fdcdf5346fdc1287cd3f67ea2a4439410e2b69395f0167258284fde43e6e1f8b",
+    "git": "ab37edd",
+    "sha256": "e38780595729a8d8af5cdc3bdbe929d9fbbfbee0a57dbe69bc20995adc4d344a",
     "track": "G"
   },
   "g6_jit_amortization": {
@@ -282,8 +282,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "e23b3d82579eb9763857b69e06b342c6452f458e6f87e3ddada5bcc65a7a85cd",
+    "git": "2c67c22",
+    "sha256": "410b1805f4d7e5e384131bc6e226d5defd0a903d8a3b7b35691d0e13a2dd6066",
     "track": "G"
   },
   "g8_galax_orbit_speed": {
@@ -298,8 +298,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "597c5bf9d578a83652bbb139fd32f9827179dd77d0911b144d94c700e4d6b33c",
+    "git": "2c67c22",
+    "sha256": "cfcfc1a9e083d7019873765f664c09023c06667979035c0bb2fee03e676e5bf1",
     "track": "G"
   },
   "g9_variational_validity": {
@@ -314,8 +314,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "feb93f24472575b7723b173c58912b5dd62e81a575787f67aa39c76838756ffe",
+    "git": "2c67c22",
+    "sha256": "97559143dc405310d14a8927137ff45358012615b95ade38841a3708f606ac2b",
     "track": "G"
   },
   "gA1_staeckel_param_sensitivity": {
@@ -330,8 +330,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "39c3c923614e119c909ae895bcd88b74dc31771def84c517a9944ee6a1767f8c",
+    "git": "5ee8d2a",
+    "sha256": "0c94a678b2c6e0f45aab784bb02c9bafaf132b3dcf6c879c4702c52f3bb7aeca",
     "track": "A"
   },
   "gD1_df_sensitivity": {
@@ -362,8 +362,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "1240e6bf9e3290ba97f2cb5da7459680579eda3e458e9d21cdfa9d401cd8ac2e",
+    "git": "2c67c22",
+    "sha256": "efac6f30f4ea62f2a2ccb7632e9399e4a5fef2d24c6ca0c4a6e574eed050a735",
     "track": "G"
   },
   "gD3_spherical_df_speed": {
@@ -378,8 +378,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "46ac25e899b1499f3e43c12e68edcb027225120b1ab82606f0eec1a5e0588d6a",
+    "git": "2c67c22",
+    "sha256": "9c34fbe1d133cc5f2dc683dc113d89b61c63638a7918cd2c58cd234aef03bb84",
     "track": "F"
   },
   "gD4_spherical_df_param": {
@@ -394,8 +394,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "000174c799d92e486a3f50f83bb39e5b981ec8d156fb505b406c76fba9c87116",
+    "git": "5ee8d2a",
+    "sha256": "fd0be5532e6c316b299aafc05e8f9b7eb103c2adafe76279403c7ed13abced63",
     "track": "F"
   },
   "gF1_autodiff_forces": {
@@ -410,8 +410,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "47ccb0dac7f820488f61e97b4e62c94b7b8a80cf10b90fc302720d25aff5d185",
+    "git": "2c67c22",
+    "sha256": "47679d601b415b190dcddebd6d9c95c44225fd84bf521e96c0ea84977636502c",
     "track": "G"
   },
   "gS1_stream_track_sensitivity": {
@@ -426,8 +426,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "d795902689cc0fa909a01d7056a8903257eba7d8d741ec59008655f49f60ede6",
+    "git": "2c67c22",
+    "sha256": "74fb92426ecf8c1c16941f2aeb8b610f0256106c9d743c13a6490633f747acf4",
     "track": "G"
   },
   "gS2_streamspray_sensitivity": {
@@ -447,7 +447,7 @@
     "track": "G"
   },
   "gS3_track_extrapolation": {
-    "description": "one forward-mode AD pass predicts the streamspraydf smooth track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
+    "description": "one forward-mode AD pass predicts the streamspraydf smooth track (both tails) for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run; like-for-like residual falls as dq^2 (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
       "galpy_git": "9a877712e",
@@ -458,8 +458,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "d310630776942bc88831dd281a0e861ee43fd71095320e8669a173e36c1398bf",
+    "git": "2c67c22",
+    "sha256": "06b679d82fdd0eb9385e0b3caa146b951dbee1d3d6fdaddce44e5aa4755e841b",
     "track": "G"
   },
   "gS4_streamdf_speed": {
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "08d19d9ca5f44ac605159ac166c1cfcf67dcf974a75cb255f6f8961f2bf6f797",
+    "git": "ab37edd",
+    "sha256": "701384a907bbb14d58bffed5844334441298919f8df23815a719569703734052",
     "track": "S"
   },
   "gS5_streamspray_speed": {
@@ -490,8 +490,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "1721945adc541024ee1f6b49d3953b12c36a8ba090c9aef2100b9fa6cb4a8d70",
+    "git": "5ee8d2a",
+    "sha256": "76f700bdee613c36974e3b287f7fe771f0a4264c03936308f58df6bcdfc77c81",
     "track": "S"
   },
   "gV1_vertical_inverse": {
@@ -506,8 +506,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "38bd4ebe5981574c5b0a59c6070935fc62d76e69651cbabb4c51bd3a99117567",
+    "git": "2c67c22",
+    "sha256": "a1f19f114c3d1be268a1072314ad6c0fc42d4ec96d070a64a0be49e98e7cfc97",
     "track": "E"
   },
   "gV2_vertical_inverse_speed": {
@@ -522,8 +522,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "84bc7e0a271da774b70da217675f2c1b9b98c3284a4c40a56dedc9026aea57fc",
+    "git": "2c67c22",
+    "sha256": "eb683772045e6334f1ad8a0c73c08a45a21187dce3300a7aba3b0200431cab24",
     "track": "E"
   }
 }

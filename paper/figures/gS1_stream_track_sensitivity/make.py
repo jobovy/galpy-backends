@@ -160,7 +160,7 @@ def make():
 
     # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
     # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends).
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 3.3) if PAPER else (9.8, 4.0))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.3) if PAPER else (9.8, 4.0))
     _ts = {"fontsize": 10} if PAPER else {}
     _fs_leg = 8 if PAPER else 7
 
@@ -186,11 +186,16 @@ def make():
                   else rf"AD vs central FD ($h={data['h']}$)", **_ts)
     ax2.set_xticks(numpy.arange(tr.shape[0]))
     if PAPER:  # the y-range spans < 1 decade: label the minor ticks too
-        from matplotlib.ticker import LogFormatterSciNotation
-        ax2.yaxis.set_minor_formatter(LogFormatterSciNotation(minor_thresholds=(2, 0.5)))
+        from matplotlib.ticker import FuncFormatter, LogFormatterSciNotation
+        _lf = LogFormatterSciNotation(labelOnlyBase=False, minor_thresholds=(2, 0.5))
+
+        def _minor(v, pos):  # 2, 4, 6 x 10^k only: 3 and 4 x 10^k collide at print size
+            m = round(v / 10 ** numpy.floor(numpy.log10(v) + 1e-9))
+            return _lf(v, pos) if m in (2, 4, 6) else ""
+
+        ax2.yaxis.set_minor_formatter(FuncFormatter(_minor))
         ax2.tick_params(axis="y", which="minor", labelsize=9)
     ax2.legend(fontsize=_fs_leg, ncol=2, framealpha=0.92)
-    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
 
     fig.tight_layout()
     return fig

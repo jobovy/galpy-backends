@@ -169,12 +169,6 @@ def make():
             ax.loglog(Nd, thr, ms=3.5, label=lab, zorder=3, **st)
         ax.set_xlabel(r"array length $N$  (points per $F_R$ call)")
         ax.set_title(title, fontsize=layout.FS["title"])
-        # Constant-wall-time reference lines: throughput = N / t0 is a slope-1 line
-        # in log-log; the GPU curves hug them at small N (launch-bound).
-        Nlo, Nhi = float(Nd.min()), float(Nd.max())
-        for t0 in (1e-4, 1e-3, 1e-2, 1e-1):
-            ax.plot([Nlo, Nhi], [Nlo / t0, Nhi / t0], ls=":", lw=0.8, color="0.78",
-                    zorder=0, label="_ref")
         e = d.get("env", {})
         if not PAPER:
             ax.text(0.97, 0.03, f"{e.get('gpu', '?')}\njax {e.get('jax', '?')} · torch {e.get('torch', '?')}"
@@ -188,8 +182,13 @@ def make():
     hi = 3.0 * max(t.max() for t in thr_all)
     for ax in axes[0]:
         ax.set_ylim(lo, hi)
-    axes[0][0].text(0.03, 0.97, "dotted: constant time per call" if PAPER
-                    else "dotted grey: constant wall-time / call\n(0.1, 1, 10, 100 ms)",
+    # constant-wall-time-per-call reference lines (throughput = N / t0, slope 1),
+    # decade-spaced to bracket every curve's time per call at its largest N
+    t_last = [c for ax in axes[0] for c in layout.last_costs(ax, kind="rate")]
+    for ax, (_, d, _) in zip(axes[0], panels):
+        Nd = numpy.asarray(d["Ns"], dtype=float)
+        refs = layout.cost_lines(ax, t_last, kind="rate", x_range=(Nd.min(), Nd.max()))
+    axes[0][0].text(0.03, 0.97, "grey dotted, per call:\n" + layout.fmt_seconds(refs),
                     transform=axes[0][0].transAxes, fontsize=fs_note, color="0.5", va="top", ha="left")
     if not PAPER:
         fig.suptitle(r"Plummer $F_R$ throughput: compute-only vs end-to-end (+transfer, dotted)",

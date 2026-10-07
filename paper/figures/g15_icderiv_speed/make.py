@@ -147,9 +147,16 @@ def make():
     ax2.set_xlabel("number of orbits  N")
     ax2.set_ylabel("IC-gradient wall-clock  [ms]")
     ax2.set_title("(b) batch scaling" if PAPER else "(b) batch scaling of the IC-gradient")
-    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
     lo, hi = ax2.get_xlim()
     ax2.set_xlim(lo, hi * 1.5)
+    # constant cost-per-orbit reference lines (wall = N * tau), decade-spaced to
+    # bracket every curve's cost per orbit at its largest N
+    xd = numpy.concatenate([ln.get_xdata() for ln in ax2.get_lines()]).astype(float)
+    refs = layout.cost_lines(ax2, layout.last_costs(ax2, kind="time"), kind="time",
+                             x_range=(xd.min(), xd.max()))
+    ax2.text(0.03, 0.97, "grey dotted: " + layout.fmt_seconds([1e-3 * r for r in refs])
+             + "\nper orbit", transform=ax2.transAxes, fontsize=fs_note, color="0.5",
+             va="top", ha="left")
     # the C-STM line ends mid-plot: label it in the empty region below, not in the
     # right-hand column (its leader would cross the other lines)
     c_lines = [ln for ln in ax2.get_lines() if ln.get_label().startswith("galpy C")]

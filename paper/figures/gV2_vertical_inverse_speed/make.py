@@ -514,14 +514,16 @@ def make():
                  if ("vmap" in name or "loop" in name) else numpy.asarray(src["Ns"], dtype=float))
             axa.loglog(x, t, ms=3.5, label=lab, lw=1.3, **st)
     axa.set_ylim(1.5e-4 if PAPER else 2e-4, 400.0)
-    # constant cost-per-point references (1 us and 10 us per point)
-    for us, lab in ((1e-6, r"1 $\mu$s/point"), (1e-5, r"10 $\mu$s/point")):
-        axa.plot(Ns, us * Ns, ":", color="0.75", lw=0.9, zorder=0, label="_ref")
+    # constant cost-per-point reference lines (wall = N * tau), decade-spaced to
+    # bracket every curve's cost per point at its largest N
+    xd = numpy.concatenate([ln.get_xdata() for ln in axa.get_lines()]).astype(float)
+    refs = layout.cost_lines(axa, layout.last_costs(axa), x_range=(xd.min(), xd.max()))
     if PAPER:
         axa.set_xlabel(r"points per call $N$ (vmap/loop: $N/%d$ tori $\times$ %d angles)"
                        % (data["nang_vmap"], data["nang_vmap"]))
         axa.set_title("(a) evaluation")
-        axa.text(0.02, 0.97, r"dotted: 1, 10 $\mu$s per point", transform=axa.transAxes,
+        axa.text(0.02, 0.97, "grey dotted: " + layout.fmt_seconds(refs) + " per point",
+                 transform=axa.transAxes,
                  fontsize=fs_note, color="0.45", ha="left", va="top")
     else:
         axa.set_xlabel(r"points per call $N$ (angles on one torus; vmap/loop: $N/%d$ tori $\times$ %d angles)"
@@ -567,7 +569,7 @@ def make():
         if len(srcs) > 1:
             he = srcs[1][0].get("env", {}).get("gpu_run", {})
             stamp += f"\n{he.get('gpu', 'H100')}: jax {he.get('jax', '?')} · torch {he.get('torch', '?')}"
-        axa.text(0.02, 0.98, stamp + "\nfloat64 · dotted grey: 1 and 10 $\\mu$s per point",
+        axa.text(0.02, 0.98, stamp + "\nfloat64 · dotted grey: " + layout.fmt_seconds(refs) + " per point",
                  transform=axa.transAxes, fontsize=5.8, color="0.45", ha="left", va="top")
         fig.tight_layout(w_pad=12.0)
     else:

@@ -197,14 +197,12 @@ def make():
     # extend the x-axis to the right so the rightmost markers have room and the
     # reference lines / legend region do not crowd the data
     xl = (xl[0], xl[1] * 1.6)
-    Nlo, Nhi = xl
-    for tau in (1e-2, 1e-3, 1e-4):
-        ax.plot([Nlo, Nhi], [Nlo * tau, Nhi * tau], ls=":", lw=0.8, color="0.8", zorder=0)
     ax.set_xlim(*xl)
+    # decade-spaced to bracket every curve's cost per orbit at its largest N
+    refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
     ax.text(
         0.025, 0.975,
-        "dotted: constant cost per orbit" if PAPER
-        else "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
+        "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
         transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
     )
     # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator

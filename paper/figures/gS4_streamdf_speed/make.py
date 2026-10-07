@@ -114,7 +114,7 @@ import sys
 
 import numpy
 
-from paper.figures._harness import bench, palette
+from paper.figures._harness import bench, layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -511,10 +511,10 @@ def make():
         # final printed width of a figure* (7.0 in) with printed text sizes. Three
         # panels plus two 8 pt direct-label columns do not fit in one row, so (a)
         # sits above (b) with its labels beside it; (c)'s labels take the right margin.
-        fig = plt.figure(figsize=(7.0, 5.0))
+        fig = plt.figure(figsize=(7.0, 5.6))
         _l, _r, _gap = 0.085, 0.80, 0.09
         _pw = (_r - _l - _gap) / 2.0
-        _b0, _h, _hgap = 0.075, 0.37, 0.14
+        _b0, _h, _hgap = 0.07, 0.38, 0.13
         axa = fig.add_axes([_l, _b0 + _h + _hgap, _pw, _h])
         axb = fig.add_axes([_l, _b0, _pw, _h])
         axc = fig.add_axes([_l + _pw + _gap, _b0, _pw, _h])
@@ -546,8 +546,16 @@ def make():
     axc.set_xlabel(r"number of phase-space points $N$")
     axc.set_ylabel("wall time (s)")
     axc.set_title("(c) DF evaluation" if PAPER else r"(c) log DF at $N$ points", **_ts)
+    # constant cost-per-star/point reference lines (wall = N * tau), decade-spaced to
+    # bracket every curve's cost per star/point at its largest N
+    if PAPER:  # headroom above the data for the in-panel notes
+        for ax in (axb, axc):
+            ax.set_ylim(top=ax.get_ylim()[1] * 300)
+    refs_b = layout.cost_lines(axb, layout.last_costs(axb), x_range=(Ns.min(), Ns.max()))
+    refs_c = layout.cost_lines(axc, layout.last_costs(axc), x_range=(Ns.min(), Ns.max()))
     if PAPER:
-        axc.text(0.03, 0.97, "torch: numpy-built sdf", transform=axc.transAxes,
+        axc.text(0.03, 0.97, "torch: numpy-built sdf\ngrey dotted, per point:\n"
+                 + layout.fmt_seconds(refs_c), transform=axc.transAxes,
                  fontsize=_fs_note, color="0.45", va="top", ha="left")
     ec, eg = data.get("env_cpu", {}), data.get("env_gpu", {})
     eh = (h100 or {}).get("env_gpu", {})
@@ -559,7 +567,8 @@ def make():
                  + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else ""),
                  transform=axb.transAxes, fontsize=5.6, color="0.45", va="top", ha="left")
     if PAPER:  # the lower right holds the GPU lines at this size
-        axb.text(0.03, 0.97, "lines labelled in (c)", transform=axb.transAxes,
+        axb.text(0.03, 0.97, "lines labelled in (c)\ngrey dotted, per star:\n"
+                 + layout.fmt_seconds(refs_b), transform=axb.transAxes,
                  fontsize=_fs_note, color="0.45", va="top", ha="left")
     else:
         axb.text(0.97, 0.03, "lines labelled in (c)", transform=axb.transAxes,
@@ -571,8 +580,9 @@ def make():
                      y=0.99)
     if not PAPER:
         fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86, wspace=0.62)
-    palette.label_lines(axa, fontsize=_fs_lab)
-    palette.label_lines(axc, fontsize=_fs_lab)
+    sep = 1.3 * _fs_lab if PAPER else None
+    palette.label_lines(axa, fontsize=_fs_lab, min_sep_pt=sep)
+    palette.label_lines(axc, fontsize=_fs_lab, min_sep_pt=sep)
     return fig
 
 

@@ -23,6 +23,11 @@ serves as the single galpy for ALL shared series:
     PYTHONPATH=/var/tmp/backends-merge python galpy_c_measure.py hiN
     PYTHONPATH=<worktree> GALPY_WORKTREE=<worktree> python galpy_c_measure.py hiN_ext
       (appends N=1e5, 3e5, 1e6 to galpy_c_cpu_hiN.json; existing points are kept)
+    ... galpy_c_measure.py <mode> --numcores K     (multi-core variant)
+      C orbits run on OpenMP threads (omp_get_max_threads; the ``numcores``
+      kwarg is ignored on the C path), so this sets OMP_NUM_THREADS=K before
+      galpy loads and writes data/galpy_c_cpu_Kcores[_hiN].json instead; pin it
+      (e.g. ``taskset -c 16-31`` for K=16). Without --numcores nothing changes.
 
 Writes data/galpy_c_cpu[_hiN].json (machine + version stamped).  The plots
 (../../g8.../make.py, ../../g12.../make.py) are byte-stable from these JSONs.
@@ -36,6 +41,14 @@ import time
 
 import numpy as np
 
+_argv = list(sys.argv[1:])
+_ncores = None
+if "--numcores" in _argv:  # multi-core variant: OpenMP threads, set before galpy loads
+    _i = _argv.index("--numcores")
+    _ncores = int(_argv[_i + 1])
+    del _argv[_i : _i + 2]
+    os.environ["OMP_NUM_THREADS"] = str(_ncores)
+
 import galpy  # noqa: E402
 from galpy.orbit import Orbit  # noqa: E402
 from galpy.potential import MWPotential2014  # noqa: E402
@@ -44,13 +57,16 @@ assert galpy.__file__.startswith(
     os.environ.get("GALPY_WORKTREE", "/var/tmp/backends-merge")
 ), galpy.__file__
 
-mode = sys.argv[1] if len(sys.argv) > 1 else "lowN"  # 'lowN', 'hiN' or 'hiN_ext'
+mode = _argv[0] if _argv else "lowN"  # 'lowN', 'hiN' or 'hiN_ext'
 if mode == "hiN":
     nt, Ns, suffix = 16, [1000, 10000, 30000], "_hiN"
 elif mode == "hiN_ext":  # extend the hiN curve to the GPU series' largest N, appending
     nt, Ns, suffix = 16, [100000, 300000, 1000000], "_hiN"  # to the existing JSON
 else:
     nt, Ns, suffix = 1000, [1, 10, 100, 1000, 10000], ""
+
+if _ncores is not None:
+    suffix = f"_{_ncores}cores{suffix}"
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 ts = np.linspace(0.0, 56.2, nt)  # 2 Gyr in galpy internal units
@@ -80,6 +96,10 @@ out = {
     "galpy_file": galpy.__file__,
     "results": [],
 }
+if _ncores is not None:
+    out["integrator"] = f"dop853_c (compiled, OpenMP, OMP_NUM_THREADS={_ncores})"
+    out["omp_num_threads"] = _ncores
+    out["cpu_affinity"] = len(os.sched_getaffinity(0))
 _OUT = os.path.join(_DATA, f"galpy_c_cpu{suffix}.json")
 if mode == "hiN_ext" and os.path.exists(_OUT):  # keep the existing points + stamps
     with open(_OUT) as fh:
@@ -92,12 +112,12 @@ for N in Ns:
     rng = np.random.default_rng(N)
     ics = make_ics(N, rng)
     o = Orbit(ics if N > 1 else ics[0])  # warmup (caches)
-    o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8, numcores=1)
+    o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8, numcores=_ncores or 1)
     best = 1e18
     for _ in range(3):
         o = Orbit(ics if N > 1 else ics[0])
         t0 = time.perf_counter()
-        o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8, numcores=1)
+        o.integrate(ts, MWPotential2014, method="dop853_c", rtol=1e-8, atol=1e-8, numcores=_ncores or 1)
         best = min(best, time.perf_counter() - t0)
     out["results"].append({"N": N, "wall_s": best, "per_orbit_ms": best / N * 1e3})
     print(

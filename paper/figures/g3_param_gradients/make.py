@@ -202,19 +202,24 @@ def make():
     ax2.legend(fontsize=_f(8.5, 8), loc="upper right")
     # parameter-recovery inset, bottom-left (the loss curve runs top-left ->
     # bottom-right, leaving the lower-left corner empty)
-    axin = ax2.inset_axes([0.13, 0.14, 0.40, 0.38])
+    axin = ax2.inset_axes([0.22, 0.13, 0.31, 0.34] if PAPER else [0.13, 0.14, 0.40, 0.38])
     axin.plot(it, bj_hist, color=BACKEND_COLORS["jax"], lw=1.5)
     axin.axhline(b_true, ls=":", color="0.4", lw=1)
-    if PAPER:  # inside the inset, above the line (the right edge clips into the curve)
-        axin.text(n_it * 0.7, b_true, "$b_{\\rm true}$", fontsize=8, color="0.4",
-                  va="bottom", ha="center")
+    if PAPER:  # inside the inset, just above the dotted truth line at its right end
+        axin.annotate("$b_{\\rm true}$", xy=(n_it - 1, b_true), xytext=(-2, 2),
+                      textcoords="offset points", fontsize=8, color="0.4",
+                      va="bottom", ha="right")
     else:
         axin.text(n_it * 0.97, b_true, " $b_{\\rm true}$", fontsize=7, color="0.4",
                   va="center", ha="left")
-    axin.set_xlabel("iter", fontsize=_f(8, 7))
-    axin.set_ylabel("$b$", fontsize=_f(8, 7))
-    axin.tick_params(labelsize=_f(7, 6))
-    axin.text(0.95, 0.9, f"recovered\n$b={float(bj):.6f}$", transform=axin.transAxes,
+    if not PAPER:  # PAPER: the inset shares the main x-axis quantity (iteration)
+        axin.set_xlabel("iter", fontsize=7)
+    axin.set_ylabel("$b$", fontsize=_f(8, 7), labelpad=1 if PAPER else None)
+    axin.tick_params(labelsize=_f(8, 6))
+    if PAPER:  # headroom above the descent for the recovered value
+        axin.set_ylim(0.75, 2.1)
+        axin.set_yticks([1.0, 1.5, 2.0])
+    axin.text(0.95, 0.94 if PAPER else 0.9, f"recovered\n$b={float(bj):.6f}$", transform=axin.transAxes,
               fontsize=_f(8, 6.5), ha="right", va="top", color=BACKEND_COLORS["jax"])
 
     if not PAPER:

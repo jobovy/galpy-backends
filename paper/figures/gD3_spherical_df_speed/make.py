@@ -84,7 +84,7 @@ import numpy
 if __name__ == "__main__" and __package__ is None:  # subprocess worker / --gpu
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
-from paper.figures._harness import bench, palette
+from paper.figures._harness import bench, layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -518,8 +518,6 @@ def make():
                 ax.loglog(numpy.array(d.get("Ns", data["Ns"]), dtype=float),  # own N grid (--Ns)
                           numpy.array(ser[mode], dtype=float), ms=3.5,
                           label=palette.label(fw, dev, md), **palette.style(fw, dev, md))
-        for rate in (1e5, 1e6, 1e7, 1e8):
-            ax.plot(Ns, Ns / rate, ":", lw=0.7, color="0.8", zorder=0)
         ax.set_ylim(3e-5, 200)
         ax.set_xlabel(r"$N$ particles")
         ax.set_title(f"({'abcd'[i]}) {name}", fontsize=10)
@@ -528,9 +526,14 @@ def make():
                           else r"wall time of $\tt sample(n=N)$  (s)")
         else:
             ax.tick_params(labelleft=False)
-    axs[0].text(0.03, 0.97, "dotted: constant particles/s" if PAPER
-                else "dotted: $10^5$..$10^8$ particles/s", transform=axs[0].transAxes,
-                fontsize=_fs_note, color="0.5", va="top")
+    # constant cost-per-particle reference lines (wall = N * tau), decade-spaced to
+    # bracket every curve's cost per particle at its largest N (all four panels)
+    tau = [c for ax in axs for c in layout.last_costs(ax, kind="time")]
+    xd = numpy.concatenate([ln.get_xdata() for ax in axs for ln in ax.get_lines()]).astype(float)
+    for ax in axs:
+        refs = layout.cost_lines(ax, tau, kind="time", x_range=(xd.min(), xd.max()))
+    axs[0].text(0.03, 0.97, "grey dotted, per particle:\n" + layout.fmt_seconds(refs, wrap=True),
+                transform=axs[0].transAxes, fontsize=_fs_note, color="0.5", va="top")
 
     # (e) bars: colour = backend x device; filled = warm (white-hatched = eager, the
     # bar analogue of a dashed line); hollow outline = first call in a fresh process
@@ -608,7 +611,7 @@ def make():
                  + "  ·  float64",
                  fontsize=6, color="0.5", ha="right", va="bottom")
     # the four sampling panels share their series: label them once, beside (d)
-    palette.label_lines(axs[-1], fontsize=_fs_lab)
+    palette.label_lines(axs[-1], fontsize=_fs_lab, min_sep_pt=1.3 * _fs_lab if PAPER else None)
     return fig
 
 

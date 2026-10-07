@@ -101,7 +101,7 @@ import sys
 
 import numpy
 
-from paper.figures._harness import bench, palette
+from paper.figures._harness import bench, layout, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -385,8 +385,14 @@ def make():
     axw.set_xlabel(r"number of sprayed particles $N$")
     axw.set_ylabel(r"wall time for spdf.sample($N$)  (s)")
     axw.set_title("(a) wall time per call", **_ts)
-    if not PAPER:
-        axw.set_ylim(top=2e3)  # headroom for the stamp
+    axw.set_ylim(top=2e3)  # headroom for the note / stamp
+    # constant cost-per-particle reference lines (wall = N * tau), decade-spaced to
+    # bracket every curve's cost per particle at its largest N
+    xd = numpy.concatenate([ln.get_xdata() for ln in axw.get_lines()]).astype(float)
+    refs = layout.cost_lines(axw, layout.last_costs(axw), x_range=(xd.min(), xd.max()))
+    if PAPER:
+        axw.text(0.03, 0.97, "grey dotted, per particle:\n" + layout.fmt_seconds(refs),
+                 transform=axw.transAxes, fontsize=8, color="0.45", va="top", ha="left")
     axp.set_xlabel(r"number of sprayed particles $N$")
     axp.set_ylabel(r"cost per particle  (ms)")
     axp.set_title("(b) per-particle cost", **_ts)
@@ -407,17 +413,27 @@ def make():
             r"Particle-spray stream: fardal15spraydf.sample($N$), 4.5 Gyr of stripping "
             r"(numpy/C vs differentiable jax/torch)", y=0.99)
         fig.tight_layout(rect=[0, 0, 1, 0.96])
-    # direct labels on (b) (same lines as (a)); (a) carries the stamp
-    # the CPU lines end early (series stop at ~60 s/call): label them inline
-    inline = {  # PAPER (8 pt): spots clear of the other lines at 7 in
-        "torch CPU eager": (5e3, 8) if PAPER else (1e4, 8),
-        "numpy (C integrator)": (1e3, 9),
-        "jax CPU eager": (1.5e5, 9), "jax CPU jit": (3e3, -9),
-    }
-    palette.label_lines(axp, inline=inline, fontsize=8 if PAPER else 7)
-    for t in axp.texts:
-        if t.get_text() in inline:
-            t.set_bbox(dict(fc="white", ec="none", alpha=0.85, pad=0.4))
+    # direct labels on (b) (same lines as (a)); the CPU lines end early (series stop
+    # at ~60-200 s/call): PAPER puts them in a small legend in the empty upper right,
+    # the rest in the right-hand label column
+    early = ["torch CPU eager", "numpy (C integrator)", "jax CPU eager", "jax CPU jit"]
+    if PAPER:
+        lines = {ln.get_label(): ln for ln in axp.get_lines()}
+        axp.set_ylim(top=2e4)  # headroom: the legend sits above the data
+        axp.legend(handles=[lines[k] for k in early], loc="upper right", fontsize=8,
+                   handlelength=2.2, borderaxespad=0.4, framealpha=0.9)
+        palette.label_lines(axp, [(ln, ln.get_label()) for ln in axp.get_lines()
+                                  if not ln.get_label().startswith("_")
+                                  and ln.get_label() not in early],
+                            fontsize=8, min_sep_pt=1.3 * 8)
+        layout.fit_right(fig)
+    else:
+        inline = {"torch CPU eager": (1e4, 8), "numpy (C integrator)": (1e3, 9),
+                  "jax CPU eager": (1.5e5, 9), "jax CPU jit": (3e3, -9)}
+        palette.label_lines(axp, inline=inline, fontsize=7)
+        for t in axp.texts:
+            if t.get_text() in inline:
+                t.set_bbox(dict(fc="white", ec="none", alpha=0.85, pad=0.4))
     return fig
 
 

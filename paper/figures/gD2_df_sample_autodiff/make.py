@@ -161,8 +161,9 @@ def _measure():
     return out
 
 
-_C_MC = "#c2410c"
-_C_TH = "#1d4ed8"
+# sample = reddish purple (as in gD4), the jax quadrature in the jax blue
+_C_MC = "#CC79A7"
+_C_TH = "#0072B2"
 
 
 @figure(
@@ -186,7 +187,7 @@ def make():
     r = numpy.array(data["r_grid"])
     # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
     # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends).
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 3.3) if PAPER else (9.8, 4.0))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.3) if PAPER else (9.8, 4.0))
     _ts = {"fontsize": 10} if PAPER else {}
     _fs_leg = 8 if PAPER else 7
 
@@ -210,7 +211,7 @@ def make():
     ax2.set_xlabel("$r$")
     ax2.set_ylabel(r"$d\sigma_r/dr$")
     ax2.set_title("(b) the derivative" if PAPER else "the derivative, two independent ways", **_ts)
-    ax2.legend(fontsize=_fs_leg, framealpha=0.92)
+    ax2.legend(fontsize=_fs_leg, framealpha=0.92, loc="upper left" if PAPER else "best")
 
     d1 = numpy.array(data["dsigma_mc"])
     d2 = numpy.array(data["dsigma_jeans"])

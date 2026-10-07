@@ -58,12 +58,16 @@ def make():
     ax1.plot(obx, oby, color="#bbbbbb", lw=1.3, label="observed IC")
     ax1.plot(ftx, fty, color="#0072B2", lw=1.8, label="C-STM-fitted IC")
     ax1.plot([0], [0], marker="*", ms=15, color="k", zorder=5)
-    ax1.text(0.0, 0.0, "  Sgr A*", fontsize=_f(8, 7.5), va="center")
+    if PAPER:  # below-right of the star, clear of the orbits (which run up-right)
+        ax1.annotate("Sgr A*", (0.0, 0.0), xytext=(6, -6), textcoords="offset points",
+                     fontsize=8, va="top", ha="left")
+    else:
+        ax1.text(0.0, 0.0, "  Sgr A*", fontsize=7.5, va="center")
     ax1.set_xlabel("x  [kpc]")
     ax1.set_ylabel("y  [kpc]")
     ax1.set_title("(a) initial-condition fit" if PAPER
                   else "(a) C-STM IC fit: backward orbit -> Galactic Centre")
-    ax1.legend(fontsize=_f(8.5, 7.8), loc="best")
+    ax1.legend(fontsize=_f(8.5, 7.8), loc="upper left" if PAPER else "best")
     ax1.set_aspect("equal", adjustable="datalim")
     # inset: zoom on the GC showing the closest-approach improvement (kpc)
     icf = d["ic_fit"]
@@ -72,14 +76,15 @@ def make():
     axin.plot(ftx, fty, color="#0072B2", lw=1.3)
     axin.plot([0], [0], marker="*", ms=9, color="k")
     axin.set_xlim(-0.5, 0.5); axin.set_ylim(-0.5, 0.5)
-    if PAPER:  # the orbits pass over an inset title; the inset's upper left is empty
-        axin.text(0.05, 0.95, "closest approach\n"
-                  rf"{_RO * icf['r_obs']:.2f} $\rightarrow$ {_RO * icf['r_fit']:.2f} kpc",
-                  transform=axin.transAxes, fontsize=8, va="top", ha="left")
+    if PAPER:  # the orbits cross the inset's diagonal: the note goes in the main
+        # axes, under the legend, where the orbits are not
+        ax1.text(0.03, 0.74, "closest approach to Sgr A*:\n"
+                 rf"{_RO * icf['r_obs']:.2f} $\rightarrow$ {_RO * icf['r_fit']:.2f} kpc (inset)",
+                 transform=ax1.transAxes, fontsize=8, va="top", ha="left")
         axin.set_xticks([-0.4, 0.0, 0.4]); axin.set_yticks([-0.4, 0.0, 0.4])
     else:
         axin.set_title(f"closest: {_RO * icf['r_obs']:.2f}->{_RO * icf['r_fit']:.2f} kpc", fontsize=6.6)
-    axin.tick_params(labelsize=_f(7, 5.5))
+    axin.tick_params(labelsize=_f(8, 5.5))
 
     # ---- (b) in-backend AD potential fit: GC closest-approach vs q + Adam path -----
     # black = the objective landscape (one backward integration per q on a grid);

@@ -117,18 +117,23 @@ def make():
     ax1.axhline(0, color="0.8", lw=0.7, zorder=0)
 
     ax2.axhline(_EPS, color="0.35", ls="--", lw=1.0, zorder=1)
-    ax2.text(R[0] * 1.05, _EPS * 1.35, r"float64 $\epsilon$", fontsize=fs_note, color="0.35",
-             zorder=5, **({"bbox": dict(fc="white", ec="none", alpha=0.85, pad=0.6)} if PAPER else {}))
+    if PAPER:  # label right of the axes: the residuals fill the band around epsilon
+        ax2.annotate("float64\n" r"$\epsilon$", xy=(1.0, _EPS), xycoords=("axes fraction", "data"),
+                     xytext=(4, 0), textcoords="offset points", fontsize=fs_note, color="0.35",
+                     ha="left", va="center", annotation_clip=False)
+    else:
+        ax2.text(R[0] * 1.05, _EPS * 1.35, r"float64 $\epsilon$", fontsize=fs_note, color="0.35",
+                 zorder=5)
     ax2.set_xscale("log"); ax2.set_ylim(1e-18, 1e-12)
     ax2.set_xlabel(r"$R$"); ax2.set_ylabel(r"$|{\rm AD}-{\rm exact}|\,/\,|{\rm exact}|$")
     ax2.set_title("(b) relative residual" if PAPER else "residual against the hand-coded force")
-    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
     if PAPER:  # one legend for both panels, below them, clear of the data
         ax2.set_ylim(1e-18, 1e-13)
         h, l = ax1.get_legend_handles_labels()
         fig.tight_layout(rect=(0.0, 0.13, 1.0, 1.0))
         fig.legend(h, l, fontsize=fs_leg, loc="lower center", ncol=3, frameon=False,
                    bbox_to_anchor=(0.5, 0.0))
+        layout.fit_right(fig)
         return fig
     ax2.legend(fontsize=fs_leg, framealpha=0.92, loc="upper right", ncol=2)  # duplicates (a)
 

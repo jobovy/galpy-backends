@@ -332,7 +332,7 @@ def make():
 
     # PAPER: final printed width of a figure* (7.0 in); text sizes are then the
     # printed sizes (9-10 pt labels/ticks, 10 pt titles, 8 pt legends/notes).
-    fig, axs = plt.subplots(2, 2, figsize=(7.1, 7.0) if PAPER else (10.4, 8.6))
+    fig, axs = plt.subplots(2, 2, figsize=(7.0, 7.0) if PAPER else (10.4, 8.6))
     ax1, ax2, ax3, ax4 = axs.ravel()
     _ts = {"fontsize": 10} if PAPER else {}
     _fl = (lambda d: 8) if PAPER else (lambda d: d)  # legend / note sizes
@@ -340,17 +340,14 @@ def make():
     # (a) the tori, the rebuilt tori, and the first-order AD prediction
     s0, ds = data["sig0"], data["dsig"]
     cols = plt.cm.viridis(numpy.linspace(0.05, 0.85, len(data["tori"])))
-    ins = ax1.inset_axes([0.665, 0.08, 0.325, 0.60] if PAPER else [0.60, 0.10, 0.38, 0.62])
+    ins = ax1.inset_axes([0.665, 0.17, 0.325, 0.52] if PAPER else [0.60, 0.10, 0.38, 0.62])
     for t, c in zip(data["tori"], cols):
         for ax, ev in ((ax1, 8), (ins, 2)):
             ax.plot(t["x0"], t["v0"], "-", color=c, lw=1.4)
             ax.plot(t["x1"], t["v1"], "--", color=c, lw=1.0)
             ax.plot(t["x_ad"][::ev], t["v_ad"][::ev], "o", color=c, ms=2.4, mew=0)
-        if PAPER:  # below each torus: the legend takes the top
-            ax1.text(0.0, min(t["v1"]) * 1.02, rf"$J={t['J']:g}$", color=c, fontsize=_fl(6.5),
-                     ha="center", va="top")
-        else:
-            ax1.text(0.0, max(t["v1"]) * 1.02, rf"$J={t['J']:g}$", color=c, fontsize=_fl(6.5),
+        if not PAPER:  # PAPER: one colour key below the tori (labels inside cross tori)
+            ax1.text(0.0, max(t["v1"]) * 1.02, rf"$J={t['J']:g}$", color=c, fontsize=6.5,
                      ha="center", va="bottom")
     ins.set_xlim(0.27, 0.49)
     ins.set_ylim(-0.42, 0.42)
@@ -370,6 +367,16 @@ def make():
                   rf"AD sensitivity to $\sigma$ ($\Delta\sigma={ds / s0:.1f}\,\sigma_0$)", **_ts)
     ax1.legend(fontsize=_fl(6.5), loc="upper right", framealpha=0.92)
     ax1.margins(y=0.12)
+    if PAPER:  # the colour key: "J = 0.01 0.04 ..." in a row under the tori
+        from matplotlib.offsetbox import AnchoredOffsetbox, HPacker, TextArea
+
+        lo, hi = ax1.get_ylim()
+        ax1.set_ylim(lo - 0.1 * (hi - lo), hi)
+        parts = [TextArea(r"$J=$", textprops=dict(fontsize=8, color="0.2"))]
+        parts += [TextArea(f"{t['J']:g}", textprops=dict(fontsize=8, color=c))
+                  for t, c in zip(data["tori"], cols)]
+        ax1.add_artist(AnchoredOffsetbox(loc="lower left", child=HPacker(children=parts, pad=0, sep=4),
+                                         frameon=False, pad=0.2, borderpad=0.3))
 
     # (b) per-angle AD vs central FD (best h each) + Poisson bracket
     ang = numpy.asarray(data["angles"])
@@ -408,8 +415,9 @@ def make():
     ax3.set_title("(c) FD convergence onto AD" if PAPER else
                   "(c) the 5-point central FD converges onto AD\n"
                   r"($\propto h^4$) down to its round-off floor", **_ts)
+    if PAPER:  # headroom: the legend sits above the data
+        ax3.set_ylim(top=ax3.get_ylim()[1] * 30)
     ax3.legend(fontsize=_fl(6.0), ncol=2, framealpha=0.92, loc="upper center")
-    ax3.grid(True, alpha=0.25)
 
     # (d) the fit in the (sigma, amp) plane
     _plot_fit(fig, ax4, data["fit"])

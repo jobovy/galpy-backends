@@ -101,3 +101,75 @@ def fit_right(fig, pad_in=0.04):
             changed = True
         if not changed:
             return
+
+
+def ref_decades(costs):
+    """Decade-spaced reference values 10^k bracketing ``costs``: the smallest is
+    at or below the cheapest and the largest at or above the dearest, so the
+    measured curves lie between reference lines."""
+    import math
+
+    c = [float(v) for v in costs if v is not None and math.isfinite(v) and v > 0]
+    lo = math.floor(math.log10(min(c)) + 1e-9)
+    hi = math.ceil(math.log10(max(c)) - 1e-9)
+    return [10.0**k for k in range(lo, hi + 1)]
+
+
+def last_costs(ax, kind="time"):
+    """The per-unit cost at the right end of every labelled data line in ``ax``:
+    y/x (``kind="time"``: wall time vs N) or x/y (``kind="rate"``: throughput)."""
+    import numpy
+
+    out = []
+    for ln in ax.get_lines():
+        if ln.get_label().startswith("_ref"):
+            continue
+        x, y = (numpy.asarray(v, dtype=float) for v in ln.get_data())
+        ok = numpy.isfinite(x) & numpy.isfinite(y) & (x > 0) & (y > 0)
+        if ok.sum() < 2:
+            continue
+        i = numpy.flatnonzero(ok)[-1]
+        out.append(y[i] / x[i] if kind == "time" else x[i] / y[i])
+    return out
+
+
+def cost_lines(ax, costs, kind="time", x_range=None, scale=1.0):
+    """Light-grey dotted constant-cost diagonals behind the data: y = c*x
+    (``kind="time"``) or y = x/c (``"rate"``) for each decade value c returned by
+    ref_decades(costs); ``scale`` multiplies y (e.g. 1e3 for a ms axis). The axis
+    limits are kept. Returns the decade values (per unit, in the units of
+    ``costs``)."""
+    import numpy
+
+    vals = ref_decades(costs)
+    xl, yl = ax.get_xlim(), ax.get_ylim()
+    lo, hi = x_range if x_range is not None else xl
+    x = numpy.geomspace(lo, hi, 2)
+    for c in vals:
+        y = c * x if kind == "time" else x / c
+        ax.plot(x, scale * y, ls=":", lw=0.8, color="0.75", zorder=0, label="_ref")
+    ax.set_xlim(xl)
+    ax.set_ylim(yl)
+    return vals
+
+
+def fmt_seconds(vals, unit=None, wrap=False):
+    """'0.01, 0.1, 1, 10 ms' for decade values in seconds: one unit (``unit``, or
+    the largest of s/ms/us/ns that keeps every value in [0.01, 100]), else each
+    value in its own unit, grouped: '100 us, 1, 10, 100 ms, 1 s'."""
+    units = [("s", 1.0), ("ms", 1e-3), (r"$\mu$s", 1e-6), ("ns", 1e-9)]
+    if unit is not None:
+        f = dict(units)[unit]
+        return ", ".join(f"{v / f:g}" for v in vals) + f" {unit}"
+    for u, f in units:
+        s = [v / f for v in vals]
+        if min(s) >= 0.01 - 1e-12 and max(s) <= 100 + 1e-9:
+            return ", ".join(f"{x:g}" for x in s) + f" {u}"
+    groups = []
+    for v in vals:
+        u, f = next(((u, f) for u, f in units if v >= f * (1 - 1e-9)), units[-1])
+        if groups and groups[-1][0] == u:
+            groups[-1][1].append(v / f)
+        else:
+            groups.append((u, [v / f]))
+    return (",\n" if wrap else ", ").join(", ".join(f"{x:g}" for x in xs) + f" {u}" for u, xs in groups)

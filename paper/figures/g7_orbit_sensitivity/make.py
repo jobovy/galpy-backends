@@ -158,11 +158,15 @@ def make():
     axin.plot(path[:, 0], path[:, 1], "-o", ms=2.5, color=BACKEND_COLORS["jax"], lw=1)
     axin.plot([vR_true], [vz_true], marker="*", ms=11, color="k", zorder=5)
     axin.margins(0.15)  # the truth sits at a corner of the path's range
-    axin.annotate("truth", (vR_true, vz_true), xytext=(7, 0), textcoords="offset points",
-                  fontsize=_f(8, 6.5), va="center")
+    if PAPER:  # headroom above the truth (top-left corner) for its label
+        lo, hi = axin.get_ylim()
+        axin.set_ylim(lo, hi + 0.3 * (hi - lo))
+    axin.annotate("truth", (vR_true, vz_true), xytext=(6, 3) if PAPER else (7, 0),
+                  textcoords="offset points", fontsize=_f(8, 6.5),
+                  va="bottom" if PAPER else "center", ha="left")
     axin.set_xlabel(r"$v_{R0}$", fontsize=_f(8, 7))
     axin.set_ylabel(r"$v_{z0}$", fontsize=_f(8, 7))
-    axin.tick_params(labelsize=_f(7, 6))
+    axin.tick_params(labelsize=_f(8, 6))
     axin.set_title("optimizer path", fontsize=_f(8, 7))
 
     if not PAPER:

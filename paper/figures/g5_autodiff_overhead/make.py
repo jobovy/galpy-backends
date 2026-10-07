@@ -151,8 +151,14 @@ def make():
             else:
                 lab = palette.label(fw, dev, _MODE[fw], kind)
             ax1.loglog(Nd, thr, ms=3.8, zorder=3, label=lab, **st)
+    # constant-wall-time-per-call reference lines (throughput = N / t0, slope 1),
+    # decade-spaced to bracket every curve's time per call at the largest N
+    ax1.set_ylim(None, 3.0 * ax1.dataLim.y1)  # room above the fastest curve's reference
+    refs = layout.cost_lines(ax1, layout.last_costs(ax1, kind="rate"), kind="rate",
+                             x_range=(Ns.min(), Ns.max()))
     if PAPER:
-        ax1.text(0.03, 0.97, "filled: value, hollow: gradient", transform=ax1.transAxes,
+        ax1.text(0.03, 0.97, "filled: value, hollow: gradient\ngrey dotted, per call:\n"
+                 + layout.fmt_seconds(refs), transform=ax1.transAxes,
                  fontsize=fs_note, color="0.5", va="top", ha="left")
     ax1.set_xlabel(r"array length $N$")
     ax1.set_ylabel(r"throughput  (points / second)")
@@ -170,7 +176,7 @@ def make():
                              label=(layout.label if PAPER else palette.label)(fw, dev, _MODE[fw]),
                              **palette.style(fw, dev, _MODE[fw]))
     ax2.axhline(1.0, ls=":", lw=1, color="0.6")
-    ax2.text(Ns[0], 0.94, "value cost", fontsize=fs_note, color="0.5", va="top")
+    ax2.text(Ns[0], 0.88, "value cost", fontsize=fs_note, color="0.5", va="top")
     ax2.set_xlabel(r"array length $N$")
     ax2.set_ylabel(r"gradient / value wall-time" if PAPER else r"gradient wall-time / value wall-time")
     ax2.set_title("(b) autodiff overhead" if PAPER

@@ -107,7 +107,7 @@ def make():
     ax.loglog(g3, cen[-3] * (eps[-3] / g3), ls=":", lw=0.9, color="0.65")
     # print version: the slope notes sit off their arms (at 8 pt they would
     # overlap them)
-    ax.annotate(r"$\propto\varepsilon$", xy=(1e-6, 6e-4) if PAPER else (8e-4, 4e-2),
+    ax.annotate(r"$\propto\varepsilon$", xy=(1.5e-7, 2.5e-3) if PAPER else (8e-4, 4e-2),
                 fontsize=fs_note, color="0.45")
     ax.annotate(r"$\propto\varepsilon^{2}$", xy=(8e-4, 2e-4), fontsize=fs_note,
                 color="0.45")

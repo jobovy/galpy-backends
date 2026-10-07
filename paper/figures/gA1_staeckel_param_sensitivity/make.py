@@ -77,6 +77,10 @@ def make():
     axa.set_title("(a) Staeckel actions", loc="left")
     axa.tick_params(labelbottom=False)
     axa.set_xlim(q[0] - 0.01, q[-1] + 0.095)
+    # room below the lowest curve so its direct label stays inside the box
+    jall = numpy.concatenate([numpy.asarray(sw[k]) for k in ("JR", "Jz")]) * 1e3
+    span = jall.max() - jall.min()
+    axa.set_ylim(jall.min() - 0.15 * span, jall.max() + 0.1 * span)
 
     # ---- (b) dJ/dq: jax.grad lines vs FD circles -------------------------------
     for k in ("JR", "Jz"):

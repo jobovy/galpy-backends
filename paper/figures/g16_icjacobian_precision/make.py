@@ -33,7 +33,8 @@ _DATA = pathlib.Path(__file__).resolve().parent / "data" / "precision.json"
 # journal version (default): no suptitle, short panel titles; the caption carries
 # the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
 PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
-_C = {"cstm": "#222222", "fd": "#999999", "jax_ad": "#0072B2", "torch_ad": "#D55E00"}
+# galpy C = grey (palette.py): the C-STM reference mid grey, its FD a lighter grey
+_C = {"cstm": "#666666", "fd": "#AAAAAA", "jax_ad": "#0072B2", "torch_ad": "#D55E00"}
 _LAB = {"cstm": "C-STM (C variational)", "fd": "finite difference (C)",
         "jax_ad": "jax AD (diffrax)", "torch_ad": "torch AD (torchdiffeq)"}
 
@@ -80,7 +81,6 @@ def make():
         ax2.legend(fontsize=fs_leg, loc="upper left")
     else:
         ax2.legend(fontsize=fs_leg, loc="best")
-    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
 
     if not PAPER:
         fig.suptitle(r"$\partial x(t)/\partial x_0$: autodiff $=$ the C state-transition "
