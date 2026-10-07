@@ -18,13 +18,19 @@ Hessian) + **Lyapunov exponents** in C.
 
 ## Status
 
-**Status 2026-10-06.** feat/backends is rebased onto main (7c675eb63, applied
+**Status 2026-10-07.** feat/backends is rebased onto main (7c675eb63, applied
 2026-10-04) and green. Ledgers: **3** xfail entries (all `--jit` pickling of unit
 wrappers), **3** slow-skips (FDM `central_limit` under torch/torch-jit: eager
 Python-integrator dispatch; ExpTruncNFW `analytic_ecc_rperi_rap` under jax-jit,
 260 s after #1625), **16** permanent skips (actionAngleTorus via streamdf useTM;
 four eager-jax per-op floors, measured not compile-bound), across 88 backend
 test modules.
+
+Open on 2026-10-07: **#1641** (VerticalInverse Newton polish: `guess=` for the
+backend brentq's safeguarded Newton; angle inversion ~2x faster under jit) is
+green; **#1642** (Staeckel `c=False`: chi-anomaly mesh matching C, 3.8x faster;
+fixes the ~9x regression of Sept. 2) is open, CI running. The paper draft is at
+`paper/ms`.
 
 Since 2026-10-01:
 
@@ -333,7 +339,235 @@ backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). 
 | #1371 | power-law spherical DFs: fE normalizations on the backend; `from scipy import special` gone | MERGED `856ceccc` |
 | #1372 | `parallel_map`: run serially under jax instead of forking into a deadlock; un-defers `test_streamdf.py` (~76 tests) | MERGED `a063e674` |
 | #1374 | special: backend-op `gammainc`/`gammaincc` differentiable in the ORDER (native forward + custom backward; 485x → 2.08x) | MERGED `068de984` |
-| #1380 | ledger: un-defer 3 measured-stale jax entries; measure the rest of Group 1 (unmeasured 10 → 0) | OPEN — CI running |
+| #1380 | ledger: un-defer 3 measured-stale jax entries; measure the rest of Group 1 (unmeasured 10 → 0) | MERGED `eabc3a5a` |
+| #1381 | special: guard the x=0 endpoint of d/dx gammainc on torch (#1204 review, 1/5) | MERGED `206ccd78` |
+| #1382 | backend: finite_part_quad batching + symmetric_quad eager-torch limit + AnyAxisym torch construction (#1204 review, 2/5) | MERGED `06267d1d` |
+| #1383 | coords: finish the inverse galcen transforms + fix the f64-constant/f32-data promotion (#1204 review, 3/4/6) | MERGED `4e2cc322` |
+| #1384 | actionAngleVerticalInverse: canonical evaluation mode, on by default (main) | CLOSED (unmerged) |
+| #1385 | actionAngleVerticalInverse: canonical evaluation for all point-transformation modes; old interpolated path removed | CLOSED (unmerged) |
+| #1387 | actionAngleSphericalCanonical: the spherical inverse, built the Stäckel-canonical way (S1) (main) | CLOSED (unmerged) |
+| #1388 | backend: map_coordinates must dispatch on the GRID too (#1204 review, batch 2 item 2) | MERGED `107a8060` |
+| #1389 | actionAngleSphericalInverse, the canonical construction: the momentum-matched alignment PT (S2) | CLOSED (unmerged) |
+| #1391 | backend: traceable constructors + differentiable hyp2f1/hyp1f1 parameters (#1204 review, batch 2 items 3+4) | MERGED `cfe23abe` |
+| #1392 | constantbetaHernquistdf: route the gammas so d f_E/d beta works | MERGED `8980402a` |
+| #1393 | tests: un-gate the Einasto d_n gradient to torch + pin float64 in test_backend_spherical | MERGED `366ffc04` |
+| #1394 | surfdens: keep both routes on the backend under eager torch autograd | MERGED `bc69771e` |
+| #1395 | actionAngleStaeckelInverse: the canonical momentum-matched construction (T1) (stacked on `aainv-staeckel-canonical-dev`) | OPEN — green (107/107) |
+| #1396 | actionAngleStaeckelInverse: the canonical family (T2) (stacked on `aainv-staeckel-canonical-core`) | OPEN — green (107/107) |
+| #1398 | actionAngleAdiabatic: fix multi-point _justjr raising TypeError (main) | MERGED `3df11b96` |
+| #1399 | actionAngleAdiabaticGrid: exact off-grid actions on jax/torch | MERGED `5c3c8671` |
+| #1400 | integrate_dxdv: transform the base state in C, restoring bit-identity with plain integrate (main) | MERGED `87547bf0` |
+| #1401 | Review round 3: traced beta under jit, mixed quad limits, and the small-B hyp2f1 floor | MERGED `00a7153c` |
+| #1402 | hyp2f1: one tanh-sinh rule for every B, and drop the c-B >= 1 constraint | MERGED `8c320b39` |
+| #1403 | hyp2f1: the traced Euler-label selector must use the same rule as the concrete one | MERGED `26388056` |
+| #1404 | actionAngleStaeckel: chi-anomaly quadrature at the turning points in C (main) | MERGED `f49fa016` |
+| #1405 | actionAngleIsochroneInverse: solve Kepler's equation for all angles at once (main) | MERGED `72f96783` |
+| #1406 | hyp2f1: bring the comments back in line with the code | MERGED `b1a8b03f` |
+| #1407 | surfdens: eager backends take the batched vertical quadrature (ledger -6) | MERGED `852d69d6` |
+| #1408 | mass(): ask the backend's array-safety question; re-ledger a wrong de-ledgering | MERGED `b331faa0` |
+| #1409 | CI: fetch GSL from the nearest GNU mirror rather than ftp.gnu.org (main) | MERGED `96f40406` |
+| #1410 | test_orbit: two tests bypassed _backend_integrators (ledger -4) | MERGED `ef360db0` |
+| #1411 | SCF coefficients: lift the numpy pin so the expansion is differentiable w.r.t. the density | MERGED `e9afe588` |
+| #1412 | actionAngleVerticalInverse: the momentum-matched anomaly map (construction) | CLOSED (unmerged) |
+| #1413 | actionAngleStaeckelInverse: speed — vectorize the canonical family evaluation (stacked on `aainv-staeckel-canonical-family`) | OPEN — green (107/107) |
+| #1414 | actionAngleVerticalInverse: the momentum-matched family | CLOSED (unmerged) |
+| #1415 | actionAngleVerticalInverse: the momentum-matched canonical map (main) | MERGED `70032808` |
+| #1416 | SCF axi coefficients: batched quadrature on backends (bit-exact, ~1.9x) | MERGED `d8098c7e` |
+| #1417 | tests: roundoff tolerance for batched-vs-sequential mass quadrature | MERGED `5410ac6e` |
+| #1418 | tests: cut the time-dependent SCF coefficient tests from ~76s to ~11s (main) | MERGED `a41eb8bd` |
+| #1419 | actionAngleStaeckelInverse: canonicity for a varying focal length (stacked on `aainv-staeckel-vectorize`) | OPEN — green (107/107) |
+| #1420 | actionAngleStaeckelInverse: build the family adaptively, delta(E, L_z) (stacked on `aainv-staeckel-adaptive`) | OPEN — green (107/107) |
+| #1421 | actionAngleStaeckelInverse: delta='fit', and integrals in the local chart (stacked on `aainv-staeckel-adaptive-build`) | OPEN — green (107/107) |
+| #1422 | Speed up ChandrasekharDynamicalFrictionForce construction ~100x for array-capable potentials (main) | MERGED `02d589bf` |
+| #1423 | actionAngleStaeckelInverse: target= — localize the grid on an orbit or stream (stacked on `aainv-staeckel-adaptive-fit`) | OPEN — green (107/107) |
+| #1424 | actionAngleStaeckel C: frequencies and angles near turning points (main) | MERGED `5925f0b1` |
+| #1425 | Cherry-pick: ChandrasekharDynamicalFrictionForce ctor speedup (drop in the next rebase) | CLOSED (unmerged) |
+| #1426 | actionAngleStaeckelInverse: u0-only adaptation — fixed delta, u0(E, L_z) (stacked on `aainv-staeckel-targetbox`) | OPEN — green (107/107) |
+| #1427 | actionAngleStaeckelInverse: a single focal length, like the forward code (stacked on `aainv-staeckel-u0only`) | OPEN — green (107/107) |
+| #1428 | backend: keep the jax isinstance out of dynamo's way (unblocks #1204 on torch 2.14) | MERGED `b0698589` |
+| #1429 | actionAngleStaeckelInverse: array-J canonical evaluation (stacked on `aainv-staeckel-singledelta`) | OPEN — green (107/107) |
+| #1430 | actionAngleTorusStaeckel: torus mapping on the canonical Staeckel-inverse auxiliary (stacked on `aainv-staeckel-arrayJ`) | OPEN — green (107/107) |
+| #1431 | actionAngleStaeckel C: NaN and near-axis accuracy in the chi quadratures (main) | MERGED `c8b9e982` |
+| #1432 | Backend shard split (1/n): trace the torch-compile sweep under eager | MERGED `3aaf0e5c` |
+| #1433 | Backend shard split (2/n): duration-balanced pytest-split | MERGED `d35ed301` |
+| #1434 | actionAngleStaeckelInverse: circular-edge anchor + edge-conscious frequency chains (stacked on `aainv-torusmapper`) | OPEN — green (107/107) |
+| #1436 | Backend shard: eager torch.compile for jit tests (real ~10x on the heaviest) | MERGED `1bbddb38` |
+| #1437 | qdf: float the precomputed rg grid bound so forced-backend _rg survives | MERGED `f053bee5` |
+| #1438 | backend ledger: xfail the forced jax/torch reds the main rebase introduced | MERGED `c11eeba5` |
+| #1439 | jeans: don't let scipy.quad's default epsabs truncate sigma_r's small outer tail (main) | MERGED `04f30362` |
+| #1442 | backend burndown 1: numpy sigmar byte-identity + drop 4 stale xfail entries | MERGED `a637696a` |
+| #1443 | qdf sampleV: backend-native inverse-CDF sampler (drop the numpy-forced rejection) | MERGED `7752807b` |
+| #1444 | qdf sampleV_interpolate: inverse-CDF on the backends, rejection on numpy | MERGED `c2611a49` |
+| #1446 | backend: vectorise the Staeckel c-vs-Python freqs/angles parity grid (slow-skip -1) | MERGED `629479d1` |
+| #1447 | test_actionAngle: platform-proof the Staeckel chi-quadrature bars (3e-11 -> 1e-10) | MERGED `10b7ec96` |
+| #1448 | sphericaldf: build the p(v\|r) inverse-CDF table on the backend (d(sample_v)/d(DF params)) | MERGED `831dd644` |
+| #1449 | sphericaldf: cover the p(v\|r) backend-build branches #1448 left untested | MERGED `4f54b885` |
+| #1450 | backend: stop re-doing two pieces of eager work on every force evaluation | MERGED `35a536c4` |
+| #1451 | slow-skip: drop the traced Staeckel parity grid (ledger -1), re-measure three stale jit notes | MERGED `d1d59adf` |
+| #1452 | Make the traced suite green: fix the vcirc probe, record the four traced timeouts | MERGED `a7fdc4fc` |
+| #1453 | SCF: batch the general (non-axi) coefficient quadrature (traced test_density1_Order 300s+ -> 13s, ledger -1) | MERGED `396e13c2` |
+| #1454 | SCF: contract the time-dependent coefficient quadrature over its nodes (jax 63s -> 4.3s, ledger -3) | MERGED `33f1f05b` |
+| #1455 | Route the orbit integrator loops through _backend_integrators (SOS_3D 573s -> 12s, ledger -3) | MERGED `87362405` |
+| #1458 | Do not fork a worker per task when numcores=1 (Orbit.lyapunov 94x faster) (main) | MERGED `a95dc88a` |
+| #1459 | slow-skip: un-ledger three stale jax entries (ledger -3) | MERGED `be64f868` |
+| #1460 | test_backend_dynamfric: validate the in-backend integrators against analytic friction | MERGED `e575bfcf` |
+| #1461 | test_dynamfric_c: in-backend second arm under a backend, and chunk the loop | MERGED `f059c098` |
+| #1463 | dynamfric + FDM: in-backend non-C arm, and un-ledger what it earns (ledger -9) | MERGED `cd7fec21` |
+| #1464 | bessel_k: evaluate the ascending series in one pass (torch 2.3x on Bessel-K potentials) | MERGED `ca522e63` |
+| #1465 | noninertial + Chandrasekhar orbits: in-backend non-C arm, and un-ledger what it earns (ledger -6) | MERGED `15a5f7d4` |
+| #1467 | test_orbit: one test case per potential for the four all-potentials walks (main) | MERGED `2296c50b` |
+| #1468 | OblateStaeckelWrapperPotential: optional tabulated C evaluation (ntab=), ~10-16x faster C integration (main) | MERGED `1bc09cac` |
+| #1469 | dynamfric: one test case per potential, replacing the index chunks | MERGED `2b40ae8a` |
+| #1470 | Avoid duplicate builds/tests on PRs (main) | MERGED `3e744b61` |
+| #1471 | CI: run the all-backend suite once per commit, not twice | MERGED `e2ce72e5` |
+| #1472 | Delete copilot setup (main) | MERGED `9b9bcd96` |
+| #1473 | C bridge: keep a potential's tables whole in pot_args (streamTrack 7x under jax) | MERGED `b94cd0a8` |
+| #1474 | test_orbit: per-potential walks on feat/backends, and ledger the potentials (not the walks) | CLOSED (unmerged) |
+| #1475 | actionAngle_c: parse one potentialArg copy per OpenMP thread (main) | MERGED `76ce1807` |
+| #1476 | streamTrack sky Jacobians batched + exp1 vectorized (ledger 18 -> 14) | MERGED `a381fcf1` |
+| #1477 | exp1: one quadrature instead of an 80-step recurrence (torch 7.3x on ExpTruncNFW, and 8x more accurate) | MERGED `f9745db3` |
+| #1478 | torch-jit walks: retire both whole-walk rows (ledger 11 -> 9) | MERGED `3bb4e40e` |
+| #1480 | traced rows: re-measure the three that never were, retire all three (ledger 9 -> 6) | MERGED `2515e281` |
+| #1481 | xfail ledger: the eager rows are gone (31 -> 6, and every survivor is jit-only) | MERGED `cbebad69` |
+| #1482 | the numpy/backend boundary in orbit integration: warn on the demotion, and stop the friction force paying for it | MERGED `c5ce9565` |
+| #1484 | ChandrasekharDynamicalFrictionForce: the force cache has never hit (2.1x on the friction path) (main) | MERGED `d243f989` |
+| #1485 | OblateStaeckelWrapperPotential: ntab= works on the backend, differentiably | MERGED `43f10799` |
+| #1486 | Orbit: a backend IC gets a backend trajectory back, whatever the integrator | MERGED `c81c1992` |
+| #1489 | Orbit: the backend integration routes continue an integration instead of replacing it | MERGED `5aaf31ef` |
+| #1490 | test_eccentricity: a traced-only bar for the one potential that integrates on GL | MERGED `ecce6294` |
+| #1491 | eval_rect_ppoly: one gather for the cell, not sixteen | MERGED `7fc8e031` |
+| #1492 | slow-skip: retire one FDM row, and make three stale notes true | MERGED `e2857725` |
+| #1493 | actionAngleStaeckel: parallelise actionsFreqsAnglesJac's Jacobian loop | MERGED `bf84fca0` |
+| #1494 | sici: two cumulative products instead of two 40-term Python loops | MERGED `84d9b1b6` |
+| #1495 | map_coordinates: one gather for the whole cubic tap block, not 4**D | MERGED `51b65fa4` |
+| #1496 | AnyAxisymmetricRazorThinDisk: accept backend array input; xfail 5 -> 3 | MERGED `25087f0f` |
+| #1497 | constantbetadf: make eta sampling differentiable in beta | MERGED `a40b911c` |
+| #1498 | orbit: keep a backend Orbit on its backend through the no-time accessors and o() | MERGED `0d070d2a` |
+| #1499 | streamdf: run the progenitor/offset setup on the backend (Phase C.3) | MERGED `8c99e203` |
+| #1500 | streamTrack: keep the accessor query axis on the backend so it can be differentiated | MERGED `12f37425` |
+| #1501 | EinastoPotential: use regularized P so n=6 force stays finite (main) | MERGED `7a67da19` |
+| #1503 | orbit: a backend potential parameter must not take the C-STM | MERGED `0c05087f` |
+| #1504 | backend: integrate, spline and read an orbit back on a TRACED time grid | MERGED `ead2ccea` |
+| #1505 | streamdf: determine the track on a theta-dependent (traced) time grid | MERGED `62c53ee8` |
+| #1506 | tests: units-consistent bar for test_streamgapdf_sample's sky-frame comparison | MERGED `0d1c247a` |
+| #1507 | streamgapdf: build the impact coordinate transform on the backend | MERGED `c548f0ad` |
+| #1508 | potentials: branch on a stored parameter only when it is concrete | MERGED `3351b666` |
+| #1509 | linalg: make psd_project's gradient exact where nothing is clipped | MERGED `a432d6e4` |
+| #1510 | actionAngleVerticalInverse: select tori by their actual action with a polynomial point transformation (main) | MERGED `e0fb094e` |
+| #1511 | sphericaldf: invert r(Phi) by root-find when the potential is traced | MERGED `54aa7e60` |
+| #1512 | streamgapdf: put the kick interpolation on the backend, completing d/d(potential) | MERGED `0e78aa15` |
+| #1514 | DFs: make the quasiisothermal and King constructors differentiable | MERGED `4d608f43` |
+| #1515 | actionAngleVerticalInverse: speed up the momentum-matched evaluation (Newton on the closed-form derivative) and construction | MERGED `058e3d2a` |
+| #1516 | actionAngleVerticalInverse: compute the polynomial point transformation's action offset in closed form and apply it (main) | MERGED `eb5aa8c7` |
+| #1517 | actionAngleVerticalInverse: the map's action derivatives on each torus, stored as Hermite constraints of the family | MERGED `2db0c6f7` |
+| #1519 | linearPotential: x2deriv and evaluatelinearx2derivs, the second derivative of 1D potentials (main) | MERGED `b19f8743` |
+| #1521 | streamdf/streamgapdf: fix the nan d/d(potential) through the kick, and test the perturber chain end to end | MERGED `211dbe83` |
+| #1522 | actionAngleSphericalInverse: the momentum-matched map alone, as in the paper and the 1D code | CLOSED (unmerged) |
+| #1523 | actionAngleSphericalInverse: the family as Hermite interpolants with exact first partials at every node | CLOSED (unmerged) |
+| #1524 | actionAngleSphericalInverse: the evaluation as one pass in the anomaly | CLOSED (unmerged) |
+| #1525 | Orbit: let the analytic ecc/zmax/rperi/rap differentiate w.r.t. potential parameters | MERGED `85d6c4e2` |
+| #1526 | actionAngleSphericalInverse: the circular orbits, as the edge of the family and as tori | CLOSED (unmerged) |
+| #1527 | actionAngleSpherical: circular and near-circular orbits (main) | MERGED `5282778c` |
+| #1528 | spherical DFs: differentiate w.r.t. potential parameters (construction + velocity moments) | MERGED `562f9fda` |
+| #1529 | DFs: differentiate w.r.t. their own parameters (diskdf profile, qdf hr) | MERGED `4910fb6b` |
+| #1530 | dynamical friction: coerce the caller-supplied velocity triple onto the backend | MERGED `15156dd5` |
+| #1531 | Osipkov-Merritt dM/dE: integrate fQ's support and split at the ceiling corners | MERGED `f2844428` |
+| #1532 | Orbit accessors: follow the gradient w.r.t. potential parameters | MERGED `8f74d0d2` |
+| #1533 | Spline1D: vector-valued y, and default to the boundary condition numpy uses | MERGED `24bb56af` |
+| #1534 | Spline1D consumers: streamTrack's dual representation and SCF's eval_ppoly clone | MERGED `1a1e2211` |
+| #1535 | interpRZPotential and Orbits: one spline object per grid, not a spline plus a derived cache | MERGED `d3a92e44` |
+| #1536 | CI: run the backend suite TRACED on every PR, as a matrix axis | MERGED `af709169` |
+| #1537 | qdf: differentiate the moments w.r.t. potential parameters, and fix _rg's no-table array branch | MERGED `3b0b3ce9` |
+| #1538 | actionAngle grids: delegate to the exact method when the potential carries a gradient | MERGED `bba922cb` |
+| #1539 | evolveddiskdf: fix the vanishing-normalisation guard on torch (odd moments) | MERGED `1ea00491` |
+| #1540 | evolveddiskdf: honour a gradient carried by the POTENTIAL, not just by R | MERGED `0172ce5c` |
+| #1541 | sphericaldf: make sample() work when the potential carries a gradient | MERGED `64f3bb7e` |
+| #1542 | evolveddiskdf: migrate the hierarchical velocity grid to the backend | MERGED `62ccd636` |
+| #1543 | constantbetadf: differentiate fE w.r.t. the potential parameter | MERGED `1db57056` |
+| #1544 | backend: namespace_of() — resolve a value's own namespace, not the forced one | MERGED `18cd0ace` |
+| #1545 | actionAngleSphericalInverse: the inverse action-angle transformation for spherical potentials through a momentum-matched canonical map (main) | OPEN — green (105 pass, 3 skipped) |
+| #1546 | constantbetadf: differentiable w.r.t. the potential under jax too (eager grad) | MERGED `87f4ec20` |
+| #1547 | sphericaldf: differentiable backend-key sampling w.r.t. the potential | MERGED `c68bcbeb` |
+| #1549 | dynamical friction: differentiable w.r.t. the host potential | MERGED `e24a1fc5` |
+| #1550 | psd_project: exact gradient on clipped slices; diffrax accepts a potential list | MERGED `dce7195d` |
+| #1551 | kingdf: differentiable w.r.t. W0 (forward sensitivities of the King ODE) | MERGED `7caff969` |
+| #1552 | kingdf: solve the King ODE at rtol=1e-10 (scipy's default left ~1e-4) | MERGED `836e3f6b` |
+| #1553 | actionAngleSpherical: decide boundedness at infinity, not at a fixed radius (main) | MERGED `a0d7dff6` |
+| #1554 | potentials: finite parameter gradients at r = 0 and r = inf | MERGED `cfc9a77d` |
+| #1555 | special: accurate backend hyp2f1 at large negative z | MERGED `516ac9fb` |
+| #1556 | osipkovmerrittdf: differentiable velocity sampling w.r.t. the potential | MERGED `45dcc2a3` |
+| #1557 | constantbetadf: ~4x faster construction; spline solves in O(n log n) | MERGED `e817b56d` |
+| #1558 | constantbetadf: construct, evaluate and sample under jax.jit | MERGED `10afd54c` |
+| #1559 | eddingtondf, kingdf (M, rt), osipkovmerrittdf: under jax.jit | MERGED `482ef217` |
+| #1560 | actionAngleStaeckel: the focal length from a potential that supplies one (main) | MERGED `1966a1c0` |
+| #1561 | PerfectEllipsoidPotential: the focal length of an axisymmetric oblate perfect ellipsoid | MERGED `7cfaa5c7` |
+| #1562 | actionAngleStaeckelInverse: the momentum-matched canonical map for Staeckel potentials, explicit tori (stacked on `aainv-spherical-inverse`) | OPEN — green (107/107) |
+| #1563 | actionAngleStaeckelInverse: the interpolated family (stacked on `aainv-staeckel-inverse`) | OPEN — green (107/107) |
+| #1566 | kingdf: d/dW0 under jax.jit (diffrax) and torch.compile | MERGED `7236d252` |
+| #1567 | orbit: C integrators under torch.compile (and no silent detach) | MERGED `07d68ed7` |
+| #1568 | Fix spherical DF sampling velocity bias (main) | MERGED `fade6dae` |
+| #1569 | orbit: method='torchode', a torch.compile-able in-backend integrator | MERGED `e5e73318` |
+| #1571 | backend: linalg solve/inv/cholesky/eigvals that torch 2.14 can compile | CLOSED (unmerged) |
+| #1572 | kingdf: correct second (and higher) W0-derivatives on jax and torch | MERGED `9606ee4a` |
+| #1573 | tests: whole workflows under jax.jit / torch.compile, value and gradient | MERGED `ee3eff6c` |
+| #1574 | qdf under torch.compile; Orbit.E at a traced time under jax.jit | MERGED `7b408d35` |
+| #1575 | streamTrack: spray -> track under torch.compile | MERGED `a71a2be5` |
+| #1578 | potentials, eddingtondf: backend side of #1585 and #1586 (small-r accuracy, edge limits, f(E) near Emin) | MERGED `3d8d14a5` |
+| #1579 | eddingtondf: backend side of #1586 (f(E) accurate near Emin) | MERGED `c603f266` |
+| #1582 | Add Python 3.15 support (main) | OPEN — green (113 pass, 3 skipped) |
+| #1583 | Add Python 3.15 wheels (main) | MERGED `649b7506` |
+| #1584 | backend: torchode default; stream workflows fully compile under inductor | MERGED `60310a17` |
+| #1585 | potentials: machine-precision small r (NFW, Burkert, TwoPower), finite edge limits, Staeckel midplane vmin (main) | MERGED `a6f41359` |
+| #1586 | eddingtondf: f(E) accurate near Emin (NFW was NaN/negative there) | MERGED `d0a8e24f` |
+| #1588 | Programatically define galpy animation <style> to avoid duplication and HTML error (main) | MERGED `85788ef7` |
+| #1589 | all-clear: ignore superseded check attempts (main) | MERGED `84166989` |
+| #1590 | Build Pyodide wheels for Python 3.14 (main) | MERGED `ba066013` |
+| #1591 | DO NOT MERGE: CI for feat/backends rebased onto main (+ rebuilt #1578/#1579) (main) | CLOSED (unmerged) |
+| #1592 | DO NOT MERGE: CI for feat/backends rebased onto main (+ rebuilt #1578/#1579) | CLOSED (unmerged) |
+| #1593 | torch.compile: the streamTrack fit and the qdf constructor compile (replace #1574/#1575 opt-outs) | MERGED `3432e0d5` |
+| #1594 | actionAngleSpherical: the backend solves main's relative radial problem (retire the rebase's 8 xfails) | MERGED `03d417e9` |
+| #1596 | TwoPowerSphericalPotential: forces, second derivatives and mass from the incomplete beta (accurate near beta = 3, finite at large r) (main) | MERGED `7c675eb6` |
+| #1597 | TwoPowerSphericalPotential: forces, second derivatives and mass from the incomplete beta (numpy, C, backends) | MERGED `28d05c02` |
+| #1598 | spherical DFs: osipkovmerrittdf.sample under jax.jit; exact traced r(Phi) near Emin; constantbetadf backend fE without the calibrated limit | MERGED `4599bdcb` |
+| #1599 | Orbit.rperi/rap/zmax/e(analytic=True): backend-native and differentiable w.r.t. the phase-space point | MERGED `74cd6698` |
+| #1600 | kingdf: W0 compiles under torch.compile (no opaque scipy solve) | MERGED `e20282d7` |
+| #1602 | streamdf: vmap the differentiable track's chunk loop (shared constant steps keep d/dparam exact) | MERGED `8d5769a4` |
+| #1603 | GPU (CUDA) validation: --device cuda test option and CUDA fixes | MERGED `756fe414` |
+| #1604 | GPU numpy islands (1/5): coords + conversion; to_host for sequences, on_host | MERGED `74d69e87` |
+| #1605 | GPU numpy islands (2/5): potential | MERGED `65f63abd` |
+| #1606 | GPU numpy islands (3/5): actionAngle | MERGED `a316de7e` |
+| #1607 | GPU numpy islands (4/5): Orbit | MERGED `164d4e51` |
+| #1608 | GPU numpy islands (5/5): df, ars, scipy spline | MERGED `1a4c720f` |
+| #1610 | Orbit: backend ICs in sky coordinates convert differentiably (radec/lb) | MERGED `0724b62b` |
+| #1611 | Orbit: setting up from sky coordinates with uvw=True no longer modifies the input (main) | MERGED `cddcc8ff` |
+| #1612 | SCFPotential.from_density: differentiable w.r.t. the density's parameters (static and time-dependent) | MERGED `986ade27` |
+| #1613 | float64 by default: torch's float32 default no longer crashes galpy or degrades its internals | MERGED `2abae485` |
+| #1614 | test_backend_compile_workflows: cap inductor SIMD at 256 bits for kingdf_W0 (GCC ICE on AVX-512 runners) | MERGED `99f52149` |
+| #1615 | gammainc/gammaincc on jax: vectorized series/CF (~100x faster on CPU), scipy-accurate everywhere | MERGED `b88c1fe5` |
+| #1616 | Run the Orbit.from_name (SIMBAD) tests under forced jax/torch | MERGED `abc8f48c` |
+| #1617 | quasiisothermaldf: constructor compiles under torch.compile without an opt-out | MERGED `cee82aae` |
+| #1618 | MultipoleExpansionPotential.from_density: differentiable w.r.t. the density's parameters (static and time-dependent) | MERGED `c278dbf6` |
+| #1619 | Dynamical friction (backend, eager): one force factor per EOM step; FDM computes only its regime | MERGED `e8114d53` |
+| #1620 | conftest: report the runner's CPU (model, AVX2/AVX-512/AMX, inductor vec ISA) in the pytest header | MERGED `1cffb1ca` |
+| #1621 | qdf sampler: bucket varying lengths + skip pure_callback for concrete inputs; un-skip test_sampleV_interpolate under jax (2837 s -> 118 s) | MERGED `21965057` |
+| #1623 | test_orbit_interface_staeckel_defaultdelta: compare the interfaces at the Orbit's own delta (1-ulp jit/eager delta difference) | MERGED `72029ea2` |
+| #1624 | Remove two numpy islands (streamgapdf orbit-integration kick, constantbetadf torch sampling pin); classify the rest | MERGED `2eea28de` |
+| #1625 | jit mode: key static objects by type + attributes (stale traces after a wrapped potential changes; per-call retraces) | MERGED `27e3c649` |
+| #1626 | DO NOT MERGE: CI for feat/backends rebased onto main (2026-10-04) | CLOSED (unmerged) |
+| #1627 | actionAngleVerticalInverse (1/3): the momentum-matched map evaluates natively under jax/torch | MERGED `7c06aead` |
+| #1628 | actionAngleVerticalInverse (2/3): build the momentum-matched family natively, differentiable in the potential's parameters | MERGED `884defc3` |
+| #1630 | actionAngleVerticalInverse (3/3): the legacy modes evaluate natively under jax/torch | MERGED `f65c4ae2` |
+| #1631 | actionAngleVerticalInverse: runs on CUDA (energy grid to host; tests CUDA-clean) | MERGED `9f6c9d6f` |
+| #1633 | Dynamical friction: sigma_r on a log-r grid (was 20-60% off at small r); Python evaluates C's natural spline (main) | MERGED `3ae536e1` |
+| #1634 | Dynamical friction: sigma_r on a log-r grid; every path evaluates C's natural spline (backend side of #1633) | MERGED `793ceef7` |
+| #1635 | backend brentq: bracket_width= keeps the traced halving schedule as short as eager (VerticalInverse jit 2.5-3.7x faster) | MERGED `1c352a0e` |
+| #1636 | actionAngleVerticalInverse: tables follow the potential's device (CUDA parameters with torch's default device on the CPU) | MERGED `3504efdf` |
+| #1637 | streamdf: a torch progenitor constructs (eager torch grad tensors stay on torch; a silently dropped gradient fixed) | MERGED `70165d10` |
+| #1638 | Pyodide build: fetch GSL from independent mirrors, SHA-256 verified (GNU hosts down) (main) | MERGED `97096de7` |
+| #1639 | gammainc (torch): a float order follows the argument's device (MWPotential2014 on CUDA failed) | MERGED `1bfce100` |
+| #1640 | streamdf: a jitted construction matches eager (track solves on DirectAdjoint); jax.grad of the constructor runs | MERGED `253ad012` |
+| #1641 | backend brentq: guess= for safeguarded Newton; VerticalInverse angle inversion ~2x faster under jit (4.8x incl. #1635) | OPEN — green (150/150) |
+| #1642 | actionAngleStaeckel (c=False): chi-anomaly mesh matches C (3.8x faster; fixes the Sept. 2 regression) | OPEN — CI running (138 pending; codecov/project+patch red on partial uploads) |
 
 ## Upstream issues filed from this work (numpy-path defects, not backend)
 
