@@ -6,8 +6,12 @@ functions on each backend (float64). (a–d) Wall time of `df.sample(n=N)`
 (galpy's historical path: global RNG + scipy spline inverse CDF), and the
 backend-native path taken when a jax/torch random key is passed (eager jax,
 the caller's `jax.jit` with compile excluded, eager torch; GPU series where
-available). The native bilinear inverse CDF makes every backend faster than
-numpy at large $N$; jitted jax is the fastest (or tied) CPU path at every $N$
+available). The CPU series ran pinned to 4 cores of a Xeon E5-2697 v4: numpy
+(scipy) and torch on one core each (single-threaded; torch with one intra-op
+thread), jax with XLA:CPU's thread pool over all 4 cores (labelled "≤4 cores"; a
+jitted sample keeps ~1.8 of them busy), so the jax CPU timings are not
+single-core numbers. The native bilinear inverse CDF makes every backend faster
+than numpy at large $N$; jitted jax is the fastest (or tied) CPU path at every $N$
 (3–17× numpy at $N=10^7$), while eager jax pays a ~30 ms dispatch floor below
 $N\sim10^5$. On the GPU the jitted sampler draws $10^7$ particles in 39–68 ms on an
 NVIDIA TITAN Xp and 3.9–7.2 ms on an NVIDIA H100 (~1000× numpy).
@@ -24,7 +28,7 @@ backend × device (numpy black; jax sky blue / blue / navy and torch orange /
 vermillion / dark red for CPU / TITAN Xp / H100); in (a–d) jit solid, eager dashed;
 in (e) eager bars hatched.
 
-## CPU numbers (Xeon E5-2697 v4, 4 pinned cores of a loaded shared box; torch 1 thread)
+## CPU numbers (Xeon E5-2697 v4, 4 pinned cores of a loaded shared box; numpy and torch 1 core each, jax up to 4)
 Sampling, wall time of `sample(n=N)`:
 
 | DF | N | numpy | jax eager | jax jit | torch |

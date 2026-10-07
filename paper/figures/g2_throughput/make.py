@@ -163,8 +163,10 @@ def make():
             st = palette.style(fw, "cpu" if fw == "numpy" else dev, _MODE[fw])
             if transfer:
                 st.update(ls=":", mfc="white")
-            lab = (layout.label(fw, None, _MODE[fw], "+transfer" if transfer else "") if PAPER
-                   else palette.label(fw, dev, _MODE[fw], "+transfer" if transfer else ""))
+            # numpy's elementwise F_R runs on one core (no BLAS; measured cpu/wall = 1.0)
+            extra = "+transfer" if transfer else ("1 core" if fw == "numpy" else "")
+            lab = (layout.label(fw, None, _MODE[fw], extra) if PAPER
+                   else palette.label(fw, dev, _MODE[fw], extra))
             thr = Nd / numpy.asarray(d["series"][name], dtype=float)
             ax.loglog(Nd, thr, ms=3.5, label=lab, zorder=3, **st)
         ax.set_xlabel(r"array length $N$  (points per $F_R$ call)")

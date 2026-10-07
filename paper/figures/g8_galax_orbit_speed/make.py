@@ -16,9 +16,12 @@ Shared parameterization (G8 == G12 on these series):
     N).  Integration is adaptive-step-bound not save-bound, so per-orbit cost is the
     same in both regimes and the overlap points agree -> one consistent curve each.
 
-  * galpy (C, CPU): the compiled ``dop853_c`` integrator, one orbit at a time in a
-    sequential C loop (numcores=1).  ~0.1 ms/orbit after a ~3 ms per-call setup,
-    ~0.08 ms/orbit at N>=1e5 (measured to N=1e6).
+  * galpy (C, CPU): the compiled ``dop853_c`` integrator. Its orbit loop is
+    OpenMP-parallel over the orbits (omp_get_max_threads(); ``numcores`` does not
+    reach it), so it is drawn twice: on ONE core (OMP_NUM_THREADS=1 + taskset;
+    galpy_c_cpu_1cores*.json): 2.2-2.4 ms/orbit; and on the whole node (unpinned,
+    72 hardware threads; galpy_c_cpu*.json): ~0.1 ms/orbit after a ~3 ms per-call
+    setup, ~0.08 ms/orbit at N>=1e5 (measured to N=1e6).
   * galpy (JAX, CPU) and galpy (JAX, GPU): galpy's OWN in-backend differentiable
     integrator (``galpy.backend._reference.integrate_orbit`` -> diffrax Dopri8),
     jit-fused and ``jax.vmap``-ed over the N ICs (compile excluded), per-orbit
@@ -28,7 +31,8 @@ Shared parameterization (G8 == G12 on these series):
     GPU = NVIDIA TITAN Xp (sm_61) and NVIDIA H100 (data/h100/, galpy and galax).
 
 The story, per orbit at each line's largest N (all GPU lines end at N=3e5):
-  * galpy C (single thread): 0.079 ms/orbit at N=1e6 (79 s); 0.084 at 3e5 (25 s).
+  * galpy C, 1 core: 2.2-2.4 ms/orbit (716 s at 3e5). 72 threads: 0.079 ms/orbit
+    at N=1e6 (79 s); 0.084 at 3e5 (25 s). "C" below = the 72-thread node.
   * TITAN Xp (float64 at 1/32 rate), ~1-2 s launch/compile floor: galpy jax
     per-orbit 0.215 ms/orbit (64 s), galax per-orbit 0.209 (63 s), galax batched
     0.068 (20 s).  galax batched is level with C from N=3e4 to 1e5 (2.8 vs 3.1 s,
@@ -38,13 +42,17 @@ The story, per orbit at each line's largest N (all GPU lines end at N=3e5):
     galpy jax per-orbit 0.0247 ms/orbit (7.4 s; ~3.4x faster than C, ~9x the TITAN
     Xp), galax per-orbit 0.0246 (7.4 s; equal to galpy), galax batched 0.0130
     (3.9 s; ~6x C).  All three H100 lines cross below C at N~1-3e4.
-So C is the fastest line only up to N~1e4; past that the H100 lines are faster
-and galax's batched TITAN line is level with it, then faster at N=3e5.
+So the 72-thread C node is the fastest line only up to N~1e4; past that the H100
+lines are faster and galax's batched TITAN line is level with it, then faster at
+N=3e5. Every GPU line overtakes ONE-core C at N~500-1e3 (11-35x faster per orbit
+at 3e5 on the TITAN, ~97-180x on the H100).
 Line convention: _harness/palette.py (colour = framework x device, jit solid;
 galax per-orbit dash-dotted).
-The galpy-C numbers were re-measured on 2026-10-06 at ~0.1 ms/orbit; the first
-version of this figure (June) had ~2.1 ms/orbit, ~20x too slow -- a slow build in
-that environment (both a June-25 and the current galpy measure ~0.1 ms/orbit today).
+The galpy-C numbers re-measured on 2026-10-06 (~0.1 ms/orbit) ran unpinned on all
+72 threads; the first version of this figure (June) had ~2.1-3.4 ms/orbit, which
+matches the one-core numbers point by point (N=1, 10, 100: June 3.4, 3.3, 2.6;
+one core 3.4, 3.2, 2.2 ms/orbit) -- most likely a run without OpenMP threading,
+not a slow build.
 
 The GPU lowN (dense) run OOMs at N=1e5 (12 GiB), saving 1000 dense steps x N x 6
 doubles; the hiN (sparse, 16 saves) run reaches N=3e5.
@@ -88,12 +96,24 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # the gap between the galax lines is the batched-stepping architecture.
 # The galpy series (galpy_c_*, jax_*) live in ../_shared/orbit_speed/data and are
 # shared byte-for-byte with G12; the galax series are local to G8.
-# (json files, framework, device, mode, label, line-style override); colours from
-# _harness/palette.py (galpy C grey, jax blue shades, galax green).
+# (json files, framework, device, mode, label, line-style or style override); colours
+# from _harness/palette.py (galpy C grey, jax blue shades, galax green).
+# CPU thread counts (paper/ms/notes/CPU_CORES_AUDIT.md): galpy C threads its orbit
+# loop with OpenMP (omp_get_max_threads(); ``numcores`` does not reach it), so the
+# unpinned galpy_c_cpu*.json ran on all 72 hardware threads; the *_1cores* files are
+# OMP_NUM_THREADS=1 + taskset to one core. The jax/galax CPU lines ran unpinned:
+# XLA:CPU's thread pool spans all 72 (in practice cpu/wall ~1.1-1.3 for these solves).
+# A series whose JSONs do not exist (yet) is skipped.
+_C1 = "galpy C (1 core)"
+_C_NODE = "galpy C (72 threads)"
 _SERIES = [
-    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, "galpy C (dop853_c)", None),
-    (["galax_cpu.json"], "galax", "cpu", "jit", "galax CPU", None),
-    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "galpy jax CPU (per-orbit steps)", None),
+    (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
+     palette.c_threads_style(1)),
+    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, _C_NODE,
+     palette.c_threads_style(72)),
+    (["galax_cpu.json"], "galax", "cpu", "jit", "galax CPU (≤72 threads)", None),
+    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit",
+     "galpy jax CPU (≤72 threads, per-orbit steps)", None),
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "galpy jax {dev} (per-orbit steps)", None),
     (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax", "gpu", "jit",
      "galax {dev} (per-orbit steps)", "-."),
@@ -157,7 +177,9 @@ def make():
             Ns = numpy.array([r["N"] for r in res], dtype=float)
             wall = numpy.array([r["wall_s"] for r in res], dtype=float)
             st = palette.style(fw, d_, mode)
-            if ls:
+            if isinstance(ls, dict):
+                st.update(ls)
+            elif ls:
                 st["ls"] = ls
             ax.loglog(Ns, wall, ms=4, zorder=3, label=_lab(lab, d_), **st)
 
@@ -181,15 +203,24 @@ def make():
     if not PAPER:
         ax.text(
             0.975, 0.03,
-            "galpy C: dop853_c, single thread\n"
+            "galpy C: dop853_c on 1 core and on all 72 threads (OpenMP)\n"
             "all lines: diffrax Dopri8 / dop853, rtol=atol=1e-8 (matched)\n"
             f"TITAN Xp: jax {_load_one('jax_gpu.json').get('jax_version', '?')}"
             + (f"  ·  H100: jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
             transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
         )
     fig.tight_layout()
-    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
-                        inline={_lab("galpy C (dop853_c)", "cpu"): (300.0, 14 if PAPER else 9)})
+    # the all-threads C line runs below every other line: label it on the plot, to
+    # the lower right of its N=100 point (clear of the line, which rises to the right)
+    node = [ln for ln in ax.get_lines() if ln.get_label() == _lab(_C_NODE, "cpu")]
+    for ln in node:
+        x, y = (numpy.asarray(v, dtype=float) for v in ln.get_data())
+        k = int(numpy.argmin(abs(numpy.log(x / 100.0))))
+        ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6), textcoords="offset points",
+                    fontsize=fs_line, color=ln.get_color(), ha="left", va="top")
+    palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
+                             if not ln.get_label().startswith("_") and ln not in node],
+                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     return fig

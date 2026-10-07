@@ -7,10 +7,13 @@ as G8: MWPotential2014, a Sun-like orbit integrated for 2 Gyr over a batch of N
 
 Five series, all integrating the *same* backend-agnostic galpy forces:
 
-  * galpy (C, CPU): the compiled ``dop853_c`` integrator, one orbit at a time in a
-    single-threaded C loop -- the classical baseline. The in-backend EOM is modelled
-    on this C integrator (rectangular variables), so it is the apples-to-apples
-    sequential reference.
+  * galpy (C, CPU): the compiled ``dop853_c`` integrator -- the classical baseline.
+    The in-backend EOM is modelled on this C integrator (rectangular variables).
+    Its orbit loop is OpenMP-parallel (omp_get_max_threads(); ``numcores`` does not
+    reach it), so it is drawn on ONE core (OMP_NUM_THREADS=1 + taskset;
+    galpy_c_cpu_1cores*.json, 2.2-2.4 ms/orbit), on 16 pinned threads when
+    galpy_c_cpu_16cores*.json exists (_SHOW_C16), and on the whole node (unpinned,
+    72 hardware threads; galpy_c_cpu*.json, ~0.08-0.1 ms/orbit).
   * galpy in-backend (JAX, CPU): the diffrax Dopri8 path, ``jax.vmap``-ed over the
     batch and jit-fused, run on the CPU -- isolates the framework/vectorisation cost
     from the device.
@@ -44,14 +47,15 @@ and are byte-for-byte IDENTICAL to G8's -- same orbit (MWPotential2014, Sun-like
 convention (lowN regime nt=1000 dense saves; hiN regime nt=16 sparse saves; per-orbit
 cost matches and the overlap points agree), so G8 and G12 can be read together.
 
-The story mirrors G8 (re-measured 2026-10-06): single-thread galpy-C costs ~0.1
+The story mirrors G8 (re-measured 2026-10-06): 72-thread galpy-C costs ~0.1
 ms/orbit after a ~3 ms per-call setup and is the fastest line at every measured N
-on this float64-limited consumer GPU; the jit-fused JAX-GPU lines amortise their
+on this float64-limited consumer GPU (one-core C: 2.2-2.4 ms/orbit, overtaken by
+every GPU line at N~1e3); the jit-fused JAX-GPU lines amortise their
 ~1.5 s compile/launch floor down to ~0.21 ms/orbit (Dopri8) and ~0.13 ms/orbit
-(same-work Dopri5) at large N. (The June version had ~2.1 ms/orbit for C, ~20x too
-slow: a slow build in that environment.) The JAX-CPU line shows the device
-contribution. On the H100 (Trillium) the GPU lines drop 9-12x at large N and pass
-single-thread C at N~3e4: jax Dopri8 0.025, Dopri5 0.018, torch dopri5 0.009
+(same-work Dopri5) at large N. (The June version had ~2.1 ms/orbit for C: the
+one-core cost, not a slow build.) The JAX-CPU line (unpinned, <=72 threads) shows
+the device contribution. On the H100 (Trillium) the GPU lines drop 9-12x at large
+N and pass the 72-thread C node at N~3e4: jax Dopri8 0.025, Dopri5 0.018, torch dopri5 0.009
 ms/orbit at the largest N (see caption.md).
 
 SAME-WORK VERDICT: at the matched 5th-order method, the jit+vmap jax-Dopri5 GPU line
@@ -120,10 +124,25 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # dopri5 (5th order -- torchdiffeq's dopri8 backward is buggy). The jax-Dopri5 line is
 # the apples-to-apples (same 5th-order method, matching nfev/steps -- see
 # measure/work_counts.py -> data/work_counts.json) comparison to torch-dopri5.
-# (json files, framework, device, mode, label suffix, line-style override)
+# (json files, framework, device, mode, label suffix, line-style or style override)
+# CPU thread counts (paper/ms/notes/CPU_CORES_AUDIT.md): galpy C threads its orbit
+# loop with OpenMP (omp_get_max_threads(); ``numcores`` does not reach it), so the
+# unpinned galpy_c_cpu*.json ran on all 72 hardware threads; *_1cores* =
+# OMP_NUM_THREADS=1 + taskset to one core, *_16cores* = 16 threads on 16 pinned
+# cores. The jax CPU line ran unpinned: XLA:CPU's pool spans all 72 (in practice
+# cpu/wall ~1.3 for this solve). A series whose JSONs do not exist (yet) is skipped.
+_C1, _C16, _C_NODE = "1 core", "16 threads", "72 threads"
+_SHOW_C16 = True
 _SERIES = [
-    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, "dop853_c, sequential", None),
-    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "Dopri8", None),
+    (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
+     palette.c_threads_style(1)),
+] + ([
+    (["galpy_c_cpu_16cores.json", "galpy_c_cpu_16cores_hiN.json"], "c", "cpu", None, _C16,
+     palette.c_threads_style(16)),
+] if _SHOW_C16 else []) + [
+    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, _C_NODE,
+     palette.c_threads_style(72)),
+    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "Dopri8, ≤72 threads", None),
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri8", None),
     (["jax_dopri5_gpu.json", "jax_dopri5_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri5", "-."),
     (["torch_cuda.json"], "torch", "gpu", "eager", "dopri5", None),
@@ -182,7 +201,9 @@ def make():
             Ns = numpy.array([r["N"] for r in res], dtype=float)
             wall = numpy.array([r["wall_s"] for r in res], dtype=float)
             st = palette.style(fw, d_, mode)
-            if ls:
+            if isinstance(ls, dict):
+                st.update(ls)
+            elif ls:
                 st["ls"] = ls
             ax.loglog(Ns, wall, ms=4, zorder=3, label=_label(fw, d_, mode, extra), **st)
 
@@ -219,8 +240,17 @@ def make():
             transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
         )
     fig.tight_layout()
-    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
-                        inline={_label("c", "cpu", None, "dop853_c, sequential"): (300.0, 14 if PAPER else 9)})
+    # the all-threads C line runs below every other line: label it on the plot, to
+    # the lower right of its N=100 point (clear of the line, which rises to the right)
+    node = [ln for ln in ax.get_lines() if ln.get_label() == _label("c", "cpu", None, _C_NODE)]
+    for ln in node:
+        x, y = (numpy.asarray(v, dtype=float) for v in ln.get_data())
+        k = int(numpy.argmin(abs(numpy.log(x / 100.0))))
+        ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6), textcoords="offset points",
+                    fontsize=fs_line, color=ln.get_color(), ha="left", va="top")
+    palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
+                             if not ln.get_label().startswith("_") and ln not in node],
+                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     return fig

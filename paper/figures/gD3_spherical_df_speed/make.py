@@ -112,6 +112,29 @@ _MODES = {
     "torch-gpu": ("torch", "gpu", "eager"),
 }
 _JSON_H100 = os.path.join(_DATA, "h100", "gD3_spherical_df_speed.json")
+
+
+def _cores(mode, data):
+    """CPU cores behind a CPU series (paper/ms/notes/CPU_CORES_AUDIT.md), from the
+    env stamps of the run that measured it (modes_measured[mode], else env):
+    numpy/scipy are single-threaded, torch runs ``torch_threads`` intra-op threads,
+    and XLA:CPU's pool spans the CPU affinity (4 pinned cores here; a jitted sample
+    keeps ~1.8 busy)."""
+    env = data.get("modes_measured", {}).get(mode) or data.get("env", {})
+    n = {"numpy": 1, "torch": env.get("torch_threads", "?")}.get(mode)
+    if n is None:
+        aff = env.get("cpu_affinity", "?")
+        return "1 core" if aff == 1 else f"≤{aff} cores"
+    return "1 core" if n == 1 else f"{n} threads"
+
+
+def _label(mode, dev, data):
+    """palette.label; a CPU series names its cores instead of the device ("jax jit,
+    ≤4 cores"): as short as the GPU labels, so the label column keeps its width."""
+    fw, _, md = _MODES[mode]
+    if mode not in _CPU_MODES:
+        return palette.label(fw, dev, md)
+    return " ".join(p for p in (fw, md) if p) + f", {_cores(mode, data)}"
 # journal version (default): no env stamp / long titles or notes; the caption
 # carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
 PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
@@ -517,7 +540,7 @@ def make():
                     continue
                 ax.loglog(numpy.array(d.get("Ns", data["Ns"]), dtype=float),  # own N grid (--Ns)
                           numpy.array(ser[mode], dtype=float), ms=3.5,
-                          label=palette.label(fw, dev, md), **palette.style(fw, dev, md))
+                          label=_label(mode, dev, data), **palette.style(fw, dev, md))
         ax.set_ylim(3e-5, 200)
         ax.set_xlabel(r"$N$ particles")
         ax.set_title(f"({'abcd'[i]}) {name}", fontsize=10)
@@ -578,7 +601,7 @@ def make():
     for mode, d, dev in bars:
         fw, _, md = _MODES[mode]
         handles.append(Patch(facecolor=palette.style(fw, dev, md)["color"], edgecolor="w",
-                             hatch="////" if md == "eager" else None, label=palette.label(fw, dev, md)))
+                             hatch="////" if md == "eager" else None, label=_label(mode, dev, data)))
     handles.append(Patch(facecolor="none", edgecolor="0.3", label="first call (outline)"))
     ax.legend(handles=handles, fontsize=_fs_leg, ncol=4 if PAPER else 6, loc="upper center",
               bbox_to_anchor=(0.5, -0.12 if PAPER else -0.1), framealpha=0.92)

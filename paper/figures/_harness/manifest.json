@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
-    "sha256": "77ad11370e0607a68bf2d7e2e8469cb3e7db51b3d54d91cb37a40eb9ba843ff5",
+    "git": "7e01f1f",
+    "sha256": "81794320362e9efc34729f365d635f5a6a5cefaa68797b24540150d6317d03e3",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ab37edd",
-    "sha256": "c66f3df0ca6d84d0fe1dbfd225cff6a518c11e44afb857f2fe5b8c85aa8512bd",
+    "git": "0b1fee2",
+    "sha256": "9b2d3997b258458dbe799541b64769197e866b188d84eb767e0de2b5a8494abc",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -203,8 +203,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ab37edd",
-    "sha256": "477e0119e491404eace2cd47182b37f840e6da3d964002c5a7d3bcbe5b2e0d66",
+    "git": "0b1fee2",
+    "sha256": "08afce4d028b0387e88cb0b413d8438c44040e32cde9f9f69ce9ec16ff019998",
     "track": "G"
   },
   "g2b_transfer": {
@@ -298,8 +298,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
-    "sha256": "cfcfc1a9e083d7019873765f664c09023c06667979035c0bb2fee03e676e5bf1",
+    "git": "7e01f1f",
+    "sha256": "f21408c4fec053a847609dc1fff1bf7180664085f7892a89c8461db7b947d671",
     "track": "G"
   },
   "g9_variational_validity": {
@@ -378,8 +378,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
-    "sha256": "9c34fbe1d133cc5f2dc683dc113d89b61c63638a7918cd2c58cd234aef03bb84",
+    "git": "7e01f1f",
+    "sha256": "bed79c3364123bf4e6035edd4403a1da74af2d1cc0d18d4f66452d8169b3d5bd",
     "track": "F"
   },
   "gD4_spherical_df_param": {
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ab37edd",
-    "sha256": "701384a907bbb14d58bffed5844334441298919f8df23815a719569703734052",
+    "git": "0b1fee2",
+    "sha256": "fcd2cd8915669c0c10489519ea2ec851929af7fd0e79607415ba0a4ff1959027",
     "track": "S"
   },
   "gS5_streamspray_speed": {
@@ -490,8 +490,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "5ee8d2a",
-    "sha256": "76f700bdee613c36974e3b287f7fe771f0a4264c03936308f58df6bcdfc77c81",
+    "git": "0b1fee2",
+    "sha256": "3af3ffc93e228dc283eadaba8ed2821373dd5773799925ed8f58cb65720edc25",
     "track": "S"
   },
   "gV1_vertical_inverse": {
@@ -522,8 +522,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
-    "sha256": "eb683772045e6334f1ad8a0c73c08a45a21187dce3300a7aba3b0200431cab24",
+    "git": "0b1fee2",
+    "sha256": "91ff8733788a12adad277e09b169ed06ebe308457e680fe3bf99f6dbf2a34a35",
     "track": "E"
   }
 }

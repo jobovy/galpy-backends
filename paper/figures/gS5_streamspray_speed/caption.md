@@ -21,5 +21,7 @@ has an ~11 s floor and reaches 22 µs/particle at 10⁶. Colour = backend × dev
 (numpy black; jax sky blue / blue / navy and torch orange / vermillion / dark red
 for CPU / TITAN Xp / H100); jit solid, eager dashed. Medians of 3 warm calls; CPU
 series pinned to 4 cores of a Xeon E5-2697 v4 (a shared, heavily loaded machine,
-so absolute CPU times are inflated); H100 series on Trillium (jax 0.11.2, torch
+so absolute CPU times are inflated): the numpy path's C integrator threads over the
+particles with OpenMP on all 4 (4 threads), jax's XLA:CPU pool spans up to the 4,
+and torch runs one intra-op thread (one core); CPU labels state these counts; H100 series on Trillium (jax 0.11.2, torch
 2.14.1+cu130).

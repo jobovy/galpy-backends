@@ -17,22 +17,31 @@ an **NVIDIA H100 80GB** (Trillium; jax 0.11.2, torch 2.14.1+cu130). The small-N 
 is launch/compile-bound and barely moves (~1–4 s per call on both). At large N the
 H100 is 9–12× faster per orbit than the TITAN: jax Dopri8 0.025 ms/orbit at
 N = 3×10⁵ (TITAN 0.21), the same-work jax Dopri5 0.018, and eager torch dopri5 0.009
-ms/orbit at N = 10⁶ (TITAN 0.076). On the H100 the GPU lines overtake single-thread
-C (0.10 ms/orbit) at N ≈ 3×10⁴ and are 4–11× cheaper per orbit at the largest N.
-Single-thread C is the per-core baseline: galpy's C path also runs orbits in
-parallel (`numcores`), which divides its line by the number of cores used.
+ms/orbit at N = 10⁶ (TITAN 0.076). galpy's C orbit loop is OpenMP-parallel over
+the orbits (`omp_get_max_threads()`; the `numcores` keyword does not reach it), so
+C is drawn on **one core** (`OMP_NUM_THREADS=1`, pinned with `taskset`; 2.2–2.4
+ms/orbit) and on the **whole node** (unpinned: all 72 hardware threads of the dual
+18-core Xeon E5-2697 v4; ~0.08–0.10 ms/orbit), plus on 16 pinned threads (0.17–0.2
+ms/orbit, 178 s at N = 10⁶; 13× one core, 2.2× slower than the node). Every GPU line overtakes one-core C at N ≈ 10³ (eager torch,
+with its flat 4–11 s floor, at N ≈ 2–5×10³). On the H100 the GPU lines also overtake
+the 72-thread node at N ≈ 3×10⁴ and at the largest N are 5–9× cheaper per orbit
+than it (0.079 ms/orbit at N = 10⁶) and 150–280× cheaper than one-core C.
 
-* **galpy (C, CPU; sequential)** — the compiled `dop853_c` integrator, one orbit at
-  a time in a single-threaded C loop (`numcores=1`). ~3 ms per-call setup, then
-  ~0.1 ms/orbit at 1e-8: on the float64-limited TITAN Xp it is the fastest
-  line at every measured N (the in-backend GPU lines amortise their ~1.5 s
+* **galpy (C, CPU)** — the compiled `dop853_c` integrator, on one core (grey,
+  solid), on all 72 hardware threads (light grey, dash-dot) and on 16 pinned
+  threads (mid grey, dash-dot-dot). One core: ~3 ms per-call setup, then 2.2–2.4
+  ms/orbit at 1e-8 at every N ≥ 100 (716 s at N = 3×10⁵). 72 threads: ~0.1
+  ms/orbit (0.079 at N = 10⁶): on the float64-limited TITAN Xp the node is the
+  fastest line at every measured N (the in-backend GPU lines amortise their ~1.5 s
   compile/launch floor only down to ~0.13–0.21 ms/orbit). The June version of this
-  figure had ~2.1 ms/orbit for C, ~20x too slow (a slow build in that environment).
+  figure had ~2.1 ms/orbit for C: that is the one-core cost (it matches the
+  one-core line point by point), not a slow build.
 * **galpy in-backend (JAX, GPU; Dopri8, shipped)** — diffrax `Dopri8` (8th order) of
   the backend-agnostic forces, `jax.vmap`-ed over the batch and jit-fused, on the
   NVIDIA TITAN Xp (sm_61). This is **what galpy ships on jax**. The vectorised solve
   amortises across the batch down to ~0.25 ms/orbit at N=1e5 and ~0.21 at 3e5
-  (~10× faster per orbit than galpy-C); crosses galpy-C around N≈few-hundred.
+  (~11× faster per orbit than one-core C, ~2.5× slower than the 72-thread node);
+  crosses one-core C at N≈10³.
 * **galpy in-backend (JAX, GPU; Dopri5, same-work)** — diffrax `Dopri5` (5th order)
   through the **same** backend forces, jit+vmap, GPU. galpy ships Dopri8 on jax but
   `dopri5` on torch, so the shipped jax-vs-torch crossover is **not same-work**; this
@@ -41,7 +50,11 @@ parallel (`numcores`), which divides its line by the number of cores used.
   *beating* the shipped Dopri8 line on the GPU despite taking ~3× more steps.
 * **galpy in-backend (JAX, CPU; Dopri8)** — the shipped diffrax `Dopri8` path forced
   onto the CPU, isolating the device contribution from the framework/vectorisation
-  cost (~5–8 ms/orbit).
+  cost (~3–10 ms/orbit). It ran unpinned, so XLA:CPU's thread pool could use all 72
+  hardware threads ("≤72 threads"); a quick check (2026-10-07) finds the solve keeps
+  only ~1.3 cores busy and runs ~2.5× *faster* pinned to one core (N = 10³: 2.2 s vs
+  the 5.5 s plotted), i.e. level with one-core C (2.3 s). A pinned re-measurement
+  is queued.
 * **galpy in-backend (torch, GPU; dopri5, eager)** — the torchdiffeq `dopri5` path
   (5th order — torchdiffeq's `dopri8` *backward* pass is buggy, so galpy ships `dopri5`
   on torch; state carried as (6, N) so one `odeint` vectorises the batch). torchdiffeq

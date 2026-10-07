@@ -84,7 +84,9 @@ and noisy at the tens-of-percent level; the orders of magnitude and the
 scalings are robust.
 
 Timing protocol: one warm-up call, median of 3 timed calls (bench.time_call), all
-CPU series pinned to the same 4 cores (taskset); a series stops once one call
+CPU series pinned to the same 4 cores (taskset): numpy/C runs 4 OpenMP threads
+(measured cpu/wall 2.5), jax's XLA:CPU pool spans the 4, torch 1 thread
+(paper/ms/notes/CPU_CORES_AUDIT.md); a series stops once one call
 exceeds ~60 s (later N recorded as NaN). Large-N GPU calls that run out of the
 12 GB device memory are recorded as NaN.
 
@@ -133,6 +135,24 @@ _JSON_H100 = os.path.join(_DATA, "h100", "gS5_streamspray_speed.json")
 # journal version (default): no env stamp / long titles or notes; the caption
 # carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
 PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
+
+
+def _label(name, dv, data):
+    """palette.label; a CPU series names its cores/threads instead of the device
+    (paper/ms/notes/CPU_CORES_AUDIT.md): the CPU run is pinned to ``cpu_cores_used``
+    cores; numpy's C integrator threads over the particles with OpenMP (2000-particle
+    chunks -> one thread per pinned core), torch runs ``torch_cpu_threads`` intra-op
+    threads, and XLA:CPU's pool spans the pinned cores."""
+    fw, dev, mode, extra = _SERIES[name]
+    if dv != "cpu":
+        return palette.label(fw, dv, mode, extra)
+    nc = data.get("env_cpu", {}).get("cpu_cores_used", "?")
+    if fw == "numpy":
+        return f"numpy/C, {nc} threads"
+    if fw == "torch":
+        n = data.get("torch_cpu_threads", "?")
+        return f"torch {mode}, {n} " + ("core" if n == 1 else "threads")
+    return f"jax {mode}, ≤{nc} cores"
 
 
 def _env(torch, jax):
@@ -379,7 +399,7 @@ def make():
             if not numpy.any(numpy.isfinite(t)):
                 continue
             st = palette.style(fw, dv, mode)
-            lab = palette.label(fw, dv, mode, extra)
+            lab = _label(name, dv, d)
             axw.loglog(Ns, t, ms=4, label=lab, zorder=3, **st)
             axp.loglog(Ns, 1e3 * t / Ns, ms=4, label=lab, zorder=3, **st)
     axw.set_xlabel(r"number of sprayed particles $N$")
@@ -416,7 +436,8 @@ def make():
     # direct labels on (b) (same lines as (a)); the CPU lines end early (series stop
     # at ~60-200 s/call): PAPER puts them in a small legend in the empty upper right,
     # the rest in the right-hand label column
-    early = ["torch CPU eager", "numpy (C integrator)", "jax CPU eager", "jax CPU jit"]
+    early = [_label(n, "cpu", data) for n in
+             ("torch (CPU, eager)", "numpy (CPU, C)", "jax (CPU, eager)", "jax (CPU, jit)")]
     if PAPER:
         lines = {ln.get_label(): ln for ln in axp.get_lines()}
         axp.set_ylim(top=2e4)  # headroom: the legend sits above the data
@@ -428,8 +449,7 @@ def make():
                             fontsize=8, min_sep_pt=1.3 * 8)
         layout.fit_right(fig)
     else:
-        inline = {"torch CPU eager": (1e4, 8), "numpy (C integrator)": (1e3, 9),
-                  "jax CPU eager": (1.5e5, 9), "jax CPU jit": (3e3, -9)}
+        inline = dict(zip(early, [(1e4, 8), (1e3, 9), (1.5e5, 9), (3e3, -9)]))
         palette.label_lines(axp, inline=inline, fontsize=7)
         for t in axp.texts:
             if t.get_text() in inline:

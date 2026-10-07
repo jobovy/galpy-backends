@@ -20,6 +20,9 @@ drops to ~53 s warm on the H100 (~130 s on the TITAN, a consumer card with float
 at 1/32 rate). Colour = backend × device (numpy black; jax sky blue / blue / navy
 and torch orange / vermillion / dark red for CPU / TITAN Xp / H100); jit solid,
 eager dashed, first (cold) calls dotted / dash-dotted. Medians of 3 warm calls (construction: single
-shots); CPU series on 4 cores of a shared, heavily loaded Xeon E5-2697 v4, so
-absolute CPU times are inflated; H100 series on Trillium (jax 0.11.2, torch
+shots); CPU series pinned to 4 cores of a shared, heavily loaded Xeon E5-2697 v4,
+so absolute CPU times are inflated: numpy (whose C orbit calls integrate one orbit
+at a time, i.e. one OpenMP thread) and torch (one intra-op thread) on one core
+each, jax with XLA:CPU's thread pool over up to all 4 cores (CPU labels state the
+cores instead of the device); H100 series on Trillium (jax 0.11.2, torch
 2.14.1+cu130).

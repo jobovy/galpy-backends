@@ -12,31 +12,45 @@ to G12's**, so the two figures can be read on a common reference. nt convention
 save 16 (memory) — integration is adaptive-step-bound not save-bound, so per-orbit
 cost matches and the overlap points agree.
 
-galpy's compiled `dop853_c` (single-thread C, `numcores=1`) costs ~0.1 ms/orbit
-once past its ~3 ms per-call setup, falling to **0.084 ms/orbit at N=3e5 (25 s)
-and 0.079 ms/orbit at N=10⁶ (79 s)**, its largest N. It is the fastest line up to
-N≈10⁴. The GPU backends start from ~1–2 s of compile/kernel-launch overhead and
+galpy's compiled `dop853_c` is drawn twice, because its C orbit loop is
+parallelised with OpenMP over the orbits (`omp_get_max_threads()`; the `numcores`
+keyword does not reach it): **on one core** (`OMP_NUM_THREADS=1`, pinned with
+`taskset`; grey, solid) it costs 2.2–2.4 ms/orbit at every N ≥ 100 (2.3 s at
+N=10³, 22 s at 10⁴, 716 s at 3×10⁵), and **on the whole node** (unpinned: all 72
+hardware threads of the dual 18-core Xeon E5-2697 v4; light grey, dash-dot)
+~0.1 ms/orbit once past its ~3 ms per-call setup, falling to 0.084 ms/orbit at
+N=3×10⁵ (25 s) and 0.079 ms/orbit at N=10⁶ (79 s) — a ~28× parallel speed-up.
+The GPU backends start from ~1–2 s of compile/kernel-launch overhead and
 amortise it with N; all GPU lines end at N=3×10⁵. On the **TITAN Xp** (a consumer
 GPU that runs float64 at 1/32 of its float32 rate) they reach 0.215 ms/orbit
 (galpy in-backend, per-orbit steps; 64 s), 0.209 ms/orbit (galax, per-orbit
-steps; 63 s) and **0.068 ms/orbit (galax, batched steps; 20 s)**: galax's batched
-line is level with single-thread C from N=3×10⁴ to 10⁵ (2.8 vs 3.1 s, 8.0 vs 8.1 s)
-and faster at 3×10⁵ (20 vs 25 s), while the two per-orbit lines stay ~2.5× slower
-than C. On an **NVIDIA H100** (Trillium; galpy and galax both measured there;
-galpy on jax 0.11.2) every GPU line crosses below C at N≈1–3×10⁴ and at N=3×10⁵ reaches **0.0247 ms/orbit for galpy's
-per-orbit integrator (7.4 s)** — ~9× the TITAN Xp and ~3.4× faster than
-single-thread C — 0.0246 ms/orbit for galax per-orbit (7.4 s, equal to galpy) and
-0.0130 ms/orbit for galax batched (3.9 s, ~6× faster than C).
+steps; 63 s) and **0.068 ms/orbit (galax, batched steps; 20 s)**: all three
+overtake one-core C between N≈500 and 10³ and are 11–35× faster per orbit than
+it at N=3×10⁵, whereas against the 72-thread node only galax's batched line is
+level (N=3×10⁴ and 10⁵: 2.8 vs 3.1 s, 8.0 vs 8.1 s) and then faster (20 vs 25 s
+at 3×10⁵); the two per-orbit TITAN lines stay ~2.5× slower than the node. On an
+**NVIDIA H100** (Trillium; galpy and galax both measured there; galpy on jax
+0.11.2) every GPU line crosses below one-core C just under N=10³ and below the
+72-thread node at N≈1–3×10⁴, and at N=3×10⁵ reaches **0.0247 ms/orbit for
+galpy's per-orbit integrator (7.4 s)** — ~97× one-core C, ~3.4× the 72-thread
+node and ~9× the TITAN Xp — 0.0246 ms/orbit for galax per-orbit (7.4 s, equal
+to galpy) and 0.0130 ms/orbit for galax batched (3.9 s, ~6× the node).
 
-Colours follow the paper-wide convention (galpy C grey, jax blue — sky blue on the
-CPU, darker on the GPUs, navy for the H100 — galax green); all jax/galax lines are
-jit-compiled (solid), galax's per-orbit control is dash-dotted. The individual
-lines:
+Colours follow the paper-wide convention (galpy C grey — one core dark grey,
+the 72-thread node light grey dash-dot — jax blue — sky blue on the CPU, darker on
+the GPUs, navy for the H100 — galax green); all jax/galax lines are jit-compiled
+(solid), galax's per-orbit control is dash-dotted. The individual lines:
 
 * **galpy (JAX, CPU; per-orbit steps)** — galpy's in-backend diffrax integrator on
   the CPU: the framework/vectorisation cost without the device, the common galpy
   reference shared with G12 (~3–10 ms/orbit, 2.8 at N=3e5; isolates the GPU
-  contribution below).
+  contribution below). Like **galax (JAX, CPU)** it ran unpinned, so XLA:CPU's
+  thread pool could use all 72 hardware threads (labelled "≤72 threads"); a quick
+  check (2026-10-07) finds these solves keep only ~1.1–1.3 cores busy and run ~2×
+  *faster* pinned to one core (N=10³: 2.2 s for galpy, 1.6 s for galax, vs 5.5 s
+  and 3.9 s plotted; one-core C: 2.3 s), so both CPU jax lines overstate the
+  single-core cost: pinned to one core galpy-jax is level with one-core C and
+  galax faster. (A pinned re-measurement of both lines is queued.)
 * **galpy (JAX, GPU; per-orbit steps)** — the same in-backend diffrax integrator of
   the backend-agnostic forces (`jax.vmap` of a per-orbit solve, jit-fused) on the
   GPU; every orbit carries its own adaptive `PIDController`. ~0.25 ms/orbit at N=1e5,

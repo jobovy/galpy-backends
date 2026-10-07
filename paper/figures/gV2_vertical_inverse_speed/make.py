@@ -49,8 +49,12 @@ Plot: colours from _harness/palette.py (framework x device; jit solid, eager
 dashed, many-tori variants dash-dot), lines labelled directly. The GPU series
 re-measured on an H100 (data/h100/, Trillium) are drawn as extra lines.
 
-CPU threading: every CPU series is SINGLE-THREADED (OPENBLAS_NUM_THREADS=
-OMP_NUM_THREADS=1, torch.set_num_threads(1), XLA eigen/intra-op threads = 1).
+CPU threading: numpy and torch are SINGLE-THREADED (OPENBLAS_NUM_THREADS=
+OMP_NUM_THREADS=1, torch.set_num_threads(1)). jax is NOT: the XLA_FLAGS set below
+(--xla_cpu_multi_thread_eigen=false ...) are ignored by jax 0.10.1, whose XLA:CPU
+thread pool spans the CPU affinity (72 hardware threads here; checked 2026-10-07:
+cpu/wall ~6 for a large elementwise jit and ~55 for a matmul with the flags, 1.0
+only when pinned to one core). The jax CPU series are therefore multi-threaded.
 The measuring box is shared; when it is oversubscribed, multi-threaded BLAS and
 torch thrash (measured at load ~160 on 72 hardware threads: numpy construction
 nE=31 0.6 s -> 19 s with 4 OpenBLAS threads, torch N=1e3 evaluation 0.08 s ->
@@ -132,7 +136,20 @@ _CONS = ["numpy (CPU)", "jax (CPU, eager)", "jax (CPU, jit)", "torch (CPU)",
          "jax (GPU, eager)", "jax (GPU, jit)", "torch (GPU)"]
 
 
-def _style(name, dev):
+def _cores(fw, env):
+    """CPU threads behind a CPU series, from the CPU run's env stamps
+    (paper/ms/notes/CPU_CORES_AUDIT.md): numpy/scipy single-threaded
+    (OPENBLAS_NUM_THREADS=1), torch ``torch_threads``; jax 0.10.1 ignores the
+    single-thread XLA_FLAGS, so XLA:CPU's pool spans the whole affinity."""
+    if fw == "numpy":
+        return "1 core"
+    if fw == "torch":
+        n = env.get("torch_threads", "?")
+        return "1 core" if n == 1 else f"{n} threads"
+    return f"≤{env.get('cpu_affinity', '?')} threads"
+
+
+def _style(name, dev, env=None):
     fw, mode, var = _SPEC[name]
     st = palette.style(fw, dev, mode)
     if var:
@@ -140,7 +157,12 @@ def _style(name, dev):
         st["marker"] = "x" if fw == "numpy" else st["marker"]
     if PAPER:  # short variant tags; the caption explains them
         var = {"loop over tori": "loop", "vmap over tori": "vmap"}.get(var, var)
-    return st, palette.label(fw, dev, mode, var or "")
+    if dev != "cpu":
+        return st, palette.label(fw, dev, mode, var or "")
+    # a CPU series names its cores/threads instead of the device: "jax jit, ≤72 threads"
+    lab = " ".join(p for p in (fw, mode if fw != "numpy" else None) if p)
+    lab += f", {_cores(fw, env or {})}"
+    return st, (f"{lab} ({var})" if var else lab)
 
 
 def _sources(data):
@@ -508,7 +530,7 @@ def make():
                 if dev == "cpu":
                     continue  # only the GPU series are re-measured on the H100
                 dev = override
-            st, lab = _style(name, dev)
+            st, lab = _style(name, dev, src.get("env", {}).get("cpu_run"))
             t = _nan(src["eval"][name])
             x = (numpy.asarray(src["Ms"], dtype=float) * src["nang_vmap"]
                  if ("vmap" in name or "loop" in name) else numpy.asarray(src["Ns"], dtype=float))
@@ -542,7 +564,7 @@ def make():
                 if dev == "cpu":
                     continue
                 dev = override
-            st, lab = _style(name, dev)
+            st, lab = _style(name, dev, src.get("env", {}).get("cpu_run"))
             c = src["construct"][name]
             axb.loglog(nEs, _nan(c["warm"]), ms=4, lw=1.3, label=lab, **st)
             if "first" in c:

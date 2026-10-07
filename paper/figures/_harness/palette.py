@@ -13,7 +13,8 @@ galax      green      green           dark green
 =========  =========  ==============  ============
 
 jit / torch.compile = solid, eager = dashed. CPU = square, TITAN Xp = circle,
-H100 = diamond. Okabe-Ito / Wong (2011) hues, colour-blind safe, for the CPU and
+H100 = diamond. galpy C on several OpenMP threads: lighter grey, dash-dot
+(``c_threads_style``). Okabe-Ito / Wong (2011) hues, colour-blind safe, for the CPU and
 TITAN shades. A device-agnostic jax/torch line uses the TITAN shade
 (``style.BACKEND_COLORS``).
 """
@@ -60,6 +61,18 @@ def style(framework, device="cpu", mode=None):
         "ls": _LS[mode],
         "marker": _MARKER[dev],
     }
+
+
+def c_threads_style(nthreads, node_threads=72):
+    """galpy C on ``nthreads`` OpenMP threads (its orbit and action-angle loops thread
+    over objects): 1 thread is style("c") (grey, solid); the whole node is a lighter
+    grey, dash-dot; anything in between a mid grey, dash-dot-dot."""
+    st = style("c")
+    if nthreads >= node_threads:
+        st.update(color="#A6A6A6", ls="-.")
+    elif nthreads > 1:
+        st.update(color="#878787", ls=(0, (4, 1.5, 1, 1.5, 1, 1.5)))
+    return st
 
 
 def parse(name, default_mode=None):

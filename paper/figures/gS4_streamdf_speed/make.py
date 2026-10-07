@@ -97,7 +97,9 @@ load is stamped in ``env_cpu``), so absolute CPU times are inflated and noisy at
 the tens-of-percent level; the orders of magnitude and the scalings are robust.
 
 Timing protocol: median of 3 timed calls after one warm-up (bench.time_call),
-CPU series pinned to the same 4 cores (taskset); a (b)/(c) series stops once one
+CPU series pinned to the same 4 cores (taskset): numpy (and its one-orbit-per-call
+C integrations, one OpenMP thread) and torch (one intra-op thread) use one core,
+jax's XLA:CPU pool spans the 4 (paper/ms/notes/CPU_CORES_AUDIT.md); a (b)/(c) series stops once one
 call exceeds ~60 s (NaN beyond); GPU OOM -> NaN.
 
 Reproducibility: measure -> data/gS4_streamdf_speed.json, plot byte-stable from it.
@@ -473,6 +475,26 @@ def _data():
     return _measure(devices=("cpu", "gpu"))
 
 
+def _cores(fw, data):
+    """CPU cores behind a CPU series (paper/ms/notes/CPU_CORES_AUDIT.md): numpy and
+    its C orbit calls (one orbit per call -> one OpenMP thread) use one core, torch
+    runs ``torch_cpu_threads`` intra-op threads, and XLA:CPU's pool spans the pinned
+    cores (env_cpu cpu_cores_used)."""
+    n = {"numpy": 1, "torch": data.get("torch_cpu_threads", "?")}.get(fw)
+    if n is None:
+        return f"≤{data.get('env_cpu', {}).get('cpu_cores_used', '?')} cores"
+    return f"{n} core" + ("" if n == 1 else "s")
+
+
+def _label(fw, dv, mode, extra, data):
+    """palette.label; a CPU series names its cores instead of the device ("jax jit,
+    ≤4 cores"), as short as the GPU labels."""
+    if dv != "cpu":
+        return palette.label(fw, dv, mode, extra)
+    lab = " ".join(p for p in (fw, mode if fw != "numpy" else None) if p) + f", {_cores(fw, data)}"
+    return f"{lab} ({extra})" if extra else lab
+
+
 def _panel(ax, xs, part, data, h100):
     for name in _ORDER:
         fw, dev, mode, extra, ls = _SERIES[name]
@@ -490,7 +512,7 @@ def _panel(ax, xs, part, data, h100):
             st = palette.style(fw, dv, mode)
             if ls:
                 st["ls"] = ls
-            ax.loglog(xs, t, ms=4, zorder=3, label=palette.label(fw, dv, mode, extra), **st)
+            ax.loglog(xs, t, ms=4, zorder=3, label=_label(fw, dv, mode, extra, d), **st)
 
 
 @figure(

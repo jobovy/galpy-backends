@@ -54,6 +54,28 @@ _MECH = [
     ("diffrax", "jax", "jit", "diffrax"),
     ("torchdiffeq", "torch", "eager", "torchdiffeq"),
 ]
+# CPU threads behind each CPU series (paper/ms/notes/CPU_CORES_AUDIT.md; the
+# measure scripts ran unpinned on the 72-thread dev box, no thread settings):
+# C-STM calls the C integrator once per orbit (an OpenMP team of 1); XLA:CPU's
+# pool spans all 72 threads (in practice cpu/wall ~1.2 here); torch defaults to
+# its 36 intra-op threads (one per physical core).
+_CPU_THREADS = {"cstm": "1", "diffrax": "≤72", "torchdiffeq": "36"}
+
+
+def _thr(mk):
+    n = _CPU_THREADS[mk]
+    return "1 core" if n == "1" else f"{n} threads"
+
+
+def _lab2(mk, fw, pdev, mode, suf, dk):
+    """Panel (b) label; a CPU series states its threads (C: in the parentheses,
+    jax/torch: on the first line, which is the shorter one)."""
+    if dk != "cpu":
+        return (layout.label if PAPER else palette.label)(fw, pdev, mode, suf)
+    if fw == "c" or not PAPER:
+        return (layout.label if PAPER else palette.label)(fw, pdev, mode, f"{suf}, {_thr(mk)}")
+    first, second = layout.label(fw, pdev, mode, suf).split("\n", 1)
+    return f"{first}, {_thr(mk)}\n{second}"
 
 
 def _series(d, d_h100):
@@ -97,7 +119,7 @@ def make():
         heights.append(v * 1e3)
         colors.append(palette.style(fw, pdev, mode)["color"])
         hatches.append("//" if mode == "eager" else None)
-        dev_lab = "CPU" if fw == "c" else palette.DEVICE_NAME[pdev]
+        dev_lab = f"CPU ({_CPU_THREADS[mk]})" if dk == "cpu" else palette.DEVICE_NAME[pdev]
         labels.append(f"{suf}\n{'C' if fw == 'c' else fw}\n{dev_lab}")
         devs.append(dev_lab)
         groups.setdefault(f"{suf} ({'C' if fw == 'c' else fw})", []).append(xs[-1])
@@ -114,7 +136,7 @@ def make():
         # mechanism once per bar group, under the device names
         for g, v in groups.items():
             ax1.annotate(g.replace(" (", "\n("), xy=(numpy.mean(v), 0.0),
-                         xycoords=("data", "axes fraction"), xytext=(0, -52),
+                         xycoords=("data", "axes fraction"), xytext=(0, -58),
                          textcoords="offset points", ha="center", va="top",
                          fontsize=layout.FS["legend"], annotation_clip=False)
     else:
@@ -130,7 +152,7 @@ def make():
             ax1.text(x, h * 1.15, f"{h:.0f}" if h >= 10 else f"{h:.1f}",
                      ha="center", va="bottom", fontsize=fs_note)
     ax1.set_ylim(top=max(heights) * (30 if PAPER else 3))
-    ax1.text(0.02, 0.97, "hatched = eager", transform=ax1.transAxes,
+    ax1.text(0.02, 0.97, "hatched = eager\nCPU ($n$): $n$ threads", transform=ax1.transAxes,
              fontsize=fs_note, color="0.4", va="top")
 
     # ---- (b) IC-gradient wall-clock vs number of orbits N -----------------------
@@ -142,7 +164,7 @@ def make():
         ysN = [scaling[str(n)][key] * 1e3 for n in xsN]
         if len(xsN) >= 2:
             ax2.loglog(xsN, ysN, ms=4, lw=1.6,
-                       label=(layout.label if PAPER else palette.label)(fw, pdev, mode, suf),
+                       label=_lab2(mk, fw, pdev, mode, suf, dk),
                        **palette.style(fw, pdev, mode))
     ax2.set_xlabel("number of orbits  N")
     ax2.set_ylabel("IC-gradient wall-clock  [ms]")
