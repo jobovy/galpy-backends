@@ -85,18 +85,30 @@ Hamiltonian Monte Carlo \citep{Duane1987,HoffmanGelman2014}, variational
 inference, or the optimization of models with many parameters, such as
 neural networks that stand in for a potential or a DF. Codes built on
 these frameworks are now in use in cosmology
-\citep[\eg,][]{Modi2021,Campagne2023,Li2024} and in galactic
-dynamics: \texttt{galax} \citep{Starkman2026} re-implements \texttt{gala} in
-\jax; \citet{Nibauer2025} fit the perturbations of stellar streams in
-flexible potentials by differentiating through the stream simulation;
-\citet{Green2023}, \citet{An2021}, and \citet{Buckley2023} recover the
-gravitational potential from a snapshot of phase space by training a
-normalizing flow for the DF and requiring it to be stationary; and
-\citet{Nibauer2025b} measure Galactic accelerations from the GD-1
-stream. Analyses such as these, in which a model with thousands of
-parameters is fit to millions of stars, or in which an entire simulation
-is differentiated, were not practical with codes that only return
-values.
+\citep[\eg,][]{Modi2021,Campagne2023,Li2024} and, over the past two
+years, in galactic dynamics, where the examples give a good idea of what
+the derivatives and the GPUs are used for. \texttt{galax}
+\citep{Starkman2026}, a re-implementation of \texttt{gala} in \jax, has
+been used to measure the shapes of dark-matter halos from the curvature
+of stellar streams around other galaxies, by fitting large batches of
+stream models on GPUs \citep{Wu2026b,Euclid2026,Starkman2026b}, and to
+forecast the constraining power of streams with Fisher matrices obtained
+by differentiating the stream model \citep{AnauMontel2026}; differentiable
+$N$-body and stream codes in \jax\ allow stream progenitors and their
+orbits to be fit by gradient descent \citep{Viterbo2025} and halo
+flattenings to be inferred hierarchically from many streams
+\citep{Chemaly2026}. \citet{Nibauer2025} fit the perturbations of
+streams in flexible potentials by differentiating Hamilton's equations,
+which \citet{Nibauer2025b} use to measure Galactic accelerations along
+GD-1 with Hamiltonian Monte Carlo. \citet{Green2023}, \citet{An2021},
+\citet{Buckley2023}, and \citet{Kalda2025} recover the gravitational
+potential from a snapshot of phase space by training a normalizing flow
+for the DF and requiring it to be stationary, and orbital torus imaging
+fits the Galactic potential to the abundance gradients across action
+space with gradient-based samplers \citep{PriceWhelan2025}. Analyses
+such as these, in which a model with thousands of parameters is fit to
+millions of stars, or in which an entire simulation is differentiated,
+were not practical with codes that only return values.
 
 In this paper, we describe an extension of \galpy\ that adds \jax\ and
 \torch\ as \emph{backends} to its existing \numpy\ and \cc\
