@@ -119,7 +119,50 @@ behavior is worth knowing when a new potential is written.
 New potentials are written as before: a class that inherits from
 \pot\ and implements \texttt{\_evaluate}, \texttt{\_Rforce}, and
 \texttt{\_zforce}. If these are written with the resolved namespace
-rather than with \numpy\ directly, the new potential runs on every
-backend and can be differentiated, and the test suite's automatic checks
-of new potentials are run under every backend. A test checks that no
-migrated potential calls \numpy\ directly in a compute method.
+rather than with \numpy\ directly, as in \figurename~\ref{fig:newpot},
+the new potential runs on every backend and can be differentiated with
+respect to its parameters without any further work, and the test suite's
+automatic checks of new potentials are run under every backend. A test
+checks that no migrated potential calls \numpy\ directly in a compute
+method.
+
+\begin{figure}[t!]
+\begin{codefig}
+from galpy.potential import Potential
+from galpy.backend import get_namespace
+class MNLikePotential(Potential):
+    # a Miyamoto-Nagai disk written for every backend
+    def __init__(self,amp=1.,a=1.,b=0.1,normalize=False):
+        Potential.__init__(self,amp=amp)
+        self._a= a
+        self._b2= b**2
+        if normalize: self.normalize(normalize)
+    def _evaluate(self,R,z,phi=0.,t=0.):
+        xp= get_namespace(R,z)
+        s= self._a+xp.sqrt(z**2+self._b2)
+        return -1./xp.sqrt(R**2+s**2)
+    def _Rforce(self,R,z,phi=0.,t=0.):
+        xp= get_namespace(R,z)
+        s= self._a+xp.sqrt(z**2+self._b2)
+        return -R*(R**2+s**2)**-1.5
+    def _zforce(self,R,z,phi=0.,t=0.):
+        xp= get_namespace(R,z)
+        sqb= xp.sqrt(z**2+self._b2)
+        s= self._a+sqb
+        return -z*s/sqb*(R**2+s**2)**-1.5
+# differentiate an orbit in it w.r.t. the scale length a
+def final_z(a):
+    o= Orbit(jnp.asarray([1.,0.1,1.1,0.1,0.05,0.]))
+    o.integrate(ts,MNLikePotential(a=a,b=0.3,normalize=1.),
+                method='diffrax')
+    return o.z(ts[-1])
+jax.grad(final_z)(0.5)
+\end{codefig}
+\caption{A new \pot\ class written for every backend. The only
+  difference from a class written for \numpy\ is that the array
+  functions are taken from the namespace resolved from the coordinates
+  (\texttt{xp}) rather than from \numpy. The class can then be used, and
+  differentiated, like any other potential; the last lines take the
+  derivative of the final height of an orbit with respect to the scale
+  length of the new potential.}\label{fig:newpot}
+\end{figure}

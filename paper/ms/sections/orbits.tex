@@ -82,7 +82,20 @@ compares the state-transition matrix of a Milky-Way orbit over 3\,Gyr
 from the \cc\ variational equations with reverse-mode AD through
 \diffrax\ and through \texttt{torchdiffeq} and with finite differences
 of independently integrated orbits, and the four agree to a few parts in
-$10^{10}$. This path gives derivatives with respect to the initial
+$10^{10}$. In code, nothing marks the difference between the two paths except the
+method,
+\begin{code}
+def end_point(ic):
+    o= Orbit(ic)
+    o.integrate(ts,MWPotential2014,method='dop853_c') # C + variational
+    return jnp.stack([o.R(ts[-1]),o.z(ts[-1])])
+M= jax.jacrev(end_point)(jnp.asarray(ic))  # = rows of the STM
+\end{code}
+and a batch of orbits is differentiated with \texttt{jax.vmap},
+\begin{code}
+Ms= jax.vmap(jax.jacrev(end_point))(ics)   # ics.shape == (N,6)
+\end{code}
+This path gives derivatives with respect to the initial
 conditions only, and to first order only; the variational equations do
 not carry derivatives with respect to the parameters of the potential,
 which must come from the in-backend solve.
@@ -138,7 +151,15 @@ them are given in \appendixname~\ref{app:dxdv}. Their user-facing form is
 \texttt{Orbit.integrate\_dxdv}, which integrates an orbit together with a
 deviation vector or with the full state-transition matrix, and
 \texttt{Orbit.lyapunov}, which computes the largest Lyapunov exponent, or
-the spectrum, by the renormalization method of \citet{Benettin1980a,Benettin1980b}. For
+the spectrum, by the renormalization method of \citet{Benettin1980a,Benettin1980b},
+\begin{code}
+o= Orbit([0.8,0.3,0.75,0.,0.2,0.])
+o.integrate_dxdv([1.,0.,0.,0.,0.,0.],ts,MWPotential2014,
+                 method='dop853_c')  # orbit + deviation vector
+o.getOrbit_dxdv()                   # the deviation along the orbit
+o.lyapunov(ts,MWPotential2014,method='dop853_c',renorm_every=10)
+\end{code}
+For
 the H\'enon--Heiles potential at $E=1/8$, the exponent of a chaotic orbit
 converges into the range quoted in the literature while that of a
 regular orbit at the same energy decays as $\ln t/t$

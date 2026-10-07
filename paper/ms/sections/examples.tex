@@ -29,8 +29,17 @@ the star is held fixed and the flattening $q$ of the halo is fit by
 descending the closest approach with the derivative obtained by
 reverse-mode differentiation through the in-backend orbit integration,
 which the \cc\ path cannot provide; the recovered $q=0.851$ matches the
-true $0.85$ from which the mock star was generated. In code, the second
-fit is
+true $0.85$ from which the mock star was generated. In code, the first fit uses the derivative of the backward orbit with
+respect to the star's observed coordinates,
+\begin{code}
+def closest_approach_ic(vxvv):  # (ra,dec,d,pmra,pmdec,vlos)
+    o= Orbit(vxvv,radec=True,ro=8.,vo=220.)
+    o.integrate(-ts,pot,method='dop853_c')  # C + variational eqs.
+    return jnp.min(o.r(-ts))
+J= jax.jacrev(closest_approach_ic)(jnp.asarray(vxvv_obs))
+\end{code}
+which a Gauss--Newton step then combines with the covariance of the
+observations; the second fit is
 \begin{code}
 def closest_approach(q):
     pot= LogarithmicHaloPotential(normalize=1.,core=0.2,q=q)
@@ -85,7 +94,16 @@ small network trained in a few minutes, identically under \jax\ and
 \torch, reproduces the exact tori to a phase-space error of $0.5$ to
 $2\,\%$; in the second, a four-layer network trained for half an hour on
 a GPU returns actions on the round trip with a scatter of $7\times10^{-3}$
-and reconstructs the meridional orbits that it has never seen. Neither
+and reconstructs the meridional orbits that it has never seen. The training step is a few lines, whatever the framework,
+\begin{code}
+def loss(params,J,theta):
+    z,vz= net.apply(params,J,theta)          # the network's inverse
+    Jp,_,thetap= aAV.actionsFreqsAngles(z,vz) # galpy's forward map
+    return jnp.mean((Jp-J)**2/J**2)+jnp.mean(wrap(thetap-theta)**2)
+grads= jax.jit(jax.grad(loss))(params,J,theta)
+\end{code}
+where \texttt{net} is a small multi-layer perceptron and \texttt{wrap}
+reduces an angle difference to $[-\pi,\pi)$. Neither
 network is a replacement for a proper inverse, and the point is not the
 accuracy of these particular fits but that \galpy's action--angle code
 sits inside a training loop, as a layer whose gradient the framework

@@ -82,7 +82,14 @@ respect to the phase-space position only, to first order, and the focal
 length \texttt{delta} is a fixed number; derivatives with respect to the
 potential's parameters require \texttt{c=False}. The estimate of the
 focal length from the potential, \texttt{estimateDeltaStaeckel}, runs on
-the backends and traces. The grid-based interpolated version,
+the backends and traces, such that a focal length estimated along an
+integrated orbit can be part of a compiled program,
+\begin{code}
+delta= estimateDeltaStaeckel(MWPotential2014,o.R(ts),o.z(ts))
+aAS= actionAngleStaeckel(pot=MWPotential2014,delta=delta,c=False)
+jr,lz,jz= aAS(o.R(ts),o.vR(ts),o.vT(ts),o.z(ts),o.vz(ts))
+\end{code}
+The grid-based interpolated version,
 \texttt{actionAngleStaeckelGrid}, builds its grid on the backend, such
 that the grid lives on the GPU when the potential does and the
 interpolated actions are differentiable with respect to the query
@@ -125,7 +132,18 @@ self-gravitating isothermal disk: the derivative of the tori with
 respect to the velocity dispersion of the disk predicts the tori of a
 nearby disk, agrees with finite differences to $10^{-10}$, and serves
 as the Jacobian of a Levenberg--Marquardt fit of the disk's parameters to
-stars scattered around three tori. The older construction modes of the
+stars scattered around three tori. In code, the tori of a family of disks
+parametrized by their velocity dispersion are differentiated as
+\begin{code}
+def torus(sigma):
+    disk= IsothermalDiskPotential(amp=1.,sigma=sigma)
+    aAVI= actionAngleVerticalInverse(pot=disk,Es=Es,nta=128,
+                                      setup_interp=True)
+    return aAVI.xvFreqs(J,angles)[:2]  # (z, v_z) on the torus
+z,vz= torus(0.5)
+dz_dsigma,dvz_dsigma= jax.jacfwd(torus)(0.5)
+\end{code}
+The older construction modes of the
 class, which use point transformations, are evaluated natively but
 built on \numpy, and therefore cannot take a potential with backend
 parameters.

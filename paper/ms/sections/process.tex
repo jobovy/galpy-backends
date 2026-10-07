@@ -48,6 +48,44 @@ support it (timings, parity counts, gradient errors), and what was
 explicitly left out, such that the description can be reviewed without
 re-deriving it from the diff.
 
+The rate of PRs varied with the kind of work. In June, 87 backend PRs
+and 29 PRs for the three-dimensional variational equations were opened
+as the potentials were migrated family by family, in parallel, from a
+fixed template. July was the peak, with 175 backend PRs: the orbit,
+action--angle, and DF modules were ported, the autonomous stretch
+started, and the PRs were small, one problem each. August (114) and
+September (110) were spent on the compiled modes, the ledger, and the
+harder DFs, with PRs that were fewer and larger, because the remaining
+problems were coupled; the last month of the work, October, added 32.
+Over the same months, \galpy's main branch received a separate stream
+of about 50 PRs per month in August and September for an unrelated
+project on inverse action--angle transformations, which shared the
+continuous integration and matters for the costs below.
+
+The work cost, in round numbers, the following. The agent ran on a
+fixed-price subscription to Anthropic's Claude (the ``Max'' plan at
+its 20$\times$ tier until the end of June and at its 5$\times$ tier
+afterwards), %TODO(JB): prices
+with successive versions of the Claude Opus models doing the coding and
+Claude Fable used only to draft this paper. The far larger cost was the
+continuous integration. Every backend PR runs \galpy's test suite in
+five modes over 22 shards, about 150 jobs of 20 to 90 minutes each, and
+the GitHub Actions bill for the repository at list price was
+\$13,100 in June, \$16,500 in July, \$15,800 in August, and
+\$10,200 in September 2026. June and July were almost entirely this
+project; in August and September the backend PRs were three quarters of
+the PRs and, since a PR to the main branch runs only the \numpy\ suite,
+a larger fraction of the compute, such that about \$50,000 of the total
+is attributable to the backends. This was covered by GitHub's
+Education program and would otherwise have been prohibitive; it was
+also the bottleneck of the project, because a PR could not be merged
+before its matrix had run, the shards queued behind each other when
+several PRs were open, and a flaky job meant a two-hour wait. Several
+of the engineering decisions---stacked PRs, cancelling the runs of
+superseded commits, running the compiled modes only on demand until
+they were stable, running the touched tests under forced backends
+locally before pushing---were made to spend less time in that queue.
+
 A few rules were fixed early and enforced throughout. The \numpy\ path
 has to remain byte-identical, and any deviation (there are four: a
 tolerance in the King DF and the three cases noted in

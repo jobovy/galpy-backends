@@ -33,7 +33,17 @@ orbit integrations and the iteration of the track, takes a quarter of an
 hour and is only worthwhile when many streams are to be built; the
 construction itself, once compiled, takes about a minute on a CPU,
 compared with a few to tens of seconds for the \numpy\ and \cc\ version.
-Sampling and evaluating the DF, on the other hand, are two orders of
+A \texttt{streamdf} is set up as before, with a progenitor orbit, an
+\texttt{actionAngle} instance, and a velocity dispersion,
+\begin{code}
+aAI= actionAngleIsochroneApprox(pot=lp,b=0.8,integrate_method='diffrax')
+sdf= streamdf(sigv/220.,progenitor=Orbit(jnp.asarray(prog)),pot=lp,aA=aAI,
+              leading=True,nTrackChunks=11,tdisrupt=4.5/time_in_Gyr())
+sdf.sample(n=10**4,key=grandom.key(3,backend='jax'))
+\end{code}
+and when \texttt{lp} carries a backend parameter the track and the
+sample are differentiable with respect to it. Sampling and evaluating
+the DF, on the other hand, are two orders of
 magnitude faster under compilation than on \numpy, and run on a GPU;
 the sampler draws by inverse transformation on \numpy\ too, which is the
 third place where \numpy\ output changed, in the draws but not in their
@@ -96,7 +106,16 @@ track_and_dtrack= jax.jvp(leading_arm,(q0,),(1.,))
 \end{code}
 where the forward-mode derivative gives the change of every particle's
 position for a unit change in the halo flattening, with the random
-numbers in common between the two. The derivative of the sampled stream
+numbers in common between the two. The fitted track, which is what a
+likelihood for stream data typically uses, is obtained in the same way,
+\begin{code}
+def track(q):
+    lp= LogarithmicHaloPotential(normalize=1.,q=q)
+    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),pot=lp,tdisrupt=td)
+    return spdf.streamTrack(n=1500,key=key)
+track(0.9); jax.jacfwd(track)(0.9)
+\end{code}
+The derivative of the sampled stream
 with respect to the potential agrees with finite differences of the same
 sample to $10^{-6}$, and \figurename~\ref{fig:extrapolation}
 demonstrates what it is good for: a single pass of forward-mode
