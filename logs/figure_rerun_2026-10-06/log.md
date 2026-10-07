@@ -111,3 +111,7 @@ re-measured. Re-measured: max relerr 3.7e-3 (was 5.7e-6), rising once r < 0.06.
   stream/graph-input mutation) and 7 eager float32/CUDA->numpy conversions; jax 2
   (a 5.6e-4 vs 2e-4 grad-vs-FD tolerance miss in evolveddiskdf). Not yet triaged.
 - Paper draft (paper/ms): all sections drafted, 26 pages; see paper/ms/README.md.
+- 2026-10-07 (later): main's per-orbit c=False path has the same 20-panel chi rule
+  (#1357) but was NOT slowed by it (setup and turning points dominate there); matching
+  C's mesh still gives 1.6x -> galpy PR #1644 (main). H100 follow-up instructions in
+  tools/H100_FOLLOWUP.md; g17 torch-alone measure script added.

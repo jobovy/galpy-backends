@@ -567,7 +567,8 @@ backend migration (ExpTruncNFW + SCF-time-dep). Reviewed via PR #1080 (closed). 
 | #1639 | gammainc (torch): a float order follows the argument's device (MWPotential2014 on CUDA failed) | MERGED `1bfce100` |
 | #1640 | streamdf: a jitted construction matches eager (track solves on DirectAdjoint); jax.grad of the constructor runs | MERGED `253ad012` |
 | #1641 | backend brentq: guess= for safeguarded Newton; VerticalInverse angle inversion ~2x faster under jit (4.8x incl. #1635) | OPEN — green (150/150) |
-| #1642 | actionAngleStaeckel (c=False): chi-anomaly mesh matches C (3.8x faster; fixes the Sept. 2 regression) | OPEN — CI running (138 pending; codecov/project+patch red on partial uploads) |
+| #1642 | actionAngleStaeckel (c=False): chi-anomaly mesh matches C (3.8x faster; fixes the Sept. 2 regression) | OPEN — CI running (115 pass, 33 pending) |
+| #1644 | actionAngleStaeckel (c=False): chi-anomaly quadrature mesh matches C (1.6x faster, same accuracy) (main) | OPEN — CI running |
 
 ## Upstream issues filed from this work (numpy-path defects, not backend)
 
