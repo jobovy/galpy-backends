@@ -1,0 +1,13 @@
+mode torch NVIDIA H100 80GB HBM3
+torch N=100000: 2.004 s, peak 6.5 GB
+torch N=300000: 4.999 s, peak 19.5 GB
+torch N=1000000: 15.556 s, peak 65.0 GB
+mode jax NVIDIA H100 80GB HBM3
+jax N=300000: 13.142 s; jax in_use 0.0 GB, peak 21.3 GB, pool 32.2 GB
+jax N=1000000: FAIL RESOURCE_EXHAUSTED: Out of memory while trying to allocate 10.45GiB with allocator GPU_0_bfc on device 0. [tf-allocator-allocation-error='']; jax in_use 46.6 GB, peak 51.1 GB, pool 59.4 GB
+mode seq NVIDIA H100 80GB HBM3
+jax jit N=100000: 0.324 s; jax in_use 0.0 GB, peak 13.0 GB, pool 16.0 GB
+jax N=300000: 13.188 s; jax in_use 0.0 GB, peak 21.3 GB, pool 32.0 GB
+before torch: jax in_use 0.0 GB, peak 21.3 GB, pool 32.0 GB
+torch N=100000: 2.010 s, peak 6.5 GB
+
