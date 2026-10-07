@@ -91,6 +91,34 @@ had room at every requested N, so none of these series hits a memory limit up
 to 3e6 orbits / 1e7 angles / 1e8 samples. I didn't log `nvidia-smi` memory in
 this stage (not part of `hiN2`).
 
+**gS4 GPU re-measured (stage `gS4`, job 1055078, 22 min 50 s, galpy 9a877712).**
+The earlier GPU series were taken on 70165d10 + #1639, before #1640, which
+changed streamdf's track solves. `--measure gpu` re-measured only the GPU series
+and merged them; the CPU series are untouched.
+
+| gS4 GPU series | before (70165d10 + #1639) | after (9a877712) |
+|---|---|---|
+| construct, jax eager, warm (nch 4/8/16/32) | 53.0 / 53.6 / 53.8 / 54.4 s | **104.8 / 107.5 / 105.6 / 106.3 s** |
+| construct, jax eager, cold (nch 4/8/16/32) | 109.4 / 110.5 / 111.1 / 112.4 s | **165.2 / 161.6 / 163.9 / 165.9 s** |
+| build for panels (b)/(c), cold | 109.5 s | 159.7 s |
+| eval / sample, jax jit, N=1e6 | 1.66 / 4.06 ms | 1.65 / 4.06 ms |
+| eval / sample, jax eager and torch eager | – | unchanged within about 5% at every N |
+| compile (eval, sample) | – | unchanged |
+
+- **Eager jax construction on the GPU got about 2× slower.** The node load was
+  the same (loadavg ~8 on 24 cores) and nothing else changed for the
+  eval/sample series, so this is the galpy update. The likely cause is #1640:
+  `streamdf.py` now solves the tracks with `DiffraxDirectAdjoint`. Not confirmed
+  by an A/B against 1bfce100. The CPU construction series on `main` predate
+  #1640 too, so they would presumably show the same shift if re-measured.
+- **The N=1e6 eager GPU points are still OOM** (`nan`): jax eager sample and
+  eval need single 16.3 / 22.4 GiB allocations, and torch eager needs a
+  17.5 GB one. `nvidia-smi` (`gS4_mem.csv`, 5 s sampling) peaked at 67.2 of
+  81.6 GB. The jit series complete at 1e6.
+- The JSON still notes `construct_jit: not measured` (gS4's script). #1640
+  makes a jitted construction run; measuring it would need a change to gS4's
+  measure code.
+
 ## Machine and software
 
 | | |
