@@ -1,0 +1,2 @@
+tests/test_backend_evolveddiskdf.py::test_moment_grad_through_evolution_vs_fd[meanvT-jax]
+tests/test_backend_evolveddiskdf.py::test_moment_grad_through_evolution_vs_fd[vertexdev-jax]
