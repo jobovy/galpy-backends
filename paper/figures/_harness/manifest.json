@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "e5bd9ea3ce40b1f3539d3a2e265ac2f3d58bde278603b16a9f5bc88c7992b1dd",
+    "git": "33eb9aa",
+    "sha256": "98ffb141a98c698e48f4766d8af759f2dac4079f94599bd82a1e46f734078ecb",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -75,8 +75,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "91b7559",
-    "sha256": "4130f898d05d69be089f42a6d2fa9d22ead6ae02bbbce521fffaf2cbf9e67ab6",
+    "git": "33eb9aa",
+    "sha256": "848c8e6aebba9b2f4142f3b61b6bd0695c48835ada1a07933e98a216ee246460",
     "track": "G"
   },
   "g14_hvs_potential_fit": {
@@ -91,8 +91,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "2a5234dfa088a782be09e0d0d55bdbbab9b545096587eab037aa49c9aad29a30",
+    "git": "33eb9aa",
+    "sha256": "e95247a9428aa8a14a3c3ac8fdff9d043945e3a48206632d02e0856080b74842",
     "track": "G"
   },
   "g15_icderiv_speed": {
@@ -123,8 +123,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "e4286ebfa0b8e8d26ea3142f0bd6a4d1f1492c5033b8e698166e1fd9d56bc126",
+    "git": "33eb9aa",
+    "sha256": "cb8d9b94e6ad64a17dbbe9957fa65d186f363898a01da0860e488bbe7ab64082",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_jax": {
@@ -203,8 +203,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "c21b2aa39af71b9dab2ccbd062a7d4595a77fe8a796e0a3530c5cbce3a581ca7",
+    "git": "33eb9aa",
+    "sha256": "55657d84691a5cdef5423498e9897c93d425c37cddcbf8369c5034f91e5afea8",
     "track": "G"
   },
   "g2b_transfer": {
@@ -234,8 +234,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "30412050c1190ece1e3fce19b0761d402485f554b24ace82c7196063a8080b6f",
+    "git": "33eb9aa",
+    "sha256": "ef13892e66a16c7f9f1205c80c8504c441dfa27a0d573c3e3913c8304ccc55b8",
     "track": "G"
   },
   "g5_autodiff_overhead": {
@@ -314,8 +314,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "9224c6435302dfd37d04af510eb086c070fdf5afae2cffca9074ccb5bb38318c",
+    "git": "33eb9aa",
+    "sha256": "6a8a45936568de243a1e25ea85c4533698d1546097164b62652f8352bc2891c5",
     "track": "G"
   },
   "gD1_df_sensitivity": {
@@ -362,8 +362,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "6b19bc7093e43bc75c3818dd66b581b4b8ed1ce767a90151a2ac69e710954568",
+    "git": "33eb9aa",
+    "sha256": "5aff7f7d964ea40ebbc1896b57f17c525c426495df1364782e3e831e7d5d5bfe",
     "track": "F"
   },
   "gD4_spherical_df_param": {
@@ -378,8 +378,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "87202e3",
-    "sha256": "9fdaff8099e5baa5d2d82b15962206a0d1c80b87b41b5309707a88f37fb073d3",
+    "git": "33eb9aa",
+    "sha256": "23fb1cd1ffa97b62464bb76165487d26cccd75cf2561b0a2727030e35170f9ff",
     "track": "F"
   },
   "gF1_autodiff_forces": {
@@ -442,8 +442,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "3034e39",
-    "sha256": "904c9804a10fdf85080c8e3d2cbd5bede6d12554baa8132902e1914dbbb19c25",
+    "git": "33eb9aa",
+    "sha256": "042ef33a1aafd3e0fc16669314fc970dbcbfdbf8add66de8a01b841bbea0c524",
     "track": "G"
   },
   "gS4_streamdf_speed": {
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "8d0a279cd75fe603144918b533b387db0b803e8415ace6ba3ef667e6e34c5960",
+    "git": "33eb9aa",
+    "sha256": "1d54a4e493c9fc6a780e6c107eaa23c6bc322c48f42a0c49ea63bffceaf4d692",
     "track": "S"
   },
   "gV1_vertical_inverse": {
@@ -490,8 +490,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "1f1cdd1021ace97566282a57970d419f0b1f171645fefd2af3c0209fec15b189",
+    "git": "33eb9aa",
+    "sha256": "dc2e537407c605cec9a570c053d5746ddca34080bf96945765886374afd63d52",
     "track": "E"
   },
   "gV2_vertical_inverse_speed": {

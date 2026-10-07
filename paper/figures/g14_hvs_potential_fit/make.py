@@ -21,6 +21,7 @@ The mock is S5-HVS1-like (ejected from the GC); real S5-HVS1 data is a follow-on
 """
 
 import json
+import os
 import pathlib
 
 import matplotlib.pyplot as plt
@@ -29,6 +30,9 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = pathlib.Path(__file__).resolve().parent / "data" / "fit.json"
+# journal version (default): no suptitle, short panel titles and legend entries;
+# the caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 @figure(
@@ -52,7 +56,8 @@ def make():
     ax1.text(0.0, 0.0, "  Sgr A*", fontsize=7.5, va="center")
     ax1.set_xlabel("x  [kpc]")
     ax1.set_ylabel("y  [kpc]")
-    ax1.set_title("(a) C-STM IC fit: backward orbit -> Galactic Centre")
+    ax1.set_title("(a) initial-condition fit" if PAPER
+                  else "(a) C-STM IC fit: backward orbit -> Galactic Centre")
     ax1.legend(fontsize=7.8, loc="best")
     ax1.set_aspect("equal", adjustable="datalim")
     # inset: zoom on the GC showing the closest-approach improvement (kpc)
@@ -72,19 +77,22 @@ def make():
     qs = numpy.array(qf["qs"])
     appr = numpy.sqrt(numpy.array(qf["losses"])) * _RO  # closest approach in kpc
     path_appr = numpy.sqrt(numpy.array(qf["path_loss"])) * _RO
-    ax2.plot(qs, appr, color="#000000", lw=1.8, label="objective: grid scan (1 integration / $q$)")
+    ax2.plot(qs, appr, color="#000000", lw=1.8,
+             label="grid scan" if PAPER else "objective: grid scan (1 integration / $q$)")
     ax2.axvline(d["meta"]["q_true"], color="#D55E00", ls="--", lw=1.2, label=f"true $q$={d['meta']['q_true']}")
     ax2.plot(qf["path_q"], path_appr, "-o", color="#009E73", ms=3, lw=1.2,
-             label="Adam path (AD through the solver)")
+             label="Adam path" if PAPER else "Adam path (AD through the solver)")
     ax2.plot([qf["recovered"]], [path_appr[-1]], marker="*", ms=13, color="#009E73",
              zorder=5, label=f"recovered $q$={qf['recovered']:.3f}")
     ax2.set_yscale("log")
     ax2.set_xlabel(r"halo flattening  $q$")
     ax2.set_ylabel("closest approach to the GC  [kpc]")
-    ax2.set_title("(b) in-backend AD: recover the halo flattening")
+    ax2.set_title("(b) halo flattening" if PAPER
+                  else "(b) in-backend AD: recover the halo flattening")
     ax2.legend(fontsize=7.2, loc="best")
 
-    fig.suptitle("Hypervelocity-star constraint on the Milky Way: C-STM IC fit + "
-                 "in-backend-AD potential fit", fontsize=10.5)
+    if not PAPER:
+        fig.suptitle("Hypervelocity-star constraint on the Milky Way: C-STM IC fit + "
+                     "in-backend-AD potential fit", fontsize=10.5)
     fig.tight_layout()
     return fig

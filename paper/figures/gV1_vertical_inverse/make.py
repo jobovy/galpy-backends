@@ -71,6 +71,9 @@ from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "gV1_vertical_inverse.json")
+# journal version (default): no env stamp / long titles or notes; the caption
+# carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 _AMP = 1.0
 _SIG0 = 0.5
@@ -344,7 +347,8 @@ def make():
     ins.set_xlim(0.27, 0.49)
     ins.set_ylim(-0.42, 0.42)
     ins.tick_params(labelsize=6)
-    ins.set_title(r"zoom: $+z$ turning points", fontsize=6.5, pad=2)
+    ins.set_title(r"$+z$ turning points" if PAPER else r"zoom: $+z$ turning points",
+                  fontsize=6.5, pad=2)
     ax1.indicate_inset_zoom(ins, edgecolor="0.4")
     ax1.plot([], [], "-", color="0.3", label=rf"$\sigma_0={s0:g}$")
     ax1.plot([], [], "--", color="0.3", label=rf"rebuilt at $\sigma_0+{ds:g}$")
@@ -353,7 +357,8 @@ def make():
     ax1.set_xlim(-0.47, 1.12)
     ax1.set_xlabel(r"$z$")
     ax1.set_ylabel(r"$v_z$")
-    ax1.set_title("(a) isothermal-disk tori at fixed $J$ and their\n"
+    ax1.set_title(r"(a) tori and their $\sigma$-derivative" if PAPER else
+                  "(a) isothermal-disk tori at fixed $J$ and their\n"
                   rf"AD sensitivity to $\sigma$ ($\Delta\sigma={ds / s0:.1f}\,\sigma_0$)")
     ax1.legend(fontsize=6.5, loc="upper right", framealpha=0.92)
     ax1.margins(y=0.12)
@@ -379,7 +384,8 @@ def make():
     ax2.set_xticks([0, 0.5 * numpy.pi, numpy.pi, 1.5 * numpy.pi, 2 * numpy.pi])
     ax2.set_xticklabels(["0", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
     ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|\,/\,\max|{\rm AD}|$")
-    ax2.set_title(rf"(b) AD vs 5-point central FD along the $J={data['Jchk']:g}$ torus" "\n"
+    ax2.set_title(rf"(b) AD vs FD along the $J={data['Jchk']:g}$ torus" if PAPER else
+                  rf"(b) AD vs 5-point central FD along the $J={data['Jchk']:g}$ torus" "\n"
                   r"($\sigma$-FD rebuilds the family at $\sigma_0\pm h$)")
     ax2.legend(fontsize=6.0, ncol=2, framealpha=0.92, loc="upper center")
     ax2.set_ylim(1e-17, 1e-4)
@@ -391,7 +397,8 @@ def make():
                    marker="o", ms=3, lw=1.1, label=lab)
     ax3.set_xlabel("finite-difference step $h$")
     ax3.set_ylabel(r"$\max_\theta |{\rm AD}-{\rm FD}(h)|\,/\,\max|{\rm AD}|$")
-    ax3.set_title("(c) the 5-point central FD converges onto AD\n"
+    ax3.set_title("(c) FD convergence onto AD" if PAPER else
+                  "(c) the 5-point central FD converges onto AD\n"
                   r"($\propto h^4$) down to its round-off floor")
     ax3.legend(fontsize=6.0, ncol=2, framealpha=0.92, loc="upper center")
     ax3.grid(True, which="both", alpha=0.25)
@@ -429,7 +436,8 @@ def _plot_fit(fig, ax, ft):
             bbox=dict(fc="w", ec="0.8", alpha=0.9))
     ax.set_xlabel(r"$\sigma$")
     ax.set_ylabel(r"amp")
-    ax.set_title("(d) fitting the disk from noisy $(z, v_z)$ on 3 tori:\n"
+    ax.set_title("(d) Levenberg-Marquardt fit" if PAPER else
+                 "(d) fitting the disk from noisy $(z, v_z)$ on 3 tori:\n"
                  r"Levenberg-Marquardt on the AD Jacobian ($\partial_\sigma$, "
                  r"$\partial_{\rm amp}$, $\partial_{\theta_i}$)")
     ax.legend(fontsize=7, loc="lower left", framealpha=0.92)

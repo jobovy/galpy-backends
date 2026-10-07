@@ -130,6 +130,9 @@ _SERIES = {
 }
 _ORDER = list(_SERIES)
 _JSON_H100 = os.path.join(_DATA, "h100", "gS5_streamspray_speed.json")
+# journal version (default): no env stamp / long titles or notes; the caption
+# carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _env(torch, jax):
@@ -379,7 +382,8 @@ def make():
     axw.set_xlabel(r"number of sprayed particles $N$")
     axw.set_ylabel(r"wall time for spdf.sample($N$)  (s)")
     axw.set_title("(a) wall time per call")
-    axw.set_ylim(top=2e3)  # headroom for the stamp
+    if not PAPER:
+        axw.set_ylim(top=2e3)  # headroom for the stamp
     axp.set_xlabel(r"number of sprayed particles $N$")
     axp.set_ylabel(r"cost per particle  (ms)")
     axp.set_title("(b) per-particle cost")
@@ -391,12 +395,15 @@ def make():
         f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
         + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
     )
-    axw.text(0.03, 0.97, txt, transform=axw.transAxes, fontsize=6.0, color="0.45",
-             va="top", ha="left")
-    fig.suptitle(
-        r"Particle-spray stream: fardal15spraydf.sample($N$), 4.5 Gyr of stripping "
-        r"(numpy/C vs differentiable jax/torch)", y=0.99)
-    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    if PAPER:
+        fig.tight_layout()
+    else:
+        axw.text(0.03, 0.97, txt, transform=axw.transAxes, fontsize=6.0, color="0.45",
+                 va="top", ha="left")
+        fig.suptitle(
+            r"Particle-spray stream: fardal15spraydf.sample($N$), 4.5 Gyr of stripping "
+            r"(numpy/C vs differentiable jax/torch)", y=0.99)
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
     # direct labels on (b) (same lines as (a)); (a) carries the stamp
     # the CPU lines end early (series stop at ~60 s/call): label them inline
     inline = {

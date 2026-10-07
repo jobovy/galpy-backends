@@ -28,6 +28,9 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
+# journal version (default): no provenance stamp / explanatory annotations; the
+# caption carries them. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _load():
@@ -102,16 +105,18 @@ def make():
                 color="0.45")
     ax.annotate(r"$\propto\varepsilon^{-1}$", xy=(1e-9, 1.2e-6), fontsize=8,
                 color="0.45")
-    ax.annotate(
-        "STM matches the best FD\n" r"at its floor ($\sim$10$^{-8}$)",
-        xy=(1.2e-6, 1.4e-8), xytext=(8e-5, 3.2e-9), fontsize=7.5,
-        arrowprops=dict(arrowstyle="->", lw=0.8, color="0.3"), color="0.3",
-    )
+    if not PAPER:
+        ax.annotate(
+            "STM matches the best FD\n" r"at its floor ($\sim$10$^{-8}$)",
+            xy=(1.2e-6, 1.4e-8), xytext=(8e-5, 3.2e-9), fontsize=7.5,
+            arrowprops=dict(arrowstyle="->", lw=0.8, color="0.3"), color="0.3",
+        )
     ax.set_xlabel(r"FD step $\varepsilon$")
     ax.set_ylabel(
         r"$\max_i\,\|M(t)\,e_i - \Delta x(t)/\varepsilon\|_\infty$"
     )
-    ax.set_title(r"(c) FD of the flow vs STM ($t=10$)", fontsize=10)
+    ax.set_title(r"(c) finite differences vs STM ($t=10$)" if PAPER
+                 else r"(c) FD of the flow vs STM ($t=10$)", fontsize=10)
     ax.set_ylim(1e-9, 3e0)
     ax.legend(fontsize=7.5, loc="upper center")
 
@@ -125,22 +130,23 @@ def make():
     )
     ax.set_xlabel(r"$t$")
     ax.set_ylabel(r"in-plane block difference")
-    ax.set_title("(d) 2D-reduction bridge (planar IC)", fontsize=10)
+    ax.set_title("(d) planar reduction" if PAPER
+                 else "(d) 2D-reduction bridge (planar IC)", fontsize=10)
     ax.set_ylim(1e-14, 1e-5)
-    ax.legend(fontsize=7.5, loc="lower right")
-    ax.text(
-        0.03, 0.92,
-        f"out-of-plane leakage = {pd_['max_leak_err']:.0f} (exact)",
-        transform=ax.transAxes, fontsize=7, color="0.4", ha="left",
-    )
-
-    env = d["env"]
-    fig.text(
-        0.005, 0.005,
-        f"galpy {env['galpy_branch']}@{env['galpy_commit']}"
-        f"{'+local-fix' if env['galpy_dirty'] else ''}, "
-        f"MWPotential2014, dop853_c rtol=atol=1e-12",
-        fontsize=6, color="0.55",
-    )
+    if not PAPER:  # one line; the y-label names it
+        ax.legend(fontsize=7.5, loc="lower right")
+        ax.text(
+            0.03, 0.92,
+            f"out-of-plane leakage = {pd_['max_leak_err']:.0f} (exact)",
+            transform=ax.transAxes, fontsize=7, color="0.4", ha="left",
+        )
+        env = d["env"]
+        fig.text(
+            0.005, 0.005,
+            f"galpy {env['galpy_branch']}@{env['galpy_commit']}"
+            f"{'+local-fix' if env['galpy_dirty'] else ''}, "
+            f"MWPotential2014, dop853_c rtol=atol=1e-12",
+            fontsize=6, color="0.55",
+        )
     fig.tight_layout()
     return fig

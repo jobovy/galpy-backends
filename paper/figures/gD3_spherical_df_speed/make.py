@@ -107,6 +107,9 @@ _MODES = {
     "torch-gpu": ("torch", "gpu", "eager"),
 }
 _JSON_H100 = os.path.join(_DATA, "h100", "gD3_spherical_df_speed.json")
+# journal version (default): no env stamp / long titles or notes; the caption
+# carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _runs(mode, data, h100):
@@ -449,7 +452,8 @@ def make():
             ax.set_ylabel(r"wall time of $\tt sample(n=N)$  (s)")
         else:
             ax.tick_params(labelleft=False)
-    axs[0].text(0.03, 0.97, "dotted: $10^5$..$10^8$ particles/s", transform=axs[0].transAxes,
+    axs[0].text(0.03, 0.97, "dotted: constant particles/s" if PAPER
+                else "dotted: $10^5$..$10^8$ particles/s", transform=axs[0].transAxes,
                 fontsize=6.5, color="0.5", va="top")
 
     # (e) bars: colour = backend x device; filled = warm (white-hatched = eager, the
@@ -488,7 +492,8 @@ def make():
     ax.set_xticklabels(_CONSTRUCT_DFS)
     ax.set_xlim(-0.5, len(_CONSTRUCT_DFS) - 0.5)
     ax.set_ylabel("construct + first %d draws  (s)" % data.get("n_construct", _N_CONSTRUCT))
-    ax.set_title("(e) DF construction (f(E)/f(Q) inversion or King ODE + sampling tables): "
+    ax.set_title("(e) DF construction" if PAPER else
+                 "(e) DF construction (f(E)/f(Q) inversion or King ODE + sampling tables): "
                  "filled = warm (hatched = eager), outline = first call in a fresh process",
                  fontsize=10)
     handles = []
@@ -506,13 +511,14 @@ def make():
     ax.set_ylim(lo / 4.0, hi * 12.0)
     env = data.get("env", {})
     eg, eh = data.get("env_gpu", {}), (h100 or {}).get("env_gpu", {})
-    fig.text(0.995, 0.005,
-             f"CPU: {env.get('cpu', '?')} ({env.get('cpu_affinity', '?')} cores): numpy {env.get('numpy', '?')} · "
-             f"jax {env.get('jax', '?')} · torch {env.get('torch', '?')}  |  "
-             f"{eg.get('gpu', 'no GPU')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
-             + (f"  |  {eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
-             + "  ·  float64",
-             fontsize=6, color="0.5", ha="right", va="bottom")
+    if not PAPER:
+        fig.text(0.995, 0.005,
+                 f"CPU: {env.get('cpu', '?')} ({env.get('cpu_affinity', '?')} cores): numpy {env.get('numpy', '?')} · "
+                 f"jax {env.get('jax', '?')} · torch {env.get('torch', '?')}  |  "
+                 f"{eg.get('gpu', 'no GPU')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
+                 + (f"  |  {eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
+                 + "  ·  float64",
+                 fontsize=6, color="0.5", ha="right", va="bottom")
     # the four sampling panels share their series: label them once, beside (d)
     palette.label_lines(axs[-1], fontsize=6.5)
     return fig

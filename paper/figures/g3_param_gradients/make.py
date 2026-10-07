@@ -18,11 +18,17 @@ Pure-CPU float64 and deterministic, so the PDF is byte-stable. Enabled by the
 unit-parser pass-through for backend arrays (galpy.backend.is_backend_array).
 """
 
+import os
+
 import matplotlib.pyplot as plt
 import numpy
 
 from paper.figures._harness.figure import figure
 from paper.figures._harness.style import BACKEND_COLORS
+
+# journal version (default): no suptitle, short panel titles; the caption carries
+# the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 @figure(
@@ -123,12 +129,14 @@ def make():
         ax1.text(si, 1.5e-7, f"{pn}\n" + r"$\partial_{%s}$" % pname, fontsize=7.5,
                  color=col, ha="center", va="top")
     ax1.set_ylabel(r"max$_R$ |gradient difference|")
-    ax1.set_title("(a) parameter-gradient correctness")
+    ax1.set_title("(a) gradient agreement" if PAPER else "(a) parameter-gradient correctness")
     h1 = ax1.scatter([], [], marker="o", s=40, color="0.3",
                      label=r"jax vs torch (AD vs AD)")
     h2 = ax1.scatter([], [], marker="^", s=46, facecolors="none", edgecolors="0.3",
                      label="AD vs finite-diff")
-    ax1.legend(handles=[h1, h2], fontsize=7.5, loc="upper left", framealpha=0.9)
+    # centre-left: clear of the per-potential labels along the top and of the
+    # markers (triangles ~1e-10, circles ~1e-16)
+    ax1.legend(handles=[h1, h2], fontsize=7.5, loc="center left", framealpha=0.9)
 
     # ---- (b) gradient-descent recovery of a Plummer scale length ---------------
     # start above b_true so the descent is monotone (clean convergence curve)
@@ -174,7 +182,8 @@ def make():
                  ls="--", label="torch.autograd descent")
     ax2.set_xlabel("gradient-descent iteration")
     ax2.set_ylabel(r"fit loss  $\langle (F_R(b)-F_R^{\rm target})^2\rangle$")
-    ax2.set_title("(b) recover Plummer $b$ by autodiff gradient descent")
+    ax2.set_title("(b) gradient-descent fit of $b$" if PAPER
+                  else "(b) recover Plummer $b$ by autodiff gradient descent")
     ax2.set_ylim(1e-18, 1.0)
     ax2.legend(fontsize=8, loc="upper right")
     # parameter-recovery inset, bottom-left (the loss curve runs top-left ->
@@ -190,7 +199,8 @@ def make():
     axin.text(0.95, 0.9, f"recovered\n$b={float(bj):.6f}$", transform=axin.transAxes,
               fontsize=6.5, ha="right", va="top", color=BACKEND_COLORS["jax"])
 
-    fig.suptitle("Parameter-gradient autodiff: correctness & a worked fit "
-                 "(CPU, float64)", fontsize=11)
+    if not PAPER:
+        fig.suptitle("Parameter-gradient autodiff: correctness & a worked fit "
+                     "(CPU, float64)", fontsize=11)
     fig.tight_layout()
     return fig

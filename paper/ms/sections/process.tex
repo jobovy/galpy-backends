@@ -161,18 +161,21 @@ in addition.
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g13_ledger_burndown/g13_ledger_burndown.pdf}
   \caption{Tests of \galpy's existing test suite that pass under each
-    backend, as a function of time. The suite itself grows from 2,489 to
-    4,275 tests over the period (dotted line); the colored curves show
-    the number of these tests that pass under \jax\ and \torch\ in eager
-    mode (solid) and under compilation (dashed), that is, the size of the
-    suite minus the tests that are ledgered as expected failures or as
-    too slow under that mode. The bottom panel shows the tests of the
-    dedicated backend test modules. The numbered milestones mark, among
-    others, the central coordinate-coercion work that removed the
-    systematic rejection of scalar inputs by \torch, the introduction of
-    the compiled-mode suite, and the port of the inverse action--angle
-    code. At the end, one eager test and five compiled tests remain in
-    the ledger, with 16 tests permanently skipped.}\label{fig:ledger}
+    backend, as a function of time. The grey line is the size of the
+    suite, which grows from 2,466 to 4,275 tests over the period; the
+    colored curves show the number of these tests that pass under
+    \torch\ (top) and \jax\ (middle) in eager mode (solid) and under
+    compilation (dashed), that is, the size of the suite minus the tests
+    that are ledgered as expected failures or as too slow under that
+    mode, which is the shaded band. The bottom panel shows the number of
+    tests in the dedicated backend test modules. The numbered milestones
+    are listed below the figure; among them are the central
+    coordinate-coercion work that removed \torch's systematic rejection of
+    scalar inputs (5), the introduction of the compiled-mode suite (6),
+    and the port of the inverse action--angle code (8). At the end, 4,270
+    of the 4,275 tests pass under \torch\ and 4,267 under \jax; the rest
+    are the six remaining ledger entries and the permanently skipped
+    torus tests.}\label{fig:ledger}
 \end{figure*}
 
 \figurename~\ref{fig:ledger} displays how the suite was brought to pass.

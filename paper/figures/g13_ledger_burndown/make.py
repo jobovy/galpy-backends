@@ -28,6 +28,7 @@ measure/burndown_from_git.py (raw entry counts) is kept for reference.
 
 import datetime
 import json
+import os
 from pathlib import Path
 
 import matplotlib.dates as mdates
@@ -36,6 +37,9 @@ import matplotlib.pyplot as plt
 from paper.figures._harness.figure import figure
 
 _DATA = Path(__file__).resolve().parent / "data"
+# journal version (default): no suptitle, short callouts, milestone key without
+# dates (the axis gives them). GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _load(name):
@@ -121,10 +125,10 @@ def make():
                 label=f"passing under {label} --jit")
         last = rows[-1]
         ax.annotate(
-            f"{passing[-1]} / {suite[-1]}\n({last['ledgered'][mode]} ledgered, "
-            f"{last['skipped'][mode]} skipped)",
-            (dates[-1], passing[-1]), textcoords="offset points", xytext=(-4, -26),
-            ha="right", fontsize=7, color=color,
+            f"{passing[-1]} / {suite[-1]}" + ("" if PAPER else
+            f"\n({last['ledgered'][mode]} ledgered, {last['skipped'][mode]} skipped)"),
+            (dates[-1], passing[-1]), textcoords="offset points",
+            xytext=(-4, -16 if PAPER else -26), ha="right", fontsize=7, color=color,
         )
         for m in milestones:
             ax.axvline(_d(m["date"]), color="0.82", lw=0.7, ls="--", zorder=0)
@@ -136,7 +140,8 @@ def make():
     axes[2].plot(bkd, bk, "-", color="#2a9d8f", lw=1.8)
     axes[2].set_ylim(0, max(bk) * 1.15)
     axes[2].set_ylabel("tests in the\nbackend modules")
-    axes[2].annotate(f"{bk[-1]} tests in {_N_BACKEND_MODULES} test_backend_*.py modules",
+    axes[2].annotate(f"{bk[-1]}" if PAPER
+                     else f"{bk[-1]} tests in {_N_BACKEND_MODULES} test_backend_*.py modules",
                      (bkd[-1], bk[-1]), textcoords="offset points", xytext=(-4, -14),
                      ha="right", fontsize=7, color="#2a9d8f")
     for m in milestones:
@@ -148,19 +153,22 @@ def make():
         axes[0].annotate(str(i), (_d(m["date"]), 1.0), xycoords=("data", "axes fraction"),
                          xytext=(0, 2), textcoords="offset points", ha="center",
                          va="bottom", fontsize=6.5, color="0.35")
-    key = [f"{i}: {m['date']}  {m['label']}" for i, m in enumerate(ms, 1)]
+    key = [f"{i}: {m['label']}" if PAPER else f"{i}: {m['date']}  {m['label']}"
+           for i, m in enumerate(ms, 1)]
     half = (len(key) + 1) // 2
     for col, chunk in enumerate((key[:half], key[half:])):
         fig.text(0.02 + 0.5 * col, 0.005, "\n".join(chunk), fontsize=6,
                  color="0.3", va="bottom", ha="left")
-    fig.suptitle(
-        "Backend port of galpy's test suite: tests passing under each backend",
-        fontsize=10, y=0.985,
-    )
+    if not PAPER:
+        fig.suptitle(
+            "Backend port of galpy's test suite: tests passing under each backend",
+            fontsize=10, y=0.985,
+        )
     loc = mdates.AutoDateLocator(minticks=3, maxticks=8)
     axes[2].xaxis.set_major_locator(loc)
     axes[2].xaxis.set_major_formatter(mdates.ConciseDateFormatter(loc))
-    fig.subplots_adjust(left=0.14, right=0.97, top=0.93, bottom=0.17)
+    fig.subplots_adjust(left=0.14, right=0.97, top=0.97 if PAPER else 0.93,
+                        bottom=0.14 if PAPER else 0.17)
     return fig
 
 

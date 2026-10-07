@@ -40,6 +40,9 @@ from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "gS3_track_extrapolation.json")
+# journal version (default): no env stamp / long titles or notes; the caption
+# carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 # The orbit must actually PROBE the flattening: q flattens the halo in z, so a
 # near-planar orbit is insensitive to it by construction. This is galpy's standard
@@ -186,9 +189,11 @@ def make():
         ax1.plot(d["phi1"], d["phi2"], "-", color=c, lw=1.6, alpha=0.95,
                  label=rf"$q={data['q0'] + float(k):.1f}$")
         ax1.plot(a["phi1"], a["phi2"], "--", color=c, lw=1.5, dashes=(4, 2))
-    ax1.set_xlabel(r"$\phi_1$ [deg] (along the progenitor's orbital plane)")
+    ax1.set_xlabel(r"$\phi_1$ [deg]" if PAPER
+                   else r"$\phi_1$ [deg] (along the progenitor's orbital plane)")
     ax1.set_ylabel(r"$\phi_2$ [deg]")
-    ax1.set_title(rf"solid: direct re-run   dashed: one AD pass ($N={data['n']}$)")
+    ax1.set_title("(a) direct (solid) vs AD (dashed)" if PAPER
+                  else rf"solid: direct re-run   dashed: one AD pass ($N={data['n']}$)")
     ax1.legend(fontsize=7, framealpha=0.92, ncol=2)
 
     dqs = numpy.array(sorted(data.get("dqs_err", [abs(float(k)) for k in data["err"]])))
@@ -221,9 +226,11 @@ def make():
     ax2.set_xlabel(r"$|\Delta q|$")
     ax2.set_ylabel(r"rms $\Delta\phi_2$ at fixed $\phi_1$ [deg]")
     frac = 100.0 * (1.0 - errs / moved)
-    ax2.set_title(f"one AD pass removes {frac.min():.0f}-{frac.max():.0f}% of the shift")
+    ax2.set_title("(b) shift and residual" if PAPER
+                  else f"one AD pass removes {frac.min():.0f}-{frac.max():.0f}% of the shift")
     ax2.legend(fontsize=7, framealpha=0.92, loc="upper left")
     ax2.grid(True, which="both", alpha=0.25)
+    ax2.set_ylim(bottom=0.6 * errs.min())  # room for the lowest "%" callout
 
     fig.tight_layout()
     return fig

@@ -18,6 +18,7 @@ Reads data/precision.json (machine-stamped); plot byte-stable.
 """
 
 import json
+import os
 import pathlib
 
 import matplotlib.pyplot as plt
@@ -26,6 +27,9 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = pathlib.Path(__file__).resolve().parent / "data" / "precision.json"
+# journal version (default): no suptitle, short panel titles; the caption carries
+# the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 _C = {"cstm": "#222222", "fd": "#999999", "jax_ad": "#0072B2", "torch_ad": "#D55E00"}
 _LAB = {"cstm": "C-STM (C variational)", "fd": "finite difference (C)",
         "jax_ad": "jax AD (diffrax)", "torch_ad": "torch AD (torchdiffeq)"}
@@ -50,7 +54,8 @@ def make():
                  alpha=(1.0 if k == "cstm" else 0.9))
     ax1.set_xlabel("time")
     ax1.set_ylabel(r"$\partial R(t)/\partial v_{R0}$")
-    ax1.set_title("(a) a state-transition-matrix element, 4 ways")
+    ax1.set_title("(a) one matrix element" if PAPER
+                  else "(a) a state-transition-matrix element, 4 ways")
     ax1.legend(fontsize=7.8, loc="best")
 
     # ---- (b) relative Frobenius residual vs C-STM, per time --------------------
@@ -62,11 +67,13 @@ def make():
                      marker="o", ms=3, label=f"{_LAB[k]} vs C-STM")
     ax2.set_xlabel("time")
     ax2.set_ylabel(r"rel. Frobenius residual  $\|M_x-M_{\rm CSTM}\|/\|M_{\rm CSTM}\|$")
-    ax2.set_title("(b) agreement with the C variational STM")
+    ax2.set_title("(b) residual vs C-STM" if PAPER
+                  else "(b) agreement with the C variational STM")
     ax2.legend(fontsize=7.6, loc="best")
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
 
-    fig.suptitle(r"$\partial x(t)/\partial x_0$: autodiff $=$ the C state-transition "
-                 "matrix to solver precision (MWPotential2014)", fontsize=10.5)
+    if not PAPER:
+        fig.suptitle(r"$\partial x(t)/\partial x_0$: autodiff $=$ the C state-transition "
+                     "matrix to solver precision (MWPotential2014)", fontsize=10.5)
     fig.tight_layout()
     return fig

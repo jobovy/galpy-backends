@@ -42,6 +42,9 @@ from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "g2_throughput.json")
+# journal version (default): no suptitle / env stamps / long notes; the captions
+# carry the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 # colour = framework x device (palette.py); jax is jit-compiled (solid), torch eager
 # (dashed); end-to-end (+transfer) series are dotted with hollow markers.
@@ -142,9 +145,9 @@ def make():
     env = data.get("env", {})
 
     hdata = h100.load(os.path.dirname(__file__), "g2_throughput.json")
-    panels = [("titan", data, "(a) dev box: NVIDIA TITAN Xp")]
+    panels = [("titan", data, "(a) TITAN Xp" if PAPER else "(a) dev box: NVIDIA TITAN Xp")]
     if hdata:
-        panels.append(("h100", hdata, "(b) Trillium: NVIDIA H100"))
+        panels.append(("h100", hdata, "(b) H100" if PAPER else "(b) Trillium: NVIDIA H100"))
     fig, axes = plt.subplots(1, len(panels), figsize=(5.2 * len(panels) + 1.4, 4.3),
                              sharey=True, squeeze=False)
     for ax, (dev, d, title) in zip(axes[0], panels):
@@ -167,9 +170,10 @@ def make():
             ax.plot([Nlo, Nhi], [Nlo / t0, Nhi / t0], ls=":", lw=0.8, color="0.78",
                     zorder=0, label="_ref")
         e = d.get("env", {})
-        ax.text(0.97, 0.03, f"{e.get('gpu', '?')}\njax {e.get('jax', '?')} · torch {e.get('torch', '?')}"
-                "\nnumpy on this machine's CPU",
-                transform=ax.transAxes, fontsize=6.3, color="0.5", va="bottom", ha="right")
+        if not PAPER:
+            ax.text(0.97, 0.03, f"{e.get('gpu', '?')}\njax {e.get('jax', '?')} · torch {e.get('torch', '?')}"
+                    "\nnumpy on this machine's CPU",
+                    transform=ax.transAxes, fontsize=6.3, color="0.5", va="bottom", ha="right")
     axes[0][0].set_ylabel(r"throughput  (points evaluated / second)")
     thr_all = [numpy.asarray(d["Ns"], float) / numpy.asarray(v, float)
                for _, d, _ in panels for v in d["series"].values()]
@@ -177,10 +181,12 @@ def make():
     hi = 3.0 * max(t.max() for t in thr_all)
     for ax in axes[0]:
         ax.set_ylim(lo, hi)
-    axes[0][0].text(0.03, 0.97, "dotted grey: constant wall-time / call\n(0.1, 1, 10, 100 ms)",
+    axes[0][0].text(0.03, 0.97, "dotted: constant time per call" if PAPER
+                    else "dotted grey: constant wall-time / call\n(0.1, 1, 10, 100 ms)",
                     transform=axes[0][0].transAxes, fontsize=6.3, color="0.5", va="top", ha="left")
-    fig.suptitle(r"Plummer $F_R$ throughput: compute-only vs end-to-end (+transfer, dotted)",
-                 fontsize=11)
+    if not PAPER:
+        fig.suptitle(r"Plummer $F_R$ throughput: compute-only vs end-to-end (+transfer, dotted)",
+                     fontsize=11)
     fig.tight_layout()
     for ax in axes[0]:
         palette.label_lines(ax, fontsize=6.5)
