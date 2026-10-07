@@ -32,6 +32,9 @@ from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "g5_autodiff_overhead.json")
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 # colour = framework x device (palette.py); jax jit-compiled (solid), torch eager
 # (dashed); value = filled markers, gradient = hollow markers.
@@ -141,7 +144,8 @@ def make():
             ax1.loglog(Nd, thr, ms=3.8, zorder=3, label=palette.label(fw, dev, _MODE[fw], kind), **st)
     ax1.set_xlabel(r"array length $N$")
     ax1.set_ylabel(r"throughput  (points / second)")
-    ax1.set_title(r"(a) value (filled) vs gradient (hollow markers)", fontsize=10)
+    ax1.set_title("(a) throughput" if PAPER
+                  else r"(a) value (filled) vs gradient (hollow markers)", fontsize=10)
 
     # ---- (b) overhead ratio: grad time / value time ----------------------------
     for dev, d in runs:
@@ -156,14 +160,15 @@ def make():
     ax2.text(Ns[0], 0.94, "value cost", fontsize=7, color="0.5", va="top")
     ax2.set_xlabel(r"array length $N$")
     ax2.set_ylabel(r"gradient wall-time / value wall-time")
-    ax2.set_title("(b) reverse-mode autodiff overhead", fontsize=10)
+    ax2.set_title("(b) autodiff overhead" if PAPER
+                  else "(b) reverse-mode autodiff overhead", fontsize=10)
     ax2.set_ylim(0, None)
-    stamp = "\n".join(f"{d['env'].get('gpu', '?')}: jax {d['env'].get('jax', '?')} · torch {d['env'].get('torch', '?')}"
-                      for _, d in runs)
-    ax2.text(0.97, 0.03, stamp, transform=ax2.transAxes, fontsize=6.3, color="0.5", va="bottom", ha="right")
-
-    fig.suptitle(r"Cost of differentiability: Plummer $\Phi$ gradient vs value (TITAN Xp and H100 GPUs, float64)",
-                 fontsize=11)
+    if not PAPER:
+        stamp = "\n".join(f"{d['env'].get('gpu', '?')}: jax {d['env'].get('jax', '?')} · torch {d['env'].get('torch', '?')}"
+                          for _, d in runs)
+        ax2.text(0.97, 0.03, stamp, transform=ax2.transAxes, fontsize=6.3, color="0.5", va="bottom", ha="right")
+        fig.suptitle(r"Cost of differentiability: Plummer $\Phi$ gradient vs value (TITAN Xp and H100 GPUs, float64)",
+                     fontsize=11)
     fig.tight_layout(w_pad=11)
     palette.label_lines(ax1, fontsize=6.5)
     palette.label_lines(ax2, fontsize=6.5)

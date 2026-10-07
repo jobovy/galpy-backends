@@ -57,6 +57,9 @@ _TINTJ = 8
 _DELTA = 0.5
 _H = 1e-3          # central-FD step in q
 _DQ_SHOW = 0.02    # flattening perturbation drawn in panel (a)
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 _C_TRACK, _C_PLUS, _C_MINUS = "#0072B2", "#D55E00", "#009E73"
 
@@ -165,7 +168,8 @@ def make():
     ax1.plot(R - dq * ad[:, 0], z - dq * ad[:, 3], "--^", color=_C_MINUS, ms=3, lw=1.2,
              label=rf"AD: $q-{dq}$", zorder=2)
     ax1.set_xlabel(r"$R$"); ax1.set_ylabel(r"$z$")
-    ax1.set_title(r"stream track and its AD sensitivity to halo $q$")
+    ax1.set_title("(a) track and AD prediction" if PAPER
+                  else r"stream track and its AD sensitivity to halo $q$")
     ax1.legend(fontsize=7, framealpha=0.92)
 
     # (b) the cross-check: AD vs central FD, per track component
@@ -174,7 +178,8 @@ def make():
     for j in data.get("cols_measured", [0, 3]):
         ax2.semilogy(numpy.arange(tr.shape[0]), rel[:, j], "o-", ms=4, lw=1.0, label=lbl[j])
     ax2.set_xlabel("track chunk"); ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|/|{\rm FD}|$")
-    ax2.set_title(rf"AD vs central FD ($h={data['h']}$)")
+    ax2.set_title("(b) AD vs finite difference" if PAPER
+                  else rf"AD vs central FD ($h={data['h']}$)")
     ax2.set_xticks(numpy.arange(tr.shape[0]))
     ax2.legend(fontsize=7, ncol=2, framealpha=0.92)
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)

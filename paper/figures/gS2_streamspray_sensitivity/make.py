@@ -50,6 +50,9 @@ _NSHOW = 400           # particles in the morphology panel
 _NS = (60, 120, 240)   # particle counts for the convergence panel
 _HS = (1e-2, 1e-3, 1e-4, 1e-5)
 _SEED = 20260707
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _measure():
@@ -147,7 +150,8 @@ def make():
     ax1.set_xlabel("$x$")
     ax1.set_ylabel("$y$")
     ax1.set_aspect("equal", adjustable="datalim")
-    ax1.set_title(rf"per-particle sensitivity to $q$ ($N={data['n_show']}$)")
+    ax1.set_title("(a) per-particle sensitivity" if PAPER
+                  else rf"per-particle sensitivity to $q$ ($N={data['n_show']}$)")
 
     hs = numpy.array(data["hs"])
     for i, row in enumerate(data["conv"]):
@@ -156,7 +160,8 @@ def make():
                    label=rf"$N={row['n']}$")
     ax2.set_xlabel("finite-difference step $h$")
     ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}(h)|\,/\,|{\rm AD}|$")
-    ax2.set_title("the FD converges onto the AD value")
+    ax2.set_title("(b) FD convergence to AD" if PAPER
+                  else "the FD converges onto the AD value")
     ax2.legend(fontsize=7, framealpha=0.92)
     ax2.grid(True, which="both", alpha=0.25)
 

@@ -31,6 +31,9 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 _SERIES = [
     ("dissipative_cdf.json", "Chandrasekhar friction", "#0072B2"),
@@ -77,22 +80,27 @@ def make():
     ax = axes[1]
     ax.set_xlabel(r"$t$")
     ax.set_ylabel("relative difference")
-    ax.set_title(
-        r"(b) $|\det M - \exp\!\int \mathrm{tr}\,(\partial F/\partial v)\,"
-        r"\mathrm{d}t'\,|\;/\;\exp\!\int \mathrm{tr}\,(\partial F/\partial v)\,"
-        r"\mathrm{d}t'$",
-        fontsize=9,
-    )
+    if PAPER:
+        ax.set_title("(b) relative difference", fontsize=10)
+    else:
+        ax.set_title(
+            r"(b) $|\det M - \exp\!\int \mathrm{tr}\,(\partial F/\partial v)\,"
+            r"\mathrm{d}t'\,|\;/\;\exp\!\int \mathrm{tr}\,(\partial F/\partial v)\,"
+            r"\mathrm{d}t'$",
+            fontsize=9,
+        )
     ax.set_ylim(1e-11, 1e-4)
-    ax.legend(fontsize=7.5, loc="upper left")
+    if not PAPER:  # duplicates the legend of (a)
+        ax.legend(fontsize=7.5, loc="upper left")
 
-    env = envs[0]
-    fig.text(
-        0.005, 0.005,
-        f"galpy {env['galpy_branch']}@{env['galpy_commit']} (Chandrasekhar) / "
-        f"{envs[1]['galpy_branch']}@{envs[1]['galpy_commit']} (FDM); "
-        "MWPotential2014 + friction (GMs=0.008), dopr54_c rtol=atol=1e-12",
-        fontsize=6, color="0.55",
-    )
+    if not PAPER:
+        env = envs[0]
+        fig.text(
+            0.005, 0.005,
+            f"galpy {env['galpy_branch']}@{env['galpy_commit']} (Chandrasekhar) / "
+            f"{envs[1]['galpy_branch']}@{envs[1]['galpy_commit']} (FDM); "
+            "MWPotential2014 + friction (GMs=0.008), dopr54_c rtol=atol=1e-12",
+            fontsize=6, color="0.55",
+        )
     fig.tight_layout()
     return fig

@@ -17,11 +17,17 @@ Pure-CPU float64 and deterministic (jax pinned to the CPU device), so the PDF is
 byte-stable. Needs jax + diffrax.
 """
 
+import os
+
 import matplotlib.pyplot as plt
 import numpy
 
 from paper.figures._harness.figure import figure
 from paper.figures._harness.style import BACKEND_COLORS
+
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 @figure(
@@ -88,7 +94,8 @@ def make():
     ax1.axhline(0, color="0.8", lw=0.8, zorder=0)
     ax1.set_xlabel("time")
     ax1.set_ylabel(r"sensitivity  $\partial x(t)/\partial x_0$")
-    ax1.set_title("(a) orbit sensitivity (autodiff STM; o = finite-diff)")
+    ax1.set_title("(a) orbit sensitivity" if PAPER
+                  else "(a) orbit sensitivity (autodiff STM; o = finite-diff)")
     ax1.legend(fontsize=7.5, ncol=2, loc="upper left", framealpha=0.9)
 
     # ---- (b) gradient-descent orbit fit: recover (vR0, vz0) ----------------------
@@ -128,7 +135,8 @@ def make():
                  color=BACKEND_COLORS["jax"], lw=2)
     ax2.set_xlabel("Gauss-Newton iteration")
     ax2.set_ylabel(r"end-point miss  $\|(R,z)_f-(R,z)_f^{\rm target}\|^2$")
-    ax2.set_title("(b) fit launch velocity: autodiff Jacobian through the solver")
+    ax2.set_title("(b) launch-velocity fit" if PAPER
+                  else "(b) fit launch velocity: autodiff Jacobian through the solver")
     ax2.set_ylim(1e-18, None)
     # inset: optimizer path in (vR0, vz0)
     axin = ax2.inset_axes([0.50, 0.50, 0.46, 0.44])
@@ -140,7 +148,8 @@ def make():
     axin.tick_params(labelsize=6)
     axin.set_title("optimizer path", fontsize=7)
 
-    fig.suptitle("Differentiable orbit integration (in-backend diffrax; Plummer, "
-                 "CPU float64)", fontsize=11)
+    if not PAPER:
+        fig.suptitle("Differentiable orbit integration (in-backend diffrax; Plummer, "
+                     "CPU float64)", fontsize=11)
     fig.tight_layout()
     return fig

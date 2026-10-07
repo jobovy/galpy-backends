@@ -63,6 +63,9 @@ _DATA = os.path.join(os.path.dirname(__file__), "data")
 _SHARED = os.path.join(
     os.path.dirname(__file__), "..", "_shared", "orbit_speed", "data"
 )
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 # (json files [low-N first, optional high-N second], legend label, colour, ls, marker).
 # GPU backends merge a low-N run (1000 dense saves, shows the small-N crossover)
@@ -146,7 +149,8 @@ def make():
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")
-    ax.set_title(r"MWPotential2014 orbit integration, 2 Gyr")
+    if not PAPER:
+        ax.set_title(r"MWPotential2014 orbit integration, 2 Gyr")
 
     # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
     ax.set_ylim(*ax.get_ylim())
@@ -157,19 +161,20 @@ def make():
     ax.set_xlim(*xl)
     ax.text(
         0.025, 0.975,
-        "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
+        "dotted: constant cost per orbit" if PAPER
+        else "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
     # env stamp from the GPU JSON (the headline machine)
-    g = _load_one("galax_gpu.json") or {}
-    ax.text(
-        0.975, 0.03,
-        "galpy C: dop853_c, single thread\n"
-        "all lines: diffrax Dopri8 / dop853, rtol=atol=1e-8 (matched)\n"
-        f"TITAN Xp: jax {_load_one('jax_gpu.json').get('jax_version', '?')}"
-        + (f"  ·  H100 (galpy only): jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
-        transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
-    )
+    if not PAPER:
+        ax.text(
+            0.975, 0.03,
+            "galpy C: dop853_c, single thread\n"
+            "all lines: diffrax Dopri8 / dop853, rtol=atol=1e-8 (matched)\n"
+            f"TITAN Xp: jax {_load_one('jax_gpu.json').get('jax_version', '?')}"
+            + (f"  ·  H100 (galpy only): jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
+            transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
+        )
     fig.tight_layout()
     palette.label_lines(ax, fontsize=6.5, inline={"galpy C (dop853_c)": (300.0, 9)})
     return fig

@@ -56,6 +56,9 @@ _N_V_VESC = 300              # see docstring / galpy#1343
 _H = 0.25                    # kernel bandwidth
 _R_GRID = numpy.linspace(1.0, 4.0, 11)
 _NCHUNK = 8          # independent sub-samples -> MC error bar
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _measure():
@@ -192,7 +195,7 @@ def make():
                  label=r"MC sample ($N=4\times10^6$)")
     ax1.set_xlabel("$r$")
     ax1.set_ylabel(r"$\sigma_r(r)$")
-    ax1.set_title("the value")
+    ax1.set_title("(a) the value" if PAPER else "the value")
     ax1.legend(fontsize=7, framealpha=0.92)
 
     ax2.plot(r, data["dsigma_jeans"], "-", color=_C_TH, lw=1.8,
@@ -202,16 +205,17 @@ def make():
                  label=r"$\tt jax.grad$ through the sample")
     ax2.set_xlabel("$r$")
     ax2.set_ylabel(r"$d\sigma_r/dr$")
-    ax2.set_title("the derivative, two independent ways")
+    ax2.set_title("(b) the derivative" if PAPER else "the derivative, two independent ways")
     ax2.legend(fontsize=7, framealpha=0.92)
 
     d1 = numpy.array(data["dsigma_mc"])
     d2 = numpy.array(data["dsigma_jeans"])
     err = numpy.array(data["dsigma_mc_err"])
     pull = numpy.fabs(d1 - d2) / err
-    ax2.text(0.53, 0.07,
-             f"agreement within MC noise:\nmax {pull.max():.1f}$\\sigma$, median {numpy.median(pull):.1f}$\\sigma$",
-             transform=ax2.transAxes, fontsize=7.5, color="0.25")
+    if not PAPER:  # the caption carries the pull statistics
+        ax2.text(0.53, 0.07,
+                 f"agreement within MC noise:\nmax {pull.max():.1f}$\\sigma$, median {numpy.median(pull):.1f}$\\sigma$",
+                 transform=ax2.transAxes, fontsize=7.5, color="0.25")
 
     fig.tight_layout()
     return fig

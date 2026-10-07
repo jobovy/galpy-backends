@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 HERE = os.path.dirname(os.path.abspath(__file__))
 JAX_C, TORCH_C = "#2a6f97", "#e07a5f"
 TORI_C = ["#22577a", "#e07a5f", "#3d5a40"]
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def load(backend):
@@ -38,7 +41,7 @@ def main():
     axr.plot([], [], "o", color="0.35", mfc="white", mew=1.5, label="neural net $G(J,\\theta)$")
     axr.set_xlabel(r"$z$  [$R_0$]")
     axr.set_ylabel(r"$v_z$  [$v_0$]")
-    axr.set_title("(a) learned AA inverse vs exact tori")
+    axr.set_title("(a) learned vs exact tori" if PAPER else "(a) learned AA inverse vs exact tori")
     axr.legend(fontsize=8, loc="upper right")
     axr.grid(alpha=0.25)
 
@@ -50,7 +53,8 @@ def main():
                  label=f"PyTorch (torch.nn), {float(dt['train_seconds']):.0f}s")
     axl.set_xlabel("training step")
     axl.set_ylabel("loss = data + physics-informed cycle")
-    axl.set_title("(b) same physics, two autodiff backends\nbackprop through galpy's action-angle map")
+    axl.set_title("(b) training loss" if PAPER else
+                  "(b) same physics, two autodiff backends\nbackprop through galpy's action-angle map")
     axl.legend(fontsize=8.5)
     axl.grid(alpha=0.25, which="both")
 
@@ -59,15 +63,16 @@ def main():
     axe.semilogy(dt["J_c"], dt["err_c"], "-s", color=TORCH_C, ms=4, label="PyTorch")
     axe.set_xlabel(r"action  $J_z$")
     axe.set_ylabel("RMS phase-space error vs numpy inverse")
-    axe.set_title("(c) accuracy across the action range")
+    axe.set_title("(c) inverse accuracy" if PAPER else "(c) accuracy across the action range")
     axe.legend(fontsize=9)
     axe.grid(alpha=0.25, which="both")
 
-    fig.suptitle(
-        "Learning the action-angle inverse of the Milky-Way vertical potential by "
-        "differentiating through galpy  (JAX & PyTorch)",
-        fontsize=12.5, y=1.02,
-    )
+    if not PAPER:
+        fig.suptitle(
+            "Learning the action-angle inverse of the Milky-Way vertical potential by "
+            "differentiating through galpy  (JAX & PyTorch)",
+            fontsize=12.5, y=1.02,
+        )
     fig.tight_layout()
     out = os.path.join(HERE, "g19_neural_aa_inverse.png")
     fig.savefig(out, dpi=130, bbox_inches="tight")

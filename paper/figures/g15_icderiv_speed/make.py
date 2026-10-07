@@ -29,6 +29,7 @@ eager dashed / hatched); panel (b) is labelled directly.
 """
 
 import json
+import os
 import pathlib
 
 import matplotlib.pyplot as plt
@@ -40,6 +41,9 @@ _HERE = pathlib.Path(__file__).resolve().parent
 _DATA = _HERE / "data" / "icderiv.json"
 # the same measurement on an H100 (Trillium), drawn as extra GPU series if present
 _DATA_H100 = _HERE / "data" / "h100" / "icderiv.json"
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 # palette colour = framework x device; diffrax runs under jax.jit (solid),
 # torchdiffeq is eager torch (dashed); C-STM is galpy's C (grey).
@@ -99,7 +103,7 @@ def make():
     ax1.set_xticks(xs)
     ax1.set_xticklabels(labels, fontsize=7 if len(labels) <= 5 else 5.8)
     ax1.set_ylabel("IC-gradient wall-clock  [ms]")
-    ax1.set_title("(a) single orbit: full IC-gradient")
+    ax1.set_title("(a) single orbit" if PAPER else "(a) single orbit: full IC-gradient")
     for x, h in zip(xs, heights):
         ax1.text(x, h * 1.15, f"{h:.0f}" if h >= 10 else f"{h:.1f}",
                  ha="center", va="bottom", fontsize=7)
@@ -119,7 +123,7 @@ def make():
                        **palette.style(fw, pdev, mode))
     ax2.set_xlabel("number of orbits  N")
     ax2.set_ylabel("IC-gradient wall-clock  [ms]")
-    ax2.set_title("(b) batch scaling of the IC-gradient")
+    ax2.set_title("(b) batch scaling" if PAPER else "(b) batch scaling of the IC-gradient")
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
     lo, hi = ax2.get_xlim()
     ax2.set_xlim(lo, hi * 1.5)
@@ -135,9 +139,10 @@ def make():
     palette.label_lines(ax2, [(ln, ln.get_label()) for ln in ax2.get_lines()
                               if not ln.get_label().startswith(("_", "galpy C"))])
 
-    gpus = [d["meta"].get("gpu", "?")] + ([d_h100["meta"].get("gpu", "H100")] if d_h100 else [])
-    fig.suptitle("Cost of differentiating an orbit w.r.t. its initial conditions "
-                 "(full 6-vector gradient; MWPotential2014)", fontsize=11)
-    fig.text(0.01, 0.005, "GPU: " + "; ".join(gpus), fontsize=6.5, color="0.5")
+    if not PAPER:
+        gpus = [d["meta"].get("gpu", "?")] + ([d_h100["meta"].get("gpu", "H100")] if d_h100 else [])
+        fig.suptitle("Cost of differentiating an orbit w.r.t. its initial conditions "
+                     "(full 6-vector gradient; MWPotential2014)", fontsize=11)
+        fig.text(0.01, 0.005, "GPU: " + "; ".join(gpus), fontsize=6.5, color="0.5")
     fig.tight_layout()
     return fig

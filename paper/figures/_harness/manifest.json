@@ -27,15 +27,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "e5e8de75eb956699ef9d8229e919cb05e04f2cfe38e82436745e3d010b97f1fd",
+    "git": "1f202a1",
+    "sha256": "5bf3451912bebe3363c230881985235ae794600902593ad6517ceb82a8bac7c2",
     "track": "G"
   },
   "g11_dissipative_phase_volume": {
     "description": "Dissipative phase-volume law det M(t)=exp(int tr(dF/dv) dt'): STM determinant vs C-Jacobian trace integral for Chandrasekhar and FDM friction in MWPotential2014 [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "4abce12a5",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -43,8 +43,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "66daa50c2cffe923d9752e8af6468fcbc3e3d475e5fa474f016dfdc1746c636c",
+    "git": "1f202a1",
+    "sha256": "df992a2a262ca5e0901ebbe856b91a8b2412a874daee4b84b5a2074701761fa9",
     "track": "G"
   },
   "g12_inbackend_orbit_gpu": {
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "c4548bd",
-    "sha256": "91591a7bf3e494ee8c3765fb367230823fb8f8097c30f00efd41f9437e9e8091",
+    "git": "1f202a1",
+    "sha256": "8078815c1a046867a2133698ca6a39f89a2adb2bea5f664e6f4d0cf96c1e4bb5",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -171,8 +171,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "9b6b78d726f405ce87a289f412fd4f04744763c859bce70e0cf3c05eb19a07d7",
+    "git": "1f202a1",
+    "sha256": "7a8f178777cbe0a5be85350a94e860736fda020f58ddd1d3b03960f9e3c9f3d7",
     "track": "G"
   },
   "g1_backend_parity": {
@@ -250,8 +250,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "439f96cf7a67caefe294cb12d9659a6de4383d59315de4680b56d584e074204c",
+    "git": "1f202a1",
+    "sha256": "2d00956c7b2f871cf4098664cd966ab1a0b257623cb01fd362119646c3a54433",
     "track": "G"
   },
   "g6_jit_amortization": {
@@ -266,8 +266,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "00adf71f2b0b35b52d8343b1549c6945a2894358b0b7dbfaa7b992cfdd348c75",
+    "git": "1f202a1",
+    "sha256": "9168db0230605ed8bc898df9486806931d97ab1096e4e0a02330a7c7b235215f",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -282,8 +282,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "9425828c9bb78d5018fe455926242dbe92afc47d2b05fb67be209299b812093b",
+    "git": "1f202a1",
+    "sha256": "0ef92e5a02a77242e5d61598ad6ab82295df77c947f7451e886271bbff47e54c",
     "track": "G"
   },
   "g8_galax_orbit_speed": {
@@ -298,8 +298,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "c4548bd",
-    "sha256": "f986a15c470b02d16a421b575cea8f23de8f2cbe1627f711178c4aa406d200f8",
+    "git": "1f202a1",
+    "sha256": "a9545fce505005ea36792c00d070fcc99a7c64ba69170d79a86e565e06ffe92e",
     "track": "G"
   },
   "g9_variational_validity": {
@@ -346,8 +346,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "70c417b2d2c8e280e153f4073d51ff77594c57e8a996ce7fe788c16dfd5c700c",
+    "git": "1f202a1",
+    "sha256": "1ab2722d94ff7a7f924f5e22c13d726b4f9349aaf9a8cf5ece80d793fe414002",
     "track": "G"
   },
   "gD3_spherical_df_speed": {
@@ -394,8 +394,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "def030bf6ad1491c5386b2ca39a1b70f74ad6b42e49a3aea53a1a4799303b321",
+    "git": "1f202a1",
+    "sha256": "c745f76c22377ea377267b3492869dac9ec401e5f040790ccb3c4ed6af57a521",
     "track": "G"
   },
   "gS1_stream_track_sensitivity": {
@@ -410,8 +410,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "e9092987d7c769e1057bbfb2be2c5a7e2b68dd40b972128eaf447c104c2cbcc4",
+    "git": "1f202a1",
+    "sha256": "3992b21e943b8b5632c041f3351f2791354b1513ac38360d969cdda5564a97ce",
     "track": "G"
   },
   "gS2_streamspray_sensitivity": {
@@ -426,8 +426,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "10744df",
-    "sha256": "13705adc992a008569bc900cf30d00d85be581a5b180648edcfa516f9191c413",
+    "git": "1f202a1",
+    "sha256": "20d3f4f9f048720878050c0453456b9c514a86466cc7759e89d6853425636168",
     "track": "G"
   },
   "gS3_track_extrapolation": {
@@ -458,8 +458,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "964e800",
-    "sha256": "1d9adc9bd5d127f0a0daa6f8803fbb1dcd60c40b29a710c38e00a9580af68a78",
+    "git": "1f202a1",
+    "sha256": "dbf025db0a12165fad7de6a96adcf56144979fa7154746ef3ee2da7bb6ca54a1",
     "track": "S"
   },
   "gS5_streamspray_speed": {

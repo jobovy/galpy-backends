@@ -32,6 +32,9 @@ from paper.figures._harness import h100, palette
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "g6_jit_amortization.json")
 _NCALLS = 15
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _grid(N):
@@ -137,7 +140,8 @@ def make():
                  color="0.3", arrowprops=dict(arrowstyle="->", color="0.5", lw=0.8))
     ax1.set_xlabel("call index")
     ax1.set_ylabel("wall-time per call  (ms)")
-    ax1.set_title("(a) compile-once, run-many (eager per-call dashed)", fontsize=10)
+    ax1.set_title("(a) per-call wall-time" if PAPER
+                  else "(a) compile-once, run-many (eager per-call dashed)", fontsize=10)
 
     # ---- (b) cumulative time: jit vs eager, with break-even --------------------
     N = Ns[1]  # the larger size, where the GPU is fully engaged
@@ -166,12 +170,13 @@ def make():
                      fontsize=7.5, va="bottom", ha="right", color=col)
     ax2.set_xlabel("number of calls")
     ax2.set_ylabel("cumulative wall-time  (ms)")
-    ax2.set_title(rf"(b) jit vs eager break-even ({_nlab(N)})", fontsize=10)
-    stamp = "\n".join(f"{d['env'].get('gpu', '?')}: jax {d['env'].get('jax', '?')}" for _, d in runs)
-    ax2.text(0.97, 0.03, stamp, transform=ax2.transAxes, fontsize=6.3, color="0.5",
-             ha="right", va="bottom")
-
-    fig.suptitle(r"jit amortization: Plummer $F_R$ (jax; TITAN Xp and H100 GPUs, float64)", fontsize=11)
+    ax2.set_title(rf"(b) break-even, {_nlab(N)}" if PAPER
+                  else rf"(b) jit vs eager break-even ({_nlab(N)})", fontsize=10)
+    if not PAPER:
+        stamp = "\n".join(f"{d['env'].get('gpu', '?')}: jax {d['env'].get('jax', '?')}" for _, d in runs)
+        ax2.text(0.97, 0.03, stamp, transform=ax2.transAxes, fontsize=6.3, color="0.5",
+                 ha="right", va="bottom")
+        fig.suptitle(r"jit amortization: Plummer $F_R$ (jax; TITAN Xp and H100 GPUs, float64)", fontsize=11)
     fig.tight_layout(w_pad=11)
     palette.label_lines(ax1, fontsize=6.5)
     palette.label_lines(ax2, fontsize=6.5)

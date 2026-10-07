@@ -25,6 +25,9 @@ import numpy
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 
 def _load():
@@ -94,18 +97,19 @@ def make():
     lam_exp = int(numpy.floor(numpy.log10(mw["lam_final"])))
     ax.text(
         0.03, 0.05,
-        rf"$\lambda(3\times10^3)={lam_mantissa:.1f}\times10^{{{lam_exp}}}$" "\n"
-        r"(upper limit, still $\propto \ln(t)/t$)",
+        rf"$\lambda(3\times10^3)={lam_mantissa:.1f}\times10^{{{lam_exp}}}$"
+        + ("" if PAPER else "\n" r"(upper limit, still $\propto \ln(t)/t$)"),
         transform=ax.transAxes, fontsize=7.5, color="0.3",
     )
 
-    env = d["env"]
-    fig.text(
-        0.005, 0.005,
-        f"galpy {env['galpy_branch']}@{env['galpy_commit']}"
-        f"{'+local-fix' if env['galpy_dirty'] else ''}, "
-        "Orbit.lyapunov (dop853_c, renorm_every=10)",
-        fontsize=6, color="0.55",
-    )
+    if not PAPER:
+        env = d["env"]
+        fig.text(
+            0.005, 0.005,
+            f"galpy {env['galpy_branch']}@{env['galpy_commit']}"
+            f"{'+local-fix' if env['galpy_dirty'] else ''}, "
+            "Orbit.lyapunov (dop853_c, renorm_every=10)",
+            fontsize=6, color="0.55",
+        )
     fig.tight_layout()
     return fig

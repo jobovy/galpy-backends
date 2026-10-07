@@ -28,6 +28,9 @@ _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "gF1_autodiff_forces.json")
 _Z, _PHI = 0.15, 0.3
 _EPS = numpy.finfo(numpy.float64).eps
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 _STYLE = {  # colour-blind-safe, one per potential
     "MWPotential2014": "#0072B2", "SCF (basis expansion)": "#D55E00",
@@ -101,7 +104,8 @@ def make():
 
     ax1.set_xscale("log")
     ax1.set_xlabel(r"$R$"); ax1.set_ylabel(r"$F_R$")
-    ax1.set_title(r"lines: $-\partial\Phi/\partial R$ by autodiff   ·   circles: analytic")
+    ax1.set_title("(a) autodiff vs analytic" if PAPER else
+                  r"lines: $-\partial\Phi/\partial R$ by autodiff   ·   circles: analytic")
     ax1.legend(fontsize=6.8, framealpha=0.92, loc="best")
     ax1.axhline(0, color="0.8", lw=0.7, zorder=0)
 
@@ -109,9 +113,10 @@ def make():
     ax2.text(R[0] * 1.05, _EPS * 1.35, r"float64 $\epsilon$", fontsize=7.5, color="0.35")
     ax2.set_xscale("log"); ax2.set_ylim(1e-18, 1e-12)
     ax2.set_xlabel(r"$R$"); ax2.set_ylabel(r"$|{\rm AD}-{\rm exact}|\,/\,|{\rm exact}|$")
-    ax2.set_title("residual against the hand-coded force")
+    ax2.set_title("(b) relative residual" if PAPER else "residual against the hand-coded force")
     ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
-    ax2.legend(fontsize=6.8, framealpha=0.92, loc="upper right", ncol=2)
+    if not PAPER:  # duplicates the legend of (a)
+        ax2.legend(fontsize=6.8, framealpha=0.92, loc="upper right", ncol=2)
 
     fig.tight_layout()
     return fig

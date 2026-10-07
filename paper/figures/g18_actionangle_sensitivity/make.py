@@ -31,11 +31,16 @@ Pure-CPU float64 and deterministic (jax pinned to the CPU device, x64 enabled), 
 the PDF is byte-stable. Needs jax.
 """
 
+import os
+
 import matplotlib.pyplot as plt
 import numpy
 
 from paper.figures._harness.figure import figure
 
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # colour families: an action and its sensitivity share a hue (dark = value,
 # light = derivative), so panel (a) reads as two (value, d/dv_R) pairs.
 _C_JR, _C_DJR = "#0072B2", "#56B4E9"  # blue      / sky blue   (radial)
@@ -171,7 +176,8 @@ def make():
                    transform=_resid_ax.transAxes, fontsize=7.2, va="bottom",
                    ha="right", color="0.35")
 
-    fig.suptitle("Differentiable action-angle (autodiff vs finite-difference; "
-                 "CPU float64)", fontsize=11)
+    if not PAPER:
+        fig.suptitle("Differentiable action-angle (autodiff vs finite-difference; "
+                     "CPU float64)", fontsize=11)
     fig.tight_layout()
     return fig

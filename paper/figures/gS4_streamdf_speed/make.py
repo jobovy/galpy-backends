@@ -151,6 +151,9 @@ _SERIES = {
 }
 _ORDER = list(_SERIES)
 _JSON_H100 = os.path.join(_DATA, "h100", "gS4_streamdf_speed.json")
+# journal version (default): no suptitle, short panel titles, no stamps; the
+# caption carries the explanations. GALPY_JAX_PAPER=0 restores the annotated figure.
+PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 
 # --- construction: one fresh process per (backend, nTrackChunks) -------------------
 _BUILD_SCRIPT = r"""
@@ -512,9 +515,9 @@ def make():
     axa.axvline(data.get("nch_default", 10), color="0.8", lw=0.8, zorder=0)
     axa.set_xlabel("number of track chunks (nTrackChunks)")
     axa.set_ylabel("wall time (s)")
-    axa.set_title("(a) construction incl. stream track")
+    axa.set_title("(a) construction" if PAPER else "(a) construction incl. stream track")
     notes = [data["notes"][k] for k in ("construct_torch", "construct_jit") if data["notes"].get(k)]
-    if notes:
+    if notes and not PAPER:
         import textwrap
 
         axa.text(0.97, 0.03, "\n".join(textwrap.fill(n, 48) for n in notes),
@@ -522,26 +525,29 @@ def make():
     _panel(axb, Ns, "sample", data, h100)
     axb.set_xlabel(r"number of sampled stars $N$")
     axb.set_ylabel("wall time (s)")
-    axb.set_title(r"(b) sdf.sample($N$)")
+    axb.set_title(r"(b) sampling $N$ stars" if PAPER else r"(b) sdf.sample($N$)")
     _panel(axc, Ns, "eval", data, h100)
     axc.set_xlabel(r"number of phase-space points $N$")
     axc.set_ylabel("wall time (s)")
-    axc.set_title(r"(c) log DF at $N$ points")
+    axc.set_title("(c) DF evaluation" if PAPER else r"(c) log DF at $N$ points")
     ec, eg = data.get("env_cpu", {}), data.get("env_gpu", {})
     eh = (h100 or {}).get("env_gpu", {})
-    axb.text(0.03, 0.97,
-             f"CPU: {ec.get('cpu', '?').replace('Intel(R) Xeon(R) CPU ', 'Xeon ')}"
-             f" ({ec.get('cpu_cores_used', '?')} cores): jax {ec.get('jax', '?')} · torch {ec.get('torch', '?')}\n"
-             f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
-             + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else ""),
-             transform=axb.transAxes, fontsize=5.6, color="0.45", va="top", ha="left")
+    if not PAPER:
+        axb.text(0.03, 0.97,
+                 f"CPU: {ec.get('cpu', '?').replace('Intel(R) Xeon(R) CPU ', 'Xeon ')}"
+                 f" ({ec.get('cpu_cores_used', '?')} cores): jax {ec.get('jax', '?')} · torch {ec.get('torch', '?')}\n"
+                 f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
+                 + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else ""),
+                 transform=axb.transAxes, fontsize=5.6, color="0.45", va="top", ha="left")
     axb.text(0.97, 0.03, "lines labelled in (c)", transform=axb.transAxes, fontsize=6.5,
              color="0.45", va="bottom", ha="right")
-    for ax in (axb, axc):
-        ax.set_ylim(top=ax.get_ylim()[1] * 8)  # headroom for the stamp
-    fig.suptitle("streamdf (action-angle stream model): build once, then sample / evaluate",
-                 y=0.99)
-    fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86, wspace=0.62)
+    if not PAPER:
+        for ax in (axb, axc):
+            ax.set_ylim(top=ax.get_ylim()[1] * 8)  # headroom for the stamp
+        fig.suptitle("streamdf (action-angle stream model): build once, then sample / evaluate",
+                     y=0.99)
+    fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86 if not PAPER else 0.92,
+                        wspace=0.62)
     palette.label_lines(axa, fontsize=6.5)
     palette.label_lines(axc, fontsize=6.5)
     return fig
