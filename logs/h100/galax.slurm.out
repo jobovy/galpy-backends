@@ -1,0 +1,52 @@
+NVIDIA H100 80GB HBM3, 580.173.02
+>>> 04:58:08 [galax] /scratch/bovy/galpy-h100/galax-src/.venv/bin/python -c 'import jax; print(jax.devices())'
+    ok 04:58:16
+>>> 04:58:16 [galax] /scratch/bovy/galpy-h100/galax-src/.venv/bin/python galax_measure_modern.py
+    ok 04:59:16
+>>> 04:59:16 [galax] /scratch/bovy/galpy-h100/galax-src/.venv/bin/python galax_extended.py
+    ok 05:00:02
+>>> 05:00:02 [galax] /scratch/bovy/galpy-h100/galax-src/.venv/bin/python galax_perorbit_measure.py lowN
+    ok 05:00:57
+>>> 05:00:57 [galax] /scratch/bovy/galpy-h100/galax-src/.venv/bin/python galax_perorbit_measure.py hiN
+    ok 05:02:08
+>>> 05:02:08 [galax] done
+
+scontrol show job 1050024
+JobId=1050024 JobName=galax-h100
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1378291 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:04:06 TimeLimit=01:30:00 TimeMin=N/A
+   SubmitTime=2026-10-07T04:57:50 EligibleTime=2026-10-07T04:57:50
+   AccrueTime=2026-10-07T04:57:50
+   StartTime=2026-10-07T04:58:02 EndTime=2026-10-07T05:02:08 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-07T04:58:02 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2634961
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0043
+   BatchHost=trig0043
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/galax_job.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=01:30:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out galax_job.sbatch --export=NONE --parsable --account=def-bovy --time=01:30:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out galax_job.sbatch
+   WorkDir=/scratch/bovy/galpy-h100
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=01:30:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out galax_job.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/galax-h100-1050024.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1050024
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1050024      galax-h100   def-bovy   00:04:07                         00:00:00   00:00:00      0:0 
+1050024.bat+      batch   def-bovy   00:04:07                         00:00:00   00:00:00      0:0 
+1050024.ext+     extern   def-bovy   00:04:07                         00:00:00   00:00:00      0:0 
+

@@ -88,7 +88,8 @@ radius of a Hernquist potential under \torch\ is obtained as
 a= torch.tensor(1.,requires_grad=True)
 with galpy.backend.use('torch'):
     df= constantbetadf(pot=HernquistPotential(amp=2.,a=a),beta=-0.2)
-    sam= df.sample(n=1000,rmin=0.1,key=galpy.backend.random.key(7,backend='torch'))
+    key= galpy.backend.random.key(7,backend='torch')
+    sam= df.sample(n=1000,rmin=0.1,key=key)
 dr_da= torch.autograd.grad(sam.r().sum(),a)
 \end{code}
 and for a Hernquist sphere this derivative is $r_i/a$, which the sampler

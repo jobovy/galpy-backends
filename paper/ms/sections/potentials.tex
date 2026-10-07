@@ -69,8 +69,8 @@ potential constructed from a density, as the basis-function and
 multipole expansions can be, carry the derivative through the expansion
 coefficients.
 
-\begin{figure}[t!]
-  \includegraphics[width=0.48\textwidth,clip=]{../figures/g3_param_gradients/g3_param_gradients.pdf}
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g3_param_gradients/g3_param_gradients.pdf}}
   \caption{Derivatives of potentials with respect to their parameters.
     The left panel shows, for the Plummer and isochrone potentials, the
     largest difference between the derivatives of the potential and of
@@ -83,7 +83,7 @@ coefficients.
     set of points by gradient descent on the derivative, starting from
     $b=1.5$ and converging to the true $b=0.85$, with both
     backends.}\label{fig:paramgrad}
-\end{figure}
+\end{figure*}
 
 A few things are worth stating plainly. Where \galpy\ computes an
 integral over a potential adaptively on the \numpy\ path, as for the

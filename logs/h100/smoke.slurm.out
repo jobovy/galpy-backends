@@ -1,0 +1,48 @@
+NVIDIA H100 80GB HBM3, 580.173.02
+>>> 17:08:05 [smoke] python -c 'import jax, torch; print(jax.devices(), torch.cuda.get_device_name(0))'
+    ok 17:08:15
+>>> 17:08:15 [smoke] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider --backend jax --device cuda tests/test_backend_force.py -x
+    ok 17:08:32
+>>> 17:08:32 [smoke] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider --backend torch --device cuda tests/test_backend_force.py -x
+    ok 17:08:49
+>>> 17:08:49 [smoke] done
+
+scontrol show job 1045350
+JobId=1045350 JobName=galpy-h100
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=5000267 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:51 TimeLimit=00:20:00 TimeMin=N/A
+   SubmitTime=2026-10-06T17:07:57 EligibleTime=2026-10-06T17:07:57
+   AccrueTime=2026-10-06T17:07:57
+   StartTime=2026-10-06T17:07:58 EndTime=2026-10-06T17:08:49 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-06T17:07:58 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:1821019
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0008
+   BatchHost=trig0008
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/galpy-jax/tools/trillium_job.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --account=def-bovy --time=00:20:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out --export=ALL,STAGE=smoke tools/trillium_job.sbatch --export=NONE --account=def-bovy --time=00:20:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out --export=ALL,STAGE=smoke tools/trillium_job.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/galpy-jax
+   Comment=/opt/slurm/bin/sbatch --export=NONE --account=def-bovy --time=00:20:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out --export=ALL,STAGE=smoke tools/trillium_job.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/galpy-h100-1045350.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1045350
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1045350      galpy-h100   def-bovy   00:00:51                         00:00:00   00:00:00      0:0 
+1045350.bat+      batch   def-bovy   00:00:51                         00:00:00   00:00:00      0:0 
+1045350.ext+     extern   def-bovy   00:00:51                         00:00:00   00:00:00      0:0 
+

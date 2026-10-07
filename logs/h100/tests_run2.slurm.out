@@ -1,0 +1,48 @@
+NVIDIA H100 80GB HBM3, 580.173.02
+>>> 01:59:53 [tests] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider -n 2 --backend jax --device cuda tests/test_backend_*.py
+!!! FAILED [tests] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider -n 2 --backend jax --device cuda tests/test_backend_*.py (see /scratch/bovy/galpy-h100/logs/tests.log)
+>>> 03:26:41 [tests] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider -n 2 --backend torch --device cuda tests/test_backend_*.py
+!!! FAILED [tests] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider -n 2 --backend torch --device cuda tests/test_backend_*.py (see /scratch/bovy/galpy-h100/logs/tests.log)
+>>> 04:56:06 [tests] cd /scratch/bovy/galpy-h100/galpy-fb && python -m pytest -q -p no:cacheprovider tests/test_backend_special.py tests/test_backend_actionAngleVerticalInverse.py -k cuda
+    ok 04:56:37
+>>> 04:56:37 [tests] done
+
+scontrol show job 1048782
+JobId=1048782 JobName=galpy-h100
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1419890 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=02:56:51 TimeLimit=06:00:00 TimeMin=N/A
+   SubmitTime=2026-10-07T01:59:26 EligibleTime=2026-10-07T01:59:26
+   AccrueTime=2026-10-07T01:59:26
+   StartTime=2026-10-07T01:59:46 EndTime=2026-10-07T04:56:37 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-07T01:59:46 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:1048881
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0038
+   BatchHost=trig0038
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/galpy-jax/tools/trillium_job.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=06:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-tests-%j.out --export=ALL,STAGE=tests tools/trillium_job.sbatch --export=NONE --parsable --account=def-bovy --time=06:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-tests-%j.out --export=ALL,STAGE=tests tools/trillium_job.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/galpy-jax
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=06:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-tests-%j.out --export=ALL,STAGE=tests tools/trillium_job.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/galpy-h100-tests-1048782.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1048782
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1048782      galpy-h100   def-bovy   02:56:51                        50:35.370   08:57:27      0:0 
+1048782.bat+      batch   def-bovy   02:56:51          0  32517488K  50:35.370   08:57:27      0:0 
+1048782.ext+     extern   def-bovy   02:56:51                         00:00:00   00:00:00      0:0 
+

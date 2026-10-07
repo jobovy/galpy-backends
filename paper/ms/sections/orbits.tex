@@ -30,12 +30,12 @@ and under \torch\
 \begin{code}
 b= torch.tensor(0.6,requires_grad=True)
 o= Orbit(torch.as_tensor(ic))
-o.integrate(torch.as_tensor(ts),PlummerPotential(amp=1.,b=b),
-            method='torchode')
+pp= PlummerPotential(amp=1.,b=b)
+o.integrate(torch.as_tensor(ts),pp,method='torchode')
 o.R(ts[-1]).backward() # b.grad = dR/db
 \end{code}
-Second derivatives are available under \jax\ with the direct adjoint
-(\texttt{inbackend\_kwargs=\{'adjoint':\,'direct'\}}), and
+Second derivatives are available under \jax\ by selecting the direct
+adjoint through the \texttt{inbackend\_kwargs} keyword, and
 \texttt{jax.vmap} over initial conditions works, with one caveat
 discussed below.
 
@@ -68,8 +68,8 @@ conditions only, and to first order only; the variational equations do
 not carry derivatives with respect to the parameters of the potential,
 which must come from the in-backend solve.
 
-\begin{figure}[t!]
-  \includegraphics[width=0.48\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}}
   \caption{The derivative of an orbit with respect to its initial
     condition, four ways. For a Sun-like orbit in \texttt{MWPotential2014}
     integrated for 3\,Gyr, the left panel shows one element of the
@@ -80,7 +80,7 @@ which must come from the in-backend solve.
     relative Frobenius norm of the difference between each of the
     latter three and the variational result; all agree to a few parts in
     $10^{10}$.}\label{fig:icjacobian}
-\end{figure}
+\end{figure*}
 
 The choice between the two is made automatically. An \orb\ with a
 backend initial condition that is integrated with a Runge--Kutta \cc\

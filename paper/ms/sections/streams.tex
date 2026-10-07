@@ -62,9 +62,11 @@ and is differentiable with respect to every parameter,
 \begin{code}
 key= galpy.backend.random.key(1,backend='jax')
 def leading_arm(q):
-    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),tdisrupt=4.5/time_in_Gyr(),
-                          pot=LogarithmicHaloPotential(normalize=1.,q=q))
-    return spdf.sample(n=1500,return_orbit=False,tail='leading',key=key)
+    lp= LogarithmicHaloPotential(normalize=1.,q=q)
+    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),pot=lp,
+                          tdisrupt=4.5/time_in_Gyr())
+    return spdf.sample(n=1500,return_orbit=False,
+                       tail='leading',key=key)
 track_and_dtrack= jax.jvp(leading_arm,(q0,),(1.,))
 \end{code}
 where the forward-mode derivative gives the change of every particle's
@@ -82,8 +84,8 @@ stream costs about a millisecond per particle on a CPU under compiled
 \jax, about half the cost of the non-differentiable \cc\ version, and
 microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
 
-\begin{figure}[t!]
-  \includegraphics[width=0.48\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}}
   \caption{Predicting a stream's track in a different potential from one
     derivative. Left: the track of a 1500-particle \texttt{fardal15spraydf}
     stream after 4.5\,Gyr in a logarithmic halo with flattening
@@ -94,7 +96,7 @@ microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
     root-mean-square shift of the track at fixed $\phi_1$ and the
     residual after the first-order prediction, as a function of
     $|\Delta q|$.}\label{fig:extrapolation}
-\end{figure}
+\end{figure*}
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gS5_streamspray_speed/gS5_streamspray_speed.pdf}

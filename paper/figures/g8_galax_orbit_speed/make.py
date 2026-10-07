@@ -93,7 +93,7 @@ _SERIES = [
 
 def _load_one(fname, sub=""):
     # shared galpy JSONs live in _shared/orbit_speed/data; galax JSONs are local.
-    # sub="h100": the same measurement on an H100 (data/h100/; galax not run there)
+    # sub="h100": the same measurement on an H100 (data/h100/; galax too, measured 2026-10-07)
     for base in (_SHARED, _DATA):
         path = os.path.join(base, sub, fname)
         if os.path.exists(path):

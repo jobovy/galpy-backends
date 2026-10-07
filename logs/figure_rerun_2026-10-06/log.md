@@ -92,3 +92,22 @@ re-measured. Re-measured: max relerr 3.7e-3 (was 5.7e-6), rising once r < 0.06.
 - **galpy regression found via g17**: numpy Staeckel `c=False` actionsFreqsAngles at
   N=1e4 takes 26.4 s on an idle box vs 2.07 s in August (9ec5bd2); C unchanged.
   ~13x, in the Python path. Bisect pending.
+
+## 2026-10-07: H100 stages 2 folded in; Staeckel regression fixed (PR #1642)
+
+- From `gpu-h100`: g15, g17 and the galax g8 series measured on the H100 copied into
+  `data/h100/` (GPU series only are drawn; the branch's CPU series are from Trillium's
+  EPYC and are not used); `logs/h100/` (report.md, stage logs) copied. g8 now has galax
+  H100 lines (galax main 16a7e636b): galax's batched mode on the H100 ~ galpy's
+  per-orbit mode on the H100.
+- g17 H100: torch is nan at N>=1e5 and eager jax at N=1e6 (OOM: jax's retained pool
+  starves torch in the same process; torch alone completes, see logs/h100/diag on the
+  branch). The TITAN CPU series of g17 remain load-corrupted; re-measure after #1642.
+- Staeckel c=False regression (commit dd0aba7ca, 2026-09-02; 200 nodes/integral):
+  fixed in galpy PR #1642 (mesh matches C's 2x10 on the u side; 3.8x faster, 0.63 s vs
+  2.35 s for 1000 orbits; the remaining gap to the 0.275 s of August is the fixed-count
+  turning-point bisection).
+- H100 torch CUDA suite: 47 failures, mostly torch 2.14 dynamo (fake-tensor ndarray,
+  stream/graph-input mutation) and 7 eager float32/CUDA->numpy conversions; jax 2
+  (a 5.6e-4 vs 2e-4 grad-vs-FD tolerance miss in evolveddiskdf). Not yet triaged.
+- Paper draft (paper/ms): all sections drafted, 26 pages; see paper/ms/README.md.

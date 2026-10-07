@@ -1,1 +1,53 @@
-% conclusion
+\section{Conclusion}\label{sec:conclusion}
+
+I have described an extension of \galpy\ that makes it run, compile, and
+differentiate under \jax\ and \torch, on CPUs and GPUs, while leaving
+its existing \numpy\ and \cc\ implementation byte-for-byte unchanged
+and its interface as it was. Potentials, orbit integration, the
+action--angle transformations and their inverses, and the distribution
+functions, including those of tidal streams, accept the arrays of either
+framework and return derivatives with respect to their inputs and
+parameters. The existing test suite of \galpy, now 4,275 tests, passes
+under \numpy, under both frameworks in eager mode, and under both with
+compilation, with six tests remaining as known exceptions, and the
+dedicated tests of the backend code add 8,585 more. Derivatives were
+tested against finite differences whose convergence is demonstrated,
+against the \cc\ variational equations, and against each other across
+the two frameworks; where \galpy\ implements a numerical method of its
+own, it was tested against \scipy\ and against arbitrary-precision
+references. The work also found and fixed about fifty defects in the
+\numpy\ and \cc\ code that had been there before.
+
+What this makes possible is the gradient-based fitting of dynamical
+models that \galpy\ already contains, with a likelihood whose derivative
+with respect to every parameter---of the potential, of the DF, of the
+orbits of the objects being modeled---costs a small multiple of the
+likelihood itself, and the use of these models as components of larger
+differentiable programs, such as neural networks that represent a
+potential or a DF, or a simulation whose output is compared with data.
+The speed-ups that a GPU provides, of one to three orders of magnitude
+for large batches, are a second benefit, and one that depends on
+keeping the computation on the device by compiling it as a whole.
+Fitting a stream model to data with a Hamiltonian Monte Carlo sampler,
+which the derivatives of \sectionname~\ref{sec:streams} allow, is the
+obvious next application and will be presented separately.
+
+Some things are not done. The torus-mapping code is not covered and will
+not be. \astropy\ units cannot be used inside compiled programs. The
+construction of the quasi-isothermal disk DF and of the stream-gap model
+are \numpy\ computations, as are the variational equations and Lyapunov
+exponents, which are features of the \cc\ integrators. Derivatives
+through the \cc\ integrators and the \cc\ action--angle methods are with
+respect to the initial conditions only and of first order. And a
+backend is a moving target: the special-function fallbacks exist
+because the frameworks' own versions are incomplete today, and the test
+that checks this will say when they are no longer needed.
+
+The code described here is part of \galpy's main branch from version
+\flag{v1.13} on %TODO(JB): version
+and is installed with \texttt{pip install galpy[jax]} or
+\texttt{galpy[torch]}; the documentation describes the backends at
+\\ \centerline{\url{https://docs.galpy.org}~.} All code used to produce
+the figures in this paper, together with the working notes and logs of
+the development, is available at
+\\ \centerline{\url{https://github.com/jobovy/galpy-jax}~.}

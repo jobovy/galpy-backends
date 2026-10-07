@@ -365,3 +365,11 @@ Format: `key` -- how -- URL(s) -- description (for use in the text).
   Describes the three phases of gap growth in subhalo-stream encounters.
 - `Pearson2017` -- C -- https://api.crossref.org/works/10.1038/s41550-017-0220-3  
   Shows that gaps and length asymmetry in Pal 5 can arise from the rotating Galactic bar.
+
+## Additions of 2026-10-07 (third pass, by the coordinator)
+
+Verified by DOI through the Crossref API (`https://api.crossref.org/works/<doi>`):
+- `Shu1969` 10.1086/150214 — ApJ 158, 505; the Shu disk DF.
+- `Dehnen1999` 10.1086/301010 — AJ 118, 1201 (not MNRAS); the Dehnen disk DF.
+- `Evans1997` 10.1093/mnras/286.2.315 — MNRAS 286, 315, Evans, Häfner & de Zeeuw; the scale-free (power-law) models referenced by galpy's HISTORY for the analytic power-law spherical DFs (the exact reference galpy intends should be confirmed in the galpy docs).
+- `Galassi2009` — GSL manual, ISBN 0954612078, as in the galpy paper's bibliography.

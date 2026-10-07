@@ -1,0 +1,32 @@
+{
+  "backend": "galax",
+  "device": "gpu",
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "solver": "Dopri8",
+  "stepping": "per-orbit (vmap of single-orbit solve; NOT galax's native batched mode)",
+  "results": [
+    {
+      "N": 1000,
+      "wall_s": 1.9237434109672904,
+      "per_orbit_ms": 1.9237434109672904
+    },
+    {
+      "N": 10000,
+      "wall_s": 2.063001022208482,
+      "per_orbit_ms": 0.2063001022208482
+    },
+    {
+      "N": 100000,
+      "wall_s": 2.9585499176755548,
+      "per_orbit_ms": 0.029585499176755545
+    },
+    {
+      "N": 300000,
+      "wall_s": 7.393390796147287,
+      "per_orbit_ms": 0.02464463598715762
+    }
+  ]
+}
