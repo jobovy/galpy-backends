@@ -409,7 +409,7 @@ def make():
                   "(c) the 5-point central FD converges onto AD\n"
                   r"($\propto h^4$) down to its round-off floor", **_ts)
     ax3.legend(fontsize=_fl(6.0), ncol=2, framealpha=0.92, loc="upper center")
-    ax3.grid(True, which="both", alpha=0.25)
+    ax3.grid(True, alpha=0.25)
 
     # (d) the fit in the (sigma, amp) plane
     _plot_fit(fig, ax4, data["fit"])

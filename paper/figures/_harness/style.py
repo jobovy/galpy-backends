@@ -50,7 +50,8 @@ def apply_style():
             "ytick.labelsize": 9,
             "axes.prop_cycle": mpl.cycler(color=PALETTE),
             "axes.grid": True,
-            "grid.alpha": 0.3,
+            "grid.alpha": 0.25,
+            "axes.grid.which": "major",
             "lines.linewidth": 1.6,
             "pdf.fonttype": 42,  # embed TrueType -> portable, reproducible bytes
             "ps.fonttype": 42,

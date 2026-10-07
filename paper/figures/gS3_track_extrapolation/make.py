@@ -233,7 +233,7 @@ def make():
     ax2.set_title("(b) shift and residual" if PAPER
                   else f"one AD pass removes {frac.min():.0f}-{frac.max():.0f}% of the shift", **_ts)
     ax2.legend(fontsize=_fs_leg, framealpha=0.92, loc="upper left")
-    ax2.grid(True, which="both", alpha=0.25)
+    ax2.grid(True, alpha=0.25)
     ax2.set_ylim(bottom=0.6 * errs.min())  # room for the lowest "%" callout
     if PAPER:  # plain ticks at the measured |dq| (the auto log labels overlap)
         ax2.set_xticks(dqs)

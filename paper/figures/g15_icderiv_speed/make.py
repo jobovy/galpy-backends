@@ -147,7 +147,7 @@ def make():
     ax2.set_xlabel("number of orbits  N")
     ax2.set_ylabel("IC-gradient wall-clock  [ms]")
     ax2.set_title("(b) batch scaling" if PAPER else "(b) batch scaling of the IC-gradient")
-    ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
+    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
     lo, hi = ax2.get_xlim()
     ax2.set_xlim(lo, hi * 1.5)
     # the C-STM line ends mid-plot: label it in the empty region below, not in the

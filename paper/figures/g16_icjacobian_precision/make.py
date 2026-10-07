@@ -80,7 +80,7 @@ def make():
         ax2.legend(fontsize=fs_leg, loc="upper left")
     else:
         ax2.legend(fontsize=fs_leg, loc="best")
-    ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
+    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
 
     if not PAPER:
         fig.suptitle(r"$\partial x(t)/\partial x_0$: autodiff $=$ the C state-transition "

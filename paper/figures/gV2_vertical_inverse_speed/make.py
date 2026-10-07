@@ -528,7 +528,7 @@ def make():
                        % (data["nang_vmap"], data["nang_vmap"]), fontsize=8)
         axa.set_title(rf"(a) evaluation: xvFreqs($J={data['J']:g}$, angles)")
     axa.set_ylabel("wall time per call (s)")
-    axa.grid(True, which="both", alpha=0.25)
+    axa.grid(True, alpha=0.25)
 
     nEs = numpy.asarray(data["nEs"], dtype=float)
     for src, override in srcs:
@@ -556,7 +556,7 @@ def make():
     axb.set_title("(b) construction" if PAPER
                   else r"(b) construction (setup_interp=True, mm_npt=40)")
     axb.set_ylim(top=axb.get_ylim()[1] * (3.0 if PAPER else 8.0))
-    axb.grid(True, which="both", alpha=0.25)
+    axb.grid(True, alpha=0.25)
     if not PAPER:
         env = data.get("env", {})
         cpu_env = env.get("cpu_run", {})

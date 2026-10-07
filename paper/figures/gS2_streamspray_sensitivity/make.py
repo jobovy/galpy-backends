@@ -163,7 +163,7 @@ def make():
     ax2.set_title("(b) FD convergence to AD" if PAPER
                   else "the FD converges onto the AD value")
     ax2.legend(fontsize=7, framealpha=0.92)
-    ax2.grid(True, which="both", alpha=0.25)
+    ax2.grid(True, alpha=0.25)
 
     fig.tight_layout()
     return fig

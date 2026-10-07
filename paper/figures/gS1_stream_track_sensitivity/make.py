@@ -190,7 +190,7 @@ def make():
         ax2.yaxis.set_minor_formatter(LogFormatterSciNotation(minor_thresholds=(2, 0.5)))
         ax2.tick_params(axis="y", which="minor", labelsize=9)
     ax2.legend(fontsize=_fs_leg, ncol=2, framealpha=0.92)
-    ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
+    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
 
     fig.tight_layout()
     return fig

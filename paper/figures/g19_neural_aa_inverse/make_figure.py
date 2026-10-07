@@ -70,7 +70,7 @@ def main():
         axl.set_ylim(lo, hi * 1e4)
     axl.legend(fontsize=_fl(8.5), loc="upper right" if PAPER else "best",
                **(dict(handlelength=1.2, handletextpad=0.4, borderaxespad=0.3) if PAPER else {}))
-    axl.grid(alpha=0.25, which="both")
+    axl.grid(alpha=0.25)
 
     # (c) inverse accuracy vs action
     axe.semilogy(dj["J_c"], dj["err_c"], "-o", color=JAX_C, ms=4, label="JAX")
@@ -80,7 +80,7 @@ def main():
                    else "RMS phase-space error vs numpy inverse")
     axe.set_title("(c) inverse accuracy" if PAPER else "(c) accuracy across the action range")
     axe.legend(fontsize=_fl(9))
-    axe.grid(alpha=0.25, which="both")
+    axe.grid(alpha=0.25)
 
     if not PAPER:
         fig.suptitle(

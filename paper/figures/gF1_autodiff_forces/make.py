@@ -122,12 +122,15 @@ def make():
     ax2.set_xscale("log"); ax2.set_ylim(1e-18, 1e-12)
     ax2.set_xlabel(r"$R$"); ax2.set_ylabel(r"$|{\rm AD}-{\rm exact}|\,/\,|{\rm exact}|$")
     ax2.set_title("(b) relative residual" if PAPER else "residual against the hand-coded force")
-    ax2.grid(True, which="both", ls=":", lw=0.5, alpha=0.5)
-    if PAPER:  # one legend for both panels, in (b)'s empty upper half
-        ax2.set_ylim(1e-18, 1e-10)
-        ax2.legend(fontsize=fs_leg, framealpha=0.92, loc="upper right")
-    else:  # duplicates the legend of (a)
-        ax2.legend(fontsize=fs_leg, framealpha=0.92, loc="upper right", ncol=2)
+    ax2.grid(True, ls=":", lw=0.5, alpha=0.5)
+    if PAPER:  # one legend for both panels, below them, clear of the data
+        ax2.set_ylim(1e-18, 1e-13)
+        h, l = ax1.get_legend_handles_labels()
+        fig.tight_layout(rect=(0.0, 0.13, 1.0, 1.0))
+        fig.legend(h, l, fontsize=fs_leg, loc="lower center", ncol=3, frameon=False,
+                   bbox_to_anchor=(0.5, 0.0))
+        return fig
+    ax2.legend(fontsize=fs_leg, framealpha=0.92, loc="upper right", ncol=2)  # duplicates (a)
 
     fig.tight_layout()
     return fig
