@@ -31,7 +31,7 @@ derivative that an inference loop uses when it adjusts the potential
 to match measured actions.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g18_actionangle_sensitivity/g18_actionangle_sensitivity.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g18_actionangle_sensitivity/g18_actionangle_sensitivity.pdf}
   \caption{Derivatives of actions in the isochrone potential. Left: the
     radial and vertical actions of an orbit as a function of its radial
     velocity (solid, left axis) and their derivatives with respect to
@@ -64,7 +64,28 @@ def jr_of_a(a):
 djr_da= jax.grad(jr_of_a)(0.5)
 \end{code}
 with the restriction that the derivative of the action integral is of
-first order only. The \cc\ path (\texttt{c=True}) is much faster for
+first order only. \figurename~\ref{fig:staeckelq} shows such a
+derivative, of the radial and vertical actions of a Sun-like orbit with
+respect to the flattening of a logarithmic halo, with the potential and
+the St\"{a}ckel transformation rebuilt from $q$ inside the differentiated
+function: the automatic derivative agrees with finite differences to
+$10^{-10}$, at the bottom of the finite-difference error curve, and once
+compiled it costs about a millisecond.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/gA1_staeckel_param_sensitivity/gA1_staeckel_param_sensitivity.pdf}
+  \caption{Derivatives of St\"{a}ckel actions with respect to a parameter
+    of the potential. (a) The radial and vertical actions of a Sun-like
+    orbit in a logarithmic halo as a function of its flattening $q$,
+    computed with \texttt{actionAngleStaeckel(c=False)} at fixed focal
+    length. (b) Their derivatives with respect to $q$ by \texttt{jax.grad}
+    (lines) and by central finite differences in which the potential and
+    the action--angle object are rebuilt (circles). (c) The relative
+    difference between the two at $q=0.9$ as a function of the
+    finite-difference step: the finite difference converges as $h^2$ onto
+    the automatic derivative until rounding error takes over below
+    $10^{-10}$.}\label{fig:staeckelq}
+\end{figure*} The \cc\ path (\texttt{c=True}) is much faster for
 small numbers of points and, on a backend, does more than before: the
 \cc\ code computes, along with the actions, frequencies, and angles,
 their Jacobian with respect to the five phase-space coordinates, and

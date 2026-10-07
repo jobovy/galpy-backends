@@ -254,7 +254,7 @@ selection, which is such a variable, reads a thread-local mirror while
 \torch\ is tracing.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}
   \caption{Cost and benefit of compilation for the radial force of a
     Plummer potential under \jax. Left: wall time of successive calls at
     $N=10^4$ and $10^6$ points on the TITAN~Xp and the H100; the first
@@ -265,7 +265,7 @@ selection, which is such a variable, reads a thread-local mirror while
 \end{figure*}
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g5_autodiff_overhead/g5_autodiff_overhead.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g5_autodiff_overhead/g5_autodiff_overhead.pdf}
   \caption{Cost of a derivative. Left: throughput of the Plummer
     potential (filled markers) and of its gradient with respect to the
     coordinates by reverse-mode automatic differentiation (open
@@ -318,7 +318,7 @@ of four to six. GPUs pay off when the data stay on the device across many
 operations, which is what a compiled program does.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g2_throughput/g2_throughput.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g2_throughput/g2_throughput.pdf}
   \caption{Throughput of the radial force of a Plummer potential as a
     function of the number of points per call. The left panel shows the
     development machine, with \numpy\ on the CPU and \jax\ and \torch\

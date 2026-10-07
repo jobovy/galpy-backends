@@ -51,7 +51,7 @@ distribution. \figurename~\ref{fig:streamdfspeed} summarizes these
 costs.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/gS1_stream_track_sensitivity/gS1_stream_track_sensitivity.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/gS1_stream_track_sensitivity/gS1_stream_track_sensitivity.pdf}
   \caption{Derivative of a \texttt{streamdf} track with respect to the
     flattening $q$ of a logarithmic halo. Left: the track in the
     meridional plane at $q=0.9$ and its first-order extrapolations to
@@ -68,7 +68,9 @@ costs.
     the number of track segments, on \numpy\ with the \cc\ integrators
     and on the backends, warm and including compilation (cold). (b)
     Sampling $N$ stars and (c) evaluating the DF at $N$ phase-space
-    points from the constructed model.}\label{fig:streamdfspeed}
+    points from the constructed model. Eager \jax\ on the TITAN~Xp
+    takes a nearly constant 10\,s per call from $N=10^5$ on, which the
+    compiled program and the H100 do not show.}\label{fig:streamdfspeed}%TODO: explain once the probe is run
 \end{figure*}
 
 A point about these derivatives is general enough to state here. A
@@ -129,7 +131,7 @@ stream costs about a millisecond per particle on a CPU under compiled
 microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}
   \caption{Predicting a stream's track in a different potential from one
     derivative. Left: the track of a 1500-particle \texttt{fardal15spraydf}
     stream after 4.5\,Gyr in a logarithmic halo with flattening

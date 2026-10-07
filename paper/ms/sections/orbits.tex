@@ -46,7 +46,7 @@ Jacobian of the integration, which converges quadratically to machine
 precision in a handful of iterations.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g7_orbit_sensitivity/g7_orbit_sensitivity.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g7_orbit_sensitivity/g7_orbit_sensitivity.pdf}
   \caption{Derivatives of an in-backend orbit integration. Left: the
     sensitivities $\partial R(t)/\partial R_0$, $\partial R(t)/\partial v_{R,0}$,
     $\partial z(t)/\partial z_0$, and $\partial z(t)/\partial v_{z,0}$ of an
@@ -101,7 +101,7 @@ not carry derivatives with respect to the parameters of the potential,
 which must come from the in-backend solve.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
   \caption{The derivative of an orbit with respect to its initial
     condition, four ways. For a Sun-like orbit in \texttt{MWPotential2014}
     integrated for 3\,Gyr, the left panel shows one element of the
@@ -167,7 +167,7 @@ regular orbit at the same energy decays as $\ln t/t$
 they do not run on the backends.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g10_lyapunov/g10_lyapunov.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g10_lyapunov/g10_lyapunov.pdf}
   \caption{Largest Lyapunov exponent from \texttt{Orbit.lyapunov}, as a
     running estimate against time. Left: a chaotic and a regular orbit
     in the H\'enon--Heiles potential at $E=1/8$; the shaded band is the
@@ -236,7 +236,7 @@ control that depends on which orbits happen to be in the batch. \galpy\
 keeps the per-orbit control.
 
 \begin{figure*}[t!]
-  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g15_icderiv_speed/g15_icderiv_speed.pdf}}
+  \includegraphics[width=\textwidth,clip=]{../figures/g15_icderiv_speed/g15_icderiv_speed.pdf}
   \caption{Cost of the derivative of an orbit with respect to its
     initial conditions, for a 2\,Gyr orbit in \texttt{MWPotential2014}.
     Left: wall time for a single orbit with the \cc\ variational
