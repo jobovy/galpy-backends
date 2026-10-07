@@ -204,8 +204,8 @@ The one-dimensional inverse transformation is shown in
 \figurename~\ref{fig:vinvspeed}. Evaluating the torus map at $N$ angles
 is fastest with \numpy\ for up to a few thousand angles, where the
 backends pay their per-call overhead; compiled \jax\ overtakes it near
-$N=10^4$ and is five times faster at $N=10^6$ on a single CPU core (2.0
-against 9.6\,s), and on the H100 the same evaluation takes 11\,ms. The
+$N=10^4$ %TODO: 1-core jax CPU re-measurement (the current jax CPU series used up to 72 threads)
+and on the H100 the same evaluation takes 11\,ms. The
 backends find the angle with the same safeguarded Newton iteration as
 \numpy, started at the requested angle. Constructing the map for a
 family of $n_E$ energies is faster on every backend than on \numpy, by
