@@ -13,6 +13,13 @@ costs ~1–1.5 ms per particle on the CPU with no fixed overhead — as fast as,
 faster than, the non-differentiable C path (~2.1 ms/particle) — while eager jax
 and eager torch carry ~6 s and ~12 s per-call floors from dispatching the
 adaptive-step loop, amortised only for N ≳ 10⁴. On the GPU the same code runs the
-particles in parallel [GPU numbers to be added]. Medians of 3 warm calls; CPU
+particles in parallel: the jitted jax sampler has a flat ~0.2–0.3 s floor on both
+GPUs; on the TITAN Xp (a consumer card with float64 at 1/32 rate) it turns linear
+past N ≈ 10⁴ (0.15 ms/particle at 10⁶), on an NVIDIA H100 only past ≈ 10⁵, reaching
+7 µs/particle at 10⁶ (7.2 s, ~20× faster than the TITAN). Eager torch on the H100
+has an ~11 s floor and reaches 22 µs/particle at 10⁶. Colour = backend × device
+(numpy black; jax sky blue / blue / navy and torch orange / vermillion / dark red
+for CPU / TITAN Xp / H100); jit solid, eager dashed. Medians of 3 warm calls; CPU
 series pinned to 4 cores of a Xeon E5-2697 v4 (a shared, heavily loaded machine,
-so absolute CPU times are inflated).
+so absolute CPU times are inflated); H100 series on Trillium (jax 0.11.2, torch
+2.14.1+cu130).

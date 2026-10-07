@@ -36,8 +36,8 @@ This figure measures what that costs and buys.
     the per-step cost of any model that rebuilds the DF when a parameter
     changes. Parameter: NFW/Hernquist scale a (eddingtondf, osipkovmerrittdf,
     constantbetadf with beta = -0.2) or King W0 (kingdf). Each (DF, backend)
-    runs in a FRESH subprocess: hatched = first call (for jax eager: per-op
-    compilation; for jax.jit: trace + XLA compile), solid = warm (median of
+    runs in a FRESH subprocess: outline = first call (for jax eager: per-op
+    compilation; for jax.jit: trace + XLA compile), filled = warm (median of
     re-calls with new parameter values -- same shapes, so jit does not
     recompile). torch is eager (torch.compile is not used; it does not run on the
     sm_61 GPU this paper uses).
@@ -52,6 +52,12 @@ OpenMP workers spin-wait against busy hyperthread siblings and the timings were
 5-15x slower and load-dependent (N = 1e5: 0.5 s at 4 threads vs 0.08 s at 1 on
 the loaded box; 0.03 s at 4 on a quiet one). Absolute CPU numbers vary with the
 box load by up to ~2x; the ratios between backends are the robust content.
+Colours/line styles: the shared palette (paper/figures/_harness/palette.py) --
+colour = framework x device (numpy black; jax sky blue / blue / navy and torch
+orange / vermillion / dark red for CPU / TITAN Xp / H100), jit solid, eager dashed;
+in (e) eager bars are white-hatched and the first call is the hollow outline. The
+H100 series (NVIDIA H100 80GB, Trillium; jax 0.11.2, torch 2.14.1+cu130) come from
+data/h100/gD3_spherical_df_speed.json, measured with the same script.
 GPU series are measured only when a GPU is visible: re-measure them with
 ``python paper/figures/gD3_spherical_df_speed/make.py --gpu`` (merges into the
 JSON), then ``python -m paper.figures._harness run gD3_spherical_df_speed``.
@@ -73,7 +79,7 @@ import numpy
 if __name__ == "__main__" and __package__ is None:  # subprocess worker / --gpu
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
-from paper.figures._harness import bench
+from paper.figures._harness import bench, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -88,15 +94,28 @@ _GPU_MODES = ["jax-gpu", "jax-gpu-jit", "torch-gpu"]
 _N_CONSTRUCT = 1000
 _P0 = {"eddingtondf (NFW)": 1.0, "osipkovmerrittdf": 1.0, "constantbetadf": 1.0, "kingdf": 5.0}
 
-_STYLE = {  # label, colour, linestyle, marker
-    "numpy": ("numpy (CPU)", "#000000", "-", "s"),
-    "jax": ("jax (CPU, eager)", "#56B4E9", "-", "^"),
-    "jax-jit": ("jax (CPU, jit)", "#009E73", "-.", "P"),
-    "torch": ("torch (CPU)", "#E69F00", "-", "v"),
-    "jax-gpu": ("jax (GPU, eager)", "#0072B2", "-", "o"),
-    "jax-gpu-jit": ("jax (GPU, jit)", "#CC79A7", "-.", "D"),
-    "torch-gpu": ("torch (GPU)", "#D55E00", "-", "o"),
+# mode -> (framework, device, mode); colours/line styles from the shared palette
+# (paper/figures/_harness/palette.py). H100 twins of the GPU modes come from
+# data/h100/ (same script on an NVIDIA H100, Trillium).
+_MODES = {
+    "numpy": ("numpy", "cpu", None),
+    "jax": ("jax", "cpu", "eager"),
+    "jax-jit": ("jax", "cpu", "jit"),
+    "torch": ("torch", "cpu", "eager"),
+    "jax-gpu": ("jax", "gpu", "eager"),
+    "jax-gpu-jit": ("jax", "gpu", "jit"),
+    "torch-gpu": ("torch", "gpu", "eager"),
 }
+_JSON_H100 = os.path.join(_DATA, "h100", "gD3_spherical_df_speed.json")
+
+
+def _runs(mode, data, h100):
+    """(record source, device) pairs to draw for ``mode``: TITAN [+ H100]."""
+    dev = _MODES[mode][1]
+    out = [(data, dev)]
+    if dev == "gpu" and h100 is not None:
+        out.append((h100, "h100"))
+    return out
 
 
 # ------------------------------------------------------------------ helpers ---
@@ -391,6 +410,7 @@ def _fmt(t):
     description="spherical-DF speed: sample(n=N) wall time vs N for four DFs and DF construction (+first 1000 draws) time, numpy vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
 )
 def make():
+    import matplotlib
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
     from matplotlib.patches import Patch
@@ -400,20 +420,26 @@ def make():
             data = json.load(fh)
     else:
         data = _measure()
+    h100 = None
+    if os.path.exists(_JSON_H100):
+        with open(_JSON_H100) as fh:
+            h100 = json.load(fh)
     Ns = numpy.array(data["Ns"], dtype=float)
     order = _CPU_MODES + _GPU_MODES
 
-    fig = plt.figure(figsize=(13.6, 8.2))
-    gs = GridSpec(2, 4, figure=fig, height_ratios=[1.0, 1.0], hspace=0.42, wspace=0.08)
+    fig = plt.figure(figsize=(14.6, 8.4))
+    gs = GridSpec(2, 4, figure=fig, height_ratios=[1.0, 1.0], hspace=0.42, wspace=0.08,
+                  left=0.06, right=0.86, top=0.95, bottom=0.12)
     axs = [fig.add_subplot(gs[0, i]) for i in range(4)]
     for i, (ax, name) in enumerate(zip(axs, _SAMPLE_DFS)):
-        ser = data["sample"].get(name, {})
         for mode in order:
-            if mode not in ser:
-                continue
-            lab, col, ls, mk = _STYLE[mode]
-            ax.loglog(Ns, numpy.array(ser[mode], dtype=float), ls=ls, marker=mk, ms=3.5,
-                      color=col, label=lab)
+            fw, _, md = _MODES[mode]
+            for d, dev in _runs(mode, data, h100):
+                ser = d["sample"].get(name, {})
+                if mode not in ser:
+                    continue
+                ax.loglog(Ns, numpy.array(ser[mode], dtype=float), ms=3.5,
+                          label=palette.label(fw, dev, md), **palette.style(fw, dev, md))
         for rate in (1e5, 1e6, 1e7, 1e8):
             ax.plot(Ns, Ns / rate, ":", lw=0.7, color="0.8", zorder=0)
         ax.set_ylim(3e-5, 200)
@@ -425,27 +451,37 @@ def make():
             ax.tick_params(labelleft=False)
     axs[0].text(0.03, 0.97, "dotted: $10^5$..$10^8$ particles/s", transform=axs[0].transAxes,
                 fontsize=6.5, color="0.5", va="top")
-    axs[-1].legend(fontsize=6.8, loc="lower right", framealpha=0.92)
 
+    # (e) bars: colour = backend x device; filled = warm (white-hatched = eager, the
+    # bar analogue of a dashed line); hollow outline = first call in a fresh process
     ax = fig.add_subplot(gs[1, :])
-    modes = [m for m in order if any(m in data["construct"].get(d, {}) for d in _CONSTRUCT_DFS)]
-    nm = len(modes)
-    w = 0.8 / nm
+    bars = []  # (mode, source, device)
+    for mode in order:
+        for d, dev in _runs(mode, data, h100):
+            if any(mode in d["construct"].get(dn, {}) for dn in _CONSTRUCT_DFS):
+                bars.append((mode, d, dev))
+    nm = len(bars)
+    w = 0.86 / nm
     for g, dname in enumerate(_CONSTRUCT_DFS):
-        rec = data["construct"].get(dname, {})
-        for j, mode in enumerate(modes):
+        for j, (mode, d, dev) in enumerate(bars):
+            rec = d["construct"].get(dname, {})
             if mode not in rec:
                 continue
+            fw, _, md = _MODES[mode]
+            col = palette.style(fw, dev, md)["color"]
+            eager = md == "eager"
             x = g + (j - (nm - 1) / 2.0) * w
             first, warm = rec[mode]["first"], rec[mode]["warm"]
-            col = _STYLE[mode][1]
-            ax.bar(x, first, w * 0.92, color="none", edgecolor=col, hatch="////", lw=0.8)
-            ax.bar(x, warm, w * 0.92, color=col, edgecolor="k", lw=0.4)
+            ax.bar(x, first, w * 0.92, color="none", edgecolor=col, lw=1.0)
+            ax.bar(x, warm, w * 0.92, color=col, edgecolor="w", hatch="////" if eager else None, lw=0)
+            ax.bar(x, warm, w * 0.92, color="none", edgecolor="k", lw=0.4)
             if numpy.isfinite(warm):
-                ax.text(x, warm * 0.8, _fmt(warm), ha="center", va="top", fontsize=5.6,
-                        rotation=90, color="w" if mode in ("numpy", "jax-gpu", "jax-gpu-jit", "torch-gpu", "jax-jit") else "k")
+                rgb = matplotlib.colors.to_rgb(col)
+                dark = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) < 0.5
+                ax.text(x, warm * 0.8, _fmt(warm), ha="center", va="top", fontsize=5.2,
+                        rotation=90, color="w" if dark else "k")
             if numpy.isfinite(first):
-                ax.text(x, first * 1.15, _fmt(first), ha="center", va="bottom", fontsize=5.6,
+                ax.text(x, first * 1.15, _fmt(first), ha="center", va="bottom", fontsize=5.2,
                         rotation=90, color="0.35")
     ax.set_yscale("log")
     ax.set_xticks(range(len(_CONSTRUCT_DFS)))
@@ -453,22 +489,32 @@ def make():
     ax.set_xlim(-0.5, len(_CONSTRUCT_DFS) - 0.5)
     ax.set_ylabel("construct + first %d draws  (s)" % data.get("n_construct", _N_CONSTRUCT))
     ax.set_title("(e) DF construction (f(E)/f(Q) inversion or King ODE + sampling tables): "
-                 "hatched = first call in a fresh process, solid = warm", fontsize=10)
-    handles = [Patch(facecolor=_STYLE[m][1], edgecolor="k", label=_STYLE[m][0]) for m in modes]
-    handles.append(Patch(facecolor="none", edgecolor="0.3", hatch="////", label="first call"))
-    ax.legend(handles=handles, fontsize=7, ncol=len(handles), loc="upper center",
+                 "filled = warm (hatched = eager), outline = first call in a fresh process",
+                 fontsize=10)
+    handles = []
+    for mode, d, dev in bars:
+        fw, _, md = _MODES[mode]
+        handles.append(Patch(facecolor=palette.style(fw, dev, md)["color"], edgecolor="w",
+                             hatch="////" if md == "eager" else None, label=palette.label(fw, dev, md)))
+    handles.append(Patch(facecolor="none", edgecolor="0.3", label="first call (outline)"))
+    ax.legend(handles=handles, fontsize=7, ncol=6, loc="upper center",
               bbox_to_anchor=(0.5, -0.1), framealpha=0.92)
-    lo = min(v[m]["warm"] for v in data["construct"].values() for m in v
-             if numpy.isfinite(v[m]["warm"]))
-    hi = max(v[m]["first"] for v in data["construct"].values() for m in v
-             if numpy.isfinite(v[m]["first"]))
+    recs = [r[m] for src in ([data] + ([h100] if h100 else [])) for r in src["construct"].values()
+            for m in r]
+    lo = min(r["warm"] for r in recs if numpy.isfinite(r["warm"]))
+    hi = max(r["first"] for r in recs if numpy.isfinite(r["first"]))
     ax.set_ylim(lo / 4.0, hi * 12.0)
     env = data.get("env", {})
+    eg, eh = data.get("env_gpu", {}), (h100 or {}).get("env_gpu", {})
     fig.text(0.995, 0.005,
-             f"CPU: {env.get('cpu', '?')} ({env.get('cpu_affinity', '?')} cores) · "
-             f"GPU: {data.get('env_gpu', {}).get('gpu', 'none')} · numpy {env.get('numpy', '?')} · "
-             f"jax {env.get('jax', '?')} · torch {env.get('torch', '?')} · float64",
+             f"CPU: {env.get('cpu', '?')} ({env.get('cpu_affinity', '?')} cores): numpy {env.get('numpy', '?')} · "
+             f"jax {env.get('jax', '?')} · torch {env.get('torch', '?')}  |  "
+             f"{eg.get('gpu', 'no GPU')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
+             + (f"  |  {eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
+             + "  ·  float64",
              fontsize=6, color="0.5", ha="right", va="bottom")
+    # the four sampling panels share their series: label them once, beside (d)
+    palette.label_lines(axs[-1], fontsize=6.5)
     return fig
 
 

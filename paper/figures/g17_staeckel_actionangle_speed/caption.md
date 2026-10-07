@@ -6,6 +6,8 @@ size N, for the compiled C path and the now-vectorised, differentiable c=False
 path under numpy/jax/torch on CPU and an NVIDIA TITAN Xp. MWPotential2014,
 δ=0.45, GL order 10; median of repeated calls with backend warmup + device sync.
 
+Plotted as two figures (`_jax`, `_torch`), each with the C/numpy reference lines. Colour encodes framework and device (galpy C grey, numpy black, jax sky blue/blue/navy and torch orange/vermillion/dark red for CPU/TITAN Xp/H100); jitted series are solid, eager ones dashed, eager-with-host↔device-transfer dotted, and the old per-object numpy loop is dotted black; lines are labelled directly. H100 lines (Trillium) appear when `data/h100/g17_staeckel_actionangle_speed.json` exists.
+
 ## Headline numbers (this machine; timings are machine-dependent)
 | backend | N=1 | N=10³ | N=10⁵ |
 |---|---|---|---|

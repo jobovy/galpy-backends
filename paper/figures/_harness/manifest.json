@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "4b4e803",
-    "sha256": "b6c615eb78ab9262656bf91d4719fe25eba12fcf030ae8928aff0a89ba656958",
+    "git": "964e800",
+    "sha256": "e5bd9ea3ce40b1f3539d3a2e265ac2f3d58bde278603b16a9f5bc88c7992b1dd",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -99,7 +99,7 @@
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "5fc401dc6",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "cdb1ccf",
-    "sha256": "1862a333e49abc57d162ed4697125562e7ad52d1a6ce7bce41d4910048eaf7a2",
+    "git": "964e800",
+    "sha256": "b02e72ae0dc6ea277ba495a67b4731bdec122fa6329ca76c1483317680bd329e",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -131,7 +131,7 @@
     "description": "Staeckel actionsFreqsAngles throughput vs N -- jax (eager vs jit, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -139,15 +139,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "41dafeb",
-    "sha256": "dcad3c99661c1fca58f834e237f8dde9fff3a82e24bd5cb25cb0e30ba0edc9e6",
+    "git": "964e800",
+    "sha256": "d7987a66358097c613c7ec215d00a68d8c7ad28421e087f6120eb5187f9fc347",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_torch": {
     "description": "Staeckel actionsFreqsAngles throughput vs N -- torch (eager, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -155,8 +155,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "41dafeb",
-    "sha256": "f075dfd9223e072873922241e3d8fced8f67f1cb637668018ddb2eab051622f0",
+    "git": "964e800",
+    "sha256": "17296440c82e43afe2d23a8e0edeeffd6159989c07b453567497ea175b2d91b0",
     "track": "G"
   },
   "g18_actionangle_sensitivity": {
@@ -195,7 +195,7 @@
     "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU), compute-only vs end-to-end transfer [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -203,8 +203,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "87202e3",
-    "sha256": "508776c6c3aea2e8ffc64e1f3cd3d66f1f49bb21998fde4fbed5210950f8358e",
+    "git": "964e800",
+    "sha256": "c21b2aa39af71b9dab2ccbd062a7d4595a77fe8a796e0a3530c5cbce3a581ca7",
     "track": "G"
   },
   "g2b_transfer": {
@@ -242,7 +242,7 @@
     "description": "gradient vs value throughput (reverse-mode AD overhead), jax/torch GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -250,15 +250,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "87202e3",
-    "sha256": "456ad50fd4c41bae78372cf9ac9fcd17b2b16cb2f884265109fa651741c53bc1",
+    "git": "964e800",
+    "sha256": "439f96cf7a67caefe294cb12d9659a6de4383d59315de4680b56d584e074204c",
     "track": "G"
   },
   "g6_jit_amortization": {
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "809f4e460",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -266,8 +266,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "87202e3",
-    "sha256": "4f5d7756b7e5150076e02c817330b3ba519a6ab16ea373c386cebb25a22d3c05",
+    "git": "964e800",
+    "sha256": "00adf71f2b0b35b52d8343b1549c6945a2894358b0b7dbfaa7b992cfdd348c75",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -298,8 +298,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "4b4e803",
-    "sha256": "b084c3aa71dce6e607e028cf8a516702f5dc832353d837fbb82c73090d5c638e",
+    "git": "964e800",
+    "sha256": "98a5bb9f25bee07a9b556b7152927579293e7c94e3703703bb6951e656aa52fd",
     "track": "G"
   },
   "g9_variational_validity": {
@@ -354,7 +354,7 @@
     "description": "spherical-DF speed: sample(n=N) wall time vs N for four DFs and DF construction (+first 1000 draws) time, numpy vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "a3300d5a0",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -362,8 +362,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "3034e39",
-    "sha256": "165b2470a39a2fffc9f8c7ce753258e417340d694eb079308c5f1882c02bc8fd",
+    "git": "964e800",
+    "sha256": "6b19bc7093e43bc75c3818dd66b581b4b8ed1ce767a90151a2ac69e710954568",
     "track": "F"
   },
   "gD4_spherical_df_param": {
@@ -458,15 +458,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "cc6c98c",
-    "sha256": "0b7fa382fc8a29354ffa52d3e2b3f5b6a13bf90513a098047fa78b5c86b4d050",
+    "git": "964e800",
+    "sha256": "1d9adc9bd5d127f0a0daa6f8803fbb1dcd60c40b29a710c38e00a9580af68a78",
     "track": "S"
   },
   "gS5_streamspray_speed": {
     "description": "particle-spray stream generation (fardal15spraydf.sample) wall time and per-particle cost vs N: numpy/C vs differentiable jax (eager/jit) and torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "a3300d5a0",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "3034e39",
-    "sha256": "a3da1501517f143f3811c2f77a6b3ac370ea4039c6faffa4ac8fd643a3c06baa",
+    "git": "964e800",
+    "sha256": "8d0a279cd75fe603144918b533b387db0b803e8415ace6ba3ef667e6e34c5960",
     "track": "S"
   },
   "gV1_vertical_inverse": {
@@ -498,7 +498,7 @@
     "description": "actionAngleVerticalInverse speed: xvFreqs evaluation wall time vs N angles (numpy, jax eager/jit/vmap, torch; CPU & GPU) and family construction time vs nE [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "a3300d5a0",
+      "galpy_git": "9f6c9d6f7",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -506,8 +506,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "3034e39",
-    "sha256": "501554476e8cfcbde6fd9594ef9f2cb80e7f97fd5cdd28f827879d84fe46e84f",
+    "git": "964e800",
+    "sha256": "b0ab51c4139ac25670a1b7f77141ae29e858f8fc7b71100f53857ed9a15adcc0",
     "track": "E"
   }
 }

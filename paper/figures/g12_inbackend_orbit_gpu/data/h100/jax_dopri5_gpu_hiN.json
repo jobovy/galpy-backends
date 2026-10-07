@@ -1,0 +1,43 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "diffrax Dopri5 (in-backend; same-work match to torch dopri5)",
+  "stepping": "per-orbit adaptive (vmap-of-solve)",
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "trig0028",
+  "results": [
+    {
+      "N": 1000,
+      "wall_s": 1.4031017600791529,
+      "per_orbit_ms": 1.4031017600791529,
+      "compile_run_s": 2.549564060056582
+    },
+    {
+      "N": 10000,
+      "wall_s": 1.5937173450365663,
+      "per_orbit_ms": 0.15937173450365663,
+      "compile_run_s": 2.8152095129480585
+    },
+    {
+      "N": 100000,
+      "wall_s": 2.5352481540758163,
+      "per_orbit_ms": 0.025352481540758164,
+      "compile_run_s": 3.463496818090789
+    },
+    {
+      "N": 300000,
+      "wall_s": 5.467539392062463,
+      "per_orbit_ms": 0.018225131306874878,
+      "compile_run_s": 6.473159958026372
+    }
+  ],
+  "jax_version": "0.11.2",
+  "diffrax_version": "0.7.2",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.5.3",
+  "gpu": "NVIDIA H100 80GB HBM3"
+}

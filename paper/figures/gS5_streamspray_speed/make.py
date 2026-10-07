@@ -42,7 +42,8 @@ What runs on each backend is DIFFERENT, and that is the point of the figure:
         small kernels. CPU torch runs with ONE intra-op thread: for these small
         kernels 4 threads only add barrier syncs (N=1000: 17 s with 1 thread vs
         38 s with 4, and 165-200 s with 4 under heavier contention).
-  * GPU series (TITAN Xp): the same jax/torch code with the spdf built on the
+  * GPU series (TITAN Xp, and NVIDIA H100 80GB on Trillium: data/h100/, same
+    script, jax 0.11.2 / torch 2.14.1+cu130): the same jax/torch code with the spdf built on the
     device (jax.default_device / a torch.device('cuda') context, which is how
     galpy's own --device cuda test mode places torch work); sync via
     block_until_ready / cuda.synchronize.
@@ -63,6 +64,18 @@ floor (per-call overhead of the un-jitted sampler around the diffrax solve) that
 has a ~12 s floor (the adaptive-step loop is dispatched from Python) and
 ~7 ms/particle at 10^4. The compile of the jitted sampler (excluded) is ~36-50 s
 per shape up to N=10^4 (stored in the JSON).
+
+GPU: the jitted jax sampler has a flat ~0.2-0.3 s floor on both GPUs; on the
+TITAN Xp (float64 at 1/32 rate) it turns linear past N~10^4 (0.15 ms/particle at
+10^6, 149 s), on the H100 only past ~10^5 (7 us/particle at 10^6: 7.2 s, ~20x
+the TITAN). Eager floors: jax ~9-10 s (TITAN) / ~3.5-4 s (H100); torch ~30-45 s
+(TITAN) / ~11-14 s (H100), torch reaching 22 us/particle at 10^6 on the H100.
+The jit compile (excluded) is 24-184 s on the TITAN box and 5-15 s on the H100
+node (a faster host CPU).
+
+Colours/line styles: the shared palette (paper/figures/_harness/palette.py) --
+colour = framework x device (numpy black; jax sky blue / blue / navy and torch
+orange / vermillion / dark red for CPU / TITAN Xp / H100), jit solid, eager dashed.
 
 CAVEAT: the CPU numbers were measured on a heavily shared machine (load average
 ~65-150 on 72 logical CPUs, other users' threads running on the same 4 pinned
@@ -88,7 +101,7 @@ import sys
 
 import numpy
 
-from paper.figures._harness import bench
+from paper.figures._harness import bench, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -104,16 +117,19 @@ _TSTOP = 60.0  # stop a series once one call exceeds this (s)
 _SEED = 20261005
 _TORCH_CPU_THREADS = 1
 
-_STYLE = {  # colour, linestyle, marker
-    "numpy (CPU, C)": ("#000000", "-", "s"),
-    "jax (CPU, eager)": ("#56B4E9", "--", "^"),
-    "jax (CPU, jit)": ("#56B4E9", "-", "P"),
-    "torch (CPU, eager)": ("#E69F00", "--", "v"),
-    "jax (GPU, eager)": ("#0072B2", "--", "o"),
-    "jax (GPU, jit)": ("#0072B2", "-", "D"),
-    "torch (GPU, eager)": ("#D55E00", "--", "o"),
+# series name in the JSON -> (framework, device, mode, label suffix); colours and
+# line styles from the shared palette (paper/figures/_harness/palette.py)
+_SERIES = {
+    "numpy (CPU, C)": ("numpy", "cpu", None, "C integrator"),
+    "jax (CPU, eager)": ("jax", "cpu", "eager", ""),
+    "jax (CPU, jit)": ("jax", "cpu", "jit", ""),
+    "torch (CPU, eager)": ("torch", "cpu", "eager", ""),
+    "jax (GPU, eager)": ("jax", "gpu", "eager", ""),
+    "jax (GPU, jit)": ("jax", "gpu", "jit", ""),
+    "torch (GPU, eager)": ("torch", "gpu", "eager", ""),
 }
-_ORDER = list(_STYLE)
+_ORDER = list(_SERIES)
+_JSON_H100 = os.path.join(_DATA, "h100", "gS5_streamspray_speed.json")
 
 
 def _env(torch, jax):
@@ -339,30 +355,41 @@ def make():
     import matplotlib.pyplot as plt
 
     data = _data()
-    Ns = numpy.asarray(data["Ns"], dtype=float)
-    series = data["series"]
+    h100 = None
+    if os.path.exists(_JSON_H100):
+        with open(_JSON_H100) as fh:
+            h100 = json.load(fh)
     fig, (axw, axp) = plt.subplots(1, 2, figsize=(10.4, 4.3))
     for name in _ORDER:
-        if name not in series:
-            continue
-        t = numpy.asarray(series[name], dtype=float)
-        if not numpy.any(numpy.isfinite(t)):
-            continue
-        col, ls, mk = _STYLE[name]
-        axw.loglog(Ns, t, color=col, ls=ls, marker=mk, ms=4, label=name, zorder=3)
-        axp.loglog(Ns, 1e3 * t / Ns, color=col, ls=ls, marker=mk, ms=4, label=name, zorder=3)
+        fw, dev, mode, extra = _SERIES[name]
+        runs = [(data, dev)]
+        if dev == "gpu" and h100 is not None:
+            runs.append((h100, "h100"))
+        for d, dv in runs:
+            if name not in d["series"]:
+                continue
+            Ns = numpy.asarray(d["Ns"], dtype=float)
+            t = numpy.asarray(d["series"][name], dtype=float)
+            if not numpy.any(numpy.isfinite(t)):
+                continue
+            st = palette.style(fw, dv, mode)
+            lab = palette.label(fw, dv, mode, extra)
+            axw.loglog(Ns, t, ms=4, label=lab, zorder=3, **st)
+            axp.loglog(Ns, 1e3 * t / Ns, ms=4, label=lab, zorder=3, **st)
     axw.set_xlabel(r"number of sprayed particles $N$")
     axw.set_ylabel(r"wall time for spdf.sample($N$)  (s)")
     axw.set_title("(a) wall time per call")
+    axw.set_ylim(top=2e3)  # headroom for the stamp
     axp.set_xlabel(r"number of sprayed particles $N$")
     axp.set_ylabel(r"cost per particle  (ms)")
     axp.set_title("(b) per-particle cost")
-    axp.legend(fontsize=7, loc="upper right", framealpha=0.92)
     ec, eg = data.get("env_cpu", {}), data.get("env_gpu", {})
+    eh = (h100 or {}).get("env_gpu", {})
     txt = (
         f"CPU: {ec.get('cpu', '?').replace('Intel(R) Xeon(R) CPU ', 'Xeon ')}"
-        f" ({ec.get('cpu_cores_used', '?')} cores)\nGPU: {eg.get('gpu', 'not measured')}\n"
-        f"jax {ec.get('jax', '?')} · torch {ec.get('torch', '?')}"
+        f" ({ec.get('cpu_cores_used', '?')} cores): jax {ec.get('jax', '?')} · torch {ec.get('torch', '?')}\n"
+        f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
+        + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
     )
     axw.text(0.03, 0.97, txt, transform=axw.transAxes, fontsize=6.0, color="0.45",
              va="top", ha="left")
@@ -370,6 +397,16 @@ def make():
         r"Particle-spray stream: fardal15spraydf.sample($N$), 4.5 Gyr of stripping "
         r"(numpy/C vs differentiable jax/torch)", y=0.99)
     fig.tight_layout(rect=[0, 0, 1, 0.96])
+    # direct labels on (b) (same lines as (a)); (a) carries the stamp
+    # the CPU lines end early (series stop at ~60 s/call): label them inline
+    inline = {
+        "torch CPU eager": (1e4, 8), "numpy (C integrator)": (1e3, 9),
+        "jax CPU eager": (1.5e5, 9), "jax CPU jit": (3e3, -9),
+    }
+    palette.label_lines(axp, inline=inline)
+    for t in axp.texts:
+        if t.get_text() in inline:
+            t.set_bbox(dict(fc="white", ec="none", alpha=0.85, pad=0.4))
     return fig
 
 

@@ -52,10 +52,10 @@
       "torchdiffeq_gpu": 9.027354997000657
     },
     "4096": {
-      "diffrax_cpu": 83.62051131599583,
-      "diffrax_gpu": 7.194425560068339,
-      "torchdiffeq_cpu": 9.717851814930327,
-      "torchdiffeq_gpu": 9.31499269104097
+      "diffrax_cpu": 91.22513315000106,
+      "diffrax_gpu": 6.890410098014399,
+      "torchdiffeq_cpu": 9.376486037042923,
+      "torchdiffeq_gpu": 9.43491232895758
     },
     "64": {
       "cstm_cpu": 0.8917750039836392,

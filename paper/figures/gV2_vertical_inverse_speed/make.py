@@ -45,6 +45,10 @@ construction). float64 throughout.
     op for the new shapes, for jit the full trace+compile (both one-time per
     shape); filled markers are warm calls.
 
+Plot: colours from _harness/palette.py (framework x device; jit solid, eager
+dashed, many-tori variants dash-dot), lines labelled directly. The GPU series
+re-measured on an H100 (data/h100/, Trillium) are drawn as extra lines.
+
 CPU threading: every CPU series is SINGLE-THREADED (OPENBLAS_NUM_THREADS=
 OMP_NUM_THREADS=1, torch.set_num_threads(1), XLA eigen/intra-op threads = 1).
 The measuring box is shared and was heavily oversubscribed (load average
@@ -78,11 +82,13 @@ import time
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import bench
+from paper.figures._harness import bench, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "gV2_vertical_inverse_speed.json")
+# the GPU series re-measured on an H100 (Trillium), drawn as extra lines
+_JSON_H100 = os.path.join(_DATA, "h100", "gV2_vertical_inverse_speed.json")
 
 _AMP, _SIG = 1.0, 0.5
 _EMIN, _EMAX = 0.05, 2.0
@@ -96,26 +102,44 @@ _NES = [8, 16, 32, 64, 128, 256]
 _SLOW = 5.0     # a call slower than this is timed once
 _STOP = 60.0    # a call slower than this ends its series
 
-_STYLE = {  # name: (colour, linestyle, marker)
-    "numpy (CPU)": ("#000000", "-", "s"),
-    "numpy (CPU, loop over tori)": ("#000000", "-.", "x"),
-    "jax (CPU, eager)": ("#56B4E9", "-", "^"),
-    "jax (CPU, jit)": ("#56B4E9", "--", "P"),
-    "jax (CPU, jit, vmap over tori)": ("#56B4E9", "-.", "D"),
-    "torch (CPU)": ("#E69F00", "-", "v"),
-    "jax (GPU, jit)": ("#0072B2", "--", "o"),
-    "jax (GPU, jit, vmap over tori)": ("#0072B2", "-.", "D"),
-    "torch (GPU)": ("#D55E00", "-", "o"),
+# palette.py: colour = framework x device; jit solid, eager dashed; the
+# many-tori variants (vmap / Python loop over tori) dash-dot.
+# name: (framework, mode, variant label or None)
+_SPEC = {
+    "numpy (CPU)": ("numpy", None, None),
+    "numpy (CPU, loop over tori)": ("numpy", None, "loop over tori"),
+    "jax (CPU, eager)": ("jax", "eager", None),
+    "jax (CPU, jit)": ("jax", "jit", None),
+    "jax (CPU, jit, vmap over tori)": ("jax", "jit", "vmap over tori"),
+    "torch (CPU)": ("torch", "eager", None),
+    "jax (GPU, eager)": ("jax", "eager", None),
+    "jax (GPU, jit)": ("jax", "jit", None),
+    "jax (GPU, jit, vmap over tori)": ("jax", "jit", "vmap over tori"),
+    "torch (GPU)": ("torch", "eager", None),
 }
-_CSTYLE = {  # construction series
-    "numpy (CPU)": ("#000000", "-", "s"),
-    "jax (CPU, eager)": ("#56B4E9", "-", "^"),
-    "jax (CPU, jit)": ("#56B4E9", "--", "P"),
-    "torch (CPU)": ("#E69F00", "-", "v"),
-    "jax (GPU, eager)": ("#0072B2", "-", "^"),
-    "jax (GPU, jit)": ("#0072B2", "--", "P"),
-    "torch (GPU)": ("#D55E00", "-", "o"),
-}
+_EVAL = ["numpy (CPU)", "numpy (CPU, loop over tori)", "jax (CPU, eager)", "jax (CPU, jit)",
+         "jax (CPU, jit, vmap over tori)", "torch (CPU)", "jax (GPU, jit)",
+         "jax (GPU, jit, vmap over tori)", "torch (GPU)"]
+_CONS = ["numpy (CPU)", "jax (CPU, eager)", "jax (CPU, jit)", "torch (CPU)",
+         "jax (GPU, eager)", "jax (GPU, jit)", "torch (GPU)"]
+
+
+def _style(name, dev):
+    fw, mode, var = _SPEC[name]
+    st = palette.style(fw, dev, mode)
+    if var:
+        st["ls"] = "-."
+        st["marker"] = "x" if fw == "numpy" else st["marker"]
+    return st, palette.label(fw, dev, mode, var or "")
+
+
+def _sources(data):
+    """[(data, device override)]: the main JSON, then the H100 GPU series."""
+    out = [(data, None)]
+    if os.path.exists(_JSON_H100):
+        with open(_JSON_H100) as fh:
+            out.append((json.load(fh), "h100"))
+    return out
 
 
 def _es(n):
@@ -418,56 +442,72 @@ def _nan(x):
 )
 def make():
     data = _data()
+    srcs = _sources(data)
     Ns = numpy.asarray(data["Ns"], dtype=float)
-    fig, (axa, axb) = plt.subplots(1, 2, figsize=(11.2, 4.6),
-                                   gridspec_kw={"width_ratios": [1.25, 1.0]})
-    for name, (col, ls, mk) in _STYLE.items():
-        if name not in data["eval"]:
-            continue
-        t = _nan(data["eval"][name])
-        x = (numpy.asarray(data["Ms"], dtype=float) * data["nang_vmap"]
-             if ("vmap" in name or "loop" in name) else Ns)
-        axa.loglog(x, t, ls=ls, marker=mk, ms=4, color=col, label=name, lw=1.4)
-    axa.set_ylim(5e-4, 400.0)
+    fig, (axa, axb) = plt.subplots(1, 2, figsize=(13.4, 5.0),
+                                   gridspec_kw={"width_ratios": [1.2, 1.0]})
+    for src, override in srcs:
+        for name in _EVAL:
+            if name not in src["eval"]:
+                continue
+            dev = palette.parse(name)[1]
+            if override:
+                if dev == "cpu":
+                    continue  # only the GPU series are re-measured on the H100
+                dev = override
+            st, lab = _style(name, dev)
+            t = _nan(src["eval"][name])
+            x = (numpy.asarray(src["Ms"], dtype=float) * src["nang_vmap"]
+                 if ("vmap" in name or "loop" in name) else numpy.asarray(src["Ns"], dtype=float))
+            axa.loglog(x, t, ms=3.5, label=lab, lw=1.3, **st)
+    axa.set_ylim(2e-4, 400.0)
     # constant cost-per-point references (1 us and 10 us per point)
     for us, lab in ((1e-6, r"1 $\mu$s/point"), (1e-5, r"10 $\mu$s/point")):
-        axa.plot(Ns, us * Ns, ":", color="0.75", lw=0.9, zorder=0)
-        axa.text(Ns[-1] / 1.3, us * Ns[-1] / 1.3, lab, fontsize=6, color="0.55",
-                 ha="right", va="top", rotation=0)
+        axa.plot(Ns, us * Ns, ":", color="0.75", lw=0.9, zorder=0, label="_ref")
     axa.set_xlabel(r"points per call $N$ (angles on one torus; vmap/loop: $N/%d$ tori $\times$ %d angles)"
                    % (data["nang_vmap"], data["nang_vmap"]), fontsize=8)
     axa.set_ylabel("wall time per call (s)")
     axa.set_title(rf"(a) evaluation: xvFreqs($J={data['J']:g}$, angles)")
-    axa.legend(fontsize=6.5, loc="upper left", framealpha=0.92)
     axa.grid(True, which="both", alpha=0.25)
 
     nEs = numpy.asarray(data["nEs"], dtype=float)
-    for name, (col, ls, mk) in _CSTYLE.items():
-        if name not in data["construct"]:
-            continue
-        c = data["construct"][name]
-        axb.loglog(nEs, _nan(c["warm"]), ls=ls, marker=mk, ms=4.5, color=col, lw=1.4,
-                   label=name)
-        if "first" in c:
-            axb.loglog(nEs, _nan(c["first"]), ls=":", marker=mk, ms=4.5, color=col,
-                       mfc="w", lw=0.9)
-    axb.plot([], [], ":", marker="o", mfc="w", color="0.4",
-             label="first call (eager: op compiles; jit: trace+compile)")
+    for src, override in srcs:
+        for name in _CONS:
+            if name not in src["construct"]:
+                continue
+            dev = palette.parse(name)[1]
+            if override:
+                if dev == "cpu":
+                    continue
+                dev = override
+            st, lab = _style(name, dev)
+            c = src["construct"][name]
+            axb.loglog(nEs, _nan(c["warm"]), ms=4, lw=1.3, label=lab, **st)
+            if "first" in c:
+                fst = dict(st, ls=":")
+                axb.loglog(nEs, _nan(c["first"]), ms=4, mfc="w", lw=0.8, label="_first", **fst)
+    axb.text(0.02, 0.98, "thin dotted, open markers: first call at each $n_E$\n"
+             "(eager jax: op compiles; jit: trace+compile)",
+             transform=axb.transAxes, fontsize=6.3, color="0.4", va="top", ha="left")
     axb.set_xlabel(r"number of energies $n_E$ in the family")
-    axb.set_ylabel("construction wall time (s)")
+    axb.set_ylabel("construction wall time (s) [warm]")
     axb.set_title(r"(b) construction (setup_interp=True, mm_npt=40)")
-    axb.set_ylim(top=axb.get_ylim()[1] * 25.0)
-    axb.legend(fontsize=6.5, loc="upper left", framealpha=0.92, ncol=2)
+    axb.set_ylim(top=axb.get_ylim()[1] * 8.0)
     axb.grid(True, which="both", alpha=0.25)
     env = data.get("env", {})
     cpu_env = env.get("cpu_run", {})
     gpu_env = env.get("gpu_run", cpu_env)
-    axa.text(0.98, 0.02,
-             f"CPU: {cpu_env.get('cpu', '?')}, 1 thread\n"
-             f"GPU: {gpu_env.get('gpu', cpu_env.get('gpu', 'none'))}\n"
-             f"jax {cpu_env.get('jax', '?')} · torch {cpu_env.get('torch', '?')} · float64",
-             transform=axa.transAxes, fontsize=5.8, color="0.45", ha="right", va="bottom")
-    fig.tight_layout()
+    stamp = (f"CPU: {cpu_env.get('cpu', '?')}, 1 thread\n"
+             f"{gpu_env.get('gpu', cpu_env.get('gpu', 'none'))}: jax {gpu_env.get('jax', '?')}"
+             f" · torch {gpu_env.get('torch', '?')}")
+    if len(srcs) > 1:
+        he = srcs[1][0].get("env", {}).get("gpu_run", {})
+        stamp += f"\n{he.get('gpu', 'H100')}: jax {he.get('jax', '?')} · torch {he.get('torch', '?')}"
+    axa.text(0.02, 0.98, stamp + "\nfloat64 · dotted grey: 1 and 10 $\\mu$s per point",
+             transform=axa.transAxes, fontsize=5.8, color="0.45", ha="left", va="top")
+    fig.tight_layout(w_pad=12.0)
+    palette.label_lines(axa, fontsize=6.2)
+    palette.label_lines(axb, fontsize=6.2)
     return fig
 
 

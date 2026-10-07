@@ -70,3 +70,25 @@ re-measured. Re-measured: max relerr 3.7e-3 (was 5.7e-6), rising once r < 0.06.
   in the fresh worktree (.so at 23:53, gate 23:52); rerun: 101 passed.
 - Timing chain on /var/tmp/figs = feat/backends 9f6c9d6f7 + #1634 + #1635 + #1636
   commits (cherry-picked), so jit timings include the brentq fix.
+
+## 2026-10-06 (evening): H100 fold-in, one palette, direct labels
+
+- H100 (Trillium) data from branch `gpu-h100` copied into `<fig>/data/h100/` and
+  `_shared/orbit_speed/data/h100/`; `benchmarks/gpu/results_h100/`. Every GPU series
+  with an H100 twin is drawn as an extra line (g2 g5 g6 g8 g12 gD3 gS4 gS5 gV2).
+  g15/g17 pick `data/h100/` up automatically when those stages run.
+- `_harness/palette.py`: one colour per framework x device (numpy black, C grey,
+  jax sky/blue/navy, torch orange/vermillion/dark red for CPU/TITAN Xp/H100, galax
+  green); jit solid, eager dashed; `label_lines` = direct labels in a right-hand
+  column. `style.BACKEND_COLORS` now derives from it. All 12 speed figures converted.
+- H100 vs TITAN Xp speed-ups: 8-12x for ODE stepping and eager torch (launch/
+  dispatch floors identical on both; g12's H100 line is not yet saturated at N=3e5),
+  30x for the bandwidth-bound Plummer force (g2: 1.7 TB/s = half the H100 peak),
+  30-40x for arithmetic-dense kernels (gV2 root-finding, gS4 DF evaluation).
+- **Load-corrupted this morning** (box at load ~190 during the CPU phase): g17 (all
+  series) and gV2's CPU series must be re-measured on an idle box. g17's torch GPU
+  series (NaN this morning: the GPU run lacked galpy #1639) were re-measured but at
+  load ~9; kept only as a placeholder.
+- **galpy regression found via g17**: numpy Staeckel `c=False` actionsFreqsAngles at
+  N=1e4 takes 26.4 s on an idle box vs 2.07 s in August (9ec5bd2); C unchanged.
+  ~13x, in the Python path. Bisect pending.

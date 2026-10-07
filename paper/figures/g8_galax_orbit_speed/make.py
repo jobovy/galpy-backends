@@ -30,7 +30,11 @@ The story (TITAN Xp, float64 at 1/32 rate): single-thread galpy-C, ~0.1 ms/orbit
 is the fastest line at every measured N; the JAX GPU backends amortise their ~1.6 s
 launch/compile floor down to ~0.07 ms/orbit (galax, batched stepping) and ~0.21
 ms/orbit (galpy in-backend, per-orbit stepping) at N=3e5, i.e. galax's batched GPU
-line only reaches C's per-orbit cost at the largest N.
+line only reaches C's per-orbit cost at the largest N.  On an H100 (Trillium,
+data/h100 of the shared orbit data; galpy's jax GPU line only -- galax was not run
+there) galpy's per-orbit in-backend line reaches ~0.025 ms/orbit at N=3e5 (~4x
+single-thread C, crossing it near N~2e4).  Line convention: _harness/palette.py
+(colour = framework x device, jit solid; galax per-orbit dash-dotted).
 The galpy-C numbers were re-measured on 2026-10-06 at ~0.1 ms/orbit; the first
 version of this figure (June) had ~2.1 ms/orbit, ~20x too slow -- a slow build in
 that environment (both a June-25 and the current galpy measure ~0.1 ms/orbit today).
@@ -52,6 +56,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -73,32 +78,36 @@ _SHARED = os.path.join(
 # the gap between the galax lines is the batched-stepping architecture.
 # The galpy series (galpy_c_*, jax_*) live in ../_shared/orbit_speed/data and are
 # shared byte-for-byte with G12; the galax series are local to G8.
+# (json files, framework, device, mode, label, line-style override); colours from
+# _harness/palette.py (galpy C grey, jax blue shades, galax green).
 _SERIES = [
-    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "galpy (C, CPU)", "#000000", "-", "o"),
-    (["galax_cpu.json"], "galax (JAX, CPU)", "#009E73", "--", "s"),
-    (["jax_cpu.json", "jax_cpu_hiN.json"], "galpy (JAX, CPU; per-orbit steps)", "#56B4E9", "--", "P"),
-    (["jax_gpu.json", "jax_gpu_hiN.json"], "galpy (JAX, GPU; per-orbit steps)", "#0072B2", "-", "^"),
-    (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax (JAX, GPU; per-orbit steps)", "#D55E00", "--", "v"),
-    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax (JAX, GPU; batched steps)", "#D55E00", "-", "D"),
+    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, "galpy C (dop853_c)", None),
+    (["galax_cpu.json"], "galax", "cpu", "jit", "galax CPU", None),
+    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "galpy jax CPU (per-orbit steps)", None),
+    (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "galpy jax {dev} (per-orbit steps)", None),
+    (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax", "gpu", "jit",
+     "galax {dev} (per-orbit steps)", "-."),
+    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "galax {dev} (batched steps)", None),
 ]
 
 
-def _load_one(fname):
+def _load_one(fname, sub=""):
     # shared galpy JSONs live in _shared/orbit_speed/data; galax JSONs are local.
+    # sub="h100": the same measurement on an H100 (data/h100/; galax not run there)
     for base in (_SHARED, _DATA):
-        path = os.path.join(base, fname)
+        path = os.path.join(base, sub, fname)
         if os.path.exists(path):
             with open(path) as fh:
                 return json.load(fh)
     return None
 
 
-def _load(fnames):
+def _load(fnames, sub=""):
     # merge results by N across the listed files (later files win on overlap)
     merged = {}
     meta = None
     for fname in fnames:
-        d = _load_one(fname)
+        d = _load_one(fname, sub)
         if d is None:
             continue
         meta = d
@@ -116,16 +125,24 @@ def _load(fnames):
     description="MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    fig, ax = plt.subplots(figsize=(6.0, 4.4))
+    fig, ax = plt.subplots(figsize=(6.6, 4.6))
 
-    for fname, label, col, ls, mk in _SERIES:
-        d = _load(fname)
-        if d is None or not d.get("results"):
-            continue
-        res = sorted(d["results"], key=lambda r: r["N"])
-        Ns = numpy.array([r["N"] for r in res], dtype=float)
-        wall = numpy.array([r["wall_s"] for r in res], dtype=float)
-        ax.loglog(Ns, wall, marker=mk, ms=4.5, color=col, ls=ls, label=label, zorder=3)
+    h100_meta = _load_one("jax_gpu.json", "h100") or {}
+    for fnames, fw, dev, mode, lab, ls in _SERIES:
+        for sub, d_ in (("", dev), ("h100", "h100")):
+            if sub and dev != "gpu":
+                continue
+            d = _load(fnames, sub)
+            if d is None or not d.get("results"):
+                continue
+            res = sorted(d["results"], key=lambda r: r["N"])
+            Ns = numpy.array([r["N"] for r in res], dtype=float)
+            wall = numpy.array([r["wall_s"] for r in res], dtype=float)
+            st = palette.style(fw, d_, mode)
+            if ls:
+                st["ls"] = ls
+            ax.loglog(Ns, wall, ms=4, zorder=3,
+                      label=lab.format(dev=palette.DEVICE_NAME[palette._device(d_)]), **st)
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")
@@ -143,21 +160,16 @@ def make():
         "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
-    # legend OUTSIDE the axes (upper right, anchored to the figure margin) so it
-    # overlaps no data line.
-    ax.legend(
-        fontsize=7.0, loc="upper left", bbox_to_anchor=(1.01, 1.0),
-        borderaxespad=0.0, framealpha=0.95,
-    )
-
     # env stamp from the GPU JSON (the headline machine)
     g = _load_one("galax_gpu.json") or {}
     ax.text(
-        0.025, 0.03,
-        f"galax {g.get('solver', 'Dopri8')} on {g.get('device', '?')}\n"
-        "galpy dop853_c (single-thread C)\n"
-        "all lines: diffrax/dop853, rtol=atol=1e-8 (matched)",
-        transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
+        0.975, 0.03,
+        "galpy C: dop853_c, single thread\n"
+        "all lines: diffrax Dopri8 / dop853, rtol=atol=1e-8 (matched)\n"
+        f"TITAN Xp: jax {_load_one('jax_gpu.json').get('jax_version', '?')}"
+        + (f"  ·  H100 (galpy only): jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
+        transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
     )
     fig.tight_layout()
+    palette.label_lines(ax, fontsize=6.5, inline={"galpy C (dop853_c)": (300.0, 9)})
     return fig

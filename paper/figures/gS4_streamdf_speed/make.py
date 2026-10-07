@@ -23,13 +23,13 @@ user actually performs:
         ~1400 small compiles) and "warm" (an identical second construction in the
         same process, all op compilations cached = the cost inside a fitting loop).
         Single shots (each is minutes).
-      * NOT measured, because they fail (see the BUG_*.md notes in this directory):
-          - torch: a torch-progenitor streamdf cannot be constructed eagerly
-            (BUG_torch_streamdf_construct.md: numpy.sqrt on a grad-carrying tensor
-            in _offset_setup).
-          - jax.jit (or jax.grad) of the construction w.r.t. a potential parameter:
-            TracerArrayConversionError in meanOmega
-            (BUG_jax_streamdf_construct_traced.md).
+      * jax (CPU, jit): ``jax.jit`` of the whole construction as a function of the
+        halo q (fixed since galpy#1637/#1640; the BUG_*.md notes are historical):
+        "cold" = compile + first call, "warm" = a second call of the compiled
+        function.
+      * torch: a torch-progenitor streamdf builds since galpy#1637, but eagerly it
+        takes ~22 min and >100 GB host memory at nTrackChunks=4 (eager reverse-mode
+        Jacobians retain the graph of ~1e4 torchode steps), so it is not plotted.
 
 (b) SAMPLING N stream stars, ``sdf.sample(n=N, key=key)`` -> (R,vR,vT,z,vz,phi): the
     backend-native inverse-CDF frequency/angle/time draw + the linearised
@@ -59,8 +59,9 @@ What it shows (CPU numbers, measured 2026-10-06):
   (a) numpy/C construction grows linearly with the chunk count (4.4, 7.0, 13, 27 s
       for 4, 8, 16, 32 chunks: a serial per-chunk loop). The jax construction is
       FLAT in nTrackChunks (the chunk loop is vmapped) but expensive: ~200-230 s
-      cold and ~90-113 s warm, i.e. eager jax is compile/dispatch-bound, and the
-      construction cannot (yet) be jitted to remove that.
+      cold and ~90-113 s warm, i.e. eager jax is compile/dispatch-bound. Jitting
+      the construction costs 15-24 min of compile (cold) and then 53-195 s per
+      build (warm).
   (b) sampling: jax.jit is ~70-150x faster than numpy (N=10^5: 0.51 s vs 77 s;
       N=100: 1.2 ms vs 77 ms); eager jax (0.03 s floor, 7.3 s at 10^5) and eager
       torch on the numpy-built track (23 s at 10^5) also beat numpy, whose
@@ -75,6 +76,17 @@ What it shows (CPU numbers, measured 2026-10-06):
   (AD vs finite-difference Jacobians); the torch-forced DF evaluation matches numpy
   to 2e-13 and its d(logDF)/dR matches a central FD to 1.8e-7 (no numpy island:
   grad_fn present, no fallback warnings).
+  GPU (jax eager construction; (b)/(c) all series): on the TITAN Xp (float64 at
+  1/32 rate) the warm construction is ~130-140 s (~250 s cold), on an NVIDIA H100
+  (Trillium; data/h100/, jax 0.11.2 / torch 2.14.1+cu130) ~53-54 s (~110 s cold).
+  Jitted sampling at N=10^6: 0.14 s (TITAN) vs 4.1 ms (H100); jitted DF evaluation
+  at 10^6: 67 ms (TITAN) vs 1.7 ms (H100) vs 149 s for numpy -- ~10^5x. Eager torch
+  on the GPU has no points beyond N=10^4 (TITAN) / 10^5 (H100): NaN in the JSONs
+  (OOM or the per-call cap).
+  Colours/line styles: the shared palette (paper/figures/_harness/palette.py) --
+  colour = framework x device (numpy black; jax sky blue / blue / navy and torch
+  orange / vermillion / dark red for CPU / TITAN Xp / H100), jit solid, eager
+  dashed; the first (cold) call dotted (eager) / dash-dotted (jit).
   CPU caps: the eager jax 10^6-point sample was OOM-killed on the shared box (the
   closest-track-point search holds (N, 1001) temporaries), so the jax CPU series
   stop at 10^5.
@@ -102,7 +114,7 @@ import sys
 
 import numpy
 
-from paper.figures._harness import bench
+from paper.figures._harness import bench, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -121,23 +133,24 @@ _TSTOP = 60.0
 _NMAX_JAX_CPU = 100000
 _SEED = 20261005
 
-_STYLE = {  # colour, linestyle, marker
-    "numpy (CPU)": ("#000000", "-", "s"),
-    "jax (CPU, eager cold)": ("#56B4E9", ":", "^"),
-    "jax (CPU, eager)": ("#56B4E9", "--", "^"),
-    "jax (CPU, jit cold)": ("#56B4E9", "-.", "P"),
-    "jax (CPU, jit)": ("#56B4E9", "-", "P"),
-    "torch (CPU, eager)": ("#E69F00", "--", "v"),
-    "jax (GPU, eager cold)": ("#0072B2", ":", "o"),
-    "jax (GPU, eager)": ("#0072B2", "--", "o"),
-    "jax (GPU, jit)": ("#0072B2", "-", "D"),
-    "torch (GPU, eager)": ("#D55E00", "--", "o"),
+# series name in the JSON -> (framework, device, mode, label suffix, ls override);
+# colours/line styles from the shared palette (paper/figures/_harness/palette.py):
+# jit solid, eager dashed, and the first (cold) call dotted / dash-dotted. The
+# torch series run the numpy-built streamdf under use("torch").
+_SERIES = {
+    "numpy (CPU)": ("numpy", "cpu", None, "", None),
+    "jax (CPU, eager cold)": ("jax", "cpu", "eager", "cold", ":"),
+    "jax (CPU, eager)": ("jax", "cpu", "eager", "", None),
+    "jax (CPU, jit cold)": ("jax", "cpu", "jit", "cold", "-."),
+    "jax (CPU, jit)": ("jax", "cpu", "jit", "", None),
+    "torch (CPU, eager)": ("torch", "cpu", "eager", "numpy-built sdf", None),
+    "jax (GPU, eager cold)": ("jax", "gpu", "eager", "cold", ":"),
+    "jax (GPU, eager)": ("jax", "gpu", "eager", "", None),
+    "jax (GPU, jit)": ("jax", "gpu", "jit", "", None),
+    "torch (GPU, eager)": ("torch", "gpu", "eager", "numpy-built sdf", None),
 }
-_ORDER = list(_STYLE)
-_LABEL = {  # the torch series run the numpy-built streamdf under use("torch")
-    "torch (CPU, eager)": "torch (CPU, eager; numpy-built sdf)",
-    "torch (GPU, eager)": "torch (GPU, eager; numpy-built sdf)",
-}
+_ORDER = list(_SERIES)
+_JSON_H100 = os.path.join(_DATA, "h100", "gS4_streamdf_speed.json")
 
 # --- construction: one fresh process per (backend, nTrackChunks) -------------------
 _BUILD_SCRIPT = r"""
@@ -457,16 +470,22 @@ def _data():
     return _measure(devices=("cpu", "gpu"))
 
 
-def _panel(ax, xs, block, names, per_point=False):
-    for name in names:
-        if name not in block:
-            continue
-        t = numpy.asarray(block[name], dtype=float)
-        if not numpy.any(numpy.isfinite(t)):
-            continue
-        col, ls, mk = _STYLE[name]
-        ax.loglog(xs, t, color=col, ls=ls, marker=mk, ms=4, label=_LABEL.get(name, name),
-                  zorder=3)
+def _panel(ax, xs, part, data, h100):
+    for name in _ORDER:
+        fw, dev, mode, extra, ls = _SERIES[name]
+        runs = [(data, dev)]
+        if dev == "gpu" and h100 is not None:
+            runs.append((h100, "h100"))
+        for d, dv in runs:
+            if name not in d[part]:
+                continue
+            t = numpy.asarray(d[part][name], dtype=float)
+            if not numpy.any(numpy.isfinite(t)):
+                continue
+            st = palette.style(fw, dv, mode)
+            if ls:
+                st["ls"] = ls
+            ax.loglog(xs, t, ms=4, zorder=3, label=palette.label(fw, dv, mode, extra), **st)
 
 
 @figure(
@@ -479,10 +498,14 @@ def make():
     import matplotlib.pyplot as plt
 
     data = _data()
-    fig, (axa, axb, axc) = plt.subplots(1, 3, figsize=(13.2, 4.3))
+    h100 = None
+    if os.path.exists(_JSON_H100):
+        with open(_JSON_H100) as fh:
+            h100 = json.load(fh)
+    fig, (axa, axb, axc) = plt.subplots(1, 3, figsize=(15.5, 4.6))
     nchs = numpy.asarray(data["nchs"], dtype=float)
     Ns = numpy.asarray(data["Ns"], dtype=float)
-    _panel(axa, nchs, data["construct"], _ORDER)
+    _panel(axa, nchs, "construct", data, h100)
     axa.set_xscale("log", base=2)
     axa.set_xticks(nchs)
     axa.set_xticklabels([str(int(n)) for n in nchs])
@@ -490,37 +513,37 @@ def make():
     axa.set_xlabel("number of track chunks (nTrackChunks)")
     axa.set_ylabel("wall time (s)")
     axa.set_title("(a) construction incl. stream track")
-    axa.legend(fontsize=6.5, loc="center left", framealpha=0.92)
     notes = [data["notes"][k] for k in ("construct_torch", "construct_jit") if data["notes"].get(k)]
     if notes:
         import textwrap
 
         axa.text(0.97, 0.03, "\n".join(textwrap.fill(n, 48) for n in notes),
                  transform=axa.transAxes, fontsize=5.6, color="0.45", va="bottom", ha="right")
-    _panel(axb, Ns, data["sample"], _ORDER)
+    _panel(axb, Ns, "sample", data, h100)
     axb.set_xlabel(r"number of sampled stars $N$")
     axb.set_ylabel("wall time (s)")
     axb.set_title(r"(b) sdf.sample($N$)")
-    _panel(axc, Ns, data["eval"], _ORDER)
+    _panel(axc, Ns, "eval", data, h100)
     axc.set_xlabel(r"number of phase-space points $N$")
     axc.set_ylabel("wall time (s)")
     axc.set_title(r"(c) log DF at $N$ points")
-    handles, labels = [], []
-    for ax in (axb, axc):
-        for h, lab in zip(*ax.get_legend_handles_labels()):
-            if lab not in labels:
-                handles.append(h)
-                labels.append(lab)
-    axc.legend(handles, labels, fontsize=6.5, loc="upper left", framealpha=0.92)
     ec, eg = data.get("env_cpu", {}), data.get("env_gpu", {})
-    axb.text(0.97, 0.03,
+    eh = (h100 or {}).get("env_gpu", {})
+    axb.text(0.03, 0.97,
              f"CPU: {ec.get('cpu', '?').replace('Intel(R) Xeon(R) CPU ', 'Xeon ')}"
-             f" ({ec.get('cpu_cores_used', '?')} cores)\nGPU: {eg.get('gpu', 'not measured')}\n"
-             f"jax {ec.get('jax', '?')} · torch {ec.get('torch', '?')}",
-             transform=axb.transAxes, fontsize=6.0, color="0.45", va="bottom", ha="right")
+             f" ({ec.get('cpu_cores_used', '?')} cores): jax {ec.get('jax', '?')} · torch {ec.get('torch', '?')}\n"
+             f"{eg.get('gpu', 'GPU not measured')}: jax {eg.get('jax', '?')} · torch {eg.get('torch', '?')}"
+             + (f"\n{eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else ""),
+             transform=axb.transAxes, fontsize=5.6, color="0.45", va="top", ha="left")
+    axb.text(0.97, 0.03, "lines labelled in (c)", transform=axb.transAxes, fontsize=6.5,
+             color="0.45", va="bottom", ha="right")
+    for ax in (axb, axc):
+        ax.set_ylim(top=ax.get_ylim()[1] * 8)  # headroom for the stamp
     fig.suptitle("streamdf (action-angle stream model): build once, then sample / evaluate",
                  y=0.99)
-    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86, wspace=0.62)
+    palette.label_lines(axa, fontsize=6.5)
+    palette.label_lines(axc, fontsize=6.5)
     return fig
 
 

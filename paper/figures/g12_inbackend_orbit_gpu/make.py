@@ -50,7 +50,9 @@ on this float64-limited consumer GPU; the jit-fused JAX-GPU lines amortise their
 ~1.5 s compile/launch floor down to ~0.21 ms/orbit (Dopri8) and ~0.13 ms/orbit
 (same-work Dopri5) at large N. (The June version had ~2.1 ms/orbit for C, ~20x too
 slow: a slow build in that environment.) The JAX-CPU line shows the device
-contribution.
+contribution. On the H100 (Trillium) the GPU lines drop 9-12x at large N and pass
+single-thread C at N~3e4: jax Dopri8 0.025, Dopri5 0.018, torch dopri5 0.009
+ms/orbit at the largest N (see caption.md).
 
 SAME-WORK VERDICT: at the matched 5th-order method, the jit+vmap jax-Dopri5 GPU line
 reaches its compute-bound asymptote ~0.13 ms/orbit at N=3e5; the eager torch-dopri5
@@ -97,6 +99,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy
 
+from paper.figures._harness import palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
@@ -114,29 +117,31 @@ _SHARED = os.path.join(
 # dopri5 (5th order -- torchdiffeq's dopri8 backward is buggy). The jax-Dopri5 line is
 # the apples-to-apples (same 5th-order method, matching nfev/steps -- see
 # measure/work_counts.py -> data/work_counts.json) comparison to torch-dopri5.
+# (json files, framework, device, mode, label suffix, line-style override)
 _SERIES = [
-    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "galpy (C, CPU; sequential)", "#000000", "-", "o"),
-    (["jax_cpu.json", "jax_cpu_hiN.json"], "galpy in-backend (JAX, CPU; Dopri8)", "#009E73", "--", "s"),
-    (["jax_gpu.json", "jax_gpu_hiN.json"], "galpy in-backend (JAX, GPU; Dopri8, shipped)", "#0072B2", "-", "^"),
-    (["jax_dopri5_gpu.json", "jax_dopri5_gpu_hiN.json"], "galpy in-backend (JAX, GPU; Dopri5, same-work)", "#56B4E9", "-.", "P"),
-    (["torch_cuda.json"], "galpy in-backend (torch, GPU; dopri5, eager)", "#D55E00", ":", "v"),
+    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, "dop853_c, sequential", None),
+    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "Dopri8", None),
+    (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri8", None),
+    (["jax_dopri5_gpu.json", "jax_dopri5_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri5", "-."),
+    (["torch_cuda.json"], "torch", "gpu", "eager", "dopri5", None),
 ]
 
 
-def _load_one(fname):
+def _load_one(fname, sub=""):
     # shared galpy JSONs live in _shared/orbit_speed/data; torch JSON is local.
+    # sub="h100": the same measurement on an H100 (data/h100/)
     for base in (_SHARED, _DATA):
-        path = os.path.join(base, fname)
+        path = os.path.join(base, sub, fname)
         if os.path.exists(path):
             with open(path) as fh:
                 return json.load(fh)
     return None
 
 
-def _load(fnames):
+def _load(fnames, sub=""):
     merged, meta = {}, None
     for fname in fnames:
-        d = _load_one(fname)
+        d = _load_one(fname, sub)
         if d is None:
             continue
         meta = d
@@ -158,14 +163,21 @@ def make():
 
     gpu_meta = _load_one("jax_gpu.json") or _load_one("jax_gpu_hiN.json") or {}
     torch_meta = _load_one("torch_cuda.json") or {}
-    for fnames, label, col, ls, mk in _SERIES:
-        d = _load(fnames)
-        if d is None or not d.get("results"):
-            continue
-        res = sorted(d["results"], key=lambda r: r["N"])
-        Ns = numpy.array([r["N"] for r in res], dtype=float)
-        wall = numpy.array([r["wall_s"] for r in res], dtype=float)
-        ax.loglog(Ns, wall, marker=mk, ms=4.5, color=col, ls=ls, label=label, zorder=3)
+    h100_meta = _load_one("jax_gpu.json", "h100") or {}
+    for fnames, fw, dev, mode, extra, ls in _SERIES:
+        for sub, d_ in (("", dev), ("h100", "h100")):
+            if sub and dev != "gpu":
+                continue
+            d = _load(fnames, sub)
+            if d is None or not d.get("results"):
+                continue
+            res = sorted(d["results"], key=lambda r: r["N"])
+            Ns = numpy.array([r["N"] for r in res], dtype=float)
+            wall = numpy.array([r["wall_s"] for r in res], dtype=float)
+            st = palette.style(fw, d_, mode)
+            if ls:
+                st["ls"] = ls
+            ax.loglog(Ns, wall, ms=4, zorder=3, label=palette.label(fw, d_, mode, extra), **st)
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")
@@ -176,7 +188,7 @@ def make():
     xl = ax.get_xlim()
     # extend the x-axis to the right so the rightmost markers have room and the
     # reference lines / legend region do not crowd the data
-    xl = (xl[0], xl[1] * 3.0)
+    xl = (xl[0], xl[1] * 1.6)
     Nlo, Nhi = xl
     for tau in (1e-2, 1e-3, 1e-4):
         ax.plot([Nlo, Nhi], [Nlo * tau, Nhi * tau], ls=":", lw=0.8, color="0.8", zorder=0)
@@ -186,18 +198,17 @@ def make():
         "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="top", ha="left",
     )
-    # legend INSIDE the axes, lower-right (the empty high-N / low-wall corner),
-    # sitting a bit low so it clears the rising data lines.
-    ax.legend(
-        fontsize=7.5, loc="lower right", borderaxespad=0.8, framealpha=0.95,
-    )
+    palette.label_lines(ax, inline={"galpy C (dop853_c, sequential)": (300.0, 9)})
     # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator
     # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,
     # controller architecture, compile amortization) live in caption.md.
     ax.text(
         0.17, 0.02,
-        f"rtol=atol=1e-8  ·  GPU: {gpu_meta.get('gpu', '?')}  ·  "
-        f"jax {gpu_meta.get('jax_version', '?')} · torch {torch_meta.get('torch_version', '?')}",
+        f"rtol=atol=1e-8  ·  {gpu_meta.get('gpu', '?')}: jax {gpu_meta.get('jax_version', '?')}"
+        f" · torch {torch_meta.get('torch_version', '?')}"
+        + (f"\n{h100_meta.get('gpu', 'H100')}: jax {h100_meta.get('jax_version', '?')}"
+           f" · torch {(_load_one('torch_cuda.json', 'h100') or {}).get('torch_version', '?')}"
+           if h100_meta else ""),
         transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
     )
     fig.tight_layout()

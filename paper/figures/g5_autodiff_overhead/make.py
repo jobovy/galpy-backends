@@ -9,7 +9,10 @@ directly for a vectorised Plummer evaluation on the GPU:
   value : Phi(R, z)            over N points
   grad  : d/dR sum_i Phi(R_i)  -- the per-point dPhi/dR, one reverse-mode pass
 
-(a) throughput (points/s) vs N, value (solid) vs gradient (dashed), jax & torch.
+(a) throughput (points/s) vs N, value (filled markers) vs gradient (hollow), jax &
+    torch, on the TITAN Xp and (data/h100/) an H100. Paper-wide line convention
+    (_harness/palette.py): colour = framework x device, jit solid / eager dashed
+    (jax is jit-compiled here, torch eager).
 (b) the overhead ratio (grad wall-time / value wall-time) vs N -- a small, roughly
     N-independent constant once past the launch-bound small-N regime.
 
@@ -24,20 +27,16 @@ import sys
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import bench
+from paper.figures._harness import bench, h100, palette
 from paper.figures._harness.figure import figure
-from paper.figures._harness.style import BACKEND_COLORS
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "g5_autodiff_overhead.json")
 
-# solid = value, dashed = gradient; colour per backend.
-_STYLE = {
-    "jax value": (BACKEND_COLORS["jax"], "-"),
-    "jax grad": (BACKEND_COLORS["jax"], "--"),
-    "torch value": (BACKEND_COLORS["torch"], "-"),
-    "torch grad": (BACKEND_COLORS["torch"], "--"),
-}
+# colour = framework x device (palette.py); jax jit-compiled (solid), torch eager
+# (dashed); value = filled markers, gradient = hollow markers.
+_ORDER = ["jax value", "jax grad", "torch value", "torch grad"]
+_MODE = {"jax": "jit", "torch": "eager"}
 
 
 def _grid(N):
@@ -126,39 +125,46 @@ def make():
     series = data["series"]
     env = data.get("env", {})
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    hdata = h100.load(os.path.dirname(__file__), "g5_autodiff_overhead.json")
+    runs = [("titan", data)] + ([("h100", hdata)] if hdata else [])
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.6, 4.3))
 
-    # ---- (a) throughput: value (solid) vs grad (dashed) ------------------------
-    for name in [k for k in _STYLE if k in series]:
-        col, ls = _STYLE[name]
-        thr = Ns / numpy.asarray(series[name], dtype=float)
-        ax1.loglog(Ns, thr, marker="o", ms=3.5, color=col, ls=ls, label=name, zorder=3)
+    # ---- (a) throughput: value (filled) vs grad (hollow) -----------------------
+    for dev, d in runs:
+        Nd = numpy.asarray(d["Ns"], dtype=float)
+        for name in [k for k in _ORDER if k in d["series"]]:
+            fw, kind = name.split()
+            st = palette.style(fw, dev, _MODE[fw])
+            if kind == "grad":
+                st["mfc"] = "white"
+            thr = Nd / numpy.asarray(d["series"][name], dtype=float)
+            ax1.loglog(Nd, thr, ms=3.8, zorder=3, label=palette.label(fw, dev, _MODE[fw], kind), **st)
     ax1.set_xlabel(r"array length $N$")
     ax1.set_ylabel(r"throughput  (points / second)")
-    ax1.set_title(r"(a) value (solid) vs gradient (dashed)")
-    ax1.legend(fontsize=7.5, loc="lower right", framealpha=0.92, handlelength=3.0)
+    ax1.set_title(r"(a) value (filled) vs gradient (hollow markers)", fontsize=10)
 
     # ---- (b) overhead ratio: grad time / value time ----------------------------
-    for backend in ("jax", "torch"):
-        v, g = f"{backend} value", f"{backend} grad"
-        if v in series and g in series:
-            ratio = numpy.asarray(series[g], dtype=float) / numpy.asarray(series[v], dtype=float)
-            ax2.semilogx(Ns, ratio, marker="o", ms=4, color=BACKEND_COLORS[backend],
-                         label=f"{backend}: grad / value", zorder=3)
+    for dev, d in runs:
+        Nd = numpy.asarray(d["Ns"], dtype=float)
+        for fw in ("jax", "torch"):
+            v, g = f"{fw} value", f"{fw} grad"
+            if v in d["series"] and g in d["series"]:
+                ratio = numpy.asarray(d["series"][g], dtype=float) / numpy.asarray(d["series"][v], dtype=float)
+                ax2.semilogx(Nd, ratio, ms=4, zorder=3, label=palette.label(fw, dev, _MODE[fw]),
+                             **palette.style(fw, dev, _MODE[fw]))
     ax2.axhline(1.0, ls=":", lw=1, color="0.6")
-    ax2.text(Ns[0], 1.04, "value cost", fontsize=7, color="0.5", va="bottom")
+    ax2.text(Ns[0], 0.94, "value cost", fontsize=7, color="0.5", va="top")
     ax2.set_xlabel(r"array length $N$")
     ax2.set_ylabel(r"gradient wall-time / value wall-time")
-    ax2.set_title("(b) reverse-mode autodiff overhead")
+    ax2.set_title("(b) reverse-mode autodiff overhead", fontsize=10)
     ax2.set_ylim(0, None)
-    ax2.legend(fontsize=8, loc="upper right", framealpha=0.92)
-    ax2.text(
-        0.03, 0.03,
-        f"GPU: {env.get('gpu', '?')} · jax {env.get('jax', '?')} · torch {env.get('torch', '?')}",
-        transform=ax2.transAxes, fontsize=6.5, color="0.5", va="bottom",
-    )
+    stamp = "\n".join(f"{d['env'].get('gpu', '?')}: jax {d['env'].get('jax', '?')} · torch {d['env'].get('torch', '?')}"
+                      for _, d in runs)
+    ax2.text(0.97, 0.03, stamp, transform=ax2.transAxes, fontsize=6.3, color="0.5", va="bottom", ha="right")
 
-    fig.suptitle(r"Cost of differentiability: Plummer $\Phi$ gradient vs value (GPU, float64)",
+    fig.suptitle(r"Cost of differentiability: Plummer $\Phi$ gradient vs value (TITAN Xp and H100 GPUs, float64)",
                  fontsize=11)
-    fig.tight_layout()
+    fig.tight_layout(w_pad=11)
+    palette.label_lines(ax1, fontsize=6.5)
+    palette.label_lines(ax2, fontsize=6.5)
     return fig

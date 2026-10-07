@@ -10,6 +10,10 @@ calls. This figure quantifies the trade for a vectorised Plummer F_R:
     behind by the compile cost but has a shallower slope, so it overtakes eager
     after a break-even number of calls (marked).
 
+Both panels show the dev box's TITAN Xp and (data/h100/) an H100 on Trillium, in the
+paper-wide line convention (_harness/palette.py): colour = framework x device (jax
+blue; darker = H100), jit solid / eager dashed; in (a) N=1e6 filled, N=1e4 hollow.
+
 Reproducibility: timings -> data/g6_jit_amortization.json (machine + versions
 stamped); the plot is byte-stable from the JSON.
 """
@@ -23,7 +27,7 @@ import matplotlib.pyplot as plt
 import numpy
 
 from paper.figures._harness.figure import figure
-from paper.figures._harness.style import BACKEND_COLORS
+from paper.figures._harness import h100, palette
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "g6_jit_amortization.json")
@@ -106,57 +110,69 @@ def make():
     per_call = data["per_call"]
     eager = data["eager"]
     env = data.get("env", {})
-    jcol = BACKEND_COLORS["jax"]
-    shades = {str(Ns[0]): jcol, str(Ns[1]): "#56B4E9"}
+    hdata = h100.load(os.path.dirname(__file__), "g6_jit_amortization.json")
+    runs = [("titan", data)] + ([("h100", hdata)] if hdata else [])
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.8, 4.0))
+    def _nlab(N):
+        return rf"$N=10^{{{int(round(numpy.log10(N)))}}}$"
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.6, 4.3))
 
     # ---- (a) per-call wall-time vs call index ----------------------------------
-    for N in Ns:
-        ts = numpy.asarray(per_call[str(N)], dtype=float)
-        idx = numpy.arange(len(ts))
-        ax1.semilogy(idx, ts * 1e3, marker="o", ms=4, color=shades[str(N)],
-                     label=rf"$N=10^{{{int(round(numpy.log10(N)))}}}$")
-        ax1.semilogy([1, len(ts) - 1], [eager[str(N)] * 1e3] * 2, ls=":", lw=1.2,
-                     color=shades[str(N)])
-    ax1.annotate("call 0 = compile", xy=(0, per_call[str(Ns[1])][0] * 1e3),
-                 xytext=(2.2, per_call[str(Ns[1])][0] * 1e3 * 0.62), fontsize=7.5,
+    # jit solid, eager (un-jit) per-call dashed; N=1e6 filled, N=1e4 hollow markers
+    for dev, d in runs:
+        for N in d["Ns"]:
+            ts = numpy.asarray(d["per_call"][str(N)], dtype=float)
+            idx = numpy.arange(len(ts))
+            st = palette.style("jax", dev, "jit")
+            if N != max(d["Ns"]):
+                st["mfc"] = "white"
+            ax1.semilogy(idx, ts * 1e3, ms=4, label=palette.label("jax", dev, "jit", _nlab(N)), **st)
+            se = palette.style("jax", dev, "eager")
+            se.pop("marker")
+            ax1.semilogy([0, len(ts) - 1], [d["eager"][str(N)] * 1e3] * 2, lw=1.1,
+                         label=palette.label("jax", dev, "eager", _nlab(N)), **se)
+    ax1.annotate("call 0 = compile", xy=(0, data["per_call"][str(Ns[1])][0] * 1e3),
+                 xytext=(2.2, data["per_call"][str(Ns[1])][0] * 1e3 * 0.62), fontsize=7.5,
                  color="0.3", arrowprops=dict(arrowstyle="->", color="0.5", lw=0.8))
-    ax1.text(0.97, 0.05, "dotted: eager (un-jit) per-call", transform=ax1.transAxes,
-             fontsize=6.8, color="0.5", ha="right", va="bottom")
     ax1.set_xlabel("call index")
     ax1.set_ylabel("wall-time per call  (ms)")
-    ax1.set_title("(a) compile-once, run-many")
-    ax1.legend(fontsize=8, loc="upper right", framealpha=0.92)
+    ax1.set_title("(a) compile-once, run-many (eager per-call dashed)", fontsize=10)
 
     # ---- (b) cumulative time: jit vs eager, with break-even --------------------
     N = Ns[1]  # the larger size, where the GPU is fully engaged
-    ts = numpy.asarray(per_call[str(N)], dtype=float)
-    compile_plus = ts[0]
-    steady = float(numpy.median(ts[1:]))
-    eg = eager[str(N)]
-    kstar = compile_plus / (eg - steady) if eg > steady else None  # break-even calls
-    # extend the x-range comfortably past the crossover so the lines actually meet
-    kmax = int(numpy.ceil(kstar * 1.5)) if kstar else 60
+    stats = []
+    for dev, d in runs:
+        ts = numpy.asarray(d["per_call"][str(N)], dtype=float)
+        compile_plus = ts[0]
+        steady = float(numpy.median(ts[1:]))
+        eg = d["eager"][str(N)]
+        kstar = compile_plus / (eg - steady) if eg > steady else None  # break-even calls
+        stats.append((dev, compile_plus, steady, eg, kstar))
+    # extend the x-range comfortably past the crossovers so the lines actually meet
+    kmax = int(numpy.ceil(max(k for *_, k in stats if k) * 1.5)) if any(k for *_, k in stats) else 60
     k = numpy.arange(0, kmax)
-    cum_jit = (compile_plus + steady * k) * 1e3  # k calls after the compiling one
-    cum_eager = eg * (k + 1) * 1e3
-    ax2.plot(k + 1, cum_jit, color=jcol, lw=2, label="jit (compile + run)")
-    ax2.plot(k + 1, cum_eager, color="0.45", lw=1.5, ls="--", label="eager (un-jit)")
-    if kstar:
-        ystar = (compile_plus + steady * kstar) * 1e3
-        ax2.axvline(kstar + 1, ls=":", lw=1, color="0.5")
-        ax2.plot([kstar + 1], [ystar], marker="o", ms=6, color="k", zorder=5)
-        ax2.text(kstar * 0.96, ystar * 1.06, f"break-even $\\approx${kstar + 1:.0f} calls",
-                 fontsize=7.5, va="bottom", ha="right", color="0.2")
+    for dev, compile_plus, steady, eg, kstar in stats:
+        ax2.plot(k + 1, (compile_plus + steady * k) * 1e3, lw=2,
+                 label=palette.label("jax", dev, "jit", "compile + run"),
+                 **{**palette.style("jax", dev, "jit"), "marker": "none"})
+        ax2.plot(k + 1, eg * (k + 1) * 1e3, lw=1.5, label=palette.label("jax", dev, "eager"),
+                 **{**palette.style("jax", dev, "eager"), "marker": "none"})
+        if kstar:
+            ystar = (compile_plus + steady * kstar) * 1e3
+            col = palette.style("jax", dev)["color"]
+            ax2.plot([kstar + 1], [ystar], marker="o", ms=6, color=col, zorder=5, label="_be")
+            ax2.text(kstar * 0.97, ystar * 1.04, f"break-even $\\approx${kstar + 1:.0f} calls",
+                     fontsize=7.5, va="bottom", ha="right", color=col)
     ax2.set_xlabel("number of calls")
     ax2.set_ylabel("cumulative wall-time  (ms)")
-    ax2.set_title(rf"(b) jit vs eager break-even ($N=10^{{{int(round(numpy.log10(N)))}}}$)")
-    ax2.legend(fontsize=8, loc="upper left", framealpha=0.92)
-    ax2.text(0.97, 0.03,
-             f"GPU: {env.get('gpu', '?')} · jax {env.get('jax', '?')}",
-             transform=ax2.transAxes, fontsize=6.5, color="0.5", ha="right", va="bottom")
+    ax2.set_title(rf"(b) jit vs eager break-even ({_nlab(N)})", fontsize=10)
+    stamp = "\n".join(f"{d['env'].get('gpu', '?')}: jax {d['env'].get('jax', '?')}" for _, d in runs)
+    ax2.text(0.97, 0.03, stamp, transform=ax2.transAxes, fontsize=6.3, color="0.5",
+             ha="right", va="bottom")
 
-    fig.suptitle(r"jit amortization: Plummer $F_R$ (GPU, float64)", fontsize=11)
-    fig.tight_layout()
+    fig.suptitle(r"jit amortization: Plummer $F_R$ (jax; TITAN Xp and H100 GPUs, float64)", fontsize=11)
+    fig.tight_layout(w_pad=11)
+    palette.label_lines(ax1, fontsize=6.5)
+    palette.label_lines(ax2, fontsize=6.5)
     return fig

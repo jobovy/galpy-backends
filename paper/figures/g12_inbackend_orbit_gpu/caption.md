@@ -9,9 +9,22 @@ The galpy-C and galpy-jax (CPU/GPU) series are loaded from the shared
 (same orbit, tolerance, and nt convention — lowN saves 1000 dense steps, high-N GPU
 saves 16), so the two figures can be read together.
 
+Colours follow the paper-wide palette (framework × device: numpy black, galpy C
+grey, jax blues and torch oranges, light → dark for CPU → TITAN Xp → H100); jit is
+solid, eager dashed; lines are labelled directly. Every GPU line was measured on two
+cards: the dev box's **NVIDIA TITAN Xp** (consumer, float64 at 1/32 of float32) and
+an **NVIDIA H100 80GB** (Trillium; jax 0.11.2, torch 2.14.1+cu130). The small-N end
+is launch/compile-bound and barely moves (~1–4 s per call on both). At large N the
+H100 is 9–12× faster per orbit than the TITAN: jax Dopri8 0.025 ms/orbit at
+N = 3×10⁵ (TITAN 0.21), the same-work jax Dopri5 0.018, and eager torch dopri5 0.009
+ms/orbit at N = 10⁶ (TITAN 0.076). On the H100 the GPU lines overtake single-thread
+C (0.10 ms/orbit) at N ≈ 3×10⁴ and are 4–11× cheaper per orbit at the largest N.
+Single-thread C is the per-core baseline: galpy's C path also runs orbits in
+parallel (`numcores`), which divides its line by the number of cores used.
+
 * **galpy (C, CPU; sequential)** — the compiled `dop853_c` integrator, one orbit at
   a time in a single-threaded C loop (`numcores=1`). ~3 ms per-call setup, then
-  ~0.1 ms/orbit at 1e-8: on this float64-limited consumer GPU it is the fastest
+  ~0.1 ms/orbit at 1e-8: on the float64-limited TITAN Xp it is the fastest
   line at every measured N (the in-backend GPU lines amortise their ~1.5 s
   compile/launch floor only down to ~0.13–0.21 ms/orbit). The June version of this
   figure had ~2.1 ms/orbit for C, ~20x too slow (a slow build in that environment).

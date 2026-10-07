@@ -14,12 +14,20 @@ cost matches and the overlap points agree.
 
 galpy's compiled `dop853_c` (single-thread C, `numcores=1`) costs ~0.1 ms/orbit
 once past its ~3 ms per-call setup, and is the fastest line at every measured N on
-this GPU: the GPU backends start from ~1–2 s of compile/kernel-launch overhead and
-amortise down to ~0.21 ms/orbit (galpy in-backend, per-orbit steps) and ~0.07
+the TITAN Xp: the GPU backends start from ~1–2 s of compile/kernel-launch overhead
+and amortise down to ~0.21 ms/orbit (galpy in-backend, per-orbit steps) and ~0.07
 ms/orbit (galax, batched steps) at N≈3e5, where single-thread C would take about as
 long as galax's batched GPU line. The TITAN Xp is a consumer GPU that runs float64
-at 1/32 of its float32 rate; a datacenter GPU (H100) changes this picture (see the
-H100 lines, when added). The individual lines:
+at 1/32 of its float32 rate. On an **NVIDIA H100** (Trillium; galpy's in-backend
+line only, galax was not run there; jax 0.11.2) the same galpy per-orbit integrator
+has a similar ~1–1.8 s floor but amortises to **~0.025 ms/orbit at N=3e5** — ~9×
+the TITAN Xp, ~4× single-thread C (crossing it near N≈2e4), and ~3× faster than
+galax's batched mode on the TITAN Xp.
+
+Colours follow the paper-wide convention (galpy C grey, jax blue — sky blue on the
+CPU, darker on the GPUs, navy for the H100 — galax green); all jax/galax lines are
+jit-compiled (solid), galax's per-orbit control is dash-dotted. The individual
+lines:
 
 * **galpy (JAX, CPU; per-orbit steps)** — galpy's in-backend diffrax integrator on
   the CPU: the framework/vectorisation cost without the device, the common galpy
@@ -48,7 +56,7 @@ unlike jax/diffrax), so it is Python-overhead-bound and GPU-starved — impracti
 for large batches, hence not shown here (G12 shows it explicitly, out to the
 eager overhead→compute transition).
 
-All measurements on the NVIDIA TITAN Xp (sm_61). Reproducibility: the galpy series
+All measurements on the NVIDIA TITAN Xp (sm_61), except the H100 line (data in `_shared/orbit_speed/data/h100/`). Reproducibility: the galpy series
 (C, JAX-CPU, JAX-GPU) come from the shared measure scripts under
 `paper/figures/_shared/orbit_speed/` (`galpy_c_measure.py`, `galpy_jax_measure.py`),
 run against the backend-migrated galpy worktree (`/var/tmp/backends-merge`,

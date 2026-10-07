@@ -33,6 +33,10 @@ backends are not here to beat C on raw throughput -- they are here to make the
 action-angle map *differentiable and composable* inside jax/torch models; this figure
 quantifies what that costs, eager vs jit.
 
+Plot: colours from _harness/palette.py (framework x device; jit solid, eager dashed,
++transfer dotted), lines labelled directly; the GPU series of an H100 measurement in
+data/h100/ (same JSON name) are drawn as extra lines when present.
+
 Reproducibility: timings are machine-dependent, so the *measure* step writes
 data/g17_staeckel_actionangle_speed.json (stamped with GPU + library versions) and
 the *plot* step is byte-stable from that JSON. Re-measure by deleting the JSON and
@@ -47,25 +51,29 @@ import sys
 import matplotlib.pyplot as plt
 import numpy
 
-from paper.figures._harness import bench
+from paper.figures._harness import bench, palette
 from paper.figures._harness.figure import figure
 
 _DATA = os.path.join(os.path.dirname(__file__), "data")
 _JSON = os.path.join(_DATA, "g17_staeckel_actionangle_speed.json")
+# the same measurement on an H100 (Trillium): GPU series drawn as extra lines
+_JSON_H100 = os.path.join(_DATA, "h100", "g17_staeckel_actionangle_speed.json")
 
-# colour per backend; solid = compute-only / CPU, dashed = +transfer or OLD.
-_STYLE = {
-    "C (c=True)": ("#000000", "-", "o"),
-    "numpy (CPU)": ("#444444", "-", "s"),
-    "numpy (CPU, per-object, OLD)": ("#999999", "--", "x"),
-    "jax (CPU)": ("#56B4E9", "-", "^"),
-    "jax (CPU, jit)": ("#56B4E9", "-.", "P"),
-    "jax (GPU)": ("#0072B2", "-", "o"),
-    "jax (GPU, jit)": ("#0072B2", "-.", "D"),
-    "jax (GPU, +transfer)": ("#0072B2", "--", "o"),
-    "torch (CPU)": ("#E69F00", "-", "v"),
-    "torch (GPU)": ("#D55E00", "-", "o"),
-    "torch (GPU, +transfer)": ("#D55E00", "--", "o"),
+# palette.py: colour = framework x device; jit solid, eager dashed. Variants:
+# "+transfer" (eager, incl. host<->device copies) dotted; the OLD per-object
+# numpy loop dotted black. (framework, mode, line-style override, label suffix)
+_SPEC = {
+    "C (c=True)": ("c", None, None, "c=True"),
+    "numpy (CPU)": ("numpy", None, None, "vectorised c=False"),
+    "numpy (CPU, per-object, OLD)": ("numpy", None, ":", "per-object, old c=False"),
+    "jax (CPU)": ("jax", "eager", None, ""),
+    "jax (CPU, jit)": ("jax", "jit", None, ""),
+    "jax (GPU)": ("jax", "eager", None, ""),
+    "jax (GPU, jit)": ("jax", "jit", None, ""),
+    "jax (GPU, +transfer)": ("jax", "eager", ":", "+transfer"),
+    "torch (CPU)": ("torch", "eager", None, ""),
+    "torch (GPU)": ("torch", "eager", None, ""),
+    "torch (GPU, +transfer)": ("torch", "eager", ":", "+transfer"),
 }
 
 # A known-bound base grid (the validated _STK_GRID: 768 bound orbits for
@@ -304,6 +312,13 @@ def _data():
     return _measure()
 
 
+def _data_h100():
+    if os.path.exists(_JSON_H100):
+        with open(_JSON_H100) as fh:
+            return json.load(fh)
+    return None
+
+
 def _Nmap(data):
     return {
         "jax (CPU)": data["Ns_jaxcpu"], "torch (CPU)": data["Ns_torchcpu"],
@@ -315,20 +330,56 @@ def _Nmap(data):
     }
 
 
+def _curves(names):
+    """[(name, Ns, times, plot kwargs, label)] for the listed series: the TITAN Xp
+    measurement, plus each GPU series' H100 twin when data/h100/ has one."""
+    out = []
+    srcs = [(_data(), None)]
+    h = _data_h100()
+    if h is not None:
+        srcs.append((h, "h100"))
+    for data, dev_override in srcs:
+        series, Nmap = data["series"], _Nmap(data)
+        for name in names:
+            if name not in series:
+                continue
+            fw, mode, ls, suf = _SPEC[name]
+            dev = palette.parse(name)[1]
+            if dev_override:
+                if dev == "cpu":
+                    continue  # only the GPU series are re-measured on the H100
+                dev = dev_override
+            st = palette.style(fw, dev, mode)
+            if ls:
+                st["ls"] = ls
+            if name == "numpy (CPU, per-object, OLD)":
+                st["marker"] = "x"
+            Ns = numpy.asarray(Nmap.get(name, data["Ns"]), dtype=float)
+            out.append((name, Ns, numpy.asarray(series[name], dtype=float), st,
+                        palette.label(fw, dev, mode, suf)))
+    return out
+
+
 def _make(names, backend_label):
     data = _data()
-    series, env, Nmap = data["series"], data.get("env", {}), _Nmap(data)
-    plot_names = [n for n in names if n in series]
-    fig, (axw, axt) = plt.subplots(1, 2, figsize=(10.4, 4.4))
-    _plot_panel(axw, series, Nmap, data, "walltime", plot_names)
-    _plot_panel(axt, series, Nmap, data, "throughput", plot_names)
-    axt.legend(fontsize=6.8, loc="lower right", framealpha=0.92, handlelength=2.6, ncol=1)
-    axt.text(0.97, 0.05,
-             f"GPU: {env.get('gpu', '?')}\njax {env.get('jax', '?')} · torch {env.get('torch', '?')}",
-             transform=axt.transAxes, fontsize=6.0, color="0.5", va="bottom", ha="right")
+    env = data.get("env", {})
+    h = _data_h100()
+    curves = _curves(names)
+    Nfull = float(max(data["Ns_gpu"] if "Ns_gpu" in data else data["Ns"]))
+    fig, (axw, axt) = plt.subplots(1, 2, figsize=(13.0, 4.8))
+    _plot_panel(axw, curves, Nfull, "walltime")
+    _plot_panel(axt, curves, Nfull, "throughput")
+    stamp = f"{env.get('gpu', '?')}: jax {env.get('jax', '?')} · torch {env.get('torch', '?')}"
+    if h is not None:
+        he = h.get("env", {})
+        stamp += f"\n{he.get('gpu', 'H100')}: jax {he.get('jax', '?')} · torch {he.get('torch', '?')}"
+    axt.text(0.97, 0.03, stamp, transform=axt.transAxes, fontsize=6.0, color="0.5",
+             va="bottom", ha="right")
     fig.suptitle(r"Staeckel $(\mathbf{J},\mathbf{\Omega},\mathbf{\theta})$ via actionsFreqsAngles "
                  r"vs batch size $N$ -- " + backend_label, y=0.99)
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.tight_layout(rect=[0, 0, 1, 0.97], w_pad=11.0)
+    for ax in (axw, axt):
+        palette.label_lines(ax, fontsize=6.3)
     return fig
 
 
@@ -350,19 +401,12 @@ def make_torch():
     return _make(_REF + _TORCH, "torch (eager)")
 
 
-def _plot_panel(ax, series, Nmap, data, mode, names):
+def _plot_panel(ax, curves, Nfull, mode):
     """One log-log panel: mode='walltime' (s) [matches the orbit speed figures]
-    or mode='throughput' (points/s). NaN points (OOM-skipped) drop out. `names`
-    is the ordered subset of series to draw (the backend split)."""
-    Nfull = float(max(data["Ns_gpu"] if "Ns_gpu" in data else data["Ns"]))
-    for name in names:
-        if name not in series:
-            continue
-        col, ls, mk = _STYLE[name]
-        Ns = numpy.asarray(Nmap.get(name, data["Ns"]), dtype=float)
-        t = numpy.asarray(series[name], dtype=float)
+    or mode='throughput' (points/s). NaN points (OOM-skipped) drop out."""
+    for name, Ns, t, st, lab in curves:
         y = t if mode == "walltime" else Ns / t
-        ax.loglog(Ns, y, marker=mk, ms=4, color=col, ls=ls, label=name, zorder=3)
+        ax.loglog(Ns, y, ms=3.5, label=lab, zorder=3, **st)
     ax.set_xlabel(r"number of phase-space points $N$ per call")
     if mode == "walltime":
         ax.set_ylabel(r"wall time for the batch  (s)")
@@ -372,6 +416,7 @@ def _plot_panel(ax, series, Nmap, data, mode, names):
         ax.set_title("(b) throughput")
         ax.set_ylim(*ax.get_ylim())
         for t0 in (1e-3, 1e-2, 1e-1, 1e0):  # constant wall-time/call references
-            ax.plot([1.0, Nfull], [1.0 / t0, Nfull / t0], ls=":", lw=0.8, color="0.82", zorder=0)
-        ax.text(0.025, 0.975, "dotted: constant wall-time / call\n(1, 10, 100, 1000 ms)",
+            ax.plot([1.0, Nfull], [1.0 / t0, Nfull / t0], ls=":", lw=0.8, color="0.82",
+                    zorder=0, label="_ref")
+        ax.text(0.025, 0.975, "dotted grey: constant wall-time / call\n(1, 10, 100, 1000 ms)",
                 transform=ax.transAxes, fontsize=6.2, color="0.55", va="top", ha="left")

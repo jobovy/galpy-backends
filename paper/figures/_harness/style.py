@@ -18,14 +18,21 @@ PALETTE = [
     "#000000",  # black
 ]
 
-# Stable per-backend colours so every comparison figure uses the same mapping.
+# Stable per-backend colours, from palette.py (the one mapping for every figure):
+# a device-agnostic "jax"/"torch" line takes the mid (TITAN Xp) shade.
+from .palette import _COLOURS as _P  # noqa: E402
+
 BACKEND_COLORS = {
-    "numpy": "#000000",
-    "C": "#666666",
-    "jax": "#0072B2",
-    "jax-gpu": "#56B4E9",
-    "torch": "#D55E00",
-    "torch-gpu": "#E69F00",
+    "numpy": _P[("numpy", "cpu")],
+    "C": _P[("c", "cpu")],
+    "jax": _P[("jax", "titan")],
+    "jax-cpu": _P[("jax", "cpu")],
+    "jax-gpu": _P[("jax", "titan")],
+    "jax-h100": _P[("jax", "h100")],
+    "torch": _P[("torch", "titan")],
+    "torch-cpu": _P[("torch", "cpu")],
+    "torch-gpu": _P[("torch", "titan")],
+    "torch-h100": _P[("torch", "h100")],
 }
 
 
