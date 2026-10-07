@@ -61,6 +61,11 @@ data/h100/gD3_spherical_df_speed.json, measured with the same script.
 GPU series are measured only when a GPU is visible: re-measure them with
 ``python paper/figures/gD3_spherical_df_speed/make.py --gpu`` (merges into the
 JSON), then ``python -m paper.figures._harness run gD3_spherical_df_speed``.
+Sampling points at larger N (e.g. on a bigger GPU): ``make.py --gpu --Ns 1e8``
+(or ``--modes ... --Ns ...``) measures only the sampling series of those modes,
+at those N only, and merges them into the JSON (its N grid is extended, other
+series NaN there; construction not re-measured; env stamps kept, the run
+recorded in ``extra_points``).
 
 Reproducibility: timings are machine-dependent, so measure -> data/gD3_spherical_df_speed.json
 (stamped with CPU/GPU model and library versions); the plot is byte-stable from
@@ -220,7 +225,7 @@ def _clear_gpu():
 
 
 # ------------------------------------------------------- (a) sampling sweep ---
-def _measure_sampling(modes, dev, errors):
+def _measure_sampling(modes, dev, errors, Ns=_NS):
     import jax
 
     from galpy.backend import random as grandom
@@ -234,7 +239,7 @@ def _measure_sampling(modes, dev, errors):
         for mode in modes:
             times, ctimes = [], []
             stopped = False
-            for N in _NS:
+            for N in Ns:
                 if stopped:
                     times.append(float("nan"))
                     continue
@@ -360,16 +365,21 @@ def _measure_construction(modes, errors):
 
 
 # ------------------------------------------------------------ measure/merge ---
-def _measure(gpu_only=False, only=None):
-    """Measure all available modes, or only the GPU ones / the given ``only``
-    modes, merging the latter two into an existing JSON."""
-    _setup()
-    dev = _devices()
+def _select_modes(dev, gpu_only, only):
     gpu_modes = [m for m in _GPU_MODES
                  if (dev["jax_gpu"] is not None if m.startswith("jax") else dev["torch_gpu"])]
     modes = gpu_modes if gpu_only else _CPU_MODES + gpu_modes
     if only is not None:
         modes = [m for m in only if m in _CPU_MODES or m in gpu_modes]
+    return modes
+
+
+def _measure(gpu_only=False, only=None):
+    """Measure all available modes, or only the GPU ones / the given ``only``
+    modes, merging the latter two into an existing JSON."""
+    _setup()
+    dev = _devices()
+    modes = _select_modes(dev, gpu_only, only)
     errors = []
     sample, comp = _measure_sampling(modes, dev, errors)
     construct = _measure_construction(modes, errors)
@@ -398,6 +408,60 @@ def _measure(gpu_only=False, only=None):
     with open(_JSON, "w") as fh:
         json.dump(data, fh, indent=2, sort_keys=True)
         fh.write("\n")
+    return data
+
+
+def _measure_Ns(Ns, gpu_only=False, only=None):
+    """``--Ns``: the SAMPLING series of the selected modes at ``Ns`` only, merged
+    into the existing JSON (N grid extended, every other series NaN at the new N;
+    construction not re-measured; env stamps kept, the run in ``extra_points``)."""
+    from paper.figures._harness import extra_points
+
+    data = extra_points.load(_JSON, required=True)
+    _setup()
+    dev = _devices()
+    modes = _select_modes(dev, gpu_only, only)
+    if not modes:
+        sys.exit("--Ns: none of the selected modes is available here; JSON left untouched")
+    env = _env()
+    if any(m in _GPU_MODES for m in modes):
+        extra_points.check_same(data.get("env_gpu", {}).get("gpu"), env["gpu"], "gpu", _JSON)
+    if any(m in _CPU_MODES for m in modes):
+        extra_points.check_same(data.get("env", {}).get("cpu"), env["cpu"], "cpu", _JSON)
+    errors = []
+    sample, comp = _measure_sampling(modes, dev, errors, Ns=Ns)
+    nan = float("nan")
+    old_Ns, grid = data["Ns"], sorted(set(data["Ns"]) | set(Ns))
+    for k in ("sample", "compile"):
+        for ser in data.get(k, {}).values():
+            for mode in ser:
+                ser[mode] = extra_points.regrid(old_Ns, ser[mode], grid)
+    replaced = {}
+    for name in sample:
+        ser = data["sample"].setdefault(name, {})
+        for mode, times in sample[name].items():
+            if mode in ser:
+                replaced.update({f"{name} {mode} N={N}": ser[mode][grid.index(N)]
+                                 for N in Ns if N in old_Ns})
+            extra_points.put(ser.setdefault(mode, [nan] * len(grid)), grid, Ns, times)
+        cser = data.setdefault("compile", {}).setdefault(name, {})
+        for mode in (m for m in modes if m.endswith("jit")):
+            ct = comp[name].get(mode, [])  # one per N, in order, until a failure
+            c = cser.setdefault(mode, [nan] * len(grid))
+            extra_points.put(c, grid, Ns, [nan] * len(Ns))
+            extra_points.put(c, grid, Ns[:len(ct)], ct)
+    data["Ns"] = grid
+    data["errors"] = [e for e in data.get("errors", [])
+                      if not any(e.startswith("sample ") and f" {m} N={N}:" in e
+                                 for m in modes for N in Ns)] + errors
+    rec = extra_points.note(Ns, env)
+    rec["modes"] = modes
+    rec["replaced"] = replaced
+    data["extra_points"] = list(data.get("extra_points", [])) + [rec]
+    with open(_JSON, "w") as fh:
+        json.dump(data, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    print("wrote", _JSON)
     return data
 
 
@@ -451,7 +515,8 @@ def make():
                 ser = d["sample"].get(name, {})
                 if mode not in ser:
                     continue
-                ax.loglog(Ns, numpy.array(ser[mode], dtype=float), ms=3.5,
+                ax.loglog(numpy.array(d.get("Ns", data["Ns"]), dtype=float),  # own N grid (--Ns)
+                          numpy.array(ser[mode], dtype=float), ms=3.5,
                           label=palette.label(fw, dev, md), **palette.style(fw, dev, md))
         for rate in (1e5, 1e6, 1e7, 1e8):
             ax.plot(Ns, Ns / rate, ":", lw=0.7, color="0.8", zorder=0)
@@ -550,6 +615,32 @@ def make():
 if __name__ == "__main__":
     if len(sys.argv) >= 4 and sys.argv[1] == "--construct":
         _construct_worker(sys.argv[2], sys.argv[3])
+    elif any(a in ("-h", "--help", "--Ns") or a.startswith("--Ns=") for a in sys.argv[1:]):
+        import argparse
+
+        from paper.figures._harness import extra_points
+
+        ap = argparse.ArgumentParser(
+            description="gD3: measure every available mode into a fresh JSON (no option), "
+                        "or the given modes merged into the existing JSON")
+        sel = ap.add_mutually_exclusive_group()
+        sel.add_argument("--gpu", action="store_true", help="only the GPU modes (merged)")
+        sel.add_argument("--modes", metavar="M1,M2,...",
+                         help="only these modes (merged): " + ",".join(_CPU_MODES + _GPU_MODES))
+        ap.add_argument("--Ns", metavar="N1,N2,...",
+                        help="with --gpu or --modes: ONLY the sampling series of those modes, at "
+                             "these N (ints or e-notation, e.g. 1e8), merged into the existing "
+                             "JSON (N grid extended; construction not re-measured; env stamps "
+                             "kept; run recorded in 'extra_points')")
+        args = ap.parse_args()
+        if not (args.gpu or args.modes):
+            ap.error("--Ns needs --gpu or --modes (it measures the selected modes' sampling series)")
+        try:
+            Ns = extra_points.parse_Ns(args.Ns)
+        except ValueError as e:
+            ap.error(str(e))
+        _measure_Ns(Ns, gpu_only=args.gpu,
+                    only=args.modes.split(",") if args.modes else None)
     elif len(sys.argv) >= 2 and sys.argv[1] == "--gpu":
         _measure(gpu_only=True)
     elif len(sys.argv) >= 3 and sys.argv[1] == "--modes":

@@ -26,16 +26,37 @@ STRICTLY SERIALLY (one device-timed process at a time):
 
 Writes data/jax_dopri5_<device>[_hiN].json (machine + version stamped); local to g12
 (NOT shared -- the shared jax_*.json stay the production Dopri8 curve g8 also uses).
+
+Extra points at larger N (e.g. on a bigger GPU), merged into the existing JSON
+(its other points and env stamps kept; the run is noted in its ``extra_points``):
+
+    python jax_dopri5_measure.py gpu hiN --Ns 1e6,3e6
 """
 
+import argparse
 import json
 import os
 import socket
 import sys
 import time
 
-device = sys.argv[1] if len(sys.argv) > 1 else "gpu"  # 'gpu' or 'cpu'
-mode = sys.argv[2] if len(sys.argv) > 2 else "lowN"   # 'lowN' or 'hiN'
+_ap = argparse.ArgumentParser(description="galpy-jax with diffrax Dopri5 (g12): orbit-integration speed vs N")
+_ap.add_argument("device", nargs="?", default="gpu", help="'gpu' (default) or 'cpu'")
+_ap.add_argument("mode", nargs="?", default="lowN", help="'lowN' (nt=1000; default) or 'hiN' (nt=16)")
+_ap.add_argument("--Ns", metavar="N1,N2,...",
+                 help="measure ONLY these N (ints or e-notation, e.g. 1e6,3e6) and MERGE them "
+                      "into the existing data/jax_dopri5_<device>[_hiN].json (other points and "
+                      "its env stamps kept; this run is recorded in its 'extra_points')")
+_args = _ap.parse_args()
+device, mode = _args.device, _args.mode
+if _args.Ns is not None:  # paper/figures/_harness/extra_points.py
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), *[".."] * 4)))
+    from paper.figures._harness import extra_points
+
+    try:
+        _extra_Ns = extra_points.parse_Ns(_args.Ns)
+    except ValueError as e:
+        _ap.error(str(e))
 
 if device == "cpu":
     os.environ["JAX_PLATFORMS"] = "cpu"  # force CPU before jax import
@@ -65,6 +86,8 @@ if mode == "hiN":
 else:
     nt, suffix = 1000, ""
     Ns = [1, 10, 100, 1000, 10000] if device == "cpu" else [1, 10, 100, 1000, 10000, 30000]
+if _args.Ns is not None:
+    Ns = _extra_Ns
 
 ts = jnp.linspace(0.0, 56.2, nt)  # 2 Gyr in galpy internal units
 ic0 = jnp.array([1.0, 0.0, 1.0, 0.0125, 0.036, 0.0])  # Sun-like [R,vR,vT,z,vz,phi]
@@ -123,6 +146,20 @@ try:
 except Exception:
     out["gpu"] = plat
 
+
+def _dump(out):
+    if _args.Ns is not None:
+        out = extra_points.merge_results(_base, out, _note)
+    with open(os.path.join(_DATA, f"jax_dopri5_{plat}{suffix}.json"), "w") as fh:
+        json.dump(out, fh, indent=2)
+
+
+if _args.Ns is not None:
+    _base = extra_points.load(os.path.join(_DATA, f"jax_dopri5_{plat}{suffix}.json"), required=False)
+    for _k in ("device", "gpu", "nt"):
+        extra_points.check_same((_base or {}).get(_k), out[_k], _k, f"jax_dopri5_{plat}{suffix}.json")
+    _note = extra_points.note(Ns, {k: v for k, v in out.items() if k != "results"})
+
 for N in Ns:
     ics = ic0[None] + jax.random.normal(jax.random.PRNGKey(N), (N, 6)) * scale
     try:
@@ -149,12 +186,10 @@ for N in Ns:
             flush=True,
         )
         os.makedirs(_DATA, exist_ok=True)
-        with open(os.path.join(_DATA, f"jax_dopri5_{plat}{suffix}.json"), "w") as fh:
-            json.dump(out, fh, indent=2)
+        _dump(out)
     except Exception as e:  # OOM or step-cap: stop and record where
         print(f"galpy-jax-Dopri5[{plat}] N={N}: STOP {type(e).__name__}: {str(e)[:70]}", flush=True)
         out["stopped_at"] = {"N": N, "reason": type(e).__name__, "msg": str(e)[:120]}
-        with open(os.path.join(_DATA, f"jax_dopri5_{plat}{suffix}.json"), "w") as fh:
-            json.dump(out, fh, indent=2)
+        _dump(out)
         break
 print("done")

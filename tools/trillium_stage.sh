@@ -11,6 +11,8 @@
 #   g15     : g15 IC-gradient speed, all five scripts (hours, CPU parts included)
 #   bench   : benchmarks/gpu bench.py, jax gpu + torch gpu (~20 min)
 #   newfigs : GPU series of gV2, gD3, gS5, gS4 (~1-2 h)
+#   hiN2    : larger N on the 80 GB card, MERGED into the existing JSONs (--Ns): g12 jax Dopri8 +
+#             Dopri5 at N=1e6, 3e6, g12 torch at 3e6, gV2 GPU eval at 1e7, gD3 GPU sampling at 1e8 (~1 h)
 set -u
 STAGE=$1
 : "${G13ROOT:=$SCRATCH/galpy-h100}"           # clones, logs, caches live here
@@ -47,6 +49,15 @@ case $STAGE in
            run "python -m paper.figures.gS5_streamspray_speed.make --measure gpu"
            run "python -m paper.figures.gS4_streamdf_speed.make --measure gpu"
            run "$H gV2_vertical_inverse_speed gD3_spherical_df_speed gS5_streamspray_speed gS4_streamdf_speed" ;;
+  hiN2)    # each N in its own process (an OOM fails only that run); --Ns keeps all other points
+           for n in 1e6 3e6; do
+             run "python $F/_shared/orbit_speed/galpy_jax_measure.py gpu hiN --Ns $n"
+             run "python $M12/jax_dopri5_measure.py gpu hiN --Ns $n"
+           done
+           run "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python $M12/torch_measure.py --Ns 3e6"
+           run "python $F/gV2_vertical_inverse_speed/make.py --devices gpu --Ns 1e7"
+           run "python $F/gD3_spherical_df_speed/make.py --gpu --Ns 1e8"
+           run "$H g8_galax_orbit_speed g12_inbackend_orbit_gpu gV2_vertical_inverse_speed gD3_spherical_df_speed" ;;
   *) echo "unknown stage $STAGE"; exit 2 ;;
 esac
 echo ">>> $(date +%T) [$STAGE] done"

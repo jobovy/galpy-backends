@@ -69,7 +69,11 @@ from the JSON. Re-measure all by deleting the JSON and running
 gV2_vertical_inverse_speed``; measure only the GPU series into the existing JSON
 with ``OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python
 paper/figures/gV2_vertical_inverse_speed/make.py --devices gpu``
-(merges, then re-run ``run`` to re-plot).
+(merges, then re-run ``run`` to re-plot). Add GPU evaluation points at larger N
+(e.g. on a bigger GPU) with ``... make.py --devices gpu --Ns 1e7``: only the GPU
+evaluation series are measured, at those N only, and merged into the JSON (its
+N grid is extended, other series NaN there; env stamps kept, the run recorded in
+``extra_points``).
 """
 
 import json
@@ -238,7 +242,11 @@ def _env():
 _XLA_1T = "--xla_cpu_multi_thread_eigen=false intra_op_parallelism_threads=1"
 
 
-def _measure(devices=("cpu", "gpu")):
+def _measure(devices=("cpu", "gpu"), Ns=None):
+    """``Ns`` given: the evaluation series only, at those N (``--Ns``)."""
+    eval_only = Ns is not None
+    Ns = _NS if Ns is None else Ns
+    Ms = _MS if not eval_only else [max(1, round(n / 16)) for n in Ns]
     # single-threaded CPU for every library (see the module docstring); jax reads
     # XLA_FLAGS at backend initialisation, so set it before the first import
     if "jax" not in sys.modules:
@@ -289,7 +297,7 @@ def _measure(devices=("cpu", "gpu")):
             jJ = jax.device_put(jnp.asarray(_J), dev)
             if tag == "CPU":
                 ev["jax (CPU, eager)"] = _sweep(
-                    _NS, lambda N: (lambda a=jax.device_put(jnp.asarray(angles(N)), dev):
+                    Ns, lambda N: (lambda a=jax.device_put(jnp.asarray(angles(N)), dev):
                                     aA.xvFreqs(jJ, a)), "jax", "jax eager")
             comp = []
 
@@ -301,8 +309,8 @@ def _measure(devices=("cpu", "gpu")):
                 comp.append(time.perf_counter() - t0)  # compile + first run
                 return lambda: f(jJ, a)
 
-            ev[f"jax ({tag}, jit)"] = _sweep(_NS, jit_call, "jax", f"jax {tag} jit")
-            extra[f"jax ({tag}, jit) first call"] = comp + [float("nan")] * (len(_NS) - len(comp))
+            ev[f"jax ({tag}, jit)"] = _sweep(Ns, jit_call, "jax", f"jax {tag} jit")
+            extra[f"jax ({tag}, jit) first call"] = comp + [float("nan")] * (len(Ns) - len(comp))
             a16d = jax.device_put(jnp.asarray(a16), dev)
             fv = jax.jit(jax.vmap(lambda j: aA.xvFreqs(j, a16d)))
 
@@ -312,7 +320,9 @@ def _measure(devices=("cpu", "gpu")):
                 return lambda: fv(Js)
 
             ev[f"jax ({tag}, jit, vmap over tori)"] = _sweep(
-                _MS, vmap_call, "jax", f"jax {tag} vmap M")
+                Ms, vmap_call, "jax", f"jax {tag} vmap M")
+            if eval_only:
+                return
             # construction
             warm, first = [], []
             stop = False
@@ -355,8 +365,10 @@ def _measure(devices=("cpu", "gpu")):
         aA = build(pot_torch(dev), _NE_EVAL)
         jJ = torch.tensor(_J, device=dev)
         ev[f"torch ({tag})"] = _sweep(
-            _NS, lambda N: (lambda a=torch.as_tensor(angles(N), device=dev):
-                            aA.xvFreqs(jJ, a)), sync, f"torch {tag}")
+            Ns, lambda N: (lambda a=torch.as_tensor(angles(N), device=dev):
+                           aA.xvFreqs(jJ, a)), sync, f"torch {tag}")
+        if eval_only:
+            return
         warm, first = [], []
         stop = False
         for nE in _NES:
@@ -377,19 +389,20 @@ def _measure(devices=("cpu", "gpu")):
         # numpy
         aN = build(IsothermalDiskPotential(amp=_AMP, sigma=_SIG), _NE_EVAL)
         ev["numpy (CPU)"] = _sweep(
-            _NS, lambda N: (lambda a=angles(N): aN.xvFreqs(_J, a)), "none", "numpy")
+            Ns, lambda N: (lambda a=angles(N): aN.xvFreqs(_J, a)), "none", "numpy")
         ev["numpy (CPU, loop over tori)"] = _sweep(
-            _MS, lambda M: (lambda Js=Jv(M): [aN.xvFreqs(float(j), a16) for j in Js]),
+            Ms, lambda M: (lambda Js=Jv(M): [aN.xvFreqs(float(j), a16) for j in Js]),
             "none", "numpy loop M")
-        warm, stop = [], False
-        for nE in _NES:
-            if stop:
-                warm.append(float("nan"))
-                continue
-            t, stop = _timed(lambda: build(IsothermalDiskPotential(amp=_AMP, sigma=_SIG), nE))
-            warm.append(t)
-            print(f"  numpy construct nE={nE}: {t:.2e}", flush=True)
-        cons["numpy (CPU)"] = {"warm": warm}
+        if not eval_only:
+            warm, stop = [], False
+            for nE in _NES:
+                if stop:
+                    warm.append(float("nan"))
+                    continue
+                t, stop = _timed(lambda: build(IsothermalDiskPotential(amp=_AMP, sigma=_SIG), nE))
+                warm.append(t)
+                print(f"  numpy construct nE={nE}: {t:.2e}", flush=True)
+            cons["numpy (CPU)"] = {"warm": warm}
         torch_series("cpu", "CPU")
         jax_series(cpu, "CPU")
     if "gpu" in devices:
@@ -403,7 +416,7 @@ def _measure(devices=("cpu", "gpu")):
         env["gpu"] = torch.cuda.get_device_name(0) if tgpu else "none"
     except Exception:
         env["gpu"] = "?"
-    return {"Ns": _NS, "Ms": _MS, "nEs": _NES, "nang_vmap": _NANG_VMAP, "J": _J,
+    return {"Ns": Ns, "Ms": Ms, "nEs": _NES, "nang_vmap": _NANG_VMAP, "J": _J,
             "nE_eval": _NE_EVAL, "eval": ev, "construct": cons, "extra": extra,
             "env": {("gpu_run" if devices == ("gpu",) else "cpu_run"): env}}
 
@@ -415,6 +428,31 @@ def _merge(old, new):
         out[k].update(new.get(k, {}))
     out["env"] = dict(old.get("env", {}))
     out["env"].update(new.get("env", {}))
+    return out
+
+
+def _merge_Ns(old, new, Ns):
+    """``--Ns``: ``new``'s evaluation series at ``Ns`` into ``old`` (grid extended,
+    every other eval series NaN at the new N; ``old``'s env stamps kept)."""
+    from paper.figures._harness import extra_points
+
+    out = dict(old)
+    grid = sorted(set(old["Ns"]) | set(Ns))
+    m_of = dict(zip(old["Ns"], old["Ms"]))
+    m_of.update(zip(new["Ns"], new["Ms"]))
+    out["Ns"], out["Ms"] = grid, [m_of[N] for N in grid]
+    replaced = {}
+    for k in ("eval", "extra"):
+        out[k] = {name: extra_points.regrid(old["Ns"], v, grid) for name, v in old[k].items()}
+        for name, v in new[k].items():
+            replaced.update({f"{name} N={N}": out[k][name][grid.index(N)]
+                             for N in Ns if N in old["Ns"] and name in old[k]})
+            ser = out[k].setdefault(name, [float("nan")] * len(grid))
+            extra_points.put(ser, grid, Ns, v)
+    rec = extra_points.note(Ns, next(iter(new["env"].values())))
+    rec["series"] = sorted(new["eval"]) + sorted(new["extra"])
+    rec["replaced"] = replaced
+    out["extra_points"] = list(old.get("extra_points", [])) + [rec]
     return out
 
 
@@ -516,8 +554,35 @@ if __name__ == "__main__":  # re-measure a subset of devices and merge into the 
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--devices", default="gpu", help="comma list of cpu,gpu")
+    ap.add_argument("--Ns", metavar="N1,N2,...",
+                    help="with --devices gpu: measure ONLY the GPU evaluation series at these N "
+                         "(ints or e-notation, e.g. 1e7) and MERGE them into the existing JSON "
+                         "(N grid extended; env stamps kept; run recorded in 'extra_points')")
     args = ap.parse_args()
     devs = tuple(d.strip() for d in args.devices.split(",") if d.strip())
+    if args.Ns is not None:
+        from paper.figures._harness import extra_points
+
+        if devs != ("gpu",):
+            ap.error("--Ns measures the GPU evaluation series only: use it with --devices gpu")
+        try:
+            Ns = extra_points.parse_Ns(args.Ns)
+        except ValueError as e:
+            ap.error(str(e))
+        old = extra_points.load(_JSON, required=True)
+        import torch
+
+        extra_points.check_same(old.get("env", {}).get("gpu_run", {}).get("gpu"),
+                                torch.cuda.get_device_name(0) if torch.cuda.is_available()
+                                else "none", "gpu", _JSON)
+        new = _measure(devices=devs, Ns=Ns)
+        if not new["eval"]:
+            sys.exit("--Ns: no GPU visible, nothing measured; JSON left untouched")
+        with open(_JSON, "w") as fh:
+            json.dump(_merge_Ns(old, new, Ns), fh, indent=1, sort_keys=True)
+            fh.write("\n")
+        print("wrote", _JSON)
+        sys.exit(0)
     new = _measure(devices=devs)
     old = {}
     if os.path.exists(_JSON):

@@ -27,14 +27,35 @@ Run STRICTLY SERIALLY on the GPU (one device-timed process at a time):
     PYTHONPATH=/var/tmp/backends-merge python torch_measure.py
 
 Writes data/torch_<device>.json (machine + version stamped).
+
+Extra points at larger N (e.g. on a bigger GPU), merged into the existing JSON
+(its other points and env stamps kept; the run is noted in its ``extra_points``):
+    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python torch_measure.py --Ns 3e6
 """
 
+import argparse
 import json
 import os
 import socket
+import sys
 import time
 
-import torch
+_ap = argparse.ArgumentParser(description="galpy-torch (torchdiffeq dopri5) orbit-integration speed vs N")
+_ap.add_argument("--Ns", metavar="N1,N2,...",
+                 help="measure ONLY these N (ints or e-notation, e.g. 3e6) and MERGE them into "
+                      "the existing data/torch_<device>.json (other points and its env stamps "
+                      "kept; this run is recorded in its 'extra_points')")
+_args = _ap.parse_args()
+if _args.Ns is not None:  # paper/figures/_harness/extra_points.py
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), *[".."] * 4)))
+    from paper.figures._harness import extra_points
+
+    try:
+        _extra_Ns = extra_points.parse_Ns(_args.Ns)
+    except ValueError as e:
+        _ap.error(str(e))
+
+import torch  # noqa: E402
 
 torch.set_default_dtype(torch.float64)
 from torchdiffeq import odeint  # noqa: E402
@@ -58,6 +79,8 @@ nt = 16  # hiN convention: torch is step-bound, saves are irrelevant; keeps outp
 # tensors + empties the cache before the next, reclaiming that memory to attempt 1e6.
 # Stop on OOM or budget (recorded in stopped_at).
 Ns = [1, 10, 100, 1000, 10000, 30000, 100000, 300000, 500000, 700000, 1000000]
+if _args.Ns is not None:
+    Ns = _extra_Ns
 WALL_BUDGET_S = 200.0  # stop once a single steady run exceeds this
 ts = torch.linspace(0.0, 56.2, nt, device=dev)
 ic0 = torch.tensor([1.0, 0.0, 1.0, 0.0125, 0.036, 0.0], device=dev)
@@ -103,6 +126,20 @@ try:
 except Exception:
     out["gpu"] = dev
 
+
+def _dump(out):
+    if _args.Ns is not None:
+        out = extra_points.merge_results(_base, out, _note)
+    with open(os.path.join(_DATA, f"torch_{dev}.json"), "w") as fh:
+        json.dump(out, fh, indent=2)
+
+
+if _args.Ns is not None:
+    _base = extra_points.load(os.path.join(_DATA, f"torch_{dev}.json"), required=False)
+    for _k in ("device", "gpu", "nt"):
+        extra_points.check_same((_base or {}).get(_k), out[_k], _k, f"torch_{dev}.json")
+    _note = extra_points.note(Ns, {k: v for k, v in out.items() if k != "results"})
+
 for N in Ns:
     try:
         y0 = _y0(N)
@@ -127,8 +164,7 @@ for N in Ns:
             flush=True,
         )
         os.makedirs(_DATA, exist_ok=True)
-        with open(os.path.join(_DATA, f"torch_{dev}.json"), "w") as fh:
-            json.dump(out, fh, indent=2)
+        _dump(out)
         del y0
         if dev == "cuda":
             torch.cuda.empty_cache()
@@ -139,14 +175,12 @@ for N in Ns:
                 flush=True,
             )
             out["stopped_at"] = {"N": N, "reason": "wall_budget", "wall_s": best}
-            with open(os.path.join(_DATA, f"torch_{dev}.json"), "w") as fh:
-                json.dump(out, fh, indent=2)
+            _dump(out)
             break
     except RuntimeError as e:  # CUDA OOM or step-cap: stop and record where
         print(f"galpy-torch[{dev}] N={N}: STOP {type(e).__name__}: {str(e)[:70]}", flush=True)
         out["stopped_at"] = {"N": N, "reason": type(e).__name__, "msg": str(e)[:120]}
-        with open(os.path.join(_DATA, f"torch_{dev}.json"), "w") as fh:
-            json.dump(out, fh, indent=2)
+        _dump(out)
         if dev == "cuda":
             torch.cuda.empty_cache()
         break
