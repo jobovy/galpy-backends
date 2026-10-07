@@ -1,0 +1,43 @@
+\documentclass[twocolumn]{aastex701}
+\usepackage{amsmath,amssymb}
+\usepackage{minted}
+\usepackage{xcolor}
+\usemintedstyle{friendly}
+\input{macros}
+\shorttitle{galpy with jax and PyTorch backends}
+\shortauthors{Bovy}
+
+\begin{document}
+
+\title{\galpy\ with differentiable, accelerated backends: galactic dynamics in \jax\ and \torch}
+
+\author[0000-0001-6855-442X]{Jo Bovy}
+\affiliation{David A. Dunlap Department of Astronomy and Astrophysics, University of Toronto, 50 St.~George Street, Toronto, ON M5S 3H4, Canada}
+\email{bovy@astro.utoronto.ca}
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\keywords{\uat{Galaxy dynamics}{591} --- \uat{Stellar dynamics}{1596} --- \uat{Milky Way dynamics}{1051} --- \uat{Stellar streams}{2166} --- \uat{Astronomy software}{1855} --- \uat{Computational methods}{1965}}
+
+\input{sections/introduction}
+\input{sections/design}
+\input{sections/potentials}
+\input{sections/orbits}
+\input{sections/actionangle}
+\input{sections/dfs}
+\input{sections/streams}
+\input{sections/process}
+\input{sections/examples}
+\input{sections/conclusion}
+
+\input{sections/acknowledgments}
+
+\appendix
+\input{sections/appendix_dxdv}
+
+\bibliography{refs}
+\bibliographystyle{aasjournalv7}
+
+\end{document}

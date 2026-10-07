@@ -1,0 +1,34 @@
+% Macros (conventions follow the galpy paper, Bovy 2015)
+\newcommand{\ie}{i.e.}
+\newcommand{\eg}{e.g.}
+\newcommand{\etal}{et al.}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\sectionname}{$\mathsection$}
+\newcommand{\flag}[1]{\texttt{#1}}
+\newcommand{\galpy}{\flag{galpy}}
+\newcommand{\numpy}{\flag{numpy}}
+\newcommand{\scipy}{\flag{scipy}}
+\newcommand{\jax}{\flag{jax}}
+\newcommand{\torch}{\flag{PyTorch}}
+\newcommand{\python}{\flag{Python}}
+\newcommand{\cc}{\texttt{C}}
+\newcommand{\diffrax}{\flag{diffrax}}
+\newcommand{\pot}{\texttt{Potential}}
+\newcommand{\orb}{\texttt{Orbit}}
+\newcommand{\vecx}{\ensuremath{\vec{x}}}
+\newcommand{\vecv}{\ensuremath{\vec{v}}}
+\newcommand{\vecw}{\ensuremath{\vec{w}}}
+\newcommand{\vecj}{\ensuremath{\vec{J}}}
+\newcommand{\veco}{\ensuremath{\vec{\Omega}}}
+\newcommand{\veca}{\ensuremath{\boldsymbol\theta}}
+\newcommand{\paramspot}{\ensuremath{\vec{p}_\Phi}}
+\newcommand{\kpc}{\ensuremath{\,\mathrm{kpc}}}
+\newcommand{\pc}{\ensuremath{\,\mathrm{pc}}}
+\newcommand{\kms}{\ensuremath{\,\mathrm{km\ s}^{-1}}}
+\newcommand{\Gyr}{\ensuremath{\,\mathrm{Gyr}}}
+\newcommand{\Myr}{\ensuremath{\,\mathrm{Myr}}}
+\newcommand{\msun}{\ensuremath{\,\mathrm{M}_{\odot}}}
+% code
+\newminted{python}{fontsize=\small,autogobble,breaklines}
+\newenvironment{code}{\VerbatimEnvironment\begin{pythoncode}}{\end{pythoncode}}
+\newcommand{\pycode}[1]{\mintinline{python}{#1}}

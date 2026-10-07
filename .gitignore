@@ -217,3 +217,11 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 paper/figures/_harness/manifest.json.lock
+paper/ms/_minted-ms/
+paper/ms/ms.aux
+paper/ms/ms.bbl
+paper/ms/ms.blg
+paper/ms/ms.log
+paper/ms/ms.out
+paper/ms/ms.pyg
+paper/ms/ms.pdf
