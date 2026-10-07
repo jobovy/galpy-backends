@@ -86,29 +86,31 @@ inference, or the optimization of models with many parameters, such as
 neural networks that stand in for a potential or a DF. Codes built on
 these frameworks are now in use in cosmology
 \citep[\eg,][]{Modi2021,Campagne2023,Li2024} and, over the past two
-years, in galactic dynamics, where the examples give a good idea of what
-the derivatives and the GPUs are used for. \texttt{galax}
-\citep{Starkman2026}, a re-implementation of \texttt{gala} in \jax, has
-been used to measure the shapes of dark-matter halos from the curvature
-of stellar streams around other galaxies, by fitting large batches of
-stream models on GPUs \citep{Wu2026b,Euclid2026,Starkman2026b}, and to
-forecast the constraining power of streams with Fisher matrices obtained
-by differentiating the stream model \citep{AnauMontel2026}; differentiable
-$N$-body and stream codes in \jax\ allow stream progenitors and their
-orbits to be fit by gradient descent \citep{Viterbo2025} and halo
-flattenings to be inferred hierarchically from many streams
-\citep{Chemaly2026}. \citet{Nibauer2025} fit the perturbations of
-streams in flexible potentials by differentiating Hamilton's equations,
-which \citet{Nibauer2025b} use to measure Galactic accelerations along
-GD-1 with Hamiltonian Monte Carlo. \citet{Green2023}, \citet{An2021},
-\citet{Buckley2023}, and \citet{Kalda2025} recover the gravitational
-potential from a snapshot of phase space by training a normalizing flow
-for the DF and requiring it to be stationary, and orbital torus imaging
-fits the Galactic potential to the abundance gradients across action
-space with gradient-based samplers \citep{PriceWhelan2025}. Analyses
-such as these, in which a model with thousands of parameters is fit to
-millions of stars, or in which an entire simulation is differentiated,
-were not practical with codes that only return values.
+years, in galactic dynamics. \texttt{galax} \citep{Starkman2026}, a
+\jax\ code modeled on \texttt{gala}, provides the halo potentials whose
+acceleration directions are compared with the curvature of stellar
+streams around other galaxies to constrain the shapes of their halos
+\citep{Wu2026b,Euclid2026}, and the orbits used to forecast how well
+such curvature tests separate dark-matter models \citep{Starkman2026b}.
+\citet{AnauMontel2026} integrate streams perturbed by subhalos with
+\texttt{galax} on a GPU and obtain Fisher forecasts by differentiating
+the full simulation. Other \jax\ codes fit the progenitor and the host
+potential of a mock stream by gradient descent through an $N$-body
+simulation \citep{Viterbo2025}, generate the many particle-spray models
+needed to infer the distribution of halo flattenings from a population
+of streams \citep{Chemaly2026}, and compute the response of streams to
+subhalos by integrating linearized equations of motion
+\citep{Nibauer2025}. Gradient-based samplers in \jax\ fit a spline
+model of the track of GD-1 to measure the accelerations along it
+\citep{Nibauer2025b}, and a flexible model of vertical orbits to the
+variation of stellar abundances \citep{PriceWhelan2025}. Normalizing
+flows for the DF, differentiated automatically, recover the potential
+from phase-space snapshots of simulated galaxies
+\citep{Green2023,An2021,Buckley2023} and of 5.6 million \textit{Gaia}
+stars \citep{Kalda2025}. Differentiating an entire simulation
+\citep{Viterbo2025,AnauMontel2026}, or fitting a neural-network
+potential to millions of stars \citep{Kalda2025}, is not practical with
+codes that only return values.
 
 In this paper, we describe an extension of \galpy\ that adds \jax\ and
 \torch\ as \emph{backends} to its existing \numpy\ and \cc\
