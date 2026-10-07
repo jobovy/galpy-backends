@@ -102,7 +102,7 @@ and merged them; the CPU series are untouched.
 | construct, jax eager, cold (nch 4/8/16/32) | 109.4 / 110.5 / 111.1 / 112.4 s | **165.2 / 161.6 / 163.9 / 165.9 s** |
 | build for panels (b)/(c), cold | 109.5 s | 159.7 s |
 | eval / sample, jax jit, N=1e6 | 1.66 / 4.06 ms | 1.65 / 4.06 ms |
-| eval / sample, jax eager and torch eager | – | unchanged within about 5% at every N |
+| eval / sample, jax eager and torch eager | – | unchanged within about 10% at every N (largest: jax eager sample at 1e5, 36.1 → 33.0 ms) |
 | compile (eval, sample) | – | unchanged |
 
 - **Eager jax construction on the GPU got about 2× slower.** The node load was
