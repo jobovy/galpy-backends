@@ -121,10 +121,16 @@ The derivative of the sampled stream
 with respect to the potential agrees with finite differences of the same
 sample to $10^{-6}$, and \figurename~\ref{fig:extrapolation}
 demonstrates what it is good for: a single pass of forward-mode
-differentiation over a 1500-particle stream predicts the stream's track
-in a halo of different flattening well enough to remove most of the
-shift in the track for changes in the flattening of up to twenty
-percent, which is the kind of step a fitter takes. Each spray
+differentiation over a 6000-particle stream predicts the stream's track
+in a halo of different flattening. The residual of this first-order
+prediction falls as $\Delta q^2$, such that it removes 99\,\% of the
+shift of the track for $|\Delta q|=0.003$, 92\,\% for $|\Delta q|=0.025$,
+and still two thirds for $|\Delta q|=0.2$, a range that covers the steps
+a fitter takes. The comparison has to be made with a smooth estimate of
+the track evaluated on a fixed grid: two independent fits with
+\texttt{streamTrack}, which bins the particles, differ by a noise term
+that is proportional to $|\Delta q|$ and hides the quadratic
+convergence. Each spray
 particle's orbit is one more orbit in a batch, such that a sprayed
 stream costs about a millisecond per particle on a CPU under compiled
 \jax, about half the cost of the non-differentiable \cc\ version, and
@@ -133,15 +139,19 @@ microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}
   \caption{Predicting a stream's track in a different potential from one
-    derivative. Left: the track of a 1500-particle \texttt{fardal15spraydf}
-    stream after 4.5\,Gyr in a logarithmic halo with flattening
-    $q_0=0.9$ (black), the tracks in halos with $q=0.7$ to $1.1$
-    computed directly (solid), and their prediction from the forward-mode
-    derivative of the stream with respect to $q$ at $q_0$ (dashed), in a
-    coordinate frame aligned with the progenitor's orbit. Right: the
-    root-mean-square shift of the track at fixed $\phi_1$ and the
-    residual after the first-order prediction, as a function of
-    $|\Delta q|$.}\label{fig:extrapolation}
+    derivative. Left: the leading and trailing tracks of a 6000-particle
+    \texttt{fardal15spraydf} stream after 4.5\,Gyr in a logarithmic halo
+    with flattening $q_0=0.9$ (thick), the tracks in halos with $q=0.7$
+    to $1.1$ computed directly (solid), and their prediction from the
+    forward-mode derivative of the stream with respect to $q$ at $q_0$
+    (dashed), in a coordinate frame aligned with the progenitor's orbit.
+    Right: the root-mean-square shift of the track at fixed $\phi_1$ and
+    the residual after the first-order prediction, for the same random
+    numbers, frame, and smoothing; the residual falls as $\Delta q^2$
+    (dotted). Crosses show the residual between two independent
+    \texttt{streamTrack} fits, whose binning noise grows only as
+    $|\Delta q|$. A single derivative predicts the track of a nearby
+    potential to within a few percent of its shift.}\label{fig:extrapolation}
 \end{figure*}
 
 \begin{figure*}[t!]

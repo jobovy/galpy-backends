@@ -458,7 +458,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
+    "git": "c4a2536",
     "sha256": "06b679d82fdd0eb9385e0b3caa146b951dbee1d3d6fdaddce44e5aa4755e841b",
     "track": "G"
   },
