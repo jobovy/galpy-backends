@@ -190,7 +190,7 @@ def make():
             transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
         )
     fig.tight_layout()
-    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None,
+    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
                         inline={_lab("galpy C (dop853_c)", "cpu"): (300.0, 14 if PAPER else 9)})
     if PAPER:
         layout.fit_right(fig)

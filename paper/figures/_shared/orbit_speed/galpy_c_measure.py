@@ -21,6 +21,8 @@ serves as the single galpy for ALL shared series:
 
     PYTHONPATH=/var/tmp/backends-merge python galpy_c_measure.py lowN
     PYTHONPATH=/var/tmp/backends-merge python galpy_c_measure.py hiN
+    PYTHONPATH=<worktree> GALPY_WORKTREE=<worktree> python galpy_c_measure.py hiN_ext
+      (appends N=1e5, 3e5, 1e6 to galpy_c_cpu_hiN.json; existing points are kept)
 
 Writes data/galpy_c_cpu[_hiN].json (machine + version stamped).  The plots
 (../../g8.../make.py, ../../g12.../make.py) are byte-stable from these JSONs.
@@ -42,9 +44,11 @@ assert galpy.__file__.startswith(
     os.environ.get("GALPY_WORKTREE", "/var/tmp/backends-merge")
 ), galpy.__file__
 
-mode = sys.argv[1] if len(sys.argv) > 1 else "lowN"  # 'lowN' or 'hiN'
+mode = sys.argv[1] if len(sys.argv) > 1 else "lowN"  # 'lowN', 'hiN' or 'hiN_ext'
 if mode == "hiN":
     nt, Ns, suffix = 16, [1000, 10000, 30000], "_hiN"
+elif mode == "hiN_ext":  # extend the hiN curve to the GPU series' largest N, appending
+    nt, Ns, suffix = 16, [100000, 300000, 1000000], "_hiN"  # to the existing JSON
 else:
     nt, Ns, suffix = 1000, [1, 10, 100, 1000, 10000], ""
 
@@ -76,6 +80,14 @@ out = {
     "galpy_file": galpy.__file__,
     "results": [],
 }
+_OUT = os.path.join(_DATA, f"galpy_c_cpu{suffix}.json")
+if mode == "hiN_ext" and os.path.exists(_OUT):  # keep the existing points + stamps
+    with open(_OUT) as fh:
+        prev = json.load(fh)
+    out.update({k: v for k, v in prev.items() if k != "results"})
+    out["results"] = [r for r in prev["results"] if r["N"] not in Ns]
+    out["extended"] = {"Ns": Ns, "host": socket.gethostname(),
+                       "galpy_version": galpy.__version__, "galpy_file": galpy.__file__}
 for N in Ns:
     rng = np.random.default_rng(N)
     ics = make_ics(N, rng)

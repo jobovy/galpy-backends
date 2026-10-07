@@ -1,5 +1,8 @@
-"""Extend the C-STM scaling line to N=1000, 3000 (it is linear, so just slow)."""
-import json, pathlib, numpy, jax
+"""Extend the C-STM scaling line to large N (it is linear, so just slow).
+
+Usage: PYTHONPATH=<galpy worktree> python measure_cstm_largeN.py [N ...]
+(default N = 1000 3000; 2026-10-07: 10000 100000 to reach the GPU series' N)."""
+import json, pathlib, sys, numpy, jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 from paper.figures._harness.bench import time_call
@@ -10,7 +13,7 @@ ts_j = jnp.asarray(_TS); CPU = jax.devices("cpu")[0]
 _F = pathlib.Path(__file__).resolve().parent.parent / "data" / "icderiv.json"
 out = json.loads(_F.read_text())
 def batch(n): return numpy.stack([_IC * (1 + 0.001 * (k % 97)) for k in range(n)])
-for n in (1000, 3000):
+for n in ([int(float(a)) for a in sys.argv[1:]] or [1000, 3000]):
     with jax.default_device(CPU):
         g = jax.jit(jax.grad(lambda v: cstm_jax(MWPotential2014, v, ts_j, method="dop853_c")[:, -1, 0].sum()))
         icb = jnp.asarray(batch(n))

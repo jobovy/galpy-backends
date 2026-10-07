@@ -196,7 +196,7 @@ def make():
                      fontsize=11)
     fig.tight_layout()
     for ax in axes[0]:
-        palette.label_lines(ax, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None)
+        palette.label_lines(ax, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     else:

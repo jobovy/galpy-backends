@@ -195,8 +195,8 @@ def make():
                  ha="right", va="bottom")
         fig.suptitle(r"jit amortization: Plummer $F_R$ (jax; TITAN Xp and H100 GPUs, float64)", fontsize=11)
     fig.tight_layout(**({} if PAPER else {"w_pad": 11}))
-    palette.label_lines(ax1, fontsize=fs_line)
-    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None)
+    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=1.5 * fs_line)  # mathtext superscripts
+    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     return fig

@@ -114,7 +114,7 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
 
     Every line (default: each with a label not starting with "_") is labelled in a
     column just right of the axes, at the height of its last finite point, spread
-    to ``min_sep_pt`` apart, with a thin leader from the line end. ``inline``
+    to ``min_sep_pt`` per text line apart (a two-line label takes twice the room), with a thin leader from the line end. ``inline``
     maps a label to ``(x, dy_pt)``: that line is instead labelled on the plot,
     next to its point at data ``x`` (lines that end well inside the axes).
     Call after the axis limits are final.
@@ -153,16 +153,31 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
         Y = ax.transData.transform((x[i], y[i]))[1]
         col.append({"xy": (x[i], y[i]), "Y": Y, "Ynew": Y, "text": text, "color": c})
     col.sort(key=lambda a: a["Y"])
-    sep = min_sep_pt * pt
+
+    def sep(lo, hi):  # centre-to-centre spacing; a multi-line label is taller
+        nl = lambda a: a["text"].count("\n") + 1
+        return 0.5 * (nl(lo) + nl(hi)) * min_sep_pt * pt
+
     for k in range(1, len(col)):
-        col[k]["Ynew"] = max(col[k]["Y"], col[k - 1]["Ynew"] + sep)
+        col[k]["Ynew"] = max(col[k]["Y"], col[k - 1]["Ynew"] + sep(col[k - 1], col[k]))
     # re-centre so the labels sit around their lines rather than all above them
     if col:
         shift = 0.5 * numpy.mean([a["Ynew"] - a["Y"] for a in col])
         for a in col:
             a["Ynew"] -= shift
         for k in range(1, len(col)):
-            col[k]["Ynew"] = max(col[k]["Ynew"], col[k - 1]["Ynew"] + sep)
+            col[k]["Ynew"] = max(col[k]["Ynew"], col[k - 1]["Ynew"] + sep(col[k - 1], col[k]))
+        # keep the whole column inside the axes' height (leaders connect the lines)
+        y_lo, y_hi = ax.transAxes.transform((0.0, 0.0))[1], ax.transAxes.transform((0.0, 1.0))[1]
+        half = lambda a: 0.5 * (a["text"].count("\n") + 1) * min_sep_pt * pt
+        top = col[-1]["Ynew"] + half(col[-1])
+        if top > y_hi:
+            for a in col:
+                a["Ynew"] -= top - y_hi
+        bot = col[0]["Ynew"] - half(col[0])
+        if bot < y_lo:
+            for a in col:
+                a["Ynew"] += y_lo - bot
     x0 = ax.transAxes.transform((1.0, 0.0))[0] + pad_pt * pt
     for a in col:
         xt, yt = to_axes.transform((x0, a["Ynew"]))

@@ -207,8 +207,6 @@ def make():
         else "dotted: constant cost / orbit\n(0.1, 1, 10 ms)",
         transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
     )
-    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None,
-                        inline={_label("c", "cpu", None, "dop853_c, sequential"): (300.0, 14 if PAPER else 9)})
     # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator
     # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,
     # controller architecture, compile amortization) live in caption.md.
@@ -223,6 +221,8 @@ def make():
             transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="left",
         )
     fig.tight_layout()
+    palette.label_lines(ax, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                        inline={_label("c", "cpu", None, "dop853_c, sequential"): (300.0, 14 if PAPER else 9)})
     if PAPER:
         layout.fit_right(fig)
     return fig

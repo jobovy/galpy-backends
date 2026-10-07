@@ -122,9 +122,14 @@ def make():
     ax1.set_ylabel("IC-gradient wall-clock  [ms]")
     ax1.set_title("(a) single orbit" if PAPER else "(a) single orbit: full IC-gradient")
     for x, h in zip(xs, heights):
-        ax1.text(x, h * 1.15, f"{h:.0f}" if h >= 10 else f"{h:.1f}",
-                 ha="center", va="bottom", fontsize=fs_note)
-    ax1.set_ylim(top=max(heights) * 3)
+        # PAPER: values in seconds, rotated, so neighbouring bars do not collide
+        if PAPER:
+            ax1.text(x, h * 1.15, f"{h / 1e3:.2g} s" if h >= 1e3 else f"{h:.0f} ms",
+                     ha="center", va="bottom", fontsize=fs_note, rotation=90)
+        else:
+            ax1.text(x, h * 1.15, f"{h:.0f}" if h >= 10 else f"{h:.1f}",
+                     ha="center", va="bottom", fontsize=fs_note)
+    ax1.set_ylim(top=max(heights) * (30 if PAPER else 3))
     ax1.text(0.02, 0.97, "hatched = eager", transform=ax1.transAxes,
              fontsize=fs_note, color="0.4", va="top")
 
@@ -154,9 +159,6 @@ def make():
         ax2.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(250.0, y[k] / 8.0),
                      fontsize=fs_line, color=ln.get_color(), va="center", ha="left",
                      arrowprops=dict(arrowstyle="-", lw=0.5, color=ln.get_color(), shrinkA=1, shrinkB=2))
-    palette.label_lines(ax2, [(ln, ln.get_label()) for ln in ax2.get_lines()
-                              if not ln.get_label().startswith(("_", "galpy C"))],
-                        fontsize=fs_line, min_sep_pt=2.3 * fs_line if PAPER else None)
 
     if not PAPER:
         gpus = [d["meta"].get("gpu", "?")] + ([d_h100["meta"].get("gpu", "H100")] if d_h100 else [])
@@ -164,6 +166,10 @@ def make():
                      "(full 6-vector gradient; MWPotential2014)", fontsize=11)
         fig.text(0.01, 0.005, "GPU: " + "; ".join(gpus), fontsize=6.5, color="0.5")
     fig.tight_layout()
+    # after tight_layout: label positions are in axes fraction of the final axes
+    palette.label_lines(ax2, [(ln, ln.get_label()) for ln in ax2.get_lines()
+                              if not ln.get_label().startswith(("_", "galpy C"))],
+                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     return fig
