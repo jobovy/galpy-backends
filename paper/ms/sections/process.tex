@@ -47,8 +47,10 @@ explicitly left out, such that the description can be reviewed without
 re-deriving it from the diff.
 
 A few rules were fixed early and enforced throughout. The \numpy\ path
-has to remain byte-identical, and any deviation (there is one, a
-tolerance in the King DF) is flagged in the PR rather than absorbed.
+has to remain byte-identical, and any deviation (there are four: a
+tolerance in the King DF and the three cases noted in
+\sectionname s~\ref{sec:df} and \ref{sec:streams}) is flagged in the PR
+rather than absorbed.
 The jax and torch paths have to pass the same tests at the same
 tolerances; a tolerance may be loosened only for one test, only
 slightly, and with a justification in the PR. Test coverage may not

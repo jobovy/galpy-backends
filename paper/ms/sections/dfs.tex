@@ -121,8 +121,11 @@ velocity grid rather than a loop. The quasi-isothermal DF of
 differentiably with respect to the parameters of the potential and the
 DF's scale lengths, and its velocity sampler at a given position draws
 by inverse transformation on a three-dimensional velocity mesh, such
-that a sample is differentiable in the DF's parameters for a fixed key.
-Its construction is a \numpy\ computation, and its interpolated velocity
+that a sample is differentiable in the DF's parameters for a fixed key;
+this sampler replaced a rejection sampler on the \numpy\ path as well,
+which is the second place where \numpy\ output changed (the distribution
+is the same, the particular draws are not). Its construction is a \numpy\
+computation, and its interpolated velocity
 sampler, which samples many positions at once, is a rejection sampler
 with \numpy\ proposals that runs on the backends, with its shrinking
 arrays padded to fixed sizes, but is not differentiable. The corrections

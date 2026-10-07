@@ -11,8 +11,8 @@ backend helper is a strict pass-through when the active array library is
 on the identical object. This rule is enforced by tests and, for each
 PR, by comparing checksums of outputs between a checkout with and one
 without the change. Where the \numpy\ result did change, this was
-flagged and approved; there are three such places, discussed where they
-arise. Second, the interface is unchanged: the same classes, methods,
+flagged and approved; there are three such places, all in the DFs, and
+they are noted where they arise. Second, the interface is unchanged: the same classes, methods,
 and keywords, with the backend determined by the arrays that are passed
 in. Third, \galpy's code is written against a backend-agnostic array
 namespace, with backend-specific code confined to the \texttt{galpy.backend}

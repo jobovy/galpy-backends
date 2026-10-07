@@ -34,7 +34,10 @@ hour and is only worthwhile when many streams are to be built; the
 construction itself, once compiled, takes about a minute on a CPU,
 compared with a few to tens of seconds for the \numpy\ and \cc\ version.
 Sampling and evaluating the DF, on the other hand, are two orders of
-magnitude faster under compilation than on \numpy, and run on a GPU.
+magnitude faster under compilation than on \numpy, and run on a GPU;
+the sampler draws by inverse transformation on \numpy\ too, which is the
+third place where \numpy\ output changed, in the draws but not in their
+distribution.
 
 A point about these derivatives is general enough to state here. A
 stream model is a generative model: the stream's stars are a sample from
