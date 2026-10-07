@@ -1,0 +1,58 @@
+NVIDIA H100 80GB HBM3, 580.173.02
+>>> 16:09:10 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/_shared/orbit_speed/galpy_jax_measure.py gpu hiN --Ns 1e6
+    ok 16:10:40
+>>> 16:10:40 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/jax_dopri5_measure.py gpu hiN --Ns 1e6
+    ok 16:11:44
+>>> 16:11:44 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/_shared/orbit_speed/galpy_jax_measure.py gpu hiN --Ns 3e6
+    ok 16:14:59
+>>> 16:14:59 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/jax_dopri5_measure.py gpu hiN --Ns 3e6
+    ok 16:17:38
+>>> 16:17:38 [hiN2] PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/torch_measure.py --Ns 3e6
+    ok 16:19:26
+>>> 16:19:26 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/gV2_vertical_inverse_speed/make.py --devices gpu --Ns 1e7
+    ok 16:19:48
+>>> 16:19:48 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/gD3_spherical_df_speed/make.py --gpu --Ns 1e8
+    ok 16:21:34
+>>> 16:21:34 [hiN2] python -m paper.figures._harness run g8_galax_orbit_speed g12_inbackend_orbit_gpu gV2_vertical_inverse_speed gD3_spherical_df_speed
+    ok 16:21:42
+>>> 16:21:42 [hiN2] done
+
+scontrol show job 1054212
+JobId=1054212 JobName=galpy-h100
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1346990 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:12:40 TimeLimit=04:00:00 TimeMin=N/A
+   SubmitTime=2026-10-07T16:08:34 EligibleTime=2026-10-07T16:08:34
+   AccrueTime=2026-10-07T16:08:34
+   StartTime=2026-10-07T16:09:02 EndTime=2026-10-07T16:21:42 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-07T16:09:02 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2074999
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0014
+   BatchHost=trig0014
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/galpy-jax/tools/trillium_job.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=04:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-hiN2-%j.out --export=ALL,STAGE=hiN2 tools/trillium_job.sbatch --export=NONE --parsable --account=def-bovy --time=04:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-hiN2-%j.out --export=ALL,STAGE=hiN2 tools/trillium_job.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/galpy-jax
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=04:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-hiN2-%j.out --export=ALL,STAGE=hiN2 tools/trillium_job.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/galpy-h100-hiN2-1054212.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1054212
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1054212      galpy-h100   def-bovy   00:12:40                         00:00:00   00:00:00      0:0 
+1054212.bat+      batch   def-bovy   00:12:40                         00:00:00   00:00:00      0:0 
+1054212.ext+     extern   def-bovy   00:12:40                         00:00:00   00:00:00      0:0 
+
