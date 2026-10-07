@@ -37,9 +37,9 @@ hand. Under a backend these can also be obtained by differentiating the
 potential, and the agreement between the two is a strong test of both:
 for the basis-function expansions, the spiral arms, a rotating bar, and
 composite potentials, the force by AD agrees with the hand-coded force
-to within a few units in the last place (\figurename~\ref{fig:adforces}),
-that is, the derivative that AD produces is the analytic force up to
-rounding. The test suite checks
+to a few parts in $10^{15}$, within twenty units in the last place
+(\figurename~\ref{fig:adforces}), that is, the derivative that AD
+produces is the analytic force up to rounding. The test suite checks
 these identities for every potential, under both backends and in both
 modes. For the user, the relevant derivatives are those with respect to
 the parameters. A potential constructed with a backend array as a

@@ -201,7 +201,7 @@ all; their derivative rule runs the integration on the host.
 \figurename~\ref{fig:orbitspeed} compares the wall time of integrating
 $N$ orbits for 2\,Gyr in the Milky-Way model with the \cc\ integrator,
 one orbit at a time on one core, with the in-backend solvers on a CPU
-and on two GPUs. The \cc\ path costs about $0.1$\,ms per orbit after a
+and on two GPUs. The \cc\ path costs 0.08 to 0.1\,ms per orbit after a
 few milliseconds of setup and is the fastest option for up to about
 $10^4$ orbits on any hardware. The backend solvers start from a floor of
 one to a few seconds, set by compilation and kernel launches, and
@@ -209,7 +209,7 @@ amortize it over the batch; on the consumer GPU they never quite reach
 the \cc\ cost per orbit, because that card executes double-precision
 arithmetic at one thirty-second of its single-precision rate, while on
 the H100 they pass single-threaded \cc\ near $N\approx3\times10^4$ and are
-several times cheaper per orbit at the largest batches. The \cc\ path
+about three times cheaper per orbit at $N=3\times10^5$. The \cc\ path
 also runs in parallel over cores, which divides its line by the number
 of cores. Compilation of the in-backend solve takes seconds and is paid
 once per shape of the problem. The derivative of an orbit with respect
@@ -246,8 +246,8 @@ keeps the per-orbit control.
     number of orbits differentiated at once.}\label{fig:icderivcost}
 \end{figure*}
 
-\begin{figure}[t!]
-  \includegraphics[width=0.48\textwidth,clip=]{../figures/g8_galax_orbit_speed/g8_galax_orbit_speed.pdf}
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g8_galax_orbit_speed/g8_galax_orbit_speed.pdf}
   \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
     \texttt{MWPotential2014} at matched tolerances with \galpy\ and with
     \texttt{galax}. Grey: \galpy's \cc\ integrator on one core. Blue:
@@ -255,7 +255,7 @@ keeps the per-orbit control.
     Green: \texttt{galax} on the CPU and the GPUs, with its default
     batched step-size control (solid) and with per-orbit control as in
     \galpy\ (dash-dotted).}\label{fig:galax}
-\end{figure}
+\end{figure*}
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g12_inbackend_orbit_gpu/g12_inbackend_orbit_gpu.pdf}
