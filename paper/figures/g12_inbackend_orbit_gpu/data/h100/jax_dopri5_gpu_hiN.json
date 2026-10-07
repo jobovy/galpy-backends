@@ -33,11 +33,95 @@
       "wall_s": 5.467539392062463,
       "per_orbit_ms": 0.018225131306874878,
       "compile_run_s": 6.473159958026372
+    },
+    {
+      "N": 1000000,
+      "wall_s": 13.750536716077477,
+      "per_orbit_ms": 0.013750536716077476,
+      "compile_run_s": 15.099076848942786
+    },
+    {
+      "N": 3000000,
+      "wall_s": 37.397675218991935,
+      "per_orbit_ms": 0.012465891739663977,
+      "compile_run_s": 39.207374177873135
     }
   ],
   "jax_version": "0.11.2",
   "diffrax_version": "0.7.2",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.5.3",
-  "gpu": "NVIDIA H100 80GB HBM3"
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "extra_points": [
+    {
+      "added": "2026-10-07T20:10:46+00:00",
+      "host": "trig0014",
+      "argv": [
+        "jax_dopri5_measure.py",
+        "gpu",
+        "hiN",
+        "--Ns",
+        "1e6"
+      ],
+      "Ns": [
+        1000000
+      ],
+      "env": {
+        "backend": "galpy-jax",
+        "device": "gpu",
+        "integrator": "diffrax Dopri5 (in-backend; same-work match to torch dopri5)",
+        "stepping": "per-orbit adaptive (vmap-of-solve)",
+        "nt": 16,
+        "tspan_Gyr": 2.0,
+        "rtol": 1e-08,
+        "atol": 1e-08,
+        "potential": "MWPotential2014",
+        "host": "trig0014",
+        "jax_version": "0.11.2",
+        "diffrax_version": "0.7.2",
+        "galpy_version": "1.12.1.dev0",
+        "numpy_version": "2.5.3",
+        "gpu": "NVIDIA H100 80GB HBM3"
+      },
+      "Ns_measured": [
+        1000000
+      ],
+      "replaced": []
+    },
+    {
+      "added": "2026-10-07T20:15:05+00:00",
+      "host": "trig0014",
+      "argv": [
+        "jax_dopri5_measure.py",
+        "gpu",
+        "hiN",
+        "--Ns",
+        "3e6"
+      ],
+      "Ns": [
+        3000000
+      ],
+      "env": {
+        "backend": "galpy-jax",
+        "device": "gpu",
+        "integrator": "diffrax Dopri5 (in-backend; same-work match to torch dopri5)",
+        "stepping": "per-orbit adaptive (vmap-of-solve)",
+        "nt": 16,
+        "tspan_Gyr": 2.0,
+        "rtol": 1e-08,
+        "atol": 1e-08,
+        "potential": "MWPotential2014",
+        "host": "trig0014",
+        "jax_version": "0.11.2",
+        "diffrax_version": "0.7.2",
+        "galpy_version": "1.12.1.dev0",
+        "numpy_version": "2.5.3",
+        "gpu": "NVIDIA H100 80GB HBM3"
+      },
+      "Ns_measured": [
+        3000000
+      ],
+      "replaced": []
+    }
+  ]
 }

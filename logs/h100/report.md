@@ -60,14 +60,36 @@ value takes at least three values across 9 runs; the FD value is stable), as
 is the atol=0 `finite_part_quad` test. 2 tests (`test_misalignment_traces`)
 are fixed upstream.
 
-**Optional larger-N stage (hiN2): not run.** The scripts have no size
-arguments: `_shared/orbit_speed/galpy_jax_measure.py`,
-`g12/measure/jax_dopri5_measure.py` and `g12/measure/torch_measure.py`
-hard-code their N lists (only `gpu|cpu` and `lowN|hiN` positional arguments).
-`gV2/make.py` takes only `--devices`, and `gD3/make.py` only
-`--gpu`/`--modes`. Extending N would mean editing the figure code, which the
-rules forbid. Adding an `--Ns` option to these five scripts would make it a
-one-job stage.
+**Larger N (stage `hiN2`, 2026-10-07, job 1054212, 12 min 40 s).** The
+branch was first rebased onto main ab37edd, which includes 8c72ba6 (`--Ns` option + `hiN2` stage);
+the `trillium_stage.sh` conflict was resolved by keeping both sides. galpy is
+`feat/backends` @ 9a877712 (#1641 and #1642 merged, no cherry-picks), rebuilt
+with `build_ext --force`.
+
+Each N ran in its own process and was merged into the H100 JSONs with `--Ns`.
+**Every requested N ran: no OOM, no `stopped_at`, no NaN, empty gD3 `errors`,**
+and no OOM, `RESOURCE_EXHAUSTED` or traceback anywhere in `hiN2.log`.
+Every `extra_points` record has `replaced: []`, so no existing point changed.
+
+| series (JSON) | previous largest N | largest N that ran | wall | per item |
+|---|---|---|---|---|
+| g12/g8 jax Dopri8 hiN (`_shared/orbit_speed/data/jax_gpu_hiN.json`) | 3e5 (7.40 s) | **3e6** (1e6: 16.4 s) | 46.5 s | 0.0155 ms/orbit (1e6: 0.0164) |
+| g12 jax Dopri5 hiN (`g12/data/jax_dopri5_gpu_hiN.json`) | 3e5 (5.47 s) | **3e6** (1e6: 13.8 s) | 37.4 s | 0.0125 ms/orbit (1e6: 0.0138) |
+| g12 torch dopri5 (`g12/data/torch_cuda.json`) | 1e6 (9.22 s) | **3e6** | 25.3 s | 0.00844 ms/orbit |
+| gV2 eval, jax GPU jit | 1e6 (10.9 ms) | **1e7** | 102 ms | |
+| gV2 eval, jax GPU jit, vmap over tori | 1e6 (11.3 ms) | **1e7** | 107 ms | |
+| gV2 eval, torch GPU | 1e6 (69.8 ms) | **1e7** | 659 ms | |
+| gD3 sample, jax GPU jit (eddington NFW / Hernquist / King / OM) | 1e7 | **1e8** | 62.4 / 38.5 / 72.0 / 63.8 ms | |
+| gD3 sample, jax GPU eager (same order) | 1e7 | **1e8** | 167 / 118 / 174 / 171 ms | |
+| gD3 sample, torch GPU (same order) | 1e7 | **1e8** | 4.93 / 4.91 / 4.90 / 5.56 s | |
+
+**Saturation.** Per-orbit cost is nearly flat from 1e6 to 3e6 (Dopri8 0.0164 →
+0.0155, Dopri5 0.0138 → 0.0125, torch 0.0092 → 0.0084 ms/orbit), so the orbit
+integrators saturate the H100 at about 1e6 orbits. gV2 and gD3 are already
+linear in N from 1e6–1e7 on (10× N gives about 10× wall time). The 80 GB card
+had room at every requested N, so none of these series hits a memory limit up
+to 3e6 orbits / 1e7 angles / 1e8 samples. I didn't log `nvidia-smi` memory in
+this stage (not part of `hiN2`).
 
 ## Machine and software
 
@@ -76,6 +98,7 @@ one-job stage.
 | GPU | NVIDIA H100 80GB HBM3 (sm_90), 1 of 4 on the node; driver 580.173.02 (CUDA 13.0) |
 | CPU | AMD EPYC 9654 96-core; a 1-GPU job gets 24 cores and 187.5 GB host RAM |
 | galpy, run 1 | `feat/backends` @ 70165d10 (#1637 merge) + #1639 cherry-picked (`1478b68f`, then still open) |
+| galpy, hiN2 | `feat/backends` @ 9a877712 (#1641, #1642 merged; no cherry-picks) |
 | galpy, follow-up | `feat/backends` @ 3d9ac516 (#1639, #1640, #1641 merged) + #1642 cherry-picked (`0465ad32`; its second commit, the misalignment atol, was already on the tip and is empty) |
 | jax | 0.11.2, jaxlib 0.11.2, jax-cuda12-plugin/pjrt 0.11.2 (nvidia cu12 12.9 wheels) |
 | torch | 2.14.1+cu130, triton 3.8.0; torchdiffeq 0.2.5, torchode 1.0.1 |

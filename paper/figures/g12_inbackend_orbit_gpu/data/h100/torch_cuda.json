@@ -76,10 +76,51 @@
       "wall_s": 9.224849211983383,
       "per_orbit_ms": 0.009224849211983382,
       "first_s": 9.235367664019577
+    },
+    {
+      "N": 3000000,
+      "wall_s": 25.312368215061724,
+      "per_orbit_ms": 0.00843745607168724,
+      "first_s": 25.793435745406896
     }
   ],
   "torch_version": "2.14.1+cu130",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.5.3",
-  "gpu": "NVIDIA H100 80GB HBM3"
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "extra_points": [
+    {
+      "added": "2026-10-07T20:17:43+00:00",
+      "host": "trig0014",
+      "argv": [
+        "torch_measure.py",
+        "--Ns",
+        "3e6"
+      ],
+      "Ns": [
+        3000000
+      ],
+      "env": {
+        "backend": "galpy-torch",
+        "device": "cuda",
+        "integrator": "torchdiffeq dopri5 (in-backend, eager)",
+        "stepping": "batched state (6,N), shared adaptive controller",
+        "nt": 16,
+        "tspan_Gyr": 2.0,
+        "rtol": 1e-08,
+        "atol": 1e-08,
+        "potential": "MWPotential2014",
+        "host": "trig0014",
+        "wall_budget_s": 200.0,
+        "torch_version": "2.14.1+cu130",
+        "galpy_version": "1.12.1.dev0",
+        "numpy_version": "2.5.3",
+        "gpu": "NVIDIA H100 80GB HBM3"
+      },
+      "Ns_measured": [
+        3000000
+      ],
+      "replaced": []
+    }
+  ]
 }
