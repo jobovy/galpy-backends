@@ -22,7 +22,24 @@ respect to the parameters of the potential; these parameter derivatives
 agree with finite differences in which the potential and the
 \texttt{actionAngle} instance are rebuilt from the perturbed parameter
 to a few parts in $10^{10}$ for the St\"{a}ckel, adiabatic, and
-spherical methods.
+spherical methods. \figurename~\ref{fig:aasens} shows the two kinds of
+derivative for the isochrone potential, where the actions are known in
+closed form: the derivatives of the radial and vertical actions with
+respect to the radial velocity, and the derivative of the radial action
+with respect to the scale radius of the potential, which is the
+derivative that an inference loop uses when it adjusts the potential
+to match measured actions.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g18_actionangle_sensitivity/g18_actionangle_sensitivity.pdf}}
+  \caption{Derivatives of actions in the isochrone potential. Left: the
+    radial and vertical actions of an orbit as a function of its radial
+    velocity (solid, left axis) and their derivatives with respect to
+    the radial velocity by automatic differentiation (dashed, right
+    axis) with finite differences (circles). Right: the radial action as
+    a function of the scale radius $b$ of the potential and its
+    derivative with respect to $b$.}\label{fig:aasens}
+\end{figure*}
 
 \subsection{The St\"{a}ckel and adiabatic approximations}\label{sec:aa-staeckel}
 

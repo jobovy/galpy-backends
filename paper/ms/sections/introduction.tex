@@ -98,7 +98,7 @@ parameters is fit to millions of stars, or in which an entire simulation
 is differentiated, were not practical with codes that only return
 values.
 
-In this paper, I describe an extension of \galpy\ that adds \jax\ and
+In this paper, we describe an extension of \galpy\ that adds \jax\ and
 \torch\ as \emph{backends} to its existing \numpy\ and \cc\
 implementation. The principle that guided this work is that nothing
 should change for the existing user: the \numpy\ path produces results
@@ -121,11 +121,12 @@ programs.
 
 Essentially all of the code described in this paper was written by
 Claude, an AI coding agent developed by Anthropic, working in the
-\texttt{Claude Code} environment under my direction and review between
-June and October 2026. I discuss how this was done, how the work was
-organized, and how I established that the code is
-correct in \sectionname~\ref{sec:process}, and a statement on the use of
-AI appears at the end of the paper.
+\texttt{Claude Code} environment, under the direction and review of the
+human author (JB) between June and October 2026. We discuss how this was
+done, how the work was organized, and how the correctness of the code
+was established in \sectionname~\ref{sec:process}; a statement on the
+use of AI, which also explains the use of ``we'' in a paper with a single
+human author, appears at the end of the paper.
 
 The outline of this paper is as follows. \sectionname~\ref{sec:design}
 describes the design of the backend framework: how a backend is chosen,

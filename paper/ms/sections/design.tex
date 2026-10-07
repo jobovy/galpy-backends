@@ -196,7 +196,17 @@ def loss(q):
     return jnp.sum((o.x(ts)-x_obs)**2)
 grad_loss= jax.jit(jax.grad(loss))
 \end{code}
-and it is \galpy's job to be traceable. For the test suite, an optional
+and it is \galpy's job to be traceable. \figurename~\ref{fig:jitamort}
+displays what compilation costs and buys for the simplest operation,
+the radial force of a Plummer potential at $10^6$ points: compiling it
+takes about a tenth of a second, after which a call takes a fraction of
+a millisecond rather than a few milliseconds, such that the compilation
+has paid for itself after about a hundred calls. The cost of a
+derivative is shown in \figurename~\ref{fig:adoverhead}: under
+compiled \jax\ the gradient of the potential with respect to the
+coordinates at $N$ points costs between one and two times the value
+itself, and under eager \torch\ two to five times, independent of $N$.
+For the test suite, an optional
 global trace mode exists that traces every call at the coercion boundary
 described above; it is how the suite is run in compiled mode, and it is
 not needed in normal use.
@@ -229,6 +239,27 @@ re-trace and a freshly created but identical wrapper does not. The
 \python\ context variable severs its graph, and \galpy's backend
 selection, which is such a variable, reads a thread-local mirror while
 \torch\ is tracing.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}}
+  \caption{Cost and benefit of compilation for the radial force of a
+    Plummer potential under \jax. Left: wall time of successive calls at
+    $N=10^4$ and $10^6$ points on the TITAN~Xp and the H100; the first
+    call compiles. Dashed lines are the eager cost per call. Right: the
+    cumulative time of compiled and eager calls at $N=10^6$ and the
+    number of calls after which compilation pays for
+    itself.}\label{fig:jitamort}
+\end{figure*}
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g5_autodiff_overhead/g5_autodiff_overhead.pdf}}
+  \caption{Cost of a derivative. Left: throughput of the Plummer
+    potential (filled markers) and of its gradient with respect to the
+    coordinates by reverse-mode automatic differentiation (open
+    markers), under compiled \jax\ and eager \torch, on the two GPUs.
+    Right: the ratio of the wall time of the gradient to that of the
+    value.}\label{fig:adoverhead}
+\end{figure*}
 
 \subsection{The test suite under every backend}\label{sec:design-tests}
 

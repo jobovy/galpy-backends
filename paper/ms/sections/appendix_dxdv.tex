@@ -68,6 +68,13 @@ size and the variational result sits at the bottom of the V.
 orbit: the Liouville and symplecticity defects stay below $10^{-6}$ over
 a hundred time units, and the state-transition matrix agrees with the
 best central difference at the finite-difference floor of $10^{-8}$.
+\figurename~\ref{fig:dissipative} shows the dissipative case: for an
+orbit that sinks under Chandrasekhar dynamical friction, the phase-space
+volume contracts by five orders of magnitude over ten time units, and
+$\det\vec{M}$ follows the integral of the velocity divergence of the
+force to a few parts in $10^{6}$; the same orbit under the fuzzy-dark-matter
+friction of \galpy\ contracts far less, because that force is
+suppressed at the orbit's velocities.
 
 \begin{figure}[t!]
   \includegraphics[width=0.48\textwidth,clip=]{../figures/g9_variational_validity/g9_variational_validity.pdf}
@@ -83,6 +90,17 @@ best central difference at the finite-difference floor of $10^{-8}$.
     three-dimensional matrix for a planar initial condition agrees with
     the planar matrix, with no leakage out of the plane.}\label{fig:variational}
 \end{figure}
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g11_dissipative_phase_volume/g11_dissipative_phase_volume.pdf}}
+  \caption{Phase-space volume under dissipative forces. Left:
+    $\det\vec{M}(t)$ for an orbit in \texttt{MWPotential2014} with
+    Chandrasekhar dynamical friction and with fuzzy-dark-matter
+    friction, from the \cc\ variational equations (solid) and from the
+    integral of the velocity divergence of the force along the orbit
+    (dashed). Right: the relative difference between the
+    two.}\label{fig:dissipative}
+\end{figure*}
 
 The derivative rule of \sectionname~\ref{sec:orbit-paths} follows from
 the chain rule: for a scalar function $L$ of the orbit sampled at times

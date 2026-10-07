@@ -37,7 +37,26 @@ o.R(ts[-1]).backward() # b.grad = dR/db
 Second derivatives are available under \jax\ by selecting the direct
 adjoint through the \texttt{inbackend\_kwargs} keyword, and
 \texttt{jax.vmap} over initial conditions works, with one caveat
-discussed below.
+discussed below. \figurename~\ref{fig:orbitsens} displays the simplest
+use of these derivatives: the sensitivity of an orbit to its initial
+conditions as a function of time, which the solver's derivative gives
+for free and which finite differences confirm, and a Gauss--Newton fit
+of the launch velocity of an orbit to a target end point using the
+Jacobian of the integration, which converges quadratically to machine
+precision in a handful of iterations.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g7_orbit_sensitivity/g7_orbit_sensitivity.pdf}}
+  \caption{Derivatives of an in-backend orbit integration. Left: the
+    sensitivities $\partial R(t)/\partial R_0$, $\partial R(t)/\partial v_{R,0}$,
+    $\partial z(t)/\partial z_0$, and $\partial z(t)/\partial v_{z,0}$ of an
+    orbit in a Plummer potential by reverse-mode differentiation through
+    the \diffrax\ solve (lines) and by central finite differences
+    (circles). Right: the squared distance between the end point of the
+    orbit and a target as the launch velocity $(v_{R,0},v_{z,0})$ is
+    fit by Gauss--Newton iterations on the Jacobian of the integration;
+    the inset shows the path of the fit.}\label{fig:orbitsens}
+\end{figure*}
 
 The second way uses \galpy's compiled \cc\ integrators. These are much
 faster than a solver that runs inside \jax\ or \torch\ on a CPU (for a
@@ -122,8 +141,20 @@ deviation vector or with the full state-transition matrix, and
 the spectrum, by the renormalization method of \citet{Benettin1980a,Benettin1980b}. For
 the H\'enon--Heiles potential at $E=1/8$, the exponent of a chaotic orbit
 converges into the range quoted in the literature while that of a
-regular orbit at the same energy decays as $\ln t/t$. These are \numpy\
-and \cc\ features; they do not run on the backends.
+regular orbit at the same energy decays as $\ln t/t$
+(\figurename~\ref{fig:lyapunov}). These are \numpy\ and \cc\ features;
+they do not run on the backends.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g10_lyapunov/g10_lyapunov.pdf}}
+  \caption{Largest Lyapunov exponent from \texttt{Orbit.lyapunov}, as a
+    running estimate against time. Left: a chaotic and a regular orbit
+    in the H\'enon--Heiles potential at $E=1/8$; the shaded band is the
+    range of values in the literature for the chaotic orbit, and the
+    dashed line is the $\ln t/t$ decay expected for a regular orbit.
+    Right: a Sun-like orbit in \texttt{MWPotential2014}, which is
+    regular.}\label{fig:lyapunov}
+\end{figure*}
 
 \subsection{Limitations}\label{sec:orbit-limitations}
 
@@ -161,10 +192,49 @@ several times cheaper per orbit at the largest batches. The \cc\ path
 also runs in parallel over cores, which divides its line by the number
 of cores. Compilation of the in-backend solve takes seconds and is paid
 once per shape of the problem. The derivative of an orbit with respect
-to its initial condition follows the same pattern: the \cc\ variational
-integrator computes it for a single orbit in about $10$\,ms, where the
-backend solvers take 0.1 to 10\,s, and the GPU overtakes it at batches
-of a few thousand orbits.
+to its initial condition follows the same pattern
+(\figurename~\ref{fig:icderivcost}): the \cc\ variational integrator
+computes it for a single orbit in about $10$\,ms, where the backend
+solvers take 0.1 to 10\,s, and the GPU overtakes it at batches of a few
+thousand orbits.
+
+\galpy\ is not the only galactic-dynamics code that integrates orbits
+with \diffrax: \texttt{galax} \citep{Starkman2026}, a re-implementation
+of \texttt{gala} in \jax, does so by design, and comparing the two is a
+useful check that the cost of the in-backend solve is in the solver and
+the potential rather than in the library around them.
+\figurename~\ref{fig:galax} shows this comparison for the same orbits,
+potential, and tolerances. When \texttt{galax} is made to control its
+step size per orbit, as \galpy\ does, the two codes take the same time
+to within a few percent at every batch size and on every device. In its
+default mode, \texttt{galax} uses a single step-size controller for the
+whole batch, such that every orbit takes the steps that the most
+demanding orbit requires; this is cheaper per orbit, by about a factor
+of three on the TITAN~Xp and less on the H100, at the price of an error
+control that depends on which orbits happen to be in the batch. \galpy\
+keeps the per-orbit control.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/g15_icderiv_speed/g15_icderiv_speed.pdf}}
+  \caption{Cost of the derivative of an orbit with respect to its
+    initial conditions, for a 2\,Gyr orbit in \texttt{MWPotential2014}.
+    Left: wall time for a single orbit with the \cc\ variational
+    integrator and by reverse-mode differentiation through the
+    \diffrax\ and \texttt{torchdiffeq} solves on the CPU and the two
+    GPUs; hatched bars are eager. Right: the same as a function of the
+    number of orbits differentiated at once.}\label{fig:icderivcost}
+\end{figure*}
+
+\begin{figure}[t!]
+  \includegraphics[width=0.48\textwidth,clip=]{../figures/g8_galax_orbit_speed/g8_galax_orbit_speed.pdf}
+  \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
+    \texttt{MWPotential2014} at matched tolerances with \galpy\ and with
+    \texttt{galax}. Grey: \galpy's \cc\ integrator on one core. Blue:
+    \galpy's in-backend \diffrax\ solve on the CPU and on the two GPUs.
+    Green: \texttt{galax} on the CPU and the GPUs, with its default
+    batched step-size control (solid) and with per-orbit control as in
+    \galpy\ (dash-dotted).}\label{fig:galax}
+\end{figure}
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g12_inbackend_orbit_gpu/g12_inbackend_orbit_gpu.pdf}

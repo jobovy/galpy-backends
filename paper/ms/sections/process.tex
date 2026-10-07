@@ -4,15 +4,17 @@ The way in which this work was carried out differs enough from how
 \galpy\ was developed before that it deserves a description of its own.
 The code was written by an AI agent; the question of how one comes to
 trust such code is therefore as much a part of this paper as the code
-itself. In this section I describe the organization of the work, how it
+itself. In this section we describe the organization of the work, how it
 was reviewed, the stretch during which the agent worked without
 supervision, how the existing test suite was made to pass under the new
-backends, and the checks through which I established that the code is
-correct.
+backends, and the checks through which the code was established to be
+correct. Because the division of labor between the human author and the
+agent is the subject here, this section names them separately, as JB
+and the agent.
 
 \subsection{Organization}\label{sec:process-organization}
 
-Work started on 2026 June 1 with a design discussion between me and
+Work started on 2026 June 1 with a design discussion between JB and
 Claude, Anthropic's AI coding agent, used through the \texttt{Claude
   Code} environment, which has access to a shell, to the \galpy\
 repository, and to \github. The discussion settled the scope (all of
@@ -68,7 +70,7 @@ checkouts that differ only in the files of the PR.
 \subsection{Review}\label{sec:process-review}
 
 Every PR was reviewed before it was merged into the backend branch, and
-I merged all of them except during the stretch described in
+JB merged all of them except during the stretch described in
 \sectionname~\ref{sec:process-autonomous}. Much of the review was
 conversational, in the session in which the agent worked, and
 concerned design as much as code: that a hand-rolled root finder
@@ -80,7 +82,7 @@ kinds of problems that reviews of human code catch: a variable omitted
 from an OpenMP \texttt{private} clause, a coverage drop of one line that
 the automated check had passed.
 
-Two other forms of review were used. First, at several points I ran an
+Two other forms of review were used. First, at several points JB ran an
 independent AI code reviewer (OpenAI's Codex) over the agent's work and
 posted its findings to the PRs for the agent to address. These reviews
 found real defects: a gradient of the incomplete gamma function that
@@ -106,12 +108,12 @@ rewritten, never an algebraically equivalent form.
 
 \subsection{The autonomous stretch}\label{sec:process-autonomous}
 
-From 2026 July 26 to August 9, I was away and the agent worked on its
+From 2026 July 26 to August 9, JB was away and the agent worked on its
 own, with the goal of making the whole existing test suite pass under
 compilation and of emptying the ledger of expected failures. For this,
 the agent opened PRs against a separate development branch, which it
 merged itself once the continuous integration was green, under the
-understanding that I would review the accumulated branch on my return.
+understanding that JB would review the accumulated branch on his return.
 It could not merge into the main backend branch or into \galpy's main
 branch, and it could not change the continuous-integration
 configuration. The agent was woken at regular intervals by a scheduler
@@ -121,7 +123,7 @@ this paper.
 
 In the two unsupervised weeks, 74 PRs were merged, and 145 PRs in total
 went through the development branch before it was merged into the
-backend branch on 2026 September 2, after I had reviewed it as a whole
+backend branch on 2026 September 2, after JB had reviewed it as a whole
 and with the help of a Codex review (the latter's verdict, that ``the
 work is coherent, the ledger is honest,'' matched mine). The stretch
 made clear both what such an agent can and cannot do. It burned the
@@ -133,12 +135,12 @@ cost 178\,$\mu$s per call, resolved the interaction between
 before filing them as issues. It also introduced regressions, all of
 which it found itself within days using the tools it had built for the
 purpose---a traced sweep of the suite, a comparison of test durations
-between runs---and fixed before I returned; it misread a stale rule;
+between runs---and fixed before JB returned; it misread a stale rule;
 it once left conflict markers in a working tree; and its summary table
 of PRs fell out of date and had to be rebuilt from \github. The
 scorecard that it wrote for itself judged the stretch against its goal
 honestly: the ledger went from 392 to 140 entries against a target of
-zero. I have kept this account in the paper because it is the kind of
+zero. We have kept this account in the paper because it is the kind of
 information that a reader deciding whether to work this way needs.
 
 \subsection{Making the test suite pass under every backend}\label{sec:process-ledger}
@@ -229,9 +231,9 @@ in the backend branch, such that the count of them is known.
 
 \subsection{Establishing correctness}\label{sec:process-correctness}
 
-I do not believe that the code is correct because an agent says that
-its tests pass. I believe it for the following reasons, roughly in
-order of weight. The \numpy\ path is byte-identical to the previous
+JB does not take the code to be correct because an agent reports that
+its tests pass. The reasons to believe that it is correct are the
+following, roughly in order of weight. The \numpy\ path is byte-identical to the previous
 version, measured by checksums of tens of thousands of output values per
 PR, such that the entire body of validation that \galpy\ has accumulated
 over a decade carries over. The backend paths pass the same tests at the
@@ -249,11 +251,11 @@ special function, a quadrature, a root finder---it was checked against
 \scipy\ and against \texttt{mpmath} at 30 to 50 digits, and the reference
 itself was validated before use, because the analytic formula one
 reaches for first is sometimes the one that is wrong. The code was
-reviewed by me, by a second AI system, and by adversarial agents. It was
+reviewed by JB, by a second AI system, and by adversarial agents. It was
 run on two GPUs, which the continuous integration cannot do, and these
 runs found the device-placement bugs that are invisible on a CPU. And
 the figures of this paper, each of which is produced by a script that is
 re-run against the current code and whose output is checked against a
 stored hash, found several of the bugs listed above. None of these
-checks is sufficient on its own, and I would not have accepted the code
+checks is sufficient on its own, and JB would not have accepted the code
 on the basis of any one of them.

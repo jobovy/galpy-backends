@@ -38,7 +38,24 @@ the dimensionless central potential $W_0$ at fixed mass and tidal
 radius, which passes through the solution of the Poisson equation. In
 eager mode this ODE is solved with \scipy\ and the derivative is
 attached from the forward sensitivity equations; under compilation the
-same ODE is solved in the backend.
+same ODE is solved in the backend. That the pathwise derivative of a
+sample is the derivative of the expectation can be checked
+independently of any DF construction, by differentiating a kernel
+estimate of the velocity dispersion over a large fixed sample with
+respect to radius and comparing with the derivative of the Jeans
+equation (\figurename~\ref{fig:dfsample}); the two share no code and
+agree within the Monte-Carlo noise.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/gD2_df_sample_autodiff/gD2_df_sample_autodiff.pdf}}
+  \caption{A derivative through a sample. Left: the radial velocity
+    dispersion of the isotropic Hernquist DF from the analytic
+    expression, from the Jeans equation by quadrature, and from a sample
+    of $4\times10^6$ particles. Right: its derivative with respect to
+    radius, from \texttt{jax.grad} of the Jeans quadrature and from
+    \texttt{jax.grad} of a kernel estimator over the fixed sample, with
+    error bars from eight sub-samples.}\label{fig:dfsample}
+\end{figure*}
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gD4_spherical_df_param/gD4_spherical_df_param.pdf}

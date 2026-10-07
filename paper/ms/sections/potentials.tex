@@ -37,8 +37,9 @@ hand. Under a backend these can also be obtained by differentiating the
 potential, and the agreement between the two is a strong test of both:
 for the basis-function expansions, the spiral arms, a rotating bar, and
 composite potentials, the force by AD agrees with the hand-coded force
-to within a few units in the last place, that is, the derivative that
-AD produces is the analytic force up to rounding. The test suite checks
+to within a few units in the last place (\figurename~\ref{fig:adforces}),
+that is, the derivative that AD produces is the analytic force up to
+rounding. The test suite checks
 these identities for every potential, under both backends and in both
 modes. For the user, the relevant derivatives are those with respect to
 the parameters. A potential constructed with a backend array as a
@@ -68,6 +69,18 @@ potential from its force by gradient descent. The parameters of a
 potential constructed from a density, as the basis-function and
 multipole expansions can be, carry the derivative through the expansion
 coefficients.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.9\textwidth,clip=]{../figures/gF1_autodiff_forces/gF1_autodiff_forces.pdf}}
+  \caption{The radial force by automatic differentiation of the
+    potential compared with the hand-coded force, for the Milky-Way
+    model, a basis-function expansion and its disk variant, spiral arms,
+    a rotating bar, and a disk-plus-halo composite. Left: the force along
+    $R$ in the mid-plane, lines from automatic differentiation and
+    circles from the analytic implementation. Right: the relative
+    difference between the two, which is at the level of the
+    double-precision rounding error.}\label{fig:adforces}
+\end{figure*}
 
 \begin{figure*}[t!]
   \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/g3_param_gradients/g3_param_gradients.pdf}}

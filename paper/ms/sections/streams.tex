@@ -25,8 +25,8 @@ the track, which was a finite-difference Jacobian in the \numpy\ code,
 is the automatic Jacobian of the methods of \sectionname~\ref{sec:aa}.
 The derivative of the track with respect to a parameter of the
 potential agrees with a finite difference of the same computation to a
-few parts in $10^4$, which is the level set by the fixed iteration count
-of the track refinement. Construction of a \texttt{streamdf} is
+few parts in $10^4$ (\figurename~\ref{fig:streamtrack}), which is the
+level set by the fixed iteration count of the track refinement. Construction of a \texttt{streamdf} is
 differentiable with respect to the potential, and can be compiled,
 although the compilation of a construction, which contains tens of
 orbit integrations and the iteration of the track, takes a quarter of an
@@ -37,7 +37,29 @@ Sampling and evaluating the DF, on the other hand, are two orders of
 magnitude faster under compilation than on \numpy, and run on a GPU;
 the sampler draws by inverse transformation on \numpy\ too, which is the
 third place where \numpy\ output changed, in the draws but not in their
-distribution.
+distribution. \figurename~\ref{fig:streamdfspeed} summarizes these
+costs.
+
+\begin{figure*}[t!]
+  \centerline{\includegraphics[width=0.85\textwidth,clip=]{../figures/gS1_stream_track_sensitivity/gS1_stream_track_sensitivity.pdf}}
+  \caption{Derivative of a \texttt{streamdf} track with respect to the
+    flattening $q$ of a logarithmic halo. Left: the track in the
+    meridional plane at $q=0.9$ and its first-order extrapolations to
+    $q\pm0.02$ from the derivative by automatic differentiation through
+    the whole track computation. Right: the relative difference between
+    this derivative and a central finite difference of the same
+    computation, per segment of the track.}\label{fig:streamtrack}
+\end{figure*}
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/gS4_streamdf_speed/gS4_streamdf_speed.pdf}
+  \caption{Speed of the action--angle stream model. (a) Wall time to
+    construct a \texttt{streamdf}, including its track, as a function of
+    the number of track segments, on \numpy\ with the \cc\ integrators
+    and on the backends, warm and including compilation (cold). (b)
+    Sampling $N$ stars and (c) evaluating the DF at $N$ phase-space
+    points from the constructed model.}\label{fig:streamdfspeed}
+\end{figure*}
 
 A point about these derivatives is general enough to state here. A
 stream model is a generative model: the stream's stars are a sample from
