@@ -64,6 +64,9 @@ res2, st2, _ = co.integrate(lib, ics, ts, gpu=False, lazy=True, stats=True)
 report("host, lazy dense", res2, st2)
 print(f"    lazy vs faithful outputs bit-identical: {np.array_equal(res, res2)}")
 if "--gpu" in sys.argv:
-    for lazy in (False, True):
-        r, s, tm = co.integrate(lib, ics, ts, gpu=True, lazy=lazy, stats=True)
-        report(f"GPU{variant}, {'lazy' if lazy else 'faithful'} dense", r, s, st)
+    for refill, lazy, srt in [(False, False, False), (False, True, False), (True, False, False),
+                              (True, True, False), (True, True, True)]:
+        r, s, tm = co.integrate(lib, ics, ts, gpu=True, lazy=lazy, stats=True, refill=refill,
+                                order=co.cost_order(ics) if srt else None)
+        report(f"GPU{variant}, {'lazy' if lazy else 'faithful'} dense"
+               f"{', refill' if refill else ''}{', sorted' if srt else ''}", r, s, st)

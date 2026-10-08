@@ -2,3 +2,5 @@
 build_*.log
 __pycache__/
 flopcount
+flopcount_fast
+build_out.log

@@ -1,0 +1,34 @@
+{
+ "backend": "cuda (galpy dop853_c port, one thread per orbit)",
+ "device": "NVIDIA TITAN Xp (sm_61, 30 SMs)",
+ "variant": "_f32",
+ "block": 128,
+ "refill": true,
+ "sort": false,
+ "pinned": false,
+ "fixed_nstep": 0,
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "rtol": 1e-05,
+ "atol": 1e-05,
+ "potential": "MWPotential2014",
+ "host": "geir",
+ "results": [
+  {
+   "N": 30000,
+   "mode": "faithful",
+   "wall_s": 0.08699338999576867,
+   "per_orbit_ms": 0.0028997796665256224,
+   "alloc_h2d_ms": 0.4838399887084961,
+   "kernel_ms": 80.17817687988281,
+   "d2h_ms": 5.560480117797852,
+   "nfev_mean": 1656.1192666666666,
+   "nfev_max": 3356,
+   "naccept_mean": 85.97236666666667,
+   "nreject_mean": 33.139433333333336,
+   "nfev_total": 49683578,
+   "fevals_per_s_kernel": 619664601.1848383,
+   "warp_lane_eff_static": 0.7577281512106491
+  }
+ ]
+}

@@ -25,6 +25,10 @@ p.add_argument("--modes", default="lazy,faithful")
 p.add_argument("--block", type=int, default=128)
 p.add_argument("--repeats", type=int, default=3)
 p.add_argument("--out", default=None)
+p.add_argument("--refill", action="store_true", help="persistent-thread refill kernel")
+p.add_argument("--sort", action="store_true", help="schedule by cost proxy (longest first)")
+p.add_argument("--pinned", action="store_true", help="page-locked result buffer (allocated once per N, untimed)")
+p.add_argument("--fixed-nstep", type=int, default=0, help="diagnostic: constant step, this many steps")
 p.add_argument("--tol", type=float, default=1e-8, help="rtol=atol (1e-8 = paper convention; float32 needs ~1e-5)")
 args = p.parse_args()
 
@@ -48,29 +52,45 @@ def make_ics(N, rng):  # verbatim from galpy_c_measure.py
 co.integrate(lib, make_ics(1000, np.random.default_rng(0)), ts)  # warm-up
 out = {"backend": "cuda (galpy dop853_c port, one thread per orbit)",
        "device": dev, "variant": args.variant or "fmad", "block": args.block,
+       "refill": args.refill, "sort": args.sort, "pinned": args.pinned,
+       "fixed_nstep": args.fixed_nstep,
        "nt": nt, "tspan_Gyr": 2.0, "rtol": args.tol, "atol": args.tol,
        "potential": "MWPotential2014", "host": socket.gethostname(), "results": []}
 for mode in args.modes.split(","):
     lazy = mode == "lazy"
     for N in [int(float(s)) for s in args.Ns.split(",")]:
         ics = make_ics(N, np.random.default_rng(N))
-        _, st, _ = co.integrate(lib, ics, ts, rtol=args.tol, atol=args.tol, lazy=lazy, block=args.block, stats=True)
+        fixed_h = 56.2 / args.fixed_nstep if args.fixed_nstep else 0.0
+        kw = dict(rtol=args.tol, atol=args.tol, lazy=lazy, block=args.block,
+                  refill=args.refill, fixed_h=fixed_h)
+        out_buf = co.pinned_empty(lib, (N, nt, 6)) if args.pinned else None
+        _, st, _ = co.integrate(lib, ics, ts, stats=True, out=out_buf,
+                                order=co.cost_order(ics) if args.sort else None, **kw)
         best, best_tm = 1e18, None
         for _ in range(args.repeats):
             t0 = time.perf_counter()
-            res, _, tm = co.integrate(lib, ics, ts, rtol=args.tol, atol=args.tol, lazy=lazy, block=args.block)
+            order = co.cost_order(ics) if args.sort else None  # timed
+            res, _, tm = co.integrate(lib, ics, ts, out=out_buf, order=order, **kw)
             w = time.perf_counter() - t0
             if w < best:
                 best, best_tm = w, tm
-        del res
+        del res, out_buf
         r = {"N": N, "mode": mode, "wall_s": best, "per_orbit_ms": best / N * 1e3,
              "alloc_h2d_ms": best_tm[0], "kernel_ms": best_tm[1], "d2h_ms": best_tm[2],
              "nfev_mean": float(st[:, 0].mean()), "nfev_max": int(st[:, 0].max()),
              "naccept_mean": float(st[:, 1].mean()), "nreject_mean": float(st[:, 2].mean()),
              "nfev_total": int(st[:, 0].astype(np.int64).sum())}
         r["fevals_per_s_kernel"] = r["nfev_total"] / (best_tm[1] * 1e-3)
+        # lane utilisation a one-orbit-per-thread kernel would get with this schedule:
+        # sum(nfev) / sum over warps of 32*max(nfev in warp)
+        sched = co.cost_order(ics) if args.sort else np.arange(N)
+        w = st[sched, 0][: N // 32 * 32].reshape(-1, 32).astype(float)
+        r["warp_lane_eff_static"] = float(w.sum() / (32 * w.max(1)).sum()) if len(w) else None
         out["results"].append(r)
-        print(f"[{dev} {out['variant']} {mode}] N={N:8d}: wall {best:8.3f}s "
+        tag = "".join(x for x, on in [("+refill", args.refill), ("+sort", args.sort),
+                                      ("+pinned", args.pinned),
+                                      (f"+fixed{args.fixed_nstep}", args.fixed_nstep)] if on)
+        print(f"[{dev} {out['variant']}{tag} {mode}] N={N:8d}: wall {best:8.3f}s "
               f"({r['per_orbit_ms']*1e3:8.3f} us/orbit; kernel {best_tm[1]:.1f} ms, "
               f"d2h {best_tm[2]:.1f} ms); nfev/orbit {r['nfev_mean']:.0f} (max {r['nfev_max']})",
               flush=True)

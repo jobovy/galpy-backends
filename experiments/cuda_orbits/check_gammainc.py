@@ -10,7 +10,9 @@ from scipy.special import gammainc, gammaln
 
 import cuda_orbits as co
 
-lib = co.load()
+variant = sys.argv[sys.argv.index("--variant") + 1] if "--variant" in sys.argv else ""
+lib = co.load(variant)
+print(f"variant {variant!r}")
 gsl = ctypes.CDLL("/home/bovy/miniforge3/envs/py313/lib/libgsl.so.28")
 gsl.gsl_sf_gamma_inc_P.restype = ctypes.c_double
 gsl.gsl_sf_gamma_inc_P.argtypes = [ctypes.c_double, ctypes.c_double]

@@ -2,6 +2,7 @@
 // replaced by a counting double).  Counts per force evaluation (evalRectDeriv,
 // incl. GSL gamma_inc_P) and per orbit (integrator + forces).
 //   g++ -O1 -std=c++17 flopcount.cpp -o flopcount && ./flopcount
+//   g++ -O1 -std=c++17 -DCO_FASTGAM -DCO_FASTPOW flopcount.cpp -o flopcount_fast && ./flopcount_fast
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -33,6 +34,8 @@ inline CountedReal fabs(CountedReal a) { return CountedReal(std::fabs(a.v)); }
 inline CountedReal sqrt(CountedReal a) { cnt[SQRT]++; return CountedReal(std::sqrt(a.v)); }
 inline CountedReal pow(CountedReal a, CountedReal b) { cnt[POW]++; return CountedReal(std::pow(a.v, b.v)); }
 inline CountedReal log(CountedReal a) { cnt[LOG]++; return CountedReal(std::log(a.v)); }
+inline CountedReal log1p(CountedReal a) { cnt[LOG]++; return CountedReal(std::log1p(a.v)); }
+inline bool operator<(CountedReal a, int b) { cnt[CMP]++; return a.v < b; }
 inline CountedReal exp(CountedReal a) { cnt[EXP]++; return CountedReal(std::exp(a.v)); }
 inline CountedReal cos(CountedReal a) { cnt[TRIG]++; return CountedReal(std::cos(a.v)); }
 inline CountedReal sin(CountedReal a) { cnt[TRIG]++; return CountedReal(std::sin(a.v)); }

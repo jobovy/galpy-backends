@@ -42,7 +42,8 @@ typedef double real;
 #define POT_POWERSPHWCUTOFF 15
 
 #define CO_MAXPOT 16
-#define CO_MAXARGS 256
+#define CO_MAXARGS 512
+#define CO_NINV 160  // CO_FASTGAM: table of 1/(a+n), n < CO_NINV
 
 // Flat replacement for galpy's `struct potentialArg` array: a type code and an
 // offset into one shared args table (no heap pointers, no function pointers).
@@ -124,6 +125,40 @@ HD real gsl_gamma_inc_P(real a, real x, real lg1) {
   return R_(1.0) - Q;
 }
 
+#ifdef CO_FASTGAM
+// Same series / asymptotic expansion as GSL, without the divisions (each DP
+// division is ~10 dependent DP instructions on the GPU): 1/(a+n) comes from a
+// per-potential table (n is warp-uniform -> constant-cache broadcast), the
+// stop tests compare |term| with eps*|sum| instead of dividing, and the
+// asymptotic series multiplies by 1/x.  Agrees with GSL to a few ulp (not
+// bit-identical); the two loops of the GSL series are merged into one so n
+// stays uniform across the warp.
+HD real fast_gamma_inc_P(real a, real x, real lg1, const real *inv) {
+  if (x == R_(0.0)) return R_(0.0);
+  real D = exp(a * log(x) - x - lg1);
+  if (x < R_(20.0) || x < R_(0.5) * a) {
+    real sum = R_(1.0), term = R_(1.0);
+    long nlow = (x > a) ? (long)(x - a) : 0;
+    for (int n = 1; n < 10000; n++) {
+      term *= (n < CO_NINV) ? x * inv[n] : x / (a + n);
+      sum += term;
+      if (n >= nlow && term < CO_DBL_EPSILON * sum) break;
+    }
+    return D * sum;
+  }
+  real ix = R_(1.0) / x;
+  real sum = R_(1.0), term = R_(1.0), last = R_(1.0);
+  for (int n = 1; n < 5000; n++) {
+    term *= (a - n) * ix;
+    if (fabs(term) > fabs(last)) break;
+    if (fabs(term) < CO_DBL_EPSILON * fabs(sum)) break;
+    sum += term;
+    last = term;
+  }
+  return R_(1.0) - D * (a * ix) * sum;  // a <= 0.2 x here (a < 4 for x >= 20)
+}
+#endif
+
 // ---- PowerSphericalPotentialwCutoff; galpy args (amp, alpha, rc, cache, cache)
 // are re-packed on the host as
 //   [amp, alpha, rc, c2pirc = 2.*M_PI*pow(rc,3.-alpha), gam = gsl_sf_gamma(a),
@@ -136,8 +171,16 @@ HD real PSwC_force_over_r(const real *args, real R, real Z) {
   real rc = args[2];
   real r2 = R * R + Z * Z;
   // mass(r2,alpha,rc) = 2.*M_PI*pow(rc,3.-alpha) * (gamma(a) * P(a, r2/rc/rc))
+#ifdef CO_FASTGAM
+  real mass = args[3] * (args[4] * fast_gamma_inc_P(args[6], r2 / rc / rc, args[5], args + 7));
+#else
   real mass = args[3] * (args[4] * gsl_gamma_inc_P(args[6], r2 / rc / rc, args[5]));
+#endif
+#ifdef CO_FASTPOW
+  return -amp * mass / (r2 * sqrt(r2));
+#else
   return -amp * mass / pow(r2, R_(1.5));
+#endif
 }
 
 // ---- MiyamotoNagaiPotential: args amp, a, b
@@ -198,6 +241,32 @@ HD void calcRzforce(real R, real Z, const PotSet &P, real *Rforce,
       fz += f * Z;
       break;
     }
+#ifdef CO_FASTPOW
+    // pow(x,0.5) -> sqrt, pow(d,-1.5) -> 1/(d sqrt d), shared subexpressions
+    case POT_MIYAMOTONAGAI: {
+      real amp = args[0], a = args[1], b = args[2];
+      real sqrtbz = sqrt(b * b + Z * Z);
+      real asqrtbz = a + sqrtbz;
+      real d = R * R + asqrtbz * asqrtbz;
+      real f = -amp / (d * sqrt(d));
+      fR += f * R;
+      fz += (a == R_(0.)) ? f * Z : f * Z * asqrtbz / sqrtbz;
+      break;
+    }
+    case POT_NFW: {
+      real amp = args[0], a = args[1];
+      real Rz = R * R + Z * Z;
+      real sqrtRz = sqrt(Rz);
+      real f;
+      if (sqrtRz < NFW_SMALL_X * a)
+        f = -amp * nfw_h(sqrtRz / a) / (Rz * sqrtRz);
+      else
+        f = amp * (R_(1.) / (Rz * (a + sqrtRz)) - log1p(sqrtRz / a) / (sqrtRz * Rz));
+      fR += f * R;
+      fz += f * Z;
+      break;
+    }
+#else
     case POT_MIYAMOTONAGAI:
       fR += MN_Rforce(args, R, Z);
       fz += MN_zforce(args, R, Z);
@@ -206,6 +275,7 @@ HD void calcRzforce(real R, real Z, const PotSet &P, real *Rforce,
       fR += NFW_Rforce(args, R, Z);
       fz += NFW_zforce(args, R, Z);
       break;
+#endif
     }
   }
   *Rforce = fR;

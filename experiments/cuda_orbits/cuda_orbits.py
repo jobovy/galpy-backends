@@ -12,6 +12,7 @@ import os
 import numpy as np
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+CO_NINV = 160  # must match galpy_cuda.cuh
 _dp = np.ctypeslib.ndpointer(dtype=np.float64, flags="C_CONTIGUOUS")
 _ip = np.ctypeslib.ndpointer(dtype=np.int32, flags="C_CONTIGUOUS")
 
@@ -26,7 +27,11 @@ def load(variant=""):
     sig = [ctypes.c_int, rp, ctypes.c_int, rp, ctypes.c_double, ctypes.c_double, rp,
            ctypes.c_void_p, ctypes.c_int]
     lib.co_integrate_host.argtypes = sig
-    lib.co_integrate_gpu.argtypes = sig + [ctypes.c_int, ctypes.c_void_p]
+    lib.co_integrate_gpu.argtypes = sig + [ctypes.c_int, ctypes.c_void_p, ctypes.c_int,
+                                           ctypes.c_double, ctypes.c_void_p]
+    lib.co_host_alloc.restype = ctypes.c_void_p
+    lib.co_host_alloc.argtypes = [ctypes.c_size_t]
+    lib.co_host_free.argtypes = [ctypes.c_void_p]
     lib.co_gammaP.argtypes = [ctypes.c_int, rp, rp, rp, rp, ctypes.c_int]
     lib.co_device_name.argtypes = [ctypes.c_char_p, ctypes.c_int]
     return lib
@@ -57,6 +62,8 @@ def repack(pot_type, pot_args, gamma_a, lngamma_a1):
             a = 1.5 - 0.5 * alpha
             args += [amp, alpha, rc, 2.0 * math.pi * math.pow(rc, 3.0 - alpha),
                      gamma_a[a], lngamma_a1[a], a]
+            # CO_FASTGAM builds: 1/(a+n), n < CO_NINV (unused by the GSL-exact path)
+            args += [0.0] + [1.0 / (a + n) for n in range(1, CO_NINV)]
             k += 5
         elif ty == 5:  # MiyamotoNagai: amp, a, b
             args += list(pot_args[k : k + 3])
@@ -86,22 +93,54 @@ def set_potential(lib, types, offs, args):
         raise RuntimeError(f"co_set_potential failed ({rc})")
 
 
+class _Pinned:
+    def __init__(self, lib, nbytes):
+        self.lib, self.ptr = lib, lib.co_host_alloc(max(int(nbytes), 1))
+        if not self.ptr:
+            raise MemoryError("cudaHostAlloc failed")
+
+    def __del__(self):
+        self.lib.co_host_free(self.ptr)
+
+
+def pinned_empty(lib, shape, dtype=None):
+    """numpy array in page-locked (pinned) host memory: steady, fast D2H copies."""
+    dtype = np.dtype(dtype or lib.dtype)
+    n = int(np.prod(shape))
+    buf = _Pinned(lib, n * dtype.itemsize)
+    arr = np.ctypeslib.as_array((ctypes.c_char * (n * dtype.itemsize)).from_address(buf.ptr))
+    arr = arr.view(dtype).reshape(shape).view(_PinnedArray)
+    arr._pinned = buf  # keeps the allocation alive (views hold arr via .base)
+    return arr
+
+
+class _PinnedArray(np.ndarray):
+    pass
+
+
 def integrate(lib, yo, ts, rtol=1e-8, atol=1e-8, gpu=True, lazy=True, block=128,
-              stats=False):
+              stats=False, refill=False, fixed_h=0.0, out=None, order=None):
     """yo: (N,6) galpy [R,vR,vT,z,vz,phi]; returns (N,nt,6) like Orbit.getOrbit().
 
+    out: optional preallocated (N,nt,6) result array (e.g. pinned_empty).
+    order: optional int32 (N,) schedule (orbit order[k] is started k-th); results
+    stay in input order.  refill: persistent-thread kernel.  fixed_h>0: diagnostic.
     Returns (result, stats(N,3)=[nfev,naccept,nreject] or None, timings_ms or None).
     """
     yo = np.ascontiguousarray(yo, dtype=lib.dtype)
     ts = np.ascontiguousarray(ts, dtype=lib.dtype)
     N, nt = yo.shape[0], len(ts)
-    res = np.empty((N, nt, 6), dtype=lib.dtype)
+    res = np.empty((N, nt, 6), dtype=lib.dtype) if out is None else out
     st = np.empty((N, 3), dtype=np.int32) if stats else None
     stp = st.ctypes.data_as(ctypes.c_void_p) if stats else None
     lr, la = np.log(rtol), np.log(atol)  # galpy passes log(tol); C does exp()
+    if order is not None:
+        order = np.ascontiguousarray(order, dtype=np.int32)  # keep alive over the call
     if gpu:
         tm = (ctypes.c_float * 3)()
-        rc = lib.co_integrate_gpu(N, yo, nt, ts, lr, la, res, stp, int(lazy), block, tm)
+        rc = lib.co_integrate_gpu(N, yo, nt, ts, lr, la, res, stp, int(lazy), block, tm,
+                                  int(refill), float(fixed_h),
+                                  None if order is None else order.ctypes.data)
         tms = list(tm)
     else:
         rc = lib.co_integrate_host(N, yo, nt, ts, lr, la, res, stp, int(lazy))
@@ -109,3 +148,10 @@ def integrate(lib, yo, ts, rtol=1e-8, atol=1e-8, gpu=True, lazy=True, block=128,
     if rc != 0:
         raise RuntimeError(f"integration failed ({rc})")
     return res, st, tms
+
+
+def cost_order(yo, nu2=9.0):
+    """Schedule most-expensive-first by a vertical-energy proxy vz^2 + nu^2 z^2
+    (correlates r=0.76 with nfev for the paper's ICs; problem-specific)."""
+    key = yo[:, 4] ** 2 + nu2 * yo[:, 3] ** 2
+    return np.argsort(-key, kind="stable").astype(np.int32)

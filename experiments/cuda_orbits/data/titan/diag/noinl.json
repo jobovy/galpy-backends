@@ -1,0 +1,50 @@
+{
+ "backend": "cuda (galpy dop853_c port, one thread per orbit)",
+ "device": "NVIDIA TITAN Xp (sm_61, 30 SMs)",
+ "variant": "_noinl",
+ "block": 128,
+ "refill": false,
+ "sort": false,
+ "pinned": false,
+ "fixed_nstep": 0,
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "rtol": 1e-08,
+ "atol": 1e-08,
+ "potential": "MWPotential2014",
+ "host": "geir",
+ "results": [
+  {
+   "N": 30000,
+   "mode": "faithful",
+   "wall_s": 2.158653151942417,
+   "per_orbit_ms": 0.07195510506474724,
+   "alloc_h2d_ms": 1.1508159637451172,
+   "kernel_ms": 2143.6416015625,
+   "d2h_ms": 12.485440254211426,
+   "nfev_mean": 3470.7806,
+   "nfev_max": 6852,
+   "naccept_mean": 188.50853333333333,
+   "nreject_mean": 58.2866,
+   "nfev_total": 104123418,
+   "fevals_per_s_kernel": 48573146.70703557,
+   "warp_lane_eff_static": 0.6896168596653907
+  },
+  {
+   "N": 30000,
+   "mode": "lazy",
+   "wall_s": 1.946674790000543,
+   "per_orbit_ms": 0.06488915966668476,
+   "alloc_h2d_ms": 0.6880319714546204,
+   "kernel_ms": 1940.9581298828125,
+   "d2h_ms": 3.7406399250030518,
+   "nfev_mean": 2950.255,
+   "nfev_max": 5934,
+   "naccept_mean": 188.50853333333333,
+   "nreject_mean": 58.2866,
+   "nfev_total": 88507650,
+   "fevals_per_s_kernel": 45599979.019302055,
+   "warp_lane_eff_static": 0.6793576692058584
+  }
+ ]
+}
