@@ -194,5 +194,12 @@ the stream, and the transformation to the impact frame run on the
 backends and are differentiable with respect to the parameters of the
 impact, and the orbit integrations in the model go through the batched
 in-backend solver when given backend inputs. The construction of the
-model is not traceable, because it assigns into arrays in place in
-many places, and we left it as it is.
+model also runs on the backends and can be compiled: with a backend
+progenitor and an \texttt{actionAngleIsochroneApprox} that integrates
+with \diffrax, every stage of the set-up is a backend computation, and
+the construction compiled with \texttt{jax.jit} reproduces the eager
+one to $2\times10^{-11}$. The density along the stream, the mean
+frequency, and the frequency--angle kicks are differentiable with
+respect to the subhalo's mass, scale, impact parameter, and velocity
+through the construction, and these derivatives agree with finite
+differences of rebuilt models to better than $10^{-6}$.
