@@ -155,8 +155,8 @@ velocity grid rather than a loop. The quasi-isothermal DF of
 differentiably with respect to the parameters of the potential and the
 DF's scale lengths, and its velocity sampler at a given position draws
 by inverse transformation on a three-dimensional velocity mesh, such
-that a sample drawn with a fixed key is a function of the DF's
-parameters; %TODO: derivative NaN for MWPotential2014 (galpy bug being fixed); restore 'differentiable' once fixed
+that a sample drawn with a fixed key is a differentiable function of the
+DF's parameters;
 this sampler replaced a rejection sampler on the \numpy\ path as well,
 which is the second place where \numpy\ output changed (the distribution
 is the same, the particular draws are not). In code,
