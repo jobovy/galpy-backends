@@ -43,7 +43,8 @@ to match measured actions.
 
 \subsection{The St\"{a}ckel and adiabatic approximations}\label{sec:aa-staeckel}
 
-\texttt{actionAngleStaeckel}, the workhorse for axisymmetric potentials,
+\texttt{actionAngleStaeckel}, the workhorse for axisymmetric potentials
+\citep{Binney2012,BovyRix2013},
 has two implementations that behave differently under a backend. As
 part of this work, we rewrote the pure-\python\ path (\texttt{c=False})
 to be vectorized over phase-space points, where it previously looped
@@ -122,7 +123,7 @@ interpolated actions are differentiable with respect to the query
 point; when the potential carries a parameter that is being
 differentiated, the grid class delegates to the exact method, with a
 warning, because the grid cannot be differentiated through its
-construction. The adiabatic approximation follows the same pattern,
+construction. The adiabatic approximation \citep{Binney2010} follows the same pattern,
 with a fused Jacobian in \cc\ for \texttt{c=True} and, for
 \texttt{c=False}, the migrated spherical and vertical machinery for
 its radial and vertical parts.
@@ -144,7 +145,7 @@ the direct adjoint, and runs on a GPU.
 The inverse transformation, from actions and angles to positions and
 velocities, exists in \galpy\ for the isochrone and harmonic potentials
 in closed form and for general one-dimensional potentials through
-\texttt{actionAngleVerticalInverse}, which constructs a torus map by a
+\texttt{actionAngleVerticalInverse} \citep{BovyInPrep}, which constructs a torus map by a
 momentum-matched canonical transformation and tabulates it as a
 function of the action. The construction---a root find for the maximum
 excursion, a spectral sweep over the angle, a batched Gauss--Newton

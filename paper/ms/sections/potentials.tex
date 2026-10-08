@@ -22,12 +22,12 @@ and the interpolation layer of \sectionname~\ref{sec:design-numerics}.
 All of the potentials, forces, and wrappers in \texttt{galpy.potential}
 run on both backends, with the exception of the potentials that read
 $N$-body snapshots through \texttt{pynbody} and the \texttt{AMUSE}
-interface, which have no backend code; the adiabatic-contraction
+interface \citep{Webb2020}, which have no backend code; the adiabatic-contraction
 wrapper, whose construction is a \scipy\ root-find, declares itself
 incompatible and is computed on \numpy. The convenience functions that
 act on potentials (the circular velocity and epicycle frequencies, the
 radius of a circular orbit of given angular momentum or energy, the
-enclosed mass, the tidal radius and tidal tensor) are backend-aware as
+enclosed mass, the tidal radius and tidal tensor; \citealt{Webb2019}) are backend-aware as
 well; those that require a root are solved with the shared root finder
 and those that require an integral use Gauss--Legendre quadrature.
 
