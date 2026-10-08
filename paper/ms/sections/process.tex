@@ -182,7 +182,7 @@ information that a reader deciding whether to work this way needs.
 \subsection{Making the test suite pass under every backend}\label{sec:process-ledger}
 
 The acceptance test for the backends is \galpy's own test suite, which
-grew from 2,466 to 4,275 tests over the course of this work, run under
+grew from 2,466 to 4,277 tests over the course of this work, run under
 \numpy, under \jax\ and \torch\ in eager mode, and under \jax\ and
 \torch\ with compilation at every entry point, for a total of five
 modes. We do not delete or modify tests that fail under a backend, but
@@ -193,27 +193,28 @@ pass under a backend but exceed the time limit of the continuous
 integration, and a third lists the tests of code that is permanently
 out of scope. We regenerate the ledgers from the actual test results on
 demand, such that they cannot drift from reality, and in addition we run
-a dedicated set of tests of the backend code itself, now 8,585 tests in
-88 files.
+a dedicated set of tests of the backend code itself, now 8,664 tests in
+89 files.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g13_ledger_burndown/g13_ledger_burndown.pdf}
   \caption{Tests of \galpy's existing test suite that pass under each
     backend, as a function of time. The grey line is the size of the
-    suite, which grows from 2,466 to 4,275 tests over the period; the
-    colored curves show the number of these tests that pass under
-    \torch\ (top) and \jax\ (middle) in eager mode (solid) and under
-    compilation (dashed), that is, the size of the suite minus the tests
-    that are ledgered as expected failures or as too slow under that
-    mode, which is the shaded band. The bottom panel shows the number of
-    tests in the dedicated backend test modules. The numbered milestones
-    are listed below the figure; among them are the central
-    coordinate-coercion work that removed \torch's systematic rejection of
-    scalar inputs (5), the introduction of the compiled-mode suite (6),
-    and the port of the inverse action--angle code (8). At the end, 4,270
-    of the 4,275 tests pass under \torch\ and 4,267 under \jax; the rest
-    are the six remaining ledger entries and the permanently skipped
-    torus tests.}\label{fig:ledger}
+    suite, which grows from 2,466 to 4,277 tests over the period (most
+    of the jump on June 19 comes from splitting the potential tests into
+    one test per potential); the colored curves show the number of these
+    tests that pass under \torch\ (top) and \jax\ (middle) in eager mode
+    (solid) and under compilation (dashed), that is, the size of the suite
+    minus the tests that are ledgered as expected failures or as too slow,
+    or skipped, under that mode, which is the shaded band. The compiled
+    mode's ledgers are counted with the rules that the test configuration
+    applied at each date; in August, \jax\ passes more tests under
+    compilation than in eager mode because slow orbit tests that are
+    skipped in eager mode run in reasonable time when compiled. The bottom
+    panel shows the number of tests in the dedicated backend test modules.
+    At the end, 4,272 of the 4,277 tests pass under \torch\ and 4,268
+    under \jax; the rest are the remaining ledger entries and the
+    permanently skipped tests.}\label{fig:ledger}
 \end{figure*}
 
 \figurename~\ref{fig:ledger} displays how we brought the suite to pass.

@@ -24,6 +24,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 327,
+    "slow_skip": 715,
+    "skip": 0,
+    "union": 1042
+   },
+   "torch": {
+    "xfail": 1670,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 1670
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -51,6 +82,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 296,
+    "slow_skip": 715,
+    "skip": 0,
+    "union": 1011
+   },
+   "torch": {
+    "xfail": 1670,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 1670
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -78,6 +140,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 296,
+    "slow_skip": 726,
+    "skip": 0,
+    "union": 1022
+   },
+   "torch": {
+    "xfail": 1683,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 1684
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -105,6 +198,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 253,
+    "slow_skip": 726,
+    "skip": 0,
+    "union": 979
+   },
+   "torch": {
+    "xfail": 1484,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 1485
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -132,6 +256,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 254,
+    "slow_skip": 726,
+    "skip": 0,
+    "union": 980
+   },
+   "torch": {
+    "xfail": 1494,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 1495
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -159,6 +314,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 291,
+    "slow_skip": 726,
+    "skip": 0,
+    "union": 1017
+   },
+   "torch": {
+    "xfail": 1513,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 1514
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -186,6 +372,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 298,
+    "slow_skip": 726,
+    "skip": 0,
+    "union": 1024
+   },
+   "torch": {
+    "xfail": 1589,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 1590
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -213,6 +430,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 284,
+    "slow_skip": 736,
+    "skip": 0,
+    "union": 1020
+   },
+   "torch": {
+    "xfail": 2073,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 2074
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -240,6 +488,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 284,
+    "slow_skip": 736,
+    "skip": 0,
+    "union": 1020
+   },
+   "torch": {
+    "xfail": 2079,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 2080
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -267,6 +546,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 284,
+    "slow_skip": 742,
+    "skip": 0,
+    "union": 1026
+   },
+   "torch": {
+    "xfail": 2079,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 2080
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -294,6 +604,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 271,
+    "slow_skip": 742,
+    "skip": 0,
+    "union": 1013
+   },
+   "torch": {
+    "xfail": 1075,
+    "slow_skip": 1,
+    "skip": 0,
+    "union": 1076
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "absent"
   }
  },
  {
@@ -321,6 +662,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 289,
+    "slow_skip": 180,
+    "skip": 6,
+    "union": 475
+   },
+   "torch": {
+    "xfail": 1064,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 1084
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -348,6 +720,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 289,
+    "slow_skip": 180,
+    "skip": 6,
+    "union": 475
+   },
+   "torch": {
+    "xfail": 1029,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 1049
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -375,6 +778,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 287,
+    "slow_skip": 180,
+    "skip": 6,
+    "union": 473
+   },
+   "torch": {
+    "xfail": 961,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 981
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -402,6 +836,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 287,
+    "slow_skip": 260,
+    "skip": 6,
+    "union": 536
+   },
+   "torch": {
+    "xfail": 963,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 983
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -429,6 +894,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 291,
+    "slow_skip": 260,
+    "skip": 6,
+    "union": 540
+   },
+   "torch": {
+    "xfail": 967,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 987
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -456,6 +952,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 297,
+    "slow_skip": 260,
+    "skip": 6,
+    "union": 546
+   },
+   "torch": {
+    "xfail": 967,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 987
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -483,6 +1010,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 273,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 529
+   },
+   "torch": {
+    "xfail": 921,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 941
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -510,6 +1068,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 273,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 529
+   },
+   "torch": {
+    "xfail": 916,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 936
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -537,6 +1126,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 233,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 506
+   },
+   "torch": {
+    "xfail": 886,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 906
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -564,6 +1184,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 242,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 513
+   },
+   "torch": {
+    "xfail": 895,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 915
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -591,6 +1242,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 256,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 526
+   },
+   "torch": {
+    "xfail": 902,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 922
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -618,6 +1300,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 261,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 531
+   },
+   "torch": {
+    "xfail": 902,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 922
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -645,6 +1358,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 261,
+    "slow_skip": 267,
+    "skip": 6,
+    "union": 531
+   },
+   "torch": {
+    "xfail": 899,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 919
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -672,6 +1416,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 255,
+    "slow_skip": 273,
+    "skip": 6,
+    "union": 531
+   },
+   "torch": {
+    "xfail": 900,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 920
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -699,6 +1474,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 255,
+    "slow_skip": 273,
+    "skip": 6,
+    "union": 531
+   },
+   "torch": {
+    "xfail": 896,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 916
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -726,6 +1532,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 109,
+    "slow_skip": 274,
+    "skip": 6,
+    "union": 389
+   },
+   "torch": {
+    "xfail": 738,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 758
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -735,7 +1572,7 @@
   "source": "rewritten",
   "existing": 0,
   "backend_modules": 0,
-  "collect_errors": 85,
+  "collect_errors": 35,
   "ledgered": {
    "jax": 0,
    "torch": 0,
@@ -753,6 +1590,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -780,6 +1648,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 121,
+    "slow_skip": 274,
+    "skip": 6,
+    "union": 401
+   },
+   "torch": {
+    "xfail": 784,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 804
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -807,6 +1706,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 111,
+    "slow_skip": 274,
+    "skip": 6,
+    "union": 391
+   },
+   "torch": {
+    "xfail": 773,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 793
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -834,6 +1764,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 111,
+    "slow_skip": 274,
+    "skip": 6,
+    "union": 391
+   },
+   "torch": {
+    "xfail": 746,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 766
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -861,6 +1822,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 111,
+    "slow_skip": 274,
+    "skip": 6,
+    "union": 391
+   },
+   "torch": {
+    "xfail": 741,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 761
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -888,6 +1880,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 113,
+    "slow_skip": 274,
+    "skip": 6,
+    "union": 393
+   },
+   "torch": {
+    "xfail": 746,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 766
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -915,6 +1938,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 113,
+    "slow_skip": 319,
+    "skip": 6,
+    "union": 438
+   },
+   "torch": {
+    "xfail": 741,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 761
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -942,6 +1996,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 113,
+    "slow_skip": 319,
+    "skip": 6,
+    "union": 438
+   },
+   "torch": {
+    "xfail": 740,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 760
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -969,6 +2054,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 113,
+    "slow_skip": 321,
+    "skip": 6,
+    "union": 440
+   },
+   "torch": {
+    "xfail": 740,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 760
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -996,6 +2112,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 113,
+    "slow_skip": 333,
+    "skip": 6,
+    "union": 452
+   },
+   "torch": {
+    "xfail": 740,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 760
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1023,6 +2170,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 112,
+    "slow_skip": 333,
+    "skip": 6,
+    "union": 451
+   },
+   "torch": {
+    "xfail": 655,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 675
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1050,6 +2228,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 112,
+    "slow_skip": 333,
+    "skip": 6,
+    "union": 451
+   },
+   "torch": {
+    "xfail": 596,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 616
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1077,6 +2286,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 333,
+    "skip": 6,
+    "union": 428
+   },
+   "torch": {
+    "xfail": 365,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 385
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1104,6 +2344,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 365,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 385
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1131,6 +2402,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 337,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 357
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1158,6 +2460,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 328,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 348
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1185,6 +2518,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 317,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 337
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1212,6 +2576,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 333,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 353
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1239,6 +2634,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 314,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 334
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1266,6 +2692,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 89,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 429
+   },
+   "torch": {
+    "xfail": 283,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 303
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1293,6 +2750,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 87,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 427
+   },
+   "torch": {
+    "xfail": 204,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 224
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1320,6 +2808,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 87,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 427
+   },
+   "torch": {
+    "xfail": 196,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 216
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1347,6 +2866,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 77,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 417
+   },
+   "torch": {
+    "xfail": 191,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 211
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1374,6 +2924,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 77,
+    "slow_skip": 334,
+    "skip": 6,
+    "union": 417
+   },
+   "torch": {
+    "xfail": 177,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 197
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1401,6 +2982,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 54,
+    "slow_skip": 336,
+    "skip": 6,
+    "union": 396
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1428,6 +3040,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 52,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 396
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1455,6 +3098,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 52,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 396
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 100,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 100
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1482,6 +3156,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 52,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 396
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 49,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 49
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1509,6 +3214,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 52,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 396
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 28,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 28
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "jit rows only",
+   "slow_skip": "jit rows only",
+   "skip": "jit rows only"
   }
  },
  {
@@ -1536,6 +3272,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 79,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 415
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1563,6 +3330,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 66,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 402
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1590,6 +3388,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 65,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 401
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1617,6 +3446,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 70,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 406
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1644,6 +3504,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 65,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 401
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1671,6 +3562,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 58,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 402
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1698,6 +3620,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 56,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 400
+   },
+   "torch-jit": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1725,6 +3678,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 56,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 400
+   },
+   "torch-jit": {
+    "xfail": 101,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 121
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1752,6 +3736,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 55,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 399
+   },
+   "torch-jit": {
+    "xfail": 100,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 120
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1779,6 +3794,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 56,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 400
+   },
+   "torch-jit": {
+    "xfail": 100,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 120
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1806,6 +3852,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 51,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 395
+   },
+   "torch": {
+    "xfail": 99,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 119
+   },
+   "jax-jit": {
+    "xfail": 56,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 400
+   },
+   "torch-jit": {
+    "xfail": 100,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 120
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1833,6 +3910,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 48,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 392
+   },
+   "torch": {
+    "xfail": 96,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 116
+   },
+   "jax-jit": {
+    "xfail": 53,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 397
+   },
+   "torch-jit": {
+    "xfail": 97,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 117
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1860,6 +3968,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 48,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 392
+   },
+   "torch": {
+    "xfail": 76,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 96
+   },
+   "jax-jit": {
+    "xfail": 53,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 397
+   },
+   "torch-jit": {
+    "xfail": 77,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 97
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1887,6 +4026,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 47,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 391
+   },
+   "torch": {
+    "xfail": 75,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 95
+   },
+   "jax-jit": {
+    "xfail": 52,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 396
+   },
+   "torch-jit": {
+    "xfail": 76,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 96
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1914,6 +4084,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 44,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 388
+   },
+   "torch": {
+    "xfail": 72,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 92
+   },
+   "jax-jit": {
+    "xfail": 49,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 393
+   },
+   "torch-jit": {
+    "xfail": 73,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 93
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1941,6 +4142,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 43,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 71,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 91
+   },
+   "jax-jit": {
+    "xfail": 48,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 392
+   },
+   "torch-jit": {
+    "xfail": 72,
+    "slow_skip": 14,
+    "skip": 6,
+    "union": 92
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1968,6 +4200,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 43,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 60,
+    "slow_skip": 15,
+    "skip": 6,
+    "union": 81
+   },
+   "jax-jit": {
+    "xfail": 48,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 392
+   },
+   "torch-jit": {
+    "xfail": 61,
+    "slow_skip": 15,
+    "skip": 6,
+    "union": 82
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -1995,6 +4258,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 43,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 58,
+    "slow_skip": 15,
+    "skip": 6,
+    "union": 79
+   },
+   "jax-jit": {
+    "xfail": 48,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 392
+   },
+   "torch-jit": {
+    "xfail": 59,
+    "slow_skip": 15,
+    "skip": 6,
+    "union": 80
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2022,6 +4316,37 @@
    "torch": 6,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 43,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 52,
+    "slow_skip": 15,
+    "skip": 6,
+    "union": 73
+   },
+   "jax-jit": {
+    "xfail": 48,
+    "slow_skip": 338,
+    "skip": 6,
+    "union": 392
+   },
+   "torch-jit": {
+    "xfail": 53,
+    "slow_skip": 15,
+    "skip": 6,
+    "union": 74
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2031,7 +4356,7 @@
   "source": "rewritten",
   "existing": 0,
   "backend_modules": 0,
-  "collect_errors": 114,
+  "collect_errors": 35,
   "ledgered": {
    "jax": 0,
    "torch": 0,
@@ -2049,6 +4374,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2076,6 +4432,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 19,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 23,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 68
+   },
+   "jax-jit": {
+    "xfail": 24,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 392
+   },
+   "torch-jit": {
+    "xfail": 24,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 69
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2103,6 +4490,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 19,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 19,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 64
+   },
+   "jax-jit": {
+    "xfail": 24,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 392
+   },
+   "torch-jit": {
+    "xfail": 20,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 65
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2130,6 +4548,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 19,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 387
+   },
+   "torch": {
+    "xfail": 19,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 64
+   },
+   "jax-jit": {
+    "xfail": 22,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 390
+   },
+   "torch-jit": {
+    "xfail": 20,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 65
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2157,6 +4606,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 15,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 383
+   },
+   "torch": {
+    "xfail": 15,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 60
+   },
+   "jax-jit": {
+    "xfail": 18,
+    "slow_skip": 338,
+    "skip": 30,
+    "union": 386
+   },
+   "torch-jit": {
+    "xfail": 16,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 61
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2184,6 +4664,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 15,
+    "slow_skip": 311,
+    "skip": 30,
+    "union": 356
+   },
+   "torch": {
+    "xfail": 15,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 60
+   },
+   "jax-jit": {
+    "xfail": 18,
+    "slow_skip": 311,
+    "skip": 30,
+    "union": 359
+   },
+   "torch-jit": {
+    "xfail": 16,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 61
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2211,6 +4722,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 311,
+    "skip": 30,
+    "union": 353
+   },
+   "torch": {
+    "xfail": 12,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 57
+   },
+   "jax-jit": {
+    "xfail": 15,
+    "slow_skip": 311,
+    "skip": 30,
+    "union": 356
+   },
+   "torch-jit": {
+    "xfail": 16,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 61
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2220,7 +4762,7 @@
   "source": "rewritten",
   "existing": 0,
   "backend_modules": 0,
-  "collect_errors": 115,
+  "collect_errors": 35,
   "ledgered": {
    "jax": 0,
    "torch": 0,
@@ -2238,6 +4780,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2265,6 +4838,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 315,
+    "skip": 30,
+    "union": 350
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 10,
+    "slow_skip": 315,
+    "skip": 30,
+    "union": 355
+   },
+   "torch-jit": {
+    "xfail": 9,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 54
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2292,6 +4896,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 315,
+    "skip": 30,
+    "union": 350
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 10,
+    "slow_skip": 315,
+    "skip": 30,
+    "union": 355
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 18,
+    "skip": 30,
+    "union": 54
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2319,6 +4954,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 315,
+    "skip": 30,
+    "union": 350
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 10,
+    "slow_skip": 315,
+    "skip": 30,
+    "union": 355
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 17,
+    "skip": 30,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2346,6 +5012,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 215,
+    "skip": 30,
+    "union": 250
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 11,
+    "slow_skip": 215,
+    "skip": 30,
+    "union": 256
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 18,
+    "skip": 30,
+    "union": 54
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2373,6 +5070,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 210,
+    "skip": 30,
+    "union": 245
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 11,
+    "slow_skip": 210,
+    "skip": 30,
+    "union": 251
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 17,
+    "skip": 30,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2400,6 +5128,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 204,
+    "skip": 30,
+    "union": 239
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 11,
+    "slow_skip": 204,
+    "skip": 30,
+    "union": 245
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 17,
+    "skip": 30,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2427,6 +5186,37 @@
    "torch": 30,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 5,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 233
+   },
+   "torch": {
+    "xfail": 5,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 11,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 239
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 17,
+    "skip": 30,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "inherits eager",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2454,6 +5244,37 @@
    "torch": 30,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 15,
+    "skip": 30,
+    "union": 48
+   },
+   "jax-jit": {
+    "xfail": 20,
+    "slow_skip": 11,
+    "skip": 34,
+    "union": 65
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 2,
+    "skip": 30,
+    "union": 36
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2481,6 +5302,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 15,
+    "skip": 34,
+    "union": 52
+   },
+   "jax-jit": {
+    "xfail": 10,
+    "slow_skip": 11,
+    "skip": 34,
+    "union": 55
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 40
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2508,6 +5360,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 15,
+    "skip": 34,
+    "union": 52
+   },
+   "jax-jit": {
+    "xfail": 17,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 75
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 40
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2535,6 +5418,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 15,
+    "skip": 34,
+    "union": 52
+   },
+   "jax-jit": {
+    "xfail": 15,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 73
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 40
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2562,6 +5476,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 1,
+    "skip": 34,
+    "union": 38
+   },
+   "jax-jit": {
+    "xfail": 17,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 75
+   },
+   "torch-jit": {
+    "xfail": 11,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 51
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2589,6 +5534,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 15,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 73
+   },
+   "torch-jit": {
+    "xfail": 11,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 51
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2616,6 +5592,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 198,
+    "skip": 30,
+    "union": 232
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 10,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 11,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 51
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2643,6 +5650,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 174,
+    "skip": 30,
+    "union": 208
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 15,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 73
+   },
+   "torch-jit": {
+    "xfail": 11,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 51
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2670,6 +5708,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 174,
+    "skip": 30,
+    "union": 208
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 10,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 46
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2697,6 +5766,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 174,
+    "skip": 30,
+    "union": 208
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 9,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 46
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2724,6 +5824,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 171,
+    "skip": 30,
+    "union": 205
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 9,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 46
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2751,6 +5882,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 165,
+    "skip": 30,
+    "union": 199
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 9,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 46
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2778,6 +5940,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 164,
+    "skip": 30,
+    "union": 198
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 9,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 6,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 46
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2805,6 +5998,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 164,
+    "skip": 30,
+    "union": 198
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 9,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 5,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 45
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2832,6 +6056,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 164,
+    "skip": 30,
+    "union": 198
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 8,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 66
+   },
+   "torch-jit": {
+    "xfail": 5,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 45
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2859,6 +6114,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 4,
+    "slow_skip": 164,
+    "skip": 30,
+    "union": 198
+   },
+   "torch": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 7,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 65
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 44
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2886,6 +6172,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 167,
+    "skip": 30,
+    "union": 199
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 65
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 43
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2913,6 +6230,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 161,
+    "skip": 30,
+    "union": 193
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 64
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2940,6 +6288,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 159,
+    "skip": 30,
+    "union": 191
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 64
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2967,6 +6346,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 116,
+    "skip": 30,
+    "union": 148
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 64
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -2994,6 +6404,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 113,
+    "skip": 30,
+    "union": 145
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3021,6 +6462,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 113,
+    "skip": 30,
+    "union": 145
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3048,6 +6520,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 33,
+    "skip": 34,
+    "union": 69
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3075,6 +6578,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 30,
+    "skip": 34,
+    "union": 66
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3102,6 +6636,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 30,
+    "skip": 34,
+    "union": 66
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3129,6 +6694,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 24,
+    "skip": 34,
+    "union": 60
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 5,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 3,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 41
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3156,6 +6752,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 24,
+    "skip": 34,
+    "union": 60
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 6,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 60
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 42
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3165,7 +6792,7 @@
   "source": "rewritten",
   "existing": 0,
   "backend_modules": 0,
-  "collect_errors": 118,
+  "collect_errors": 35,
   "ledgered": {
    "jax": 0,
    "torch": 0,
@@ -3183,6 +6810,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3210,6 +6868,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 26,
+    "skip": 34,
+    "union": 62
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 6,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 58
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 42
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3237,6 +6926,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 2,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 61
+   },
+   "torch": {
+    "xfail": 2,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 39
+   },
+   "jax-jit": {
+    "xfail": 6,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 58
+   },
+   "torch-jit": {
+    "xfail": 4,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 42
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3264,6 +6984,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 14,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 73
+   },
+   "torch": {
+    "xfail": 15,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 52
+   },
+   "jax-jit": {
+    "xfail": 18,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 70
+   },
+   "torch-jit": {
+    "xfail": 17,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3291,6 +7042,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 71
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3318,6 +7100,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 24,
+    "skip": 34,
+    "union": 70
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3345,6 +7158,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 24,
+    "skip": 34,
+    "union": 70
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 17,
+    "skip": 34,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3372,6 +7216,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 25,
+    "skip": 34,
+    "union": 71
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 4,
+    "skip": 34,
+    "union": 53
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3399,6 +7274,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 24,
+    "skip": 34,
+    "union": 70
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 19,
+    "skip": 34,
+    "union": 69
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3426,6 +7332,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 24,
+    "skip": 34,
+    "union": 70
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3453,6 +7390,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 21,
+    "skip": 34,
+    "union": 67
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 18,
+    "skip": 34,
+    "union": 68
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3480,6 +7448,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 20,
+    "skip": 34,
+    "union": 66
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 16,
+    "skip": 34,
+    "union": 66
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3507,6 +7506,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 17,
+    "skip": 34,
+    "union": 63
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 50
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 16,
+    "skip": 34,
+    "union": 66
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3534,6 +7564,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 13,
+    "skip": 34,
+    "union": 59
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 49
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 13,
+    "skip": 34,
+    "union": 63
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 5,
+    "skip": 34,
+    "union": 54
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3561,6 +7622,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 7,
+    "skip": 34,
+    "union": 53
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 49
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 9,
+    "skip": 34,
+    "union": 59
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 5,
+    "skip": 34,
+    "union": 54
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3588,6 +7680,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 6,
+    "skip": 34,
+    "union": 52
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 49
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 8,
+    "skip": 34,
+    "union": 58
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 5,
+    "skip": 34,
+    "union": 54
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3597,7 +7720,7 @@
   "source": "rewritten",
   "existing": 0,
   "backend_modules": 0,
-  "collect_errors": 118,
+  "collect_errors": 35,
   "ledgered": {
    "jax": 0,
    "torch": 0,
@@ -3615,6 +7738,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3642,6 +7796,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 1,
+    "skip": 38,
+    "union": 51
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 1,
+    "skip": 34,
+    "union": 48
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 4,
+    "skip": 38,
+    "union": 58
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 144,
+    "skip": 34,
+    "union": 193
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3669,6 +7854,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 1,
+    "skip": 38,
+    "union": 51
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 1,
+    "skip": 34,
+    "union": 48
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 4,
+    "skip": 38,
+    "union": 58
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 3,
+    "skip": 34,
+    "union": 52
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3696,6 +7912,37 @@
    "torch": 34,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 12,
+    "slow_skip": 1,
+    "skip": 38,
+    "union": 51
+   },
+   "torch": {
+    "xfail": 13,
+    "slow_skip": 1,
+    "skip": 34,
+    "union": 48
+   },
+   "jax-jit": {
+    "xfail": 16,
+    "slow_skip": 2,
+    "skip": 38,
+    "union": 56
+   },
+   "torch-jit": {
+    "xfail": 15,
+    "slow_skip": 2,
+    "skip": 34,
+    "union": 51
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3723,6 +7970,37 @@
    "torch": 45,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 49,
+    "union": 50
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 46
+   },
+   "jax-jit": {
+    "xfail": 4,
+    "slow_skip": 2,
+    "skip": 49,
+    "union": 55
+   },
+   "torch-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 45,
+    "union": 49
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3750,6 +8028,37 @@
    "torch": 45,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 49,
+    "union": 50
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 46
+   },
+   "jax-jit": {
+    "xfail": 4,
+    "slow_skip": 2,
+    "skip": 49,
+    "union": 55
+   },
+   "torch-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 45,
+    "union": 49
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3777,6 +8086,37 @@
    "torch": 45,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 49,
+    "union": 50
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 46
+   },
+   "jax-jit": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 49,
+    "union": 54
+   },
+   "torch-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 45,
+    "union": 49
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3804,6 +8144,37 @@
    "torch": 45,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 49,
+    "union": 50
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 46
+   },
+   "jax-jit": {
+    "xfail": 3,
+    "slow_skip": 2,
+    "skip": 49,
+    "union": 54
+   },
+   "torch-jit": {
+    "xfail": 2,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 48
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3831,6 +8202,37 @@
    "torch": 45,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 49,
+    "union": 50
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 46
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 49,
+    "union": 53
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 45,
+    "union": 47
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3840,7 +8242,7 @@
   "source": "rewritten",
   "existing": 0,
   "backend_modules": 0,
-  "collect_errors": 122,
+  "collect_errors": 35,
   "ledgered": {
    "jax": 0,
    "torch": 0,
@@ -3858,6 +8260,37 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 0,
+    "union": 0
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3885,7 +8318,9 @@
    "torch": 0,
    "jax-jit": 0,
    "torch-jit": 0
-  }
+  },
+  "effective": null,
+  "jit_rule": null
  },
  {
   "sha": "78b7251940",
@@ -3912,6 +8347,37 @@
    "torch": 59,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 63,
+    "union": 64
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 59,
+    "union": 60
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 63,
+    "union": 67
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 59,
+    "union": 61
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3939,6 +8405,37 @@
    "torch": 53,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 57,
+    "union": 58
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 53,
+    "union": 54
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 57,
+    "union": 61
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 53,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3966,6 +8463,37 @@
    "torch": 53,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 57,
+    "union": 57
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 53,
+    "union": 54
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 1,
+    "skip": 57,
+    "union": 60
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 53,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -3993,6 +8521,37 @@
    "torch": 53,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 57,
+    "union": 58
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 53,
+    "union": 54
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 57,
+    "union": 61
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 53,
+    "union": 55
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -4020,6 +8579,37 @@
    "torch": 36,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 40,
+    "union": 40
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 36,
+    "union": 37
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 1,
+    "skip": 40,
+    "union": 43
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 36,
+    "union": 38
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -4047,6 +8637,37 @@
    "torch": 36,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 40,
+    "union": 40
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 36,
+    "union": 37
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 1,
+    "skip": 40,
+    "union": 43
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 36,
+    "union": 38
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  },
  {
@@ -4074,6 +8695,95 @@
    "torch": 4,
    "jax-jit": 4,
    "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 8,
+    "union": 8
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 4,
+    "union": 5
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 1,
+    "skip": 8,
+    "union": 11
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 4,
+    "union": 6
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
+  }
+ },
+ {
+  "sha": "037ddfa8e4",
+  "date": "2026-10-08",
+  "subject": "Backend usability fixes from the paper examples: Orbit from floats follows use(), DFs follow traced parameters, qdf/spray/forward-mode/torchode fixes (#1646)",
+  "source": "pull/1646/head",
+  "existing": 4277,
+  "backend_modules": 8664,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "entries": {
+   "jax": 1,
+   "torch": 1,
+   "jax-jit": 4,
+   "torch-jit": 2
+  },
+  "skipped": {
+   "jax": 8,
+   "torch": 4,
+   "jax-jit": 4,
+   "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 8,
+    "union": 9
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 1,
+    "skip": 4,
+    "union": 5
+   },
+   "jax-jit": {
+    "xfail": 2,
+    "slow_skip": 2,
+    "skip": 8,
+    "union": 12
+   },
+   "torch-jit": {
+    "xfail": 1,
+    "slow_skip": 1,
+    "skip": 4,
+    "union": 6
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
   }
  }
 ]
