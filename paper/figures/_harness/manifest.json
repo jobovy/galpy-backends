@@ -466,7 +466,7 @@
     "description": "streamdf cost per backend: construction (incl. track) vs nTrackChunks, sampling and DF evaluation vs N; numpy/C vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "d581a1f",
-    "sha256": "798e987403e3bfd641fb2114d844dac853547f010ad5f1fd0d3f9241db93b324",
+    "git": "aea47af",
+    "sha256": "933a1ff2958b36e577049c6332a80b2bb93536d6febc3f368f432e1d0d74e4a4",
     "track": "S"
   },
   "gS5_streamspray_speed": {

@@ -74,9 +74,9 @@ costs.
     and on the backends, warm and including compilation (cold). (b)
     Sampling $N$ stars and (c) evaluating the DF at $N$ phase-space
     points from the constructed model. CPU series use up to four cores
-    (\numpy\ and \torch\ one, \jax\ up to four). Eager \jax\ on the TITAN~Xp
-    takes a nearly constant 10\,s per call from $N=10^5$ on, which the
-    compiled program and the H100 do not show.}\label{fig:streamdfspeed}%TODO: explain once the probe is run
+    (\numpy\ and \torch\ one, \jax\ up to four). Eager \jax\ on the
+    TITAN~Xp runs out of GPU memory from $N=10^5$ on, and these points are
+    omitted.}\label{fig:streamdfspeed}
 \end{figure*}
 
 The following point applies to the derivatives of all of \galpy's
