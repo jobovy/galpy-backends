@@ -230,6 +230,22 @@ computes it for a single orbit in about $10$\,ms, where the backend
 solvers take from 0.05\,s (compiled \jax\ on one CPU core) to tens of
 seconds, and the GPU overtakes it at batches of a few hundred orbits.
 
+To gauge what GPU-native code could add, we also compiled \galpy's
+\cc\ implementations of \texttt{MWPotential2014} and of the
+\texttt{dop853} integrator as a CUDA kernel that integrates one orbit
+per GPU thread; this is an experiment and not part of \galpy. After
+restructuring the kernel, such that the force is evaluated by a single
+out-of-line function and threads pick up a new orbit when theirs is
+done, it integrates $10^6$ orbits in 2.4\,$\mu$s per orbit on the H100
+with \galpy's own arithmetic and in 1.0\,$\mu$s per orbit with special
+functions rewritten without divisions. That is 7 to 16 times faster
+than \galpy's compiled \jax\ integrator on the same GPU and 34 to 76
+times faster than the \cc\ integrator on all 72 hardware threads of our
+CPU node, while agreeing with the latter to within its truncation
+error (\figurename~\ref{fig:orbitspeed}). Such kernels are not
+differentiable, so they would complement the backend integrators rather
+than replace them (\sectionname~\ref{sec:conclusion}).
+
 \galpy\ is not the only galactic-dynamics code that integrates orbits
 with \diffrax: \texttt{galax} \citep{Starkman2026}, a re-implementation
 of \texttt{gala} in \jax, does so by design, and comparing the two is a
@@ -270,7 +286,8 @@ keeps the per-orbit control.
     Green: \texttt{galax} on the CPU and the GPUs, with its default
     batched step-size control (solid) and with per-orbit control as in
     \galpy\ (dash-dotted). With the same per-orbit step-size control, the
-    two codes take the same time to within a few percent.}\label{fig:galax}
+    two codes take the same time to within a few percent. Purple: the
+    experimental CUDA kernel of \figurename~\ref{fig:orbitspeed}.}\label{fig:galax}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -288,5 +305,10 @@ keeps the per-orbit control.
     the eager \texttt{torchdiffeq} solve on the GPUs. Light grey dotted lines mark a
     constant cost per orbit. The \cc\ integrator is the fastest option
     for small batches, while for large batches the in-backend solve on
-    the H100 is cheaper per orbit.}\label{fig:orbitspeed}
+    the H100 is cheaper per orbit. Purple: an experimental CUDA port of
+    \galpy's \cc\ forces and \texttt{dop853} that integrates one orbit
+    per GPU thread (not part of \galpy\ and not differentiable), with
+    \galpy's arithmetic (solid) and with special functions rewritten
+    without divisions (long-dashed), including the copies between host
+    and device.}\label{fig:orbitspeed}
 \end{figure*}
