@@ -91,6 +91,34 @@ had room at every requested N, so none of these series hits a memory limit up
 to 3e6 orbits / 1e7 angles / 1e8 samples. I didn't log `nvidia-smi` memory in
 this stage (not part of `hiN2`).
 
+**gS4 GPU re-measured (stage `gS4`, job 1055078, 22 min 50 s, galpy 9a877712).**
+The earlier GPU series were taken on 70165d10 + #1639, before #1640, which
+changed streamdf's track solves. `--measure gpu` re-measured only the GPU series
+and merged them; the CPU series are untouched.
+
+| gS4 GPU series | before (70165d10 + #1639) | after (9a877712) |
+|---|---|---|
+| construct, jax eager, warm (nch 4/8/16/32) | 53.0 / 53.6 / 53.8 / 54.4 s | **104.8 / 107.5 / 105.6 / 106.3 s** |
+| construct, jax eager, cold (nch 4/8/16/32) | 109.4 / 110.5 / 111.1 / 112.4 s | **165.2 / 161.6 / 163.9 / 165.9 s** |
+| build for panels (b)/(c), cold | 109.5 s | 159.7 s |
+| eval / sample, jax jit, N=1e6 | 1.66 / 4.06 ms | 1.65 / 4.06 ms |
+| eval / sample, jax eager and torch eager | – | unchanged within about 10% at every N (largest: jax eager sample at 1e5, 36.1 → 33.0 ms) |
+| compile (eval, sample) | – | unchanged |
+
+- **Eager jax construction on the GPU got about 2× slower.** The node load was
+  the same (loadavg ~8 on 24 cores) and nothing else changed for the
+  eval/sample series, so this is the galpy update. The likely cause is #1640:
+  `streamdf.py` now solves the tracks with `DiffraxDirectAdjoint`. Not confirmed
+  by an A/B against 1bfce100. The CPU construction series on `main` predate
+  #1640 too, so they would presumably show the same shift if re-measured.
+- **The N=1e6 eager GPU points are still OOM** (`nan`): jax eager sample and
+  eval need single 16.3 / 22.4 GiB allocations, and torch eager needs a
+  17.5 GB one. `nvidia-smi` (`gS4_mem.csv`, 5 s sampling) peaked at 67.2 of
+  81.6 GB. The jit series complete at 1e6.
+- The JSON still notes `construct_jit: not measured` (gS4's script). #1640
+  makes a jitted construction run; measuring it would need a change to gS4's
+  measure code.
+
 ## Machine and software
 
 | | |
@@ -242,6 +270,9 @@ per-call floor) change little.
 
    These points are dispatch- or launch-bound, so this is plausibly the newer
    jax/torch versions (0.11.2 / 2.14.1 vs 0.10.1 / 2.12.0). Not isolated.
+   *Superseded for g17 by the follow-up run:* after #1642, torch alone takes
+   0.778 / 1.37 / 3.50 s at 1e5 / 3e5 / 1e6, faster than the TITAN. The g15
+   points still stand.
 2. **g17 GPU OOMs on 80 GB where the 12 GB TITAN did not.** Recorded as `nan`:
    torch GPU at N ≥ 1e5 and jax GPU eager at N = 1e6. Diagnostic
    (`diag/g17_gpu_oom.py`, output in `diag/g17_gpu_oom.out`; not figure code):
@@ -257,6 +288,9 @@ per-call floor) change little.
    H100's versions than the TITAN's 12 GB could have held. g17's `nan`s from
    1e5 up are an artefact of running both backends in one process, not of the
    card.
+   *Resolved in the follow-up run:* with #1642, jax eager 1e6 fits in-process
+   (12.5 s), and the torch series measured alone (`g17torch`) is complete to
+   1e6, with a 43.9 GB peak instead of 65 GB.
 3. **gS4 eager GPU at N=1e6 OOMs** (single 16.3 / 22.4 GiB allocations,
    `nan`). The jit series completed.
 4. **g15 GPU series now reach larger N.** torchdiffeq GPU runs to 131072 and

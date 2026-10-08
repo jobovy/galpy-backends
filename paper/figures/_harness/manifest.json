@@ -59,7 +59,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "7e01f1f",
+    "git": "d581a1f",
     "sha256": "81794320362e9efc34729f365d635f5a6a5cefaa68797b24540150d6317d03e3",
     "track": "G"
   },
@@ -107,7 +107,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "0b1fee2",
+    "git": "d581a1f",
     "sha256": "9b2d3997b258458dbe799541b64769197e866b188d84eb767e0de2b5a8494abc",
     "track": "G"
   },
@@ -298,7 +298,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "7e01f1f",
+    "git": "d581a1f",
     "sha256": "f21408c4fec053a847609dc1fff1bf7180664085f7892a89c8461db7b947d671",
     "track": "G"
   },
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "0b1fee2",
-    "sha256": "fcd2cd8915669c0c10489519ea2ec851929af7fd0e79607415ba0a4ff1959027",
+    "git": "d581a1f",
+    "sha256": "798e987403e3bfd641fb2114d844dac853547f010ad5f1fd0d3f9241db93b324",
     "track": "S"
   },
   "gS5_streamspray_speed": {
@@ -522,7 +522,7 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "0b1fee2",
+    "git": "d581a1f",
     "sha256": "91ff8733788a12adad277e09b169ed06ebe308457e680fe3bf99f6dbf2a34a35",
     "track": "E"
   }
