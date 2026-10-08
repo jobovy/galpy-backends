@@ -1,14 +1,13 @@
 \section{How the backends were built}\label{sec:process}
 
-The way in which this work was carried out differs enough from how
-\galpy\ was developed before that it deserves a description of its own.
-The code was written by an AI agent; the question of how one comes to
-trust such code is therefore as much a part of this paper as the code
-itself. In this section we describe the organization of the work, how it
-was reviewed, the stretch during which the agent worked without
-supervision, how the existing test suite was made to pass under the new
-backends, and the checks through which the code was established to be
-correct. Because the division of labor between the human author and the
+We carried out this work in a way that differs enough from how \galpy\
+was developed before that we describe it in a section of its own.
+Because an AI agent wrote the code, the question of how one comes to
+trust such code is as much a part of this paper as the code itself. In
+this section, we describe the organization of the work, how we reviewed
+it, the stretch during which the agent worked without supervision, how
+we made the existing test suite pass under the new backends, and the
+checks through which we established that the code is correct. Because the division of labor between the human author and the
 agent is the subject here, this section names them separately, as JB
 and the agent.
 
@@ -21,12 +20,12 @@ repository, and to \github. The discussion settled the scope (all of
 \galpy, on both \jax\ and \torch) and the constraints described in
 \sectionname~\ref{sec:design}: byte-identity of the \numpy\ path, an
 unchanged interface, no compilation inside \galpy, and the existing test
-suite as the acceptance test. The first code was a pilot that made two
-potentials run under all three array libraries and checked value
-parity, gradients against finite differences, and the identities between
-the potential, its forces, and its second derivatives under AD. The
-pilot took a day. Everything after it was organized as pull requests
-(PRs) against a long-lived branch of the \galpy\ repository, which is
+suite as the acceptance test. The first code, which took a day to
+write, was a pilot that made two potentials run under all three array
+libraries and checked value parity, gradients against finite
+differences, and the identities between the potential, its forces, and
+its second derivatives under AD. We organized everything after it as
+pull requests (PRs) against a long-lived branch of the \galpy\ repository, which is
 rebased onto the main branch without merge commits, and which will be
 merged into the main branch as a whole when this paper is accepted.
 
@@ -36,11 +35,11 @@ opened against \galpy's main branch over the same period, most of them
 fixes to the existing \numpy\ and \cc\ code found through the backend
 work (see \sectionname~\ref{sec:process-fixes}). The merged backend PRs
 have a median size of 185 changed lines (quartiles 74 and 371 lines).
-The size was kept small on purpose: a PR is reviewable when it does one
-thing, and a backend migration of one module, with its tests, is one
-thing. Larger pieces of work were split into stacks of dependent PRs
-that are reviewed in order (119 of the PRs are members of such stacks);
-for example, the migration of the spherical DFs was split by DF family
+We kept the size small on purpose, because a PR is reviewable when it
+does one thing, and a backend migration of one module, with its tests,
+is one thing. We split larger pieces of work into stacks of dependent
+PRs that are reviewed in order (119 of the PRs are members of such stacks);
+for example, we split the migration of the spherical DFs by DF family
 into a base PR and four PRs that each port one family, and the port of
 the one-dimensional inverse action--angle code into three. Each PR
 carries a description of what was changed, the measurements that
@@ -48,61 +47,60 @@ support it (timings, parity counts, gradient errors), and what was
 explicitly left out, such that the description can be reviewed without
 re-deriving it from the diff.
 
-The rate of PRs varied with the kind of work. In June, 87 backend PRs
+The rate of PRs varied with the kind of work: in June, 87 backend PRs
 and 29 PRs for the three-dimensional variational equations were opened
-as the potentials were migrated family by family, in parallel, from a
-fixed template. July was the peak, with 175 backend PRs: the orbit,
-action--angle, and DF modules were ported, the autonomous stretch
-started, and the PRs were small, one problem each. August (114) and
-September (110) were spent on the compiled modes, the ledger, and the
-harder DFs, with PRs that were fewer and larger, because the remaining
-problems were coupled; the last month of the work, October, added 32.
+as the agent migrated the potentials family by family, in parallel, from
+a fixed template. July was the peak, with 175 backend PRs: the agent ported the orbit,
+action--angle, and DF modules, the autonomous stretch started, and the PRs were small, one problem each. In August (114) and
+September (110), the work turned to the compiled modes, the ledger, and
+the harder DFs, with PRs that were fewer and larger, because the
+remaining problems were coupled; the last month of the work, October, added 32.
 Over the same months, \galpy's main branch received a separate stream
 of about 50 PRs per month in August and September for an unrelated
 project on inverse action--angle transformations, which shared the
 continuous integration and matters for the costs below.
 
-The work cost, in round numbers, the following. The agent ran on a
+In round numbers, the work cost the following. The agent ran on a
 fixed-price subscription to Anthropic's Claude: until 2026 June 25 the
 ``Max'' plan at its 20$\times$ tier, which Anthropic provided free of
 charge, and afterwards the 5$\times$ tier at about CAD~140 per month.
-Successive versions of the Claude Opus models did the coding; Claude
-Fable was used only to draft this paper. The far larger cost was the
-continuous integration. Every backend PR runs \galpy's test suite in
-five modes over 22 shards, about 150 jobs of 20 to 90 minutes each, and
-the GitHub Actions bill for the repository at list price was
+Successive versions of the Claude Opus models did the coding, while
+Claude Fable was used only to draft this paper. The far larger cost was
+the continuous integration, because every backend PR runs \galpy's test
+suite in five modes over 22 shards, about 150 jobs of 20 to 90 minutes
+each; the GitHub Actions bill for the repository at list price was
 \$13,100 in June, \$16,500 in July, \$15,800 in August, and
 \$10,200 in September 2026. June and July were almost entirely this
 project; in August and September the backend PRs were three quarters of
 the PRs and, since a PR to the main branch runs only the \numpy\ suite,
 a larger fraction of the compute, such that about \$50,000 of the total
-is attributable to the backends. This was covered by GitHub's
-Education program and would otherwise have been prohibitive; it was
-also the bottleneck of the project, because a PR could not be merged
+is attributable to the backends. GitHub's Education program covered
+this cost, which would otherwise have been prohibitive; the continuous
+integration was also the bottleneck of the project, because a PR could not be merged
 before its matrix had run, the shards queued behind each other when
-several PRs were open, and a flaky job meant a two-hour wait. Several
-of the engineering decisions---stacked PRs, cancelling the runs of
-superseded commits, running the compiled modes only on demand until
+several PRs were open, and a flaky job meant a two-hour wait. We made
+several of the engineering decisions---stacked PRs, cancelling the runs
+of superseded commits, running the compiled modes only on demand until
 they were stable, running the touched tests under forced backends
-locally before pushing---were made to spend less time in that queue.
+locally before pushing---to spend less time in that queue.
 
-A few rules were fixed early and enforced throughout. The \numpy\ path
+JB fixed a few rules early and enforced them throughout. The \numpy\ path
 has to remain byte-identical, and any deviation (there are four: a
 tolerance in the King DF and the three cases noted in
 \sectionname s~\ref{sec:df} and \ref{sec:streams}) is flagged in the PR
 rather than absorbed.
-The jax and torch paths have to pass the same tests at the same
+The \jax\ and \torch\ paths have to pass the same tests at the same
 tolerances; a tolerance may be loosened only for one test, only
 slightly, and with a justification in the PR. Test coverage may not
 decrease, not by a single line. Tests must make meaningful assertions,
 such as a gradient matching a finite difference that is shown to
-converge, and never merely that a result is finite. And a test that
+converge, and never merely that a result is finite. A test that
 passes under a backend only because the code silently fell back to
-\numpy\ does not count; such \emph{numpy islands} were hunted down
-specifically (\sectionname~\ref{sec:process-ledger}). Before any PR was
-pushed, its tests were run locally under forced \jax\ and \torch\
-backends, which the \numpy-only checks cannot do, and the \numpy\
-byte-identity was measured by comparing checksums of outputs between two
+\numpy\ does not count, and the agent hunted down such \emph{numpy
+islands} specifically (\sectionname~\ref{sec:process-ledger}). Before
+pushing any PR, the agent ran its tests locally under forced \jax\ and
+\torch\ backends, which the \numpy-only checks cannot do, and measured
+the \numpy\ byte-identity by comparing checksums of outputs between two
 checkouts that differ only in the files of the PR.
 
 \subsection{Review}\label{sec:process-review}
@@ -120,8 +118,8 @@ kinds of problems that reviews of human code catch: a variable omitted
 from an OpenMP \texttt{private} clause, a coverage drop of one line that
 the automated check had passed.
 
-Two other forms of review were used. First, at several points JB ran an
-independent AI code reviewer (OpenAI's Codex) over the agent's work and
+JB also used two other forms of review. First, at several points he ran
+an independent AI code reviewer (OpenAI's Codex) over the agent's work and
 posted its findings to the PRs for the agent to address. These reviews
 found real defects: a gradient of the incomplete gamma function that
 was \texttt{nan} at the endpoint $x=0$ although its value was correct;
@@ -131,10 +129,10 @@ quadrature only when the height above the plane was traced, such that a
 derivative with respect to the radius at fixed height fell back to
 \scipy\ and failed; and a branch-selection rule in the compiled path of
 the hypergeometric function that returned infinity where the eager path
-was correct. Each finding was reproduced before it was fixed, and the
-findings that could not be reproduced were dropped with a note saying
-why. Second, before complex PRs were merged, the agent was instructed to
-run adversarial reviews of its own work by independent agents whose only
+was correct. The agent reproduced each finding before fixing it and
+dropped the findings that it could not reproduce with a note saying why.
+Second, before merging complex PRs, JB instructed the agent to run
+adversarial reviews of its own work by independent agents whose only
 task was to break the PR against the real code; these found, for
 example, that a stream sampler handed the same random key to the
 position- and velocity-angle samplers, and that the parity tests of an
@@ -154,16 +152,16 @@ merged itself once the continuous integration was green, under the
 understanding that JB would review the accumulated branch on his return.
 It could not merge into the main backend branch or into \galpy's main
 branch, and it could not change the continuous-integration
-configuration. The agent was woken at regular intervals by a scheduler
-and kept a dated log of what it did and why; this log, which runs to
+configuration. A scheduler woke the agent at regular intervals, and the
+agent kept a dated log of what it did and why; this log, which runs to
 60,000 lines for the summer, is part of the repository that accompanies
 this paper.
 
-In the two unsupervised weeks, 74 PRs were merged, and 145 PRs in total
-went through the development branch before it was merged into the
-backend branch on 2026 September 2, after JB had reviewed it as a whole
+In the two unsupervised weeks, the agent merged 74 PRs, and 145 PRs in
+total went through the development branch before this branch was merged
+into the backend branch on 2026 September 2, after JB had reviewed it as a whole
 and with the help of a Codex review (the latter's verdict, that ``the
-work is coherent, the ledger is honest,'' matched mine). The stretch
+work is coherent, the ledger is honest,'' matched JB's own). The stretch
 made clear both what such an agent can and cannot do. It burned the
 compiled-mode ledger down from 100 to 15 failing tests in three days,
 found and fixed a performance problem in the coercion of inputs that had
@@ -184,19 +182,19 @@ information that a reader deciding whether to work this way needs.
 \subsection{Making the test suite pass under every backend}\label{sec:process-ledger}
 
 The acceptance test for the backends is \galpy's own test suite, which
-grew from 2,489 to 4,275 tests over the course of this work, run under
+grew from 2,466 to 4,275 tests over the course of this work, run under
 \numpy, under \jax\ and \torch\ in eager mode, and under \jax\ and
 \torch\ with compilation at every entry point, for a total of five
-modes. Tests that fail under a backend are not deleted or modified;
-they are listed in a \emph{ledger}, one line per test and mode, that
-marks them as expected failures, and the size of the ledger is the
-measure of what remains to be done. A second ledger lists tests that
+modes. We do not delete or modify tests that fail under a backend, but
+list them in a \emph{ledger}, one line per test and mode, that marks them
+as expected failures, such that the size of the ledger is the measure of
+what remains to be done. A second ledger lists tests that
 pass under a backend but exceed the time limit of the continuous
 integration, and a third lists the tests of code that is permanently
-out of scope. The ledgers are regenerated from the actual test results
-on demand, such that they cannot drift from reality. A dedicated set of
-tests of the backend code itself, now 8,585 tests in 88 files, is run
-in addition.
+out of scope. We regenerate the ledgers from the actual test results on
+demand, such that they cannot drift from reality, and in addition we run
+a dedicated set of tests of the backend code itself, now 8,585 tests in
+88 files.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g13_ledger_burndown/g13_ledger_burndown.pdf}
@@ -218,16 +216,16 @@ in addition.
     torus tests.}\label{fig:ledger}
 \end{figure*}
 
-\figurename~\ref{fig:ledger} displays how the suite was brought to pass.
+\figurename~\ref{fig:ledger} displays how we brought the suite to pass.
 On 2026 June 14, when the all-backend continuous integration was first
 run, 1,042 tests failed under \jax\ and, a week later, 2,080 under
 \torch; the difference between the two is almost entirely due to
 \torch's rejection of \python\ scalars where \jax\ accepts them, and it
-disappeared when the coercion of inputs was centralized (see
-\sectionname~\ref{sec:design}). The eager ledgers were essentially
-empty by 2026 September 12, and the compiled-mode ledgers, which started
-at 100 and 146 tests when those modes were introduced, were emptied over
-the following month. At the time of writing, one eager test and five
+disappeared when we centralized the coercion of inputs (see
+\sectionname~\ref{sec:design}). The eager ledgers were essentially empty
+by 2026 September 12, and we emptied the compiled-mode ledgers, which
+started at 100 and 146 tests when we introduced those modes, over the
+following month. At the time of writing, one eager test and five
 compiled tests remain, the latter all concerning the pickling of unit
 wrappers under compilation, and 16 tests are permanently skipped
 because they test the torus-mapping code or floors that are by design.
@@ -239,44 +237,44 @@ ledger by about 700 tests.
 \subsection{Fixes to \lowercase{\galpy}}\label{sec:process-fixes}
 
 Running the same calculations through a second implementation, and
-differentiating them, is an effective way to find bugs in the first.
-About 50 PRs fixing \galpy's \numpy\ and \cc\ code were merged into the
-main branch as a result of the backend work. Some of these were found
-by the three-dimensional variational equations, which require correct
-second derivatives of the potential: four potentials had incorrect
+differentiating them, is an effective way to find bugs in the first, and
+the backend work led to about 50 PRs that fixed \galpy's \numpy\ and
+\cc\ code and were merged into the main branch. The three-dimensional
+variational equations, which require correct second derivatives of the
+potential, found some of these: four potentials had incorrect
 planar second derivatives in \cc, and the \cc\ second derivatives of
 the basis-function potentials had the wrong sign in one component,
 which the usual check that the determinant of the state-transition
-matrix is one cannot catch. Others were found by the comparison of the
-backend quadratures with the existing ones: the plain Gauss--Legendre
+matrix is one cannot catch. The comparison of the backend quadratures
+with the existing ones found others: the plain Gauss--Legendre
 quadrature of the action integrands in the adiabatic and St\"{a}ckel
 approximations loses about four digits at the turning points, because
-the integrands have square-root endpoints, and was regularized; the
+the integrands have square-root endpoints, and we regularized it; the
 default absolute tolerance of \scipy's adaptive quadrature truncated
 several small integrals (the outer tail of the Jeans velocity
 dispersion, the surface density far from the plane); and the \cc\ and
 \python\ implementations of the Chandrasekhar dynamical-friction force
 interpolated the velocity dispersion with different splines, which
-differed by a few parts in a thousand at small radii. Yet others were
-found by the figures of this paper, which are regenerated from scratch
-against the current code: the inverse-cumulative sampling of the
+differed by a few parts in a thousand at small radii. The figures of
+this paper, which we regenerate from scratch against the current code,
+found yet others: the inverse-cumulative sampling of the
 spherical DFs biased the sampled velocity dispersion low by about
 $0.7\,\%$ at the default grid resolution, and the forces of the two-power
 density profiles were off by up to $10^{-3}$ near the inner power-law
-index of three. Pre-existing defects of this kind were always filed as
-issues and fixed in PRs against the main branch, never quietly corrected
-in the backend branch, such that the count of them is known.
+index of three. We always filed pre-existing defects of this kind as
+issues and fixed them in PRs against the main branch, never quietly in
+the backend branch, such that their count is known.
 
 \subsection{Establishing correctness}\label{sec:process-correctness}
 
 JB does not take the code to be correct because an agent reports that
-its tests pass. The reasons to believe that it is correct are the
+its tests pass; the reasons to believe that it is correct are the
 following, roughly in order of weight. The \numpy\ path is byte-identical to the previous
 version, measured by checksums of tens of thousands of output values per
 PR, such that the entire body of validation that \galpy\ has accumulated
 over a decade carries over. The backend paths pass the same tests at the
 same tolerances, in five modes, and the few tests that do not are
-listed. Every derivative that the code can compute was compared with a
+listed. We compared every derivative that the code can compute with a
 finite difference whose convergence with step size is demonstrated
 rather than assumed, or with an independent reference where one
 exists: the derivatives of orbits with respect to their initial
@@ -285,13 +283,13 @@ reverse-mode AD through two different ODE solvers, and the three agree
 with each other and with finite differences of independently integrated
 orbits to a few parts in $10^{10}$ (\figurename~\ref{fig:icjacobian}).
 Where the backend code implements a numerical method of its own---a
-special function, a quadrature, a root finder---it was checked against
-\scipy\ and against \texttt{mpmath} at 30 to 50 digits, and the reference
-itself was validated before use, because the analytic formula one
-reaches for first is sometimes the one that is wrong. The code was
-reviewed by JB, by a second AI system, and by adversarial agents. It was
-run on two GPUs, which the continuous integration cannot do, and these
-runs found the device-placement bugs that are invisible on a CPU. And
+special function, a quadrature, a root finder---we checked it against
+\scipy\ and against \texttt{mpmath} at 30 to 50 digits and validated the
+reference itself before use, because the analytic formula one reaches
+for first is sometimes the one that is wrong. JB, a second AI system,
+and adversarial agents reviewed the code, and running it on two GPUs,
+which the continuous integration cannot do, found the device-placement
+bugs that are invisible on a CPU. And
 the figures of this paper, each of which is produced by a script that is
 re-run against the current code and whose output is checked against a
 stored hash, found several of the bugs listed above. None of these

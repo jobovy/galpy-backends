@@ -1,0 +1,81 @@
+{
+ "rhs": {
+  "N": 4096,
+  "kernels": 121,
+  "ops": {
+   "select": 6,
+   "pow": 19,
+   "add": 26,
+   "sqrt": 8,
+   "atan2": 1,
+   "div": 21,
+   "mul": 29,
+   "neg": 3,
+   "lift_fresh": 3,
+   "igamma": 2,
+   "lt": 2,
+   "sum": 2,
+   "_local_scalar_dense": 4,
+   "reciprocal": 2,
+   "log": 2,
+   "sub": 3,
+   "stack": 1
+  },
+  "bytes_per_orbit": 2372.0078125,
+  "flops_per_orbit": 86.00048828125,
+  "transc_per_orbit": {
+   "pow": 19.0,
+   "sqrt": 8.0,
+   "atan2": 1.0,
+   "igamma": 2.0,
+   "log": 2.0
+  }
+ },
+ "solve": {
+  "N": 1024,
+  "nfev": 3416,
+  "kernels": 489312,
+  "small_kernels": 31470,
+  "kernels_per_rhs": 143.24121779859485,
+  "bytes_per_orbit": 15215000.80078125,
+  "bytes_per_orbit_per_rhs": 4454.04004706711,
+  "flops_per_orbit": 618708.1962890625,
+  "flops_per_orbit_per_rhs": 181.12066636096677,
+  "transc_per_orbit_per_rhs": {
+   "cos": 0.0002927400468384075,
+   "sin": 0.0002927400468384075,
+   "pow": 20.014214473250878,
+   "sqrt": 8.004847363509953,
+   "atan2": 1.0046838407494145,
+   "igamma": 2.0,
+   "log": 2.0
+  },
+  "top_ops": {
+   "mul": 121909,
+   "add": 99682,
+   "div": 72896,
+   "pow": 66048,
+   "sqrt": 27901,
+   "select": 26804,
+   "_local_scalar_dense": 23944,
+   "sub": 15387,
+   "sum": 11382,
+   "neg": 10249,
+   "view": 9102,
+   "lift_fresh": 7498,
+   "abs": 7409,
+   "lt": 7403,
+   "reciprocal": 7402,
+   "igamma": 6832,
+   "log": 6832,
+   "eq": 6259,
+   "copy_": 3999,
+   "slice": 3987,
+   "detach": 3983,
+   "stack": 3418,
+   "atan2": 3417,
+   "gt": 2296,
+   "le": 1169
+  }
+ }
+}

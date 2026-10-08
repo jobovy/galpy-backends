@@ -5,8 +5,8 @@
 \orb\ instances are set up and integrated as before, but an orbit whose
 initial condition is a backend array, or whose potential carries a
 backend parameter, is integrated in one of two new ways, depending on
-what is to be differentiated. The first is to integrate the equations
-of motion inside the backend, with the backend's own ODE solver:
+what is to be differentiated. The first integrates the equations of
+motion inside the backend, with the backend's own ODE solver:
 \diffrax\ \citep{Kidger2021} for \jax, with an eighth-order
 Dormand--Prince method, and \texttt{torchdiffeq} \citep{Chen2018} or
 \torchode\ \citep{LienenGunnemann2022} for \torch, with a fifth-order method.
@@ -44,7 +44,7 @@ conditions as a function of time, which the solver's derivative gives
 for free and which finite differences confirm, and a Gauss--Newton fit
 of the launch velocity of an orbit to a target end point using the
 Jacobian of the integration, which converges quadratically to machine
-precision in a handful of iterations.
+    precision in a handful of iterations.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g7_orbit_sensitivity/g7_orbit_sensitivity.pdf}
@@ -56,22 +56,24 @@ precision in a handful of iterations.
     (circles). Right: the squared distance between the end point of the
     orbit and a target as the launch velocity $(v_{R,0},v_{z,0})$ is
     fit by Gauss--Newton iterations on the Jacobian of the integration;
-    the inset shows the path of the fit.}\label{fig:orbitsens}
+    the inset shows the path of the fit. The derivative through the
+    solver agrees with the finite differences, and the fit that uses it
+    converges in a handful of iterations.}\label{fig:orbitsens}
 \end{figure*}
 
-The second way uses \galpy's compiled \cc\ integrators. These are much
+The second way uses \galpy's compiled \cc\ integrators, which are much
 faster than a solver that runs inside \jax\ or \torch\ on a CPU (for a
 single orbit in the Milky-Way model, about ten times faster than the
-\diffrax\ solve and a hundred times faster than \texttt{torchdiffeq}), but
-they are opaque to AD. What they can provide is the derivative of the
+\diffrax\ solve and a hundred times faster than \texttt{torchdiffeq}),
+but which are opaque to AD. What they can provide is the derivative of the
 orbit with respect to its initial condition, through the variational
 equations that \galpy\ integrates alongside the orbit in \cc\
 (\appendixname~\ref{app:dxdv}). When a \galpy\ orbit with a backend
 initial condition is integrated with a \cc\ method, the \cc\ integrator
 returns both the orbit and the state-transition matrix
-$\vec{M}(t) = \partial \vecw(t)/\partial \vecw(0)$, and the backend is
-told, through a custom derivative rule, that the derivative of the orbit
-with respect to the initial condition is $\vec{M}$; the reverse-mode
+$\vec{M}(t) = \partial \vecw(t)/\partial \vecw(0)$, and a custom
+derivative rule tells the backend that the derivative of the orbit with
+respect to the initial condition is $\vec{M}$; the reverse-mode
 derivative of any function of the orbit is then a single product of
 $\vec{M}^T$ with the cotangent, without a second call to \cc. For a
 six-dimensional orbit and a Runge--Kutta method, the six columns of
@@ -116,7 +118,7 @@ which must come from the in-backend solve.
     $10^{10}$.}\label{fig:icjacobian}
 \end{figure*}
 
-The choice between the two is made automatically. An \orb\ with a
+\galpy\ chooses between the two automatically: an \orb\ with a
 backend initial condition that is integrated with a Runge--Kutta \cc\
 method, in a potential that has \cc\ second derivatives, with
 non-traced times and non-traced potential parameters, uses the \cc\
@@ -144,12 +146,12 @@ star's distance or proper motion is available.
 \subsection{Variational equations and chaos}\label{sec:orbit-dxdv}
 
 The variational equations that the \cc\ state-transition matrix relies
-on were part of \galpy\ for planar orbits since 2011; they were extended
-to three-dimensional orbits, to all of the \cc\ integrators including
-the symplectic ones, to one-dimensional orbits, and to dissipative,
-velocity-dependent forces, as part of this work and were released in
-\galpy\ \flag{v1.12}. The equations and the checks that were applied to
-them are given in \appendixname~\ref{app:dxdv}. Their user-facing form is
+on were part of \galpy\ for planar orbits since 2011; as part of this
+work, we extended them to three-dimensional orbits, to all of the \cc\
+integrators including the symplectic ones, to one-dimensional orbits,
+and to dissipative, velocity-dependent forces, and released them in
+\galpy\ \flag{v1.12}. \appendixname~\ref{app:dxdv} gives the equations
+and the checks that we applied to them. Their user-facing form is
 \texttt{Orbit.integrate\_dxdv}, which integrates an orbit together with a
 deviation vector or with the full state-transition matrix, and
 \texttt{Orbit.lyapunov}, which computes the largest Lyapunov exponent, or
@@ -166,8 +168,9 @@ For
 the H\'enon--Heiles potential at $E=1/8$, the exponent of a chaotic orbit
 converges into the range quoted in the literature while that of a
 regular orbit at the same energy decays as $\ln t/t$
-(\figurename~\ref{fig:lyapunov}). These are \numpy\ and \cc\ features;
-they do not run on the backends.
+(\figurename~\ref{fig:lyapunov}). Like the variational equations
+themselves, these are \numpy\ and \cc\ features that do not run on the
+backends.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g10_lyapunov/g10_lyapunov.pdf}
@@ -177,16 +180,18 @@ they do not run on the backends.
     range of values in the literature for the chaotic orbit, and the
     dashed line is the $\ln t/t$ decay expected for a regular orbit.
     Right: a Sun-like orbit in \texttt{MWPotential2014}, which is
-    regular.}\label{fig:lyapunov}
+    regular. The estimate for the chaotic orbit converges into the range
+    found in the literature, while that for the regular orbit decays as
+    expected.}\label{fig:lyapunov}
 \end{figure*}
 
 \subsection{Limitations}\label{sec:orbit-limitations}
 
-The derivative of an in-backend solve with respect to its inputs is
-taken, by default, by differentiating through the solver's adaptive
-steps. This is correct for a single orbit, but when a batch of orbits is
-differentiated under \texttt{jax.vmap}, the adaptive steps of one orbit
-depend on the others and the derivative is wrong by several percent.
+By default, the derivative of an in-backend solve with respect to its
+inputs differentiates through the solver's adaptive steps, which is
+correct for a single orbit; when a batch of orbits is differentiated
+under \texttt{jax.vmap}, however, the adaptive steps of one orbit depend
+on the others and the derivative is wrong by several percent.
 The remedy is to integrate with a fixed number of steps when
 differentiating a batch, which \galpy\ does where it integrates batches
 internally and which the user should do as well. \texttt{torchdiffeq}
@@ -214,8 +219,8 @@ arithmetic at one thirty-second of its single-precision rate, while on
 the H100 they pass single-threaded \cc\ near $N\approx3\times10^4$ and are
 about three times cheaper per orbit at $N=3\times10^5$. The \cc\ path
 also runs in parallel over cores, which divides its line by the number
-of cores. Compilation of the in-backend solve takes seconds and is paid
-once per shape of the problem. The derivative of an orbit with respect
+of cores, while the in-backend solve takes seconds to compile, a cost
+that is paid once per shape of the problem. The derivative of an orbit with respect
 to its initial condition follows the same pattern
 (\figurename~\ref{fig:icderivcost}): the \cc\ variational integrator
 computes it for a single orbit in about $10$\,ms, where the backend
@@ -228,8 +233,8 @@ of \texttt{gala} in \jax, does so by design, and comparing the two is a
 useful check that the cost of the in-backend solve is in the solver and
 the potential rather than in the library around them.
 \figurename~\ref{fig:galax} shows this comparison for the same orbits,
-potential, and tolerances. When \texttt{galax} is made to control its
-step size per orbit, as \galpy\ does, the two codes take the same time
+potential, and tolerances. When we make \texttt{galax} control its step
+size per orbit, as \galpy\ does, the two codes take the same time
 to within a few percent at every batch size and on every device. In its
 default mode, \texttt{galax} uses a single step-size controller for the
 whole batch, such that every orbit takes the steps that the most
@@ -246,7 +251,9 @@ keeps the per-orbit control.
     integrator and by reverse-mode differentiation through the
     \diffrax\ and \texttt{torchdiffeq} solves on the CPU and the two
     GPUs; hatched bars are eager. Right: the same as a function of the
-    number of orbits differentiated at once.}\label{fig:icderivcost}
+    number of orbits differentiated at once. The \cc\ variational
+    integrator is the fastest way to obtain the derivative of a single
+    orbit, while a GPU overtakes it for large batches.}\label{fig:icderivcost}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -257,7 +264,8 @@ keeps the per-orbit control.
     \galpy's in-backend \diffrax\ solve on the CPU and on the two GPUs.
     Green: \texttt{galax} on the CPU and the GPUs, with its default
     batched step-size control (solid) and with per-orbit control as in
-    \galpy\ (dash-dotted).}\label{fig:galax}
+    \galpy\ (dash-dotted). With the same per-orbit step-size control, the
+    two codes take the same time to within a few percent.}\label{fig:galax}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -271,5 +279,7 @@ keeps the per-orbit control.
     and, dash-dotted, with a fifth-order method that performs the same
     number of force evaluations as the \torch\ solve; the orange lines are
     the eager \texttt{torchdiffeq} solve on the GPUs. Light grey dotted lines mark a
-    constant cost per orbit.}\label{fig:orbitspeed}
+    constant cost per orbit. The \cc\ integrator is the fastest option
+    for small batches, while for large batches the in-backend solve on
+    the H100 is cheaper per orbit.}\label{fig:orbitspeed}
 \end{figure*}

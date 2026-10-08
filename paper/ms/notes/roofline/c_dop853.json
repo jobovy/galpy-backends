@@ -1,0 +1,26 @@
+{
+ "what": "dop853 (galpy C tableau, via its Python port) RHS evaluations per orbit",
+ "nfev_nt16": {
+  "mean": 3344.3333333333335,
+  "min": 2517,
+  "max": 4650,
+  "n_orbits": 24
+ },
+ "nfev_nt1000": {
+  "mean": 3344.3333333333335,
+  "min": 2517,
+  "max": 4650,
+  "n_orbits": 24
+ },
+ "one_thread_N300": {
+  "wall_s": 0.6978479559766129,
+  "per_orbit_ms": 2.326159853255376
+ },
+ "one_thread_N3000": {
+  "wall_s": 7.1543624750338495,
+  "per_orbit_ms": 2.3847874916779497
+ },
+ "affinity": [
+  35
+ ]
+}

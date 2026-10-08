@@ -1,8 +1,8 @@
 \section{Examples}\label{sec:examples}
 
-The sections above illustrate each part of the code on its own. Here we
-give two examples that combine several of them in a single analysis, of
-the kind that the backends were built for. Both are deliberately small:
+While the sections above illustrate each part of the code on its own,
+here we give two examples that combine several of them in a single
+analysis, of the kind that we built the backends for. Both are deliberately small:
 they use mock data and run in minutes, and their point is the shape of
 the computation rather than the result.
 
@@ -19,13 +19,13 @@ integrated orbit, and both the star's initial condition, within its
 uncertainties, and the potential's parameters are to be varied.
 \figurename~\ref{fig:hvs} displays the two derivatives of
 \sectionname~\ref{sec:orbit-paths} at work on a mock star resembling
-S5-HVS1 in a cored, flattened logarithmic halo. In the left panel the
-potential is held fixed and the star's phase-space position is adjusted
+S5-HVS1 in a cored, flattened logarithmic halo. In the left panel, we
+hold the potential fixed and adjust the star's phase-space position
 within its observational uncertainties to minimize the closest approach,
 using the derivative of the orbit with respect to its initial condition
 from the \cc\ variational integrator; seven Gauss--Newton iterations
-bring the closest approach from $0.2$ to $0.1$\,kpc. In the right panel
-the star is held fixed and the flattening $q$ of the halo is fit by
+bring the closest approach from $0.2$ to $0.1$\,kpc. In the right
+panel, we hold the star fixed and fit the flattening $q$ of the halo by
 descending the closest approach with the derivative obtained by
 reverse-mode differentiation through the in-backend orbit integration,
 which the \cc\ path cannot provide; the recovered $q=0.851$ matches the
@@ -53,7 +53,7 @@ objective= jax.jit(jax.value_and_grad(closest_approach))
 q= adam_descent(objective,q0=1.1) # a few lines of optax
 \end{code}
 With real
-data, the two fits would be combined into one likelihood over the star's
+data, one would combine the two fits into one likelihood over the star's
 parameters and those of the potential, and the derivative of that
 likelihood with respect to all of them would be available for a
 gradient-based sampler.
@@ -86,8 +86,8 @@ and angles to phase-space positions can be trained by requiring that
 \galpy's forward transformation, applied to the network's output,
 return the actions and angles that went in. The loss is then a cycle
 consistency, $|F(G(\vecj,\veca))-(\vecj,\veca)|^2$, with $F$ the
-\texttt{actionAngle} method, and its gradient with respect to the
-network's weights flows through $F$. No reference inverse is needed
+\texttt{actionAngle} method, and because its gradient with respect to
+the network's weights flows through $F$, no reference inverse is needed
 anywhere in the training. \figurenames~\ref{fig:neuralvertical} and
 \ref{fig:neural} show this for the vertical motion in
 \texttt{MWPotential2014} at the solar radius, where the exact inverse of \sectionname~\ref{sec:aa-other} exists and
@@ -123,7 +123,8 @@ computes, and that the same code does so in both frameworks.
     actions and a grid of angles (circles). Middle: the training loss in
     the two frameworks. Right: the root-mean-square phase-space error of
     the network against the exact inverse as a function of the
-    action.}\label{fig:neuralvertical}
+    action. The network reproduces the exact tori in both
+    frameworks.}\label{fig:neuralvertical}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -136,5 +137,7 @@ computes, and that the same code does so in both frameworks.
     angles (circles). Middle: the training loss, with its data and
     cycle-consistency terms. Right: the actions recovered by applying
     the forward transformation to the network's output against the
-    input actions for a test set.}\label{fig:neural}
+    input actions for a test set. The network recovers the input actions
+    on the round trip and reconstructs orbits that it has not seen in
+    training.}\label{fig:neural}
 \end{figure*}

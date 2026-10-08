@@ -16,8 +16,8 @@ disk DF, whose construction tabulates a guiding-center relation with
 as backend arrays and are then differentiated through everything that
 follows.
 
-Sampling deserves a word. Every sampler in \galpy\ takes a \texttt{key=}
-argument; \texttt{key=None} reproduces the previous behavior, drawing
+Every sampler in \galpy\ takes a \texttt{key=} argument:
+\texttt{key=None} reproduces the previous behavior, drawing
 from \numpy's global generator with the previous algorithm, while a
 backend key selects the inverse-cumulative samplers of
 \sectionname~\ref{sec:design-numerics} and returns backend arrays. For a
@@ -36,10 +36,10 @@ $10^{-7}$. The same figure shows the other kind of derivative of a DF's
 construction, that of the King model's density profile with respect to
 the dimensionless central potential $W_0$ at fixed mass and tidal
 radius, which passes through the solution of the Poisson equation. In
-eager mode this ODE is solved with \scipy\ and the derivative is
-attached from the forward sensitivity equations; under compilation the
-same ODE is solved in the backend. That the pathwise derivative of a
-sample is the derivative of the expectation can be checked
+eager mode, \galpy\ solves this ODE with \scipy\ and attaches the
+derivative from the forward sensitivity equations, while under
+compilation it solves the same ODE in the backend. We checked that the
+pathwise derivative of a sample is the derivative of the expectation
 independently of any DF construction, by differentiating a kernel
 estimate of the velocity dispersion over a large fixed sample with
 respect to radius and comparing with the derivative of the Jeans
@@ -94,15 +94,15 @@ integrand, such that the DF can be differentiated with respect to the
 parameters of the density and potential that it is built from. The
 constant-anisotropy DF is the one place where \jax\ was already present
 in \galpy, as an optional dependency for the fractional derivative in its
-inversion, and its \numpy\ result is one of the three places where
-byte-identity with the previous version was not kept: the force in its
+inversion, and its \numpy\ result is one of the three places where we
+did not keep byte-identity with the previous version: the force in its
 integrand is now obtained from the generic force routine rather than a
 private one, which reorders floating-point operations. Its construction
 is also much faster than it was, by about a factor of four on \numpy\
 and by orders of magnitude under compilation, because the $f(E)$
 inversion is a fixed-shape quadrature that compiles well. As an example,
-the derivative of a set of sampled radii with respect to the scale
-radius of a Hernquist potential under \torch\ is obtained as
+under \torch\ we obtain the derivative of a set of sampled radii with
+respect to the scale radius of a Hernquist potential as
 \begin{code}
 a= torch.tensor(1.,dtype=torch.float64,
                 requires_grad=True)
@@ -157,7 +157,6 @@ DF's scale lengths, and its velocity sampler at a given position draws
 by inverse transformation on a three-dimensional velocity mesh, such
 that a sample drawn with a fixed key is a function of the DF's
 parameters; %TODO: derivative NaN for MWPotential2014 (galpy bug being fixed); restore 'differentiable' once fixed
-
 this sampler replaced a rejection sampler on the \numpy\ path as well,
 which is the second place where \numpy\ output changed (the distribution
 is the same, the particular draws are not). In code,
@@ -173,15 +172,15 @@ Its construction is a \numpy\
 computation, and its interpolated velocity
 sampler, which samples many positions at once, is a rejection sampler
 with \numpy\ proposals that runs on the backends, with its shrinking
-arrays padded to fixed sizes, but is not differentiable. The corrections
-of the disk DFs for the difference between the input and output
-profiles are not migrated.
+arrays padded to fixed sizes, but is not differentiable. We did not
+migrate the corrections of the disk DFs for the difference between the
+input and output profiles.
 
 \subsection{Speed}\label{sec:df-speed}
 
-Sampling is where the backends change what is practical.
-\figurename~\ref{fig:dfspeed} displays the time to draw $N$ particles
-from four spherical DFs. On the CPU, eager \jax\ and \torch\ are slower
+Sampling is where the backends change what is practical, as is clear
+from \figurename~\ref{fig:dfspeed}, which displays the time to draw $N$
+particles from four spherical DFs. On the CPU, eager \jax\ and \torch\ are slower
 than \numpy\ for small samples, because every one of the hundreds of
 array operations in a draw is dispatched separately and each costs a few
 to tens of microseconds, and only at $N\gtrsim10^5$ do they catch up;
@@ -203,5 +202,7 @@ compilation itself costing seconds and paid once.
     and the H100; solid lines are compiled, dashed eager. Bottom: time to
     construct each DF and draw a first thousand particles, warm (filled)
     and including compilation on the first call in a fresh process
-    (outline); hatched bars are eager.}\label{fig:dfspeed}
+    (outline); hatched bars are eager. Compiling with \texttt{jax.jit} or
+    running on a GPU makes sampling much faster than with \numpy, by up
+    to three orders of magnitude for large samples.}\label{fig:dfspeed}
 \end{figure*}

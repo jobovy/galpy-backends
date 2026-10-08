@@ -1,0 +1,154 @@
+{
+ "300000": {
+  "R0_min": 0.7740039122386282,
+  "R0_max": 1.2284034436719502,
+  "Dopri8": {
+   "random": {
+    "num_steps_mean": 252.896728515625,
+    "num_steps_median": 244.0,
+    "num_steps_p99": 394.0,
+    "num_steps_max": 454,
+    "num_steps_min": 103,
+    "accepted_mean": 196.615966796875,
+    "rmin_min": 0.7977301659293142,
+    "rmin_median": 0.994618538908807
+   },
+   "lowR": {
+    "num_steps_mean": 298.2529296875,
+    "num_steps_median": 290.0,
+    "num_steps_p99": 473.0,
+    "num_steps_max": 498,
+    "num_steps_min": 182,
+    "accepted_mean": 236.0859375,
+    "rmin_min": 0.7427258923526243,
+    "rmin_median": 0.8283835847658243
+   },
+   "highR": {
+    "num_steps_mean": 219.05859375,
+    "num_steps_median": 225.0,
+    "num_steps_p99": 304.0,
+    "num_steps_max": 331,
+    "num_steps_min": 112,
+    "accepted_mean": 165.927734375,
+    "rmin_min": 1.1201911190111717,
+    "rmin_median": 1.1445557070766585
+   },
+   "S_max_batch_est": 498,
+   "S_mean_est": 252.896728515625,
+   "r_min_batch_est": 0.7427258923526243,
+   "wall_s": 39.323981523513794
+  },
+  "Dopri5": {
+   "random": {
+    "num_steps_mean": 592.302734375,
+    "num_steps_median": 590.0,
+    "num_steps_p99": 741.0500000000002,
+    "num_steps_max": 810,
+    "num_steps_min": 415,
+    "accepted_mean": 541.457763671875,
+    "rmin_min": 0.7977301158707886,
+    "rmin_median": 0.9946184255827879
+   },
+   "lowR": {
+    "num_steps_mean": 753.724609375,
+    "num_steps_median": 744.0,
+    "num_steps_p99": 864.54,
+    "num_steps_max": 909,
+    "num_steps_min": 628,
+    "accepted_mean": 685.0185546875,
+    "rmin_min": 0.7427257770524498,
+    "rmin_median": 0.8283835434197893
+   },
+   "highR": {
+    "num_steps_mean": 488.5419921875,
+    "num_steps_median": 489.0,
+    "num_steps_p99": 559.77,
+    "num_steps_max": 578,
+    "num_steps_min": 409,
+    "accepted_mean": 442.87890625,
+    "rmin_min": 1.1201910393687515,
+    "rmin_median": 1.144555674454868
+   },
+   "S_max_batch_est": 909,
+   "S_mean_est": 592.302734375,
+   "r_min_batch_est": 0.7427257770524498,
+   "wall_s": 32.383737564086914
+  }
+ },
+ "3000000": {
+  "R0_min": 0.7452081058087758,
+  "R0_max": 1.253463905022704,
+  "Dopri8": {
+   "random": {
+    "num_steps_mean": 253.983154296875,
+    "num_steps_median": 248.0,
+    "num_steps_p99": 392.0500000000002,
+    "num_steps_max": 470,
+    "num_steps_min": 106,
+    "accepted_mean": 197.004150390625,
+    "rmin_min": 0.801580310519337,
+    "rmin_median": 0.9946252959182108
+   },
+   "lowR": {
+    "num_steps_mean": 312.0693359375,
+    "num_steps_median": 305.0,
+    "num_steps_p99": 498.53999999999996,
+    "num_steps_max": 545,
+    "num_steps_min": 188,
+    "accepted_mean": 247.3076171875,
+    "rmin_min": 0.713043047170963,
+    "rmin_median": 0.793076901557385
+   },
+   "highR": {
+    "num_steps_mean": 211.484375,
+    "num_steps_median": 219.0,
+    "num_steps_p99": 290.77,
+    "num_steps_max": 314,
+    "num_steps_min": 114,
+    "accepted_mean": 159.505859375,
+    "rmin_min": 1.1644952816967493,
+    "rmin_median": 1.1789120158249164
+   },
+   "S_max_batch_est": 545,
+   "S_mean_est": 253.983154296875,
+   "r_min_batch_est": 0.713043047170963,
+   "wall_s": 41.98679995536804
+  },
+  "Dopri5": {
+   "random": {
+    "num_steps_mean": 593.0068359375,
+    "num_steps_median": 592.0,
+    "num_steps_p99": 741.1500000000005,
+    "num_steps_max": 818,
+    "num_steps_min": 415,
+    "accepted_mean": 541.69873046875,
+    "rmin_min": 0.8015802009303729,
+    "rmin_median": 0.9946252506403168
+   },
+   "lowR": {
+    "num_steps_mean": 801.5888671875,
+    "num_steps_median": 793.0,
+    "num_steps_p99": 904.77,
+    "num_steps_max": 957,
+    "num_steps_min": 623,
+    "accepted_mean": 725.8349609375,
+    "rmin_min": 0.7130430179527116,
+    "rmin_median": 0.7930768165823923
+   },
+   "highR": {
+    "num_steps_mean": 468.5234375,
+    "num_steps_median": 469.0,
+    "num_steps_p99": 533.0,
+    "num_steps_max": 557,
+    "num_steps_min": 387,
+    "accepted_mean": 424.9677734375,
+    "rmin_min": 1.1644952222480205,
+    "rmin_median": 1.1789119525568394
+   },
+   "S_max_batch_est": 957,
+   "S_mean_est": 593.0068359375,
+   "r_min_batch_est": 0.7130430179527116,
+   "wall_s": 32.1172935962677
+  }
+ }
+}

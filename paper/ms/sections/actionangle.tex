@@ -7,7 +7,7 @@ concentrated: root finding for the turning points of an orbit,
 quadrature of the action integrals between them, and, for the
 approximate methods, auxiliary orbit integrations. All of
 \texttt{galpy.actionAngle} runs on the backends except for the interface
-to the external torus-mapping code, which is excluded for good. The
+to the external torus-mapping code, which we excluded permanently. The
 public interface is unchanged: an \texttt{actionAngle} instance is set up
 for a potential and called with phase-space positions, through
 \texttt{\_\_call\_\_} for the actions, \texttt{actionsFreqs} for actions
@@ -44,16 +44,16 @@ to match measured actions.
 \subsection{The St\"{a}ckel and adiabatic approximations}\label{sec:aa-staeckel}
 
 \texttt{actionAngleStaeckel}, the workhorse for axisymmetric potentials,
-has two implementations that behave differently under a backend. The
-pure-\python\ path (\texttt{c=False}) was rewritten as part of this work
+has two implementations that behave differently under a backend. As
+part of this work, we rewrote the pure-\python\ path (\texttt{c=False})
 to be vectorized over phase-space points, where it previously looped
-over them, and the same code runs under \numpy, \jax, and \torch: the
-turning points are found by the fixed-count bisection and Newton
-polish of \sectionname~\ref{sec:design-numerics}, and the action,
-frequency, and angle integrals are evaluated with the same Gauss--Legendre
-rule, in an anomaly variable that removes the square-root singularities
-at the turning points, that the \cc\ implementation uses, such that the
-two agree to machine precision. Everything on this path is
+over them, and the same code now runs under \numpy, \jax, and \torch: it
+finds the turning points with the fixed-count bisection and Newton
+polish of \sectionname~\ref{sec:design-numerics} and evaluates the
+action, frequency, and angle integrals with the same Gauss--Legendre
+rule as the \cc\ implementation, in an anomaly variable that removes the
+square-root singularities at the turning points, such that the two agree
+to machine precision. Everything on this path is
 differentiable with respect to the phase-space coordinates and the
 potential's parameters,
 \begin{code}
@@ -89,8 +89,8 @@ compiled it costs about a millisecond.
 small numbers of points and, on a backend, does more than before: the
 \cc\ code computes, along with the actions, frequencies, and angles,
 their Jacobian with respect to the five phase-space coordinates, and
-this Jacobian is attached to the result as a custom derivative rule,
-such that \texttt{jax.grad} or \torch's \texttt{backward} through a
+\galpy\ attaches this Jacobian to the result as a custom derivative
+rule, such that \texttt{jax.grad} or \torch's \texttt{backward} through a
 \texttt{c=True} call costs one \cc\ call and a matrix product,
 \begin{code}
 aAS= actionAngleStaeckel(pot=MWPotential2014,
@@ -129,7 +129,7 @@ its radial and vertical parts.
 
 \subsection{Spherical potentials, the isochrone approximation, and the inverse transformation}\label{sec:aa-other}
 
-The isochrone and harmonic-oscillator actions are closed forms and were
+The isochrone and harmonic-oscillator actions are closed forms, which we
 migrated by swapping the namespace. \texttt{actionAngleSpherical}
 replaces its \scipy\ root finds and adaptive quadratures with the
 shared root finder and a fixed-order Gauss--Legendre rule, with special
@@ -158,8 +158,8 @@ self-gravitating isothermal disk: the derivative of the tori with
 respect to the velocity dispersion of the disk predicts the tori of a
 nearby disk, agrees with finite differences to $10^{-10}$, and serves
 as the Jacobian of a Levenberg--Marquardt fit of the disk's parameters to
-stars scattered around three tori. In code, the tori of a family of disks
-parametrized by their velocity dispersion are differentiated as
+stars scattered around three tori. In code, we differentiate the tori of
+a family of disks parametrized by their velocity dispersion as
 \begin{code}
 def torus(sigma):
     disk= IsothermalDiskPotential(amp=1.,sigma=sigma)
@@ -205,8 +205,8 @@ $10^5$ points, after a launch-bound floor of about a second; eager
 \jax, which dispatches hundreds of small operations per call, is bound
 by that dispatch and stays at a floor of several seconds. %TODO: Staeckel speed figure (g17) and its numbers after the re-measurement
 
-The one-dimensional inverse transformation is shown in
-\figurename~\ref{fig:vinvspeed}. Evaluating the torus map at $N$ angles
+\figurename~\ref{fig:vinvspeed} shows the speed of the one-dimensional
+inverse transformation. Evaluating the torus map at $N$ angles
 is fastest with \numpy\ for up to a few thousand angles, where the
 backends pay their per-call overhead; compiled \jax\ overtakes it near
 $N=10^4$ %TODO: 1-core jax CPU re-measurement (the current jax CPU series used up to 72 threads)

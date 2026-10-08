@@ -33,10 +33,10 @@ and the vertical couplings are
             -\frac{\cos\phi}{R}\,\frac{\partial^2\Phi}{\partial z\partial\phi}\,,\\
   K_{zz} &= -\frac{\partial^2\Phi}{\partial z^2}\,.\nonumber
 \end{align}
-The mixed derivatives $\partial^2\Phi/\partial R\partial z$ and
-$\partial^2\Phi/\partial z\partial\phi$ were added to the \cc\ interface
-of every potential for this purpose, and the symmetry of $\vec{K}$ is
-checked by the test suite. For a dissipative force
+We added the mixed derivatives $\partial^2\Phi/\partial R\partial z$ and
+$\partial^2\Phi/\partial z\partial\phi$ to the \cc\ interface of every
+potential for this purpose, and the test suite checks the symmetry of
+$\vec{K}$. For a dissipative force
 $\vec{F}(\vecx,\vecv)$, such as dynamical friction, the lower-right
 block $\partial\vec{F}/\partial\vecv$ is non-zero and the lower-left
 block is not symmetric; both are implemented for \galpy's
@@ -98,8 +98,9 @@ suppressed at the orbit's velocities.
     Chandrasekhar dynamical friction and with fuzzy-dark-matter
     friction, from the \cc\ variational equations (solid) and from the
     integral of the velocity divergence of the force along the orbit
-    (dashed). Right: the relative difference between the
-    two.}\label{fig:dissipative}
+    (dashed). Right: the relative difference between the two. The
+    variational equations reproduce the contraction of phase-space
+    volume by dissipative forces.}\label{fig:dissipative}
 \end{figure*}
 
 The derivative rule of \sectionname~\ref{sec:orbit-paths} follows from

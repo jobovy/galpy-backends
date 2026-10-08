@@ -1,7 +1,7 @@
 \section{Potentials}\label{sec:potential}
 
 The \pot\ classes are the foundation of \galpy\ and were the first part
-of the code to be migrated. The approach is the one of
+of the code that we migrated. The approach is the one of
 \sectionname~\ref{sec:design-agnostic}: every private compute method
 (\texttt{\_evaluate}, \texttt{\_Rforce}, \texttt{\_zforce},
 \texttt{\_phitorque}, \texttt{\_dens}, \texttt{\_surfdens}, and the six
@@ -33,17 +33,18 @@ and those that require an integral use Gauss--Legendre quadrature.
 
 The derivatives of a potential with respect to the coordinates are, of
 course, its forces and second derivatives, which \galpy\ implements by
-hand. Under a backend these can also be obtained by differentiating the
-potential, and the agreement between the two is a strong test of both:
+hand. Under a backend, these can also be obtained by differentiating
+the potential, and the agreement between the two is a strong test of
+both:
 for the basis-function expansions, the spiral arms, a rotating bar, and
 composite potentials, the force by AD agrees with the hand-coded force
 to a few parts in $10^{15}$, within twenty units in the last place
 (\figurename~\ref{fig:adforces}), that is, the derivative that AD
-produces is the analytic force up to rounding. The test suite checks
-these identities for every potential, under both backends and in both
-modes. For the user, the relevant derivatives are those with respect to
-the parameters. A potential constructed with a backend array as a
-parameter is differentiable with respect to that parameter through
+produces is the analytic force up to rounding. While the test suite
+checks these identities for every potential, under both backends and in
+both modes, the derivatives that matter to the user are those with
+respect to the parameters: a potential constructed with a backend array
+as a parameter is differentiable with respect to that parameter through
 every method,
 \begin{code}
 from galpy.potential import MiyamotoNagaiPotential
@@ -99,12 +100,12 @@ coefficients.
     backends.}\label{fig:paramgrad}
 \end{figure*}
 
-A few things are worth stating plainly. Where \galpy\ computes an
-integral over a potential adaptively on the \numpy\ path, as for the
-enclosed mass of a general density or the surface density, the backend
-computes a fixed-order Gauss--Legendre approximation; the order was set
-such that the two agree, but the backend result is an approximation of
-fixed cost rather than an adaptive one. Interpolated potentials evaluate
+The backend potentials differ from the \numpy\ ones in a few respects.
+Where \galpy\ computes an integral over a potential adaptively on the
+\numpy\ path, as for the enclosed mass of a general density or the
+surface density, the backend computes a fixed-order Gauss--Legendre
+approximation; we set the order such that the two agree, but the backend
+result is an approximation of fixed cost rather than an adaptive one. Interpolated potentials evaluate
 the same spline as \scipy\ does, to within one unit in the last place,
 by converting the fitted spline to a piecewise-polynomial table; they are
 differentiable in the evaluation point, but not in the tabulated values.
@@ -113,9 +114,9 @@ A potential that moves along a precomputed orbit, as the
 computes the field at backend coordinates. And a \python\ branch on the
 value of a stored parameter, such as the special case of a vanishing
 scale length, is harmless when the parameter is differentiated eagerly
-but fails when the parameter is traced inside a compiled ODE solve;
-such branches have been replaced where they were found, but the
-behavior is worth knowing when a new potential is written.
+but fails when the parameter is traced inside a compiled ODE solve; we
+replaced such branches where we found them, but authors of new
+potentials should keep this behavior in mind.
 
 New potentials are written as before: a class that inherits from
 \pot\ and implements \texttt{\_evaluate}, \texttt{\_Rforce}, and

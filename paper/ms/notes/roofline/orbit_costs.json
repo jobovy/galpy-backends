@@ -1,0 +1,357 @@
+{
+ "B": 1024,
+ "igamma_a": 0.6,
+ "rc": 0.2375,
+ "n_cf_vs_r": {
+  "0.60": 18,
+  "0.70": 15,
+  "0.71": 15,
+  "0.75": 13,
+  "0.80": 13,
+  "0.90": 11,
+  "1.00": 10,
+  "1.10": 8,
+  "1.20": 8
+ },
+ "rhs_xla_once": {
+  "flops": 311.0048828125,
+  "transcendentals": 7.0,
+  "bytes accessed": 1686.5986328125
+ },
+ "rhs": {
+  "loops_once": {
+   "flops_xla": 279.1337890625,
+   "transcendentals": 7.0,
+   "flop_equiv": 419.1337890625,
+   "arith": 183.0048828125,
+   "div": 18.0,
+   "cmp_select_logic": 78.12890625,
+   "integer": 0.0,
+   "other": 0.0,
+   "transc_by": {
+    "exponential": 1.0,
+    "log": 2.0,
+    "power": 1.0,
+    "sqrt": 3.0
+   },
+   "bytes": 1736.455078125,
+   "kernels": 76.0,
+   "bytes_ideal": 344.015625
+  },
+  "n_cf=10 (r=1)": {
+   "flops_xla": 1047.4453125,
+   "transcendentals": 7.0,
+   "flop_equiv": 1187.4453125,
+   "arith": 635.048828125,
+   "div": 34.0,
+   "cmp_select_logic": 378.396484375,
+   "integer": 0.0,
+   "other": 0.0,
+   "transc_by": {
+    "exponential": 1.0,
+    "log": 2.0,
+    "power": 1.0,
+    "sqrt": 3.0
+   },
+   "bytes": 7753.6728515625,
+   "kernels": 344.0,
+   "bytes_ideal": 1888.15625
+  },
+  "n_cf=15 (batch r_min)": {
+   "flops_xla": 1482.6357421875,
+   "transcendentals": 7.0,
+   "flop_equiv": 1622.6357421875,
+   "arith": 890.0732421875,
+   "div": 44.0,
+   "cmp_select_logic": 548.5625,
+   "integer": 0.0,
+   "other": 0.0,
+   "transc_by": {
+    "exponential": 1.0,
+    "log": 2.0,
+    "power": 1.0,
+    "sqrt": 3.0
+   },
+   "bytes": 11194.3857421875,
+   "kernels": 499.0,
+   "bytes_ideal": 2783.234375
+  }
+ },
+ "cf_iteration": {
+  "flops_xla": 87.0380859375,
+  "transcendentals": 0.0,
+  "bytes": 688.142578125
+ },
+ "Dopri8": {
+  "xla_once_per_lane": {
+   "flops": 1472.0380859375,
+   "transcendentals": 43.0,
+   "bytes accessed": 15169.111328125
+  },
+  "census_once_per_lane": {
+   "flops_xla": 1449.6259765625,
+   "transcendentals": 43.0,
+   "flop_equiv": 2309.6259765625,
+   "arith": 1141.0361328125,
+   "div": 58.0,
+   "cmp_select_logic": 239.3486328125,
+   "integer": 11.0107421875,
+   "other": 0.23046875,
+   "transc_by": {
+    "atan2": 16.0,
+    "cosine": 1.0,
+    "exponential": 1.0,
+    "log": 2.0,
+    "power": 2.0,
+    "sine": 1.0,
+    "sqrt": 20.0
+   },
+   "bytes": 18802.892578125,
+   "kernels": 187.0
+  },
+  "loops": [
+   [
+    "cf",
+    "while.221",
+    13,
+    1024
+   ],
+   [
+    "save",
+    "while.185",
+    14,
+    98304
+   ],
+   [
+    "series",
+    "while.223",
+    5,
+    1024
+   ],
+   [
+    "stage",
+    "while.229",
+    7,
+    86016
+   ],
+   [
+    "step",
+    "while.154",
+    12,
+    98304
+   ]
+  ],
+  "per_step_ncf15": {
+   "flops_xla": 22850.7705078125,
+   "transcendentals": 93.0,
+   "flop_equiv": 24710.7705078125,
+   "bytes": 175342.4287109375,
+   "kernels": 6808.0,
+   "arith": 14867.9521484375,
+   "div": 580.0,
+   "cmp_select_logic": 7391.7138671875,
+   "integer": 11.1044921875,
+   "bytes_ideal": 63202.484375
+  },
+  "prologue_ncf15": {
+   "flops_xla": 210.326171875,
+   "transcendentals": 34.0,
+   "flop_equiv": 890.326171875,
+   "bytes": 8390.98046875
+  },
+  "per_step_ncf10": {
+   "flops_xla": 17193.294921875,
+   "transcendentals": 93.0,
+   "flop_equiv": 19053.294921875,
+   "bytes": 130613.1611328125,
+   "kernels": 4793.0,
+   "arith": 11552.634765625,
+   "div": 450.0,
+   "cmp_select_logic": 5179.5556640625,
+   "integer": 11.1044921875,
+   "bytes_ideal": 51566.46875
+  },
+  "prologue_ncf10": {
+   "flops_xla": 210.326171875,
+   "transcendentals": 34.0,
+   "flop_equiv": 890.326171875,
+   "bytes": 8390.98046875
+  },
+  "300000": {
+   "S_max": 498,
+   "S_mean": 252.896728515625,
+   "r_min": 0.7427258923526243,
+   "n_cf_rmin": 13,
+   "performed_per_orbit": {
+    "flops_xla": 11379683.712890625,
+    "transcendentals": 46314.0,
+    "flop_equiv": 12305963.712890625,
+    "bytes": 87320529.49804688,
+    "bytes_ideal": 31474837.21875
+   },
+   "useful_per_orbit": {
+    "flops_xla": 4348128.038146496,
+    "transcendentals": 23519.395751953125,
+    "flop_equiv": 4818515.953185558,
+    "bytes": 33031641.151572466,
+    "bytes_ideal": 13040991.24797821
+   }
+  },
+  "3000000": {
+   "S_max": 545,
+   "S_mean": 253.983154296875,
+   "r_min": 0.713043047170963,
+   "n_cf_rmin": 14,
+   "performed_per_orbit": {
+    "flops_xla": 12453669.926757812,
+    "transcendentals": 50685.0,
+    "flop_equiv": 13467369.926757812,
+    "bytes": 95561623.64746094,
+    "bytes_ideal": 34445353.984375
+   },
+   "useful_per_orbit": {
+    "flops_xla": 4366807.2770142555,
+    "transcendentals": 23620.433349609375,
+    "flop_equiv": 4839215.944006443,
+    "bytes": 33173542.657197714,
+    "bytes_ideal": 13097014.389076233
+   }
+  }
+ },
+ "Dopri5": {
+  "xla_once_per_lane": {
+   "flops": 1244.0380859375,
+   "transcendentals": 43.0,
+   "bytes accessed": 14224.384765625
+  },
+  "census_once_per_lane": {
+   "flops_xla": 1221.6259765625,
+   "transcendentals": 43.0,
+   "flop_equiv": 2081.6259765625,
+   "arith": 913.0361328125,
+   "div": 58.0,
+   "cmp_select_logic": 239.3486328125,
+   "integer": 11.0107421875,
+   "other": 0.23046875,
+   "transc_by": {
+    "atan2": 16.0,
+    "cosine": 1.0,
+    "exponential": 1.0,
+    "log": 2.0,
+    "power": 2.0,
+    "sine": 1.0,
+    "sqrt": 20.0
+   },
+   "bytes": 18105.087890625,
+   "kernels": 187.0
+  },
+  "loops": [
+   [
+    "cf",
+    "while.226",
+    13,
+    1024
+   ],
+   [
+    "save",
+    "while.190",
+    13,
+    98304
+   ],
+   [
+    "series",
+    "while.228",
+    5,
+    1024
+   ],
+   [
+    "stage",
+    "while.234",
+    7,
+    43008
+   ],
+   [
+    "step",
+    "while.180",
+    12,
+    98304
+   ]
+  ],
+  "per_step_ncf15": {
+   "flops_xla": 10298.1220703125,
+   "transcendentals": 44.0,
+   "flop_equiv": 11178.1220703125,
+   "bytes": 82266.5400390625,
+   "kernels": 3175.0,
+   "arith": 6526.439453125,
+   "div": 272.0,
+   "cmp_select_logic": 3488.6328125,
+   "integer": 11.0498046875,
+   "bytes_ideal": 26981.625
+  },
+  "prologue_ncf15": {
+   "flops_xla": 210.326171875,
+   "transcendentals": 34.0,
+   "flop_equiv": 890.326171875,
+   "bytes": 8390.98046875
+  },
+  "per_step_ncf10": {
+   "flops_xla": 7686.9794921875,
+   "transcendentals": 44.0,
+   "flop_equiv": 8566.9794921875,
+   "bytes": 61622.2626953125,
+   "kernels": 2245.0,
+   "arith": 4996.29296875,
+   "div": 212.0,
+   "cmp_select_logic": 2467.63671875,
+   "integer": 11.0498046875,
+   "bytes_ideal": 21611.15625
+  },
+  "prologue_ncf10": {
+   "flops_xla": 210.326171875,
+   "transcendentals": 34.0,
+   "flop_equiv": 890.326171875,
+   "bytes": 8390.98046875
+  },
+  "300000": {
+   "S_max": 909,
+   "S_mean": 592.302734375,
+   "r_min": 0.7427257770524498,
+   "n_cf_rmin": 14,
+   "performed_per_orbit": {
+    "flops_xla": 9360992.961914062,
+    "transcendentals": 39996.0,
+    "flop_equiv": 10160912.961914062,
+    "bytes": 74780284.89550781,
+    "bytes_ideal": 24526297.125
+   },
+   "useful_per_orbit": {
+    "flops_xla": 4553018.972307205,
+    "transcendentals": 26061.3203125,
+    "flop_equiv": 5074245.378557205,
+    "bytes": 36499034.69280815,
+    "bytes_ideal": 12800346.939880371
+   }
+  },
+  "3000000": {
+   "S_max": 957,
+   "S_mean": 593.0068359375,
+   "r_min": 0.7130430179527116,
+   "n_cf_rmin": 14,
+   "performed_per_orbit": {
+    "flops_xla": 9855302.821289062,
+    "transcendentals": 42108.0,
+    "flop_equiv": 10697462.821289062,
+    "bytes": 78729078.81738281,
+    "bytes_ideal": 25821415.125
+   },
+   "useful_per_orbit": {
+    "flops_xla": 4558431.38657856,
+    "transcendentals": 26092.30078125,
+    "flop_equiv": 5080277.40220356,
+    "bytes": 36542423.024256706,
+    "bytes_ideal": 12815563.388763428
+   }
+  }
+ }
+}

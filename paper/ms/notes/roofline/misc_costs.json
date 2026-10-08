@@ -1,0 +1,661 @@
+{
+ "g2_plummer_FR_jax": {
+  "flops_xla": 7.0,
+  "transcendentals": 1.0,
+  "flop_equiv": 27.0,
+  "arith": 7.0,
+  "div": 0.0,
+  "cmp_select_logic": 0.0,
+  "integer": 0.0,
+  "other": 0.0,
+  "transc_by": {
+   "power": 1.0
+  },
+  "bytes": 24.0,
+  "kernels": 1.0,
+  "bytes_ideal": 24.0,
+  "xla_once": {
+   "flops": 7.0,
+   "transcendentals": 1.0,
+   "bytes accessed": 24.0
+  },
+  "loops": [],
+  "N": 1000000
+ },
+ "g2_plummer_FR_torch_eager": {
+  "kernels": 8,
+  "ops": [
+   "pow",
+   "pow",
+   "add",
+   "add",
+   "pow",
+   "neg",
+   "mul",
+   "mul"
+  ],
+  "bytes_per_point": 144.0
+ },
+ "gD3_isotropicHernquistdf": {
+  "flops_xla": 1873.02097,
+  "transcendentals": 21.0,
+  "flop_equiv": 2293.02097,
+  "arith": 103.0,
+  "div": 4.0,
+  "cmp_select_logic": 799.00651,
+  "integer": 967.01446,
+  "other": 0.0,
+  "transc_by": {
+   "atan2": 2.0,
+   "cosine": 7.0,
+   "log": 1.0,
+   "sine": 7.0,
+   "sqrt": 4.0
+  },
+  "bytes": 3307.52777,
+  "kernels": 996.0,
+  "bytes_ideal": 1079.05672,
+  "xla_once": {
+   "flops": 587.00468,
+   "transcendentals": 21.0,
+   "bytes accessed": 1066.63648
+  },
+  "loops": [
+   {
+    "name": "while.223",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.225",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.216",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.224",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.213",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.222",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 10,
+    "used": 10
+   },
+   {
+    "name": "while.219",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.218",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.220",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.215",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.221",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 7,
+    "used": 7
+   }
+  ],
+  "N": 100000
+ },
+ "gD3_eddingtondf (NFW)": {
+  "flops_xla": 2315.02128,
+  "transcendentals": 22.0,
+  "flop_equiv": 2755.02128,
+  "arith": 112.0,
+  "div": 5.0,
+  "cmp_select_logic": 1090.00667,
+  "integer": 1108.01461,
+  "other": 0.0,
+  "transc_by": {
+   "atan2": 2.0,
+   "cosine": 7.0,
+   "log": 2.0,
+   "log-plus-one": 1.0,
+   "sine": 7.0,
+   "sqrt": 3.0
+  },
+  "bytes": 4686.73429,
+  "kernels": 1106.0,
+  "bytes_ideal": 1575.05912,
+  "xla_once": {
+   "flops": 658.00468,
+   "transcendentals": 22.0,
+   "bytes accessed": 1191.43776
+  },
+  "loops": [
+   {
+    "name": "while.240",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.242",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.232",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.241",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.229",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.239",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 10,
+    "used": 10
+   },
+   {
+    "name": "while.237",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 15,
+    "used": 15
+   },
+   {
+    "name": "while.235",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.234",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.236",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.231",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.238",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 7,
+    "used": 7
+   }
+  ],
+  "N": 100000
+ },
+ "gD3_osipkovmerrittdf": {
+  "flops_xla": 2533.03079,
+  "transcendentals": 24.0,
+  "flop_equiv": 3013.03079,
+  "arith": 126.0,
+  "div": 5.0,
+  "cmp_select_logic": 1164.00971,
+  "integer": 1238.02108,
+  "other": 0.0,
+  "transc_by": {
+   "atan2": 2.0,
+   "cosine": 7.0,
+   "log": 1.0,
+   "rsqrt": 2.0,
+   "sine": 8.0,
+   "sqrt": 4.0
+  },
+  "bytes": 4942.79099,
+  "kernels": 1391.0,
+  "bytes_ideal": 1661.0784,
+  "xla_once": {
+   "flops": 726.0068,
+   "transcendentals": 24.0,
+   "bytes accessed": 1303.45664
+  },
+  "loops": [
+   {
+    "name": "while.327",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.329",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.316",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.328",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.313",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.326",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 10,
+    "used": 10
+   },
+   {
+    "name": "while.324",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 15,
+    "used": 15
+   },
+   {
+    "name": "while.322",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.330",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.323",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.315",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.331",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.319",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.325",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 7,
+    "used": 7
+   },
+   {
+    "name": "while.321",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   }
+  ],
+  "N": 100000
+ },
+ "gD3_kingdf": {
+  "flops_xla": 2525.02139,
+  "transcendentals": 20.0,
+  "flop_equiv": 2925.02139,
+  "arith": 140.0,
+  "div": 4.0,
+  "cmp_select_logic": 1214.00673,
+  "integer": 1167.01466,
+  "other": 0.0,
+  "transc_by": {
+   "atan2": 2.0,
+   "cosine": 7.0,
+   "log": 1.0,
+   "sine": 7.0,
+   "sqrt": 3.0
+  },
+  "bytes": 5269.93623,
+  "kernels": 1148.0,
+  "bytes_ideal": 1741.05992,
+  "xla_once": {
+   "flops": 778.00472,
+   "transcendentals": 20.0,
+   "bytes accessed": 1459.5984
+  },
+  "loops": [
+   {
+    "name": "while.274",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.276",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.265",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.275",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 4,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.262",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.272",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 10,
+    "used": 10
+   },
+   {
+    "name": "while.270",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 10,
+    "used": 10
+   },
+   {
+    "name": "while.268",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.267",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.269",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.264",
+    "depth": 0,
+    "nleaves": 8,
+    "lane": 100000,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.273",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 10,
+    "used": 10
+   },
+   {
+    "name": "while.271",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 100000,
+    "known": 7,
+    "used": 7
+   }
+  ],
+  "N": 100000
+ },
+ "gV2_xvFreqs_one_torus": {
+  "flops_xla": 13196.06742,
+  "transcendentals": 3229.00001,
+  "flop_equiv": 77776.06762,
+  "arith": 12924.05086,
+  "div": 57.00001,
+  "cmp_select_logic": 215.01544,
+  "integer": 0.00111,
+  "other": 0.0,
+  "transc_by": {
+   "cosine": 1639.0,
+   "sine": 1590.0,
+   "sqrt": 1e-05
+  },
+  "bytes": 5235.81357,
+  "kernels": 247.0,
+  "bytes_ideal": 529.2162,
+  "xla_once": {
+   "flops": 3151.0656,
+   "transcendentals": 800.0,
+   "bytes accessed": 1664.36832
+  },
+  "loops": [
+   {
+    "name": "while.102",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 1,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.101",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 1,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.100",
+    "depth": 0,
+    "nleaves": 13,
+    "lane": 100000,
+    "known": 8,
+    "used": 8
+   }
+  ],
+  "N": 100000
+ },
+ "gV2_xvFreqs_vmap_tori": {
+  "flops_xla": 13675.56289,
+  "transcendentals": 2509.0625,
+  "flop_equiv": 63856.81289,
+  "arith": 13266.375,
+  "div": 37.125,
+  "cmp_select_logic": 365.12521,
+  "integer": 6.93768,
+  "other": 0.0,
+  "transc_by": {
+   "cosine": 1271.0,
+   "sine": 1238.0,
+   "sqrt": 0.0625
+  },
+  "bytes": 48957.42669,
+  "kernels": 318.0,
+  "bytes_ideal": 1747.75288,
+  "xla_once": {
+   "flops": 3498.9376,
+   "transcendentals": 640.06248,
+   "bytes accessed": 12707.73376
+  },
+  "loops": [
+   {
+    "name": "while.75",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 6250,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.79",
+    "depth": 0,
+    "nleaves": 4,
+    "lane": 6250,
+    "known": 5,
+    "used": 5
+   },
+   {
+    "name": "while.83",
+    "depth": 0,
+    "nleaves": 13,
+    "lane": 250000,
+    "known": 8,
+    "used": 8
+   }
+  ],
+  "N": 100000
+ }
+}

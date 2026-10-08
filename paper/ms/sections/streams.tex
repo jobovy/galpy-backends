@@ -61,7 +61,9 @@ costs.
     $q\pm0.02$ from the derivative by automatic differentiation through
     the whole track computation. Right: the relative difference between
     this derivative and a central finite difference ($h=10^{-3}$) of the
-    same computation, per segment of the track.}\label{fig:streamtrack}
+    same computation, per segment of the track. The two agree at the
+    level set by the fixed iteration count of the track
+    refinement.}\label{fig:streamtrack}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -76,16 +78,17 @@ costs.
     compiled program and the H100 do not show.}\label{fig:streamdfspeed}%TODO: explain once the probe is run
 \end{figure*}
 
-A point about these derivatives is general enough to state here. A
-stream model is a generative model: the stream's stars are a sample from
-the model's DF. The derivative of the track with respect to a parameter
-can be taken with the sample of stars held fixed, which is what one
-obtains by differentiating the track code alone, or by letting the
-sample move with the parameter, which is what a finite difference of the
-full model computes. The first is not a physical quantity, and the two
-differ. Where \galpy\ provides derivatives of stream models, they are of
-the second kind, and they are tested against finite differences whose
-step is shown to be converged.
+The following point applies to the derivatives of all of \galpy's
+stream models. Because a stream model is a generative model, in which
+the stream's stars are a sample from the model's DF, the derivative of
+the track with respect to a parameter can be taken either with the
+sample of stars held fixed, which is what one obtains by differentiating
+the track code alone, or by letting the sample move with the parameter,
+which is what a finite difference of the full model computes. The two
+differ, and the first is not a physical quantity; where \galpy\
+provides derivatives of stream models, they are of the second kind, and
+we test them against finite differences whose step is shown to be
+converged.
 
 \subsection{Particle-spray models}\label{sec:streams-spray}
 
@@ -132,8 +135,7 @@ but this derivative holds the discrete choices of the track fit (its
 binning in stripping time and the knots of its spline) fixed, and a
 finite difference of the fitted track does not converge onto it. For a
 likelihood, smooth statistics of the particles themselves are the
-better target, as \figurename~\ref{fig:extrapolation} illustrates.
-The derivative of the sampled stream
+better target. The derivative of the sampled stream
 with respect to the potential agrees with finite differences of the same
 sample to $10^{-6}$, and \figurename~\ref{fig:extrapolation}
 demonstrates what it is good for: a single pass of forward-mode
@@ -142,8 +144,8 @@ in a halo of different flattening. The residual of this first-order
 prediction falls as $\Delta q^2$, such that it removes 99\,\% of the
 shift of the track for $|\Delta q|=0.003$, 92\,\% for $|\Delta q|=0.025$,
 and still two thirds for $|\Delta q|=0.2$, a range that covers the steps
-a fitter takes. The comparison has to be made with a smooth estimate of
-the track evaluated on a fixed grid: two independent fits with
+a fitter takes. We make this comparison with a smooth estimate of the
+track evaluated on a fixed grid, because two independent fits with
 \texttt{streamTrack}, which bins the particles, differ by a noise term
 that is proportional to $|\Delta q|$ and hides the quadratic
 convergence. Each spray
@@ -177,7 +179,9 @@ microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
     with 4.5\,Gyr of stripping, for the \numpy\ version with the \cc\
     integrator and for the differentiable backend version on the CPU,
     the TITAN~Xp, and the H100, compiled (solid) and eager
-    (dashed).}\label{fig:spraysp}
+    (dashed). Once compiled, the differentiable version is faster than the
+    \numpy\ version with the \cc\ integrator at every $N$, and much
+    faster on a GPU for large $N$.}\label{fig:spraysp}
 \end{figure*}
 
 \subsection{Stream gaps}\label{sec:streams-gaps}
@@ -191,4 +195,4 @@ backends and are differentiable with respect to the parameters of the
 impact, and the orbit integrations in the model go through the batched
 in-backend solver when given backend inputs. The construction of the
 model is not traceable, because it assigns into arrays in place in
-many places, and this was left as it is.
+many places, and we left it as it is.
