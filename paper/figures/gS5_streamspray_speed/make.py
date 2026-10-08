@@ -148,11 +148,11 @@ def _label(name, dv, data):
         return palette.label(fw, dv, mode, extra)
     nc = data.get("env_cpu", {}).get("cpu_cores_used", "?")
     if fw == "numpy":
-        return f"numpy/C, {nc} threads"
+        return "numpy/C, 1 core" if nc == 1 else f"numpy/C, {nc} threads"
     if fw == "torch":
         n = data.get("torch_cpu_threads", "?")
         return f"torch {mode}, {n} " + ("core" if n == 1 else "threads")
-    return f"jax {mode}, ≤{nc} cores"
+    return f"jax {mode}, 1 core" if nc == 1 else f"jax {mode}, ≤{nc} cores"
 
 
 def _env(torch, jax):

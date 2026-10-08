@@ -482,7 +482,7 @@
     "description": "particle-spray stream generation (fardal15spraydf.sample) wall time and per-particle cost vs N: numpy/C vs differentiable jax (eager/jit) and torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -490,8 +490,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "0b1fee2",
-    "sha256": "3af3ffc93e228dc283eadaba8ed2821373dd5773799925ed8f58cb65720edc25",
+    "git": "ec7c4ca",
+    "sha256": "a337e89d4cea4c647d8cf38aa898a5ad3a135458e1d9706852566138c1da5b0c",
     "track": "S"
   },
   "gV1_vertical_inverse": {
