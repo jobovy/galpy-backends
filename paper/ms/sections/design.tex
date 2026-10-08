@@ -328,7 +328,7 @@ operations, which is what a compiled program does.
   \includegraphics[width=\textwidth,clip=]{../figures/g2_throughput/g2_throughput.pdf}
   \caption{Throughput of the radial force of a Plummer potential as a
     function of the number of points per call. The left panel shows the
-    development machine, with \numpy\ on the CPU and \jax\ and \torch\
+    development machine, with \numpy\ on one CPU core and \jax\ and \torch\
     on an NVIDIA TITAN~Xp; the right panel shows a node of the Trillium
     cluster, with an NVIDIA H100. Solid and dashed lines are compute-only (compiled \jax\ and eager
     \torch); dotted lines with open markers include the transfer of

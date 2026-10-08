@@ -45,8 +45,9 @@ This figure measures what that costs and buys.
 Float64 throughout (galpy's policy: ``jax_enable_x64``, and torch computes in
 float64 internally). Timings: ``bench.time_call`` medians (warmup 1, 3
 repeats; device-synchronised), a series stops once a call exceeds ~60 s. CPU:
-pinned to 4 cores (``taskset``) of a SHARED 72-thread box; numpy/scipy are
-single-threaded, jax uses XLA's CPU threadpool on those cores, and torch runs
+ONE core per series on a SHARED 72-thread box: numpy/scipy are single-threaded,
+jax was re-measured pinned to one core (``taskset -c 16``, 2026-10-08; XLA's CPU
+threadpool spans the affinity, so the earlier 4-core run used up to 4), and torch runs
 with ONE intra-op thread (``GD3_TORCH_THREADS``, default 1): with 4 threads its
 OpenMP workers spin-wait against busy hyperthread siblings and the timings were
 5-15x slower and load-dependent (N = 1e5: 0.5 s at 4 threads vs 0.08 s at 1 on
@@ -196,6 +197,8 @@ def _env():
     except Exception:
         pass
     env["torch_threads"] = torch.get_num_threads()
+    for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "XLA_FLAGS"):
+        env[v] = os.environ.get(v, "unset")
     try:
         env["gpu"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"
     except Exception:

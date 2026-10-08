@@ -1,0 +1,48 @@
+{
+  "backend": "galpy-jax",
+  "device": "cpu",
+  "integrator": "diffrax Dopri8 (in-backend)",
+  "stepping": "per-orbit adaptive (vmap-of-solve)",
+  "nt": 1000,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 0.10586973302997649,
+      "per_orbit_ms": 105.86973302997649,
+      "compile_run_s": 3.2745999729959294
+    },
+    {
+      "N": 10,
+      "wall_s": 0.09376559394877404,
+      "per_orbit_ms": 9.376559394877404,
+      "compile_run_s": 2.66411567106843
+    },
+    {
+      "N": 100,
+      "wall_s": 1.0461043050745502,
+      "per_orbit_ms": 10.461043050745502,
+      "compile_run_s": 3.755687120021321
+    },
+    {
+      "N": 1000,
+      "wall_s": 6.631251255981624,
+      "per_orbit_ms": 6.631251255981624,
+      "compile_run_s": 8.938040142995305
+    },
+    {
+      "N": 10000,
+      "wall_s": 81.84302821708843,
+      "per_orbit_ms": 8.184302821708842,
+      "compile_run_s": 87.10402369196527
+    }
+  ],
+  "jax_version": "0.10.1",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "cpu"
+}

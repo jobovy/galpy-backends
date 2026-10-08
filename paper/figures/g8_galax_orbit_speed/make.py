@@ -101,8 +101,9 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # CPU thread counts (paper/ms/notes/CPU_CORES_AUDIT.md): galpy C threads its orbit
 # loop with OpenMP (omp_get_max_threads(); ``numcores`` does not reach it), so the
 # unpinned galpy_c_cpu*.json ran on all 72 hardware threads; the *_1cores* files are
-# OMP_NUM_THREADS=1 + taskset to one core. The jax/galax CPU lines ran unpinned:
-# XLA:CPU's thread pool spans all 72 (in practice cpu/wall ~1.1-1.3 for these solves).
+# OMP_NUM_THREADS=1 + taskset to one core. XLA:CPU's thread pool spans the CPU
+# affinity, so the jax/galax CPU labels state the affinity stamped in their JSON
+# ("cpu_affinity"; an unstamped JSON is the original unpinned 72-thread run).
 # A series whose JSONs do not exist (yet) is skipped.
 _C1 = "galpy C (1 core)"
 _C_NODE = "galpy C (72 threads)"
@@ -111,14 +112,23 @@ _SERIES = [
      palette.c_threads_style(1)),
     (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, _C_NODE,
      palette.c_threads_style(72)),
-    (["galax_cpu.json"], "galax", "cpu", "jit", "galax CPU (≤72 threads)", None),
+    (["galax_cpu.json"], "galax", "cpu", "jit", "galax CPU ({cpu})", None),
     (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit",
-     "galpy jax CPU (≤72 threads, per-orbit steps)", None),
+     "galpy jax CPU ({cpu}, per-orbit steps)", None),
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "galpy jax {dev} (per-orbit steps)", None),
     (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax", "gpu", "jit",
      "galax {dev} (per-orbit steps)", "-."),
     (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "galax {dev} (batched steps)", None),
 ]
+
+
+def _cpu_tag(d):
+    """Cores a jax/galax CPU series could use: its JSON's ``cpu_affinity`` stamp
+    (XLA:CPU's pool spans the affinity); unstamped = the unpinned 72-thread run."""
+    aff = d.get("cpu_affinity")
+    if aff is None:
+        return "≤72 threads"
+    return "1 core" if aff == 1 else f"≤{aff} cores"
 
 
 def _load_one(fname, sub=""):
@@ -161,8 +171,9 @@ def make():
     fs_line = layout.FS["line"] if PAPER else 6.5
     fs_note = layout.FS["note"] if PAPER else 6.5
 
-    def _lab(lab, dev):
-        lab = lab.format(dev=palette.DEVICE_NAME[palette._device(dev)])
+    def _lab(lab, dev, d=None):
+        lab = lab.format(dev=palette.DEVICE_NAME[palette._device(dev)],
+                         cpu=_cpu_tag(d or {}))
         return lab.replace(" (", "\n(") if PAPER else lab
 
     h100_meta = _load_one("jax_gpu.json", "h100") or {}
@@ -181,7 +192,7 @@ def make():
                 st.update(ls)
             elif ls:
                 st["ls"] = ls
-            ax.loglog(Ns, wall, ms=4, zorder=3, label=_lab(lab, d_), **st)
+            ax.loglog(Ns, wall, ms=4, zorder=3, label=_lab(lab, d_, d), **st)
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")

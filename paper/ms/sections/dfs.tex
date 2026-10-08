@@ -184,10 +184,11 @@ particles from four spherical DFs. On the CPU, eager \jax\ and \torch\ are slowe
 than \numpy\ for small samples, because every one of the hundreds of
 array operations in a draw is dispatched separately and each costs a few
 to tens of microseconds, and only at $N\gtrsim10^5$ do they catch up;
-compiled \jax\ is faster than \numpy\ at every size, by a factor of a
-few to twenty at $N=10^7$. On a GPU the sample of $10^7$ particles takes
+compiled \jax\ is faster than \numpy\ at every size, by a factor of
+1.4 to 6 at $N=10^7$ on one core. On a GPU the sample of $10^7$ particles takes
 tens of milliseconds on the consumer card and a few milliseconds on the
-H100, three orders of magnitude faster than \numpy. The lower panel
+H100, two to nearly four orders of magnitude faster than \numpy\ on
+one core. The lower panel
 shows the cost of constructing a DF, which for the inversions is
 dominated by the $f(E)$ integral: minutes on \numpy\ for the
 constant-anisotropy DF, a fraction of a second once compiled, with the
@@ -202,7 +203,7 @@ compilation itself costing seconds and paid once.
     and the H100; solid lines are compiled, dashed eager. Bottom: time to
     construct each DF and draw a first thousand particles, warm (filled)
     and including compilation on the first call in a fresh process
-    (outline); hatched bars are eager. Compiling with \texttt{jax.jit} or
-    running on a GPU makes sampling much faster than with \numpy, by up
-    to three orders of magnitude for large samples.}\label{fig:dfspeed}
+    (outline); hatched bars are eager. All CPU series use one core. Compiling with \texttt{jax.jit} or
+    running on a GPU makes sampling much faster than with \numpy, by two
+    to nearly four orders of magnitude on a GPU for large samples.}\label{fig:dfspeed}
 \end{figure*}

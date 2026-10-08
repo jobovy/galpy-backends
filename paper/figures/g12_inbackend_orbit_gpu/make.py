@@ -53,7 +53,7 @@ on this float64-limited consumer GPU (one-core C: 2.2-2.4 ms/orbit, overtaken by
 every GPU line at N~1e3); the jit-fused JAX-GPU lines amortise their
 ~1.5 s compile/launch floor down to ~0.21 ms/orbit (Dopri8) and ~0.13 ms/orbit
 (same-work Dopri5) at large N. (The June version had ~2.1 ms/orbit for C: the
-one-core cost, not a slow build.) The JAX-CPU line (unpinned, <=72 threads) shows
+one-core cost, not a slow build.) The JAX-CPU line (one core, 2026-10-08) shows
 the device contribution. On the H100 (Trillium) the GPU lines drop 9-12x at large
 N and pass the 72-thread C node at N~3e4: jax Dopri8 0.025, Dopri5 0.018, torch dopri5 0.009
 ms/orbit at the largest N (see caption.md).
@@ -129,8 +129,9 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # loop with OpenMP (omp_get_max_threads(); ``numcores`` does not reach it), so the
 # unpinned galpy_c_cpu*.json ran on all 72 hardware threads; *_1cores* =
 # OMP_NUM_THREADS=1 + taskset to one core, *_16cores* = 16 threads on 16 pinned
-# cores. The jax CPU line ran unpinned: XLA:CPU's pool spans all 72 (in practice
-# cpu/wall ~1.3 for this solve). A series whose JSONs do not exist (yet) is skipped.
+# cores. XLA:CPU's pool spans the CPU affinity, so the jax CPU label states the
+# affinity stamped in its JSON ("cpu_affinity"; unstamped = the unpinned 72-thread
+# run). A series whose JSONs do not exist (yet) is skipped.
 _C1, _C16, _C_NODE = "1 core", "16 threads", "72 threads"
 _SHOW_C16 = True
 _SERIES = [
@@ -142,11 +143,20 @@ _SERIES = [
 ] if _SHOW_C16 else []) + [
     (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, _C_NODE,
      palette.c_threads_style(72)),
-    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "Dopri8, ≤72 threads", None),
+    (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "Dopri8, {cpu}", None),
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri8", None),
     (["jax_dopri5_gpu.json", "jax_dopri5_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri5", "-."),
     (["torch_cuda.json"], "torch", "gpu", "eager", "dopri5", None),
 ]
+
+
+def _cpu_tag(d):
+    """Cores a jax CPU series could use: its JSON's ``cpu_affinity`` stamp (XLA:CPU's
+    pool spans the affinity); unstamped = the unpinned 72-thread run."""
+    aff = d.get("cpu_affinity")
+    if aff is None:
+        return "≤72 threads"
+    return "1 core" if aff == 1 else f"≤{aff} cores"
 
 
 def _load_one(fname, sub=""):
@@ -205,7 +215,8 @@ def make():
                 st.update(ls)
             elif ls:
                 st["ls"] = ls
-            ax.loglog(Ns, wall, ms=4, zorder=3, label=_label(fw, d_, mode, extra), **st)
+            ax.loglog(Ns, wall, ms=4, zorder=3,
+                      label=_label(fw, d_, mode, extra.format(cpu=_cpu_tag(d))), **st)
 
     ax.set_xlabel(r"batch size  $N$  (number of orbits)")
     ax.set_ylabel(r"wall time for the batch  (s)")

@@ -54,12 +54,22 @@ _MECH = [
     ("diffrax", "jax", "jit", "diffrax"),
     ("torchdiffeq", "torch", "eager", "torchdiffeq"),
 ]
-# CPU threads behind each CPU series (paper/ms/notes/CPU_CORES_AUDIT.md; the
-# measure scripts ran unpinned on the 72-thread dev box, no thread settings):
-# C-STM calls the C integrator once per orbit (an OpenMP team of 1); XLA:CPU's
-# pool spans all 72 threads (in practice cpu/wall ~1.2 here); torch defaults to
-# its 36 intra-op threads (one per physical core).
+# CPU threads behind each CPU series (paper/ms/notes/CPU_CORES_AUDIT.md): C-STM
+# calls the C integrator once per orbit (an OpenMP team of 1). The defaults below
+# are an UNPINNED run (XLA:CPU's pool spans all 72 threads; torch its 36); the
+# current data were re-measured on one core (taskset; 2026-10-08) and stamp
+# meta["cpu_env"], which _set_cpu_threads reads.
 _CPU_THREADS = {"cstm": "1", "diffrax": "≤72", "torchdiffeq": "36"}
+
+
+def _set_cpu_threads(meta):
+    """A pinned re-measurement of the diffrax/torchdiffeq CPU series stamps
+    meta["cpu_env"] (affinity, torch threads): the labels follow it."""
+    env = meta.get("cpu_env")
+    if env:
+        aff = env.get("cpu_affinity")
+        _CPU_THREADS["diffrax"] = "1" if aff == 1 else f"≤{aff}"
+        _CPU_THREADS["torchdiffeq"] = str(env.get("torch_threads", "?"))
 
 
 def _thr(mk):
@@ -98,6 +108,7 @@ def _series(d, d_h100):
 )
 def make():
     d = json.loads(_DATA.read_text())
+    _set_cpu_threads(d["meta"])
     d_h100 = json.loads(_DATA_H100.read_text()) if _DATA_H100.exists() else None
     series = _series(d, d_h100)
 

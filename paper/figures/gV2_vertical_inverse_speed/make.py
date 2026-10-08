@@ -27,22 +27,22 @@ construction). float64 throughout.
     inverts the angle relation with a safeguarded Newton iteration started at the
     requested angle (backend brentq(guess=...), 8 steps; numpy does the same),
     replacing the fixed-schedule bisection (43 halvings eagerly, 100 under jit)
-    of BUG_vi_backend_eval_bisection.md. Single-threaded, re-measured 2026-10-07
-    on an idle box: numpy is fastest up to N~3000 (N=10: numpy 0.8 ms, jax jit
-    2.3 ms, torch 22 ms, jax eager 0.20 s); jax jit overtakes numpy at N~1e4 and
-    at N=1e6 takes 2.0 s vs numpy 9.6 s, jax eager 14 s, torch 51 s. jit beats
-    eager at every N. The many-tori vmap costs ~4.5x the one-torus jit per point
-    on the CPU (9.1 s at N=1e6) but beats the numpy per-torus loop (~0.9 ms per
-    torus, 57 s) from ~200 tori on; on the GPU it costs nearly the same as the
-    one-torus jit. N=1e6 on the GPU: jax jit 0.31 s (TITAN Xp) / 11 ms (H100),
+    of BUG_vi_backend_eval_bisection.md. ONE core per series (re-measured
+    2026-10-08, jax pinned with taskset): numpy is fastest at every N (N=10:
+    numpy 0.75 ms, jax jit 0.76 ms, torch 16 ms, jax eager 0.13 s; N=1e6: numpy
+    9.8 s, jax jit 47 s, torch 50 s, jax eager 64 s). jit beats eager at every N.
+    The many-tori vmap is 1.4-1.8x faster than the numpy per-torus loop at every N
+    (36 s vs 54 s at N=1e6); on the GPU it costs nearly the same as the
+    one-torus jit. (The earlier jax CPU series, unpinned with up to 72 threads,
+    took 2.0 s at N=1e6.) N=1e6 on the GPU: jax jit 0.31 s (TITAN Xp) / 11 ms (H100),
     torch 0.94 s / 70 ms.
 
 (b) Construction: wall time to build the family vs the number of energies nE,
     numpy vs native jax (eager and jitted) and torch, CPU and GPU. Open markers
     are the FIRST call at each nE: for eager jax this includes compiling every
     op for the new shapes, for jit the full trace+compile (both one-time per
-    shape); filled markers are warm calls. At nE=256 (warm, CPU): numpy 2.5 s,
-    torch 0.25 s, jax eager 0.36 s, jax jit 0.48 s; jax jit on the GPU: 9-54 ms
+    shape); filled markers are warm calls. At nE=256 (warm, one CPU core): numpy
+    2.4 s, torch 0.25 s, jax eager 0.45 s, jax jit 0.77 s; jax jit on the GPU: 9-54 ms
     (TITAN Xp) and 3.6-5.8 ms (H100) over the whole nE range.
 
 Plot: colours from _harness/palette.py (framework x device; jit solid, eager
@@ -54,7 +54,8 @@ OMP_NUM_THREADS=1, torch.set_num_threads(1)). jax is NOT: the XLA_FLAGS set belo
 (--xla_cpu_multi_thread_eigen=false ...) are ignored by jax 0.10.1, whose XLA:CPU
 thread pool spans the CPU affinity (72 hardware threads here; checked 2026-10-07:
 cpu/wall ~6 for a large elementwise jit and ~55 for a matmul with the flags, 1.0
-only when pinned to one core). The jax CPU series are therefore multi-threaded.
+only when pinned to one core). The jax CPU series are therefore measured pinned
+to ONE core (``taskset -c <core>``; the current data, 2026-10-08).
 The measuring box is shared; when it is oversubscribed, multi-threaded BLAS and
 torch thrash (measured at load ~160 on 72 hardware threads: numpy construction
 nE=31 0.6 s -> 19 s with 4 OpenBLAS threads, torch N=1e3 evaluation 0.08 s ->
@@ -70,7 +71,7 @@ beyond).
 Reproducibility: measure -> data/gV2_vertical_inverse_speed.json (stamped with
 versions, CPU, GPU, thread settings, load average); the plot is byte-stable
 from the JSON. Re-measure all by deleting the JSON and running
-``OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python -m paper.figures._harness run
+``OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 taskset -c <core> python -m paper.figures._harness run
 gV2_vertical_inverse_speed``; measure only the GPU series into the existing JSON
 with ``OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python
 paper/figures/gV2_vertical_inverse_speed/make.py --devices gpu``

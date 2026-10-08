@@ -208,24 +208,27 @@ all; their derivative rule runs the integration on the host.
 
 \figurename~\ref{fig:orbitspeed} compares the wall time of integrating
 $N$ orbits for 2\,Gyr in the Milky-Way model with the \cc\ integrator,
-one orbit at a time on one core, with the in-backend solvers on a CPU
-and on two GPUs. The \cc\ path costs 0.08 to 0.1\,ms per orbit after a
-few milliseconds of setup and is the fastest option for up to about
+which parallelizes over orbits with OpenMP, on one core and on all 72
+hardware threads of the CPU, and with the in-backend solvers on one CPU
+core and on two GPUs. On one core the \cc\ path costs 2.2--2.4\,ms per
+orbit; on 72 threads it costs 0.08 to 0.1\,ms per orbit after a few
+milliseconds of setup and is the fastest option for up to about
 $10^4$ orbits on any hardware. The backend solvers start from a floor of
 one to a few seconds, set by compilation and kernel launches, and
-amortize it over the batch; on the consumer GPU they never quite reach
-the \cc\ cost per orbit, because that card executes double-precision
+amortize it over the batch. Every GPU line overtakes one-core \cc\ near
+$N=10^3$. On the consumer GPU they never quite reach the cost per orbit
+of the 72-thread \cc\ node, because that card executes double-precision
 arithmetic at one thirty-second of its single-precision rate, while on
-the H100 they pass single-threaded \cc\ near $N\approx3\times10^4$ and are
-about three times cheaper per orbit at $N=3\times10^5$. The \cc\ path
-also runs in parallel over cores, which divides its line by the number
-of cores, while the in-backend solve takes seconds to compile, a cost
-that is paid once per shape of the problem. The derivative of an orbit with respect
+the H100 they pass it near $N\approx3\times10^4$ and are about three
+times cheaper per orbit at $N=3\times10^5$. On one CPU core, the
+compiled \jax\ solve costs 2--5\,ms per orbit, comparable to the \cc\
+path; it does, however, take seconds to compile, a cost that is paid
+once per shape of the problem. The derivative of an orbit with respect
 to its initial condition follows the same pattern
 (\figurename~\ref{fig:icderivcost}): the \cc\ variational integrator
 computes it for a single orbit in about $10$\,ms, where the backend
-solvers take 0.1 to 10\,s, and the GPU overtakes it at batches of a few
-thousand orbits.
+solvers take from 0.05\,s (compiled \jax\ on one CPU core) to tens of
+seconds, and the GPU overtakes it at batches of a few hundred orbits.
 
 \galpy\ is not the only galactic-dynamics code that integrates orbits
 with \diffrax: \texttt{galax} \citep{Starkman2026}, a re-implementation
@@ -253,15 +256,17 @@ keeps the per-orbit control.
     GPUs; hatched bars are eager. Right: the same as a function of the
     number of orbits differentiated at once. The \cc\ variational
     integrator is the fastest way to obtain the derivative of a single
-    orbit, while a GPU overtakes it for large batches.}\label{fig:icderivcost}
+    orbit, while a GPU overtakes it for large batches. All CPU timings use
+    one core.}\label{fig:icderivcost}
 \end{figure*}
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g8_galax_orbit_speed/g8_galax_orbit_speed.pdf}
   \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
     \texttt{MWPotential2014} at matched tolerances with \galpy\ and with
-    \texttt{galax}. Grey: \galpy's \cc\ integrator on one core. Blue:
-    \galpy's in-backend \diffrax\ solve on the CPU and on the two GPUs.
+    \texttt{galax}. Grey: \galpy's \cc\ integrator on one core (solid) and on all
+    72 hardware threads (dash-dotted). Blue: \galpy's in-backend
+    \diffrax\ solve on the CPU (one core) and on the two GPUs.
     Green: \texttt{galax} on the CPU and the GPUs, with its default
     batched step-size control (solid) and with per-orbit control as in
     \galpy\ (dash-dotted). With the same per-orbit step-size control, the
@@ -272,9 +277,11 @@ keeps the per-orbit control.
   \includegraphics[width=\textwidth,clip=]{../figures/g12_inbackend_orbit_gpu/g12_inbackend_orbit_gpu.pdf}
   \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
     \texttt{MWPotential2014} with relative and absolute tolerances of
-    $10^{-8}$. The grey line is \galpy's \cc\ integrator \texttt{dop853\_c},
-    one orbit at a time on a single core. The blue lines are the
-    in-backend \diffrax\ solve under \jax\ on a CPU and on the two GPUs,
+    $10^{-8}$. The grey lines are \galpy's \cc\ integrator \texttt{dop853\_c},
+    which parallelizes over orbits with OpenMP, on one core (solid), 16
+    threads, and all 72 hardware threads (dash-dotted). The blue lines are
+    the in-backend \diffrax\ solve under \jax\ on one CPU core and on the
+    two GPUs,
     compiled, with the eighth-order method that \galpy\ uses by default
     and, dash-dotted, with a fifth-order method that performs the same
     number of force evaluations as the \torch\ solve; the orange lines are

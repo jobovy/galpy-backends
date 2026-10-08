@@ -1,4 +1,4 @@
-import time, json, sys
+import os, time, json, sys
 import jax, jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 import unxt as u
@@ -19,7 +19,12 @@ def integrate(q, p):
 dev = jax.devices()[0].platform
 Ns = [1, 10, 100, 1000, 10000, 30000, 100000]
 out = {"backend": "galax", "device": dev, "solver": "Dopri8",
-       "nt": 1000, "tspan_Gyr": 2.0, "results": []}
+       "nt": 1000, "tspan_Gyr": 2.0,
+       # XLA:CPU's thread pool spans the CPU affinity (pin with taskset for 1 core)
+       "cpu_affinity": len(os.sched_getaffinity(0)),
+       "thread_env": {v: os.environ.get(v, "unset")
+                      for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "XLA_FLAGS")},
+       "jax_version": jax.__version__, "results": []}
 for N in Ns:
     key = jax.random.PRNGKey(N)
     q = q0[None] + jax.random.normal(key, (N, 3)) * 0.05
@@ -29,7 +34,7 @@ for N in Ns:
         best = min(( (lambda t0: (integrate(q, p).block_until_ready(), time.perf_counter()-t0)[1])(time.perf_counter()) ) for _ in range(3))
         out["results"].append({"N": N, "wall_s": best, "per_orbit_ms": best/N*1e3})
         print(f"galax[{dev}] N={N:7d}: {best*1e3:9.2f} ms  ({best/N*1e3:.5f} ms/orbit)", flush=True)
-        json.dump(out, open(f"/var/tmp/galax-bench/galax_{dev}.json", "w"), indent=2)
+        json.dump(out, open(os.environ.get("GALAX_OUT", f"/var/tmp/galax-bench/galax_{dev}.json"), "w"), indent=2)
     except Exception as e:
         print(f"galax[{dev}] N={N}: SKIP ({type(e).__name__}: {str(e)[:60]})", flush=True)
         break

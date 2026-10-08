@@ -43,14 +43,15 @@ the GPUs, navy for the H100 — galax green); all jax/galax lines are jit-compil
 
 * **galpy (JAX, CPU; per-orbit steps)** — galpy's in-backend diffrax integrator on
   the CPU: the framework/vectorisation cost without the device, the common galpy
-  reference shared with G12 (~3–10 ms/orbit, 2.8 at N=3e5; isolates the GPU
-  contribution below). Like **galax (JAX, CPU)** it ran unpinned, so XLA:CPU's
-  thread pool could use all 72 hardware threads (labelled "≤72 threads"); a quick
-  check (2026-10-07) finds these solves keep only ~1.1–1.3 cores busy and run ~2×
-  *faster* pinned to one core (N=10³: 2.2 s for galpy, 1.6 s for galax, vs 5.5 s
-  and 3.9 s plotted; one-core C: 2.3 s), so both CPU jax lines overstate the
-  single-core cost: pinned to one core galpy-jax is level with one-core C and
-  galax faster. (A pinned re-measurement of both lines is queued.)
+  reference shared with G12, measured on ONE core (pinned with `taskset`, the only
+  way to keep XLA:CPU's thread pool to one core; 2026-10-08). 2.0 ms/orbit at
+  N=10³ — slightly *cheaper* than one-core C (2.3) — rising to 2.6 at 10⁴, 3.6 at
+  10⁵ and 4.6 ms/orbit at N=3×10⁵ (1390 s, 1.9× one-core C). **galax (JAX, CPU;
+  batched steps)**, also on one core: 1.5 ms/orbit at 10³ (cheaper than one-core
+  C), 1.8 at 10⁴, 2.9 at 10⁵ (285 s, 1.3× one-core C). (Unpinned, with up to 72
+  threads, both were 1.5–4× *slower* than on one core up to N ≈ 10⁴ — XLA's
+  thread pool kept only ~1.1–1.3 cores busy — and faster, by 1.4–1.7×, only at
+  their largest N: galpy at 3×10⁵, galax at 10⁵.)
 * **galpy (JAX, GPU; per-orbit steps)** — the same in-backend diffrax integrator of
   the backend-agnostic forces (`jax.vmap` of a per-orbit solve, jit-fused) on the
   GPU; every orbit carries its own adaptive `PIDController`. ~0.25 ms/orbit at N=1e5,

@@ -73,7 +73,8 @@ costs.
     the number of track segments, on \numpy\ with the \cc\ integrators
     and on the backends, warm and including compilation (cold). (b)
     Sampling $N$ stars and (c) evaluating the DF at $N$ phase-space
-    points from the constructed model. Eager \jax\ on the TITAN~Xp
+    points from the constructed model. CPU series use up to four cores
+    (\numpy\ and \torch\ one, \jax\ up to four). Eager \jax\ on the TITAN~Xp
     takes a nearly constant 10\,s per call from $N=10^5$ on, which the
     compiled program and the H100 do not show.}\label{fig:streamdfspeed}%TODO: explain once the probe is run
 \end{figure*}
@@ -179,7 +180,7 @@ microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
     with 4.5\,Gyr of stripping, for the \numpy\ version with the \cc\
     integrator and for the differentiable backend version on the CPU,
     the TITAN~Xp, and the H100, compiled (solid) and eager
-    (dashed). Once compiled, the differentiable version is faster than the
+    (dashed). CPU series use up to four cores. Once compiled, the differentiable version is faster than the
     \numpy\ version with the \cc\ integrator at every $N$, and much
     faster on a GPU for large $N$.}\label{fig:spraysp}
 \end{figure*}

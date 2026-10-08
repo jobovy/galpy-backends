@@ -111,6 +111,11 @@ out = {
     "atol": 1e-8,
     "potential": "MWPotential2014",
     "host": socket.gethostname(),
+    # XLA:CPU sizes its thread pool from the CPU affinity (XLA_FLAGS do not limit it
+    # on jaxlib 0.10.1): the affinity is the number of cores the CPU series could use
+    "cpu_affinity": len(os.sched_getaffinity(0)),
+    "thread_env": {v: os.environ.get(v, "unset")
+                   for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "XLA_FLAGS")},
     "results": [],
 }
 for m in ("jax", "galpy", "numpy"):

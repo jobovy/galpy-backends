@@ -9,36 +9,42 @@
   "atol": 1e-08,
   "potential": "MWPotential2014",
   "host": "geir",
+  "cpu_affinity": 1,
+  "thread_env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "XLA_FLAGS": "unset"
+  },
   "results": [
     {
       "N": 1,
-      "wall_s": 0.10586973302997649,
-      "per_orbit_ms": 105.86973302997649,
-      "compile_run_s": 3.2745999729959294
+      "wall_s": 0.02654801297467202,
+      "per_orbit_ms": 26.54801297467202,
+      "compile_run_s": 3.675083862966858
     },
     {
       "N": 10,
-      "wall_s": 0.09376559394877404,
-      "per_orbit_ms": 9.376559394877404,
-      "compile_run_s": 2.66411567106843
+      "wall_s": 0.0554111220408231,
+      "per_orbit_ms": 5.54111220408231,
+      "compile_run_s": 3.4688475439324975
     },
     {
       "N": 100,
-      "wall_s": 1.0461043050745502,
-      "per_orbit_ms": 10.461043050745502,
-      "compile_run_s": 3.755687120021321
+      "wall_s": 0.29926277906633914,
+      "per_orbit_ms": 2.9926277906633914,
+      "compile_run_s": 4.5601050889818
     },
     {
       "N": 1000,
-      "wall_s": 6.631251255981624,
-      "per_orbit_ms": 6.631251255981624,
-      "compile_run_s": 8.938040142995305
+      "wall_s": 2.274446012917906,
+      "per_orbit_ms": 2.274446012917906,
+      "compile_run_s": 5.934634689008817
     },
     {
       "N": 10000,
-      "wall_s": 81.84302821708843,
-      "per_orbit_ms": 8.184302821708842,
-      "compile_run_s": 87.10402369196527
+      "wall_s": 30.24803461798001,
+      "per_orbit_ms": 3.024803461798001,
+      "compile_run_s": 34.4542933559278
     }
   ],
   "jax_version": "0.10.1",

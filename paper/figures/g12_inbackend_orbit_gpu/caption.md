@@ -50,11 +50,10 @@ than it (0.079 ms/orbit at N = 10⁶) and 150–280× cheaper than one-core C.
   *beating* the shipped Dopri8 line on the GPU despite taking ~3× more steps.
 * **galpy in-backend (JAX, CPU; Dopri8)** — the shipped diffrax `Dopri8` path forced
   onto the CPU, isolating the device contribution from the framework/vectorisation
-  cost (~3–10 ms/orbit). It ran unpinned, so XLA:CPU's thread pool could use all 72
-  hardware threads ("≤72 threads"); a quick check (2026-10-07) finds the solve keeps
-  only ~1.3 cores busy and runs ~2.5× *faster* pinned to one core (N = 10³: 2.2 s vs
-  the 5.5 s plotted), i.e. level with one-core C (2.3 s). A pinned re-measurement
-  is queued.
+  cost, on ONE core (pinned with `taskset`, the only way to keep XLA:CPU's thread
+  pool to one core; 2026-10-08): 2.0 ms/orbit at N = 10³ (one-core C: 2.3), 2.6 at
+  10⁴, 3.6 at 10⁵ and 4.6 ms/orbit at N = 3×10⁵ (1390 s; one-core C 716 s). The
+  earlier unpinned run (up to 72 threads) was 5.5 ms/orbit at 10³ and 2.8 at 3×10⁵.
 * **galpy in-backend (torch, GPU; dopri5, eager)** — the torchdiffeq `dopri5` path
   (5th order — torchdiffeq's `dopri8` *backward* pass is buggy, so galpy ships `dopri5`
   on torch; state carried as (6, N) so one `odeint` vectorises the batch). torchdiffeq

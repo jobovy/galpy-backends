@@ -109,3 +109,29 @@ Not needed: g2 numpy, C-STM (g15), gD3/gS4 numpy and torch, gV2 numpy and torch
 * streams.tex fig:streamdfspeed and fig:spraysp captions: add "CPU series on 4
   pinned cores: \numpy\ (gS5: its \cc\ integrator on 4 OpenMP threads; gS4: one
   core) and \torch\ on one thread, \jax\ on up to four."
+
+## Chain 4: one-core re-measurement (done 2026-10-08)
+
+`$SP/chain4.sh` (03:14-07:46), every step `taskset -c 16` with
+`OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1`; each JSON now stamps its affinity and
+thread settings (`cpu_affinity`, `thread_env` / `meta.cpu_env` / env stamps), and
+the labels read them ("1 core"). The unpinned data are kept as
+`_shared/orbit_speed/data/jax_cpu_72threads[_hiN].json`,
+`g8…/data/galax_cpu_72threads.json`, `g15…/data/icderiv.json.bak_20261007`,
+`gV2…/data/*.json.bak_20261007` (gD3: `modes_measured` keeps both stamps).
+Done: g8/g12 galpy-jax CPU, g8 galax CPU, g15 diffrax/torchdiffeq CPU, gV2 all
+CPU series, gD3 jax/jax-jit CPU. Not re-measured (labels stay "≤4 cores"): gS4,
+gS5 jax CPU.
+
+| Fig | series | one core | before (unpinned / 4 cores) | vs reference |
+|---|---|---|---|---|
+| g8/g12 | galpy jax CPU Dopri8 | 2.0 ms/orbit at N=1e3, 2.6 at 1e4, 3.6 at 1e5, 4.6 at 3e5 (1390 s) | 5.5 at 1e3, 2.8 at 3e5 | one-core C 2.3 / 2.4 ms/orbit: jax cheaper at 1e3, 1.9x dearer at 3e5 |
+| g8 | galax CPU (batched) | 1.5 ms/orbit at 1e3, 1.8 at 1e4, 2.9 at 1e5 (285 s) | 3.9 at 1e3, 2.1 at 1e5 | one-core C: cheaper at 1e3, 1.3x dearer at 1e5 |
+| g15 | diffrax CPU, single orbit | 50 ms | 117 ms | C-STM 13 ms |
+| g15 | diffrax CPU, batch | 0.08 s (N=1) .. 218 s (N=16384) | 0.14 .. 336 s | cheaper than C-STM for 16 <~ N <~ 5e3 |
+| g15 | torchdiffeq CPU | single 17 s; batch 2.9 s (N=1) .. 122 s (N=65536) | 16 s; 3.7 .. 53 s (36 threads) | |
+| gV2 | jax jit eval, N=1e6 | 47 s | 2.0 s | numpy 9.8 s: numpy 4.8x faster; numpy fastest at every N>=30, tie at N=10 |
+| gV2 | jax jit vmap over tori, N=1e6 | 36 s | 9.1 s | numpy loop 54 s: vmap 1.4-1.8x faster at every N |
+| gV2 | construction warm nE=256 | jit 0.77 s, eager 0.45 s, torch 0.25 s | jit 0.48, eager 0.36 | numpy 2.4 s |
+| gD3 | jax jit sample(1e7) | 5.9-8.0 s | 5.8-6.5 s (4 cores) | numpy 8.5-47 s: 1.4-6x |
+| gD3 | jax jit construct warm (Edd/OM/beta) | 0.07-0.10 s | 0.08-0.13 s | numpy 1.3-108 s: 16-1500x |
