@@ -175,9 +175,12 @@ evidence is therefore operation counts (`flopcount.cpp`), SASS (`cuobjdump`) and
 
 ## What a full implementation would entail
 
-Effort estimate: **6-10 weeks** for all conservative potentials plus dop853/RK/symplectic integrators, with
-correctness tests against the C. Dissipative forces, `NonInertialFrameForce` and the variational equations add
-**3-4 weeks**.
+Effort estimate (revised; the potential-by-potential breakdown is in `IMPLEMENTATION_REPORT.md`):
+**≈ 6–8 weeks** for an opt-in minimum viable version (closed-form potentials + PSwC, dop853/RK4/leapfrog,
+runtime NVRTC compilation, CPU-proxy tests). **≈ 5–8 months** for parity with the C integrators: all potentials,
+wrappers, dissipative forces, planar/1D, and the variational/STM kernels. An earlier version of this README said
+6–10 weeks for all conservative potentials; the detailed count of table-based potentials and Hessians made that
+too optimistic.
 
 - **~40 potentials (12.7 k lines of C in `potential_c_ext/`).** Most are short pure functions, and the arithmetic
   ports verbatim: here only `pow(x,0.5)` and friends needed attention, and only for speed. What helps: every
