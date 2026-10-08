@@ -13,13 +13,20 @@
 #   newfigs : GPU series of gV2, gD3, gS5, gS4 (~1-2 h)
 #   hiN2    : larger N on the 80 GB card, MERGED into the existing JSONs (--Ns): g12 jax Dopri8 +
 #             Dopri5 at N=1e6, 3e6, g12 torch at 3e6, gV2 GPU eval at 1e7, gD3 GPU sampling at 1e8 (~1 h)
+#   g17torch: g17 torch GPU series alone (torch_gpu_only.py) + nvidia-smi memory log
+#   gV2     : gV2 GPU series only
+#   gS4     : gS4 GPU series only (merged) + nvidia-smi memory log
+#   cudaexp : experiments/cuda_orbits/run_h100.sh (CUDA dop853 experiment; loads the cuda module)
+#   cudav2  : experiments/cuda_orbits/run_h100_v2.sh (diagnosis + fixed kernel scans + ncu)
+#   triage  : only the failing CUDA tests, in the activated env (TRIAGE_TAG, JAXREP)
 set -u
 STAGE=$1
 : "${G13ROOT:=$SCRATCH/galpy-h100}"           # clones, logs, caches live here
 R=$G13ROOT/galpy-jax; WT=$G13ROOT/galpy-fb; LOG=$G13ROOT/logs; mkdir -p $LOG
 export PYTHONPATH=$WT:$R GALPY_WORKTREE=$WT XLA_PYTHON_CLIENT_PREALLOCATE=false
 export XDG_CACHE_HOME=$G13ROOT/cache MPLCONFIGDIR=$G13ROOT/cache/mpl \
-       TORCHINDUCTOR_CACHE_DIR=$G13ROOT/cache/inductor PYTHONDONTWRITEBYTECODE=1
+       TORCHINDUCTOR_CACHE_DIR=$G13ROOT/cache/inductor PYTHONDONTWRITEBYTECODE=1 \
+       TRITON_HOME=$G13ROOT/cache TRITON_CACHE_DIR=$G13ROOT/cache/triton CUDA_CACHE_PATH=$G13ROOT/cache/nv  # default ~/.triton, ~/.nv: read-only
 [ -n "${CONDA_PREFIX:-}" ] && export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}  # libgsl
 cd $R
 run() { echo ">>> $(date +%T) [$STAGE] $*"; ( eval "$@" ) >> $LOG/$STAGE.log 2>&1 && echo "    ok $(date +%T)" || echo "!!! FAILED [$STAGE] $* (see $LOG/$STAGE.log)"; }
@@ -58,6 +65,33 @@ case $STAGE in
            run "python $F/gV2_vertical_inverse_speed/make.py --devices gpu --Ns 1e7"
            run "python $F/gD3_spherical_df_speed/make.py --gpu --Ns 1e8"
            run "$H g8_galax_orbit_speed g12_inbackend_orbit_gpu gV2_vertical_inverse_speed gD3_spherical_df_speed" ;;
+  g17torch) J17=$F/g17_staeckel_actionangle_speed/data/g17_staeckel_actionangle_speed.json
+           nvidia-smi --query-gpu=timestamp,memory.used,memory.total --format=csv -l 5 > $LOG/g17torch_mem.csv & SMI=$!
+           run "python $F/g17_staeckel_actionangle_speed/measure/torch_gpu_only.py $J17"
+           kill $SMI
+           run "$H g17_staeckel_actionangle_speed_jax g17_staeckel_actionangle_speed_torch" ;;
+  gV2)     run "python $F/gV2_vertical_inverse_speed/make.py --devices gpu"
+           run "$H gV2_vertical_inverse_speed" ;;
+  triage)  # only the failing CUDA tests (logs/h100/triage/*_failed.txt), in the env the job activated;
+           # TRIAGE_TAG names the output dir (e.g. t214, t212); JAXREP=3 repeats the jax list
+           T=$LOG/triage_${TRIAGE_TAG:-x}; mkdir -p $T; TL=$R/logs/h100/triage
+           run "python -c 'import torch, jax; print(torch.__version__, torch.version.cuda, jax.__version__)'"
+           run "cd $WT && python -m pytest -p no:cacheprovider --backend torch --device cuda -rA --tb=long --junitxml=$T/torch.xml \$(cat $TL/torch_failed.txt) > $T/torch.txt 2>&1"
+           for i in $(seq 1 ${JAXREP:-0}); do run "cd $WT && python -m pytest -p no:cacheprovider --backend jax --device cuda -rA --tb=long --junitxml=$T/jax_$i.xml \$(cat $TL/jax_failed.txt) > $T/jax_$i.txt 2>&1"; done ;;
+  gS4)     nvidia-smi --query-gpu=timestamp,memory.used,memory.total --format=csv -l 5 > $LOG/gS4_mem.csv & SMI=$!
+           run "python -m paper.figures.gS4_streamdf_speed.make --measure gpu"
+           kill $SMI
+           run "$H gS4_streamdf_speed" ;;
+  cudaexp) # experiments/cuda_orbits: CUDA MWPotential2014 + dop853, correctness vs galpy C, timings to 1e7
+           module load StdEnv/2023 gcc/12.3 cuda/12.9   # driver 580 = CUDA 13.0; cuda/13.x is newer than it
+           command -v nvcc > /dev/null || { echo "!!! no nvcc after module load"; exit 3; }
+           run "nvcc --version | tail -1"
+           run "cd $R/experiments/cuda_orbits && PY=$CONDA_PREFIX/bin/python ./run_h100.sh" ;;
+  cudav2)  # experiments/cuda_orbits/run_h100_v2.sh: diagnosis matrix, pinned N scans, ncu (if permitted)
+           module load StdEnv/2023 gcc/12.3 cuda/12.9
+           command -v nvcc > /dev/null || { echo "!!! no nvcc after module load"; exit 3; }
+           run "grep RmProfilingAdminOnly /proc/driver/nvidia/params || true"
+           run "cd $R/experiments/cuda_orbits && mkdir -p data/h100/v2 && PY=$CONDA_PREFIX/bin/python ./run_h100_v2.sh 2>&1 | tee data/h100/v2/run.log" ;;
   *) echo "unknown stage $STAGE"; exit 2 ;;
 esac
 echo ">>> $(date +%T) [$STAGE] done"
