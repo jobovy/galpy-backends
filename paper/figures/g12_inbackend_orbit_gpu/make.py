@@ -158,8 +158,8 @@ _SERIES = [
     # incl. H2D + D2H into a reused pinned buffer. Shared with G8 (_shared/orbit_speed/
     # data/[h100/]cuda_kernel*_hiN.json, copies of experiments/cuda_orbits/data/
     # {titan,h100/v2}/scan_{noinl_refill,fast_noinl_refill_sort}_pinned.json)
-    (["cuda_kernel_hiN.json"], "cuda", "gpu", None, "galpy arith.", None),
-    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
+    (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "galpy arith.", None),
+    (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 

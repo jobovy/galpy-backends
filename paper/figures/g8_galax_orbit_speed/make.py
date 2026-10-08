@@ -124,8 +124,8 @@ _SERIES = [
     # dop853 (experiments/cuda_orbits; not a galpy backend, not differentiable), shared
     # with G12: galpy arithmetic (solid, labelled) and fast arithmetic (long-dashed,
     # named in a note); wall incl. H2D + D2H (pinned)
-    (["cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel {dev} (galpy arith.)", None),
-    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
+    (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel {dev} (galpy arith.)", None),
+    (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 

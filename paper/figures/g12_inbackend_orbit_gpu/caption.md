@@ -86,8 +86,14 @@ than it (0.079 ms/orbit at N = 10⁶) and 150–280× cheaper than one-core C.
   **1.04 µs/orbit** (fast). That is 7× / 16× less than galpy's jax Dopri8 on the same
   GPU, 4× / 9× less than torch dopri5, 34× / 76× less than the 72-thread C node, and
   ~1 000× / ~2 250× less than one core. On the TITAN Xp it costs 49 / 15.6 µs/orbit.
-  Below N≈10⁴ a launch lasts as long as its slowest orbit, ≈0.1 s (H100) or ≈0.45 s
-  (TITAN) for galpy arithmetic.
+  Measured down to N = 1: one orbit takes 45 ms on the H100 and 0.18 s on the TITAN with
+  galpy arithmetic (fast: 20 and 65 ms). The wall time stays near 0.1 s (H100) or 0.4 s
+  (TITAN) up to N ≈ 10⁴, because a launch lasts as long as its slowest orbit. The H100
+  kernel therefore overtakes one-core C at N ≈ 50 and matches the 72-thread node at
+  N ≈ 10³ (0.11 vs 0.12 s). The N < 10³ points come from separate low-N scans (H100: N = 1–3×10⁵; TITAN:
+  N = 1–3×10⁴), run without the cost-sorted schedule. Where N
+  overlaps, the high-N scans are plotted. For the fast line the two schedules differ by up
+  to ~20% in the overlap: the sort costs a host argsort at small N and pays off at large N.
   These kernels are not differentiable.
 
 **Same-work / work counts** (`measure/work_counts.py` → `data/work_counts.json`), for
