@@ -208,9 +208,8 @@ def make():
         ax.set_title(r"MWPotential2014 orbit integration, 2 Gyr")
 
     # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
-    ax.set_ylim(*ax.get_ylim())
-    xl = ax.get_xlim()
-    ax.set_xlim(*xl)
+    # same frame as G12, so the two read as a pair
+    layout.apply_frame(ax, "orbit_speed")
     # decade-spaced to bracket every curve's cost per orbit at its largest N
     refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
     ax.text(
@@ -244,4 +243,5 @@ def make():
                         order="elbow", pad_pt=18)
     if PAPER:
         layout.fit_right(fig)
+        layout.place_frame(ax, "orbit_speed")
     return fig

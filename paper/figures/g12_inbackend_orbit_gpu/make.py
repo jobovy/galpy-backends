@@ -238,14 +238,9 @@ def make():
         ax.set_title(r"galpy in-backend orbit integration (MWPotential2014, 2 Gyr)")
 
     # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
-    ax.set_ylim(*ax.get_ylim())
-    xl = ax.get_xlim()
-    # extend the x-axis to the right so the rightmost markers have room and the
-    # reference lines / legend region do not crowd the data
-    # (stop short of the next decade: a tick label at the right edge would collide
-    # with the bottom direct label)
-    xl = (xl[0], min(xl[1] * 1.6, 0.9 * 10.0 ** numpy.ceil(numpy.log10(xl[1]))))
-    ax.set_xlim(*xl)
+    # same frame as G8, so the two read as a pair (the right edge stops short of
+    # 1e7: a tick label there would collide with the bottom direct label)
+    layout.apply_frame(ax, "orbit_speed")
     # decade-spaced to bracket every curve's cost per orbit at its largest N
     refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
     ax.text(
@@ -282,4 +277,5 @@ def make():
                         order="elbow", pad_pt=18)
     if PAPER:
         layout.fit_right(fig)
+        layout.place_frame(ax, "orbit_speed")
     return fig

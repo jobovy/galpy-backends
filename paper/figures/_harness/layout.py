@@ -173,3 +173,23 @@ def fmt_seconds(vals, unit=None, wrap=False):
         else:
             groups.append((u, [v / f]))
     return (",\n" if wrap else ", ").join(", ".join(f"{x:g}" for x in xs) + f" {u}" for u, xs in groups)
+
+
+# Figures shown one after the other in the paper share their frame (axis limits and
+# axes box), so flipping between them keeps the axes fixed.
+FRAMES = {
+    # g8 (galax) and g12 (in-backend orbits): N from 1 to 3e6, wall time 1 ms to 5000 s
+    "orbit_speed": {"xlim": (0.5, 9e6), "ylim": (1e-3, 5e3),
+                    "axes": (0.111, 0.171, 0.647, 0.790)},
+}
+
+
+def apply_frame(ax, name):
+    """Fixed limits of a shared frame; call before anything reads the limits."""
+    ax.set_xlim(*FRAMES[name]["xlim"])
+    ax.set_ylim(*FRAMES[name]["ylim"])
+
+
+def place_frame(ax, name):
+    """Fixed axes box of a shared frame; call last (after fit_right)."""
+    ax.set_position(FRAMES[name]["axes"])
