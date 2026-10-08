@@ -137,7 +137,7 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # affinity stamped in its JSON ("cpu_affinity"; unstamped = the unpinned 72-thread
 # run). A series whose JSONs do not exist (yet) is skipped.
 _C1, _C16, _C_NODE = "1 core", "16 threads", "72 threads"
-_CUDA_FAST = "fast arith."  # unlabelled lines (the note names the line style)
+_CUDA_FAST = "fast arith."  # unlabelled, de-emphasised (named in the caption)
 _SHOW_C16 = True
 _SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
@@ -159,7 +159,7 @@ _SERIES = [
     # data/[h100/]cuda_kernel*_hiN.json, copies of experiments/cuda_orbits/data/
     # {titan,h100/v2}/scan_{noinl_refill,fast_noinl_refill_sort}_pinned.json)
     (["cuda_kernel_hiN.json"], "cuda", "gpu", None, "galpy arith.", None),
-    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_LS),
+    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 
@@ -252,11 +252,6 @@ def make():
         0.025, 0.975,
         "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
         transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
-    )
-    ax.text(
-        0.025, 0.915, "purple long-dashed: CUDA kernel, fast arithmetic",
-        transform=ax.transAxes, fontsize=fs_note, color=palette.style("cuda", "h100")["color"],
-        va="top", ha="left",
     )
     # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator
     # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,

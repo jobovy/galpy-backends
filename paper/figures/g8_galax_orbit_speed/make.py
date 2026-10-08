@@ -107,7 +107,7 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # A series whose JSONs do not exist (yet) is skipped.
 _C1 = "galpy C (1 core)"
 _C_NODE = "galpy C (72 threads)"
-_CUDA_FAST = "CUDA kernel {dev} (fast arith.)"  # unlabelled (a note names the line style)
+_CUDA_FAST = "CUDA kernel {dev} (fast arith.)"  # unlabelled, de-emphasised (named in the caption)
 _SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
      palette.c_threads_style(1)),
@@ -125,7 +125,7 @@ _SERIES = [
     # with G12: galpy arithmetic (solid, labelled) and fast arithmetic (long-dashed,
     # named in a note); wall incl. H2D + D2H (pinned)
     (["cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel {dev} (galpy arith.)", None),
-    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_LS),
+    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 
@@ -217,11 +217,6 @@ def make():
         0.025, 0.975,
         "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
         transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
-    )
-    ax.text(
-        0.025, 0.915, "purple long-dashed: CUDA kernel, fast arithmetic",
-        transform=ax.transAxes, fontsize=fs_note, color=palette.style("cuda", "h100")["color"],
-        va="top", ha="left",
     )
     # env stamp from the GPU JSON (the headline machine)
     if not PAPER:

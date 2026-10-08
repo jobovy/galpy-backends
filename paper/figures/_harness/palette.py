@@ -48,6 +48,8 @@ _COLOURS = {
 # CUDA kernel, fast-arithmetic variant: long dashes (distinct from eager "--",
 # Dopri5 "-." and the multi-thread C dash-dot styles)
 CUDA_FAST_LS = (0, (7, 2))
+# drawn de-emphasised: thin, faint, no markers, unlabelled (named in the caption)
+CUDA_FAST_STYLE = {"ls": CUDA_FAST_LS, "lw": 0.9, "alpha": 0.55, "marker": "None"}
 _LS = {"jit": "-", "eager": "--", None: "-"}
 _MARKER = {"cpu": "s", "titan": "o", "h100": "D"}
 DEVICE_NAME = {"cpu": "CPU", "titan": "TITAN Xp", "h100": "H100"}

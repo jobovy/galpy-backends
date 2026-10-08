@@ -41,7 +41,7 @@ is not a galpy backend. It is an experimental CUDA port of galpy's C forces and
 `dop853`, one thread per orbit (`experiments/cuda_orbits`), shown for scale: what
 GPU-native kernels would buy. **Solid**: galpy's own arithmetic (the GSL incomplete
 gamma and libm `pow`), with one out-of-line force function and a persistent-thread
-kernel that hands a finished lane the next orbit. **Long-dashed**: the same with
+kernel that hands a finished lane the next orbit. **Thin, faint long-dashed (unlabelled)**: the same with
 division- and `pow`-free special functions and a cost-sorted schedule. Both use the
 same orbit, tolerance (1e-8) and 16 saves as the hiN points. Wall time includes the
 host↔device copies (pinned, reused buffer) and, for the fast line, the host argsort;
