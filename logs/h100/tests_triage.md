@@ -115,3 +115,117 @@ nondeterministic last ulp in the GPU reduction.
 | `test_backend_torchode.py::test_float32_ic_integrates_in_float64[torchode]` | failed | failed | test bug (b') |  | the TEST calls `.numpy()` on a CUDA result (no `.cpu()` / `as_numpy`); galpy's value is fine |
 | `test_backend_torchode.py::test_torch_compile_torchode_orbit_matches_eager` | failed | failed | torchode + compile on CUDA (third-party) | torchode/adjoints.py:125,199 | torchode mutates a graph input in place (`y_eval[...] = ...`), then records a CUDA event; dynamo rejects it under compile |
 | `test_backend_tracectx.py::test_forced_backend_survives_a_fullgraph_compile` | failed | failed | galpy CUDA bug (b): numpy constant under compile | galpy/potential/Force.py:289 in _Rforce_nodecorator | a numpy ndarray operand meets a CUDA FakeTensor in `mul`: `return self._amp * self._Rforce(R, z, **kwargs)` |
+
+## After #1645 (2026-10-07)
+
+galpy `feat/backends` @ **7e1364cc** (#1645 "CUDA: numpy-scalar constants under
+torch.compile, parallel_map after CUDA init, test host copies"), rebuilt with
+`build_ext --force`. I reran the same failing tests with the `triage` stage
+(TRIAGE_TAG `post1645`, job 1055387, 8 min) in `galpy-h100`: torch
+2.14.1+cu130, jax 0.11.2, on the H100. The jax pair was repeated 3×. Outputs
+are in `post1645/` (gzipped `-rA --tb=long` text) and `outcomes_post1645.tsv`.
+All 47 node IDs still exist after #1645's test edits.
+
+The 49 failures are 47 distinct tests: the 2 jax-suite failures are the same
+evolveddiskdf tests that are also in the torch list.
+
+**Result: 34 of 47 pass, 13 fail, and every one of the 13 is accounted for.**
+
+| outcome | count | tests |
+|---|---|---|
+| **fixed by #1645** | 31 | All 26 numpy-constant-under-compile failures except 3 kingdf_W0 cases and `test_forced_backend_survives_a_fullgraph_compile` (see below). Also all 7 test-side `.numpy()` on CUDA, `parallel_map` after CUDA init, and the dop853_c grad→numpy handoff (`torch-orbit_c_integrator`). |
+| passed (fixed upstream earlier) | 2 | `test_misalignment_traces[False/True]` |
+| passed this run (nondeterministic) | 1 | `test_finite_part_quad_batches_over_its_limits[jax]` (atol=0, last bit) |
+| expected: torchode upstream | 7 | The same 7 as before |
+| still failing → now torchode (upstream) | 3 | `test_kingdf_W0_under_torch_compile_torchode`, `test_workflow_compiled_matches_eager[torch-kingdf_W0]` and `[torch-inductor-kingdf_W0]`. #1645 fixed their numpy-constant failure (`kingdf.py:470`); they now reach the torchode stream-event error. Same root cause as the 7, but no galpy frame. |
+| expected: jax nondeterminism | 2 | `test_moment_grad_through_evolution_vs_fd[meanvT-jax / vertexdev-jax]` |
+| still failing, new mode | 1 | `test_forced_backend_survives_a_fullgraph_compile` |
+
+**torchode (10 now):** every one fails at `torchode/adjoints.py:125` (in-place
+`y_eval[eval_at_start, 0] = y[eval_at_start]` on a graph input) followed by
+`:199` (`continue_iterating_done.record(torch.cuda.current_stream(device))`).
+Dynamo rejects recording an event after mutating a graph input. The event is a
+CUDA-stream event, so this is presumably CUDA-only; I didn't check on CPU.
+
+**`test_forced_backend_survives_a_fullgraph_compile`:** the original failure
+(a numpy constant at `Force.py:289`, `self._amp * ...`) is fixed. The
+`fullgraph=True` compile now traces with no graph break, which is the test's
+real point. It now fails one line later on the test's own exactness check:
+`tests/test_backend_tracectx.py:127 assert torch.equal(compiled, eager)`. On
+CUDA the compiled and eager `Rforce` agree to every printed digit
+(`[-0.9227, -0.7603, -0.9787]`) but are not bit-identical. That is plausibly
+kernel fusion/FMA in the compiled graph. No galpy frame is involved; the test
+expects bit-for-bit equality, and CUDA doesn't give it (CPU not checked here).
+
+**jax nondeterminism, unchanged:** the evolveddiskdf pair failed in the
+torch-list run and in 1 of 3 jax-only repeats, both times with grad
+0.088474 / 0.311308 against FD 0.088523 / 0.31112. That's the same discrete
+value as in tests run 2. With the earlier 0.088572 / 0.310932, at least three
+states are now observed. `finite_part_quad[jax]` passed this time.
+
+**torch-inductor workflow cases** (the TITAN Xp, sm_61, can't run inductor/Triton):
+
+| case | before #1645 | after #1645 |
+|---|---|---|
+| `torch-inductor-qdf_constructor_parameters` | numpy constant (`PowerSphericalPotentialwCutoff.py:117`) | **passes**: compiled with inductor on the H100, matches eager |
+| `torch-inductor-orbit_potential_parameter` | torchode | torchode (expected) |
+| `torch-inductor-spray_sample` | torchode | torchode (expected) |
+| `torch-inductor-spray_track` | torchode | torchode (expected) |
+| `torch-inductor-kingdf_W0` | numpy constant (`kingdf.py:470`) | torchode (now unmasked) |
+
+The 4 torchode cases fail while dynamo is still tracing, so inductor never
+compiles them. Only `qdf_constructor_parameters` exercises inductor end to end,
+and it passes. Inductor workflow cases that weren't on the failing list (they
+passed already in tests run 2) were not rerun here.
+
+### Per test (after #1645)
+
+| test | class before #1645 | after #1645 | note |
+|---|---|---|---|
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-inductor-kingdf_W0]` (inductor) | galpy: numpy const. under compile | still failing → now torchode (upstream; unmasked by #1645) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-inductor-orbit_potential_parameter]` (inductor) | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-inductor-qdf_constructor_parameters]` (inductor) | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-inductor-spray_sample]` (inductor) | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-inductor-spray_track]` (inductor) | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-kingdf_W0]` | galpy: numpy const. under compile | still failing → now torchode (upstream; unmasked by #1645) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-orbit_c_integrator]` | galpy: dop853_c grad→numpy | **fixed** |  |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-orbit_potential_parameter]` | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-qdf_constructor_parameters]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-qdf_density]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-spray_sample]` | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_compile_workflows.py::test_workflow_compiled_matches_eager[torch-spray_track]` | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_dtype_policy.py::test_float32_default_internals_run_in_float64` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_dtype_policy.py::test_float32_default_orbit_and_df_match_float64_default` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_evolveddiskdf.py::test_moment_grad_through_evolution_vs_fd[meanvT-jax]` | jax nondet. | expected (jax nondeterminism) | grad 0.088474 / 0.311308 vs FD 0.088523 / 0.31112 |
+| `test_backend_evolveddiskdf.py::test_moment_grad_through_evolution_vs_fd[vertexdev-jax]` | jax nondet. | expected (jax nondeterminism) | grad 0.088474 / 0.311308 vs FD 0.088523 / 0.31112 |
+| `test_backend_input.py::test_traced_call_traces_exactly_the_matching_namespace[torch]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_interpolate.py::test_map_coordinates_quintic_and_narrow_grids_vs_scipy[torch]` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_kingdf.py::test_kingdf_W0_under_torch_compile_torchode` | galpy: numpy const. under compile | still failing → now torchode (upstream; unmasked by #1645) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_multi.py::test_parallel_map_survives_torch_work_in_the_child` | galpy: parallel_map fork | **fixed** |  |
+| `test_backend_namespaces.py::test_get_namespace_all_torch_fast_path` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_namespaces.py::test_set_at_casts_values_to_the_destination_dtype` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[DehnenBarPotential-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[DehnenBarPotential-dens]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[DehnenBarPotential-Rforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[DehnenBarPotential-zforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[EinastoPotential-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[ExpTruncNFWPotential-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[ExpTruncNFWPotential-Rforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[ExpTruncNFWPotential-zforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[FerrersPotential-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[FerrersPotential-dens]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[FerrersPotential-Rforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[FerrersPotential-zforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[PowerSphericalPotentialwCutoff-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[PowerSphericalPotentialwCutoff-Rforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[PowerSphericalPotentialwCutoff-zforce]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[TwoPowerSphericalPotential-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_potential_jit.py::test_torch_compile_traces_public_entry_point[TwoPowerTriaxialPotential-__call__]` | galpy: numpy const. under compile | **fixed** |  |
+| `test_backend_quadrature.py::test_finite_part_quad_batches_over_its_limits[jax]` | jax nondet. | passed this run (nondeterministic) |  |
+| `test_backend_streamdf.py::test_approxaAInv_float32_query_points` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_streamdf.py::test_misalignment_traces[False]` | fixed upstream | passed (fixed upstream earlier) |  |
+| `test_backend_streamdf.py::test_misalignment_traces[True]` | fixed upstream | passed (fixed upstream earlier) |  |
+| `test_backend_torchode.py::test_float32_ic_integrates_in_float64[torchdiffeq]` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_torchode.py::test_float32_ic_integrates_in_float64[torchode]` | test .numpy() on CUDA | **fixed** |  |
+| `test_backend_torchode.py::test_torch_compile_torchode_orbit_matches_eager` | torchode | expected (torchode upstream) | torchode/adjoints.py:125 mutates a graph input, :199 records a CUDA event |
+| `test_backend_tracectx.py::test_forced_backend_survives_a_fullgraph_compile` | galpy: numpy const. under compile | still failing (new mode: exactness) | no galpy frame: tests/test_backend_tracectx.py:127 `assert torch.equal(compiled, eager)`; the fullgraph compile itself now traces (original dynamo error fixed); CUDA compiled vs eager differ below print precision |
