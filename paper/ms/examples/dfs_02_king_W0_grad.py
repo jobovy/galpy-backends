@@ -3,7 +3,7 @@
 Claim: for the King model, the derivative w.r.t. W0 (through the solution of
 the Poisson equation) runs under jax.jit, where the ODE is solved by diffrax.
 
-NOTE: before galpy PR #PRNUM, kingdf(W0=<tracer>) without a backend
+NOTE: before galpy PR #1646, kingdf(W0=<tracer>) without a backend
 context failed both eagerly and under jax.jit: the constructor evaluated its
 potential at Python floats, which dispatched to numpy and met the traced W0.
 Hence the use('jax') in the snippet; with the PR the constructor follows the
@@ -50,7 +50,7 @@ fd = (
 print(float(g), fd)
 # the jitted (diffrax) solve vs the scipy solve: agree to ~1e-8 (galpy's tests)
 numpy.testing.assert_allclose(float(g), fd, rtol=1e-6)
-# and without the backend context (galpy PR #PRNUM): the same derivative
+# and without the backend context (galpy PR #1646): the same derivative
 def sigmar_noctx(W0):
     return kingdf(W0=W0, M=2.3, rt=1.4).sigmar(jnp.asarray(0.5))
 

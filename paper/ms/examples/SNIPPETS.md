@@ -47,6 +47,17 @@ Totals: 16 reformat, 8 WRONG, 4 unchanged
 - streams.tex (Particle-spray models): "The whole computation compiles and is differentiable with respect to every parameter": forward mode (jvp/jacfwd) needs `integrate_kwargs={'adjoint':'direct'}`, and the 1e-6 agreement with finite differences needs a jax progenitor Orbit (a numpy progenitor gives 7e-5). `streamTrack()` returns an object, so it is differentiated through its accessors (e.g. `.x(tp)`); and "The fitted track ... is obtained in the same way" holds for running jacfwd but the result is the derivative with the track fit's discrete choices frozen, which a finite difference of the track does not reproduce (it does not converge). The 1e-6 agreement is a property of the particles, not of the fitted track.
 - No contradiction found for: the C-STM Jacobian (agrees with finite differences of tightly converged C orbits to 3e-10--1.3e-9, consistent with "a few parts in $10^{10}$"), `jax.vmap` over the C-STM, the c=True Staeckel derivative through C under `jax.jit`, `estimateDeltaStaeckel` inside `jax.jit`, the vertical-inverse torus derivative (3e-10 vs. finite differences), the HVS q fit (recovers 0.8485 for 0.85).
 
+## Once galpy PR #1646 (usability fixes) is merged
+
+The examples now check the fixed behaviour (so they need that PR), and these snippets can be simplified back:
+
+- `design_02_use_context`: the original snippet is right again: `Orbit([floats])` inside an unforced `use('jax')` gets a jax IC (accessors return jax arrays; integrated in jax with `method='diffrax'`, in C with the default method). The design.tex sentence about an Orbit from Python floats can stay.
+- `design_03_cuda_orbit`: numpy times work with a CUDA IC under `method='torchode'`; `ts` need not be on the GPU (`method=` is still needed).
+- `dfs_02_king_W0_grad`: drop the `with galpy.backend.use('jax'):` (the constructor follows the traced W0).
+- `dfs_03_eddington_tracer_grad`: the derivative w.r.t. the potential's parameter runs without a backend context, so the qualifier in the Spherical-DFs claim above is no longer needed.
+- `dfs_04_qdf_sampleV`: drop the `with galpy.backend.use('jax'):` (the draw follows the key); the `MWPotential2014` derivative is finite and matches a finite difference, so the Disk-DFs claim holds as written.
+- `streams_02_spray_jvp` / `streams_03_spray_track_jacfwd`: `integrate_kwargs={'adjoint':'direct'}` can be dropped (galpy selects the direct adjoint under jvp/jacfwd/hessian itself, except for the jvp of a `jax.jit`-compiled function), and the progenitor can be `Orbit(ic)` from a list (the numpy and backend samplers now agree to ~1e-8; the 7e-5 came from a coarser progenitor grid in the backend sampler, not from the progenitor escaping the differentiable path).
+
 ## `design_01_rforce_jax` — sections/design.tex, line 39 (`code`)
 
 **reformat**: Long import split with parentheses; trailing comment shortened to fit 56 characters (the device claim stays in the text and is checked by the example).

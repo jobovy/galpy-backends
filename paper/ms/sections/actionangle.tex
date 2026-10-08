@@ -196,15 +196,43 @@ parameters.
 
 \subsection{Speed}\label{sec:aa-speed}
 
-Two things changed in the speed of the action--angle calculations. The
-vectorized \python\ St\"{a}ckel path is now as fast as the single-threaded
-\cc\ path for large numbers of points on the CPU, where the old
-per-object loop was more than an order of magnitude slower, and this
-holds for plain \numpy. And on a GPU, the same path under \torch\ or
-compiled \jax\ overtakes the \cc\ path by an order of magnitude at
-$10^5$ points, after a launch-bound floor of about a second; eager
-\jax, which dispatches hundreds of small operations per call, is bound
-by that dispatch and stays at a floor of several seconds. %TODO: Staeckel speed figure (g17) and its numbers after the re-measurement
+\figurename~\ref{fig:staeckelspeed} shows the speed of the full
+St\"{a}ckel transformation (actions, frequencies, and angles). On a single
+CPU core, the compiled \cc\ path remains the fastest, at
+0.3\,ms per phase-space point for large $N$. The new vectorized
+\python\ path costs 2.5--3 times more per point in plain \numpy, but it
+is 5--6 times faster than the per-object loop that it replaces for
+$N\gtrsim10^3$. Eager \torch\ on the CPU runs at the speed of \numpy,
+while eager \jax\ is bound by dispatching hundreds of small operations
+per call and stays at a floor of several seconds. On a GPU, the
+same code overtakes the \cc\ path once $N$ is large enough to
+amortize a launch floor of about half a second. On the H100, eager \torch\
+evaluates $10^6$ points in 3.5\,s, 89 times faster than single-threaded
+\cc\ and 7.5 times faster than \cc\ on 16 OpenMP threads, and compiled
+\jax\ evaluates $10^5$ points in 0.16\,s. On the TITAN~Xp, with its slow
+double-precision arithmetic, the backends beat single-threaded \cc\ by
+a factor of 6--8 at large $N$, but not \cc\ on 16 threads. Thus the
+backends that make the action--angle transformation differentiable are
+also the fastest way to evaluate it for large samples when a modern GPU
+is available.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g17_staeckel_actionangle_speed_torch/g17_staeckel_actionangle_speed_torch.pdf}
+  \caption{Speed of the St\"{a}ckel action--angle transformation
+    (\texttt{actionAngleStaeckel.actionsFreqsAngles}) for
+    \texttt{MWPotential2014} as a function of the number $N$ of
+    phase-space points per call: (a) wall time and (b) throughput. CPU
+    lines use one core, except for the dash-dotted \cc\ line, which uses
+    16 OpenMP threads; GPU lines are for eager \torch\ on the TITAN~Xp and
+    the H100, without (dashed) and with (dotted) the transfer of the
+    inputs and outputs between host and device. The black dotted line
+    with crosses is the per-object \numpy\ loop that the vectorized path replaces. Points
+    where the TITAN~Xp runs out of memory are omitted. The \jax\ version
+    of this figure is qualitatively the same; compiled \jax\ on the H100
+    takes 0.16\,s at $N=10^5$. After a launch floor, the GPU overtakes
+    one \cc\ thread at $N\approx2000$ and 16 threads at
+    $N\approx2\times10^4$ on the H100.}\label{fig:staeckelspeed}
+\end{figure*}
 
 \figurename~\ref{fig:vinvspeed} shows the speed of the one-dimensional
 inverse transformation. Evaluating the torus map at $N$ angles

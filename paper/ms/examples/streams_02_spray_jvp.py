@@ -5,7 +5,7 @@ the potential (for a fixed key); the forward-mode derivative gives the change
 of every particle's position for a unit change in the halo flattening and
 agrees with a finite difference of the same sample (same random numbers).
 
-NOTE: before galpy PR #PRNUM, forward-mode differentiation (jax.jvp)
+NOTE: before galpy PR #1646, forward-mode differentiation (jax.jvp)
 through diffrax's default (checkpointed) adjoint raised "can't apply
 forward-mode autodiff (jvp) to a custom_vjp function", so the snippet passes
 integrate_kwargs={'adjoint':'direct'}; and with a numpy progenitor
@@ -76,7 +76,7 @@ print("max |AD - FD| / max |AD|:", err)
 assert err < 1e-6, err
 
 
-# galpy PR #PRNUM: a numpy progenitor and no integrate_kwargs give the same
+# galpy PR #1646: a numpy progenitor and no integrate_kwargs give the same
 # forward-mode derivative, which matches a finite difference of plain calls
 def leading_arm_np(q):
     lp = LogarithmicHaloPotential(normalize=1.0, q=q)

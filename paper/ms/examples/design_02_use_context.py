@@ -5,7 +5,7 @@ galpy.backend.use context manager is used.
 
 NOTE: the original snippet built an Orbit from Python floats inside the
 context and claimed its IC becomes a jax array. Before galpy PR
-#PRNUM that was false (the IC stayed numpy and the integration ran in C);
+#1646 that was false (the IC stayed numpy and the integration ran in C);
 with it, Orbit([floats]) inside an unforced use('jax') gets a jax IC, as
 checked below, so the original snippet can be restored once it is merged
 (the default method still integrates in C, returning jax arrays; an
@@ -32,7 +32,7 @@ numpy.testing.assert_allclose(
 )
 # outside the context, the default (numpy) is back
 assert not isinstance(evaluatePotentials(MWPotential2014, 1.0, 0.0), jax.Array)
-# and the claim the original snippet made (galpy PR #PRNUM): an Orbit from
+# and the claim the original snippet made (galpy PR #1646): an Orbit from
 # floats inside the context gets a jax IC, and is integrated in jax with an
 # in-backend method
 from galpy.orbit import Orbit

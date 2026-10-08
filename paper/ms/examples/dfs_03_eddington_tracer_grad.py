@@ -4,7 +4,7 @@ Claim: a DF built from a density that is not the one generating the
 potential (a tracer) is differentiable w.r.t. the parameters of both.
 
 NOTE: the snippet (tracer parameter) runs as written. Before galpy PR
-#PRNUM the derivative w.r.t. the POTENTIAL's parameter failed without a
+#1646 the derivative w.r.t. the POTENTIAL's parameter failed without a
 backend context (the constructor evaluated the potential at Python floats,
 e.g. r=0 in _handle_rmin, which went to numpy and met the traced parameter)
 and ran only inside galpy.backend.use('jax'); with the PR it runs without
@@ -74,7 +74,7 @@ def dispersion_pot_noctx(a_pot):
     return df.sigmar(jnp.asarray(1.0))
 
 
-gp_noctx = jax.grad(dispersion_pot_noctx)(2.0)  # galpy PR #PRNUM
+gp_noctx = jax.grad(dispersion_pot_noctx)(2.0)  # galpy PR #1646
 
 
 def dispersion_pot_np(a_pot):

@@ -146,7 +146,8 @@ def _cores(fw, env):
     if fw == "torch":
         n = env.get("torch_threads", "?")
         return "1 core" if n == 1 else f"{n} threads"
-    return f"≤{env.get('cpu_affinity', '?')} threads"
+    aff = env.get("cpu_affinity", "?")
+    return "1 core" if aff == 1 else f"≤{aff} threads"
 
 
 def _style(name, dev, env=None):

@@ -39,9 +39,12 @@ The whole set takes about 25 minutes on 12 CPU cores; the slowest examples
 (the stream models, the qdf sampler, the King-model derivative under
 `jax.jit`) take one to four minutes each.
 
-Some scripts also check a known galpy defect and fail loudly when it is fixed
-(so the paper text can be updated): the qdf sample derivative being NaN for
-`MWPotential2014` (`dfs_04`), and DF construction with a traced parameter
-needing `galpy.backend.use('jax')` (`dfs_02`, `dfs_03`), numpy times with
-a CUDA IC failing under torchode (`design_03`, printed only), and the fitted stream track not
-being smooth in the potential (`streams_03`).
+Some scripts check behaviour fixed in galpy PR #1646 (so they need galpy
+with that PR): an Orbit from Python floats following `use('jax')`
+(`design_02`), numpy times with a CUDA IC under torchode (`design_03`), DF
+construction with a traced parameter without a backend context (`dfs_02`,
+`dfs_03`, `dfs_04`), the finite qdf sample derivative for `MWPotential2014`
+(`dfs_04`), and a numpy progenitor with the default adjoint under `jax.jvp`
+(`streams_02`); `SNIPPETS.md` lists the snippets that can be simplified once
+it is merged. `streams_03` still checks that the fitted stream track is not
+smooth in the potential (a known limitation).
