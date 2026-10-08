@@ -1,0 +1,69 @@
+Build cuda_12.9.r12.9/compiler.36037853_0
+NVIDIA H100 80GB HBM3, 580.173.02
+Compiling entry function '_Z11k_integrateILb0EEviPKdiS1_ddPdPi' for 'sm_90'
+    96 bytes stack frame, 72 bytes spill stores, 96 bytes spill loads
+Used 255 registers, used 0 barriers, 96 bytes cumulative stack size
+--
+Compiling entry function '_Z11k_integrateILb1EEviPKdiS1_ddPdPi' for 'sm_90'
+    104 bytes stack frame, 76 bytes spill stores, 84 bytes spill loads
+Used 255 registers, used 0 barriers, 104 bytes cumulative stack size
+built: libcudaorbits_f32.so
+libcudaorbits_nofma.so
+libcudaorbits_r128.so
+libcudaorbits.so
+== correctness vs galpy dop853_c (300 orbits, 2 Gyr) ==
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 1.0590 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 3471.5 (min 1547, max 5569), accepted 187.9, rejected 59.12
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 2952.7 (min 1283, max 4846), accepted 187.9, rejected 59.12
+    lazy vs faithful outputs bit-identical: True
+[GPU, faithful dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU, lazy dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 1.0600 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 3471.5 (min 1547, max 5569), accepted 187.9, rejected 59.12
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 2952.7 (min 1283, max 4846), accepted 187.9, rejected 59.12
+    lazy vs faithful outputs bit-identical: True
+[GPU_nofma, faithful dense] N=300: max |dx|/|x| at t_end = 4.847e-06 (median 3.378e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 2.08e-03
+    vs galpy C 1e-13 (truth): max 1.610e-05, median 8.100e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.925e-07, among the rest 4.847e-06
+    nfev/orbit mean 3470.4 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_nofma, lazy dense] N=300: max |dx|/|x| at t_end = 4.847e-06 (median 3.378e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 2.08e-03
+    vs galpy C 1e-13 (truth): max 1.610e-05, median 8.100e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.925e-07, among the rest 4.847e-06
+    nfev/orbit mean 2951.8 (min 1283, max 4846), accepted 187.9, rejected 59.11
+== timing (hiN: nt=16 saves; wall = alloc + H2D + kernel + D2H) ==
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N=    1000: wall    0.110s ( 109.615 us/orbit; kernel 109.0 ms, d2h 0.1 ms); nfev/orbit 2936 (max 5551)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N=   10000: wall    0.133s (  13.298 us/orbit; kernel 131.9 ms, d2h 0.4 ms); nfev/orbit 2952 (max 5647)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N=  100000: wall    1.116s (  11.165 us/orbit; kernel 1104.7 ms, d2h 10.4 ms); nfev/orbit 2945 (max 6426)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N= 1000000: wall   11.528s (  11.528 us/orbit; kernel 10797.2 ms, d2h 723.8 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N= 3000000: wall   58.091s (  19.364 us/orbit; kernel 32570.0 ms, d2h 25501.8 ms); nfev/orbit 2945 (max 6531)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N=10000000: wall  212.039s (  21.204 us/orbit; kernel 108620.8 ms, d2h 103292.8 ms); nfev/orbit 2945 (max 6999)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N=    1000: wall    0.116s ( 116.401 us/orbit; kernel 115.8 ms, d2h 0.1 ms); nfev/orbit 3455 (max 6409)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N=   10000: wall    0.125s (  12.476 us/orbit; kernel 123.6 ms, d2h 0.4 ms); nfev/orbit 3474 (max 6529)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N=  100000: wall    2.279s (  22.790 us/orbit; kernel 672.0 ms, d2h 1605.2 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N= 1000000: wall   20.864s (  20.864 us/orbit; kernel 7592.3 ms, d2h 13268.1 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N= 3000000: wall   25.718s (   8.573 us/orbit; kernel 24474.6 ms, d2h 1224.0 ms); nfev/orbit 3465 (max 7508)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N=10000000: wall   91.552s (   9.155 us/orbit; kernel 84089.3 ms, d2h 7409.9 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _r128 lazy] N=  100000: wall    3.727s (  37.265 us/orbit; kernel 1218.8 ms, d2h 2506.2 ms); nfev/orbit 2945 (max 6426)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _r128 lazy] N= 1000000: wall   11.891s (  11.891 us/orbit; kernel 11145.9 ms, d2h 738.8 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N=  100000: wall    1.199s (  11.992 us/orbit; kernel 1122.6 ms, d2h 75.3 ms); nfev/orbit 2945 (max 6426)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N= 1000000: wall   29.177s (  29.177 us/orbit; kernel 10960.3 ms, d2h 18208.9 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N=  100000: wall    1.113s (  11.133 us/orbit; kernel 1101.0 ms, d2h 10.7 ms); nfev/orbit 2945 (max 6426)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N= 1000000: wall   10.653s (  10.653 us/orbit; kernel 10547.5 ms, d2h 100.8 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _f32 lazy] N= 1000000: wall    1.882s (   1.882 us/orbit; kernel 1828.7 ms, d2h 47.8 ms); nfev/orbit 1443 (max 3052)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N= 1000000: wall    5.105s (   5.105 us/orbit; kernel 5004.4 ms, d2h 94.5 ms); nfev/orbit 1444 (max 3210)
