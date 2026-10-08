@@ -73,8 +73,7 @@ costs.
     the number of track segments, on \numpy\ with the \cc\ integrators
     and on the backends, warm and including compilation (cold). (b)
     Sampling $N$ stars and (c) evaluating the DF at $N$ phase-space
-    points from the constructed model. CPU series use up to four cores
-    (\numpy\ and \torch\ one, \jax\ up to four). Eager \jax\ on the
+    points from the constructed model. All CPU series use one core. Eager \jax\ on the
     TITAN~Xp runs out of GPU memory from $N=10^5$ on, and these points are
     omitted.}\label{fig:streamdfspeed}
 \end{figure*}

@@ -482,7 +482,8 @@ def _cores(fw, data):
     cores (env_cpu cpu_cores_used)."""
     n = {"numpy": 1, "torch": data.get("torch_cpu_threads", "?")}.get(fw)
     if n is None:
-        return f"≤{data.get('env_cpu', {}).get('cpu_cores_used', '?')} cores"
+        nc = data.get("env_cpu", {}).get("cpu_cores_used", "?")
+        return "1 core" if nc == 1 else f"≤{nc} cores"
     return f"{n} core" + ("" if n == 1 else "s")
 
 
