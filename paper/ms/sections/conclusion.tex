@@ -32,6 +32,28 @@ Fitting a stream model to data with a Hamiltonian Monte Carlo sampler,
 which the derivatives of \sectionname~\ref{sec:streams} allow, is the
 obvious next application, and we will present it separately.
 
+The GPU speed-ups are not uniform. Evaluating forces and drawing samples
+are limited by the memory bandwidth of the GPU and come close to it, but
+the in-backend orbit integration reaches less than two percent of the
+H100's double-precision peak: the batched array programs that \jax\
+and \torch\ generate step all orbits in lockstep, with a loop overhead
+per step and branch-heavy special functions, which maps poorly onto a
+GPU. GPU-native kernels that compile \galpy's existing \cc\ potentials
+and integrators as CUDA device functions, with one thread per orbit,
+are a natural complement. A prototype for \texttt{MWPotential2014} and
+\galpy's \texttt{dop853} integrator agrees with the \cc\ integrator to
+within its truncation error and, on the H100, integrates $10^6$ orbits
+for 2\,Gyr in 2.4\,$\mu$s per orbit with \galpy's arithmetic and in
+1.0\,$\mu$s with division-free special functions, compared to 16\,$\mu$s
+for compiled \jax\ on the same GPU and 79\,$\mu$s for the \cc\
+integrator on all 36 cores of our development machine. This speed
+came from restructuring the computation rather than from a direct
+translation, porting all of \galpy's potentials would be a substantial
+effort, and such kernels are not differentiable unless their
+variational or adjoint equations are written by hand as well. They
+would therefore complement the differentiable backends rather than
+replace them.
+
 Some things are not done: the torus-mapping code is not covered and
 will not be, \astropy\ units cannot be used inside compiled programs,
 and the construction of the quasi-isothermal disk DF and of the
