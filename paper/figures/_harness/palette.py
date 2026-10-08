@@ -137,7 +137,8 @@ def label(framework, device="cpu", mode=None, extra=""):
     return f"{s} ({extra})" if extra else s
 
 
-def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt=6):
+def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt=6,
+                order="end"):
     """Direct line labels in the line's colour, instead of a legend.
 
     Every line (default: each with a label not starting with "_") is labelled in a
@@ -145,6 +146,12 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
     to ``min_sep_pt`` per text line apart (a two-line label takes twice the room), with a thin leader from the line end. ``inline``
     maps a label to ``(x, dy_pt)``: that line is instead labelled on the plot,
     next to its point at data ``x`` (lines that end well inside the axes).
+    ``order="edge"``: order (and aim) the labels by each line's height extrapolated
+    along its last segment to the rightmost data point of all lines, instead of the
+    height of its own last point (fewer leader crossings when lines end at
+    different x). ``order="elbow"``: keep the end-point order but draw each leader
+    as a thin horizontal run from the line's end to the axes' right edge, then a
+    short slanted run to the label -- leaders can then never cross each other.
     Call after the axis limits are final.
     """
     inline = inline or {}
@@ -177,9 +184,18 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
             ax.annotate(text, xy=(xi, yi), xytext=(0, dy), textcoords="offset points",
                         fontsize=fontsize, color=c, ha="center", va="center")
             continue
-        i = numpy.flatnonzero(ok)[-1]
-        Y = ax.transData.transform((x[i], y[i]))[1]
-        col.append({"xy": (x[i], y[i]), "Y": Y, "Ynew": Y, "text": text, "color": c})
+        k = numpy.flatnonzero(ok)
+        i = k[-1]
+        P = ax.transData.transform(numpy.c_[x[k[-2:]], y[k[-2:]]])
+        Y = P[-1, 1]
+        col.append({"xy": (x[i], y[i]), "Y": Y, "Ynew": Y, "text": text, "color": c, "P": P})
+    if order == "edge" and col:
+        X_edge = max(a["P"][-1, 0] for a in col)
+        for a in col:
+            P = a["P"]
+            if len(P) > 1 and P[-1, 0] > P[-2, 0]:
+                slope = (P[-1, 1] - P[-2, 1]) / (P[-1, 0] - P[-2, 0])
+                a["Y"] = a["Ynew"] = P[-1, 1] + slope * (X_edge - P[-1, 0])
     col.sort(key=lambda a: a["Y"])
 
     def sep(lo, hi):  # centre-to-centre spacing; a multi-line label is taller
@@ -209,10 +225,18 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
     x0 = ax.transAxes.transform((1.0, 0.0))[0] + pad_pt * pt
     for a in col:
         xt, yt = to_axes.transform((x0, a["Ynew"]))
+        xy, xycoords = a["xy"], "data"
+        if order == "elbow":
+            ye = to_axes.transform(ax.transData.transform(a["xy"]))[1]
+            xe = to_axes.transform(ax.transData.transform(a["xy"]))[0]
+            ax.plot([xe, 1.0], [ye, ye], transform=ax.transAxes, color=a["color"], lw=0.5,
+                    alpha=0.6, clip_on=False, zorder=1, label="_leader")
+            xy, xycoords = (1.0, ye), "axes fraction"
         ax.annotate(
-            a["text"], xy=a["xy"], xytext=(xt, yt), textcoords="axes fraction",
+            a["text"], xy=xy, xycoords=xycoords, xytext=(xt, yt), textcoords="axes fraction",
             fontsize=fontsize, color=a["color"], va="center", ha="left", annotation_clip=False,
-            arrowprops=dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.8),
+            arrowprops=dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.8,
+                            **({"relpos": (0.0, 0.5)} if order == "elbow" else {})),
         )
 
 

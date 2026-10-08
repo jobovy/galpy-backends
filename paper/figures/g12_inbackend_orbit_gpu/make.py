@@ -242,7 +242,9 @@ def make():
     xl = ax.get_xlim()
     # extend the x-axis to the right so the rightmost markers have room and the
     # reference lines / legend region do not crowd the data
-    xl = (xl[0], xl[1] * 1.6)
+    # (stop short of the next decade: a tick label at the right edge would collide
+    # with the bottom direct label)
+    xl = (xl[0], min(xl[1] * 1.6, 0.9 * 10.0 ** numpy.ceil(numpy.log10(xl[1]))))
     ax.set_xlim(*xl)
     # decade-spaced to bracket every curve's cost per orbit at its largest N
     refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
@@ -281,7 +283,8 @@ def make():
     palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
                              if not ln.get_label().startswith("_") and ln not in node
                              and _CUDA_FAST not in ln.get_label()],
-                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
+                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                        order="elbow", pad_pt=18)
     if PAPER:
         layout.fit_right(fig)
     return fig

@@ -245,7 +245,8 @@ def make():
     palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
                              if not ln.get_label().startswith("_") and ln not in node
                              and "fast arith." not in ln.get_label()],
-                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
+                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                        order="elbow", pad_pt=18)
     if PAPER:
         layout.fit_right(fig)
     return fig
