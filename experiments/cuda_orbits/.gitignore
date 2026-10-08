@@ -1,0 +1,4 @@
+*.so
+build_*.log
+__pycache__/
+flopcount
