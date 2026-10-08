@@ -1,0 +1,215 @@
+RmProfilingAdminOnly: 0
+NVIDIA H100 80GB HBM3, 580.173.02
+== build_ptxas_f32.log
+  k_integrateILb0 sm_90 Used 144 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrateILb1 sm_90 Used 146 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 139 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 140 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+== build_ptxas_f32_noinl.log
+  k_integrateILb0 sm_90 Used 153 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrateILb1 sm_90 Used 151 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 154 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 148 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+== build_ptxas_fastgam.log
+  k_integrateILb0 sm_90 Used 255 registers; 104 bytes stack frame, 76 bytes spill stores, 100 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 112 bytes stack frame, 88 bytes spill stores, 96 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 88 bytes stack frame, 60 bytes spill stores, 68 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 80 bytes stack frame, 56 bytes spill stores, 48 bytes spill loads
+== build_ptxas_fast.log
+  k_integrateILb0 sm_90 Used 255 registers; 88 bytes stack frame, 72 bytes spill stores, 72 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 96 bytes stack frame, 60 bytes spill stores, 72 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 72 bytes stack frame, 44 bytes spill stores, 52 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 72 bytes stack frame, 48 bytes spill stores, 40 bytes spill loads
+== build_ptxas_fast_noinl.log
+  k_integrateILb0 sm_90 Used 255 registers; 136 bytes stack frame, 104 bytes spill stores, 116 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 136 bytes stack frame, 112 bytes spill stores, 120 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 120 bytes stack frame, 92 bytes spill stores, 84 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 120 bytes stack frame, 84 bytes spill stores, 84 bytes spill loads
+== build_ptxas_fastpow.log
+  k_integrateILb0 sm_90 Used 255 registers; 104 bytes stack frame, 76 bytes spill stores, 100 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 112 bytes stack frame, 76 bytes spill stores, 88 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 80 bytes stack frame, 64 bytes spill stores, 72 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 80 bytes stack frame, 48 bytes spill stores, 40 bytes spill loads
+== build_ptxas.log
+  k_integrateILb0 sm_90 Used 255 registers; 112 bytes stack frame, 84 bytes spill stores, 108 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 112 bytes stack frame, 88 bytes spill stores, 96 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 88 bytes stack frame, 72 bytes spill stores, 80 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 96 bytes stack frame, 72 bytes spill stores, 64 bytes spill loads
+== build_ptxas_nofma.log
+  k_integrateILb0 sm_90 Used 255 registers; 152 bytes stack frame, 124 bytes spill stores, 148 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 160 bytes stack frame, 136 bytes spill stores, 144 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 96 bytes stack frame, 68 bytes spill stores, 76 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 80 bytes stack frame, 56 bytes spill stores, 48 bytes spill loads
+== build_ptxas_noinl.log
+  k_integrateILb0 sm_90 Used 255 registers; 152 bytes stack frame, 120 bytes spill stores, 132 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 144 bytes stack frame, 120 bytes spill stores, 128 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 254 registers; 144 bytes stack frame, 104 bytes spill stores, 104 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 128 bytes stack frame, 88 bytes spill stores, 88 bytes spill loads
+== build_ptxas_r128.log
+  k_integrateILb0 sm_90 Used 128 registers; 728 bytes stack frame, 884 bytes spill stores, 3852 bytes spill loads
+  k_integrateILb1 sm_90 Used 128 registers; 752 bytes stack frame, 924 bytes spill stores, 3872 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 128 registers; 696 bytes stack frame, 836 bytes spill stores, 3152 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 128 registers; 760 bytes stack frame, 900 bytes spill stores, 3340 bytes spill loads
+built: libcudaorbits_f32_noinl.so libcudaorbits_f32.so libcudaorbits_fastgam.so libcudaorbits_fast_noinl.so libcudaorbits_fastpow.so libcudaorbits_fast.so libcudaorbits_nofma.so libcudaorbits_noinl.so libcudaorbits_r128.so libcudaorbits.so 
+== correctness vs galpy dop853_c (300 orbits, 2 Gyr; includes refill + sorted schedules) ==
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 1.0669 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 3471.5 (min 1547, max 5569), accepted 187.9, rejected 59.12
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 2952.7 (min 1283, max 4846), accepted 187.9, rejected 59.12
+    lazy vs faithful outputs bit-identical: True
+[GPU, faithful dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU, lazy dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU, faithful dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU, lazy dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 1.0624 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 3471.5 (min 1547, max 5569), accepted 187.9, rejected 59.12
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 2952.7 (min 1283, max 4846), accepted 187.9, rejected 59.12
+    lazy vs faithful outputs bit-identical: True
+[GPU_noinl, faithful dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 0.4986 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 1.501e-06 (median 4.218e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 7.27e-04
+    vs galpy C 1e-13 (truth): max 1.509e-05, median 8.070e-07
+    nfev/orbit mean 3470.7 (min 1547, max 5569), accepted 187.9, rejected 59.09
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 1.501e-06 (median 4.218e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 7.27e-04
+    vs galpy C 1e-13 (truth): max 1.509e-05, median 8.070e-07
+    nfev/orbit mean 2952.0 (min 1283, max 4846), accepted 187.9, rejected 59.09
+    lazy vs faithful outputs bit-identical: True
+[GPU_fast_noinl, faithful dense] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense, refill] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+== diagnosis matrix at N=1e6 ==
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad faithful] N= 1000000: wall    8.224s (   8.224 us/orbit; kernel 7577.2 ms, d2h 642.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad lazy] N= 1000000: wall   11.532s (  11.532 us/orbit; kernel 10895.5 ms, d2h 632.4 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+fixed250 faithful] N= 1000000: wall    3.008s (   3.008 us/orbit; kernel 2380.3 ms, d2h 622.3 ms); nfev/orbit 3752 (max 3752)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+fixed250 lazy] N= 1000000: wall    2.952s (   2.952 us/orbit; kernel 2294.9 ms, d2h 653.1 ms); nfev/orbit 3047 (max 3047)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+sort faithful] N= 1000000: wall    5.172s (   5.172 us/orbit; kernel 4399.1 ms, d2h 641.3 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+sort lazy] N= 1000000: wall    9.802s (   9.802 us/orbit; kernel 9019.8 ms, d2h 651.3 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+refill faithful] N= 1000000: wall    9.136s (   9.136 us/orbit; kernel 8479.7 ms, d2h 651.4 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+refill lazy] N= 1000000: wall    9.518s (   9.518 us/orbit; kernel 8863.8 ms, d2h 649.3 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+refill+sort faithful] N= 1000000: wall    8.728s (   8.728 us/orbit; kernel 7968.8 ms, d2h 625.5 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+refill+sort lazy] N= 1000000: wall    9.576s (   9.576 us/orbit; kernel 8756.6 ms, d2h 690.0 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl faithful] N= 1000000: wall    3.893s (   3.893 us/orbit; kernel 3269.7 ms, d2h 618.8 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl lazy] N= 1000000: wall    3.601s (   3.601 us/orbit; kernel 2958.8 ms, d2h 638.0 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill faithful] N= 1000000: wall    2.996s (   2.996 us/orbit; kernel 2333.3 ms, d2h 657.8 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill lazy] N= 1000000: wall    2.827s (   2.827 us/orbit; kernel 2185.3 ms, d2h 636.9 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastgam faithful] N= 1000000: wall    2.805s (   2.805 us/orbit; kernel 2176.5 ms, d2h 620.9 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastgam lazy] N= 1000000: wall    4.434s (   4.434 us/orbit; kernel 3774.3 ms, d2h 655.9 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastgam+refill faithful] N= 1000000: wall    3.044s (   3.044 us/orbit; kernel 2397.8 ms, d2h 641.6 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastgam+refill lazy] N= 1000000: wall    3.696s (   3.696 us/orbit; kernel 3048.4 ms, d2h 643.2 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastpow faithful] N= 1000000: wall    5.492s (   5.492 us/orbit; kernel 4847.0 ms, d2h 640.1 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastpow lazy] N= 1000000: wall    8.505s (   8.505 us/orbit; kernel 7827.8 ms, d2h 673.1 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastpow+refill faithful] N= 1000000: wall    6.677s (   6.677 us/orbit; kernel 6095.5 ms, d2h 574.5 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fastpow+refill lazy] N= 1000000: wall    7.310s (   7.310 us/orbit; kernel 6658.0 ms, d2h 648.3 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast faithful] N= 1000000: wall    2.103s (   2.103 us/orbit; kernel 1468.6 ms, d2h 630.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast lazy] N= 1000000: wall    2.729s (   2.729 us/orbit; kernel 2085.2 ms, d2h 639.7 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast+refill faithful] N= 1000000: wall    2.111s (   2.111 us/orbit; kernel 1485.5 ms, d2h 620.9 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast+refill lazy] N= 1000000: wall    2.629s (   2.629 us/orbit; kernel 1893.6 ms, d2h 728.8 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl faithful] N= 1000000: wall    1.917s (   1.917 us/orbit; kernel 1298.4 ms, d2h 614.1 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl lazy] N= 1000000: wall    1.818s (   1.818 us/orbit; kernel 1180.0 ms, d2h 631.9 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill faithful] N= 1000000: wall    1.559s (   1.559 us/orbit; kernel 901.2 ms, d2h 653.6 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill lazy] N= 1000000: wall    1.481s (   1.481 us/orbit; kernel 850.2 ms, d2h 626.4 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+fixed250 faithful] N= 1000000: wall    1.517s (   1.517 us/orbit; kernel 885.6 ms, d2h 620.2 ms); nfev/orbit 3752 (max 3752)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort faithful] N= 1000000: wall    1.661s (   1.661 us/orbit; kernel 883.4 ms, d2h 646.8 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _r128+refill faithful] N= 1000000: wall    9.535s (   9.535 us/orbit; kernel 8908.4 ms, d2h 622.1 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _r128+refill lazy] N= 1000000: wall    9.580s (   9.580 us/orbit; kernel 8874.1 ms, d2h 635.9 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _r128+refill faithful] N= 1000000: wall    9.563s (   9.563 us/orbit; kernel 8918.8 ms, d2h 639.5 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _r128+refill lazy] N= 1000000: wall    9.519s (   9.519 us/orbit; kernel 8865.8 ms, d2h 649.0 ms); nfev/orbit 2946 (max 6703)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+refill faithful] N= 1000000: wall    5.131s (   5.131 us/orbit; kernel 4505.0 ms, d2h 621.1 ms); nfev/orbit 1656 (max 3579)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _f32+refill faithful] N= 1000000: wall    1.683s (   1.683 us/orbit; kernel 1294.6 ms, d2h 382.2 ms); nfev/orbit 1655 (max 3475)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill faithful] N= 1000000: wall    1.774s (   1.774 us/orbit; kernel 1137.6 ms, d2h 632.1 ms); nfev/orbit 1656 (max 3579)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _f32_noinl+refill faithful] N= 1000000: wall    0.545s (   0.545 us/orbit; kernel 274.3 ms, d2h 262.4 ms); nfev/orbit 1655 (max 3475)
+== N scan, pinned host buffers (wall = H2D + kernel + D2H; alloc of pinned buffer untimed) ==
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=    1000: wall    0.111s ( 111.083 us/orbit; kernel 110.6 ms, d2h 0.1 ms); nfev/orbit 3455 (max 6409)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=   10000: wall    0.120s (  11.960 us/orbit; kernel 118.6 ms, d2h 0.3 ms); nfev/orbit 3474 (max 6529)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  100000: wall    0.294s (   2.939 us/orbit; kernel 290.1 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    2.362s (   2.362 us/orbit; kernel 2330.4 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 3000000: wall    6.946s (   2.315 us/orbit; kernel 6850.6 ms, d2h 81.5 ms); nfev/orbit 3465 (max 7508)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   22.986s (   2.299 us/orbit; kernel 22670.0 ms, d2h 272.1 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort+pinned faithful] N=    1000: wall    0.050s (  50.392 us/orbit; kernel 49.9 ms, d2h 0.0 ms); nfev/orbit 3456 (max 6409)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort+pinned faithful] N=   10000: wall    0.053s (   5.342 us/orbit; kernel 51.7 ms, d2h 0.3 ms); nfev/orbit 3474 (max 6529)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort+pinned faithful] N=  100000: wall    0.111s (   1.108 us/orbit; kernel 97.3 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort+pinned faithful] N= 1000000: wall    1.039s (   1.039 us/orbit; kernel 883.1 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort+pinned faithful] N= 3000000: wall    3.154s (   1.051 us/orbit; kernel 2621.8 ms, d2h 81.5 ms); nfev/orbit 3465 (max 7508)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+sort+pinned faithful] N=10000000: wall   10.971s (   1.097 us/orbit; kernel 8712.6 ms, d2h 272.0 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+pinned faithful] N=  100000: wall    0.666s (   6.658 us/orbit; kernel 661.9 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+pinned faithful] N= 1000000: wall    7.621s (   7.621 us/orbit; kernel 7584.3 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) fmad+pinned faithful] N=10000000: wall   82.928s (   8.293 us/orbit; kernel 82611.8 ms, d2h 272.0 ms); nfev/orbit 3465 (max 8109)
+== Nsight Compute (if available and counters are permitted): stall reasons, occupancy, i-cache ==
+done: build.txt
+correctness.txt
+diag
+ncu_fast_noinl_refill.log
+ncu_fast_noinl_refill.ncu-rep
+ncu_fast_noinl_refill.txt
+ncu_v1_exact_faithful.log
+ncu_v1_exact_faithful.ncu-rep
+ncu_v1_exact_faithful.txt
+ncu_v1_exact_lazy.log
+ncu_v1_exact_lazy.ncu-rep
+ncu_v1_exact_lazy.txt
+run.log
+scan_fast_noinl_refill_sort_pinned.json
+scan_noinl_refill_pinned.json
+scan_v1_pinned.json

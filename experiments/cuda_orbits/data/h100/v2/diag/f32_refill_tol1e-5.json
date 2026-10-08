@@ -1,0 +1,34 @@
+{
+ "backend": "cuda (galpy dop853_c port, one thread per orbit)",
+ "device": "NVIDIA H100 80GB HBM3 (sm_90, 132 SMs)",
+ "variant": "_f32",
+ "block": 128,
+ "refill": true,
+ "sort": false,
+ "pinned": false,
+ "fixed_nstep": 0,
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "rtol": 1e-05,
+ "atol": 1e-05,
+ "potential": "MWPotential2014",
+ "host": "trig0004",
+ "results": [
+  {
+   "N": 1000000,
+   "mode": "faithful",
+   "wall_s": 1.682883304078132,
+   "per_orbit_ms": 0.0016828833040781318,
+   "alloc_h2d_ms": 1.7001919746398926,
+   "kernel_ms": 1294.6185302734375,
+   "d2h_ms": 382.1909484863281,
+   "nfev_mean": 1655.350237,
+   "nfev_max": 3475,
+   "naccept_mean": 85.894963,
+   "nreject_mean": 33.175072,
+   "nfev_total": 1655350237,
+   "fevals_per_s_kernel": 1278639381.6334238,
+   "warp_lane_eff_static": 0.7590868820083976
+  }
+ ]
+}

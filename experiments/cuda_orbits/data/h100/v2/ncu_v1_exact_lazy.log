@@ -1,0 +1,14 @@
+==WARNING== Could not deploy stock section files to "/home/bovy/Documents/NVIDIA Nsight Compute/2025.2.1/Sections".
+Set the HOME environment variable to a writable directory.
+==WARNING== Using "/cvmfs/soft.computecanada.ca/easybuild/software/2023/x86-64-v3/Core/cudacore/12.9.1/nsight-compute-2025.2.1/target/linux-desktop-glibc_2_11_3-x64/../../sections" instead.
+==WARNING== See https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#faq.
+==PROF== Connected to process 1159181 (/home/bovy/miniconda3/envs/galpy-h100/bin/python3.13)
+==WARNING== Unable to access the following 6 metrics: ctc__rx_bytes_data_user.sum, ctc__rx_bytes_data_user.sum.pct_of_peak_sustained_elapsed, ctc__rx_bytes_data_user.sum.per_second, ctc__tx_bytes_data_user.sum, ctc__tx_bytes_data_user.sum.pct_of_peak_sustained_elapsed, ctc__tx_bytes_data_user.sum.per_second.
+
+
+==PROF== Profiling "k_integrate": 0%
+==WARNING== Launching the workload is taking more time than expected. If this continues to hang, terminate the profile and re-try by profiling the range of all related launches using '--replay-mode range'. See https://docs.nvidia.com/nsight-compute/ProfilingGuide/index.html#replay for more details.
+....50%....100% - 38 passes
+nfev_total 590473905 kernel_ms 218574.78125
+==PROF== Disconnected from process 1159181
+==PROF== Report: /scratch/bovy/galpy-h100/galpy-jax/experiments/cuda_orbits/data/h100/v2/ncu_v1_exact_lazy.ncu-rep

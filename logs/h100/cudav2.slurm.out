@@ -1,0 +1,46 @@
+NVIDIA H100 80GB HBM3, 580.173.02
+>>> 07:35:24 [cudav2] grep RmProfilingAdminOnly /proc/driver/nvidia/params || true
+    ok 07:35:24
+>>> 07:35:24 [cudav2] cd /scratch/bovy/galpy-h100/galpy-jax/experiments/cuda_orbits && mkdir -p data/h100/v2 && PY=/home/bovy/miniconda3/envs/galpy-h100/bin/python ./run_h100_v2.sh 2>&1 | tee data/h100/v2/run.log
+    ok 08:04:17
+>>> 08:04:17 [cudav2] done
+
+scontrol show job 1058048
+JobId=1058048 JobName=galpy-h100
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1343579 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:28:59 TimeLimit=02:00:00 TimeMin=N/A
+   SubmitTime=2026-10-08T07:35:17 EligibleTime=2026-10-08T07:35:17
+   AccrueTime=2026-10-08T07:35:17
+   StartTime=2026-10-08T07:35:18 EndTime=2026-10-08T08:04:17 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-08T07:35:18 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:3696576
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0004
+   BatchHost=trig0004
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/galpy-jax/tools/trillium_job.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-cudav2-%j.out --export=ALL,STAGE=cudav2 tools/trillium_job.sbatch --export=NONE --parsable --account=def-bovy --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-cudav2-%j.out --export=ALL,STAGE=cudav2 tools/trillium_job.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/galpy-jax
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-cudav2-%j.out --export=ALL,STAGE=cudav2 tools/trillium_job.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/galpy-h100-cudav2-1058048.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1058048
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1058048      galpy-h100   def-bovy   00:29:00                         00:00:00   00:00:00      0:0 
+1058048.bat+      batch   def-bovy   00:29:00                         00:00:00   00:00:00      0:0 
+1058048.ext+     extern   def-bovy   00:29:00                         00:00:00   00:00:00      0:0 
+

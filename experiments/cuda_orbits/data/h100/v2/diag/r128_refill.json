@@ -1,0 +1,50 @@
+{
+ "backend": "cuda (galpy dop853_c port, one thread per orbit)",
+ "device": "NVIDIA H100 80GB HBM3 (sm_90, 132 SMs)",
+ "variant": "_r128",
+ "block": 128,
+ "refill": true,
+ "sort": false,
+ "pinned": false,
+ "fixed_nstep": 0,
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "rtol": 1e-08,
+ "atol": 1e-08,
+ "potential": "MWPotential2014",
+ "host": "trig0004",
+ "results": [
+  {
+   "N": 1000000,
+   "mode": "faithful",
+   "wall_s": 9.534968864172697,
+   "per_orbit_ms": 0.009534968864172697,
+   "alloc_h2d_ms": 3.2143681049346924,
+   "kernel_ms": 8908.44921875,
+   "d2h_ms": 622.1157836914062,
+   "nfev_mean": 3465.544401,
+   "nfev_max": 7750,
+   "naccept_mean": 188.308653,
+   "nreject_mean": 58.083146,
+   "nfev_total": 3465544401,
+   "fevals_per_s_kernel": 389017697.233534,
+   "warp_lane_eff_static": 0.6881588883538715
+  },
+  {
+   "N": 1000000,
+   "mode": "lazy",
+   "wall_s": 9.579617303796113,
+   "per_orbit_ms": 0.009579617303796112,
+   "alloc_h2d_ms": 2.9632320404052734,
+   "kernel_ms": 8874.080078125,
+   "d2h_ms": 635.8517456054688,
+   "nfev_mean": 2945.618442,
+   "nfev_max": 6703,
+   "naccept_mean": 188.308653,
+   "nreject_mean": 58.083146,
+   "nfev_total": 2945618442,
+   "fevals_per_s_kernel": 331935075.6436241,
+   "warp_lane_eff_static": 0.6779224631865736
+  }
+ ]
+}
