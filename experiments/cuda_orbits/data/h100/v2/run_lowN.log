@@ -1,0 +1,81 @@
+NVIDIA H100 80GB HBM3, 580.173.02
+Build cuda_12.9.r12.9/compiler.36037853_0
+gcc (Gentoo 12.3.1_p20230526 p2) 12.3.1 20230526
+/scratch/bovy/galpy-h100/jobs/pybin/python
+numpy 2.5.3
+== build_ptxas_f32.log
+  k_integrateILb0 sm_90 Used 144 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrateILb1 sm_90 Used 146 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 139 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 140 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+== build_ptxas_f32_noinl.log
+  k_integrateILb0 sm_90 Used 153 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrateILb1 sm_90 Used 151 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 154 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 148 registers; 32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+== build_ptxas_fastgam.log
+  k_integrateILb0 sm_90 Used 255 registers; 104 bytes stack frame, 76 bytes spill stores, 100 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 112 bytes stack frame, 88 bytes spill stores, 96 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 88 bytes stack frame, 60 bytes spill stores, 68 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 80 bytes stack frame, 56 bytes spill stores, 48 bytes spill loads
+== build_ptxas_fast.log
+  k_integrateILb0 sm_90 Used 255 registers; 88 bytes stack frame, 72 bytes spill stores, 72 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 96 bytes stack frame, 60 bytes spill stores, 72 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 72 bytes stack frame, 44 bytes spill stores, 52 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 72 bytes stack frame, 48 bytes spill stores, 40 bytes spill loads
+== build_ptxas_fast_noinl.log
+  k_integrateILb0 sm_90 Used 255 registers; 136 bytes stack frame, 104 bytes spill stores, 116 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 136 bytes stack frame, 112 bytes spill stores, 120 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 120 bytes stack frame, 92 bytes spill stores, 84 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 120 bytes stack frame, 84 bytes spill stores, 84 bytes spill loads
+== build_ptxas_fastpow.log
+  k_integrateILb0 sm_90 Used 255 registers; 104 bytes stack frame, 76 bytes spill stores, 100 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 112 bytes stack frame, 76 bytes spill stores, 88 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 80 bytes stack frame, 64 bytes spill stores, 72 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 80 bytes stack frame, 48 bytes spill stores, 40 bytes spill loads
+== build_ptxas.log
+  k_integrateILb0 sm_90 Used 255 registers; 112 bytes stack frame, 84 bytes spill stores, 108 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 112 bytes stack frame, 88 bytes spill stores, 96 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 88 bytes stack frame, 72 bytes spill stores, 80 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 96 bytes stack frame, 72 bytes spill stores, 64 bytes spill loads
+== build_ptxas_nofma.log
+  k_integrateILb0 sm_90 Used 255 registers; 152 bytes stack frame, 124 bytes spill stores, 148 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 160 bytes stack frame, 136 bytes spill stores, 144 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 255 registers; 96 bytes stack frame, 68 bytes spill stores, 76 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 80 bytes stack frame, 56 bytes spill stores, 48 bytes spill loads
+== build_ptxas_noinl.log
+  k_integrateILb0 sm_90 Used 255 registers; 152 bytes stack frame, 120 bytes spill stores, 132 bytes spill loads
+  k_integrateILb1 sm_90 Used 255 registers; 144 bytes stack frame, 120 bytes spill stores, 128 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 254 registers; 144 bytes stack frame, 104 bytes spill stores, 104 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 255 registers; 128 bytes stack frame, 88 bytes spill stores, 88 bytes spill loads
+== build_ptxas_r128.log
+  k_integrateILb0 sm_90 Used 128 registers; 728 bytes stack frame, 884 bytes spill stores, 3852 bytes spill loads
+  k_integrateILb1 sm_90 Used 128 registers; 752 bytes stack frame, 924 bytes spill stores, 3872 bytes spill loads
+  k_integrate_refillILb0 sm_90 Used 128 registers; 696 bytes stack frame, 836 bytes spill stores, 3152 bytes spill loads
+  k_integrate_refillILb1 sm_90 Used 128 registers; 760 bytes stack frame, 900 bytes spill stores, 3340 bytes spill loads
+built: libcudaorbits_f32_noinl.so libcudaorbits_f32.so libcudaorbits_fastgam.so libcudaorbits_fast_noinl.so libcudaorbits_fastpow.so libcudaorbits_fast.so libcudaorbits_nofma.so libcudaorbits_noinl.so libcudaorbits_r128.so libcudaorbits.so 
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=       1: wall    0.045s (44504.051 us/orbit; kernel 44.1 ms, d2h 0.0 ms); nfev/orbit 3268 (max 3268)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=       3: wall    0.077s (25660.593 us/orbit; kernel 76.5 ms, d2h 0.0 ms); nfev/orbit 3427 (max 4172)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=      10: wall    0.074s (7409.113 us/orbit; kernel 73.6 ms, d2h 0.0 ms); nfev/orbit 3399 (max 4591)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=      30: wall    0.103s (3449.913 us/orbit; kernel 103.0 ms, d2h 0.0 ms); nfev/orbit 3605 (max 5307)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=     100: wall    0.095s ( 951.867 us/orbit; kernel 94.7 ms, d2h 0.0 ms); nfev/orbit 3347 (max 5329)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=     300: wall    0.108s ( 358.905 us/orbit; kernel 107.1 ms, d2h 0.0 ms); nfev/orbit 3471 (max 5569)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=    1000: wall    0.110s ( 110.234 us/orbit; kernel 109.7 ms, d2h 0.1 ms); nfev/orbit 3455 (max 6409)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=    3000: wall    0.126s (  41.903 us/orbit; kernel 125.0 ms, d2h 0.1 ms); nfev/orbit 3458 (max 7318)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=   10000: wall    0.119s (  11.894 us/orbit; kernel 118.0 ms, d2h 0.3 ms); nfev/orbit 3474 (max 6529)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=   30000: wall    0.125s (   4.175 us/orbit; kernel 123.6 ms, d2h 0.8 ms); nfev/orbit 3471 (max 6852)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  100000: wall    0.295s (   2.954 us/orbit; kernel 291.3 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  300000: wall    0.746s (   2.486 us/orbit; kernel 736.1 ms, d2h 8.2 ms); nfev/orbit 3465 (max 7691)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=       1: wall    0.020s (20485.426 us/orbit; kernel 20.2 ms, d2h 0.0 ms); nfev/orbit 3268 (max 3268)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=       3: wall    0.030s (9850.793 us/orbit; kernel 29.2 ms, d2h 0.0 ms); nfev/orbit 3411 (max 4172)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=      10: wall    0.033s (3283.098 us/orbit; kernel 32.5 ms, d2h 0.0 ms); nfev/orbit 3398 (max 4591)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=      30: wall    0.041s (1354.156 us/orbit; kernel 40.3 ms, d2h 0.0 ms); nfev/orbit 3600 (max 5229)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=     100: wall    0.040s ( 395.982 us/orbit; kernel 39.2 ms, d2h 0.0 ms); nfev/orbit 3347 (max 5329)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=     300: wall    0.043s ( 143.155 us/orbit; kernel 42.6 ms, d2h 0.0 ms); nfev/orbit 3472 (max 5569)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=    1000: wall    0.046s (  46.371 us/orbit; kernel 46.0 ms, d2h 0.0 ms); nfev/orbit 3456 (max 6409)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=    3000: wall    0.052s (  17.301 us/orbit; kernel 51.3 ms, d2h 0.1 ms); nfev/orbit 3457 (max 7318)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=   10000: wall    0.049s (   4.873 us/orbit; kernel 47.9 ms, d2h 0.3 ms); nfev/orbit 3474 (max 6529)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=   30000: wall    0.053s (   1.755 us/orbit; kernel 51.1 ms, d2h 0.8 ms); nfev/orbit 3471 (max 6852)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=  100000: wall    0.119s (   1.189 us/orbit; kernel 115.0 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=  300000: wall    0.298s (   0.992 us/orbit; kernel 287.8 ms, d2h 8.2 ms); nfev/orbit 3465 (max 7691)
+done 09:43:12
