@@ -15,9 +15,8 @@ assert torch.cuda.is_available(), "this example needs a CUDA GPU"
 from galpy.orbit import Orbit
 from galpy.potential import MWPotential2014
 
-# the times on the GPU too: with numpy times, torchode raises (its
-# same_device assertion; galpy does not move numpy times onto the IC's device
-# for torchode, while it does for torchdiffeq)
+# the times on the GPU (with galpy PR #PRNUM numpy times work too, checked
+# below; before it torchode raised its same_device assertion)
 ts = torch.linspace(0.0, 10.0, 101, dtype=torch.float64, device="cuda")
 
 # --- paper snippet begins ---
@@ -36,12 +35,10 @@ oc = Orbit([1.0, 0.1, 1.1, 0.0, 0.05, 0.0])
 tsn = ts.cpu().numpy()
 oc.integrate(tsn, MWPotential2014, method="dop853_c")
 numpy.testing.assert_allclose(R.cpu().numpy(), oc.R(tsn), rtol=1e-6, atol=1e-6)
-# KNOWN DEFECT: numpy times + a CUDA IC fail with torchode
+# numpy times + a CUDA IC with torchode (fixed in galpy PR #PRNUM)
 o2 = Orbit(torch.tensor([1.0, 0.1, 1.1, 0.0, 0.05, 0.0], device="cuda"))
-try:
-    o2.integrate(tsn, MWPotential2014, method="torchode")
-except AssertionError:
-    print("numpy times + CUDA IC with torchode: still fails (galpy defect)")
-else:
-    print("numpy times + CUDA IC with torchode now works: drop the note")
+o2.integrate(tsn, MWPotential2014, method="torchode")
+R2 = o2.R(tsn)
+assert R2.device.type == "cuda"
+numpy.testing.assert_allclose(R2.cpu().numpy(), R.cpu().numpy(), rtol=1e-12)
 print("OK")

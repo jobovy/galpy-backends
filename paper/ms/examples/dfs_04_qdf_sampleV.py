@@ -4,15 +4,15 @@ Claims: the quasi-isothermal DF's velocity sampler at a given position draws
 by inverse transformation, such that, for a fixed key, a sample is
 differentiable in the DF's parameters.
 
-NOTES:
-- as originally written (no backend context), sampleV(...,key=<jax key>) on a
-  qdf built from Python floats raises a TypeError (numpy and jax arrays mixed
-  in the inverse-CDF draw); it runs inside galpy.backend.use('jax').
-- the derivative of the sample w.r.t. the DF's parameters is finite and
-  matches a finite difference for MWPotential, but is NaN for MWPotential2014
-  (the gradient of the DF on the v_T=0 node of the velocity mesh, where L_z=0,
-  is NaN; jax_debug_nans points at _cumcdf in _sampleV_icdf). This is a galpy
-  defect; the check below flags when it is fixed.
+NOTES (both fixed in galpy PR #PRNUM, checked below):
+- before the PR, sampleV(...,key=<jax key>) on a qdf built from Python floats
+  without a backend context raised a TypeError (numpy and jax arrays mixed in
+  the inverse-CDF draw), hence the use('jax') in the snippet; with it the
+  draw follows the key, so the context can be dropped once it is merged.
+- before the PR, the derivative of the sample w.r.t. the DF's parameters was
+  NaN for MWPotential2014 (far-tail rows of the velocity mesh with total
+  probability ~1e-177, whose CDF normalisation's 1/total**2 derivative
+  overflowed); it now matches a finite difference as for MWPotential.
 """
 
 import time
@@ -67,11 +67,14 @@ fd = (sigR(0.2 + h) - sigR(0.2 - h)) / (2 * h)
 print("MWPotential:", float(g), float(fd))
 # the inverse CDF is piecewise linear in the tables: FD agrees to ~1e-5
 numpy.testing.assert_allclose(float(g), float(fd), rtol=3e-5)
-# KNOWN DEFECT: NaN for MWPotential2014
-g14 = jax.grad(make_sigR(MWPotential2014, aAS, 100))(0.2)
-print("MWPotential2014:", float(g14))
-assert numpy.isnan(float(g14)), (
-    "the MWPotential2014 qdf derivative is no longer NaN: galpy was fixed, "
-    "check it against a finite difference here instead"
-)
+# MWPotential2014 (NaN before galpy PR #PRNUM)
+sigR14 = make_sigR(MWPotential2014, aAS, 100)
+g14 = jax.grad(sigR14)(0.2)
+fd14 = (sigR14(0.2 + h) - sigR14(0.2 - h)) / (2 * h)
+print("MWPotential2014:", float(g14), float(fd14))
+numpy.testing.assert_allclose(float(g14), float(fd14), rtol=3e-5)
+# and without the backend context (galpy PR #PRNUM): the same draw
+vs_noctx = qdf.sampleV(0.9, 0.05, n=10**4, key=grandom.key(0, backend="jax"))
+assert isinstance(vs_noctx, jax.Array)
+numpy.testing.assert_array_equal(numpy.asarray(vs_noctx), numpy.asarray(vs))
 print("OK")

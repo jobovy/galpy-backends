@@ -3,11 +3,12 @@
 Claim: a DF built from a density that is not the one generating the
 potential (a tracer) is differentiable w.r.t. the parameters of both.
 
-NOTE: the snippet (tracer parameter) runs as written. The derivative w.r.t.
-the POTENTIAL's parameter fails without a backend context (the constructor
-evaluates the potential at Python floats, e.g. r=0 in _handle_rmin, which go
-to numpy and meet the traced parameter); it runs inside
-galpy.backend.use('jax'), which is how it is checked below.
+NOTE: the snippet (tracer parameter) runs as written. Before galpy PR
+#PRNUM the derivative w.r.t. the POTENTIAL's parameter failed without a
+backend context (the constructor evaluated the potential at Python floats,
+e.g. r=0 in _handle_rmin, which went to numpy and met the traced parameter)
+and ran only inside galpy.backend.use('jax'); with the PR it runs without
+one. Both are checked below.
 """
 
 import time
@@ -73,12 +74,7 @@ def dispersion_pot_noctx(a_pot):
     return df.sigmar(jnp.asarray(1.0))
 
 
-try:
-    jax.grad(dispersion_pot_noctx)(2.0)
-except Exception as e:  # noqa: BLE001
-    print("w.r.t. the potential without use('jax'):", type(e).__name__)
-else:
-    raise AssertionError("now works without use('jax'): update the paper note")
+gp_noctx = jax.grad(dispersion_pot_noctx)(2.0)  # galpy PR #PRNUM
 
 
 def dispersion_pot_np(a_pot):
@@ -93,6 +89,7 @@ fdp = (
     -dispersion_pot_np(2.0 + 2 * h) + 8 * dispersion_pot_np(2.0 + h)
     - 8 * dispersion_pot_np(2.0 - h) + dispersion_pot_np(2.0 - 2 * h)
 ) / (12 * h)
-print(float(gp), fdp)
+print(float(gp), float(gp_noctx), fdp)
 numpy.testing.assert_allclose(float(gp), fdp, rtol=1e-6)
+numpy.testing.assert_allclose(float(gp_noctx), float(gp), rtol=1e-12)
 print("OK")

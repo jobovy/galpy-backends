@@ -3,12 +3,13 @@
 Claim: for the King model, the derivative w.r.t. W0 (through the solution of
 the Poisson equation) runs under jax.jit, where the ODE is solved by diffrax.
 
-NOTE: as originally written (no backend context), kingdf(W0=<tracer>) fails
-both eagerly and under jax.jit: the constructor evaluates its potential at
-Python floats, which dispatch to numpy and meet the traced W0. Inside
-galpy.backend.use('jax') those floats go to jax and both work; the eager
-derivative takes ~2 min on a CPU, so the snippet now shows only the jitted
-one (~1 min, nearly all compilation).
+NOTE: before galpy PR #PRNUM, kingdf(W0=<tracer>) without a backend
+context failed both eagerly and under jax.jit: the constructor evaluated its
+potential at Python floats, which dispatched to numpy and met the traced W0.
+Hence the use('jax') in the snippet; with the PR the constructor follows the
+traced W0 (checked below), so the context can be dropped once it is merged.
+The eager derivative takes ~2 min on a CPU, so the snippet shows only the
+jitted one (~1 min, nearly all compilation).
 """
 
 import time
@@ -49,16 +50,12 @@ fd = (
 print(float(g), fd)
 # the jitted (diffrax) solve vs the scipy solve: agree to ~1e-8 (galpy's tests)
 numpy.testing.assert_allclose(float(g), fd, rtol=1e-6)
-# and without the backend context the derivative does not run (the reason
-# for the context in the snippet; flip this when galpy dispatches on W0)
+# and without the backend context (galpy PR #PRNUM): the same derivative
 def sigmar_noctx(W0):
     return kingdf(W0=W0, M=2.3, rt=1.4).sigmar(jnp.asarray(0.5))
 
 
-try:
-    jax.grad(sigmar_noctx)(3.0)
-except Exception as e:  # noqa: BLE001
-    print("without use('jax'):", type(e).__name__)
-else:
-    raise AssertionError("kingdf(W0=tracer) now works without use('jax')")
+g_noctx = jax.jit(jax.grad(sigmar_noctx))(3.0)
+print("without use('jax'):", float(g_noctx))
+numpy.testing.assert_allclose(float(g_noctx), float(g), rtol=1e-12)
 print("OK")

@@ -5,9 +5,10 @@ differentiated w.r.t. the potential, in the same way.
 
 NOTE: streamTrack returns a StreamTrack object, which is not a jax pytree, so
 jax.jacfwd cannot differentiate a function returning it; the snippet now
-returns the track evaluated at fixed times tps (StreamTrack.x). Forward mode
-(jax.jacfwd) also needs integrate_kwargs={'adjoint':'direct'} and a jax
-progenitor Orbit (see streams_02).
+returns the track evaluated at fixed times tps (StreamTrack.x). Before galpy
+PR #PRNUM forward mode (jax.jacfwd) also needed
+integrate_kwargs={'adjoint':'direct'} and a jax progenitor Orbit; with it,
+neither (see streams_02).
 The derivative is that of the fit with its discrete choices frozen; see the
 KNOWN LIMITATION below.
 """

@@ -377,4 +377,4 @@ Verified by DOI through the Crossref API (`https://api.crossref.org/works/<doi>`
 ## Additions of 2026-10-07 (galpy component citations, as listed in galpy's docs "Acknowledging galpy")
 - `Webb2019` 10.1093/mnras/stz2118 (Crossref; volume/page 488, 5748 from the ADS bibcode 2019MNRAS.488.5748W given in galpy's docs) — ttensor/rtide.
 - `Webb2020` 10.1093/mnras/staa788 (Crossref: MNRAS 494, 2268) — to_amuse (galpy docs cite it as Webb et al. 2019b, arXiv:1910.01646).
-- `BovyInPrep` — actionAngleVerticalInverse, per JB: cite as "Bovy, in prep." (title placeholder; JB to confirm).
+- actionAngleVerticalInverse: cited in the text as "(J. Bovy, in prep.)", no reference-list entry (AAS style).

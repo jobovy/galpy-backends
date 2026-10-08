@@ -4,10 +4,13 @@ Claim: when there is no array to dispatch on, the default backend set by the
 galpy.backend.use context manager is used.
 
 NOTE: the original snippet built an Orbit from Python floats inside the
-context and claimed it was integrated in jax; that is false (an Orbit's
-backend follows its initial condition only: the IC stays numpy and the
-integration runs in C). The snippet now evaluates a potential at Python
-floats, which does follow the context.
+context and claimed its IC becomes a jax array. Before galpy PR
+#PRNUM that was false (the IC stayed numpy and the integration ran in C);
+with it, Orbit([floats]) inside an unforced use('jax') gets a jax IC, as
+checked below, so the original snippet can be restored once it is merged
+(the default method still integrates in C, returning jax arrays; an
+in-backend method= integrates in jax). The snippet here evaluates a
+potential at Python floats, which follows the context either way.
 """
 
 import jax
@@ -29,11 +32,18 @@ numpy.testing.assert_allclose(
 )
 # outside the context, the default (numpy) is back
 assert not isinstance(evaluatePotentials(MWPotential2014, 1.0, 0.0), jax.Array)
-# and the claim the original snippet made does NOT hold: an Orbit from floats
-# stays numpy inside the context
+# and the claim the original snippet made (galpy PR #PRNUM): an Orbit from
+# floats inside the context gets a jax IC, and is integrated in jax with an
+# in-backend method
 from galpy.orbit import Orbit
 
+ts = numpy.linspace(0.0, 10.0, 101)
 with galpy.backend.use("jax"):
-    o = Orbit([1.0, 0.1, 1.1, 0.0, 0.05, 0.0])
-assert isinstance(o.vxvv, numpy.ndarray) and o._ic_backend is None
+    o = Orbit([1.0, 0.1, 1.1, 0.0, 0.05, 0.0])  # IC becomes a jax array
+    o.integrate(ts, MWPotential2014, method="diffrax")
+assert isinstance(o._ic_backend, jax.Array), type(o._ic_backend)
+assert isinstance(o.R(ts), jax.Array)
+oc = Orbit([1.0, 0.1, 1.1, 0.0, 0.05, 0.0])
+oc.integrate(ts, MWPotential2014, method="dop853_c")
+numpy.testing.assert_allclose(numpy.asarray(o.R(ts)), oc.R(ts), rtol=1e-8)
 print("OK")

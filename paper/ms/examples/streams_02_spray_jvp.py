@@ -5,13 +5,17 @@ the potential (for a fixed key); the forward-mode derivative gives the change
 of every particle's position for a unit change in the halo flattening and
 agrees with a finite difference of the same sample (same random numbers).
 
-NOTE: forward-mode differentiation (jax.jvp) through diffrax's default
-(checkpointed) adjoint raises "can't apply forward-mode autodiff (jvp) to a
-custom_vjp function"; integrate_kwargs={'adjoint':'direct'} is required.
-And the progenitor must be a jax Orbit: with Orbit(ic) from a list, the
-progenitor is integrated off the differentiable path and the derivative
-disagrees with a finite difference at 7e-5 (and the jvp primal with a plain
-call at 1.5e-5); with Orbit(jnp.asarray(ic)) they agree to ~1e-6.
+NOTE: before galpy PR #PRNUM, forward-mode differentiation (jax.jvp)
+through diffrax's default (checkpointed) adjoint raised "can't apply
+forward-mode autodiff (jvp) to a custom_vjp function", so the snippet passes
+integrate_kwargs={'adjoint':'direct'}; and with a numpy progenitor
+(Orbit(ic) from a list) the derivative disagreed with a finite difference at
+7e-5 -- not because the progenitor escaped the differentiable path, but
+because the backend sampler splined the progenitor on a coarser grid than
+the numpy sampler the finite difference of plain calls runs (~1e-7 off in
+velocity, ~7e-6 in the stream). With the PR galpy picks the direct adjoint
+under jvp/jacfwd itself and the two samplers agree to ~1e-8, so both can be
+simplified back once it is merged (checked below).
 """
 
 import time
@@ -70,4 +74,30 @@ ad = numpy.asarray(dxv)
 err = numpy.max(numpy.abs(ad - fd)) / numpy.max(numpy.abs(ad))
 print("max |AD - FD| / max |AD|:", err)
 assert err < 1e-6, err
+
+
+# galpy PR #PRNUM: a numpy progenitor and no integrate_kwargs give the same
+# forward-mode derivative, which matches a finite difference of plain calls
+def leading_arm_np(q):
+    lp = LogarithmicHaloPotential(normalize=1.0, q=q)
+    spdf = fardal15spraydf(mass, progenitor=Orbit(ic), pot=lp, tdisrupt=td)
+    return spdf.sample(n=1500, return_orbit=False, tail="leading", key=key)
+
+
+xv2, dxv2 = jax.jvp(leading_arm_np, (q0,), (1.0,))
+err2 = numpy.max(numpy.abs(numpy.asarray(dxv2) - ad)) / numpy.max(numpy.abs(ad))
+print("numpy progenitor, default adjoint vs the snippet:", err2)
+assert err2 < 1e-10, err2
+
+
+def arm_np(q):
+    return numpy.asarray(leading_arm_np(q))
+
+
+fd_np = (
+    -arm_np(q0 + 2 * h) + 8 * arm_np(q0 + h) - 8 * arm_np(q0 - h) + arm_np(q0 - 2 * h)
+) / (12 * h)
+err_np = numpy.max(numpy.abs(ad - fd_np)) / numpy.max(numpy.abs(ad))
+print("max |AD - FD(numpy progenitor)| / max |AD|:", err_np)
+assert err_np < 1e-6, err_np
 print("OK")
