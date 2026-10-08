@@ -119,6 +119,41 @@ and merged them; the CPU series are untouched.
   makes a jitted construction run; measuring it would need a change to gS4's
   measure code.
 
+**CUDA orbit experiment (`experiments/cuda_orbits`, stage `cudaexp`, job 1055618, 42 min).**
+The branch was rebased onto main 902e453. The build used `module load StdEnv/2023 gcc/12.3 cuda/12.9`
+(nvcc 12.9.86); a bare `module load cuda` loads nothing on Trillium, and cuda/13.x is newer than the
+driver's CUDA 13.0. Output: `experiments/cuda_orbits/data/h100/cuda_gpu_hiN*.json`, log `cudaexp.log`.
+
+- **ptxas (sm_90)**, `k_integrate<false>/<true>`:
+  - default: 255 registers, 96/104 B stack, 72/76 B spill stores, 96/84 B spill loads.
+  - nofma: 255 registers, 112/136 B spill.
+  - f32: 142-144 registers, no spills.
+  - r128: 128 registers, 932/3924 B spill.
+- **Correctness vs galpy dop853_c**, 300 orbits over 2 Gyr:
+  - The host build is bit-identical to galpy C (100%).
+  - GPU (FMA): max |dx|/|x| at t_end 1.55e-6 (median 3.7e-13); max rel. diff over any coordinate/save 3.2e-3.
+    80.3% of orbits take the same accepted/rejected steps as galpy C (max 3.6e-7 among those).
+  - GPU nofma: 4.85e-6 at t_end, also 80.3% with the same step counts.
+  - All GPU differences are within galpy's own truncation error: tol 1e-8 vs 1e-13 already gives up to 1.4e-5.
+- **Timings**, µs/orbit, wall time including alloc + H2D + kernel + D2H, nt=16:
+
+| N | 1e3 | 1e4 | 1e5 | 1e6 | 3e6 | 1e7 |
+|---|---|---|---|---|---|---|
+| lazy dense | 110 | 13.3 | 11.2 | 11.5 | 19.4 | 21.2 |
+| faithful dense | 116 | 12.5 | 22.8 | 20.9 | 8.6 | 9.2 |
+
+  The device-to-host copy is erratic above 1e5 (3e6: 25.5 s lazy vs 1.2 s faithful; 1e5
+  faithful: 1.6 s), so the wall times there are copy noise. **Kernel-only** time is linear:
+  lazy ~10.8-11.0 µs/orbit (1e5-1e7), faithful ~6.7-8.4 µs/orbit.
+- **Variants** (lazy, 1e6 unless noted):
+  - r128: 11.9 µs, no gain over 255 registers.
+  - block 64: 29.2 µs wall, a D2H outlier; its kernel time is 11.0 µs, unchanged.
+  - block 256: 10.7 µs.
+  - float32 at tol 1e-5: 1.9 µs.
+  - float64 at tol 1e-5: 5.1 µs.
+- Nothing failed.
+- For comparison at 1e6: jax Dopri8 16.4 µs/orbit, torch dopri5 9.2 µs/orbit (hiN2).
+
 ## Machine and software
 
 | | |
