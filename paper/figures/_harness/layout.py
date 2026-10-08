@@ -37,7 +37,7 @@ def label(fw, dev, mode=None, extra=""):
     size. ``dev=None`` omits the device (a panel title already names it)."""
     fw = fw.lower()
     name = {"c": "galpy C", "numpy": "numpy", "jax": "jax", "torch": "torch",
-            "galax": "galax"}[fw]
+            "galax": "galax", "cuda": "CUDA kernel"}[fw]
     first = name + (f" {mode}" if mode and fw in ("jax", "torch") else "")
     second = ""
     if dev is not None and fw not in ("numpy", "c"):

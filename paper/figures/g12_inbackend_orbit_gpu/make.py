@@ -24,6 +24,10 @@ Five series, all integrating the *same* backend-agnostic galpy forces:
     match to the torch line: galpy ships Dopri8 on jax but dopri5 on torch, so the
     shipped jax-vs-torch crossover is NOT same-work; this line IS (same 5th-order
     method, matching nfev/steps -- see below). Local to g12 (measure/jax_dopri5_*).
+  * CUDA kernel (TITAN Xp / H100; galpy arith. solid, fast arith. long-dashed): the
+    experimental one-thread-per-orbit CUDA port of galpy's C forces and dop853
+    (experiments/cuda_orbits), NOT a galpy backend and not differentiable; shown
+    for scale (what GPU-native kernels would buy). Same orbit/tolerance/nt=16.
   * galpy in-backend (torch, GPU; dopri5, eager): the torchdiffeq dopri5 path
     (5th order -- torchdiffeq's dopri8 *backward* is buggy, so galpy ships dopri5 on
     torch). torchdiffeq runs EAGER (no jit-fuse of the adaptive-step loop), so every
@@ -133,6 +137,7 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # affinity stamped in its JSON ("cpu_affinity"; unstamped = the unpinned 72-thread
 # run). A series whose JSONs do not exist (yet) is skipped.
 _C1, _C16, _C_NODE = "1 core", "16 threads", "72 threads"
+_CUDA_FAST = "fast arith."  # unlabelled lines (the note names the line style)
 _SHOW_C16 = True
 _SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
@@ -147,7 +152,16 @@ _SERIES = [
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri8", None),
     (["jax_dopri5_gpu.json", "jax_dopri5_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri5", "-."),
     (["torch_cuda.json"], "torch", "gpu", "eager", "dopri5", None),
+    # experimental one-thread-per-orbit CUDA kernel (experiments/cuda_orbits): galpy's
+    # C forces + dop853 compiled for the GPU; galpy arithmetic (_noinl+refill) and the
+    # fast-arithmetic build (_fast_noinl+refill+sort). Not differentiable. Wall time
+    # incl. H2D + D2H into a reused pinned buffer. Shared with G8 (_shared/orbit_speed/
+    # data/[h100/]cuda_kernel*_hiN.json, copies of experiments/cuda_orbits/data/
+    # {titan,h100/v2}/scan_{noinl_refill,fast_noinl_refill_sort}_pinned.json)
+    (["cuda_kernel_hiN.json"], "cuda", "gpu", None, "galpy arith.", None),
+    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_LS),
 ]
+_NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 
 
 def _cpu_tag(d):
@@ -207,7 +221,7 @@ def make():
             d = _load(fnames, sub)
             if d is None or not d.get("results"):
                 continue
-            res = sorted(d["results"], key=lambda r: r["N"])
+            res = sorted((r for r in d["results"] if r["N"] <= _NMAX), key=lambda r: r["N"])
             Ns = numpy.array([r["N"] for r in res], dtype=float)
             wall = numpy.array([r["wall_s"] for r in res], dtype=float)
             st = palette.style(fw, d_, mode)
@@ -237,6 +251,11 @@ def make():
         "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
         transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
     )
+    ax.text(
+        0.025, 0.915, "purple long-dashed: CUDA kernel, fast arithmetic",
+        transform=ax.transAxes, fontsize=fs_note, color=palette.style("cuda", "h100")["color"],
+        va="top", ha="left",
+    )
     # Minimal in-figure stamp: tolerance, GPU, library versions. The integrator
     # details (Dopri8 vs dopri5, same-work nfev counts, eager-vs-compute,
     # controller architecture, compile amortization) live in caption.md.
@@ -260,7 +279,8 @@ def make():
         ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6), textcoords="offset points",
                     fontsize=fs_line, color=ln.get_color(), ha="left", va="top")
     palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
-                             if not ln.get_label().startswith("_") and ln not in node],
+                             if not ln.get_label().startswith("_") and ln not in node
+                             and _CUDA_FAST not in ln.get_label()],
                         fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)

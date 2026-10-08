@@ -36,6 +36,27 @@ galpy's per-orbit integrator (7.4 s)** — ~97× one-core C, ~3.4× the 72-threa
 node and ~9× the TITAN Xp — 0.0246 ms/orbit for galax per-orbit (7.4 s, equal
 to galpy) and 0.0130 ms/orbit for galax batched (3.9 s, ~6× the node).
 
+**CUDA kernel** (reddish purple: TITAN Xp circles, H100 dark-purple diamonds). This
+is not a galpy backend. It is an experimental CUDA port of galpy's C forces and
+`dop853`, one thread per orbit (`experiments/cuda_orbits`), shown for scale: what
+GPU-native kernels would buy. **Solid**: galpy's own arithmetic (the GSL incomplete
+gamma and libm `pow`), with one out-of-line force function and a persistent-thread
+kernel that hands a finished lane the next orbit. **Long-dashed**: the same with
+division- and `pow`-free special functions and a cost-sorted schedule. Both use the
+same orbit, tolerance (1e-8) and 16 saves as the hiN points. Wall time includes the
+host↔device copies (pinned, reused buffer) and, for the fast line, the host argsort;
+one-time nvcc compilation is excluded. Both agree with `dop853_c` to within its own
+1e-8 truncation error: over 300 orbits, the maximum relative position difference
+after 2 Gyr is 1.6e-6 (galpy arithmetic) and 5.3e-6 (fast). galpy at 1e-8 differs
+from galpy at 1e-13 by up to 1.4e-5.
+On the H100 at N=10⁶ the kernel costs **2.36 µs/orbit** (galpy arithmetic) and
+**1.04 µs/orbit** (fast). That is 7× / 16× less than galpy's jax Dopri8 on the same
+GPU, 4× / 9× less than torch dopri5, 34× / 76× less than the 72-thread C node, and
+~1 000× / ~2 250× less than one core. On the TITAN Xp it costs 49 / 15.6 µs/orbit.
+Below N≈10⁴ a launch lasts as long as its slowest orbit, ≈0.1 s (H100) or ≈0.45 s
+(TITAN) for galpy arithmetic.
+These kernels are not differentiable.
+
 Colours follow the paper-wide convention (galpy C grey — one core dark grey,
 the 72-thread node light grey dash-dot — jax blue — sky blue on the CPU, darker on
 the GPUs, navy for the H100 — galax green); all jax/galax lines are jit-compiled

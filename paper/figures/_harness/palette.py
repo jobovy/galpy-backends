@@ -10,6 +10,7 @@ C (galpy)  grey       --              --
 jax        sky blue   blue            navy
 torch      orange     vermillion      dark red
 galax      green      green           dark green
+CUDA       --         reddish purple  dark purple
 =========  =========  ==============  ============
 
 jit / torch.compile = solid, eager = dashed. CPU = square, TITAN Xp = circle,
@@ -17,6 +18,11 @@ H100 = diamond. galpy C on several OpenMP threads: lighter grey, dash-dot
 (``c_threads_style``). Okabe-Ito / Wong (2011) hues, colour-blind safe, for the CPU and
 TITAN shades. A device-agnostic jax/torch line uses the TITAN shade
 (``style.BACKEND_COLORS``).
+
+"CUDA" is the experimental one-thread-per-orbit CUDA kernel compiled from galpy's
+C potentials and dop853 (experiments/cuda_orbits; not a galpy backend). Its
+galpy-arithmetic build is solid; the fast-arithmetic build (division/pow-free
+special functions) is long-dashed, ``CUDA_FAST_LS``.
 """
 
 import re
@@ -35,7 +41,13 @@ _COLOURS = {
     ("galax", "cpu"): "#009E73",
     ("galax", "titan"): "#009E73",
     ("galax", "h100"): "#00563F",
+    ("cuda", "cpu"): "#CC79A7",  # (host build; not plotted)
+    ("cuda", "titan"): "#CC79A7",  # Okabe-Ito reddish purple
+    ("cuda", "h100"): "#7B2D6B",
 }
+# CUDA kernel, fast-arithmetic variant: long dashes (distinct from eager "--",
+# Dopri5 "-." and the multi-thread C dash-dot styles)
+CUDA_FAST_LS = (0, (7, 2))
 _LS = {"jit": "-", "eager": "--", None: "-"}
 _MARKER = {"cpu": "s", "titan": "o", "h100": "D"}
 DEVICE_NAME = {"cpu": "CPU", "titan": "TITAN Xp", "h100": "H100"}
@@ -85,6 +97,8 @@ def parse(name, default_mode=None):
         fw = "torch"
     elif "jax" in n:
         fw = "jax"
+    elif "cuda kernel" in n:
+        fw = "cuda"
     elif "numpy" in n:
         fw = "numpy"
     elif re.search(r"(\bc\b|_c\b)", n):
@@ -113,7 +127,8 @@ def style_of(name, default_mode=None):
 def label(framework, device="cpu", mode=None, extra=""):
     """Canonical short label: "jax H100 jit (Dopri8)"."""
     fw = framework.lower()
-    parts = [{"c": "galpy C", "numpy": "numpy", "jax": "jax", "torch": "torch", "galax": "galax"}[fw]]
+    parts = [{"c": "galpy C", "numpy": "numpy", "jax": "jax", "torch": "torch", "galax": "galax",
+              "cuda": "CUDA kernel"}[fw]]
     if fw not in ("numpy", "c"):
         parts.append(DEVICE_NAME[_device(device)])
     if mode and fw in ("jax", "torch"):

@@ -51,7 +51,7 @@
     "description": "MWPotential2014 in-backend orbit integration wall time vs batch size N: galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "d581a1f",
-    "sha256": "81794320362e9efc34729f365d635f5a6a5cefaa68797b24540150d6317d03e3",
+    "git": "37d790d",
+    "sha256": "46597012b3005eb991d9ab16eabc7c4721ed9345516dec9fa4470880b13c7a61",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -290,7 +290,7 @@
     "description": "MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -298,8 +298,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "d581a1f",
-    "sha256": "f21408c4fec053a847609dc1fff1bf7180664085f7892a89c8461db7b947d671",
+    "git": "37d790d",
+    "sha256": "cb8ffd5cfe7d0fe26bdb614ff21d63333e97d4c438831f981e8211fd25d48eff",
     "track": "G"
   },
   "g9_variational_validity": {

@@ -107,6 +107,7 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # A series whose JSONs do not exist (yet) is skipped.
 _C1 = "galpy C (1 core)"
 _C_NODE = "galpy C (72 threads)"
+_CUDA_FAST = "CUDA kernel {dev} (fast arith.)"  # unlabelled (a note names the line style)
 _SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
      palette.c_threads_style(1)),
@@ -119,7 +120,14 @@ _SERIES = [
     (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax", "gpu", "jit",
      "galax {dev} (per-orbit steps)", "-."),
     (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "galax {dev} (batched steps)", None),
+    # experimental one-thread-per-orbit CUDA kernel compiled from galpy's C forces +
+    # dop853 (experiments/cuda_orbits; not a galpy backend, not differentiable), shared
+    # with G12: galpy arithmetic (solid, labelled) and fast arithmetic (long-dashed,
+    # named in a note); wall incl. H2D + D2H (pinned)
+    (["cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel {dev} (galpy arith.)", None),
+    (["cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_LS),
 ]
+_NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 
 
 def _cpu_tag(d):
@@ -184,7 +192,7 @@ def make():
             d = _load(fnames, sub)
             if d is None or not d.get("results"):
                 continue
-            res = sorted(d["results"], key=lambda r: r["N"])
+            res = sorted((r for r in d["results"] if r["N"] <= _NMAX), key=lambda r: r["N"])
             Ns = numpy.array([r["N"] for r in res], dtype=float)
             wall = numpy.array([r["wall_s"] for r in res], dtype=float)
             st = palette.style(fw, d_, mode)
@@ -210,6 +218,11 @@ def make():
         "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
         transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
     )
+    ax.text(
+        0.025, 0.915, "purple long-dashed: CUDA kernel, fast arithmetic",
+        transform=ax.transAxes, fontsize=fs_note, color=palette.style("cuda", "h100")["color"],
+        va="top", ha="left",
+    )
     # env stamp from the GPU JSON (the headline machine)
     if not PAPER:
         ax.text(
@@ -230,7 +243,8 @@ def make():
         ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6), textcoords="offset points",
                     fontsize=fs_line, color=ln.get_color(), ha="left", va="top")
     palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
-                             if not ln.get_label().startswith("_") and ln not in node],
+                             if not ln.get_label().startswith("_") and ln not in node
+                             and "fast arith." not in ln.get_label()],
                         fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
