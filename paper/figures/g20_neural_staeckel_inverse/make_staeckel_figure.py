@@ -35,7 +35,7 @@ def main():
                              "xtick.labelsize": 9, "ytick.labelsize": 9})
     fig, (axo, axl, axr) = plt.subplots(
         1, 3, figsize=(7.0, 3.3) if PAPER else (15.5, 4.7),
-        **({"width_ratios": [1.35, 1, 1]} if PAPER else {}))  # PAPER: room for (a)'s legend
+        **({"width_ratios": [1.35, 1, 1]} if PAPER else {}))
 
     # (a) meridional-plane orbit reconstruction
     for k, c in enumerate(ORB_C):
@@ -49,13 +49,27 @@ def main():
              ms=2.2 if PAPER else 3.5, label="NN $G(J,\\theta)$" if PAPER
              else "NN inverse $G(J,\\theta)$")
     axo.set_xlabel(r"$R$  [$R_0$]"); axo.set_ylabel(r"$z$  [$R_0$]")
-    if PAPER:
+    if PAPER:  # direct labels: each orbit's (J_R, J_z), stacked in headroom above the orbits
         axo.set_title("(a) orbit reconstruction")
-        lo, hi = axo.get_ylim()  # headroom for the legend above the orbits
-        axo.set_ylim(lo, lo + (hi - lo) / 0.62)
-        axo.legend(fontsize=8, loc="upper center", ncol=2, handlelength=1.0,
-                   handletextpad=0.3, columnspacing=0.6, borderaxespad=0.3, borderpad=0.3,
-                   title=r"integrated ($J_R$, $J_z$)", title_fontsize=8)
+        lo, hi = axo.get_ylim()
+        axo.set_ylim(lo, lo + (hi - lo) / 0.66)
+        axo.text(0.03, 0.03, "lines: integrated\ncircles: network", transform=axo.transAxes,
+                 fontsize=7, color="0.35", va="bottom", ha="left", linespacing=1.1)
+        # stagger the labels so that each leader (from the label's right end) clears the
+        # labels below it: the orbit whose top lies furthest right gets the top label
+        tops = [(float(numpy.asarray(d["orbit_R"][k])[int(numpy.argmax(d["orbit_z"][k]))]), k)
+                for k in range(len(ORB_C))]
+        n = len(tops)
+        for row, (_, k) in enumerate(sorted(tops, reverse=True)):
+            c = ORB_C[k]
+            R, z = numpy.asarray(d["orbit_R"][k]), numpy.asarray(d["orbit_z"][k])
+            i = int(numpy.argmax(z))
+            axo.annotate(f"$({float(d['orbit_JR'][k]):.3f},\\,{float(d['orbit_Jz'][k]):.3f})$",
+                         xy=(R[i], z[i]), xycoords="data",
+                         xytext=(0.04 + 0.13 * (n - 1 - row), 0.93 - 0.075 * row),
+                         textcoords="axes fraction", fontsize=8, color=c, va="center",
+                         ha="left", arrowprops=dict(arrowstyle="-", color=c, lw=0.6,
+                                                    relpos=(1.0, 0.5)))
     else:
         axo.set_title("(a) orbit reconstruction from actions+angles\n"
                       "(line=integrated, ○=neural inverse)")
@@ -73,7 +87,13 @@ def main():
     axl.set_title("(b) training loss" if PAPER else
                   f"(b) backprop through Staeckel AA (jax)\n"
                   f"trained in {float(d['train_seconds']):.0f}s on {d['device_kind']}")
-    axl.legend(fontsize=8 if PAPER else 8.5)
+    if PAPER:  # direct labels at the right end of each curve
+        axl.set_xlim(-150, 4700)
+        for col, lab, c, f in ((1, "total", JAX_C, 1.35), (2, "data", "#7aa5c2", 1.0),
+                               (3, "cycle", "#e07a5f", 0.85)):
+            axl.text(h[-1, 0] + 150, h[-1, col] * f, lab, color=c, fontsize=8, va="center")
+    else:
+        axl.legend(fontsize=8.5)
     axl.grid(alpha=0.25)
 
     # (c) round-trip: recovered vs input action
@@ -88,9 +108,10 @@ def main():
                    else r"recovered action  $F_J(G(J,\theta))$")
     if PAPER:
         axr.set_title("(c) round-trip actions")
-        axr.text(0.97, 0.04, f"RMS $\\Delta J$ = {rms:.1e}", transform=axr.transAxes,
-                 ha="right", va="bottom", fontsize=9)
-        axr.legend(fontsize=8, markerscale=6, loc="upper left")
+        axr.text(0.04, 0.96, f"RMS $\\Delta J$ = {rms:.1e}", transform=axr.transAxes,
+                 ha="left", va="top", fontsize=9)
+        axr.text(0.06, 0.12, "$J_z$", color="#e07a5f", fontsize=10, ha="center")
+        axr.text(0.16, 0.08, "$J_R$", color=JAX_C, fontsize=10, ha="center")
     else:
         axr.set_title(f"(c) round-trip closure\nRMS $\\Delta J$ = {rms:.2e}")
         axr.legend(fontsize=9, markerscale=4)
