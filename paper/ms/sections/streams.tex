@@ -199,7 +199,8 @@ progenitor and an \texttt{actionAngleIsochroneApprox} that integrates
 with \diffrax, every stage of the set-up is a backend computation, and
 the construction compiled with \texttt{jax.jit} reproduces the eager
 one to $2\times10^{-11}$. The density along the stream, the mean
-frequency, and the frequency--angle kicks are differentiable with
-respect to the subhalo's mass, scale, impact parameter, and velocity
-through the construction, and these derivatives agree with finite
-differences of rebuilt models to better than $10^{-6}$.
+frequency, and the frequency--angle kicks are differentiable through
+the construction with respect to the subhalo's mass, scale, impact
+parameter, and velocity, the time of the impact, and the parameters of
+the potential, and these derivatives agree with finite differences of
+rebuilt models to better than $10^{-6}$.
