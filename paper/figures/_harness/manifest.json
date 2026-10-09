@@ -99,7 +99,7 @@
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "34bca2d1d",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "d581a1f",
-    "sha256": "9b2d3997b258458dbe799541b64769197e866b188d84eb767e0de2b5a8494abc",
+    "git": "18153b7",
+    "sha256": "5d667339d76475cf1c73bec572f102ed6dbcf501e95261a31c14b3320d78527c",
     "track": "G"
   },
   "g16_icjacobian_precision": {
