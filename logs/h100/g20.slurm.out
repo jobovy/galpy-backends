@@ -1,0 +1,48 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+>>> 16:09:20 [g20] python -c 'import flax, optax, jax; print(flax.__version__, optax.__version__, jax.__version__, jax.devices())'
+    ok 16:09:32
+>>> 16:09:32 [g20] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g20_neural_staeckel_inverse/train_and_dump.py --smoke --out /scratch/bovy/galpy-h100/logs/g20_smoke.npz
+    ok 16:21:39
+>>> 16:21:39 [g20] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g20_neural_staeckel_inverse/train_and_dump.py
+    ok 17:53:06
+>>> 17:53:06 [g20] done
+
+scontrol show job 1063960
+JobId=1063960 JobName=galpy-h100
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1198805 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=01:43:55 TimeLimit=04:00:00 TimeMin=N/A
+   SubmitTime=2026-10-09T15:40:21 EligibleTime=2026-10-09T15:40:21
+   AccrueTime=2026-10-09T15:40:21
+   StartTime=2026-10-09T16:09:12 EndTime=2026-10-09T17:53:07 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T16:09:12 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2251187
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0036
+   BatchHost=trig0036
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/galpy-jax/tools/trillium_job.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=04:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g20-%j.out --export=ALL,STAGE=g20 tools/trillium_job.sbatch --export=NONE --parsable --account=def-bovy --time=04:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g20-%j.out --export=ALL,STAGE=g20 tools/trillium_job.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/galpy-jax
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=04:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g20-%j.out --export=ALL,STAGE=g20 tools/trillium_job.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/galpy-h100-g20-1063960.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1063960
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1063960      galpy-h100   def-bovy   01:43:55                        04:51.303   02:52:14      0:0 
+1063960.bat+      batch   def-bovy   01:43:55          0  79337580K  04:51.303   02:52:14      0:0 
+1063960.ext+     extern   def-bovy   01:43:55                         00:00:00   00:00:00      0:0 
+
