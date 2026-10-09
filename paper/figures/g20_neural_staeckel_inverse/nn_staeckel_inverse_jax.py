@@ -107,8 +107,8 @@ def loss_fn(p, model, R, vR, z, vz, JR, Jz, thR, thz, lam):
     return sup + lam * cyc, (sup, cyc)
 
 
-def train(n_steps=3200, batch=512, lr=2e-3, warmup=400, seed=0):
-    R, vR, z, vz, JR, Jz, thR, thz = gen_dataset(40000, seed=seed)
+def train(n_steps=3200, batch=512, lr=2e-3, warmup=400, seed=0, n_data=40000):
+    R, vR, z, vz, JR, Jz, thR, thz = gen_dataset(n_data, seed=seed)
     nd = int(R.shape[0])
     print(f"dataset {nd}, JR<={float(JR.max()):.3f} Jz<={float(Jz.max()):.3f}")
     model = InverseMLP()
@@ -137,7 +137,7 @@ def train(n_steps=3200, batch=512, lr=2e-3, warmup=400, seed=0):
         # first learns a rough (bounded) inverse before the cycle term engages.
         lam = jnp.asarray(min(1.0, i / float(warmup)))
         params, st, l, (s, c) = step(params, st, idx, lam)
-        if i % 150 == 0 or i == n_steps - 1:
+        if i % 150 == 0 or i == n_steps - 1 or n_steps <= 50:
             hist.append((i, float(l), float(s), float(c)))
             print(f"step {i:4d} loss={float(l):.3e} sup={float(s):.3e} cyc={float(c):.3e} "
                   f"[{time.time()-t0:.0f}s]")

@@ -18,6 +18,10 @@
 #   g17torch: g17 torch GPU series alone (torch_gpu_only.py) + nvidia-smi memory log
 #   gV2     : gV2 GPU series only
 #   gS4     : gS4 GPU series only (merged) + nvidia-smi memory log
+#   g20     : g20 neural Staeckel inverse (jax training, needs flax + optax): checks galpy-fb is at
+#             34bca2d1d (G20_GALPY overrides), smoke (20 steps, dump in $LOG), then the full 3200-step
+#             training -> paper/figures/g20_neural_staeckel_inverse/data/results_staeckel_jax.npz,
+#             with an nvidia-smi memory log (~30 min)
 #   cudaexp : experiments/cuda_orbits/run_h100.sh (CUDA dop853 experiment; loads the cuda module)
 #   cudav2  : experiments/cuda_orbits/run_h100_v2.sh (diagnosis + fixed kernel scans + ncu)
 #   triage  : only the failing CUDA tests, in the activated env (TRIAGE_TAG, JAXREP)
@@ -88,6 +92,17 @@ case $STAGE in
            run "python -m paper.figures.gS4_streamdf_speed.make --measure gpu"
            kill $SMI
            run "$H gS4_streamdf_speed" ;;
+  g20)     G20=$F/g20_neural_staeckel_inverse; want=${G20_GALPY:-34bca2d1d}
+           have=$(git -C $WT rev-parse HEAD)
+           if [[ $have != $want* ]] || [ -n "$(git -C $WT status --porcelain -uno)" ]; then
+             echo "!!! [g20] galpy-fb is at $have (or dirty), not $want; not training"; exit 3; fi
+           run "python -c 'import flax, optax, jax; print(flax.__version__, optax.__version__, jax.__version__, jax.devices())'"
+           nvidia-smi --query-gpu=timestamp,memory.used,memory.total --format=csv -l 5 > $LOG/g20_mem.csv & SMI=$!
+           rm -f $LOG/g20_smoke.npz
+           run "python $G20/train_and_dump.py --smoke --out $LOG/g20_smoke.npz"
+           if [ -s $LOG/g20_smoke.npz ]; then run "python $G20/train_and_dump.py"
+           else echo "!!! [g20] smoke failed (no $LOG/g20_smoke.npz); skipping the full training"; fi
+           kill $SMI ;;
   cudaexp) # experiments/cuda_orbits: CUDA MWPotential2014 + dop853, correctness vs galpy C, timings to 1e7
            module load StdEnv/2023 gcc/12.3 cuda/12.9   # driver 580 = CUDA 13.0; cuda/13.x is newer than it
            command -v nvcc > /dev/null || { echo "!!! no nvcc after module load"; exit 3; }

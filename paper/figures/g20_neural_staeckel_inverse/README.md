@@ -1,10 +1,10 @@
-# G19 — Neural inverse of the Staeckel action-angle map (no analytic inverse)
+# g20 — Neural inverse of the Staeckel action-angle map (no analytic inverse)
 
 **Paper point:** galpy's Staeckel action-angle machinery for a *realistic* Milky
 Way potential (`MWPotential2014`) is differentiable and jittable, so a neural
 network can learn its **inverse** — a map for which **no closed form exists** —
 purely by backpropagating through galpy's forward action-angle computation. This
-is the harder sibling of G18 (there the 1D vertical inverse could be checked
+is the harder sibling of g19 (there the 1D vertical inverse could be checked
 against `actionAngleVerticalInverse`; here there is *nothing* to check against,
 so the inverse *is* the deliverable).
 
@@ -15,15 +15,15 @@ so the inverse *is* the deliverable).
   `L_z` (`vT = L_z/R`, `phi = 0`) via `actionAngleStaeckel(..., c=False)` —
   the pure-Python, **jittable** path (chosen because jit of the Python-backend
   quadrature is faster for the training loop than the C-callback custom-VJP, and
-  it supports higher-order AD). ~0.5 s / 512-orbit step on the GPU.
+  it supports higher-order AD). ~0.5 s / 512-orbit step on the TITAN Xp.
 - Inverse `G_phi: (J_R, J_z, theta_R, theta_z) -> (R, vR, z, vz)`, a 4-hidden-
   layer MLP with `sqrt(J)*(cos,sin)` amplitude features and a bounded output box.
 
 ## Loss & stability
 
 `L = <w * ||G - (R,vR,z,vz)||^2> + lambda(step) * <w * cycle>` with
-`w = 1/(J_R+J_z+0.02)` (action-weighting so small near-circular / near-planar
-orbits are fit as precisely as big ones). The cycle term
+`w = 1/sqrt(J_R+J_z+0.02)` (action-weighting that up-weights small near-circular /
+near-planar orbits without under-fitting the big ones; see the convergence note). The cycle term
 `(F_J(G)-J)^2 + (1-cos(F_theta(G)-theta))` **backpropagates through the Staeckel
 quadratures** — the autodiff showcase.
 
@@ -42,13 +42,28 @@ backstop plus a finite-mask on the per-sample cycle residual.
   `F_J(G(J,theta)) ≈ J` (the inverse composed with the forward is the identity).
 - Panel (b): the training curve (data + physics-cycle), backprop through Staeckel.
 
-## Reproduce
+## Reproduce (dump-then-plot)
+
+Training runs on the H100 (Trillium), on galpy `feat/backends` **34bca2d1d**
+(the commit all the paper's data are on; the dump records it as `galpy_commit`):
 
 ```bash
-cd paper/figures/g19_neural_staeckel_inverse
-CUDA_VISIBLE_DEVICES=0 PYTHONUNBUFFERED=1 \
-  PYTHONPATH=<galpy>:. python make_staeckel_figure.py   # -> g20_neural_staeckel_inverse.png
+# H100: smoke (20 steps), full training (3200 steps), dump + nvidia-smi memory log
+sbatch --account=<ACCOUNT> --time=01:30:00 --export=ALL,STAGE=g20 tools/trillium_job.sbatch
+#   -> paper/figures/g20_neural_staeckel_inverse/data/results_staeckel_jax.npz
+# or by hand, from any cwd (galpy from $GALPY_WORKTREE, else PYTHONPATH):
+XLA_PYTHON_CLIENT_PREALLOCATE=false GALPY_WORKTREE=<galpy> \
+  python paper/figures/g20_neural_staeckel_inverse/train_and_dump.py [--smoke]
 ```
+
+The figure is plot-only, from the dump (no GPU, no galpy needed):
+
+```bash
+python paper/figures/g20_neural_staeckel_inverse/make_staeckel_figure.py  # -> g20_neural_staeckel_inverse.png
+```
+
+`--smoke` writes `data/results_staeckel_jax_smoke.npz`, which the figure never
+reads (and which is not committed). Needs `flax` and `optax` besides jax.
 
 ## Notes
 
