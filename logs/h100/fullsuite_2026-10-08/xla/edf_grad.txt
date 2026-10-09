@@ -1,0 +1,63 @@
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=
+meanvT: grad 0.08852278281994709  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136613  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=
+meanvT: grad 0.08857196664931519  fd 0.08852277758042425  rel 5.557e-04  pass(rtol 2e-4) False
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.31093183514607714  fd 0.3111197864903367  rel 6.041e-04  pass(rtol 2e-4) False
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=
+meanvT: grad 0.08857196664932386  fd 0.08852277759152648  rel 5.557e-04  pass(rtol 2e-4) False
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.31093183514592926  fd 0.31111978648010186  rel 6.041e-04  pass(rtol 2e-4) False
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=--xla_gpu_deterministic_ops=true
+meanvT: grad 0.08852278281994708  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136612  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=--xla_gpu_deterministic_ops=true
+meanvT: grad 0.08852278281994708  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136612  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=--xla_gpu_deterministic_ops=true
+meanvT: grad 0.08852278281994708  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136612  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=--xla_gpu_autotune_level=0
+meanvT: grad 0.08852278281994708  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136612  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=--xla_gpu_autotune_level=0
+meanvT: grad 0.08852278281994708  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136612  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+device cuda:0 XLA_FLAGS=--xla_gpu_autotune_level=0
+meanvT: grad 0.08852278281994708  fd 0.08852277784132666  rel 5.624e-08  pass(rtol 2e-4) True
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3111197362136612  fd 0.3111197854586967  rel 1.583e-07  pass(rtol 2e-4) True

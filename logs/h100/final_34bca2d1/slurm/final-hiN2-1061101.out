@@ -1,0 +1,74 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+galpy 34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386
+pre  paper/figures/_shared/orbit_speed/data/h100/jax_gpu_hiN.json -> paper/figures/_shared/orbit_speed/data/jax_gpu_hiN.json
+pre  paper/figures/g12_inbackend_orbit_gpu/data/h100/jax_dopri5_gpu_hiN.json -> paper/figures/g12_inbackend_orbit_gpu/data/jax_dopri5_gpu_hiN.json
+pre  paper/figures/g12_inbackend_orbit_gpu/data/h100/torch_cuda.json -> paper/figures/g12_inbackend_orbit_gpu/data/torch_cuda.json
+pre  paper/figures/gV2_vertical_inverse_speed/data/h100/gV2_vertical_inverse_speed.json -> paper/figures/gV2_vertical_inverse_speed/data/gV2_vertical_inverse_speed.json
+pre  paper/figures/gD3_spherical_df_speed/data/h100/gD3_spherical_df_speed.json -> paper/figures/gD3_spherical_df_speed/data/gD3_spherical_df_speed.json
+ M paper/figures/_shared/orbit_speed/data/jax_gpu_hiN.json
+ M paper/figures/g12_inbackend_orbit_gpu/data/jax_dopri5_gpu_hiN.json
+ M paper/figures/g12_inbackend_orbit_gpu/data/torch_cuda.json
+ M paper/figures/gD3_spherical_df_speed/data/gD3_spherical_df_speed.json
+ M paper/figures/gV2_vertical_inverse_speed/data/gV2_vertical_inverse_speed.json
+>>> 09:10:48 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/_shared/orbit_speed/galpy_jax_measure.py gpu hiN --Ns 1e6
+    ok 09:12:30
+>>> 09:12:30 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/jax_dopri5_measure.py gpu hiN --Ns 1e6
+    ok 09:13:44
+>>> 09:13:44 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/_shared/orbit_speed/galpy_jax_measure.py gpu hiN --Ns 3e6
+    ok 09:17:09
+>>> 09:17:09 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/jax_dopri5_measure.py gpu hiN --Ns 3e6
+    ok 09:19:59
+>>> 09:19:59 [hiN2] PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/torch_measure.py --Ns 3e6
+    ok 09:21:59
+>>> 09:21:59 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/gV2_vertical_inverse_speed/make.py --devices gpu --Ns 1e7
+    ok 09:22:34
+>>> 09:22:34 [hiN2] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/gD3_spherical_df_speed/make.py --gpu --Ns 1e8
+    ok 09:24:32
+>>> 09:24:32 [hiN2] python -m paper.figures._harness run g8_galax_orbit_speed g12_inbackend_orbit_gpu gV2_vertical_inverse_speed gD3_spherical_df_speed
+!!! FAILED [hiN2] python -m paper.figures._harness run g8_galax_orbit_speed g12_inbackend_orbit_gpu gV2_vertical_inverse_speed gD3_spherical_df_speed (see /scratch/bovy/galpy-h100/logs/hiN2.log)
+>>> 09:24:43 [hiN2] done
+    galpy_commit already present paper/figures/_shared/orbit_speed/data/h100/jax_gpu_hiN.json
+    galpy_commit already present paper/figures/g12_inbackend_orbit_gpu/data/h100/jax_dopri5_gpu_hiN.json
+    galpy_commit already present paper/figures/g12_inbackend_orbit_gpu/data/h100/torch_cuda.json
+    galpy_commit already present paper/figures/gV2_vertical_inverse_speed/data/h100/gV2_vertical_inverse_speed.json
+    galpy_commit already present paper/figures/gD3_spherical_df_speed/data/h100/gD3_spherical_df_speed.json
+
+scontrol show job 1061101
+JobId=1061101 JobName=final
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1233385 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:14:04 TimeLimit=02:00:00 TimeMin=N/A
+   SubmitTime=2026-10-08T22:36:07 EligibleTime=2026-10-09T09:10:37
+   AccrueTime=2026-10-09T09:10:37
+   StartTime=2026-10-09T09:10:40 EndTime=2026-10-09T09:24:44 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T09:10:40 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2698246
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0021
+   BatchHost=trig0021
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/measure.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061100 --export=ALL,STAGE=hiN2 --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-hiN2-%j.out measure.sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061100 --export=ALL,STAGE=hiN2 --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-hiN2-%j.out measure.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061100 --export=ALL,STAGE=hiN2 --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-hiN2-%j.out measure.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/final-hiN2-1061101.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1061101
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1061101           final   def-bovy   00:14:04                        00:53.091  12:56.456      0:0 
+1061101.bat+      batch   def-bovy   00:14:04          0   4776312K  00:53.091  12:56.456      0:0 
+1061101.ext+     extern   def-bovy   00:14:04                         00:00:00   00:00:00      0:0 
+

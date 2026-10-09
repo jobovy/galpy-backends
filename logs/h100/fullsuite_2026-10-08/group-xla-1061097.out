@@ -1,0 +1,59 @@
+galpy 34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386  Fri 09 Oct 2026 07:52:53 AM EDT
+torch_failed exit 0
+jax_failed 1 exit 0
+jax_failed 2 exit 0
+jax_failed 3 exit 0
+inductor exit 0
+torchode exit 0
+kingdf exit 0
+tracectx exit 0
+edf_grad [] 1 exit 0
+edf_grad [] 2 exit 0
+edf_grad [] 3 exit 0
+edf_grad [--xla_gpu_deterministic_ops=true] 1 exit 0
+edf_grad [--xla_gpu_deterministic_ops=true] 2 exit 0
+edf_grad [--xla_gpu_deterministic_ops=true] 3 exit 0
+edf_grad [--xla_gpu_autotune_level=0] 1 exit 0
+edf_grad [--xla_gpu_autotune_level=0] 2 exit 0
+edf_grad [--xla_gpu_autotune_level=0] 3 exit 0
+done Fri 09 Oct 2026 08:24:31 AM EDT
+
+scontrol show job 1061097
+JobId=1061097 JobName=group-xla
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1241587 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:31:41 TimeLimit=02:00:00 TimeMin=N/A
+   SubmitTime=2026-10-08T22:36:06 EligibleTime=2026-10-09T07:52:50
+   AccrueTime=Unknown
+   StartTime=2026-10-09T07:52:50 EndTime=2026-10-09T08:24:31 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T07:52:50 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:2698246
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0045
+   BatchHost=trig0045
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/group.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061096 --export=ALL --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out group.sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061096 --export=ALL --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out group.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061096 --export=ALL --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out group.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/group-xla-1061097.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1061097
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1061097       group-xla   def-bovy   00:31:41                         00:00:00   00:00:00      0:0 
+1061097.bat+      batch   def-bovy   00:31:41                         00:00:00   00:00:00      0:0 
+1061097.ext+     extern   def-bovy   00:31:41                         00:00:00   00:00:00      0:0 
+

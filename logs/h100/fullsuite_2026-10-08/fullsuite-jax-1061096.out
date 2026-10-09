@@ -1,0 +1,40 @@
+
+scontrol show job 1061096
+JobId=1061096 JobName=fullsuite
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1264413 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=07:32:43 TimeLimit=11:00:00 TimeMin=N/A
+   SubmitTime=2026-10-08T22:36:06 EligibleTime=2026-10-09T00:18:37
+   AccrueTime=2026-10-09T00:18:37
+   StartTime=2026-10-09T00:20:06 EndTime=2026-10-09T07:52:49 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T00:20:06 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2698246
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0045
+   BatchHost=trig0045
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/fullsuite.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1060557 --export=ALL,BK=jax --time=11:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-jax-%j.out fullsuite.sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1060557 --export=ALL,BK=jax --time=11:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-jax-%j.out fullsuite.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1060557 --export=ALL,BK=jax --time=11:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-jax-%j.out fullsuite.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/fullsuite-jax-1061096.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1061096
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1061096       fullsuite   def-bovy   07:32:43                         00:00:00   00:00:00      0:0 
+1061096.bat+      batch   def-bovy   07:32:43                         00:00:00   00:00:00      0:0 
+1061096.ext+     extern   def-bovy   07:32:43                         00:00:00   00:00:00      0:0 
+

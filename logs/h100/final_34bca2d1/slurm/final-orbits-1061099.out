@@ -1,0 +1,70 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+galpy 34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386
+pre  paper/figures/_shared/orbit_speed/data/h100/jax_gpu.json -> paper/figures/_shared/orbit_speed/data/jax_gpu.json
+pre  paper/figures/_shared/orbit_speed/data/h100/jax_gpu_hiN.json -> paper/figures/_shared/orbit_speed/data/jax_gpu_hiN.json
+pre  paper/figures/g12_inbackend_orbit_gpu/data/h100/jax_dopri5_gpu.json -> paper/figures/g12_inbackend_orbit_gpu/data/jax_dopri5_gpu.json
+pre  paper/figures/g12_inbackend_orbit_gpu/data/h100/jax_dopri5_gpu_hiN.json -> paper/figures/g12_inbackend_orbit_gpu/data/jax_dopri5_gpu_hiN.json
+pre  paper/figures/g12_inbackend_orbit_gpu/data/h100/torch_cuda.json -> paper/figures/g12_inbackend_orbit_gpu/data/torch_cuda.json
+ M paper/figures/_shared/orbit_speed/data/jax_gpu.json
+ M paper/figures/_shared/orbit_speed/data/jax_gpu_hiN.json
+ M paper/figures/g12_inbackend_orbit_gpu/data/jax_dopri5_gpu.json
+ M paper/figures/g12_inbackend_orbit_gpu/data/jax_dopri5_gpu_hiN.json
+ M paper/figures/g12_inbackend_orbit_gpu/data/torch_cuda.json
+>>> 08:26:06 [orbits] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/_shared/orbit_speed/galpy_jax_measure.py gpu lowN
+    ok 08:27:14
+>>> 08:27:14 [orbits] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/_shared/orbit_speed/galpy_jax_measure.py gpu hiN
+    ok 08:28:34
+>>> 08:28:34 [orbits] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/jax_dopri5_measure.py gpu lowN
+    ok 08:29:36
+>>> 08:29:36 [orbits] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/jax_dopri5_measure.py gpu hiN
+    ok 08:30:41
+>>> 08:30:41 [orbits] PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g12_inbackend_orbit_gpu/measure/torch_measure.py
+    ok 08:35:06
+>>> 08:35:06 [orbits] python -m paper.figures._harness run g8_galax_orbit_speed g12_inbackend_orbit_gpu
+    ok 08:35:16
+>>> 08:35:16 [orbits] done
+    + galpy_commit 34bca2d1d paper/figures/_shared/orbit_speed/data/h100/jax_gpu.json
+    + galpy_commit 34bca2d1d paper/figures/_shared/orbit_speed/data/h100/jax_gpu_hiN.json
+    + galpy_commit 34bca2d1d paper/figures/g12_inbackend_orbit_gpu/data/h100/jax_dopri5_gpu.json
+    + galpy_commit 34bca2d1d paper/figures/g12_inbackend_orbit_gpu/data/h100/jax_dopri5_gpu_hiN.json
+    + galpy_commit 34bca2d1d paper/figures/g12_inbackend_orbit_gpu/data/h100/torch_cuda.json
+
+scontrol show job 1061099
+JobId=1061099 JobName=final
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1241587 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:09:18 TimeLimit=02:00:00 TimeMin=N/A
+   SubmitTime=2026-10-08T22:36:06 EligibleTime=2026-10-09T08:25:59
+   AccrueTime=Unknown
+   StartTime=2026-10-09T08:25:59 EndTime=2026-10-09T08:35:17 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T08:25:59 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:2698246
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0008
+   BatchHost=trig0008
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/measure.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061098 --export=ALL,STAGE=orbits --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-orbits-%j.out measure.sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061098 --export=ALL,STAGE=orbits --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-orbits-%j.out measure.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061098 --export=ALL,STAGE=orbits --time=02:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-orbits-%j.out measure.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/final-orbits-1061099.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1061099
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1061099           final   def-bovy   00:09:18                        00:20.836  09:23.603      0:0 
+1061099.bat+      batch   def-bovy   00:09:18          0   1169560K  00:20.836  09:23.603      0:0 
+1061099.ext+     extern   def-bovy   00:09:18                         00:00:00   00:00:00      0:0 
+

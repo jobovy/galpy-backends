@@ -8,53 +8,60 @@
   "rtol": 1e-08,
   "atol": 1e-08,
   "potential": "MWPotential2014",
-  "host": "trig0028",
+  "host": "trig0008",
+  "cpu_affinity": 24,
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "XLA_FLAGS": "unset"
+  },
   "results": [
     {
       "N": 1000,
-      "wall_s": 1.6519473049556836,
-      "per_orbit_ms": 1.6519473049556836,
-      "compile_run_s": 3.265431885025464
+      "wall_s": 1.6712211800040677,
+      "per_orbit_ms": 1.6712211800040677,
+      "compile_run_s": 3.314339693002694
     },
     {
       "N": 10000,
-      "wall_s": 1.863574821036309,
-      "per_orbit_ms": 0.1863574821036309,
-      "compile_run_s": 3.0942088320152834
+      "wall_s": 1.8702630379993934,
+      "per_orbit_ms": 0.18702630379993934,
+      "compile_run_s": 3.0980091119999997
     },
     {
       "N": 100000,
-      "wall_s": 3.4365463689900935,
-      "per_orbit_ms": 0.034365463689900934,
-      "compile_run_s": 4.410086893942207
+      "wall_s": 3.404350032004004,
+      "per_orbit_ms": 0.034043500320040034,
+      "compile_run_s": 4.364429578999989
     },
     {
       "N": 300000,
-      "wall_s": 7.404614919098094,
-      "per_orbit_ms": 0.02468204973032698,
-      "compile_run_s": 8.389145820983686
+      "wall_s": 7.334415571996942,
+      "per_orbit_ms": 0.024448051906656474,
+      "compile_run_s": 8.304323819000274
     },
     {
       "N": 1000000,
-      "wall_s": 16.418069389183074,
-      "per_orbit_ms": 0.016418069389183075,
-      "compile_run_s": 18.5809073029086
+      "wall_s": 16.414761857995472,
+      "per_orbit_ms": 0.016414761857995473,
+      "compile_run_s": 18.697166575002484
     },
     {
       "N": 3000000,
-      "wall_s": 46.47153325518593,
-      "per_orbit_ms": 0.015490511085061977,
-      "compile_run_s": 49.11007280787453
+      "wall_s": 46.43254849900404,
+      "per_orbit_ms": 0.01547751616633468,
+      "compile_run_s": 49.1224010970036
     }
   ],
   "jax_version": "0.11.2",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.5.3",
   "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
   "extra_points": [
     {
-      "added": "2026-10-07T20:09:28+00:00",
-      "host": "trig0014",
+      "added": "2026-10-09T13:11:17+00:00",
+      "host": "trig0021",
       "argv": [
         "galpy_jax_measure.py",
         "gpu",
@@ -75,7 +82,13 @@
         "rtol": 1e-08,
         "atol": 1e-08,
         "potential": "MWPotential2014",
-        "host": "trig0014",
+        "host": "trig0021",
+        "cpu_affinity": 24,
+        "thread_env": {
+          "OMP_NUM_THREADS": "unset",
+          "OPENBLAS_NUM_THREADS": "unset",
+          "XLA_FLAGS": "unset"
+        },
         "jax_version": "0.11.2",
         "galpy_version": "1.12.1.dev0",
         "numpy_version": "2.5.3",
@@ -87,8 +100,8 @@
       "replaced": []
     },
     {
-      "added": "2026-10-07T20:11:50+00:00",
-      "host": "trig0014",
+      "added": "2026-10-09T13:13:59+00:00",
+      "host": "trig0021",
       "argv": [
         "galpy_jax_measure.py",
         "gpu",
@@ -109,7 +122,13 @@
         "rtol": 1e-08,
         "atol": 1e-08,
         "potential": "MWPotential2014",
-        "host": "trig0014",
+        "host": "trig0021",
+        "cpu_affinity": 24,
+        "thread_env": {
+          "OMP_NUM_THREADS": "unset",
+          "OPENBLAS_NUM_THREADS": "unset",
+          "XLA_FLAGS": "unset"
+        },
         "jax_version": "0.11.2",
         "galpy_version": "1.12.1.dev0",
         "numpy_version": "2.5.3",

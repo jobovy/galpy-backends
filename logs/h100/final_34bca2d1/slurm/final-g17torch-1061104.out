@@ -1,0 +1,50 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+galpy 34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386
+pre  paper/figures/g17_staeckel_actionangle_speed/data/h100/g17_staeckel_actionangle_speed.json -> paper/figures/g17_staeckel_actionangle_speed/data/g17_staeckel_actionangle_speed.json
+ M paper/figures/g17_staeckel_actionangle_speed/data/g17_staeckel_actionangle_speed.json
+>>> 09:26:21 [g17torch] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g17_staeckel_actionangle_speed/measure/torch_gpu_only.py /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g17_staeckel_actionangle_speed/data/g17_staeckel_actionangle_speed.json
+    ok 09:28:50
+>>> 09:28:50 [g17torch] python -m paper.figures._harness run g17_staeckel_actionangle_speed_jax g17_staeckel_actionangle_speed_torch
+    ok 09:29:03
+>>> 09:29:03 [g17torch] done
+    + galpy_commit 34bca2d1d paper/figures/g17_staeckel_actionangle_speed/data/h100/g17_staeckel_actionangle_speed.json
+
+scontrol show job 1061104
+JobId=1061104 JobName=final
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1230532 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:02:49 TimeLimit=01:00:00 TimeMin=N/A
+   SubmitTime=2026-10-08T22:36:07 EligibleTime=2026-10-09T09:25:47
+   AccrueTime=2026-10-09T09:25:47
+   StartTime=2026-10-09T09:26:14 EndTime=2026-10-09T09:29:03 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T09:26:14 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2698246
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0008
+   BatchHost=trig0008
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/measure.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061103 --export=ALL,STAGE=g17torch --time=01:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g17torch-%j.out measure.sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061103 --export=ALL,STAGE=g17torch --time=01:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g17torch-%j.out measure.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1061103 --export=ALL,STAGE=g17torch --time=01:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g17torch-%j.out measure.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/final-g17torch-1061104.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1061104
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1061104           final   def-bovy   00:02:49                         00:00:00   00:00:00      0:0 
+1061104.bat+      batch   def-bovy   00:02:49                         00:00:00   00:00:00      0:0 
+1061104.ext+     extern   def-bovy   00:02:49                         00:00:00   00:00:00      0:0 
+

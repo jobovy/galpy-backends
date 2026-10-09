@@ -7,98 +7,98 @@
   },
   "scaling": {
     "1": {
-      "cstm_cpu": 0.007679734844714403,
-      "diffrax_cpu": 0.052747310139238834,
-      "diffrax_gpu": 3.2162834550254047,
-      "torchdiffeq_cpu": 1.3118897411040962,
-      "torchdiffeq_gpu": 3.2179126548580825
+      "cstm_cpu": 0.007688878999033477,
+      "diffrax_cpu": 0.04362301900255261,
+      "diffrax_gpu": 3.257227731999592,
+      "torchdiffeq_cpu": 1.4078019750013482,
+      "torchdiffeq_gpu": 3.4558647610028856
     },
     "1000": {
-      "cstm_cpu": 6.856106903636828
+      "cstm_cpu": 6.838195018997794
     },
     "1024": {
-      "diffrax_cpu": 3.1099242991767824,
-      "diffrax_gpu": 2.510120248887688,
-      "torchdiffeq_gpu": 3.5825869953259826
+      "diffrax_cpu": 2.3527852650004206,
+      "diffrax_gpu": 2.5097973350057146,
+      "torchdiffeq_gpu": 3.8152487609986565
     },
     "131072": {
-      "torchdiffeq_gpu": 3.6795261059887707
+      "torchdiffeq_gpu": 3.8904007320015808
     },
     "16": {
-      "cstm_cpu": 0.11972277192398906,
-      "diffrax_cpu": 0.10926345689222217,
-      "diffrax_gpu": 2.471896273083985,
-      "torchdiffeq_cpu": 1.3119183159433305,
-      "torchdiffeq_gpu": 3.3613587329164147
+      "cstm_cpu": 0.11987933799537132,
+      "diffrax_cpu": 0.10123245100112399,
+      "diffrax_gpu": 2.4876152770011686,
+      "torchdiffeq_cpu": 1.3816254199991818,
+      "torchdiffeq_gpu": 3.5703941760002635
     },
     "16384": {
-      "diffrax_cpu": 113.12586575979367,
-      "diffrax_gpu": 5.279598052147776,
-      "torchdiffeq_cpu": 9.481494006235152,
-      "torchdiffeq_gpu": 3.5669077318161726
+      "diffrax_cpu": 122.66465904300276,
+      "diffrax_gpu": 5.23313511699962,
+      "torchdiffeq_cpu": 9.619285182001477,
+      "torchdiffeq_gpu": 3.7342125549985212
     },
     "256": {
-      "cstm_cpu": 1.7528117620386183,
-      "diffrax_cpu": 0.8767117811366916,
-      "diffrax_gpu": 2.5169397038407624,
-      "torchdiffeq_cpu": 1.5682210610248148,
-      "torchdiffeq_gpu": 3.5340044032782316
+      "cstm_cpu": 1.7662186009983998,
+      "diffrax_cpu": 0.8163218240006245,
+      "diffrax_gpu": 2.5239509899984114,
+      "torchdiffeq_cpu": 1.7084514480011421,
+      "torchdiffeq_gpu": 3.881121345999418
     },
     "262144": {
-      "diffrax_gpu": 15.384439716115594,
-      "torchdiffeq_cpu": 75.30607606377453
+      "diffrax_gpu": 15.204405984004552,
+      "torchdiffeq_cpu": 54.34671602299932
     },
     "3000": {
-      "cstm_cpu": 20.539786971872672
+      "cstm_cpu": 20.42428057250072
     },
     "4": {
-      "cstm_cpu": 0.030222712084650993,
-      "diffrax_cpu": 0.07818855624645948,
-      "diffrax_gpu": 2.339737937785685,
-      "torchdiffeq_cpu": 1.324110969901085,
-      "torchdiffeq_gpu": 3.276947900187224
+      "cstm_cpu": 0.030273245996795595,
+      "diffrax_cpu": 0.0818404039964662,
+      "diffrax_gpu": 2.340913232997991,
+      "torchdiffeq_cpu": 1.3838519159980933,
+      "torchdiffeq_gpu": 3.533773643997847
     },
     "4096": {
-      "diffrax_cpu": 24.44700363976881,
-      "diffrax_gpu": 5.044495585840195,
-      "torchdiffeq_cpu": 3.6548203411512077,
-      "torchdiffeq_gpu": 3.6353895040228963
+      "diffrax_cpu": 24.002392986993073,
+      "diffrax_gpu": 4.996692187000008,
+      "torchdiffeq_cpu": 3.5469234060001327,
+      "torchdiffeq_gpu": 3.967384207993746
     },
     "64": {
-      "cstm_cpu": 0.4494728008285165,
-      "diffrax_cpu": 0.21670032804831862,
-      "diffrax_gpu": 2.4699503160081804,
-      "torchdiffeq_cpu": 1.4722946621477604,
-      "torchdiffeq_gpu": 3.441313110757619
+      "cstm_cpu": 0.45180785200500395,
+      "diffrax_cpu": 0.21306469900446245,
+      "diffrax_gpu": 2.4874696990009397,
+      "torchdiffeq_cpu": 1.5238417590007884,
+      "torchdiffeq_gpu": 3.731012023999938
     },
     "65536": {
-      "diffrax_cpu": 495.3026807527058,
-      "diffrax_gpu": 7.23535599000752,
-      "torchdiffeq_cpu": 35.85751310409978,
-      "torchdiffeq_gpu": 3.5769355627708137
+      "diffrax_gpu": 7.07521870599885,
+      "torchdiffeq_cpu": 22.543087112993817,
+      "torchdiffeq_gpu": 3.792151701003604
     }
   },
   "single": {
     "cstm": {
       "cpu": {
-        "grad": 0.007806063164025545
+        "grad": 0.00778833799995482
       }
     },
     "diffrax": {
       "cpu": {
-        "grad": 0.028045732993632555
+        "grad": 0.025917319995642174
       },
       "gpu": {
-        "grad": 3.231180150061846
+        "grad": 3.2799004079934093
       }
     },
     "torchdiffeq": {
       "cpu": {
-        "grad": 7.912819735240191
+        "grad": 8.186955201999808
       },
       "gpu": {
-        "grad": 18.419503408949822
+        "grad": 19.159740909999528
       }
     }
-  }
+  },
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
 }

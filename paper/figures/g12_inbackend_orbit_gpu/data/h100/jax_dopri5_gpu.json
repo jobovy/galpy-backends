@@ -8,48 +8,49 @@
   "rtol": 1e-08,
   "atol": 1e-08,
   "potential": "MWPotential2014",
-  "host": "trig0028",
+  "host": "trig0008",
   "results": [
     {
       "N": 1,
-      "wall_s": 1.4262888650409877,
-      "per_orbit_ms": 1426.2888650409877,
-      "compile_run_s": 2.5222948350710794
+      "wall_s": 1.4457131250019302,
+      "per_orbit_ms": 1445.7131250019302,
+      "compile_run_s": 2.617070157000853
     },
     {
       "N": 10,
-      "wall_s": 0.9721179830376059,
-      "per_orbit_ms": 97.21179830376059,
-      "compile_run_s": 2.1717169930925593
+      "wall_s": 0.9797117029957008,
+      "per_orbit_ms": 97.97117029957008,
+      "compile_run_s": 2.1404142800020054
     },
     {
       "N": 100,
-      "wall_s": 1.2975826819892973,
-      "per_orbit_ms": 12.975826819892973,
-      "compile_run_s": 2.3090954950312153
+      "wall_s": 1.3205038329979288,
+      "per_orbit_ms": 13.205038329979288,
+      "compile_run_s": 2.3145499989987
     },
     {
       "N": 1000,
-      "wall_s": 1.4689208399504423,
-      "per_orbit_ms": 1.4689208399504423,
-      "compile_run_s": 2.4970728430198506
+      "wall_s": 1.473279611003818,
+      "per_orbit_ms": 1.473279611003818,
+      "compile_run_s": 2.4838309190017753
     },
     {
       "N": 10000,
-      "wall_s": 1.6566078390460461,
-      "per_orbit_ms": 0.16566078390460462,
-      "compile_run_s": 2.719079500064254
+      "wall_s": 1.6612322740038508,
+      "per_orbit_ms": 0.16612322740038507,
+      "compile_run_s": 2.700739726999018
     },
     {
       "N": 30000,
-      "wall_s": 1.9842546579893678,
-      "per_orbit_ms": 0.06614182193297893,
-      "compile_run_s": 3.2040146460058168
+      "wall_s": 2.018711427001108,
+      "per_orbit_ms": 0.06729038090003693,
+      "compile_run_s": 2.9429395940023824
     }
   ],
   "jax_version": "0.11.2",
   "diffrax_version": "0.7.2",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.5.3",
-  "gpu": "NVIDIA H100 80GB HBM3"
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
 }

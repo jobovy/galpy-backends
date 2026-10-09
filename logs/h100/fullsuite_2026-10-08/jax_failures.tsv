@@ -1,0 +1,142 @@
+tests/test_backend_multi.py::test_forked_child_is_capped_at_one_torch_thread	test		AssertionError: forked children must run torch single-threaded, got [24, 24, 24, 24]
+tests/test_actionAngleTorus.py::test_actionAngleTorus_basic	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_basic_freqs	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_orbit	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_interppot_freqs	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_Isochrone_actions	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_Isochrone_freqsAngles	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_Staeckel_actions	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_Staeckel_freqsAngles	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_isochroneApprox_actions	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_isochroneApprox_freqsAngles	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_hessian_freqs	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_hessian_symm	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_hessian_linear	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_jacobian_freqs	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_jacobian_hessian	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_jacobian_xv	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_jacobian_detone	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_jacobian_linear	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_actionAngleTorus.py::test_actionAngleTorus_AutoFitWarning	galpy	galpy/actionAngle/actionAngleTorus.py:35 _reject_backend	NotImplementedError: actionAngleTorus wraps the external Torus C++ library and is not jax/torch-backend compatible (and will not be); use it under numpy.
+tests/test_backend_actionAngleVerticalInverse.py::test_cuda_potential_parameters_cpu_default_device[True]	third-party	galpy/backend/_torch/optimize.py:106 _newton_root	RuntimeError: Expected all tensors to be on the same device, but got min is on cuda:0, different from other tensors on cpu (when checking argument in method wrapper_CUDA_clamp_Tensor)
+tests/test_backend_actionAngleVerticalInverse.py::test_cuda_potential_parameters_cpu_default_device[False]	third-party	galpy/backend/_torch/optimize.py:106 _newton_root	RuntimeError: Expected all tensors to be on the same device, but got min is on cuda:0, different from other tensors on cpu (when checking argument in method wrapper_CUDA_clamp_Tensor)
+tests/test_backend_streamgapdf.py::test_backend_impact_angle_value	test		AssertionError: 
+tests/test_nemo.py::test_nemo_MN3ExponentialDiskPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_MiyamotoNagaiPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_NFWPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_HernquistPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_PowerSphericalPotentialwCutoffPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_LogarithmicHaloPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_PlummerPotential	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_nemo.py::test_nemo_MWPotential2014	third-party		FileNotFoundError: [Errno 2] No such file or directory: 'a2s'
+tests/test_orbit.py::test_linear_plotting	galpy	galpy/orbit/Orbits.py:7990 _parse_plot_quantity	ImportError: Parsing the quantity to be plotted failed; if you are trying to plot an expression, please make sure to install numexpr first
+tests/test_orbit.py::test_planar_plotting	galpy	galpy/orbit/Orbits.py:7990 _parse_plot_quantity	ImportError: Parsing the quantity to be plotted failed; if you are trying to plot an expression, please make sure to install numexpr first
+tests/test_orbit.py::test_full_plotting	galpy	galpy/orbit/Orbits.py:7990 _parse_plot_quantity	ImportError: Parsing the quantity to be plotted failed; if you are trying to plot an expression, please make sure to install numexpr first
+tests/test_orbit.py::test_from_name_values	galpy	galpy/orbit/Orbits.py:9952 _from_name_oneobject	ImportError: astroquery needs to be installed to use Orbit.from_name when not using a known object (i.e., when querying Simbad)
+tests/test_orbit.py::test_from_name_errors	galpy	galpy/orbit/Orbits.py:9952 _from_name_oneobject	ImportError: astroquery needs to be installed to use Orbit.from_name when not using a known object (i.e., when querying Simbad)
+tests/test_orbits.py::test_plotting	galpy	galpy/orbit/Orbits.py:7990 _parse_plot_quantity	ImportError: Parsing the quantity to be plotted failed; if you are trying to plot an expression, please make sure to install numexpr first
+tests/test_orbits.py::test_from_name_values	galpy	galpy/orbit/Orbits.py:9952 _from_name_oneobject	ImportError: astroquery needs to be installed to use Orbit.from_name when not using a known object (i.e., when querying Simbad)
+tests/test_quantity.py::test_anyaxisymmetricrazorpotential_unitson	test		AssertionError: AnyAxisymmetricRazorThinDiskPotential does not return outputs with units when the input surface density has units
+tests/test_quantity.py::test_SCFPotential_from_density	test		AssertionError: SCF density does not agree when initialized with density with units
+tests/test_quantity.py::test_actionAngle_method_returntype	test		AssertionError: actionAngleHarmonic method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_actionAngle_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_actionAngle_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_actionAngle_method_turnphysicalon	test		AssertionError: actionAngle method does not return Quantity when turn_physical_on has been called
+tests/test_quantity.py::test_estimateDeltaStaeckel_method_returntype	test		AssertionError: estimateDeltaStaeckel function does not return Quantity when it should
+tests/test_quantity.py::test_estimateDeltaStaeckel_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_estimateDeltaStaeckel_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_estimateBIsochrone_method_returntype	test		AssertionError: estimateBIsochrone function does not return Quantity when it should
+tests/test_quantity.py::test_estimateBIsochrone_method_returnunit	test		AttributeError: 'float' object has no attribute 'to'
+tests/test_quantity.py::test_estimateBIsochrone_method_value	test		AttributeError: 'float' object has no attribute 'to'
+tests/test_quantity.py::test_df_method_turnphysicalon	test		AssertionError: df method does not return Quantity when turn_physical_on has been called
+tests/test_quantity.py::test_diskdf_method_returntype	test		AssertionError: diskdf method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_diskdf_method_returnunit	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_diskdf_method_value	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_diskdf_sample	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_diskdf_method_inputAsQuantity	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_diskdf_method_inputAsQuantity_special	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_evolveddiskdf_method_returntype	test		AssertionError: evolveddiskdf method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_evolveddiskdf_method_returnunit	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_evolveddiskdf_method_value	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_evolveddiskdf_method_inputAsQuantity	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_evolveddiskdf_method_inputAsQuantity_special	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_quasiisothermaldf_method_returntype	test		AssertionError: quasiisothermaldf method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_quasiisothermaldf_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_quasiisothermaldf_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_quasiisothermaldf_sample	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_quasiisothermaldf_interpolate_sample	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_quasiisothermaldf_method_inputAsQuantity	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_quasiisothermaldf_method_inputAsQuantity_special	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_sphericaldf_method_returntype	test		AssertionError: sphericaldf method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_sphericaldf_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_sphericaldf_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_sphericaldf_method_inputAsQuantity	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_sphericaldf_sample_outputunits	test		AttributeError: 'numpy.ndarray' object has no attribute 'to_value'
+tests/test_quantity.py::test_sphericaldf_densitymatch_issue677	test		AssertionError: Density of PlummerPotential does not match that of isotropicPlummerdf when returning Quantities
+tests/test_quantity.py::test_streamdf_method_returntype	test		AssertionError: streamdf method misalignment does not return Quantity when it should
+tests/test_quantity.py::test_streamdf_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_streamdf_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_streamdf_sample	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_streamgapdf_method_returntype	test		AssertionError: streamgapdf method meanOmega does not return Quantity when it should
+tests/test_quantity.py::test_streamgapdf_method_returnunit	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_streamgapdf_method_value	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_streamgapdf_sample	test		AttributeError: 'numpy.ndarray' object has no attribute 'to'
+tests/test_quantity.py::test_streamspraydf_sample_RvR	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to_value'
+tests/test_quantity.py::test_jeans_sigmar_returntype	test		AssertionError: jeans.sigmar does not return Quantity when it should
+tests/test_quantity.py::test_jeans_sigmar_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_jeans_sigmar_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_jeans_sigmar_inputAsQuantity	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_jeans_sigmar_PotentialInputWithQuantities	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to_value'
+tests/test_quantity.py::test_jeans_sigmalos_returntype	test		AssertionError: jeans.sigmalos does not return Quantity when it should
+tests/test_quantity.py::test_jeans_sigmalos_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_jeans_sigmalos_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_jeans_sigmalos_PotentialInputWithQuantities	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to_value'
+tests/test_quantity.py::test_orbitmethodswunits_quantity_issue326	test		AssertionError: Orbit method ra does not return Quantity when called for orbit with _roSet = False / _voSet = False
+tests/test_quantity.py::test_orbitmethodswunits_quantity_overrideusephysical_issue326	test		AssertionError: Orbit method ra does not return Quantity when called for orbit with _roSet = False / _voSet = False
+tests/test_quantity.py::test_integrate_continuation_timeAsQuantity	test		AttributeError: 'numpy.ndarray' object has no attribute 'value'
+tests/test_quantity.py::test_integrate_continuation_orbits_timeAsQuantity	test		AttributeError: 'numpy.ndarray' object has no attribute 'value'
+tests/test_quantity.py::test_streamtrack_method_returntype	test		AssertionError: StreamTrack.x did not return Quantity (got float64)
+tests/test_quantity.py::test_streamtrack_method_returnunit	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_streamtrack_method_value_default_ro_vo	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_streamtrack_method_per_call_override	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_streamtrack_method_value_turn_physical_off	test		AssertionError: assert False
+tests/test_quantity.py::test_streamtrack_nondefault_rovo	test		AttributeError: 'numpy.float64' object has no attribute 'to'
+tests/test_quantity.py::test_streamtrack_pair_turn_physical	test		AssertionError: assert False
+tests/test_quantity.py::test_streamspraydf_stripping_pdf_quantity_in_out	test		AttributeError: 'numpy.ndarray' object has no attribute 'to_value'
+tests/test_quantity.py::test_streamspraydf_stripping_pdf_quantity_in_only	test		AttributeError: 'numpy.ndarray' object has no attribute 'to_value'
+tests/test_quantity.py::test_streamspraydf_stripping_pdf_quantity_out_only	test		AttributeError: 'numpy.ndarray' object has no attribute 'to_value'
+tests/test_quantity.py::test_streamspraydf_stripping_pdf_quantity_in_via_to_method	test		AttributeError: 'numpy.ndarray' object has no attribute 'to_value'
+tests/test_quantity.py::test_orbit_method_returntype_scalar	test		AssertionError: Orbit method E does not return Quantity when it should
+tests/test_quantity.py::test_orbit_method_returntype	test		AssertionError: Orbit method E does not return Quantity when it should
+tests/test_quantity.py::test_orbit_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_orbit_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_integrate_timeAsQuantity	test		AttributeError: 'numpy.ndarray' object has no attribute 'value'
+tests/test_quantity.py::test_integrate_timeAsQuantity_Myr	test		AttributeError: 'numpy.ndarray' object has no attribute 'value'
+tests/test_quantity.py::test_integrate_dtimeAsQuantity	test		AttributeError: 'numpy.ndarray' object has no attribute 'value'
+tests/test_quantity.py::test_integrate_SOS_psiQuantity	test		AttributeError: 'numpy.ndarray' object has no attribute 'value'
+tests/test_quantity.py::test_orbits_method_returntype_scalar	test		AssertionError: Orbit method E does not return Quantity when it should
+tests/test_quantity.py::test_orbits_method_returntype	test		AssertionError: Orbit method E does not return Quantity when it should
+tests/test_quantity.py::test_orbits_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_orbits_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_potential_method_returntype	test		AssertionError: Potential method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_dissipativeforce_method_returntype	test		AssertionError: Potential method phitorque does not return Quantity when it should
+tests/test_quantity.py::test_dissipativeforce_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_planarPotential_method_returntype	test		AssertionError: Potential method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_linearPotential_method_returntype	test		AssertionError: Potential method __call__ does not return Quantity when it should
+tests/test_quantity.py::test_potential_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_planarPotential_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_linearPotential_method_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_potential_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_planarPotential_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_linearPotential_method_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_potential_function_returntype	test		AssertionError: Potential function __call__ does not return Quantity when it should
+tests/test_quantity.py::test_planarPotential_function_returntype	test		AssertionError: Potential function __call__ does not return Quantity when it should
+tests/test_quantity.py::test_linearPotential_function_returntype	test		AssertionError: Potential function __call__ does not return Quantity when it should
+tests/test_quantity.py::test_potential_function_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_planarPotential_function_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_linearPotential_function_returnunit	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_potential_function_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_planarPotential_function_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_linearPotential_function_value	test		AttributeError: 'jaxlib._jax.ArrayImpl' object has no attribute 'to'
+tests/test_quantity.py::test_potential_method_turnphysicalon	test		AssertionError: Potential method does not return Quantity when turn_physical_on has been called
+tests/test_quantity.py::test_potential_function_turnphysicalon	test		AssertionError: Potential function does not return Quantity when function turn_physical_on has been called

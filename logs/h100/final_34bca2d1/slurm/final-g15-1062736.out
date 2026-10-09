@@ -1,0 +1,164 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+galpy 34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386
+pre  paper/figures/g15_icderiv_speed/data/h100/icderiv.json -> paper/figures/g15_icderiv_speed/data/icderiv.json
+ M paper/figures/g15_icderiv_speed/data/icderiv.json
+>>> 10:26:24 [g15] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g15_icderiv_speed/measure/measure_icderiv.py
+    ok 11:02:22
+>>> 11:02:22 [g15] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g15_icderiv_speed/measure/measure_scaling.py
+    ok 11:08:51
+>>> 11:08:51 [g15] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g15_icderiv_speed/measure/measure_largeN.py
+!!! FAILED [g15] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g15_icderiv_speed/measure/measure_largeN.py (see /scratch/bovy/galpy-h100/logs/g15.log)
+>>> 11:23:09 [g15] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g15_icderiv_speed/measure/measure_torch_hiN.py
+    ok 11:24:13
+>>> 11:24:13 [g15] python /scratch/bovy/galpy-h100/galpy-jax/paper/figures/g15_icderiv_speed/measure/measure_cstm_largeN.py
+    ok 11:25:44
+>>> 11:25:44 [g15] python -m paper.figures._harness run g15_icderiv_speed
+    ok 11:25:49
+>>> 11:25:49 [g15] done
+    + galpy_commit 34bca2d1d paper/figures/g15_icderiv_speed/data/h100/icderiv.json
+[2026-10-09T11:25:50.367] error: Detected 1 oom_kill event in StepId=1062736.batch. Some of the step tasks have been OOM Killed.
+
+scontrol show job 1062736
+JobId=1062736 JobName=final
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1235528 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=OutOfMemory Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:125
+   RunTime=00:59:34 TimeLimit=08:00:00 TimeMin=N/A
+   SubmitTime=2026-10-09T10:26:03 EligibleTime=2026-10-09T10:26:03
+   AccrueTime=2026-10-09T10:26:03
+   StartTime=2026-10-09T10:26:16 EndTime=2026-10-09T11:25:50 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T10:26:16 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:3753556
+   ReqNodeList=(null) ExcNodeList=trig0021
+   NodeList=trig0003
+   BatchHost=trig0003
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/measure.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --export=ALL,STAGE=g15 --time=08:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g15-%j.out measure.sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --export=ALL,STAGE=g15 --time=08:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g15-%j.out measure.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --export=ALL,STAGE=g15 --time=08:00:00 --output=/scratch/bovy/galpy-h100/slurm/%x-g15-%j.out measure.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/final-g15-1062736.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1062736
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1062736           final   def-bovy   00:59:34                        09:56.289   02:39:10    0:125 
+1062736.bat+      batch   def-bovy   00:59:34          0 196601028K  09:56.289   02:39:10    0:125 
+1062736.ext+     extern   def-bovy   00:59:34                         00:00:00   00:00:00      0:0 
+
+
+kernel messages produced during job executions:
+[Oct 9 11:23] python invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+[  +0.000010] CPU: 0 PID: 1129818 Comm: python Tainted: P           OE      ------  ---  5.14.0-687.54.1.el9_8.x86_64 #1
+[  +0.000003] Hardware name: Lenovo ThinkSystem SD665-N V3/SB27B41167, BIOS QGE140H-8.21 05/13/2025
+[  +0.000001] Call Trace:
+[  +0.000002]  <TASK>
+[  +0.000003]  dump_stack_lvl+0x33/0x50
+[  +0.000005]  dump_header+0x49/0x240
+[  +0.000004]  oom_kill_process+0xff/0x1c0
+[  +0.000003]  out_of_memory+0xee/0x330
+[  +0.000002]  ? try_to_free_mem_cgroup_pages+0x108/0x230
+[  +0.000003]  mem_cgroup_out_of_memory+0x12f/0x150
+[  +0.000005]  try_charge_memcg+0x738/0x7f0
+[  +0.000003]  ? srso_alias_return_thunk+0x5/0xfbef5
+[  +0.000004]  ? alloc_pages_mpol+0x93/0x1f0
+[  +0.000003]  ? srso_alias_return_thunk+0x5/0xfbef5
+[  +0.000003]  __mem_cgroup_charge+0x3e/0xb0
+[  +0.000003]  do_anonymous_page+0x7d/0x3e0
+[  +0.000004]  __handle_mm_fault+0x2fb/0x650
+[  +0.000001]  ? asm_sysvec_call_function+0x16/0x20
+[  +0.000005]  handle_mm_fault+0xfb/0x270
+[  +0.000002]  do_user_addr_fault+0x152/0x690
+[  +0.000004]  exc_page_fault+0x74/0x150
+[  +0.000004]  asm_exc_page_fault+0x22/0x30
+[  +0.000002] RIP: 0033:0x14fa2fc764cc
+[  +0.000005] Code: Unable to access opcode bytes at 0x14fa2fc764a2.
+[  +0.000001] RSP: 002b:000014f39b5f9b60 EFLAGS: 00010202
+[  +0.000002] RAX: 000014f39b5f9d40 RBX: 0000000000000000 RCX: 000014efa3819ff0
+[  +0.000001] RDX: 0000561e82709c40 RSI: 0000561fa917f7f0 RDI: 0000000000000003
+[  +0.000001] RBP: 000014f39b5f9ba0 R08: fffffffffffffffc R09: 0000000000000002
+[  +0.000001] R10: 0000000000000000 R11: 0000000000000002 R12: 0000000000000002
+[  +0.000001] R13: ffffbecffa69a7f8 R14: 0000000000040000 R15: 0000000000019752
+[  +0.000005]  </TASK>
+[  +0.000004] memory: usage 196608000kB, limit 196608000kB, failcnt 56674
+[  +0.000003] swap: usage 0kB, limit 9007199254740988kB, failcnt 0
+[  +0.000001] Memory cgroup stats for /system.slice/slurmstepd.scope/job_1062736:
+[  +0.000018] anon 200869072896
+[  +0.000002] file 21331968
+[  +0.000001] kernel 436187136
+[  +0.000002] kernel_stack 4571136
+[  +0.000001] pagetables 399654912
+[  +0.000002] sec_pagetables 0
+[  +0.000001] percpu 3155600
+[  +0.000002] sock 0
+[  +0.000001] vmalloc 8192
+[  +0.000001] shmem 21237760
+[  +0.000002] zswap 0
+[  +0.000001] zswapped 0
+[  +0.000001] file_mapped 21237760
+[  +0.000002] file_dirty 0
+[  +0.000001] file_writeback 0
+[  +0.000002] swapcached 0
+[  +0.000001] anon_thp 15862857728
+[  +0.000001] file_thp 0
+[  +0.000002] shmem_thp 0
+[  +0.000001] inactive_anon 270315139072
+[  +0.000001] active_anon 0
+[  +0.000002] inactive_file 40960
+[  +0.000001] active_file 53248
+[  +0.000001] unevictable 0
+[  +0.000001] slab_reclaimable 24437656
+[  +0.000002] slab_unreclaimable 4244520
+[  +0.000001] slab 28682176
+[  +0.000002] workingset_refault_anon 0
+[  +0.000001] workingset_refault_file 253
+[  +0.000001] workingset_activate_anon 0
+[  +0.000002] workingset_activate_file 158
+[  +0.000001] workingset_restore_anon 0
+[  +0.000001] workingset_restore_file 158
+[  +0.000001] workingset_nodereclaim 0
+[  +0.000002] pgscan 418600
+[  +0.000001] pgsteal 331601
+[  +0.000001] pgscan_kswapd 0
+[  +0.000002] pgscan_direct 418600
+[  +0.000001] pgscan_khugepaged 0
+[  +0.000001] pgsteal_kswapd 0
+[  +0.000002] pgsteal_direct 331601
+[  +0.000001] pgsteal_khugepaged 0
+[  +0.000002] pgfault 241530600
+[  +0.000001] pgmajfault 9638
+[  +0.000001] pgrefill 229600
+[  +0.000002] pgactivate 128903
+[  +0.000001] pgdeactivate 0
+[  +0.000001] pglazyfree 0
+[  +0.000002] pglazyfreed 0
+[  +0.000001] zswpin 0
+[  +0.000001] zswpout 0
+[  +0.000002] zswpwb 0
+[  +0.000001] thp_fault_alloc 115843
+[  +0.000002] thp_collapse_alloc 242
+[  +0.000001] thp_swpout 0
+[  +0.000001] thp_swpout_fallback 0
+[  +0.000002] Tasks state (memory values in pages):
+[  +0.000001] [  pid  ]   uid  tgid total_vm      rss pgtables_bytes swapents oom_score_adj name
+[  +0.000003] [ 693230]     0 693230   180695     6123   204800        0          -999 slurmstepd
+[  +0.000005] [ 693418] 3039629 693418    55673      768    65536        0             0 slurm_script
+[  +0.000003] [ 693451] 3039629 693451     3079      768    57344        0             0 bash
+[  +0.000003] [1129292] 3039629 1129292     3079      192    53248        0             0 bash
+[  +0.000005] [1129293] 3039629 1129293 60075143 49064017 399355904        0             0 python
+[  +0.000003] [ 693409]     0 693409   197175     6525   217088        0          -999 slurmstepd
+[  +0.000004] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=task_0,mems_allowed=0-3,oom_memcg=/system.slice/slurmstepd.scope/job_1062736,task_memcg=/system.slice/slurmstepd.scope/job_1062736/step_batch/user/task_0,task=python,pid=1129293,uid=3039629
+[  +0.000311] Memory cgroup out of memory: Killed process 1129293 (python) total-vm:240300572kB, anon-rss:196122584kB, file-rss:114284kB, shmem-rss:19200kB, UID:3039629 pgtables:389996kB oom_score_adj:0
+[  +7.204299] oom_reaper: reaped process 1129293 (python), now anon-rss:0kB, file-rss:8320kB, shmem-rss:0kB
+
