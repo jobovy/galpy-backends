@@ -370,7 +370,7 @@
     "description": "spherical-DF speed: sample(n=N) wall time vs N for four DFs and DF construction (+first 1000 draws) time, numpy vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "34bca2d1d",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -378,8 +378,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "7e01f1f",
-    "sha256": "bed79c3364123bf4e6035edd4403a1da74af2d1cc0d18d4f66452d8169b3d5bd",
+    "git": "f960498",
+    "sha256": "2116042db5843eaf0da3b4756026dbbbaaba1cfe14e7f3031c3ef9644716a4b0",
     "track": "F"
   },
   "gD4_spherical_df_param": {
