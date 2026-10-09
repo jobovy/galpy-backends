@@ -9,37 +9,37 @@
   "potential": "MWPotential2014",
   "host": "geir",
   "galpy_version": "1.12.1.dev0",
-  "galpy_file": "/var/tmp/fbp/galpy/__init__.py",
+  "galpy_file": "/var/tmp/fbfinal/galpy/__init__.py",
   "results": [
     {
       "N": 1000,
-      "wall_s": 0.20454607903957367,
-      "per_orbit_ms": 0.20454607903957367
+      "wall_s": 0.19628911698237062,
+      "per_orbit_ms": 0.19628911698237062
     },
     {
       "N": 10000,
-      "wall_s": 1.7481902569998056,
-      "per_orbit_ms": 0.17481902569998056
+      "wall_s": 1.704355153022334,
+      "per_orbit_ms": 0.1704355153022334
     },
     {
       "N": 30000,
-      "wall_s": 5.21070866601076,
-      "per_orbit_ms": 0.1736902888670253
+      "wall_s": 5.108029016060755,
+      "per_orbit_ms": 0.17026763386869181
     },
     {
       "N": 100000,
-      "wall_s": 17.218888742965646,
-      "per_orbit_ms": 0.17218888742965646
+      "wall_s": 16.98538707906846,
+      "per_orbit_ms": 0.1698538707906846
     },
     {
       "N": 300000,
-      "wall_s": 51.31174407701474,
-      "per_orbit_ms": 0.17103914692338246
+      "wall_s": 50.91952147195116,
+      "per_orbit_ms": 0.1697317382398372
     },
     {
       "N": 1000000,
-      "wall_s": 178.1480311040068,
-      "per_orbit_ms": 0.17814803110400682
+      "wall_s": 169.89570299501065,
+      "per_orbit_ms": 0.16989570299501067
     }
   ],
   "omp_num_threads": 16,
@@ -52,6 +52,19 @@
     ],
     "host": "geir",
     "galpy_version": "1.12.1.dev0",
-    "galpy_file": "/var/tmp/fbp/galpy/__init__.py"
+    "galpy_file": "/var/tmp/fbfinal/galpy/__init__.py"
+  },
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "c16": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T06:33:18",
+      "cpu_affinity": 16,
+      "omp_max_threads_effective": 16,
+      "OMP_NUM_THREADS": "16",
+      "CUDA_VISIBLE_DEVICES": ""
+    }
   }
 }

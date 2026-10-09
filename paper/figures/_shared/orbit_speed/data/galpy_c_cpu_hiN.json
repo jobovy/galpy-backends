@@ -9,37 +9,37 @@
   "potential": "MWPotential2014",
   "host": "geir",
   "galpy_version": "1.12.1.dev0",
-  "galpy_file": "/var/tmp/figs/galpy/__init__.py",
+  "galpy_file": "/var/tmp/fbfinal/galpy/__init__.py",
   "results": [
     {
       "N": 1000,
-      "wall_s": 0.11479598993901163,
-      "per_orbit_ms": 0.11479598993901163
+      "wall_s": 0.1144166070735082,
+      "per_orbit_ms": 0.1144166070735082
     },
     {
       "N": 10000,
-      "wall_s": 1.0001590989995748,
-      "per_orbit_ms": 0.10001590989995747
+      "wall_s": 0.9494054820388556,
+      "per_orbit_ms": 0.09494054820388556
     },
     {
       "N": 30000,
-      "wall_s": 3.068064710008912,
-      "per_orbit_ms": 0.10226882366696373
+      "wall_s": 2.4558567340718582,
+      "per_orbit_ms": 0.08186189113572861
     },
     {
       "N": 100000,
-      "wall_s": 8.096599317970686,
-      "per_orbit_ms": 0.08096599317970686
+      "wall_s": 8.147048456943594,
+      "per_orbit_ms": 0.08147048456943595
     },
     {
       "N": 300000,
-      "wall_s": 25.162229712004773,
-      "per_orbit_ms": 0.08387409904001591
+      "wall_s": 24.25035331095569,
+      "per_orbit_ms": 0.08083451103651897
     },
     {
       "N": 1000000,
-      "wall_s": 79.25746359000914,
-      "per_orbit_ms": 0.07925746359000914
+      "wall_s": 81.10959770297632,
+      "per_orbit_ms": 0.08110959770297632
     }
   ],
   "extended": {
@@ -50,6 +50,19 @@
     ],
     "host": "geir",
     "galpy_version": "1.12.1.dev0",
-    "galpy_file": "/var/tmp/fbp/galpy/__init__.py"
+    "galpy_file": "/var/tmp/fbfinal/galpy/__init__.py"
+  },
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "c72": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T07:17:41",
+      "cpu_affinity": 72,
+      "omp_max_threads_effective": 36,
+      "OMP_NUM_THREADS": "72",
+      "CUDA_VISIBLE_DEVICES": ""
+    }
   }
 }

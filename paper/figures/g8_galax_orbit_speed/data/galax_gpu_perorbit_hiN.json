@@ -10,23 +10,36 @@
   "results": [
     {
       "N": 1000,
-      "wall_s": 1.71533398097381,
-      "per_orbit_ms": 1.71533398097381
+      "wall_s": 1.6228732999879867,
+      "per_orbit_ms": 1.6228732999879867
     },
     {
       "N": 10000,
-      "wall_s": 2.158464931999333,
-      "per_orbit_ms": 0.21584649319993332
+      "wall_s": 2.0669341939501464,
+      "per_orbit_ms": 0.20669341939501465
     },
     {
       "N": 100000,
-      "wall_s": 22.954891728935763,
-      "per_orbit_ms": 0.22954891728935764
+      "wall_s": 22.8804915350629,
+      "per_orbit_ms": 0.22880491535062902
     },
     {
       "N": 300000,
-      "wall_s": 62.67874492704868,
-      "per_orbit_ms": 0.20892914975682894
+      "wall_s": 62.75555446394719,
+      "per_orbit_ms": 0.20918518154649066
     }
-  ]
+  ],
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "gpu": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T03:39:12",
+      "cpu_affinity": 72,
+      "OMP_NUM_THREADS": "unset",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "galax_git": "6c7cb1acaf418747ac52bf5e583d2cde546d3361"
+    }
+  }
 }

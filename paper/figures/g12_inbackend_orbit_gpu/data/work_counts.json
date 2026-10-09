@@ -76,5 +76,17 @@
       "num_total_steps_est": 560,
       "nfev_per_step": 6.003571428571429
     }
+  },
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "cpu": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T03:01:01",
+      "cpu_affinity": 1,
+      "OMP_NUM_THREADS": "1",
+      "CUDA_VISIBLE_DEVICES": ""
+    }
   }
 }

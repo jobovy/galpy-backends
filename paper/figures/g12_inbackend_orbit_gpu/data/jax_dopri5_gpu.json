@@ -12,44 +12,56 @@
   "results": [
     {
       "N": 1,
-      "wall_s": 1.5185019880300388,
-      "per_orbit_ms": 1518.5019880300388,
-      "compile_run_s": 5.237404273007996
+      "wall_s": 1.6763387829996645,
+      "per_orbit_ms": 1676.3387829996645,
+      "compile_run_s": 5.043531063012779
     },
     {
       "N": 10,
-      "wall_s": 1.3961422839201987,
-      "per_orbit_ms": 139.61422839201987,
-      "compile_run_s": 4.2433740691049024
+      "wall_s": 1.196592248044908,
+      "per_orbit_ms": 119.6592248044908,
+      "compile_run_s": 3.7694998829392716
     },
     {
       "N": 100,
-      "wall_s": 1.9299359460128471,
-      "per_orbit_ms": 19.29935946012847,
-      "compile_run_s": 5.397453668992966
+      "wall_s": 1.6644524929579347,
+      "per_orbit_ms": 16.644524929579347,
+      "compile_run_s": 5.1504941820167005
     },
     {
       "N": 1000,
-      "wall_s": 2.107973573030904,
-      "per_orbit_ms": 2.107973573030904,
-      "compile_run_s": 4.9701232590014115
+      "wall_s": 1.8776883970713243,
+      "per_orbit_ms": 1.8776883970713243,
+      "compile_run_s": 4.893088236101903
     },
     {
       "N": 10000,
-      "wall_s": 2.6500154020031914,
-      "per_orbit_ms": 0.2650015402003192,
-      "compile_run_s": 6.069180845050141
+      "wall_s": 2.383962429012172,
+      "per_orbit_ms": 0.2383962429012172,
+      "compile_run_s": 5.5666259590070695
     },
     {
       "N": 30000,
-      "wall_s": 5.762331549893133,
-      "per_orbit_ms": 0.19207771832977114,
-      "compile_run_s": 8.669968246947974
+      "wall_s": 5.615277360077016,
+      "per_orbit_ms": 0.1871759120025672,
+      "compile_run_s": 8.141218669014052
     }
   ],
   "jax_version": "0.10.1",
   "diffrax_version": "0.7.2",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.4.3",
-  "gpu": "NVIDIA TITAN Xp"
+  "gpu": "NVIDIA TITAN Xp",
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "gpu": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T02:46:36",
+      "cpu_affinity": 72,
+      "OMP_NUM_THREADS": "unset",
+      "CUDA_VISIBLE_DEVICES": "0"
+    }
+  }
 }

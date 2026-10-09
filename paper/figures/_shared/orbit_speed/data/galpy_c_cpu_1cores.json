@@ -9,34 +9,46 @@
   "potential": "MWPotential2014",
   "host": "geir",
   "galpy_version": "1.12.1.dev0",
-  "galpy_file": "/var/tmp/fbp/galpy/__init__.py",
+  "galpy_file": "/var/tmp/fbfinal/galpy/__init__.py",
   "results": [
     {
       "N": 1,
-      "wall_s": 0.003424279042519629,
-      "per_orbit_ms": 3.424279042519629
+      "wall_s": 0.0023658849531784654,
+      "per_orbit_ms": 2.3658849531784654
     },
     {
       "N": 10,
-      "wall_s": 0.031502605066634715,
-      "per_orbit_ms": 3.1502605066634715
+      "wall_s": 0.023922555963508785,
+      "per_orbit_ms": 2.3922555963508785
     },
     {
       "N": 100,
-      "wall_s": 0.22287838498596102,
-      "per_orbit_ms": 2.22878384985961
+      "wall_s": 0.22497926803771406,
+      "per_orbit_ms": 2.2497926803771406
     },
     {
       "N": 1000,
-      "wall_s": 2.323068532976322,
-      "per_orbit_ms": 2.323068532976322
+      "wall_s": 2.328606094000861,
+      "per_orbit_ms": 2.328606094000861
     },
     {
       "N": 10000,
-      "wall_s": 22.61814618599601,
-      "per_orbit_ms": 2.261814618599601
+      "wall_s": 24.117394632077776,
+      "per_orbit_ms": 2.4117394632077778
     }
   ],
   "omp_num_threads": 1,
-  "cpu_affinity": 1
+  "cpu_affinity": 1,
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "c1": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T01:01:40",
+      "cpu_affinity": 1,
+      "OMP_NUM_THREADS": "1",
+      "CUDA_VISIBLE_DEVICES": ""
+    }
+  }
 }

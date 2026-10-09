@@ -4,36 +4,56 @@
   "solver": "Dopri8",
   "nt": 1000,
   "tspan_Gyr": 2.0,
+  "cpu_affinity": 72,
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "1",
+    "XLA_FLAGS": "unset"
+  },
+  "jax_version": "0.8.0",
   "results": [
     {
       "N": 1,
-      "wall_s": 1.5597871080972254,
-      "per_orbit_ms": 1559.7871080972254
+      "wall_s": 1.6153213609941304,
+      "per_orbit_ms": 1615.3213609941304
     },
     {
       "N": 10,
-      "wall_s": 0.9223768770461902,
-      "per_orbit_ms": 92.23768770461902
+      "wall_s": 0.8885400439612567,
+      "per_orbit_ms": 88.85400439612567
     },
     {
       "N": 100,
-      "wall_s": 1.0651797539321706,
-      "per_orbit_ms": 10.651797539321706
+      "wall_s": 0.9837602559709921,
+      "per_orbit_ms": 9.837602559709921
     },
     {
       "N": 1000,
-      "wall_s": 1.1154729089466855,
-      "per_orbit_ms": 1.1154729089466855
+      "wall_s": 1.0682792710140347,
+      "per_orbit_ms": 1.0682792710140347
     },
     {
       "N": 10000,
-      "wall_s": 1.5505038540577516,
-      "per_orbit_ms": 0.15505038540577518
+      "wall_s": 1.5213692429242656,
+      "per_orbit_ms": 0.15213692429242656
     },
     {
       "N": 30000,
-      "wall_s": 2.834043830051087,
-      "per_orbit_ms": 0.09446812766836955
+      "wall_s": 2.7758843500632793,
+      "per_orbit_ms": 0.09252947833544264
     }
-  ]
+  ],
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "gpu": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T03:39:12",
+      "cpu_affinity": 72,
+      "OMP_NUM_THREADS": "unset",
+      "CUDA_VISIBLE_DEVICES": "0",
+      "galax_git": "6c7cb1acaf418747ac52bf5e583d2cde546d3361"
+    }
+  }
 }

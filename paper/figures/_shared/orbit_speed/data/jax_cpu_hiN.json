@@ -18,31 +18,43 @@
   "results": [
     {
       "N": 1000,
-      "wall_s": 1.9773707530694082,
-      "per_orbit_ms": 1.977370753069408,
-      "compile_run_s": 6.643715570913628
+      "wall_s": 2.0380973420105875,
+      "per_orbit_ms": 2.0380973420105875,
+      "compile_run_s": 8.007426201016642
     },
     {
       "N": 10000,
-      "wall_s": 26.0300571200205,
-      "per_orbit_ms": 2.60300571200205,
-      "compile_run_s": 29.48169353499543
+      "wall_s": 27.238407750963233,
+      "per_orbit_ms": 2.7238407750963236,
+      "compile_run_s": 31.678052512928843
     },
     {
       "N": 100000,
-      "wall_s": 360.64520260109566,
-      "per_orbit_ms": 3.6064520260109565,
-      "compile_run_s": 365.8667367430171
+      "wall_s": 361.81417834199965,
+      "per_orbit_ms": 3.6181417834199965,
+      "compile_run_s": 425.52229001396336
     },
     {
       "N": 300000,
-      "wall_s": 1390.1335273929872,
-      "per_orbit_ms": 4.633778424643291,
-      "compile_run_s": 1354.2239123400068
+      "wall_s": 1359.8246457980713,
+      "per_orbit_ms": 4.532748819326905,
+      "compile_run_s": 1311.4546333240578
     }
   ],
   "jax_version": "0.10.1",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.4.3",
-  "gpu": "cpu"
+  "gpu": "cpu",
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "cpu": {
+      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+      "worktree": "/var/tmp/fbfinal",
+      "campaign": "chainF (single-commit dev-box campaign)",
+      "date": "2026-10-09T05:39:51",
+      "cpu_affinity": 1,
+      "OMP_NUM_THREADS": "1",
+      "CUDA_VISIBLE_DEVICES": ""
+    }
+  }
 }
