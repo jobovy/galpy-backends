@@ -106,11 +106,10 @@ respect to the scale radius of a Hernquist potential as
 \begin{code}
 a= torch.tensor(1.,dtype=torch.float64,
                 requires_grad=True)
-with galpy.backend.use('torch'):
-    hp= HernquistPotential(amp=2.,a=a)
-    df= constantbetadf(pot=hp,beta=-0.2)
-    key= galpy.backend.random.key(7,backend='torch')
-    sam= df.sample(n=1000,key=key)
+hp= HernquistPotential(amp=2.,a=a)
+df= constantbetadf(pot=hp,beta=-0.2)
+key= galpy.backend.random.key(7,backend='torch')
+sam= df.sample(n=1000,key=key)
 dr_da= torch.autograd.grad(sam.r().sum(),a)
 \end{code}
 and for a Hernquist sphere this derivative is $r_i/a$, which the sampler
@@ -119,21 +118,21 @@ sampling of these DFs run under \texttt{jax.jit}, and for the King
 model so does the derivative with respect to $W_0$,
 \begin{code}
 def sigmar(W0):
-    with galpy.backend.use('jax'):
-        kdf= kingdf(W0=W0,M=2.3,rt=1.4)
-        return kdf.sigmar(jnp.asarray(0.5))
+    kdf= kingdf(W0=W0,M=2.3,rt=1.4)
+    return kdf.sigmar(0.5)
 dsig= jax.jit(jax.grad(sigmar)) # ODE by diffrax
 dsig(3.)
 \end{code}
 A DF built from a density that is not the one generating the
-potential is differentiable with respect to the parameters of the
+potential is differentiable with respect to the parameters of both the
+density and the potential; for example, with respect to those of the
 density,
 \begin{code}
 def dispersion(a_tracer):
     hp= HernquistPotential(amp=0.1,a=a_tracer)
     df= eddingtondf(pot=NFWPotential(amp=1.,a=2.),
                     denspot=hp)
-    return df.sigmar(jnp.asarray(1.))
+    return df.sigmar(1.)
 jax.grad(dispersion)(0.7)
 \end{code}
 Not everything is differentiable: the energy derivative of the mass
@@ -163,9 +162,8 @@ is the same, the particular draws are not). In code,
 \begin{code}
 qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,
                        pot=MWPotential2014,aA=aAS)
-with galpy.backend.use('jax'):
-    vs= qdf.sampleV(0.9,0.05,n=10**4,
-                    key=grandom.key(0,backend='jax'))
+vs= qdf.sampleV(0.9,0.05,n=10**4,
+                key=grandom.key(0,backend='jax'))
 sigma_R= jnp.std(vs[:,0])
 \end{code}
 Its construction is a \numpy\

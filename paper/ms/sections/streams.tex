@@ -108,8 +108,7 @@ many particles, require \diffrax's direct adjoint,
 key= galpy.backend.random.key(1,backend='jax')
 def leading_arm(q):
     lp= LogarithmicHaloPotential(normalize=1.,q=q)
-    prog= Orbit(jnp.asarray(ic))
-    spdf= fardal15spraydf(mass,progenitor=prog,
+    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
         integrate_kwargs={'adjoint':'direct'})
     return spdf.sample(n=1500,return_orbit=False,
@@ -123,19 +122,17 @@ differentiated in the same way,
 \begin{code}
 def track(q):
     lp= LogarithmicHaloPotential(normalize=1.,q=q)
-    prog= Orbit(jnp.asarray(ic))
-    spdf= fardal15spraydf(mass,progenitor=prog,
+    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
         integrate_kwargs={'adjoint':'direct'})
     tr= spdf.streamTrack(n=1500,key=key)
     return tr.x(tps)
 track(0.9); jax.jacfwd(track)(0.9)
 \end{code}
-but this derivative holds the discrete choices of the track fit (its
-binning in stripping time and the knots of its spline) fixed, and a
-finite difference of the fitted track does not converge onto it. For a
-likelihood, smooth statistics of the particles themselves are the
-better target. The derivative of the sampled stream
+where the derivative holds the discrete choices of the track fit (each
+particle's closest point on the progenitor's orbit and the amount of
+smoothing) fixed; it agrees with finite differences of the fitted track
+for steps small enough that none of these choices changes. The derivative of the sampled stream
 with respect to the potential agrees with finite differences of the same
 sample to $10^{-6}$, and \figurename~\ref{fig:extrapolation}
 demonstrates what it is good for: a single pass of forward-mode
