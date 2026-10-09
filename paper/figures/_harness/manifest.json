@@ -195,7 +195,7 @@
     "description": "force-eval throughput vs N: numpy(CPU) vs jax/torch(GPU), compute-only vs end-to-end transfer [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "34bca2d1d",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -203,8 +203,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "0b1fee2",
-    "sha256": "08afce4d028b0387e88cb0b413d8438c44040e32cde9f9f69ce9ec16ff019998",
+    "git": "2b3668c",
+    "sha256": "f17bb326a624408ef369a9d54773a34e137a8b05f26b8c2960c9d0d23eb13bf1",
     "track": "G"
   },
   "g2b_transfer": {
