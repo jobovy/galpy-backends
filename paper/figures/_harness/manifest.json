@@ -514,7 +514,7 @@
     "description": "actionAngleVerticalInverse speed: xvFreqs evaluation wall time vs N angles (numpy, jax eager/jit/vmap, torch; CPU & GPU) and family construction time vs nE [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "34bca2d1d",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -522,8 +522,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "d581a1f",
-    "sha256": "91ff8733788a12adad277e09b169ed06ebe308457e680fe3bf99f6dbf2a34a35",
+    "git": "2b3668c",
+    "sha256": "a6a01312662cdd712f7546d95f987539040e7e44ff0fa23536a8ddc6a172956d",
     "track": "E"
   }
 }
