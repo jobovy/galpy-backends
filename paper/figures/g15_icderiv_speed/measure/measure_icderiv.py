@@ -14,6 +14,7 @@ Run:  PYTHONPATH=<#972-worktree> python measure/measure_icderiv.py
 """
 
 import json
+import os
 import pathlib
 
 import numpy
@@ -33,6 +34,7 @@ from galpy.backend._reference.inbackend_ode import integrate_orbit
 from galpy.potential import MWPotential2014
 
 _CPU = jax.devices("cpu")[0]
+_GPU_ONLY = os.environ.get("G15_GPU_ONLY") == "1"  # H100 runs: skip the CPU series
 _GPU = next((d for d in jax.devices() if d.platform == "gpu"), None)
 _HAS_GPU = _GPU is not None
 _IC = numpy.array([1.0, 0.1, 0.9, 0.05, 0.1, 0.2])
@@ -64,7 +66,7 @@ def _batch(n):
 
 # ----------------------------- single-orbit forward + IC-gradient -------------
 icj = jnp.asarray(_IC)
-for dname, dev in ([("cpu", _CPU)] + ([("gpu", _GPU)] if _HAS_GPU else [])):
+for dname, dev in (([] if _GPU_ONLY else [("cpu", _CPU)]) + ([("gpu", _GPU)] if _HAS_GPU else [])):
     with jax.default_device(dev):
         # C-STM only meaningful on CPU (the variational forward runs in C via a
         # pure_callback regardless of jax device); record it on cpu.
@@ -78,7 +80,7 @@ for dname, dev in ([("cpu", _CPU)] + ([("gpu", _GPU)] if _HAS_GPU else [])):
     _save()
     print(f"single jax {dname} done", flush=True)
 
-for dname, tdev in ([("cpu", "cpu")] + ([("gpu", "cuda")] if torch.cuda.is_available() else [])):
+for dname, tdev in (([] if _GPU_ONLY else [("cpu", "cpu")]) + ([("gpu", "cuda")] if torch.cuda.is_available() else [])):
     ict = torch.tensor(_IC, requires_grad=True, device=tdev)
     ts_t = torch.as_tensor(_TS, device=tdev)
     def _tg(ict=ict, ts_t=ts_t):
@@ -92,7 +94,7 @@ for dname, tdev in ([("cpu", "cpu")] + ([("gpu", "cuda")] if torch.cuda.is_avail
     print(f"single torch {dname} done", flush=True)
 
 # ----------------------------- batch scaling: grad of summed final R vs N -----
-for dname, dev in ([("cpu", _CPU)] + ([("gpu", _GPU)] if _HAS_GPU else [])):
+for dname, dev in (([] if _GPU_ONLY else [("cpu", _CPU)]) + ([("gpu", _GPU)] if _HAS_GPU else [])):
     for n in (1, 2, 4, 8, 16, 32, 64):
         rec = out["scaling"].setdefault(str(n), {})
         # C-STM (CPU only; C-bound forward)

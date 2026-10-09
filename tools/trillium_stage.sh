@@ -9,6 +9,8 @@
 #   g17     : g17 Staeckel AA (one measurement incl. its CPU series; hours)
 #   orbits  : shared jax GPU orbit speeds (g8/g12) + g12 jax-Dopri5 GPU + g12 torch GPU (~40 min)
 #   g15     : g15 IC-gradient speed, all five scripts (hours, CPU parts included)
+#   g15gpu  : g15 GPU series only (G15_GPU_ONLY=1; no C-STM / CPU series)
+#   g17gpu  : g17 GPU series only (make.py --gpu-only, ~15 min)
 #   bench   : benchmarks/gpu bench.py, jax gpu + torch gpu (~20 min)
 #   newfigs : GPU series of gV2, gD3, gS5, gS4 (~1-2 h)
 #   hiN2    : larger N on the 80 GB card, MERGED into the existing JSONs (--Ns): g12 jax Dopri8 +
@@ -40,6 +42,8 @@ case $STAGE in
            run "cd $WT && python -m pytest -q -p no:cacheprovider tests/test_backend_special.py tests/test_backend_actionAngleVerticalInverse.py -k cuda" ;;
   g2g5g6)  for n in g2_throughput g5_autodiff_overhead g6_jit_amortization; do run "rm -f $F/$n/data/*.json && $H $n"; done ;;
   g17)     run "rm -f $F/g17_staeckel_actionangle_speed/data/*.json && $H g17_staeckel_actionangle_speed_jax g17_staeckel_actionangle_speed_torch" ;;
+  g17gpu)  # GPU series only (the paper's CPU series come from the dev box); ~15 min
+           run "rm -f $F/g17_staeckel_actionangle_speed/data/g17_staeckel_actionangle_speed.json.partial && python $F/g17_staeckel_actionangle_speed/make.py --gpu-only" ;;
   orbits)  run "python $F/_shared/orbit_speed/galpy_jax_measure.py gpu lowN"
            run "python $F/_shared/orbit_speed/galpy_jax_measure.py gpu hiN"
            run "python $M12/jax_dopri5_measure.py gpu lowN"
@@ -48,6 +52,8 @@ case $STAGE in
            run "$H g8_galax_orbit_speed g12_inbackend_orbit_gpu" ;;
   g15)     for sc in measure_icderiv measure_scaling measure_largeN measure_torch_hiN measure_cstm_largeN; do run "python $M15/$sc.py"; done
            run "$H g15_icderiv_speed" ;;
+  g15gpu)  # GPU series only (C-STM and the CPU series come from the dev box)
+           for sc in measure_icderiv measure_scaling measure_largeN measure_torch_hiN; do run "G15_GPU_ONLY=1 python $M15/$sc.py"; done ;;
   bench)   D=$R/benchmarks/gpu; O=$D/results_h100_$(date +%F); mkdir -p $O
            run "python $D/bench.py jax gpu $O/jax_gpu.json"
            run "python $D/bench.py torch gpu $O/torch_gpu.json" ;;

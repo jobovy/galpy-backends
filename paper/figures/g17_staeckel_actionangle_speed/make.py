@@ -369,14 +369,15 @@ def _stamp(data):
     env.setdefault("gpu", "none")
 
 
-def _measure(out=None, Ns=None, gpu=True):
+def _measure(out=None, Ns=None, gpu=True, cpu=True):
     """Measure every series (each in its own child process; see _run_series) into
     ``out`` (default _JSON), checkpointing to ``out``.partial after each series and
     resuming from it. With OMP_NUM_THREADS=1 every CPU series runs pinned to ONE
     core: XLA:CPU sizes its thread pool from the CPU affinity (jax 0.10.1 ignores
     --xla_cpu_multi_thread_eigen=false; measured cpu/wall ~6-60 with it, 1.0
     pinned). ``Ns``: one N list for every series (dry runs); ``gpu=False``: CPU
-    series only."""
+    series only; ``cpu=False``: GPU series only (the H100 runs: the paper's CPU
+    series come from the dev box)."""
     out = out or _JSON
     partial = out + ".partial"
     grids = _grids(Ns)
@@ -392,7 +393,7 @@ def _measure(out=None, Ns=None, gpu=True):
             print("ignoring", partial, "(different N grids)", flush=True)
     pin = max(os.sched_getaffinity(0)) if os.environ.get("OMP_NUM_THREADS") == "1" else None
     for name, (fw, dev, kind, key) in _RUN.items():
-        if dev == "gpu" and not gpu:
+        if (dev == "gpu" and not gpu) or (dev == "cpu" and not cpu):
             continue
         if name in data["series"] and not data["status"].get(name, "ok").startswith("crashed"):
             print(f"[{name}] in checkpoint ({data['status'].get(name, 'ok')}), skipped", flush=True)
@@ -630,7 +631,10 @@ if __name__ == "__main__":  # measure (see _measure); the plot is ``run``
                                  "child process; checkpointed to <out>.partial).")
     ap.add_argument("--out", default=_JSON, help="output JSON (default: %(default)s)")
     ap.add_argument("--Ns", help="comma list: one N grid for every series (dry runs)")
-    ap.add_argument("--cpu-only", action="store_true", help="skip the GPU series")
+    grp = ap.add_mutually_exclusive_group()
+    grp.add_argument("--cpu-only", action="store_true", help="skip the GPU series")
+    grp.add_argument("--gpu-only", action="store_true",
+                     help="skip the CPU series (C, numpy, old loop, jax/torch CPU)")
     args = ap.parse_args()
     _measure(out=args.out, Ns=None if args.Ns is None else [int(float(n)) for n in args.Ns.split(",")],
-             gpu=not args.cpu_only)
+             gpu=not args.cpu_only, cpu=not args.gpu_only)

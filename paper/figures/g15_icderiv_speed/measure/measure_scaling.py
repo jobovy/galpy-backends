@@ -15,6 +15,7 @@ Run:  PYTHONPATH=<#972-worktree> python measure/measure_scaling.py
 """
 
 import json
+import os
 import pathlib
 
 import numpy
@@ -35,6 +36,7 @@ from galpy.backend._reference.inbackend_ode import _eom_rhs, _to_eom, integrate_
 from galpy.potential import MWPotential2014
 
 _CPU = jax.devices("cpu")[0]
+_GPU_ONLY = os.environ.get("G15_GPU_ONLY") == "1"  # H100 runs: skip the CPU series
 _GPU = next((d for d in jax.devices() if d.platform == "gpu"), None)
 _IC = numpy.array([1.0, 0.1, 0.9, 0.05, 0.1, 0.2])
 _TS = numpy.linspace(0.0, 10.0, 100)
@@ -73,18 +75,18 @@ def _set(n, key, val):
 for n in NS:
     icn = _batch(n)
     # --- C-STM (CPU, loop over orbits) ---
-    if n <= CSTM_MAX_N:
+    if n <= CSTM_MAX_N and not _GPU_ONLY:
         with jax.default_device(_CPU):
             g = jax.jit(jax.grad(lambda v: cstm_jax(MWPotential2014, v, ts_j, method="dop853_c")[:, -1, 0].sum()))
             icb = jnp.asarray(icn)
             _set(n, "cstm_cpu", _safe(lambda: jax.block_until_ready(g(icb)), sync="jax", repeats=3))
     # --- diffrax (jax.vmap) on CPU and GPU ---
-    for dname, dev in ([("cpu", _CPU)] + ([("gpu", _GPU)] if _GPU else [])):
+    for dname, dev in (([] if _GPU_ONLY else [("cpu", _CPU)]) + ([("gpu", _GPU)] if _GPU else [])):
         with jax.default_device(dev):
             gd = jax.jit(jax.grad(lambda v: jax.vmap(lambda ic: integrate_orbit(MWPotential2014, ic, ts_j)[-1, 0])(v).sum()))
             _set(n, f"diffrax_{dname}", _safe(lambda: jax.block_until_ready(gd(jnp.asarray(icn))), sync="jax", repeats=3))
     # --- torchdiffeq batched (6,N), CPU and GPU ---
-    for dname, tdev in ([("cpu", "cpu")] + ([("gpu", "cuda")] if torch.cuda.is_available() else [])):
+    for dname, tdev in (([] if _GPU_ONLY else [("cpu", "cpu")]) + ([("gpu", "cuda")] if torch.cuda.is_available() else [])):
         ts_t = torch.as_tensor(_TS, device=tdev)
         def _tg(icn=icn, tdev=tdev, ts_t=ts_t):
             ics = torch.tensor(icn, device=tdev, requires_grad=True)  # (N,6)

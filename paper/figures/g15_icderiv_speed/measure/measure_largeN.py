@@ -36,6 +36,7 @@ from galpy.backend._reference.inbackend_ode import _eom_rhs, _to_eom, integrate_
 from galpy.potential import MWPotential2014
 
 _CPU = jax.devices("cpu")[0]
+_GPU_ONLY = os.environ.get("G15_GPU_ONLY") == "1"  # H100 runs: skip the CPU series
 _GPU = next((d for d in jax.devices() if d.platform == "gpu"), None)
 _IC = numpy.array([1.0, 0.1, 0.9, 0.05, 0.1, 0.2])
 _TS = numpy.linspace(0.0, 10.0, 100)
@@ -84,6 +85,8 @@ def _torch_field(t, y):  # y (N,6), batch-first
 # series: (key, kind, device)
 series = [("diffrax_cpu", "jax", _CPU), ("diffrax_gpu", "jax", _GPU),
           ("torchdiffeq_cpu", "torch", "cpu"), ("torchdiffeq_gpu", "torch", "cuda")]
+if _GPU_ONLY:
+    series = [s_ for s_ in series if s_[0].endswith("_gpu")]
 alive = {k: True for k, *_ in series}
 
 for n in N_EXT:
