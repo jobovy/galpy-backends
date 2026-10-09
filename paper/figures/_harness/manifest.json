@@ -258,7 +258,7 @@
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "34bca2d1d",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -266,8 +266,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "829e88c",
-    "sha256": "874ad23ce983bb62099bbac14fa494af1cd650f9131c8bc6fd9e875dd13a4897",
+    "git": "2b3668c",
+    "sha256": "1c6cd96e688ece36cc1b2364279356d87c3e5f9c80be5c73188fa8dacc52c415",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
