@@ -10,9 +10,17 @@ from their actions + angle evolution.
 galpy comes from $GALPY_WORKTREE (prepended to sys.path) or else PYTHONPATH;
 the paper's data are on galpy feat/backends 34bca2d1d, stamped as galpy_commit.
 
+Compile cost: each jit of the Staeckel forward takes minutes and recompiles per
+input shape, so the forward runs in fixed 512-point chunks (one executable) and
+the training step is compiled once, ahead of time; both are timed into the dump.
+A persistent compilation cache (--cache-dir or $JAX_COMPILATION_CACHE_DIR) makes
+a re-run skip them. --ckpt checkpoints the training every --ckpt-every steps and
+--resume continues a timed-out run from it (bit-identical to an uninterrupted one).
+
 Usage (any cwd; normally via tools/trillium_stage.sh g20 on the H100):
-  XLA_PYTHON_CLIENT_PREALLOCATE=false GALPY_WORKTREE=<galpy> python train_and_dump.py
-  ... python train_and_dump.py --smoke      # ~20 steps on a small dataset; writes
+  XLA_PYTHON_CLIENT_PREALLOCATE=false GALPY_WORKTREE=<galpy> python train_and_dump.py \
+      [--cache-dir DIR] [--ckpt FILE [--resume]]
+  ... python train_and_dump.py --smoke      # 20 steps on a small dataset; writes
                                             # data/results_staeckel_jax_smoke.npz (not for the figure)
 """
 
@@ -32,6 +40,15 @@ import numpy  # noqa: E402
 
 import jax  # noqa: E402
 import jax.numpy as jnp  # noqa: E402
+
+
+def _set_cache(d):
+    if d:
+        os.makedirs(d, exist_ok=True)
+        jax.config.update("jax_compilation_cache_dir", d)
+        jax.config.update("jax_persistent_cache_min_compile_time_secs", 1.0)
+    return d
+
 
 import nn_staeckel_inverse_jax as M  # noqa: E402
 
@@ -76,23 +93,28 @@ def _peak_gpu_bytes():
         return -1
 
 
-def main(n_steps=3200, smoke=False, out=None):
-    n_data, n_rt, n_t = (3000, 500, 120) if smoke else (40000, 6000, 600)
+def main(n_steps=3200, smoke=False, out=None, n_data=None, n_rt=None, n_t=None,
+         ckpt=None, ckpt_every=200, resume=False, log_every=50, stop_after=None, cache_dir=None):
+    d_data, d_rt, d_t = (3000, 500, 120) if smoke else (40000, 6000, 600)
+    n_data, n_rt, n_t = n_data or d_data, n_rt or d_rt, n_t or d_t
     if smoke:
         n_steps = min(n_steps, 20)
     hp = dict(n_steps=n_steps, batch=512, lr=2e-3, warmup=400, seed=0, n_data=n_data)
     t_all = time.time()
-    params, model, hist, train_s = M.train(**hp)
+    print(f"{hp}; device {jax.devices()[0].device_kind}; jax {jax.__version__}; "
+          f"compilation cache {cache_dir or 'off'}", flush=True)
+    params, model, hist, train_s = M.train(**hp, ckpt=ckpt, ckpt_every=ckpt_every, resume=resume,
+                                           log_every=log_every, stop_after=stop_after)
+    t_eval = time.time()
 
     # ---- (c) round-trip on IN-DISTRIBUTION tori: draw phase-space points the
     # way the training data was drawn, forward them to (JR,Jz,thR,thz), then
     # measure F(G(.)) closure (uniform (JR,Jz) would include unreachable pairs).
     _, _, _, _, JR, Jz, thR, thz = (numpy.asarray(a) for a in M.gen_dataset(n_rt, seed=7))
     pred = predict(params, model, JR, Jz, thR, thz)
-    # jitted: an unbound proposal returns the 9999.99 sentinel / NaN (masked below)
-    # instead of raising UnboundError as the eager forward does
-    JRh, Jzh, thRh, thzh = (numpy.asarray(a) for a in jax.jit(M.forward)(
-        *(jnp.asarray(pred[:, k]) for k in range(4))))
+    # jitted (chunked): an unbound proposal returns the 9999.99 sentinel / NaN
+    # (masked below) instead of raising UnboundError as the eager forward does
+    JRh, Jzh, thRh, thzh = M.forward_chunked(*(pred[:, k] for k in range(4)))
     ok = numpy.isfinite(JRh) & numpy.isfinite(Jzh) & (JRh < 1.0) & (Jzh < 1.0)
     rms = numpy.sqrt(numpy.mean((JR[ok] - JRh[ok]) ** 2 + (Jz[ok] - Jzh[ok]) ** 2))
     dth = numpy.concatenate([numpy.angle(numpy.exp(1j * (thRh[ok] - thR[ok]))),
@@ -103,8 +125,7 @@ def main(n_steps=3200, smoke=False, out=None):
     orb_R, orb_z, rec_R, rec_z, orb_JR, orb_Jz = [], [], [], [], [], []
     for (R0, vR0, z0, vz0) in ICS:
         R, z, vR, vz = integrated_orbit(R0, vR0, z0, vz0, n_t=n_t)
-        JRo, Jzo, thRo, thzo = (numpy.asarray(a) for a in M.forward(
-            jnp.asarray(R), jnp.asarray(vR), jnp.asarray(z), jnp.asarray(vz)))
+        JRo, Jzo, thRo, thzo = M.forward_chunked(R, vR, z, vz)
         rec = predict(params, model, JRo, Jzo, thRo, thzo)
         orb_R.append(R); orb_z.append(z); rec_R.append(rec[:, 0]); rec_z.append(rec[:, 2])
         orb_JR.append(numpy.median(JRo)); orb_Jz.append(numpy.median(Jzo))
@@ -119,7 +140,15 @@ def main(n_steps=3200, smoke=False, out=None):
         out,
         hist=numpy.array(hist),  # columns: step, total, data (sup), cycle
         hist_columns=numpy.array(["step", "total", "data", "cycle"]),
-        train_seconds=train_s, total_seconds=time.time() - t_all,
+        train_seconds=train_s,  # training-loop wall time, summed over resumed runs; excl. compile
+        total_seconds=time.time() - t_all,  # this run only
+        eval_seconds=time.time() - t_eval,
+        # trace + lower + compile (the persistent cache saves only the XLA compile part)
+        compile_step_seconds=M.TIMINGS["compile_step"],
+        compile_forward_seconds=M.TIMINGS[f"compile_forward_{M.CHUNK}"],
+        dataset_seconds=M.TIMINGS["dataset_seconds"],
+        resumed_from_step=M.TIMINGS["resumed_from_step"], n_runs=M.TIMINGS["n_runs"],
+        compilation_cache=str(cache_dir or ""),
         hyperparams=numpy.array(repr(hp)), smoke=smoke,
         JR_in=JR, Jz_in=Jz, thR_in=thR, thz_in=thz,
         JR_rt=JRh, Jz_rt=Jzh, thR_rt=thRh, thz_rt=thzh, rt_ok=ok,
@@ -134,11 +163,15 @@ def main(n_steps=3200, smoke=False, out=None):
         python_version=sys.version.split()[0],
         created=time.strftime("%Y-%m-%d %H:%M:%S"),
     )
+    print(f"compile: forward {M.TIMINGS[f'compile_forward_{M.CHUNK}']:.0f}s, "
+          f"train step {M.TIMINGS['compile_step']:.0f}s; dataset {M.TIMINGS['dataset_seconds']:.0f}s; "
+          f"eval {time.time() - t_eval:.0f}s", flush=True)
     print(f"trained {n_steps} steps in {train_s:.1f}s on {dev.device_kind}; galpy {sha}"
           f"{' (dirty)' if dirty else ''}; jax {jax.__version__}; "
-          f"peak GPU memory {_peak_gpu_bytes() / 2**30:.2f} GiB")
+          f"peak GPU memory {_peak_gpu_bytes() / 2**30:.2f} GiB" if _peak_gpu_bytes() >= 0
+          else "no GPU", flush=True)
     print(f"round-trip RMS dJ = {rms:.3e}, RMS dtheta = {rms_th:.3e} rad "
-          f"({ok.sum()}/{ok.size} finite); wrote {out}")
+          f"({ok.sum()}/{ok.size} finite); wrote {out}", flush=True)
 
 
 if __name__ == "__main__":
@@ -146,5 +179,19 @@ if __name__ == "__main__":
     ap.add_argument("--steps", type=int, default=3200)
     ap.add_argument("--smoke", action="store_true", help="20 steps, small dataset")
     ap.add_argument("--out", default=None, help="dump path (default: data/results_staeckel_jax[_smoke].npz)")
+    ap.add_argument("--n-data", type=int, help="override the dataset size (smoke-testing only)")
+    ap.add_argument("--n-rt", type=int, help="override the round-trip sample size (smoke-testing only)")
+    ap.add_argument("--n-t", type=int, help="override the orbit sampling (smoke-testing only)")
+    ap.add_argument("--cache-dir", default=os.environ.get("JAX_COMPILATION_CACHE_DIR"),
+                    help="persistent jax compilation cache (default $JAX_COMPILATION_CACHE_DIR)")
+    ap.add_argument("--ckpt", default=None, help="checkpoint file (params, optimizer state, step)")
+    ap.add_argument("--ckpt-every", type=int, default=200)
+    ap.add_argument("--resume", action="store_true", help="continue from --ckpt if it exists")
+    ap.add_argument("--log-every", type=int, default=50, help="progress line every N steps")
+    ap.add_argument("--stop-after", type=int, default=None,
+                    help="end after N training steps of this run (tests --resume)")
     a = ap.parse_args()
-    main(a.steps, a.smoke, a.out)
+    if a.resume and not a.ckpt:
+        ap.error("--resume needs --ckpt")
+    main(a.steps, a.smoke, a.out, a.n_data, a.n_rt, a.n_t, a.ckpt, a.ckpt_every, a.resume,
+         a.log_every, a.stop_after, _set_cache(a.cache_dir))

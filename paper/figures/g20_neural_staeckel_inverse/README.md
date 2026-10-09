@@ -49,7 +49,7 @@ Training runs on the H100 (Trillium), on galpy `feat/backends` **34bca2d1d**
 
 ```bash
 # H100: smoke (20 steps), full training (3200 steps), dump + nvidia-smi memory log
-sbatch --account=<ACCOUNT> --time=01:30:00 --export=ALL,STAGE=g20 tools/trillium_job.sbatch
+sbatch --account=<ACCOUNT> --time=04:00:00 --export=ALL,STAGE=g20 tools/trillium_job.sbatch
 #   -> paper/figures/g20_neural_staeckel_inverse/data/results_staeckel_jax.npz
 # or by hand, from any cwd (galpy from $GALPY_WORKTREE, else PYTHONPATH):
 XLA_PYTHON_CLIENT_PREALLOCATE=false GALPY_WORKTREE=<galpy> \
@@ -61,6 +61,14 @@ The figure is plot-only, from the dump (no GPU, no galpy needed):
 ```bash
 python paper/figures/g20_neural_staeckel_inverse/make_staeckel_figure.py  # -> g20_neural_staeckel_inverse.png
 ```
+
+Each jit of the Staeckel forward costs minutes and recompiles per input shape,
+so the script evaluates it in fixed 512-point chunks (one executable;
+bit-identical to the unchunked call) and compiles the training step once ahead of
+time; `--cache-dir` (or `$JAX_COMPILATION_CACHE_DIR`) persists the compiles,
+`--ckpt FILE` checkpoints every `--ckpt-every` steps, and `--resume` continues a
+timed-out run bit-identically. The dump records compile / dataset / train / eval
+times separately.
 
 `--smoke` writes `data/results_staeckel_jax_smoke.npz`, which the figure never
 reads (and which is not committed). Needs `flax` and `optax` besides jax.
