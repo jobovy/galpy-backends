@@ -5,12 +5,14 @@ differentiated w.r.t. the potential, in the same way.
 
 NOTE: streamTrack returns a StreamTrack object, which is not a jax pytree, so
 jax.jacfwd cannot differentiate a function returning it; the snippet now
-returns the track evaluated at fixed times tps (StreamTrack.x). Before galpy
-PR #1646 forward mode (jax.jacfwd) also needed
-integrate_kwargs={'adjoint':'direct'} and a jax progenitor Orbit; with it,
-neither (see streams_02).
-The derivative is that of the fit with its discrete choices frozen; see the
-KNOWN LIMITATION below.
+returns the track evaluated at fixed times tps (StreamTrack.x). Since galpy
+PR #1646 the progenitor can be set up from the list (see streams_02); the
+direct adjoint stays for jax 0.6 (Python 3.10).
+The derivative is generative (the particles are drawn and integrated inside
+it) and holds the fit's discrete choices (each particle's closest point on
+the progenitor's orbit, the smoothing level) fixed. It is checked below
+against central finite differences of the same (traced, jitted) fit for two
+steps small enough that no choice changes.
 """
 
 import time
@@ -38,8 +40,7 @@ t0 = time.time()
 # --- paper snippet begins ---
 def track(q):
     lp= LogarithmicHaloPotential(normalize=1.,q=q)
-    prog= Orbit(jnp.asarray(ic))
-    spdf= fardal15spraydf(mass,progenitor=prog,
+    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
         integrate_kwargs={'adjoint':'direct'})
     tr= spdf.streamTrack(n=1500,key=key)
@@ -53,20 +54,20 @@ dx = jax.jacfwd(track)(0.9)
 assert isinstance(x, jax.Array) and isinstance(dx, jax.Array)
 assert dx.shape == tps.shape
 assert numpy.all(numpy.isfinite(numpy.asarray(dx)))
-# KNOWN LIMITATION: the fitted track is not a smooth function of q. Its
-# closest-node assignment of particles and its GCV smoothing level are
-# discrete choices, frozen in the derivative but re-made at q+-h, so a
-# finite difference does not converge onto the derivative (it changes
-# erratically with h; measured relative differences 1.0-1.6 for h=1e-3..1e-5,
-# also with fixed smoothing/ntp). jacfwd runs and gives the derivative with
-# those choices frozen; it cannot be checked against a finite difference.
-h = 1e-3
-fd = (numpy.asarray(track(0.9 + h)) - numpy.asarray(track(0.9 - h))) / (2 * h)
-print("AD:", numpy.asarray(dx), "FD:", fd)
-err = numpy.max(numpy.abs(numpy.asarray(dx) - fd)) / numpy.max(numpy.abs(fd))
-print("max |AD - FD| / max |FD|:", err)
-assert err > 0.1, (
-    "the track derivative now agrees with a finite difference: galpy made the "
-    "track smooth in q; tighten this check to a convergence test"
-)
+# The derivative vs central finite differences of the same fit. The eager
+# track(q) at a float q takes the numpy fit (make_smoothing_spline), a
+# different estimator from the traced one that jacfwd differentiates, so the
+# finite difference uses jax.jit(track), which traces q. The fit's discrete
+# choices change for steps h >~ 1e-6, so two smaller steps are used, which
+# agree with each other and with jacfwd.
+track_jit = jax.jit(track)
+fds = []
+for h in (1e-6, 3e-7):
+    fd = (numpy.asarray(track_jit(0.9 + h)) - numpy.asarray(track_jit(0.9 - h))) / (
+        2 * h
+    )
+    err = numpy.max(numpy.abs(numpy.asarray(dx) - fd)) / numpy.max(numpy.abs(fd))
+    print(f"h={h:.0e}: AD:", numpy.asarray(dx), "FD:", fd, "rel:", err)
+    fds.append(fd)
+    assert err < 2e-4, err  # measured 2e-5 (1e-6), 6e-5 (3e-7)
 print("OK")

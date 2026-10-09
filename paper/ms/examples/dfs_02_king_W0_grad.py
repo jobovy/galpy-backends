@@ -6,8 +6,9 @@ the Poisson equation) runs under jax.jit, where the ODE is solved by diffrax.
 NOTE: before galpy PR #1646, kingdf(W0=<tracer>) without a backend
 context failed both eagerly and under jax.jit: the constructor evaluated its
 potential at Python floats, which dispatched to numpy and met the traced W0.
-Hence the use('jax') in the snippet; with the PR the constructor follows the
-traced W0 (checked below), so the context can be dropped once it is merged.
+With the PR the constructor follows the traced W0, so the snippet no longer
+needs a galpy.backend.use('jax') block, and since galpy PR #1656 sigmar takes
+a Python-float radius under a traced parameter (it needed jnp.asarray(0.5)).
 The eager derivative takes ~2 min on a CPU, so the snippet shows only the
 jitted one (~1 min, nearly all compilation).
 """
@@ -26,9 +27,8 @@ from galpy.df import kingdf
 t0 = time.time()
 # --- paper snippet begins ---
 def sigmar(W0):
-    with galpy.backend.use('jax'):
-        kdf= kingdf(W0=W0,M=2.3,rt=1.4)
-        return kdf.sigmar(jnp.asarray(0.5))
+    kdf= kingdf(W0=W0,M=2.3,rt=1.4)
+    return kdf.sigmar(0.5)
 dsig= jax.jit(jax.grad(sigmar)) # ODE by diffrax
 dsig(3.)
 # --- paper snippet ends ---
@@ -50,12 +50,14 @@ fd = (
 print(float(g), fd)
 # the jitted (diffrax) solve vs the scipy solve: agree to ~1e-8 (galpy's tests)
 numpy.testing.assert_allclose(float(g), fd, rtol=1e-6)
-# and without the backend context (galpy PR #1646): the same derivative
-def sigmar_noctx(W0):
-    return kingdf(W0=W0, M=2.3, rt=1.4).sigmar(jnp.asarray(0.5))
+# and the same derivative inside a galpy.backend.use('jax') block (what the
+# snippet needed before galpy PR #1646)
+def sigmar_ctx(W0):
+    with galpy.backend.use("jax"):
+        return kingdf(W0=W0, M=2.3, rt=1.4).sigmar(jnp.asarray(0.5))
 
 
-g_noctx = jax.jit(jax.grad(sigmar_noctx))(3.0)
-print("without use('jax'):", float(g_noctx))
-numpy.testing.assert_allclose(float(g_noctx), float(g), rtol=1e-12)
+g_ctx = jax.jit(jax.grad(sigmar_ctx))(3.0)
+print("with use('jax'):", float(g_ctx))
+numpy.testing.assert_allclose(float(g_ctx), float(g), rtol=1e-12)
 print("OK")

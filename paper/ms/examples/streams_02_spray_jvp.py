@@ -13,9 +13,11 @@ integrate_kwargs={'adjoint':'direct'}; and with a numpy progenitor
 7e-5 -- not because the progenitor escaped the differentiable path, but
 because the backend sampler splined the progenitor on a coarser grid than
 the numpy sampler the finite difference of plain calls runs (~1e-7 off in
-velocity, ~7e-6 in the stream). With the PR galpy picks the direct adjoint
-under jvp/jacfwd itself and the two samplers agree to ~1e-8, so both can be
-simplified back once it is merged (checked below).
+velocity, ~7e-6 in the stream). With the PR the two samplers agree to ~1e-8,
+so the snippet now uses a progenitor from the list; and galpy picks the
+direct adjoint under jvp/jacfwd itself with recent jax (checked below), but
+not with jax 0.6 (the last jax for Python 3.10), so the snippet keeps
+integrate_kwargs={'adjoint':'direct'}.
 """
 
 import time
@@ -43,8 +45,7 @@ t0 = time.time()
 key= galpy.backend.random.key(1,backend='jax')
 def leading_arm(q):
     lp= LogarithmicHaloPotential(normalize=1.,q=q)
-    prog= Orbit(jnp.asarray(ic))
-    spdf= fardal15spraydf(mass,progenitor=prog,
+    spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
         integrate_kwargs={'adjoint':'direct'})
     return spdf.sample(n=1500,return_orbit=False,
@@ -76,8 +77,8 @@ print("max |AD - FD| / max |AD|:", err)
 assert err < 1e-6, err
 
 
-# galpy PR #1646: a numpy progenitor and no integrate_kwargs give the same
-# forward-mode derivative, which matches a finite difference of plain calls
+# galpy PR #1646: without integrate_kwargs (recent jax) the same forward-mode
+# derivative, which matches a finite difference of plain calls
 def leading_arm_np(q):
     lp = LogarithmicHaloPotential(normalize=1.0, q=q)
     spdf = fardal15spraydf(mass, progenitor=Orbit(ic), pot=lp, tdisrupt=td)

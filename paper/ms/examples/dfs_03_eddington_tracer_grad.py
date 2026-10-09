@@ -8,7 +8,8 @@ NOTE: the snippet (tracer parameter) runs as written. Before galpy PR
 backend context (the constructor evaluated the potential at Python floats,
 e.g. r=0 in _handle_rmin, which went to numpy and met the traced parameter)
 and ran only inside galpy.backend.use('jax'); with the PR it runs without
-one. Both are checked below.
+one. Both are checked below. Since galpy PR #1656, sigmar also takes a
+Python-float radius with a traced parameter (it needed jnp.asarray(1.)).
 """
 
 import time
@@ -28,7 +29,7 @@ def dispersion(a_tracer):
     hp= HernquistPotential(amp=0.1,a=a_tracer)
     df= eddingtondf(pot=NFWPotential(amp=1.,a=2.),
                     denspot=hp)
-    return df.sigmar(jnp.asarray(1.))
+    return df.sigmar(1.)
 jax.grad(dispersion)(0.7)
 # --- paper snippet ends ---
 print(f"snippet: {time.time() - t0:.1f} s")
@@ -54,11 +55,19 @@ print(float(g), fd)
 numpy.testing.assert_allclose(float(g), fd, rtol=1e-6)
 
 
-# and w.r.t. the potential's parameter (needs the backend context)
+# and w.r.t. the potential's parameter, at a float radius (galpy #1646/#1656),
+# and as before inside the backend context at an array radius
 import galpy.backend
 
 
 def dispersion_pot(a_pot):
+    df = eddingtondf(
+        pot=NFWPotential(amp=1.0, a=a_pot), denspot=HernquistPotential(amp=0.1, a=0.7)
+    )
+    return df.sigmar(1.0)
+
+
+def dispersion_pot_ctx(a_pot):
     with galpy.backend.use("jax"):
         df = eddingtondf(
             pot=NFWPotential(amp=1.0, a=a_pot),
@@ -67,14 +76,7 @@ def dispersion_pot(a_pot):
         return df.sigmar(jnp.asarray(1.0))
 
 
-def dispersion_pot_noctx(a_pot):
-    df = eddingtondf(
-        pot=NFWPotential(amp=1.0, a=a_pot), denspot=HernquistPotential(amp=0.1, a=0.7)
-    )
-    return df.sigmar(jnp.asarray(1.0))
-
-
-gp_noctx = jax.grad(dispersion_pot_noctx)(2.0)  # galpy PR #1646
+gp_ctx = jax.grad(dispersion_pot_ctx)(2.0)
 
 
 def dispersion_pot_np(a_pot):
@@ -89,7 +91,7 @@ fdp = (
     -dispersion_pot_np(2.0 + 2 * h) + 8 * dispersion_pot_np(2.0 + h)
     - 8 * dispersion_pot_np(2.0 - h) + dispersion_pot_np(2.0 - 2 * h)
 ) / (12 * h)
-print(float(gp), float(gp_noctx), fdp)
+print(float(gp), float(gp_ctx), fdp)
 numpy.testing.assert_allclose(float(gp), fdp, rtol=1e-6)
-numpy.testing.assert_allclose(float(gp_noctx), float(gp), rtol=1e-12)
+numpy.testing.assert_allclose(float(gp_ctx), float(gp), rtol=1e-12)
 print("OK")

@@ -7,8 +7,8 @@ differentiable in the DF's parameters.
 NOTES (both fixed in galpy PR #1646, checked below):
 - before the PR, sampleV(...,key=<jax key>) on a qdf built from Python floats
   without a backend context raised a TypeError (numpy and jax arrays mixed in
-  the inverse-CDF draw), hence the use('jax') in the snippet; with it the
-  draw follows the key, so the context can be dropped once it is merged.
+  the inverse-CDF draw) and needed a galpy.backend.use('jax') block; with
+  the PR the draw follows the key, so the snippet no longer has the block.
 - before the PR, the derivative of the sample w.r.t. the DF's parameters was
   NaN for MWPotential2014 (far-tail rows of the velocity mesh with total
   probability ~1e-177, whose CDF normalisation's 1/total**2 derivative
@@ -35,9 +35,8 @@ t0 = time.time()
 # --- paper snippet begins ---
 qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,
                        pot=MWPotential2014,aA=aAS)
-with galpy.backend.use('jax'):
-    vs= qdf.sampleV(0.9,0.05,n=10**4,
-                    key=grandom.key(0,backend='jax'))
+vs= qdf.sampleV(0.9,0.05,n=10**4,
+                key=grandom.key(0,backend='jax'))
 sigma_R= jnp.std(vs[:,0])
 # --- paper snippet ends ---
 print(f"snippet: {time.time() - t0:.1f} s")
@@ -52,9 +51,8 @@ numpy.testing.assert_allclose(float(sigma_R), sR, rtol=0.02)
 # differentiable in the DF's parameters for a fixed key: d sigma_R / d sr
 def make_sigR(pot, aA, n):
     def sigR(sr):
-        with galpy.backend.use("jax"):
-            q = quasiisothermaldf(1.0 / 3.0, sr, 0.1, 1.0, 1.0, pot=pot, aA=aA)
-            v = q.sampleV(0.9, 0.05, n=n, key=grandom.key(0, backend="jax"))
+        q = quasiisothermaldf(1.0 / 3.0, sr, 0.1, 1.0, 1.0, pot=pot, aA=aA)
+        v = q.sampleV(0.9, 0.05, n=n, key=grandom.key(0, backend="jax"))
         return jnp.std(v[:, 0])
 
     return sigR
@@ -73,8 +71,11 @@ g14 = jax.grad(sigR14)(0.2)
 fd14 = (sigR14(0.2 + h) - sigR14(0.2 - h)) / (2 * h)
 print("MWPotential2014:", float(g14), float(fd14))
 numpy.testing.assert_allclose(float(g14), float(fd14), rtol=3e-5)
-# and without the backend context (galpy PR #1646): the same draw
-vs_noctx = qdf.sampleV(0.9, 0.05, n=10**4, key=grandom.key(0, backend="jax"))
-assert isinstance(vs_noctx, jax.Array)
-numpy.testing.assert_array_equal(numpy.asarray(vs_noctx), numpy.asarray(vs))
+# and inside the backend context (what the snippet needed before galpy PR
+# #1646): the same draw, to a few ulp (up to 1.2e-12 relative on galpy
+# feat/backends 87a95afc8; bit-identical on the #1646 base)
+with galpy.backend.use("jax"):
+    vs_ctx = qdf.sampleV(0.9, 0.05, n=10**4, key=grandom.key(0, backend="jax"))
+assert isinstance(vs_ctx, jax.Array)
+numpy.testing.assert_allclose(numpy.asarray(vs_ctx), numpy.asarray(vs), rtol=1e-11, atol=1e-14)
 print("OK")
