@@ -242,7 +242,7 @@
     "description": "gradient vs value throughput (reverse-mode AD overhead), jax/torch GPU [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "34bca2d1d",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -250,8 +250,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ab37edd",
-    "sha256": "e38780595729a8d8af5cdc3bdbe929d9fbbfbee0a57dbe69bc20995adc4d344a",
+    "git": "2b3668c",
+    "sha256": "fcf206bec8bf8e51012437d47dafda71644db3e3328dd35a9ac89cb0c87899a8",
     "track": "G"
   },
   "g6_jit_amortization": {
