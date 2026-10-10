@@ -522,8 +522,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "a9e92c1",
-    "sha256": "156bf3a6bed4987212c28b675d89ceb5372d71d61377fa07d1db3705001d228d",
+    "git": "c535ea7",
+    "sha256": "cde2353e4f016d768eb8822c4f87bd156b03b1360b142a3349d7502e190eaa25",
     "track": "E"
   }
 }
