@@ -27,6 +27,28 @@ index e18da1d45..edbf1cfae 100644
  [bumpversion:part:release]
  optional_value = gamma
  values =
+diff --git a/.github/copilot-instructions.md b/.github/copilot-instructions.md
+index 775b43747..ce2398008 100644
+--- a/.github/copilot-instructions.md
++++ b/.github/copilot-instructions.md
+@@ -6,7 +6,7 @@
+ 
+ - **Repository Size**: ~44MB (7.1MB galpy/, 3.3MB tests/, 18MB doc/)
+ - **Languages**: Python (142 files) and C (81 files for performance-critical extensions)
+-- **Python Versions**: Supports 3.10, 3.11, 3.12, 3.13, and 3.14
++- **Python Versions**: Supports 3.11, 3.12, 3.13, and 3.14
+ - **Key Dependencies**: numpy, scipy, matplotlib (required); GSL 1.14+ (optional, for C extensions)
+ - **Optional Dependencies**: astropy, astroquery, tqdm, numexpr, numba, JAX, pynbody
+ 
+@@ -186,7 +186,7 @@ doc/                      # Sphinx documentation
+ 
+ **Main Build Workflow** (`.github/workflows/build.yml`):
+ - Runs on: Ubuntu, macOS (Intel)
+-- Python versions: 3.9, 3.10, 3.11, 3.12, 3.13
++- Python versions: 3.11, 3.12, 3.13, 3.14
+ - **Test splitting**: Tests are split into ~15 jobs per Python version for parallel execution
+ - **OpenMP disabled on Linux**: CI uses `GALPY_COMPILE_NO_OPENMP=1`
+ - **Coverage enabled on Linux**: Uses `GALPY_COMPILE_COVERAGE=1` with lcov
 diff --git a/CITATION.cff b/CITATION.cff
 index 49396aa01..c9b2d8022 100644
 --- a/CITATION.cff
@@ -41,12 +63,15 @@ index 49396aa01..c9b2d8022 100644
  preferred-citation:
    type: article
 diff --git a/HISTORY.txt b/HISTORY.txt
-index e5b870f5b..5ef8c5e6d 100644
+index e5b870f5b..e1395a7ad 100644
 --- a/HISTORY.txt
 +++ b/HISTORY.txt
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,15 @@
 +v2.0.0b1 (pre-release)
 +======================
++
++- Python 3.10 is no longer supported (galpy 1.x keeps it); galpy 2.x
++  requires Python >= 3.11.
 +
 +- Array backends: galpy runs natively on JAX and PyTorch arrays
 +  (``galpy.backend``), differentiable end to end (potentials, orbits,
@@ -57,6 +82,23 @@ index e5b870f5b..5ef8c5e6d 100644
  v1.12.1 (expected around 2026-11-01)
  ====================
  
+diff --git a/README.md b/README.md
+index b6317de04..658486d55 100644
+--- a/README.md
++++ b/README.md
+@@ -46,9 +46,9 @@ FAQ](http://docs.galpy.org/en/latest/installation.html#installation-faq).
+ PYTHON VERSIONS AND DEPENDENCIES
+ ================================
+ 
+-`galpy` supports Python 3. Specifically, galpy supports Python 3.10, 3.11, 3.12,
+-3.13, and 3.14. GitHub Actions CI builds regularly check support for
+-Python 3.14 (and of 3.10, 3.11, 3.12, and 3.13 using a more limited, core set of tests)
++`galpy` supports Python 3. Specifically, galpy 2.x supports Python 3.11, 3.12,
++3.13, and 3.14 (galpy 1.x also supports Python 3.10). GitHub Actions CI builds regularly check support for
++Python 3.14 (and of 3.11, 3.12, and 3.13 using a more limited, core set of tests)
+ on Linux and Windows (and 3.14 on Mac OS). Python 2.7 is no longer supported.
+ 
+ This package requires [Numpy](https://numpy.org/),
 diff --git a/doc/source/conf.py b/doc/source/conf.py
 index 550acc162..50ba75a58 100644
 --- a/doc/source/conf.py
@@ -71,9 +113,27 @@ index 550acc162..50ba75a58 100644
  release = version
  on_rtd = os.environ.get("READTHEDOCS", None) == "True"
 diff --git a/doc/source/installation.rst b/doc/source/installation.rst
-index 2298bb73c..41ff15ba0 100644
+index 2298bb73c..1d51dcf81 100644
 --- a/doc/source/installation.rst
 +++ b/doc/source/installation.rst
+@@ -17,7 +17,7 @@ TL;DR
+ 
+             python -m pip install --only-binary galpy galpy
+ 
+-        This should install a fully-working version of galpy for Python versions >=3.10. If this fails, please open an `issue <https://github.com/jobovy/galpy/issues/new?assignees=&labels=&template=bug_report.md&title=>`__ on the ``galpy`` GitHub page, making sure to specify your platform and Python version. Then read on at :ref:`detailed_installation` to learn how to install ``galpy`` when the above fails.
++        This should install a fully-working version of galpy for Python versions >=3.11. If this fails, please open an `issue <https://github.com/jobovy/galpy/issues/new?assignees=&labels=&template=bug_report.md&title=>`__ on the ``galpy`` GitHub page, making sure to specify your platform and Python version. Then read on at :ref:`detailed_installation` to learn how to install ``galpy`` when the above fails.
+ 
+     .. tab-item:: Mac
+ 
+@@ -29,7 +29,7 @@ TL;DR
+ 
+             conda install -c conda-forge gsl galpy
+ 
+-        These should install a fully-working version of galpy for Python versions >=3.10. If this fails, please open an `issue <https://github.com/jobovy/galpy/issues/new?assignees=&labels=&template=bug_report.md&title=>`__ on the ``galpy`` GitHub page, making sure to specify your platform and Python version. Then read on at :ref:`detailed_installation` to learn how to install ``galpy`` when the above fails.
++        These should install a fully-working version of galpy for Python versions >=3.11. If this fails, please open an `issue <https://github.com/jobovy/galpy/issues/new?assignees=&labels=&template=bug_report.md&title=>`__ on the ``galpy`` GitHub page, making sure to specify your platform and Python version. Then read on at :ref:`detailed_installation` to learn how to install ``galpy`` when the above fails.
+ 
+     .. tab-item:: Windows
+ 
 @@ -59,7 +59,7 @@ Optional dependencies are:
    * ``tqdm`` for displaying a progress bar for certain operations (e.g., orbit integration of multiple objects at once)
    * ``numexpr`` for plotting arbitrary expressions of ``Orbit`` quantities,
@@ -126,8 +186,21 @@ index 532a93cac..e76972b4d 100644
          # Latest is now the final one
          latest_version = latest_version[-1]
      except Exception:  # pragma: no cover
+diff --git a/galpy/backend/interpolate.py b/galpy/backend/interpolate.py
+index b7bd82635..72b1aee15 100644
+--- a/galpy/backend/interpolate.py
++++ b/galpy/backend/interpolate.py
+@@ -1731,7 +1731,7 @@ def _gcv_operator(xv, yv, w):
+     wE[:-1, -2] = -_coeff_of_divided_diff(xv[-4:]) / w[-4:]
+     wE[:-2, -1] = _coeff_of_divided_diff(xv[-3:]) / w[-3:]
+     wE *= 6
+-    # 1-D yv: scipy 1.15's (Python 3.10) private GCV accepts only a 1-D y
++    # 1-D yv: scipy 1.15's private GCV accepts only a 1-D y
+     lam = float(numpy.asarray(_compute_optimal_gcv_parameter(X, wE, yv, w)).ravel()[0])
+     # natural coeffs = Ainv @ yv; scipy's own banded LU (solve_banded) reproduces
+     # its solve even for ill-conditioned A.
 diff --git a/setup.py b/setup.py
-index a7415fb14..d08768dee 100644
+index a7415fb14..b87b5140f 100644
 --- a/setup.py
 +++ b/setup.py
 @@ -388,7 +388,7 @@ class BuildExt(build_ext):
@@ -139,14 +212,22 @@ index a7415fb14..d08768dee 100644
      description="Galactic Dynamics in python",
      author="Jo Bovy",
      author_email="bovy@astro.utoronto.ca",
-@@ -411,8 +411,20 @@ setup(
+@@ -403,7 +403,7 @@ setup(
+         "": ["README.md", "README.dev", "LICENSE", "AUTHORS.rst"],
+     },
+     include_package_data=True,
+-    python_requires=">=3.10",
++    python_requires=">=3.11",
+     install_requires=["packaging", "numpy>=1.7", "scipy", "matplotlib"],
+     extras_require={
+         "test": ["pytest", "coverage", "pytest-cov", "pytest-rerunfailures"],
+@@ -411,8 +411,19 @@ setup(
          # dispatch engine and is pulled in by each backend extra; diffrax /
          # torchdiffeq / torchode provide the in-backend differentiable ODE orbit
          # integrators (torchode: the torch.compile-able one).
 -        "jax": ["jax", "jaxlib", "array-api-compat", "diffrax"],
 -        "torch": ["torch", "array-api-compat", "torchdiffeq", "torchode"],
-+        # Floors: the oldest versions exercised (CI runs the latest); jax and
-+        # diffrax need Python >= 3.11.
++        # Floors: the oldest versions exercised (CI runs the latest).
 +        "jax": [
 +            "jax>=0.10.1",
 +            "jaxlib>=0.10.1",
@@ -162,3 +243,37 @@ index a7415fb14..d08768dee 100644
          "docs": [
              "sphinxext-opengraph",
              "sphinx-design",
+@@ -428,7 +439,6 @@ setup(
+         "License :: OSI Approved :: BSD License",
+         "Operating System :: OS Independent",
+         "Programming Language :: C",
+-        "Programming Language :: Python :: 3.10",
+         "Programming Language :: Python :: 3.11",
+         "Programming Language :: Python :: 3.12",
+         "Programming Language :: Python :: 3.13",
+diff --git a/tests/conftest.py b/tests/conftest.py
+index 66691de5c..b3114a502 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -39,7 +39,7 @@ def torch_compiles():
+ 
+     dynamo trails the Python release and refuses to run on one it does not
+     support yet, so `import torch` succeeding does not imply that compiling
+-    works, and CI runs the backend shards on 3.10 through 3.14. Probing is only
++    works, and CI runs the backend shards on 3.11 through 3.14. Probing is only
+     reliable this way. Deliberately a function, not a module-level constant, so
+     importing this conftest never drags torch into a numpy-only session.
+     """
+diff --git a/tests/test_backend_interpolate.py b/tests/test_backend_interpolate.py
+index 4027f1c2a..46e68016f 100644
+--- a/tests/test_backend_interpolate.py
++++ b/tests/test_backend_interpolate.py
+@@ -846,7 +846,7 @@ def test_make_smoothing_spline_parity(backend):
+ @pytest.mark.parametrize("backend", AD_BACKENDS)
+ def test_make_smoothing_spline_gcv_1d_y(backend, monkeypatch):
+     # The frozen GCV operator passes scipy's private GCV a 1-D y: scipy 1.15
+-    # (Python 3.10) accepts only a 1-D y (a (n,1) y fails to broadcast), so
++    # accepts only a 1-D y (a (n,1) y fails to broadcast), so
+     # this pins the call on any scipy; the fit still matches scipy's.
+     import scipy.interpolate._bsplines as _bspl
+ 

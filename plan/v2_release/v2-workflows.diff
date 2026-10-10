@@ -112,7 +112,7 @@ index bb63181ae..d4671c3be 100644
 -        number: ${{ steps.intpr.outputs.number }}
 -        path: status.md
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 1ddb7a6b3..1f8ec1eec 100644
+index 1ddb7a6b3..6b07241a5 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
 @@ -6,8 +6,7 @@ on:
@@ -125,6 +125,29 @@ index 1ddb7a6b3..1f8ec1eec 100644
      paths:
        - '**'
        - '!*'
+@@ -231,22 +230,6 @@ jobs:
+             REQUIRES_ASTROQUERY: true
+             REQUIRES_NUMBA: false
+             REQUIRES_JAX: false
+-          - os: ubuntu-latest
+-            python-version: "3.10"
+-            TEST_FILES: tests/test_orbit.py -k 'test_energy_jacobi_conservation or from_name'
+-            REQUIRES_PYNBODY: true
+-            REQUIRES_ASTROPY: true
+-            REQUIRES_ASTROQUERY: true
+-            REQUIRES_NUMBA: false
+-            REQUIRES_JAX: false
+-          - os: ubuntu-latest
+-            python-version: "3.10"
+-            TEST_FILES: tests/test_orbit.py tests/test_orbits.py -k 'not test_energy_jacobi_conservation'
+-            REQUIRES_PYNBODY: true
+-            REQUIRES_ASTROPY: true
+-            REQUIRES_ASTROQUERY: true
+-            REQUIRES_NUMBA: false
+-            REQUIRES_JAX: false
+           - os: macos-15
+             python-version: "3.14"
+             TEST_FILES: tests/test_orbit.py -k 'test_energy_jacobi_conservation or from_name'
 diff --git a/.github/workflows/build_pyodide_wheels.yml b/.github/workflows/build_pyodide_wheels.yml
 index 42fa82cf7..ed5ef7ead 100644
 --- a/.github/workflows/build_pyodide_wheels.yml
@@ -139,8 +162,35 @@ index 42fa82cf7..ed5ef7ead 100644
      needs: build_wheels
      runs-on: ubuntu-latest
      steps:
+diff --git a/.github/workflows/build_windows.yml b/.github/workflows/build_windows.yml
+index 8c8aa4167..bca2326e9 100644
+--- a/.github/workflows/build_windows.yml
++++ b/.github/workflows/build_windows.yml
+@@ -179,22 +179,6 @@ jobs:
+             REQUIRES_ASTROQUERY: true
+             REQUIRES_NUMBA: false
+             REQUIRES_JAX: false
+-          - os: windows-latest
+-            python-version: "3.10"
+-            TEST_FILES: tests/test_orbit.py -k test_energy_jacobi_conservation
+-            REQUIRES_PYNBODY: false
+-            REQUIRES_ASTROPY: true
+-            REQUIRES_ASTROQUERY: true
+-            REQUIRES_NUMBA: false
+-            REQUIRES_JAX: false
+-          - os: windows-latest
+-            python-version: "3.10"
+-            TEST_FILES: tests/test_orbit.py tests/test_orbits.py -k 'not test_energy_jacobi_conservation'
+-            REQUIRES_PYNBODY: false
+-            REQUIRES_ASTROPY: true
+-            REQUIRES_ASTROQUERY: true
+-            REQUIRES_NUMBA: false
+-            REQUIRES_JAX: false
+     steps:
+     - uses: actions/checkout@v7
+     - name: Set up Python ${{ matrix.python-version }}
 diff --git a/.github/workflows/test-doc-notebooks.yml b/.github/workflows/test-doc-notebooks.yml
-index 8f5770230..8152d9471 100644
+index 8f5770230..33c5828c7 100644
 --- a/.github/workflows/test-doc-notebooks.yml
 +++ b/.github/workflows/test-doc-notebooks.yml
 @@ -6,6 +6,7 @@ on:
@@ -151,8 +201,17 @@ index 8f5770230..8152d9471 100644
      paths:
        - '**'
        - '!*'
+@@ -39,7 +40,7 @@ jobs:
+     strategy:
+       fail-fast: false
+       matrix:
+-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
++        python-version: ["3.11", "3.12", "3.13", "3.14"]
+     steps:
+       - uses: actions/checkout@v7
+       - name: Set up Python
 diff --git a/.github/workflows/wheels.yml b/.github/workflows/wheels.yml
-index 75fdb41c3..3973b3c26 100644
+index 75fdb41c3..9fd41123e 100644
 --- a/.github/workflows/wheels.yml
 +++ b/.github/workflows/wheels.yml
 @@ -1,10 +1,12 @@
@@ -169,3 +228,19 @@ index 75fdb41c3..3973b3c26 100644
      paths:
        - '**'
        - '!*'
+@@ -36,7 +38,6 @@ jobs:
+         - [macos-15, macosx, arm64]
+         - [windows-2025, win, amd64]
+         python:
+-        - ["cp310","3.10"]
+         - ["cp311","3.11"]
+         - ["cp312","3.12"]
+         - ["cp313","3.13"]
+@@ -104,7 +105,6 @@ jobs:
+             - [macos-15, macosx, arm64]
+             - [windows-2025, win, amd64]
+           python:
+-            - ["cp310","3.10"]
+             - ["cp311","3.11"]
+             - ["cp312","3.12"]
+             - ["cp313","3.13"]
