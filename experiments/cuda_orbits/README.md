@@ -258,8 +258,7 @@ The budget explains why this can at most double occupancy, and on the TITAN cann
 - So the ceiling is ≈ 12% → ≈ 15% occupancy on the TITAN and ≈ 12% → ≈ 25–30% on the H100.
 - Capping registers below the force function's own need (≈ 110–130) only moves state into spills.
 
-On the H100, 10 slots with a 170-register cap is the only split that helps (1.3×, table above). TITAN timings of the
-shared-memory kernels are pending (`run_titan_v3b.sh`, waiting for an exclusive GPU).
+On the H100, 10 slots with a 170-register cap is the only split that helps (1.3×, table above). TITAN Xp timings of the shared-memory dop853 kernels were **not run**: the first attempt failed on Pascal's 48 KB per-block shared-memory limit (fixed since), and afterwards the TITAN was shared with other users and then needed for the paper's timing campaign. The H100 v3/v3b runs cover these kernels.
 
 **Two orbits per thread.** dop853 cannot run two orbits per thread: 2 × 880 B exceeds the per-thread register budget
 (255 registers = 2 KB) once the force function's ~120 registers are counted. The symplectic integrators can, and

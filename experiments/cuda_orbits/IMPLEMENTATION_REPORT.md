@@ -272,7 +272,7 @@ maintenance cost to "write each potential once, with `GALPY_HD`", plus a CI matr
 
 ## 10. Addendum (v3): occupancy headroom and integrator choice
 
-These are H100 results at N = 10⁶–10⁷ (job 1066194, exclusive GPU) and TITAN Xp results at N = 3×10⁴. Details are
+These are H100 results at N = 10⁶–10⁷ (jobs 1066194 and 1066672, exclusive GPU) and TITAN Xp results at N = 3×10⁴. TITAN Xp timings of the shared-memory dop853 kernels were **not run**: the first attempt failed on Pascal's 48 KB per-block shared-memory limit (fixed since), and afterwards the TITAN was shared with other users and then needed for the paper's timing campaign. The H100 v3/v3b runs cover these kernels. Details are
 in the README section "v3".
 
 **Headroom for dop853 is limited by state, not by code quality.** An adaptive dop853 orbit carries ≈ 880 B of live
