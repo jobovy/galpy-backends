@@ -13,28 +13,28 @@
   "results": [
     {
       "N": 1,
-      "wall_s": 0.0027499549323692918,
-      "per_orbit_ms": 2.749954932369292
+      "wall_s": 0.002987750107422471,
+      "per_orbit_ms": 2.987750107422471
     },
     {
       "N": 10,
-      "wall_s": 0.0049854329554364085,
-      "per_orbit_ms": 0.49854329554364085
+      "wall_s": 0.005896292976103723,
+      "per_orbit_ms": 0.5896292976103723
     },
     {
       "N": 100,
-      "wall_s": 0.014758332981728017,
-      "per_orbit_ms": 0.14758332981728017
+      "wall_s": 0.019539640052244067,
+      "per_orbit_ms": 0.19539640052244067
     },
     {
       "N": 1000,
-      "wall_s": 0.12279820302501321,
-      "per_orbit_ms": 0.1227982030250132
+      "wall_s": 0.09364091698080301,
+      "per_orbit_ms": 0.09364091698080301
     },
     {
       "N": 10000,
-      "wall_s": 0.9872619359521195,
-      "per_orbit_ms": 0.09872619359521195
+      "wall_s": 0.8419885670300573,
+      "per_orbit_ms": 0.08419885670300573
     }
   ],
   "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
@@ -43,9 +43,9 @@
       "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
       "worktree": "/var/tmp/fbfinal",
       "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-09T07:17:41",
+      "date": "2026-10-09T21:40:44",
       "cpu_affinity": 72,
-      "omp_max_threads_effective": 36,
+      "omp_max_threads_effective": 72,
       "OMP_NUM_THREADS": "72",
       "CUDA_VISIBLE_DEVICES": ""
     }

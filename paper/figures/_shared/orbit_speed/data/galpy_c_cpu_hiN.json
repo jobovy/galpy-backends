@@ -13,33 +13,33 @@
   "results": [
     {
       "N": 1000,
-      "wall_s": 0.1144166070735082,
-      "per_orbit_ms": 0.1144166070735082
+      "wall_s": 0.08838942903093994,
+      "per_orbit_ms": 0.08838942903093994
     },
     {
       "N": 10000,
-      "wall_s": 0.9494054820388556,
-      "per_orbit_ms": 0.09494054820388556
+      "wall_s": 0.792131726979278,
+      "per_orbit_ms": 0.07921317269792781
     },
     {
       "N": 30000,
-      "wall_s": 2.4558567340718582,
-      "per_orbit_ms": 0.08186189113572861
+      "wall_s": 2.470969359972514,
+      "per_orbit_ms": 0.08236564533241715
     },
     {
       "N": 100000,
-      "wall_s": 8.147048456943594,
-      "per_orbit_ms": 0.08147048456943595
+      "wall_s": 8.366916363011114,
+      "per_orbit_ms": 0.08366916363011115
     },
     {
       "N": 300000,
-      "wall_s": 24.25035331095569,
-      "per_orbit_ms": 0.08083451103651897
+      "wall_s": 26.209640963934362,
+      "per_orbit_ms": 0.08736546987978121
     },
     {
       "N": 1000000,
-      "wall_s": 81.10959770297632,
-      "per_orbit_ms": 0.08110959770297632
+      "wall_s": 87.91914817295037,
+      "per_orbit_ms": 0.08791914817295038
     }
   ],
   "extended": {
@@ -58,9 +58,9 @@
       "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
       "worktree": "/var/tmp/fbfinal",
       "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-09T07:17:41",
+      "date": "2026-10-09T21:40:44",
       "cpu_affinity": 72,
-      "omp_max_threads_effective": 36,
+      "omp_max_threads_effective": 72,
       "OMP_NUM_THREADS": "72",
       "CUDA_VISIBLE_DEVICES": ""
     }
