@@ -1,0 +1,4 @@
+device cuda:0 XLA_FLAGS=--xla_gpu_dump_autotune_results_to=/scratch/bovy/galpy-h100/logs/pr1658/item3/at_2.txt --xla_dump_to=/scratch/bovy/galpy-h100/logs/pr1658/item3/hlo_2 --xla_dump_hlo_as_text
+meanvT: grad 0.08847359900396562  fd 0.08852277784132666  rel 5.556e-04  pass(rtol 2e-4) False
+galpyWarning: In versions >1.3, the output unit of evolveddiskdf.vertexdev has been changed to radian (from degree before)
+vertexdev: grad 0.3113076365086113  fd 0.3111197854586967  rel 6.038e-04  pass(rtol 2e-4) False

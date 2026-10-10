@@ -1,0 +1,25 @@
+%fused_divide (param_0.367: f64[81,6], param_1.509: f64[81,6], param_2.463: pred[], param_3.281: f64[14,81,6], param_4.232: f64[14]) -> f64[81,6] {
+  %param_4.232 = f64[14]{0} parameter(4), metadata={scheduling_name="param_4.232"}
+  %broadcast.181.3 = f64[14,81,6]{2,1,0} broadcast(%param_4.232), dimensions={0}, metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/dot_general" scheduling_name="broadcast.181.3" stack_frame_id=23}
+  %param_3.281 = f64[14,81,6]{2,1,0} parameter(3), metadata={scheduling_name="param_3.281"}
+  %multiply.55.3 = f64[14,81,6]{2,1,0} multiply(%broadcast.181.3, %param_3.281), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/dot_general" scheduling_name="multiply.55.3" stack_frame_id=23}
+  %constant_1366_3 = f64[] constant(0)
+  %reduce.36.1 = f64[81,6]{1,0} reduce(%multiply.55.3, %constant_1366_3), dimensions={0}, to_apply=%scalar_add_computation.clone, metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/dot_general" scheduling_name="reduce.36.1" stack_frame_id=23}
+  %ne.12.3 = pred[81,6]{1,0} compare(%reduce.36.1, %reduce.36.1), direction=NE, metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/ne" scheduling_name="ne.12.3" stack_frame_id=23}
+  %constant_1368_1 = f64[] constant(inf)
+  %broadcast_in_dim.185.1 = f64[81,6]{1,0} broadcast(%constant_1368_1), dimensions={}, metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/jit(_where)/broadcast_in_dim" scheduling_name="broadcast_in_dim.185.1" stack_frame_id=23}
+  %select_n.744.3 = f64[81,6]{1,0} select(%ne.12.3, %broadcast_in_dim.185.1, %reduce.36.1), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/jit(_where)/select_n" scheduling_name="select_n.744.3" stack_frame_id=23}
+  %param_0.367 = f64[81,6]{1,0} parameter(0), metadata={scheduling_name="param_0.367"}
+  %abs.19.3 = f64[81,6]{1,0} abs(%param_0.367), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/abs" scheduling_name="abs.19.3" stack_frame_id=23}
+  %param_2.463 = pred[] parameter(2), metadata={scheduling_name="param_2.463"}
+  %select_n.745.1 = pred[81,6]{1,0} broadcast(%param_2.463), dimensions={}, metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/jit(_where)/select_n" scheduling_name="select_n.745.1" stack_frame_id=23}
+  %param_1.509 = f64[81,6]{1,0} parameter(1), metadata={scheduling_name="param_1.509"}
+  %select_n.746.5 = f64[81,6]{1,0} select(%select_n.745.1, %param_0.367, %param_1.509), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/jit(_where)/select_n" scheduling_name="select_n.746.5" stack_frame_id=23}
+  %abs.20.5 = f64[81,6]{1,0} abs(%select_n.746.5), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/abs" scheduling_name="abs.20.5" stack_frame_id=23}
+  %max.13.3 = f64[81,6]{1,0} maximum(%abs.19.3, %abs.20.5), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/max" scheduling_name="max.13.3" stack_frame_id=23}
+  %constant_1370_1 = f64[] constant(1e-12)
+  %broadcast.180.1 = f64[81,6]{1,0} broadcast(%constant_1370_1), dimensions={}, metadata={scheduling_name="broadcast.180.1"}
+  %mul.126.3 = f64[81,6]{1,0} multiply(%max.13.3, %broadcast.180.1), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/mul" scheduling_name="mul.126.3" stack_frame_id=23}
+  %add.314.3 = f64[81,6]{1,0} add(%mul.126.3, %broadcast.180.1), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/add" scheduling_name="add.314.3" stack_frame_id=23}
+  ROOT %div.27.1 = f64[81,6]{1,0} divide(%select_n.744.3, %add.314.3), metadata={op_name="jit(diffeqsolve)/outer-loop/checkpointed-fwd/while/body/div" scheduling_name="div.27.1" stack_frame_id=23}
+}

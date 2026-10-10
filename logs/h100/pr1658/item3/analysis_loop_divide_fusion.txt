@@ -1,0 +1,5 @@
+run 1 (FAIL): {('forward loop', 'native'): 6, ('adjoint replay (checkpointed-bwd)', 'block_level'): 2}
+run 2 (FAIL): {('forward loop', 'native'): 6, ('adjoint replay (checkpointed-bwd)', 'block_level'): 2}
+run 4 (FAIL): {('forward loop', 'native'): 6, ('adjoint replay (checkpointed-bwd)', 'block_level'): 2}
+run 3 (PASS): {('forward loop', 'block_level'): 6, ('adjoint replay (checkpointed-bwd)', 'block_level'): 2}
+run 5 (PASS): {('forward loop', 'block_level'): 6, ('adjoint replay (checkpointed-bwd)', 'block_level'): 2}

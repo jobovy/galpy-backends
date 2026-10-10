@@ -1,0 +1,60 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+galpy e402a035bc227f84d181ccf7c1a857f440737d09
+jax 0.11.2 torch 2.14.1+cu130
+Fri 09 Oct 2026 05:53:28 PM EDT
+item1 torch exit 0
+item1 jax exit 0
+item2 run 1 exit 0
+item2 run 2 exit 0
+item2 run 3 exit 0
+item2 run 4 exit 0
+item2 run 5 exit 0
+item3 run 1 exit 0
+item3 run 2 exit 0
+item3 run 3 exit 0
+item3 run 4 exit 0
+item3 run 5 exit 0
+item4 inductor exit 0
+item4 diskdf_jit torch exit 0
+item4 diskdf_jit jax exit 0
+done Fri 09 Oct 2026 06:55:43 PM EDT
+
+scontrol show job 1064243
+JobId=1064243 JobName=pr1658
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1196467 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=01:02:32 TimeLimit=03:00:00 TimeMin=N/A
+   SubmitTime=2026-10-09T17:01:01 EligibleTime=2026-10-09T17:53:08
+   AccrueTime=2026-10-09T17:53:08
+   StartTime=2026-10-09T17:53:11 EndTime=2026-10-09T18:55:43 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T17:53:11 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:317135
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0017
+   BatchHost=trig0017
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/pr1658.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1063960 --time=03:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out pr1658.sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1063960 --time=03:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out pr1658.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --dependency=afterany:1063960 --time=03:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out pr1658.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/pr1658-1064243.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1064243
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1064243          pr1658   def-bovy   01:02:32                         00:00:00   00:00:00      0:0 
+1064243.bat+      batch   def-bovy   01:02:32                         00:00:00   00:00:00      0:0 
+1064243.ext+     extern   def-bovy   01:02:32                         00:00:00   00:00:00      0:0 
+
