@@ -231,20 +231,35 @@ solvers take from 0.05\,s (compiled \jax\ on one CPU core) to tens of
 seconds, and the GPU overtakes it at batches of a few hundred orbits.
 
 To gauge what GPU-native code could add, we also compiled \galpy's
-\cc\ implementations of \texttt{MWPotential2014} and of the
-\texttt{dop853} integrator as a CUDA kernel that integrates one orbit
-per GPU thread; this is an experiment and not part of \galpy. After
-restructuring the kernel, such that the force is evaluated by a single
-out-of-line function and threads pick up a new orbit when theirs is
-done, it integrates $10^6$ orbits in 2.4\,$\mu$s per orbit on the H100
-with \galpy's own arithmetic and in 1.0\,$\mu$s per orbit with special
-functions rewritten without divisions. That is 7 to 16 times faster
-than \galpy's compiled \jax\ integrator on the same GPU and 34 to 76
-times faster than the \cc\ integrator on all 72 hardware threads of our
-CPU node, while agreeing with the latter to within its truncation
-error (\figurename~\ref{fig:orbitspeed}). Such kernels are not
-differentiable, so they would complement the backend integrators rather
-than replace them (\sectionname~\ref{sec:conclusion}).
+\cc\ implementations of \texttt{MWPotential2014} and of its integrators
+as a CUDA kernel that integrates one orbit per GPU thread; this is an
+experiment and not part of \galpy. After restructuring the kernel, such
+that the force is evaluated by a single out-of-line function and
+threads pick up a new orbit when theirs is done, \texttt{dop853} at
+$\mathrm{rtol}=\mathrm{atol}=10^{-8}$ integrates $10^6$ orbits for
+2\,Gyr in 2.3\,$\mu$s per orbit on the H100 with \galpy's own
+arithmetic and in 0.9\,$\mu$s with GPU-tuned special functions. That
+is 7 to 18 times faster than \galpy's compiled \jax\ integrator on the
+same GPU and tens of times faster than the \cc\ integrator on all 72
+hardware threads of our CPU node, while agreeing with the latter to
+within its truncation error (\figurename~\ref{fig:orbitspeed}). The
+kernel is limited by per-thread state: an adaptive eighth-order step
+keeps $\approx$880\,B per orbit live, so few threads fit on each
+multiprocessor, and moving the stage vectors into shared memory gains
+only a factor of 1.3. \galpy's sixth-order symplectic integrator with
+one common step for the whole batch reaches the same accuracy (the
+worst-case position error over 300 orbits after 2\,Gyr) with 15\% fewer
+force evaluations and a fraction of the state, and runs in
+0.78\,$\mu$s (\galpy's arithmetic) and 0.25\,$\mu$s (fast special
+functions) per orbit, 3.0 to 3.6 times faster than \texttt{dop853}.
+These numbers hold for a smooth, cheap potential and near-solar disc
+orbits with similar dynamical times, for which one step suits every
+orbit. A batch that mixes very different timescales, or has close
+encounters or a rapidly varying potential, has to step at the rate of
+its fastest orbit, and there adaptive integration wins. Such kernels
+are not differentiable, so they would complement the backend
+integrators rather than replace them
+(\sectionname~\ref{sec:conclusion}).
 
 \galpy\ is not the only galactic-dynamics code that integrates orbits
 with \diffrax: \texttt{galax} \citep{Starkman2026}, a re-implementation
@@ -310,5 +325,8 @@ keeps the per-orbit control.
     per GPU thread (not part of \galpy\ and not differentiable), with
     \galpy's arithmetic (solid) and with special functions rewritten
     without divisions (thin long-dashed), including the copies between host
-    and device.}\label{fig:orbitspeed}
+    and device. On the H100, \galpy's sixth-order symplectic integrator
+    with one common step (not shown) reaches the same worst-case accuracy
+    3.0 to 3.6 times faster, because these disc orbits share a dynamical
+    timescale (\sectionname~\ref{sec:orbit-speed}).}\label{fig:orbitspeed}
 \end{figure*}
