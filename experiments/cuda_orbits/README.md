@@ -173,6 +173,93 @@ evidence is therefore operation counts (`flopcount.cpp`), SASS (`cuobjdump`) and
   bit-identical to galpy, but agrees with GSL to ≤1.7e-15 in Γ and with galpy C within the GPU's ulp-level spread
   on orbits.
 
+## v3: occupancy headroom and integrator choice
+
+**Status.** The TITAN Xp numbers below are at N = 3×10⁴ (`data/titan/v3/`). The GPU was exclusive for these runs,
+but that was not recorded in the JSONs. The TITAN v3b runs (N = 10⁵–10⁶, exclusivity recorded) and the H100 job
+(`run_h100_v3.sh`, N = 10⁵–10⁷, ncu) are pending. All accuracy numbers are hardware-independent and come from the CPU
+build (`accuracy_scan.py`, `data/accuracy_*.json`).
+
+### A. dop853 with its stage vectors in shared memory
+
+What is measured:
+- `k_integrate_smem<NSH, MINB>` keeps the first NSH of dop853's 18 six-vector stage slots (k2…k10, the stage input,
+  and the 8 dense-output coefficient vectors) in shared memory, in structure-of-arrays layout.
+- MINB caps registers at 255, 170 or 128 per thread.
+- Results are identical to the register kernel on the GPU (same 300-orbit check).
+
+Static resources (ptxas, `resource_usage.sh`; refill kernel = 255 registers):
+
+| NSH, register cap | regs/thread | spill/stack B | smem B/orbit |
+|---|---|---|---|
+| 0 (refill) | 255 | 120–136 | 0 |
+| 10, 170 | 168 | 376–416 | 480 |
+| 14, 128 | 128 | 504–584 | 672 |
+| 18, 170 | 168 | 224–280 | 864 |
+| 18, 128 | 128 | 344–440 | 864 |
+
+The budget explains why this can at most double occupancy, and on the TITAN cannot raise it at all:
+- A dop853 orbit carries ≈ 110 live doubles (≈ 880 B): 12 stage-sized vectors plus 8 dense-output vectors plus state.
+- The register file holds 256 KB per SM on both GPUs, so registers alone fit at most ~290 orbits per SM (≈ 9 warps).
+  The refill kernel already sits at 8 warps.
+- Shared memory adds 96 KB per SM on the TITAN (48 KB per block) and 228 KB on the H100. At 864 B per orbit that is
+  111 or 264 more orbits per SM.
+- So the ceiling is ≈ 12% → ≈ 15% occupancy on the TITAN and ≈ 12% → ≈ 25–30% on the H100.
+- Capping registers below the force function's own need (≈ 110–130) only moves state into spills.
+
+TITAN timings of the shared-memory kernels did not run before the GPU became shared. They are in `run_titan_v3b.sh`
+and `run_h100_v3.sh`.
+
+**Two orbits per thread.** dop853 cannot run two orbits per thread: 2 × 880 B exceeds the per-thread register budget
+(255 registers = 2 KB) once the force function's ~120 registers are counted. The symplectic integrators can, and
+`k_symp2` (two orbits in lockstep, one paired force call, 135–150 registers) tests it.
+
+### B. galpy's symplectic integrators at matched accuracy
+
+The kernels port `bovy_symplecticode.c`, including `*_estimate_step`. The host build is bit-identical to galpy's
+`leapfrog_c`, `symplec4_c` and `symplec6_c` for both per-orbit and common dt; the GPU agrees with it to ≤ 1e-12.
+- The state is q, p, dt and counters.
+- The register count (111–131) is set by the force function, not the integrator.
+- There is no accept/reject, so no divergence beyond the incomplete-gamma branch.
+- `common dt`: dt = (output spacing)/n for every orbit, so all lanes stay in lockstep. `per-orbit`: galpy's
+  `estimate_step` at rtol = atol.
+
+**Accuracy vs work (CPU, 300 orbits).** Error = max over orbits of |Δx|/|x| after 2 Gyr against `dop853_c` at
+1e-13. dE = max |ΔE/E| over orbits and saves. nfev = force evaluations per orbit.
+
+| target | dop853 (rtol=atol) | symplec6 (common n) | symplec4 | leapfrog |
+|---|---|---|---|---|
+| 1.4e-5 (= dop853 at 1e-8) | 1e-8: 1.40e-5, dE 2.5e-7, **3472** | n=28: 1.39e-5, dE 9.3e-8, **2940** | n=112: 1.30e-5, dE 2.9e-8, 5040 | n=3072: 1.40e-5, dE 1.3e-8, 46080 |
+| 1e-4 | 5e-8: 2.7e-5, dE 4.4e-7, **2974** | n=20: 1.01e-4, dE 7.0e-7, **2100** | n=68: 9.6e-5, dE 2.1e-7, 3060 | n=1152: 1.0e-4, dE 9.1e-8, 17280 |
+| 1e-3 | 2e-6: 8.9e-4, dE 2.3e-5, **1913** | n=14: 8.1e-4, dE 1.6e-5, **1470** | n=38: 9.7e-4, dE 2.2e-6, 1710 | n=368: 9.8e-4, dE 9.0e-7, 5520 |
+
+- At every accuracy, symplec6 with a common step needs 15–30% fewer force evaluations than dop853, and has a 2–3×
+  smaller energy error at the 1e-8 level.
+- symplec4 needs ~1.5× more work than dop853 at high accuracy and about the same at 1e-3. Leapfrog needs 3–13× more.
+- dop853's error is not monotonic in its tolerance (1e-7 gives 2.2e-4, worse than 5e-8): the max over 300 orbits is
+  set by a few orbits whose accept/reject decisions flip.
+- galpy's per-orbit `estimate_step` picks a dt that is a power of two below the output spacing. It overshoots
+  (symplec6 at tol 1e-8 runs n = 32: 6.3e-6 for 3486 nfev), so at matched accuracy a common dt is cheaper.
+
+**TITAN Xp (N = 3×10⁴, kernel µs/orbit; force evaluations per second in parentheses):**
+
+| accuracy | dop853 (refill) | symplec6 | symplec4 | leapfrog |
+|---|---|---|---|---|
+| 1.4e-5, fast arithmetic | 18.0 (1.9e8/s) | **10.5** (2.8e8/s) | 18.0 | 166 |
+| 1.4e-5, galpy arithmetic | 57.3 (6.1e7/s) | **36.5** (8.0e7/s) | 62.8 | 578 |
+| 1e-4, fast | 15.1 | **7.9** | 10.9 | 62 |
+| 1e-3, fast | 9.9 | **5.3** | 6.1 | 20 |
+
+- Per force evaluation, the symplectic kernels run 1.45× (fast) and 1.3× (galpy arithmetic) faster than dop853.
+- Combined with fewer evaluations, symplec6 at matched accuracy is **1.7× (1.4e-5), 1.9× (1e-4) and 1.9× (1e-3)
+  faster than dop853** on the TITAN.
+- By the instruction-count estimate the TITAN is at ~82–87% of its FP64 issue rate for the symplectic kernels and
+  ~70% for dop853 (`summarize_v3.py`). There is not much left on that GPU.
+- Capping registers at 64 (50% occupancy, ~300 B spills) gives the same speed on the TITAN. It is FP64-bound, not
+  latency-bound, there.
+- On the H100, which is latency-bound at 12% occupancy (v2 ncu), the 25% occupancy of the symplectic kernels (50% at
+  64 registers) and the absence of accept/reject divergence should matter more. `run_h100_v3.sh` measures this.
+
 ## What a full implementation would entail
 
 Effort estimate (revised; the potential-by-potential breakdown is in `IMPLEMENTATION_REPORT.md`):
