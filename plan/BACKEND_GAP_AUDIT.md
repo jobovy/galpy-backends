@@ -8,7 +8,7 @@ Each family below is grouped into one PR-sized unit for the stacked fix plan (se
 
 ## 0. Method
 
-- **Harness:** `/var/tmp/gapaudit/audit/{harness,driver}.py`, plus `spec_pot.py`, `spec_df.py` and `spec_aa.py`, giving 88 + 45 + 72 specs. Each spec builds the object **inside** the differentiated function.
+- **Harness:** `/var/tmp/gapaudit_artifacts/{harness,driver}.py`, plus `spec_pot.py`, `spec_df.py` and `spec_aa.py`, giving 88 + 45 + 72 specs. Each spec builds the object **inside** the differentiated function.
 - **What is compared:** for every numeric constructor parameter, plus one coordinate, the audit compares:
   - `jax.jit(jax.jacrev)`, falling back to eager to separate NOJIT from RAISE;
   - torch `autograd.grad`;
@@ -291,7 +291,7 @@ Every PR below targets develop and lands as one GitHub stack. Files are disjoint
 
 | PR | Scope (files) | Root cause | Fix approach (reuse) | Test | Size |
 |---|---|---|---|---|---|
-| **0. Parameter-gradient sweep** | `tests/test_backend_param_sweep.py` + `tests/backend_param_specs.py` (new) | n/a | Port `/var/tmp/gapaudit/audit/{harness,spec_*}.py`. Parametrize over (spec, param or one coordinate, backend ∈ {jax, torch}, mode ∈ {data, forced, floatcoords}) plus a jit axis for jax. Numpy Richardson FD is cached per spec; samplers use a same-backend self-FD. The assertion is grad-vs-FD at rtol 1e-6 with explicit ZERO, DISC (`grad_fn is None`), NOT_TENSOR and NaN detection. Includes a 0-d coordinate case. **Known failures** go in `KNOWN_GAPS = {(spec, param, backend, mode): "PR id: reason"}` as `xfail(strict=True)` | itself | M |
+| **0. Parameter-gradient sweep** | `tests/test_backend_param_sweep.py` + `tests/backend_param_specs.py` (new) | n/a | Port `/var/tmp/gapaudit_artifacts/{harness,spec_*}.py`. Parametrize over (spec, param or one coordinate, backend ∈ {jax, torch}, mode ∈ {data, forced, floatcoords}) plus a jit axis for jax. Numpy Richardson FD is cached per spec; samplers use a same-backend self-FD. The assertion is grad-vs-FD at rtol 1e-6 with explicit ZERO, DISC (`grad_fn is None`), NOT_TENSOR and NaN detection. Includes a 0-d coordinate case. **Known failures** go in `KNOWN_GAPS = {(spec, param, backend, mode): "PR id: reason"}` as `xfail(strict=True)` | itself | M |
 | **1. Parameter-aware namespace** | `backend/_input.py`, `backend/_namespaces.py`; hoist `_pot_grad_namespace` from `potential/Potential.py:3686` into `galpy.backend` (generic-helper rule) | R-NS: the namespace is resolved from the coordinates only | In `backend_input`, when the target holds a backend-array parameter (`_pot_grad_namespace(target, any_backend=True)`, cached per instance), lift numpy/Python coordinates into that namespace via `namespace_from_arrays` + `coerce_coords`, anchored with `device_of(param)`. The numpy path stays byte-identical (no backend parameter means no lift). This fixes every public-call internal site at once: `verticalPotential.py:59`, `Orbits.py:4268`, `isotropicNFWdf.py:59`, `isotropicPowerLawdf.py:101`, the CylSep and OblateStaeckel evaluations, and the whole FC column | the FC sweep column; toVertical, actionAngleVertical, Adiabatic a/b, Orbit.analytic a/b, NFW/PowerLaw sphericaldf (data mode) | M |
 | **2. Backend rotation helpers** | `util/__init__.py` (`_rotate_to_arbitrary_vector` :169, `to_host` :209) | numpy rotation matrices from parameters | An xp-native rotation built with `get_namespace` / `as_backend_constant`; the numpy path stays byte-identical | unit grad-vs-FD of the rotation w.r.t. angle and zvec | S |
 | **3. Backend `fixed_point`** | `backend/optimize.py` (+ `_jax`/`_torch` files per the separate-files rule) | scipy `fixed_point` in AdiabaticContraction | Concrete forward iteration plus an implicit-function-theorem VJP: a jax `custom_vjp` and a torch `autograd.Function`, mirroring how `brentq` is done there. Reuse `interp_linear` from `backend/interpolate.py` instead of `interp1d` | grad of a known fixed point vs analytic | M |
@@ -371,4 +371,4 @@ Practicalities:
 - **`AdiabaticContractionWrapperPotential` silently ignores `amp`.** `Force.__init__(self, ro=ro, vo=vo)` at :82 and `interpSphericalPotential.__init__` are called without amp, so the numpy FD w.r.t. amp is exactly 0.
 - **qdf + `actionAngleAdiabatic(c=False)` + `_precomputerg=False`** with an unnormalized MN potential raises "cannot unpack non-iterable" in `_vmomentdensity` (`quasiisothermaldf.py:878`).
 
-Artifacts (scratch, not committed): `/var/tmp/gapaudit/audit/` contains `res_pot*.json`, `res_df*.json`, `res_aa*.json`, `fc_pot.txt`, the spec files and the analysis scripts.
+Artifacts (scratch, not committed): `/var/tmp/gapaudit_artifacts/` contains `res_pot*.json`, `res_df*.json`, `res_aa*.json`, `fc_pot.txt`, the spec files and the analysis scripts.
