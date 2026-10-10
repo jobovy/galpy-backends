@@ -1,0 +1,144 @@
+NVIDIA H100 80GB HBM3, 580.178.04
+== correctness ==
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 1.0577 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 3471.5 (min 1547, max 5569), accepted 187.9, rejected 59.12
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 2952.7 (min 1283, max 4846), accepted 187.9, rejected 59.12
+    lazy vs faithful outputs bit-identical: True
+[GPU_noinl, faithful dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (10, 3)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (14, 4)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (18, 3)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (18, 4)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[host_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 512-1024, nfev/orbit 9784
+[gpu_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.25e-13; substeps/output 512-1024, nfev/orbit 9784
+[host_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 128-128, nfev/orbit 5832
+[gpu_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 5.44e-13; substeps/output 128-128, nfev/orbit 5832
+[host_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 64-64, nfev/orbit 2880
+[gpu_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.03e-13; substeps/output 64-64, nfev/orbit 2880
+[host_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 32-32, nfev/orbit 3486
+[gpu_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 5.56e-13; substeps/output 32-32, nfev/orbit 3486
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 0.5013 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 1.501e-06 (median 4.218e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 7.27e-04
+    vs galpy C 1e-13 (truth): max 1.509e-05, median 8.070e-07
+    nfev/orbit mean 3470.7 (min 1547, max 5569), accepted 187.9, rejected 59.09
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 1.501e-06 (median 4.218e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 7.27e-04
+    vs galpy C 1e-13 (truth): max 1.509e-05, median 8.070e-07
+    nfev/orbit mean 2952.0 (min 1283, max 4846), accepted 187.9, rejected 59.09
+    lazy vs faithful outputs bit-identical: True
+[GPU_fast_noinl, faithful dense] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense, refill] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (10, 3)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (14, 4)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (18, 3)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (18, 4)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[host_fast_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.74e-13; substeps/output 512-1024, nfev/orbit 9784
+[gpu_fast_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 8.91e-13; substeps/output 512-1024, nfev/orbit 9784
+[host_fast_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.18e-13; substeps/output 128-128, nfev/orbit 5832
+[gpu_fast_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 6.49e-13; substeps/output 128-128, nfev/orbit 5832
+[host_fast_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.58e-13; substeps/output 64-64, nfev/orbit 2880
+[gpu_fast_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.37e-13; substeps/output 64-64, nfev/orbit 2880
+[host_fast_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 4.74e-13; substeps/output 32-32, nfev/orbit 3486
+[gpu_fast_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 4.56e-13; substeps/output 32-32, nfev/orbit 3486
+== timings (N = 1e6, 1e7) ==
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    2.345s (   2.345 us/orbit; kernel 2313.4 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   22.807s (   2.281 us/orbit; kernel 22504.1 ms, d2h 272.0 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,3+pinned faithful] N= 1000000: wall    1.832s (   1.832 us/orbit; kernel 1801.2 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,3+pinned faithful] N=10000000: wall   17.677s (   1.768 us/orbit; kernel 17374.3 ms, d2h 272.1 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=8] regs 64 local 320 B, occupancy 50.0%
+   N= 1000000: wall    0.809s (   0.809 us/orbit; kernel 0.778 us/orbit); nfev/orbit 2940; 3.78e+09 force evals/s
+   N=10000000: wall    7.813s (   0.781 us/orbit; kernel 0.751 us/orbit); nfev/orbit 2940; 3.91e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N= 1000000: wall    0.927s (   0.927 us/orbit; kernel 895.6 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=10000000: wall    8.969s (   0.897 us/orbit; kernel 8666.8 ms, d2h 272.1 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,3+pinned faithful] N= 1000000: wall    0.721s (   0.721 us/orbit; kernel 690.3 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,3+pinned faithful] N=10000000: wall    6.894s (   0.689 us/orbit; kernel 6591.8 ms, d2h 272.1 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=8] regs 64 local 304 B, occupancy 50.0%
+   N= 1000000: wall    0.278s (   0.278 us/orbit; kernel 0.247 us/orbit); nfev/orbit 2940; 1.19e+10 force evals/s
+   N=10000000: wall    2.637s (   0.264 us/orbit; kernel 0.234 us/orbit); nfev/orbit 2940; 1.26e+10 force evals/s
+== Nsight Compute (N = 2e5, fast arithmetic) ==
+done: build.txt
+correctness.txt
+dop853_fast_noinl_refill.json
+dop853_fast_noinl_smem10_3.json
+dop853_noinl_refill.json
+dop853_noinl_smem10_3.json
+gpu.txt
+ncu_smem10_3.log
+ncu_smem10_3.ncu-rep
+ncu_smem10_3.txt
+ncu_symp6_n28_minb8.log
+ncu_symp6_n28_minb8.ncu-rep
+ncu_symp6_n28_minb8.txt
+resource_usage.txt
+run.log
+s6_fast_noinl_n28_minb8.json
+s6_noinl_n28_minb8.json
+summary.md
+summary_v3.json
+timings.txt

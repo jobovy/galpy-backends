@@ -1,0 +1,14 @@
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    2.345s (   2.345 us/orbit; kernel 2313.4 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   22.807s (   2.281 us/orbit; kernel 22504.1 ms, d2h 272.0 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,3+pinned faithful] N= 1000000: wall    1.832s (   1.832 us/orbit; kernel 1801.2 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,3+pinned faithful] N=10000000: wall   17.677s (   1.768 us/orbit; kernel 17374.3 ms, d2h 272.1 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=8] regs 64 local 320 B, occupancy 50.0%
+   N= 1000000: wall    0.809s (   0.809 us/orbit; kernel 0.778 us/orbit); nfev/orbit 2940; 3.78e+09 force evals/s
+   N=10000000: wall    7.813s (   0.781 us/orbit; kernel 0.751 us/orbit); nfev/orbit 2940; 3.91e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N= 1000000: wall    0.927s (   0.927 us/orbit; kernel 895.6 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=10000000: wall    8.969s (   0.897 us/orbit; kernel 8666.8 ms, d2h 272.1 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,3+pinned faithful] N= 1000000: wall    0.721s (   0.721 us/orbit; kernel 690.3 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,3+pinned faithful] N=10000000: wall    6.894s (   0.689 us/orbit; kernel 6591.8 ms, d2h 272.1 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=8] regs 64 local 304 B, occupancy 50.0%
+   N= 1000000: wall    0.278s (   0.278 us/orbit; kernel 0.247 us/orbit); nfev/orbit 2940; 1.19e+10 force evals/s
+   N=10000000: wall    2.637s (   0.264 us/orbit; kernel 0.234 us/orbit); nfev/orbit 2940; 1.26e+10 force evals/s
