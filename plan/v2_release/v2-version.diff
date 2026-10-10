@@ -1,0 +1,164 @@
+diff --git a/.bumpversion.cfg b/.bumpversion.cfg
+index e18da1d45..edbf1cfae 100644
+--- a/.bumpversion.cfg
++++ b/.bumpversion.cfg
+@@ -1,10 +1,22 @@
+ [bumpversion]
+-current_version = 1.12.1.dev0
+-parse = (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(\.(?P<release>[a-z]+)(?P<dev>\d+))?
++current_version = 2.0.0b1.dev0
++parse = (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)((?P<pre_l>b|rc)(?P<pre_n>\d+))?(\.(?P<release>[a-z]+)(?P<dev>\d+))?
+ serialize =
++	{major}.{minor}.{patch}{pre_l}{pre_n}.{release}{dev}
++	{major}.{minor}.{patch}{pre_l}{pre_n}
+ 	{major}.{minor}.{patch}.{release}{dev}
+ 	{major}.{minor}.{patch}
+ 
++[bumpversion:part:pre_l]
++optional_value = final
++values =
++	b
++	rc
++	final
++
++[bumpversion:part:pre_n]
++first_value = 1
++
+ [bumpversion:part:release]
+ optional_value = gamma
+ values =
+diff --git a/CITATION.cff b/CITATION.cff
+index 49396aa01..c9b2d8022 100644
+--- a/CITATION.cff
++++ b/CITATION.cff
+@@ -5,7 +5,7 @@ authors:
+   given-names: "Jo"
+   orcid: "https://orcid.org/0000-0001-6855-442X"
+ title: "galpy"
+-version: 1.12.1.dev0
++version: 2.0.0b1.dev0
+ url: "https://github.com/jobovy/galpy"
+ preferred-citation:
+   type: article
+diff --git a/HISTORY.txt b/HISTORY.txt
+index e5b870f5b..5ef8c5e6d 100644
+--- a/HISTORY.txt
++++ b/HISTORY.txt
+@@ -1,3 +1,12 @@
++v2.0.0b1 (pre-release)
++======================
++
++- Array backends: galpy runs natively on JAX and PyTorch arrays
++  (``galpy.backend``), differentiable end to end (potentials, orbits,
++  action-angle, distribution functions), with jax.jit / torch.compile and GPU
++  support. Install with ``pip install --pre "galpy[jax]"`` or
++  ``pip install --pre "galpy[torch]"``. [Jo: expand]
++
+ v1.12.1 (expected around 2026-11-01)
+ ====================
+ 
+diff --git a/doc/source/conf.py b/doc/source/conf.py
+index 550acc162..50ba75a58 100644
+--- a/doc/source/conf.py
++++ b/doc/source/conf.py
+@@ -150,7 +150,7 @@ copyright = f"2010 - {datetime.datetime.now().year}, Jo Bovy"
+ # built documents.
+ #
+ # The short X.Y version.
+-version = "1.12.1.dev0"
++version = "2.0.0b1.dev0"
+ # The full version, including alpha/beta/rc tags.
+ release = version
+ on_rtd = os.environ.get("READTHEDOCS", None) == "True"
+diff --git a/doc/source/installation.rst b/doc/source/installation.rst
+index 2298bb73c..41ff15ba0 100644
+--- a/doc/source/installation.rst
++++ b/doc/source/installation.rst
+@@ -59,7 +59,7 @@ Optional dependencies are:
+   * ``tqdm`` for displaying a progress bar for certain operations (e.g., orbit integration of multiple objects at once)
+   * ``numexpr`` for plotting arbitrary expressions of ``Orbit`` quantities,
+   * ``numba`` for speeding up the evaluation of certain functions when using C orbit integration,
+-  * ``JAX`` or ``PyTorch``, together with ``array-api-compat`` (the backend-dispatch engine), for use of constant-anisotropy DFs in ``galpy.df.constantbetadf`` and galpy's other differentiable array backends — most easily installed with ``pip install galpy[jax]`` or ``pip install galpy[torch]``, which pull in both, and
++  * ``JAX`` or ``PyTorch``, together with ``array-api-compat`` (the backend-dispatch engine), for use of constant-anisotropy DFs in ``galpy.df.constantbetadf`` and galpy's other differentiable array backends — most easily installed with ``pip install --pre "galpy[jax]"`` or ``pip install --pre "galpy[torch]"`` (``--pre`` while galpy 2.0 is in beta), which pull in both, and
+   * `pynbody <https://github.com/pynbody/pynbody>`__ for use of ``SnapshotRZPotential`` and ``InterpSnapshotRZPotential``.
+ 
+ .. _detailed_installation:
+@@ -129,6 +129,8 @@ If you are reading this, either the simple installation instructions at the top
+ 
+             python -m pip install git+https://github.com/jobovy/galpy.git#egg=galpy
+ 
++        (append ``@v2`` to the URL, before ``#egg``, for the galpy 2.0 development branch).
++
+         You can also download the source code or clone the repository, navigate to the
+         top-level directory, and install using::
+ 
+@@ -582,7 +584,7 @@ currently used:
+ 
+           * To set options related to whether or not to check for new versions of galpy (``do-check= False`` turns all such checks off; ``check-non-interactive`` sets whether or not to do the version check in non-interactive (script) sessions; ``check-non-interactive`` sets the cadence of how often to check for version updates in non-interactive sessions [in days; interactive sessions always check]; ``last-non-interactive-check`` is an internal variable to store when the last check occurred)
+ 
+-          * To set the default array backend (``default = numpy``, the standard numpy/scipy code path). ``galpy`` resolves the backend by following the data — passing JAX or PyTorch arrays makes ``galpy`` compute (and differentiate) with that backend automatically — so this default only applies when there is no array to dispatch on. It can be set to ``jax`` or ``torch`` to make those the default (this requires the corresponding optional dependency, installable with ``pip install galpy[jax]`` or ``pip install galpy[torch]``); at runtime it can be overridden with the ``galpy.backend.use(...)`` context manager. With ``default = numpy`` (the default) there is no change to the numpy behavior and no extra dependency is needed.
++          * To set the default array backend (``default = numpy``, the standard numpy/scipy code path). ``galpy`` resolves the backend by following the data — passing JAX or PyTorch arrays makes ``galpy`` compute (and differentiate) with that backend automatically — so this default only applies when there is no array to dispatch on. It can be set to ``jax`` or ``torch`` to make those the default (this requires the corresponding optional dependency, installable with ``pip install --pre "galpy[jax]"`` or ``pip install --pre "galpy[torch]"``); at runtime it can be overridden with the ``galpy.backend.use(...)`` context manager. With ``default = numpy`` (the default) there is no change to the numpy behavior and no extra dependency is needed.
+ 
+ The current configuration file therefore looks like this::
+ 
+diff --git a/galpy/__init__.py b/galpy/__init__.py
+index 532a93cac..e76972b4d 100644
+--- a/galpy/__init__.py
++++ b/galpy/__init__.py
+@@ -1,4 +1,4 @@
+-__version__ = "1.12.1.dev0"
++__version__ = "2.0.0b1.dev0"
+ # Check whether a new version is available
+ import datetime
+ import http.client
+@@ -39,8 +39,12 @@ def latest_pypi_version(name):
+         latest_version = latest_version[latest_version.find("(from versions:") + 15 :]
+         latest_version = latest_version[: latest_version.find(")")]
+         latest_version = latest_version.replace(" ", "").split(",")
+-        # Remove any pre-releases
+-        latest_version = [v for v in latest_version if not Version(v).is_prerelease]
++        # Remove any pre-releases, unless running one (2.0.0bN users hear of bN+1)
++        latest_version = [
++            v
++            for v in latest_version
++            if Version(__version__).is_prerelease or not Version(v).is_prerelease
++        ]
+         # Latest is now the final one
+         latest_version = latest_version[-1]
+     except Exception:  # pragma: no cover
+diff --git a/setup.py b/setup.py
+index a7415fb14..d08768dee 100644
+--- a/setup.py
++++ b/setup.py
+@@ -388,7 +388,7 @@ class BuildExt(build_ext):
+ setup(
+     cmdclass=dict(build_ext=BuildExt),  # this to allow compiler check above
+     name="galpy",
+-    version="1.12.1.dev0",
++    version="2.0.0b1.dev0",
+     description="Galactic Dynamics in python",
+     author="Jo Bovy",
+     author_email="bovy@astro.utoronto.ca",
+@@ -411,8 +411,20 @@ setup(
+         # dispatch engine and is pulled in by each backend extra; diffrax /
+         # torchdiffeq / torchode provide the in-backend differentiable ODE orbit
+         # integrators (torchode: the torch.compile-able one).
+-        "jax": ["jax", "jaxlib", "array-api-compat", "diffrax"],
+-        "torch": ["torch", "array-api-compat", "torchdiffeq", "torchode"],
++        # Floors: the oldest versions exercised (CI runs the latest); jax and
++        # diffrax need Python >= 3.11.
++        "jax": [
++            "jax>=0.10.1",
++            "jaxlib>=0.10.1",
++            "array-api-compat>=1.14",
++            "diffrax>=0.7.2",
++        ],
++        "torch": [
++            "torch>=2.12",
++            "array-api-compat>=1.14",
++            "torchdiffeq>=0.2.5",
++            "torchode>=1.0.1",
++        ],
+         "docs": [
+             "sphinxext-opengraph",
+             "sphinx-design",
