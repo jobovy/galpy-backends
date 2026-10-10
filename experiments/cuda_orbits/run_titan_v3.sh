@@ -4,7 +4,7 @@
 # ./gpu_idle.sh timing (no running cF_*gpu step, no compute apps) and logged.
 set -uo pipefail
 cd "$(dirname "$0")"
-PY="taskset -c 36-39 nice -n 19 /tmp/claude-21516/-home-bovy-Repos-galpy/e83d6165-0836-4adf-9f62-52251f942f9d/scratchpad/memcap.sh 16 /var/tmp/galpy-gpu/bin/python"
+PY="taskset -c 68-71 nice -n 19 /tmp/claude-21516/-home-bovy-Repos-galpy/e83d6165-0836-4adf-9f62-52251f942f9d/scratchpad/memcap.sh 16 /var/tmp/galpy-gpu/bin/python"
 OUT=data/titan/v3; mkdir -p $OUT
 LOG=$OUT/run.log
 g() { until ./gpu_idle.sh >/dev/null; do sleep 60; done

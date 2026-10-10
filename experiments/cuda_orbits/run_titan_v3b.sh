@@ -3,7 +3,7 @@
 # at N = 1e5 (and 1e6 for the headline configurations).  Gated on ./gpu_idle.sh; logged.
 set -uo pipefail
 cd "$(dirname "$0")"
-PY="taskset -c 44-45 nice -n 19 /tmp/claude-21516/-home-bovy-Repos-galpy/e83d6165-0836-4adf-9f62-52251f942f9d/scratchpad/memcap.sh 16 /var/tmp/galpy-gpu/bin/python"
+PY="taskset -c 68-69 nice -n 19 /tmp/claude-21516/-home-bovy-Repos-galpy/e83d6165-0836-4adf-9f62-52251f942f9d/scratchpad/memcap.sh 16 /var/tmp/galpy-gpu/bin/python"
 OUT=data/titan/v3b; mkdir -p $OUT
 LOG=$OUT/run.log
 # timing only when no other process is on the GPU and no cF_ GPU step runs (gpu_idle.sh)
