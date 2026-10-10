@@ -206,6 +206,25 @@ orbits after 2 Gyr):**
   issue rate by the instruction-count estimate, against ~16–21% for dop853.
 - **Two orbits per thread** costs more registers (144) than it buys in ILP; one orbit at 64 registers is better.
 
+**H100 v3b (job 1066672; `data/h100/v3b/`; exclusive GPU; correctness passes).** Kernel µs/orbit at N = 10⁶ / 10⁷:
+
+| | galpy arithmetic | fast arithmetic |
+|---|---|---|
+| dop853 refill (registers) | 2.31 / 2.25 | 0.90 / 0.87 |
+| dop853 shared memory 10,3 (168 regs, 19% theoretical occupancy) | 1.80 / **1.74** | 0.69 / **0.66** |
+| symplec6 n=28, 64 regs (50% theoretical) | 0.78 / **0.75** | 0.25 / **0.23** |
+
+The v3 numbers at 10⁶ are reproduced within 1%. Nsight Compute at N = 2×10⁵ (fast arithmetic):
+
+| | achieved occupancy | eligible warps / scheduler | cycles with no eligible warp | FP64 peak | top stall |
+|---|---|---|---|---|---|
+| dop853 smem 10,3 | 18.1% | 0.45 | 62.5% | 10% | fixed-latency dependency (~51%) |
+| symplec6 64 regs | 39.0% | 1.42 | 34.7% | 19% | fixed-latency dependency (~45%) |
+
+The remaining limit is **dependency latency**: chains of dependent FP64 operations (Newton steps of divisions, the
+incomplete-gamma recurrence, libdevice `pow`/`log`/`exp`, RK stage sums) that too few resident warps cannot hide.
+
+
 **Caveats.** These all apply to the test problem: a smooth, cheap potential (MWPotential2014) and near-solar disc
 orbits with similar dynamical times, where one common step suits the whole batch. A batch mixing very different
 timescales, or with close encounters or rapidly time-varying potentials, would have to step at its fastest orbit's

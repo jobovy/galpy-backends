@@ -306,3 +306,23 @@ Two caveats:
 **For a GPU implementation in galpy** (section 9), this argues for starting with the symplectic integrators. They
 are smaller to port (≈ 290 lines with step estimation, vs ≈ 340 + 160 for dop853), are bit-identical to the C on the
 host, and are the faster kernels. dop853 would follow for batches that need per-orbit adaptivity.
+
+**What limits the best kernels now (H100 v3b, Nsight Compute).**
+- *Achieved occupancy and stalls.* The shared-memory dop853 achieves 18% occupancy and symplec6 at 64 registers 39%.
+  Both are limited by fixed-latency dependency stalls (~45–51% of stall cycles): too few independent instructions
+  per warp to hide the 4–8-cycle FP64 latency. They reach 10% and 19% of the H100's FP64 peak.
+- *Measured times.* At 10⁷ the kernels cost 1.74 / 0.66 µs/orbit (dop853, galpy / fast arithmetic) and 0.75 / 0.23
+  µs/orbit (symplec6).
+- *FMA contraction.* ncu counts 12.4×10⁹ unfused FP64 instructions against 6.4×10⁹ FMAs for dop853 (8.3 vs 3.1×10⁹
+  for symplec6), and estimates up to 33–36% more FP64 throughput if add/mul pairs were fused. nvcc's FMA contraction
+  (`--fmad=true`) is **already on** in these builds; only the `_nofma` variant turns it off. The pairs it leaves
+  unfused are mostly not contractible without changing the rounding:
+  - products that feed several consumers or carry no following add: `term *= x*inv[n]`, `(c*dt)` before a drift,
+    `x*x`;
+  - adds whose operands are not products: `sum += term`, error-norm accumulations;
+  - expressions where fusing would require reassociation, which IEEE semantics forbid without fast-math.
+- *Next step.* A cheap, untested next step is to rewrite the hot loops (the incomplete-gamma series, the drift/kick
+  updates, the dop853 stage combinations) in explicitly fused forms (`fma(a,b,c)`, Horner-style recurrences). This
+  changes the rounding at the ulp level, so it belongs in the "fast arithmetic" path. Under the
+  matched-truncation-error criterion it is acceptable for both paths, but the galpy-arithmetic path would then no
+  longer be a like-for-like port of the C. The ncu estimate is an upper bound, not a forecast.
