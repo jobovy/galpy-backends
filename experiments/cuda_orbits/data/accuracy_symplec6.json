@@ -1,0 +1,204 @@
+{
+ "reference": "galpy dop853_c rtol=atol=1e-13",
+ "N": 300,
+ "nt": 16,
+ "rows": [
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 1,
+   "dt": 3.746666666666667,
+   "pos_err": 242.54544381783185,
+   "pos_err_median": 84.52180099365489,
+   "energy_err": 31.817518587684678,
+   "nfev": 105.0,
+   "host_s": 0.012187590938992798
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 2,
+   "dt": 1.8733333333333335,
+   "pos_err": 47.022505421337634,
+   "pos_err_median": 1.920817123351123,
+   "energy_err": 3.1697699893731035,
+   "nfev": 210.0,
+   "host_s": 0.025644995970651507
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 4,
+   "dt": 0.9366666666666668,
+   "pos_err": 2.127730398627144,
+   "pos_err_median": 0.2754722299616936,
+   "energy_err": 0.2881057232836507,
+   "nfev": 420.0,
+   "host_s": 0.052888133097440004
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 8,
+   "dt": 0.4683333333333334,
+   "pos_err": 0.023480781140731904,
+   "pos_err_median": 0.005928147818553222,
+   "energy_err": 0.0004388192478530619,
+   "nfev": 840.0,
+   "host_s": 0.10879926197230816
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 16,
+   "dt": 0.2341666666666667,
+   "pos_err": 0.00036916105009772947,
+   "pos_err_median": 0.00010728656737640125,
+   "energy_err": 2.817050307309662e-06,
+   "nfev": 1680.0,
+   "host_s": 0.21273377595935017
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 32,
+   "dt": 0.11708333333333334,
+   "pos_err": 6.3424265398860425e-06,
+   "pos_err_median": 1.7703657880733473e-06,
+   "energy_err": 4.214513491895248e-08,
+   "nfev": 3360.0,
+   "host_s": 0.42470692505594343
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 64,
+   "dt": 0.05854166666666667,
+   "pos_err": 1.0216050118295349e-07,
+   "pos_err_median": 2.8102186008145574e-08,
+   "energy_err": 6.617161932470975e-10,
+   "nfev": 6720.0,
+   "host_s": 0.9347054220270365
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 128,
+   "dt": 0.029270833333333336,
+   "pos_err": 1.6106351892141954e-09,
+   "pos_err_median": 4.3836981378616964e-10,
+   "energy_err": 1.0355430652797558e-11,
+   "nfev": 13440.0,
+   "host_s": 1.71391497598961
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "common_dt",
+   "n_per_output": 256,
+   "dt": 0.014635416666666668,
+   "pos_err": 5.569647244543479e-11,
+   "pos_err_median": 7.275156228940318e-12,
+   "energy_err": 1.5831720755491263e-13,
+   "nfev": 26880.0,
+   "host_s": 3.4738162610447034
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 0.0001,
+   "n_per_output_range": [
+    8,
+    8
+   ],
+   "pos_err": 0.023480781140731904,
+   "pos_err_median": 0.005928147818553222,
+   "energy_err": 0.0004388192478530619,
+   "nfev": 924.0,
+   "host_s": 0.12068059807643294
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 1e-05,
+   "n_per_output_range": [
+    8,
+    16
+   ],
+   "pos_err": 0.023480781140731904,
+   "pos_err_median": 0.00012916201822703066,
+   "energy_err": 0.0004388192478530619,
+   "nfev": 1661.59,
+   "host_s": 0.21478645992465317
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 1e-06,
+   "n_per_output_range": [
+    16,
+    16
+   ],
+   "pos_err": 0.00036916105009772947,
+   "pos_err_median": 0.00010728656737640125,
+   "energy_err": 2.817050307309662e-06,
+   "nfev": 1785.0,
+   "host_s": 0.22527226898819208
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 1e-07,
+   "n_per_output_range": [
+    16,
+    32
+   ],
+   "pos_err": 0.00017656171683401705,
+   "pos_err_median": 2.087395491287831e-06,
+   "energy_err": 1.2762454809099545e-06,
+   "nfev": 3270.54,
+   "host_s": 0.411502487026155
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 1e-08,
+   "n_per_output_range": [
+    32,
+    32
+   ],
+   "pos_err": 6.3424265398860425e-06,
+   "pos_err_median": 1.7703657880733473e-06,
+   "energy_err": 4.214513491895248e-08,
+   "nfev": 3486.0,
+   "host_s": 0.44022112793754786
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 1e-09,
+   "n_per_output_range": [
+    32,
+    64
+   ],
+   "pos_err": 3.3250108688437206e-06,
+   "pos_err_median": 3.5033340164312265e-08,
+   "energy_err": 1.8637018070644076e-08,
+   "nfev": 6247.15,
+   "host_s": 0.7889025900512934
+  },
+  {
+   "scheme": "symplec6",
+   "mode": "per_orbit_dt",
+   "tol": 1e-10,
+   "n_per_output_range": [
+    64,
+    64
+   ],
+   "pos_err": 1.0216050118295349e-07,
+   "pos_err_median": 2.8102186008145574e-08,
+   "energy_err": 6.617161932470975e-10,
+   "nfev": 6867.0,
+   "host_s": 0.8682537421118468
+  }
+ ]
+}

@@ -7,6 +7,10 @@ import time
 
 import numpy as np
 
+import os
+
+if "--gpu" not in sys.argv:
+    os.environ["CO_HOST_ONLY"] = "1"  # host-only run: no CUDA context
 import cuda_orbits as co
 
 ref = np.load(sys.argv[1])
@@ -64,9 +68,13 @@ res2, st2, _ = co.integrate(lib, ics, ts, gpu=False, lazy=True, stats=True)
 report("host, lazy dense", res2, st2)
 print(f"    lazy vs faithful outputs bit-identical: {np.array_equal(res, res2)}")
 if "--gpu" in sys.argv:
-    for refill, lazy, srt in [(False, False, False), (False, True, False), (True, False, False),
-                              (True, True, False), (True, True, True)]:
+    for refill, lazy, srt, nsh in [(False, False, False, None), (False, True, False, None),
+                                   (True, False, False, None), (True, True, False, None),
+                                   (True, True, True, None), (True, False, False, (10, 3)),
+                                   (True, False, False, (14, 4)), (True, False, False, (18, 3)),
+                                   (True, False, False, (18, 4))]:
         r, s, tm = co.integrate(lib, ics, ts, gpu=True, lazy=lazy, stats=True, refill=refill,
-                                order=co.cost_order(ics) if srt else None)
+                                order=co.cost_order(ics) if srt else None, nsh=nsh)
         report(f"GPU{variant}, {'lazy' if lazy else 'faithful'} dense"
-               f"{', refill' if refill else ''}{', sorted' if srt else ''}", r, s, st)
+               f"{', refill' if refill else ''}{', sorted' if srt else ''}"
+               f"{', smem %s' % (nsh,) if nsh else ''}", r, s, st)

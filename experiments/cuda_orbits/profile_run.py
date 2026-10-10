@@ -1,5 +1,5 @@
 """One kernel launch for a profiler (ncu/nvprof):
-    python profile_run.py N [faithful|lazy] [variant] [refill 0|1]"""
+    python profile_run.py N [faithful|lazy] [variant] [refill 0|1] [NSH,MINB]"""
 import sys
 
 import numpy as np
@@ -10,9 +10,10 @@ N = int(float(sys.argv[1]))
 lazy = (sys.argv[2] if len(sys.argv) > 2 else "faithful") == "lazy"
 variant = sys.argv[3] if len(sys.argv) > 3 else ""
 refill = bool(int(sys.argv[4])) if len(sys.argv) > 4 else False
+nsh = tuple(int(x) for x in sys.argv[5].split(",")) if len(sys.argv) > 5 else None
 lib = co.load(variant)
 co.set_potential(lib, *co.load_mw2014())
 ref = np.load("ref_N300.npz")
 ics = np.tile(ref["ics"], (N // 300 + 1, 1))[:N]
-r, st, tm = co.integrate(lib, ics, ref["ts"], lazy=lazy, stats=True, refill=refill)
+r, st, tm = co.integrate(lib, ics, ref["ts"], lazy=lazy, stats=True, refill=refill, nsh=nsh)
 print("nfev_total", int(st[:, 0].astype(np.int64).sum()), "kernel_ms", tm[1])

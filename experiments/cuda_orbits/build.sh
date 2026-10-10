@@ -21,7 +21,7 @@ ARCHS=${ARCHS:-"61 90"}
 VARIANTS=${VARIANTS:-"base nofma fastgam fastpow fast noinl fast_noinl r128 f32 f32_noinl"}
 GENCODE=""
 for a in $ARCHS; do GENCODE+=" -gencode arch=compute_${a},code=sm_${a}"; done
-COMMON="-O3 -std=c++17 -shared -Xcompiler -fPIC,-O2 $GENCODE -Xptxas -v"
+COMMON="-O3 -std=c++17 -shared -Xcompiler -fPIC,-O2 -Wno-deprecated-gpu-targets $GENCODE -Xptxas -v"
 declare -A FLAGS=(
   [base]="" [nofma]="--fmad=false" [fastgam]="-DCO_FASTGAM" [fastpow]="-DCO_FASTPOW"
   [fast]="-DCO_FASTGAM -DCO_FASTPOW" [r128]="-DCO_MINBLOCKS=2" [f32]="-DCO_FLOAT32"
@@ -31,7 +31,9 @@ declare -A FLAGS=(
 pids=()
 for v in $VARIANTS; do
   sfx=$([[ $v == base ]] && echo "" || echo "_$v")
-  $NVCC $COMMON ${FLAGS[$v]} cuda_orbits.cu -o libcudaorbits${sfx}.so 2> build_ptxas${sfx}.log &
+  # build to a temp name, then rename: running processes keep their mapped copy
+  ( $NVCC $COMMON ${FLAGS[$v]} cuda_orbits.cu -o .tmp_libcudaorbits${sfx}.so 2> build_ptxas${sfx}.log \
+    && mv -f .tmp_libcudaorbits${sfx}.so libcudaorbits${sfx}.so ) &
   pids+=($!)
 done
 fail=0

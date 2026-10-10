@@ -8,6 +8,10 @@ import sys
 import numpy as np
 from scipy.special import gammainc, gammaln
 
+import os
+
+if "--gpu" not in sys.argv:
+    os.environ["CO_HOST_ONLY"] = "1"  # host-only run: no CUDA context
 import cuda_orbits as co
 
 variant = sys.argv[sys.argv.index("--variant") + 1] if "--variant" in sys.argv else ""

@@ -24,8 +24,18 @@ struct CoAcc3 {
   real ax, ay, az;
 };
 __device__ __noinline__ CoAcc3 co_dev_accel(real x, real y, real z);
+// two points in one call (two orbits per thread): both force evaluations are
+// inlined into one function so their instructions can interleave (ILP)
+struct CoAcc6 {
+  real ax, ay, az, bx, by, bz;
+};
+__device__ __noinline__ CoAcc6 co_dev_accel2(real ax, real ay, real az, real bx, real by,
+                                             real bz);
 #endif
-HD void co_deriv(const real *q, real *a, const PotSet &P) {
+// q, a: anything indexable (real arrays/pointers, or a strided view into shared
+// memory, see SPtr); values are copied, so the arithmetic is unchanged.
+template <class QA, class AA>
+HD void co_deriv(const QA &q, AA &&a, const PotSet &P) {
 #if defined(CO_NOINLINE_FORCE) && defined(__CUDA_ARCH__)
   CoAcc3 r = co_dev_accel(q[0], q[1], q[2]);
   a[0] = q[3];
@@ -35,9 +45,21 @@ HD void co_deriv(const real *q, real *a, const PotSet &P) {
   a[4] = r.ay;
   a[5] = r.az;
 #else
-  evalRectDeriv(q, a, P);
+  real qq[DIM], aa[DIM];
+#pragma unroll
+  for (int i = 0; i < DIM; i++) qq[i] = q[i];
+  evalRectDeriv(qq, aa, P);
+#pragma unroll
+  for (int i = 0; i < DIM; i++) a[i] = aa[i];
 #endif
 }
+
+// Strided view (shared-memory stage storage: element i at p[i*s]).
+struct SPtr {
+  real *p;
+  int s;
+  HD real &operator[](int i) const { return p[i * s]; }
+};
 #ifdef CO_FLOAT32
 #define UROUND R_(1.2e-7)
 #else
@@ -48,7 +70,8 @@ HD real co_sign(real x, real y) { return (y > R_(0.0)) ? fabs(x) : -fabs(x); }
 HD real co_max(real a, real b) { return (a > b) ? a : b; }
 HD real co_min(real a, real b) { return (a < b) ? a : b; }
 
-HD void co_save(const real *y, real *out) {
+template <class YA>
+HD void co_save(const YA &y, real *out) {
   real v[DIM];
 #pragma unroll
   for (int i = 0; i < DIM; i++) v[i] = y[i];
@@ -129,9 +152,16 @@ HD void dop853_init(DopState &S, int nt, const real *t, const PotSet &P, real rt
 // One attempted step of galpy's dop853 main loop (accept or reject), including
 // the dense output of every requested time inside an accepted step.
 // fixed_h > 0 (diagnostic only): constant step, every step accepted.
-template <bool LAZY>
-HD void dop853_step(DopState &S, int nt, const real *t, const PotSet &P, real rtol,
-                    real atol, real fixed_h) {
+// Stage storage for one step: slots 0..9 = yy1, k2..k10; 10..17 = rcont1..8.
+// RegStages: plain local arrays (registers); see cuda_orbits.cu for SmemStages.
+struct RegStages {
+  real a[18][DIM];
+  template <int S> HD real *get() { return a[S]; }
+};
+
+template <bool LAZY, class SP>
+HD void dop853_step_sp(DopState &S, int nt, const real *t, const PotSet &P, real rtol,
+                       real atol, real fixed_h, SP &sp) {
   using namespace dopc;
   const real safe = R_(0.9), beta = R_(0.0);
   const real expo1 = R_(1.0) / R_(8.0) - beta * R_(0.2);
@@ -143,8 +173,16 @@ HD void dop853_step(DopState &S, int nt, const real *t, const PotSet &P, real rt
   int &reject = S.reject, &fin = S.fin, &nfev = S.nfev, &nacc = S.nacc,
       &nrej = S.nrej;
   real *&result = S.result;
-  real yy1[DIM], k2[DIM], k3[DIM], k4[DIM], k5[DIM], k6[DIM], k7[DIM], k8[DIM],
-      k9[DIM], k10[DIM];
+  auto yy1 = sp.template get<0>();
+  auto k2 = sp.template get<1>();
+  auto k3 = sp.template get<2>();
+  auto k4 = sp.template get<3>();
+  auto k5 = sp.template get<4>();
+  auto k6 = sp.template get<5>();
+  auto k7 = sp.template get<6>();
+  auto k8 = sp.template get<7>();
+  auto k9 = sp.template get<8>();
+  auto k10 = sp.template get<9>();
   int i;
   real hnew, sk, sqr, err, err2, erri, deno, fac, fac11;
   if (fixed_h > R_(0.0)) h = pos_neg * fixed_h;  // diagnostic: lockstep fixed steps
@@ -236,8 +274,14 @@ HD void dop853_step(DopState &S, int nt, const real *t, const PotSet &P, real rt
     nfev++;
     bool need_dense = !LAZY || (pos_neg * t[fin + 1] < pos_neg * t_current);
     if (need_dense) {
-      real rcont1[DIM], rcont2[DIM], rcont3[DIM], rcont4[DIM], rcont5[DIM],
-          rcont6[DIM], rcont7[DIM], rcont8[DIM];
+      auto rcont1 = sp.template get<10>();
+      auto rcont2 = sp.template get<11>();
+      auto rcont3 = sp.template get<12>();
+      auto rcont4 = sp.template get<13>();
+      auto rcont5 = sp.template get<14>();
+      auto rcont6 = sp.template get<15>();
+      auto rcont7 = sp.template get<16>();
+      auto rcont8 = sp.template get<17>();
 #pragma unroll
       for (i = 0; i < DIM; i++) {
         rcont1[i] = y0[i];
@@ -321,6 +365,13 @@ HD void dop853_step(DopState &S, int nt, const real *t, const PotSet &P, real rt
     t_old = t_old_older;
   }
   h = hnew;
+}
+
+template <bool LAZY>
+HD void dop853_step(DopState &S, int nt, const real *t, const PotSet &P, real rtol,
+                    real atol, real fixed_h) {
+  RegStages sp;
+  dop853_step_sp<LAZY>(S, nt, t, P, rtol, atol, fixed_h, sp);
 }
 
 // Whole orbit.  y0in: rectangular (x,y,z,vx,vy,vz); rtol/atol: ALREADY exp()'d

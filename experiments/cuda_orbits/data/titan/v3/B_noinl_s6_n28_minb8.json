@@ -1,0 +1,43 @@
+{
+ "backend": "cuda symplectic (galpy bovy_symplecticode.c port, one thread per orbit, refill)",
+ "device": "NVIDIA TITAN Xp (sm_61, 30 SMs)",
+ "variant": "_noinl",
+ "scheme": "symplec6",
+ "dt_mode": "common",
+ "n_per_output": 28,
+ "dt": 0.13380952380952382,
+ "tol": 0.0,
+ "minb": 8,
+ "block": 128,
+ "kernel_info": {
+  "regs": 64,
+  "local_bytes": 304,
+  "blocks_per_sm": 8,
+  "threads_per_sm": 1024,
+  "max_threads_per_sm": 2048,
+  "smem_per_block": 0,
+  "occupancy": 0.5
+ },
+ "pinned": false,
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "potential": "MWPotential2014",
+ "host": "geir",
+ "results": [
+  {
+   "N": 30000,
+   "wall_s": 1.1123673929832876,
+   "per_orbit_ms": 0.03707891309944292,
+   "alloc_h2d_ms": 0.7386559844017029,
+   "kernel_ms": 1097.597900390625,
+   "d2h_ms": 12.65715217590332,
+   "nfev_mean": 2940.0,
+   "nfev_max": 2940,
+   "n_per_output_range": [
+    28,
+    28
+   ],
+   "fevals_per_s_kernel": 80357296.57337211
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "reference": "galpy dop853_c rtol=atol=1e-13",
+ "N": 300,
+ "nt": 16,
+ "rows": [
+  {
+   "scheme": "symplec4",
+   "mode": "common_dt",
+   "n_per_output": 38,
+   "dt": 0.09859649122807018,
+   "pos_err": 0.0009732035822662877,
+   "pos_err_median": 0.0005514075195173431,
+   "energy_err": 2.1569483574935225e-06,
+   "nfev": 1710.0,
+   "host_s": 0.35316236200742424
+  },
+  {
+   "scheme": "symplec4",
+   "mode": "common_dt",
+   "n_per_output": 68,
+   "dt": 0.05509803921568628,
+   "pos_err": 9.57083060579553e-05,
+   "pos_err_median": 5.414496599898252e-05,
+   "energy_err": 2.1125239549421312e-07,
+   "nfev": 3060.0,
+   "host_s": 0.6091287669260055
+  }
+ ]
+}

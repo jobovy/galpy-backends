@@ -1,0 +1,47 @@
+2026-10-09 09:08:35 cuda_orbits: accuracy_scan.py host runs accidentally created CUDA contexts (150 MiB each, no kernels) during cF_g15_gpu for ~1-2 min; killed (PIDs 3213513/30/35/39)
+2026-10-09 09:10:52 cuda_orbits: note: earlier host-only checks today (check_symplectic.py, check_correctness.py host) also created a CUDA context for a few seconds each before CO_HOST_ONLY existed; no kernels, no timing
+2026-10-09 10:07:08 RUN check_correctness.py ref_N300.npz --gpu --variant _noinl
+2026-10-09 10:07:41 RUN check_correctness.py ref_N300.npz --gpu --variant _fast_noinl
+2026-10-09 10:08:08 RUN check_symplectic.py --gpu --variant _noinl --minb 4
+2026-10-09 10:08:42 RUN check_symplectic.py --gpu --variant _fast_noinl --minb 8
+2026-10-09 10:09:00 RUN bench.py --Ns 30000 --variant _noinl --refill --modes faithful --repeats 2 --out data/titan/v3/A_noinl_refill.json
+2026-10-09 10:09:19 RUN bench.py --Ns 30000 --variant _noinl --nsh 10,3 --modes faithful --repeats 2 --out data/titan/v3/A_noinl_smem10_3.json
+2026-10-09 10:09:38 RUN bench.py --Ns 30000 --variant _noinl --nsh 14,4 --modes faithful --repeats 2 --out data/titan/v3/A_noinl_smem14_4.json
+2026-10-09 10:09:52 RUN bench.py --Ns 30000 --variant _noinl --nsh 18,3 --modes faithful --repeats 2 --out data/titan/v3/A_noinl_smem18_3.json
+2026-10-09 10:10:06 RUN bench.py --Ns 30000 --variant _noinl --nsh 18,4 --modes faithful --repeats 2 --out data/titan/v3/A_noinl_smem18_4.json
+2026-10-09 10:13:25 RUN bench.py --Ns 30000 --variant _fast_noinl --refill --modes faithful --repeats 2 --out data/titan/v3/A_fast_noinl_refill.json
+2026-10-09 10:13:42 RUN bench.py --Ns 30000 --variant _fast_noinl --nsh 10,3 --modes faithful --repeats 2 --out data/titan/v3/A_fast_noinl_smem10_3.json
+2026-10-09 10:13:56 RUN bench.py --Ns 30000 --variant _fast_noinl --nsh 14,4 --modes faithful --repeats 2 --out data/titan/v3/A_fast_noinl_smem14_4.json
+2026-10-09 10:14:09 RUN bench.py --Ns 30000 --variant _fast_noinl --nsh 18,3 --modes faithful --repeats 2 --out data/titan/v3/A_fast_noinl_smem18_3.json
+2026-10-09 10:14:28 RUN bench.py --Ns 30000 --variant _fast_noinl --nsh 18,4 --modes faithful --repeats 2 --out data/titan/v3/A_fast_noinl_smem18_4.json
+2026-10-09 10:14:44 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec6 --n 28 --minb 2 --repeats 2 --out data/titan/v3/B_noinl_s6_n28_minb2.json
+2026-10-09 10:15:03 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec6 --n 28 --minb 4 --repeats 2 --out data/titan/v3/B_noinl_s6_n28_minb4.json
+2026-10-09 10:15:17 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec6 --n 28 --minb 8 --repeats 2 --out data/titan/v3/B_noinl_s6_n28_minb8.json
+2026-10-09 10:15:40 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec6 --n 20 --repeats 2 --out data/titan/v3/B_noinl_s6_n20.json
+2026-10-09 10:15:54 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec6 --n 14 --repeats 2 --out data/titan/v3/B_noinl_s6_n14.json
+2026-10-09 10:16:07 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec4 --n 112 --repeats 2 --out data/titan/v3/B_noinl_s4_n112.json
+2026-10-09 10:16:30 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec4 --n 68 --repeats 2 --out data/titan/v3/B_noinl_s4_n68.json
+2026-10-09 10:16:48 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec4 --n 38 --repeats 2 --out data/titan/v3/B_noinl_s4_n38.json
+2026-10-09 10:17:02 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme leapfrog --n 3072 --repeats 1 --out data/titan/v3/B_noinl_lf_n3072.json
+2026-10-09 10:17:51 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme leapfrog --n 1152 --repeats 1 --out data/titan/v3/B_noinl_lf_n1152.json
+2026-10-09 10:18:20 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme leapfrog --n 368 --repeats 2 --out data/titan/v3/B_noinl_lf_n368.json
+2026-10-09 10:18:37 RUN bench_symp.py --Ns 30000 --variant _noinl --scheme symplec6 --tol 1e-8 --repeats 2 --out data/titan/v3/B_noinl_s6_tol1e-8.json
+2026-10-09 10:20:59 RUN bench.py --Ns 30000 --variant _noinl --refill --modes faithful --tol 1e-8 --repeats 2 --out data/titan/v3/B_noinl_dop853_tol1e-8.json
+2026-10-09 10:21:20 RUN bench.py --Ns 30000 --variant _noinl --refill --modes faithful --tol 5e-8 --repeats 2 --out data/titan/v3/B_noinl_dop853_tol5e-8.json
+2026-10-09 10:21:41 RUN bench.py --Ns 30000 --variant _noinl --refill --modes faithful --tol 2e-6 --repeats 2 --out data/titan/v3/B_noinl_dop853_tol2e-6.json
+2026-10-09 10:21:58 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec6 --n 28 --minb 2 --repeats 2 --out data/titan/v3/B_fast_noinl_s6_n28_minb2.json
+2026-10-09 10:22:12 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec6 --n 28 --minb 4 --repeats 2 --out data/titan/v3/B_fast_noinl_s6_n28_minb4.json
+2026-10-09 10:22:26 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec6 --n 28 --minb 8 --repeats 2 --out data/titan/v3/B_fast_noinl_s6_n28_minb8.json
+2026-10-09 10:22:43 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec6 --n 20 --repeats 2 --out data/titan/v3/B_fast_noinl_s6_n20.json
+2026-10-09 10:23:00 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec6 --n 14 --repeats 2 --out data/titan/v3/B_fast_noinl_s6_n14.json
+2026-10-09 10:23:14 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec4 --n 112 --repeats 2 --out data/titan/v3/B_fast_noinl_s4_n112.json
+2026-10-09 10:23:28 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec4 --n 68 --repeats 2 --out data/titan/v3/B_fast_noinl_s4_n68.json
+2026-10-09 10:23:44 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec4 --n 38 --repeats 2 --out data/titan/v3/B_fast_noinl_s4_n38.json
+2026-10-09 10:24:00 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme leapfrog --n 3072 --repeats 1 --out data/titan/v3/B_fast_noinl_lf_n3072.json
+2026-10-09 10:24:23 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme leapfrog --n 1152 --repeats 1 --out data/titan/v3/B_fast_noinl_lf_n1152.json
+2026-10-09 10:24:45 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme leapfrog --n 368 --repeats 2 --out data/titan/v3/B_fast_noinl_lf_n368.json
+2026-10-09 10:25:02 RUN bench_symp.py --Ns 30000 --variant _fast_noinl --scheme symplec6 --tol 1e-8 --repeats 2 --out data/titan/v3/B_fast_noinl_s6_tol1e-8.json
+2026-10-09 10:25:16 RUN bench.py --Ns 30000 --variant _fast_noinl --refill --modes faithful --tol 1e-8 --repeats 2 --out data/titan/v3/B_fast_noinl_dop853_tol1e-8.json
+2026-10-09 10:25:30 RUN bench.py --Ns 30000 --variant _fast_noinl --refill --modes faithful --tol 5e-8 --repeats 2 --out data/titan/v3/B_fast_noinl_dop853_tol5e-8.json
+2026-10-09 10:25:47 RUN bench.py --Ns 30000 --variant _fast_noinl --refill --modes faithful --tol 2e-6 --repeats 2 --out data/titan/v3/B_fast_noinl_dop853_tol2e-6.json
+2026-10-09 21:54:00 RUN A smem TITAN N=3e4 (+ correctness)

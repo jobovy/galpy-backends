@@ -4,3 +4,4 @@ __pycache__/
 flopcount
 flopcount_fast
 build_out.log
+.tmp_lib*.so
