@@ -1,0 +1,84 @@
+{
+ "backend": "cuda symplectic (galpy bovy_symplecticode.c port, one thread per orbit, refill)",
+ "device": "NVIDIA H100 80GB HBM3 (sm_90, 132 SMs)",
+ "variant": "_noinl",
+ "scheme": "symplec6",
+ "dt_mode": "common",
+ "n_per_output": 28,
+ "dt": 0.13380952380952382,
+ "tol": 0.0,
+ "minb": 2,
+ "block": 128,
+ "orbits_per_thread": 1,
+ "kernel_info": {
+  "regs": 132,
+  "local_bytes": 40,
+  "blocks_per_sm": 3,
+  "threads_per_sm": 384,
+  "max_threads_per_sm": 2048,
+  "smem_per_block": 0,
+  "block": 128,
+  "occupancy": 0.1875
+ },
+ "pinned": true,
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "potential": "MWPotential2014",
+ "host": "trig0030",
+ "results": [
+  {
+   "N": 100000,
+   "gpu_apps_start": [],
+   "gpu_apps_end": [],
+   "gpu_exclusive": true,
+   "wall_s": 0.13216047199966852,
+   "per_orbit_ms": 0.001321604719996685,
+   "alloc_h2d_ms": 0.7070080041885376,
+   "kernel_ms": 127.89497375488281,
+   "d2h_ms": 2.7799999713897705,
+   "nfev_mean": 2940.0,
+   "nfev_max": 2940,
+   "n_per_output_range": [
+    28,
+    28
+   ],
+   "fevals_per_s_kernel": 2298761173.863375
+  },
+  {
+   "N": 1000000,
+   "gpu_apps_start": [],
+   "gpu_apps_end": [],
+   "gpu_exclusive": true,
+   "wall_s": 1.2657995589979691,
+   "per_orbit_ms": 0.0012657995589979692,
+   "alloc_h2d_ms": 2.940351963043213,
+   "kernel_ms": 1234.7344970703125,
+   "d2h_ms": 27.189279556274414,
+   "nfev_mean": 2940.0,
+   "nfev_max": 2940,
+   "n_per_output_range": [
+    28,
+    28
+   ],
+   "fevals_per_s_kernel": 2381078690.9864564
+  },
+  {
+   "N": 10000000,
+   "gpu_apps_start": [],
+   "gpu_apps_end": [],
+   "gpu_exclusive": true,
+   "wall_s": 12.396238254004857,
+   "per_orbit_ms": 0.0012396238254004858,
+   "alloc_h2d_ms": 26.734336853027344,
+   "kernel_ms": 12093.41015625,
+   "d2h_ms": 272.05517578125,
+   "nfev_mean": 2940.0,
+   "nfev_max": 2940,
+   "n_per_output_range": [
+    28,
+    28
+   ],
+   "fevals_per_s_kernel": 2431076067.060024
+  }
+ ]
+}

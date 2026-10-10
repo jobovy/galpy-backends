@@ -1,0 +1,52 @@
+== libcudaorbits_noinl.so
+void k_symp2<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:146 STACK:40
+void k_symp2<6, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:146 STACK:40
+void k_symp2<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:140 STACK:40
+void k_symp2<4, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:140 STACK:40
+void k_symp2<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:134 STACK:40
+void k_symp2<0, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:134 STACK:40
+void k_symp<6, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:320
+void k_symp<6, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:128 STACK:40
+void k_symp<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:132 STACK:40
+void k_symp<4, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:288
+void k_symp<4, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:122 STACK:40
+void k_symp<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:122 STACK:40
+void k_symp<0, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:264
+void k_symp<0, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:120 STACK:40
+void k_symp<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:120 STACK:40
+void k_integrate<false>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:152
+void k_integrate<true>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:144
+void k_integrate_refill<false>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:254 STACK:144
+void k_integrate_refill<true>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:255 STACK:128
+void k_integrate_smem<18, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:448
+void k_integrate_smem<18, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:288
+void k_integrate_smem<14, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:584
+void k_integrate_smem<14, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:392
+void k_integrate_smem<10, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:424
+void k_integrate_smem<10, 2>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:255 STACK:64
+== libcudaorbits_fast_noinl.so
+void k_symp2<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:144 STACK:40
+void k_symp2<6, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:144 STACK:40
+void k_symp2<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:136 STACK:40
+void k_symp2<4, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:136 STACK:40
+void k_symp2<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:132 STACK:40
+void k_symp2<0, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:132 STACK:40
+void k_symp<6, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:304
+void k_symp<6, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:124 STACK:40
+void k_symp<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:128 STACK:40
+void k_symp<4, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:272
+void k_symp<4, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:118 STACK:40
+void k_symp<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:118 STACK:40
+void k_symp<0, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:248
+void k_symp<0, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:114 STACK:40
+void k_symp<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:114 STACK:40
+void k_integrate<false>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:136
+void k_integrate<true>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:136
+void k_integrate_refill<false>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:255 STACK:120
+void k_integrate_refill<true>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:255 STACK:120
+void k_integrate_smem<18, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:440
+void k_integrate_smem<18, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:272
+void k_integrate_smem<14, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:584
+void k_integrate_smem<14, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:384
+void k_integrate_smem<10, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:416
+void k_integrate_smem<10, 2>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:255 STACK:120

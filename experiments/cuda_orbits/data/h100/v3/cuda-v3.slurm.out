@@ -1,0 +1,433 @@
+/scratch/bovy/galpy-h100/jobs/pybin/python
+/cvmfs/soft.computecanada.ca/easybuild/software/2023/x86-64-v3/Core/cudacore/12.9.1/bin/nvcc
+/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/x86_64-pc-linux-gnu/gcc-bin/12/gcc
+/cvmfs/soft.computecanada.ca/easybuild/software/2023/x86-64-v3/Core/cudacore/12.9.1/bin/ncu
+gcc (Gentoo 12.3.1_p20230526 p2) 12.3.1 20230526
+Build cuda_12.9.r12.9/compiler.36037853_0
+numpy 2.5.3
+RmProfilingAdminOnly: 0
+NVIDIA H100 80GB HBM3, 580.178.04
+== libcudaorbits_noinl.so
+void k_symp2<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:146 STACK:40
+void k_symp2<6, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:146 STACK:40
+void k_symp2<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:140 STACK:40
+void k_symp2<4, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:140 STACK:40
+void k_symp2<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:134 STACK:40
+void k_symp2<0, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:134 STACK:40
+void k_symp<6, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:320
+void k_symp<6, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:128 STACK:40
+void k_symp<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:132 STACK:40
+void k_symp<4, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:288
+void k_symp<4, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:122 STACK:40
+void k_symp<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:122 STACK:40
+void k_symp<0, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:264
+void k_symp<0, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:120 STACK:40
+void k_symp<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:120 STACK:40
+void k_integrate<false>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:152
+void k_integrate<true>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:144
+void k_integrate_refill<false>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:254 STACK:144
+void k_integrate_refill<true>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:255 STACK:128
+void k_integrate_smem<18, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:448
+void k_integrate_smem<18, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:288
+void k_integrate_smem<14, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:584
+void k_integrate_smem<14, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:392
+void k_integrate_smem<10, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:424
+void k_integrate_smem<10, 2>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:255 STACK:64
+== libcudaorbits_fast_noinl.so
+void k_symp2<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:144 STACK:40
+void k_symp2<6, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:144 STACK:40
+void k_symp2<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:136 STACK:40
+void k_symp2<4, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:136 STACK:40
+void k_symp2<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:132 STACK:40
+void k_symp2<0, 1>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:132 STACK:40
+void k_symp<6, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:304
+void k_symp<6, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:124 STACK:40
+void k_symp<6, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:128 STACK:40
+void k_symp<4, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:272
+void k_symp<4, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:118 STACK:40
+void k_symp<4, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:118 STACK:40
+void k_symp<0, 8>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:64 STACK:248
+void k_symp<0, 4>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:114 STACK:40
+void k_symp<0, 2>(int, double const*, int, double const*, double, double, double, double*, int*, int*) REG:114 STACK:40
+void k_integrate<false>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:136
+void k_integrate<true>(int, double const*, int, double const*, double, double, double*, int*, double, int const*) REG:255 STACK:136
+void k_integrate_refill<false>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:255 STACK:120
+void k_integrate_refill<true>(int, double const*, int, double const*, double, double, double*, int*, double, int*, int const*) REG:255 STACK:120
+void k_integrate_smem<18, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:440
+void k_integrate_smem<18, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:272
+void k_integrate_smem<14, 4>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:128 STACK:584
+void k_integrate_smem<14, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:384
+void k_integrate_smem<10, 3>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:168 STACK:416
+void k_integrate_smem<10, 2>(int, double const*, int, double const*, double, double, double*, int*, int*, int const*) REG:255 STACK:120
+== correctness (dop853 incl. shared-memory kernels; symplectic vs galpy C) ==
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 1.0608 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 3471.5 (min 1547, max 5569), accepted 187.9, rejected 59.12
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 0.000e+00 (median 0.000e+00); orbits bit-identical to galpy C over all 16 saves: 100.0%; max rel diff any coord/time 0.00e+00
+    vs galpy C 1e-13 (truth): max 1.398e-05, median 8.071e-07
+    nfev/orbit mean 2952.7 (min 1283, max 4846), accepted 187.9, rejected 59.12
+    lazy vs faithful outputs bit-identical: True
+[GPU_noinl, faithful dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense, refill] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 2952.4 (min 1283, max 4846), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (10, 3)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (14, 4)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (18, 3)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[GPU_noinl, faithful dense, refill, smem (18, 4)] N=300: max |dx|/|x| at t_end = 1.554e-06 (median 3.656e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 3.22e-03
+    vs galpy C 1e-13 (truth): max 1.486e-05, median 8.092e-07
+    same accepted/rejected step counts as galpy C: 80.3% of orbits; max |dx|/|x| among those 3.583e-07, among the rest 1.554e-06
+    nfev/orbit mean 3471.2 (min 1547, max 5569), accepted 187.9, rejected 59.11
+[host_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 512-1024, nfev/orbit 9784
+[gpu_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.25e-13; substeps/output 512-1024, nfev/orbit 9784
+[host_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 128-128, nfev/orbit 5832
+[gpu_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 5.44e-13; substeps/output 128-128, nfev/orbit 5832
+[host_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 64-64, nfev/orbit 2880
+[gpu_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.03e-13; substeps/output 64-64, nfev/orbit 2880
+[host_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 32-32, nfev/orbit 3486
+[gpu_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 5.56e-13; substeps/output 32-32, nfev/orbit 3486
+[host_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 512-1024, nfev/orbit 9784
+[host_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 128-128, nfev/orbit 5832
+[host_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 64-64, nfev/orbit 2880
+[gpu_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.03e-13; substeps/output 64-64, nfev/orbit 2880
+[host_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 100.0%, max |dx|/|x| at t_end 0.00e+00; substeps/output 32-32, nfev/orbit 3486
+[galpy C 1e-8 vs galpy C 1e-13] truncation error |dx|/|x| at t_end: max 1.398e-05, median 8.071e-07
+host build (faithful, 1 thread): 0.4944 ms/orbit
+[host, faithful dense] N=300: max |dx|/|x| at t_end = 1.501e-06 (median 4.218e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 7.27e-04
+    vs galpy C 1e-13 (truth): max 1.509e-05, median 8.070e-07
+    nfev/orbit mean 3470.7 (min 1547, max 5569), accepted 187.9, rejected 59.09
+[host, lazy dense] N=300: max |dx|/|x| at t_end = 1.501e-06 (median 4.218e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 7.27e-04
+    vs galpy C 1e-13 (truth): max 1.509e-05, median 8.070e-07
+    nfev/orbit mean 2952.0 (min 1283, max 4846), accepted 187.9, rejected 59.09
+    lazy vs faithful outputs bit-identical: True
+[GPU_fast_noinl, faithful dense] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense, refill] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, lazy dense, refill, sorted] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 2952.8 (min 1283, max 4846), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (10, 3)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (14, 4)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (18, 3)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[GPU_fast_noinl, faithful dense, refill, smem (18, 4)] N=300: max |dx|/|x| at t_end = 5.283e-06 (median 3.920e-13); orbits bit-identical to galpy C over all 16 saves: 0.0%; max rel diff any coord/time 4.10e-03
+    vs galpy C 1e-13 (truth): max 1.463e-05, median 8.071e-07
+    same accepted/rejected step counts as galpy C: 78.0% of orbits; max |dx|/|x| among those 2.098e-07, among the rest 5.283e-06
+    nfev/orbit mean 3471.6 (min 1547, max 5569), accepted 188.0, rejected 59.12
+[host_fast_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.74e-13; substeps/output 512-1024, nfev/orbit 9784
+[gpu_fast_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 8.91e-13; substeps/output 512-1024, nfev/orbit 9784
+[host_fast_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.18e-13; substeps/output 128-128, nfev/orbit 5832
+[gpu_fast_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 6.49e-13; substeps/output 128-128, nfev/orbit 5832
+[host_fast_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.58e-13; substeps/output 64-64, nfev/orbit 2880
+[gpu_fast_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.37e-13; substeps/output 64-64, nfev/orbit 2880
+[host_fast_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 4.74e-13; substeps/output 32-32, nfev/orbit 3486
+[gpu_fast_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 4.56e-13; substeps/output 32-32, nfev/orbit 3486
+[host_fast_noinl] leapfrog tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.74e-13; substeps/output 512-1024, nfev/orbit 9784
+[host_fast_noinl] symplec4 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 7.18e-13; substeps/output 128-128, nfev/orbit 5832
+[host_fast_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.58e-13; substeps/output 64-64, nfev/orbit 2880
+[gpu_fast_noinl] symplec4 tol=1e-08 dt=0.05854: bit-identical 0.0%, max |dx|/|x| at t_end 4.37e-13; substeps/output 64-64, nfev/orbit 2880
+[host_fast_noinl] symplec6 tol=1e-08 dt=per-orbit: bit-identical 0.0%, max |dx|/|x| at t_end 4.74e-13; substeps/output 32-32, nfev/orbit 3486
+== A: dop853 refill, stages in registers vs shared memory ==
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  100000: wall    0.300s (   3.001 us/orbit; kernel 296.2 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    2.367s (   2.367 us/orbit; kernel 2334.9 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   22.977s (   2.298 us/orbit; kernel 22674.9 ms, d2h 272.1 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,2+pinned faithful] N=  100000: wall    0.298s (   2.978 us/orbit; kernel 293.0 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,2+pinned faithful] N= 1000000: wall    2.374s (   2.374 us/orbit; kernel 2341.5 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,3+pinned faithful] N=  100000: wall    0.250s (   2.502 us/orbit; kernel 246.3 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem10,3+pinned faithful] N= 1000000: wall    1.846s (   1.846 us/orbit; kernel 1814.2 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem14,3+pinned faithful] N=  100000: wall    0.306s (   3.059 us/orbit; kernel 302.0 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem14,3+pinned faithful] N= 1000000: wall    2.443s (   2.443 us/orbit; kernel 2411.2 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem14,4+pinned faithful] N=  100000: wall    0.310s (   3.096 us/orbit; kernel 305.6 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem14,4+pinned faithful] N= 1000000: wall    2.475s (   2.475 us/orbit; kernel 2443.3 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem18,3+pinned faithful] N=  100000: wall    0.313s (   3.129 us/orbit; kernel 308.2 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem18,3+pinned faithful] N= 1000000: wall    2.481s (   2.481 us/orbit; kernel 2448.6 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem18,4+pinned faithful] N=  100000: wall    0.314s (   3.138 us/orbit; kernel 309.6 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+smem18,4+pinned faithful] N= 1000000: wall    2.490s (   2.490 us/orbit; kernel 2458.9 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=  100000: wall    0.120s (   1.200 us/orbit; kernel 115.2 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N= 1000000: wall    0.933s (   0.933 us/orbit; kernel 901.5 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=10000000: wall    9.032s (   0.903 us/orbit; kernel 8730.0 ms, d2h 272.1 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,2+pinned faithful] N=  100000: wall    0.123s (   1.231 us/orbit; kernel 118.9 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,2+pinned faithful] N= 1000000: wall    0.960s (   0.960 us/orbit; kernel 927.5 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,3+pinned faithful] N=  100000: wall    0.101s (   1.014 us/orbit; kernel 97.5 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem10,3+pinned faithful] N= 1000000: wall    0.723s (   0.723 us/orbit; kernel 691.6 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem14,3+pinned faithful] N=  100000: wall    0.127s (   1.266 us/orbit; kernel 121.8 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem14,3+pinned faithful] N= 1000000: wall    0.986s (   0.986 us/orbit; kernel 954.3 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem14,4+pinned faithful] N=  100000: wall    0.132s (   1.318 us/orbit; kernel 127.5 ms, d2h 2.8 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem14,4+pinned faithful] N= 1000000: wall    1.024s (   1.024 us/orbit; kernel 993.1 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem18,3+pinned faithful] N=  100000: wall    0.131s (   1.314 us/orbit; kernel 127.1 ms, d2h 2.8 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem18,3+pinned faithful] N= 1000000: wall    1.030s (   1.030 us/orbit; kernel 998.4 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem18,4+pinned faithful] N=  100000: wall    0.136s (   1.361 us/orbit; kernel 131.3 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+smem18,4+pinned faithful] N= 1000000: wall    1.051s (   1.051 us/orbit; kernel 1019.5 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+== B: symplectic (common dt, lockstep) at matched accuracy, register caps ==
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=2] regs 132 local 40 B, occupancy 18.8%
+   N=  100000: wall    0.132s (   1.322 us/orbit; kernel 1.279 us/orbit); nfev/orbit 2940; 2.3e+09 force evals/s
+   N= 1000000: wall    1.266s (   1.266 us/orbit; kernel 1.235 us/orbit); nfev/orbit 2940; 2.38e+09 force evals/s
+   N=10000000: wall   12.396s (   1.240 us/orbit; kernel 1.209 us/orbit); nfev/orbit 2940; 2.43e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=4] regs 128 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.133s (   1.330 us/orbit; kernel 1.287 us/orbit); nfev/orbit 2940; 2.28e+09 force evals/s
+   N= 1000000: wall    1.041s (   1.041 us/orbit; kernel 1.010 us/orbit); nfev/orbit 2940; 2.91e+09 force evals/s
+   N=10000000: wall   10.069s (   1.007 us/orbit; kernel 0.977 us/orbit); nfev/orbit 2940; 3.01e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=8] regs 64 local 320 B, occupancy 50.0%
+   N=  100000: wall    0.097s (   0.969 us/orbit; kernel 0.929 us/orbit); nfev/orbit 2940; 3.16e+09 force evals/s
+   N= 1000000: wall    0.814s (   0.814 us/orbit; kernel 0.783 us/orbit); nfev/orbit 2940; 3.76e+09 force evals/s
+   N=10000000: wall    7.824s (   0.782 us/orbit; kernel 0.752 us/orbit); nfev/orbit 2940; 3.91e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=1 2/thread] regs 146 local 40 B, occupancy 18.8%
+   N=  100000: wall    0.145s (   1.454 us/orbit; kernel 1.405 us/orbit); nfev/orbit 2940; 2.09e+09 force evals/s
+   N= 1000000: wall    1.380s (   1.380 us/orbit; kernel 1.348 us/orbit); nfev/orbit 2940; 2.18e+09 force evals/s
+   N=10000000: wall   13.506s (   1.351 us/orbit; kernel 1.320 us/orbit); nfev/orbit 2940; 2.23e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=28 minb=2 2/thread] regs 146 local 40 B, occupancy 18.8%
+   N=  100000: wall    0.146s (   1.456 us/orbit; kernel 1.408 us/orbit); nfev/orbit 2940; 2.09e+09 force evals/s
+   N= 1000000: wall    1.380s (   1.380 us/orbit; kernel 1.349 us/orbit); nfev/orbit 2940; 2.18e+09 force evals/s
+   N=10000000: wall   13.509s (   1.351 us/orbit; kernel 1.321 us/orbit); nfev/orbit 2940; 2.23e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=20 minb=4] regs 128 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.097s (   0.971 us/orbit; kernel 0.931 us/orbit); nfev/orbit 2100; 2.26e+09 force evals/s
+   N= 1000000: wall    0.754s (   0.754 us/orbit; kernel 0.723 us/orbit); nfev/orbit 2100; 2.9e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 n=14 minb=4] regs 128 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.068s (   0.684 us/orbit; kernel 0.646 us/orbit); nfev/orbit 1470; 2.28e+09 force evals/s
+   N= 1000000: wall    0.540s (   0.540 us/orbit; kernel 0.509 us/orbit); nfev/orbit 1470; 2.89e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec4 n=112 minb=4] regs 122 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.227s (   2.267 us/orbit; kernel 2.228 us/orbit); nfev/orbit 5040; 2.26e+09 force evals/s
+   N= 1000000: wall    1.755s (   1.755 us/orbit; kernel 1.724 us/orbit); nfev/orbit 5040; 2.92e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec4 n=68 minb=4] regs 122 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.138s (   1.385 us/orbit; kernel 1.337 us/orbit); nfev/orbit 3060; 2.29e+09 force evals/s
+   N= 1000000: wall    1.080s (   1.080 us/orbit; kernel 1.049 us/orbit); nfev/orbit 3060; 2.92e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec4 n=38 minb=4] regs 122 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.079s (   0.794 us/orbit; kernel 0.755 us/orbit); nfev/orbit 1710; 2.27e+09 force evals/s
+   N= 1000000: wall    0.618s (   0.618 us/orbit; kernel 0.587 us/orbit); nfev/orbit 1710; 2.91e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl leapfrog n=3072 minb=4] regs 120 local 40 B, occupancy 25.0%
+   N=  100000: wall    2.051s (  20.507 us/orbit; kernel 20.463 us/orbit); nfev/orbit 46080; 2.25e+09 force evals/s
+   N= 1000000: wall   16.032s (  16.032 us/orbit; kernel 16.000 us/orbit); nfev/orbit 46080; 2.88e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl leapfrog n=1152 minb=4] regs 120 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.786s (   7.860 us/orbit; kernel 7.822 us/orbit); nfev/orbit 17280; 2.21e+09 force evals/s
+   N= 1000000: wall    6.038s (   6.038 us/orbit; kernel 6.006 us/orbit); nfev/orbit 17280; 2.88e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl leapfrog n=368 minb=4] regs 120 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.251s (   2.510 us/orbit; kernel 2.462 us/orbit); nfev/orbit 5520; 2.24e+09 force evals/s
+   N= 1000000: wall    1.951s (   1.951 us/orbit; kernel 1.919 us/orbit); nfev/orbit 5520; 2.88e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec6 tol=1e-08 minb=4] regs 128 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.197s (   1.968 us/orbit; kernel 1.920 us/orbit); nfev/orbit 3490; 1.82e+09 force evals/s
+   N= 1000000: wall    1.264s (   1.264 us/orbit; kernel 1.233 us/orbit); nfev/orbit 3490; 2.83e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl symplec4 tol=1e-08 minb=4] regs 122 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.261s (   2.610 us/orbit; kernel 2.562 us/orbit); nfev/orbit 5822; 2.27e+09 force evals/s
+   N= 1000000: wall    2.024s (   2.024 us/orbit; kernel 1.992 us/orbit); nfev/orbit 5822; 2.92e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  100000: wall    0.296s (   2.960 us/orbit; kernel 292.1 ms, d2h 2.7 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    2.363s (   2.363 us/orbit; kernel 2330.6 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   22.979s (   2.298 us/orbit; kernel 22676.7 ms, d2h 272.0 ms); nfev/orbit 3465 (max 8109)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  100000: wall    0.247s (   2.474 us/orbit; kernel 243.5 ms, d2h 2.7 ms); nfev/orbit 2996 (max 5459)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    2.049s (   2.049 us/orbit; kernel 2017.1 ms, d2h 27.2 ms); nfev/orbit 2994 (max 5550)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   20.045s (   2.004 us/orbit; kernel 19742.5 ms, d2h 272.1 ms); nfev/orbit 2994 (max 6161)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=  100000: wall    0.163s (   1.633 us/orbit; kernel 158.5 ms, d2h 2.7 ms); nfev/orbit 1928 (max 3585)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N= 1000000: wall    1.346s (   1.346 us/orbit; kernel 1313.8 ms, d2h 27.2 ms); nfev/orbit 1927 (max 3856)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _noinl+refill+pinned faithful] N=10000000: wall   13.133s (   1.313 us/orbit; kernel 12820.1 ms, d2h 272.1 ms); nfev/orbit 1927 (max 4217)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=2] regs 128 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.052s (   0.520 us/orbit; kernel 0.480 us/orbit); nfev/orbit 2940; 6.12e+09 force evals/s
+   N= 1000000: wall    0.401s (   0.401 us/orbit; kernel 0.370 us/orbit); nfev/orbit 2940; 7.95e+09 force evals/s
+   N=10000000: wall    3.913s (   0.391 us/orbit; kernel 0.360 us/orbit); nfev/orbit 2940; 8.16e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=4] regs 124 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.051s (   0.513 us/orbit; kernel 0.475 us/orbit); nfev/orbit 2940; 6.19e+09 force evals/s
+   N= 1000000: wall    0.398s (   0.398 us/orbit; kernel 0.367 us/orbit); nfev/orbit 2940; 8.02e+09 force evals/s
+   N=10000000: wall    3.869s (   0.387 us/orbit; kernel 0.357 us/orbit); nfev/orbit 2940; 8.24e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=8] regs 64 local 304 B, occupancy 50.0%
+   N=  100000: wall    0.033s (   0.333 us/orbit; kernel 0.296 us/orbit); nfev/orbit 2940; 9.93e+09 force evals/s
+   N= 1000000: wall    0.278s (   0.278 us/orbit; kernel 0.247 us/orbit); nfev/orbit 2940; 1.19e+10 force evals/s
+   N=10000000: wall    2.642s (   0.264 us/orbit; kernel 0.234 us/orbit); nfev/orbit 2940; 1.26e+10 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=1 2/thread] regs 144 local 40 B, occupancy 18.8%
+   N=  100000: wall    0.051s (   0.507 us/orbit; kernel 0.469 us/orbit); nfev/orbit 2940; 6.27e+09 force evals/s
+   N= 1000000: wall    0.492s (   0.492 us/orbit; kernel 0.461 us/orbit); nfev/orbit 2940; 6.37e+09 force evals/s
+   N=10000000: wall    4.838s (   0.484 us/orbit; kernel 0.453 us/orbit); nfev/orbit 2940; 6.5e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=28 minb=2 2/thread] regs 144 local 40 B, occupancy 18.8%
+   N=  100000: wall    0.051s (   0.506 us/orbit; kernel 0.468 us/orbit); nfev/orbit 2940; 6.28e+09 force evals/s
+   N= 1000000: wall    0.492s (   0.492 us/orbit; kernel 0.461 us/orbit); nfev/orbit 2940; 6.37e+09 force evals/s
+   N=10000000: wall    4.828s (   0.483 us/orbit; kernel 0.453 us/orbit); nfev/orbit 2940; 6.5e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=20 minb=4] regs 124 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.038s (   0.382 us/orbit; kernel 0.345 us/orbit); nfev/orbit 2100; 6.09e+09 force evals/s
+   N= 1000000: wall    0.293s (   0.293 us/orbit; kernel 0.262 us/orbit); nfev/orbit 2100; 8.01e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 n=14 minb=4] regs 124 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.027s (   0.275 us/orbit; kernel 0.238 us/orbit); nfev/orbit 1470; 6.18e+09 force evals/s
+   N= 1000000: wall    0.215s (   0.215 us/orbit; kernel 0.184 us/orbit); nfev/orbit 1470; 7.99e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec4 n=112 minb=4] regs 118 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.086s (   0.855 us/orbit; kernel 0.814 us/orbit); nfev/orbit 5040; 6.19e+09 force evals/s
+   N= 1000000: wall    0.658s (   0.658 us/orbit; kernel 0.627 us/orbit); nfev/orbit 5040; 8.04e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec4 n=68 minb=4] regs 118 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.053s (   0.532 us/orbit; kernel 0.494 us/orbit); nfev/orbit 3060; 6.19e+09 force evals/s
+   N= 1000000: wall    0.412s (   0.412 us/orbit; kernel 0.381 us/orbit); nfev/orbit 3060; 8.03e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec4 n=38 minb=4] regs 118 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.031s (   0.315 us/orbit; kernel 0.278 us/orbit); nfev/orbit 1710; 6.15e+09 force evals/s
+   N= 1000000: wall    0.244s (   0.244 us/orbit; kernel 0.213 us/orbit); nfev/orbit 1710; 8.02e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl leapfrog n=3072 minb=4] regs 114 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.760s (   7.603 us/orbit; kernel 7.563 us/orbit); nfev/orbit 46080; 6.09e+09 force evals/s
+   N= 1000000: wall    5.748s (   5.748 us/orbit; kernel 5.716 us/orbit); nfev/orbit 46080; 8.06e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl leapfrog n=1152 minb=4] regs 114 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.282s (   2.819 us/orbit; kernel 2.776 us/orbit); nfev/orbit 17280; 6.22e+09 force evals/s
+   N= 1000000: wall    2.175s (   2.175 us/orbit; kernel 2.144 us/orbit); nfev/orbit 17280; 8.06e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl leapfrog n=368 minb=4] regs 114 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.093s (   0.928 us/orbit; kernel 0.888 us/orbit); nfev/orbit 5520; 6.22e+09 force evals/s
+   N= 1000000: wall    0.716s (   0.716 us/orbit; kernel 0.685 us/orbit); nfev/orbit 5520; 8.06e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec6 tol=1e-08 minb=4] regs 124 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.078s (   0.776 us/orbit; kernel 0.737 us/orbit); nfev/orbit 3490; 4.74e+09 force evals/s
+   N= 1000000: wall    0.481s (   0.481 us/orbit; kernel 0.450 us/orbit); nfev/orbit 3490; 7.75e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl symplec4 tol=1e-08 minb=4] regs 118 local 40 B, occupancy 25.0%
+   N=  100000: wall    0.099s (   0.987 us/orbit; kernel 0.945 us/orbit); nfev/orbit 5822; 6.16e+09 force evals/s
+   N= 1000000: wall    0.757s (   0.757 us/orbit; kernel 0.726 us/orbit); nfev/orbit 5822; 8.02e+09 force evals/s
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=  100000: wall    0.119s (   1.195 us/orbit; kernel 115.2 ms, d2h 2.8 ms); nfev/orbit 3465 (max 7368)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N= 1000000: wall    0.932s (   0.932 us/orbit; kernel 900.3 ms, d2h 27.2 ms); nfev/orbit 3466 (max 7750)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=10000000: wall    9.033s (   0.903 us/orbit; kernel 8730.7 ms, d2h 272.0 ms); nfev/orbit 3465 (max 7950)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=  100000: wall    0.099s (   0.991 us/orbit; kernel 95.1 ms, d2h 2.7 ms); nfev/orbit 2996 (max 5459)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N= 1000000: wall    0.813s (   0.813 us/orbit; kernel 781.7 ms, d2h 27.2 ms); nfev/orbit 2994 (max 5702)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=10000000: wall    7.915s (   0.792 us/orbit; kernel 7603.7 ms, d2h 272.0 ms); nfev/orbit 2994 (max 6161)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=  100000: wall    0.067s (   0.669 us/orbit; kernel 63.1 ms, d2h 2.7 ms); nfev/orbit 1928 (max 3585)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N= 1000000: wall    0.539s (   0.539 us/orbit; kernel 507.7 ms, d2h 27.2 ms); nfev/orbit 1927 (max 3856)
+[NVIDIA H100 80GB HBM3 (sm_90, 132 SMs) _fast_noinl+refill+pinned faithful] N=10000000: wall    5.250s (   0.525 us/orbit; kernel 4948.2 ms, d2h 272.0 ms); nfev/orbit 1927 (max 4217)
+== Nsight Compute (best variants) ==
+done: A_fast_noinl_refill.json
+A_fast_noinl_smem10_2.json
+A_fast_noinl_smem10_3.json
+A_fast_noinl_smem14_3.json
+A_fast_noinl_smem14_4.json
+A_fast_noinl_smem18_3.json
+A_fast_noinl_smem18_4.json
+A_noinl_refill.json
+A_noinl_smem10_2.json
+A_noinl_smem10_3.json
+A_noinl_smem14_3.json
+A_noinl_smem14_4.json
+A_noinl_smem18_3.json
+A_noinl_smem18_4.json
+B_fast_noinl_dop853_tol1e-8.json
+B_fast_noinl_dop853_tol2e-6.json
+B_fast_noinl_dop853_tol5e-8.json
+B_fast_noinl_lf_n1152.json
+B_fast_noinl_lf_n3072.json
+B_fast_noinl_lf_n368.json
+B_fast_noinl_s4_n112.json
+B_fast_noinl_s4_n38.json
+B_fast_noinl_s4_n68.json
+B_fast_noinl_s4_tol1e-8.json
+B_fast_noinl_s6_n14.json
+B_fast_noinl_s6_n20.json
+B_fast_noinl_s6_n28_2pt_minb1.json
+B_fast_noinl_s6_n28_2pt_minb2.json
+B_fast_noinl_s6_n28_minb2.json
+B_fast_noinl_s6_n28_minb4.json
+B_fast_noinl_s6_n28_minb8.json
+B_fast_noinl_s6_tol1e-8.json
+B_noinl_dop853_tol1e-8.json
+B_noinl_dop853_tol2e-6.json
+B_noinl_dop853_tol5e-8.json
+B_noinl_lf_n1152.json
+B_noinl_lf_n3072.json
+B_noinl_lf_n368.json
+B_noinl_s4_n112.json
+B_noinl_s4_n38.json
+B_noinl_s4_n68.json
+B_noinl_s4_tol1e-8.json
+B_noinl_s6_n14.json
+B_noinl_s6_n20.json
+B_noinl_s6_n28_2pt_minb1.json
+B_noinl_s6_n28_2pt_minb2.json
+B_noinl_s6_n28_minb2.json
+B_noinl_s6_n28_minb4.json
+B_noinl_s6_n28_minb8.json
+B_noinl_s6_tol1e-8.json
+build.txt
+correctness.txt
+gpu.txt
+ncu_smem18_3.log
+ncu_smem18_3.ncu-rep
+ncu_smem18_3.txt
+ncu_symp6_n28.log
+ncu_symp6_n28.ncu-rep
+ncu_symp6_n28.txt
+resource_usage.txt
+run.log
+summary.md
+summary_v3.json
+run_h100_v3 exit 0 Fri 09 Oct 2026 11:20:14 PM EDT
+
+scontrol show job 1066194
+JobId=1066194 JobName=cuda-v3
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1170732 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:20:11 TimeLimit=02:00:00 TimeMin=N/A
+   SubmitTime=2026-10-09T23:00:02 EligibleTime=2026-10-09T23:00:02
+   AccrueTime=2026-10-09T23:00:02
+   StartTime=2026-10-09T23:00:03 EndTime=2026-10-09T23:20:14 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-09T23:00:03 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:1338564
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=trig0030
+   BatchHost=trig0030
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/cuda_v3.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=02:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out cuda_v3.sbatch --export=NONE --parsable --account=def-bovy --time=02:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out cuda_v3.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --time=02:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out cuda_v3.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/cuda-v3-1066194.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1066194
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1066194         cuda-v3   def-bovy   00:20:11                         00:00:00   00:00:00      0:0 
+1066194.bat+      batch   def-bovy   00:20:11                         00:00:00   00:00:00      0:0 
+1066194.ext+     extern   def-bovy   00:20:11                         00:00:00   00:00:00      0:0 
+
