@@ -447,10 +447,10 @@
     "track": "G"
   },
   "gS3_track_extrapolation": {
-    "description": "one forward-mode AD pass predicts the streamspraydf smooth track (both tails) for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run; like-for-like residual falls as dq^2 (CPU float64) [measure->json, plot byte-stable]",
+    "description": "the forward-mode derivative of the streamspraydf fitted track (both tails, traced streamTrack fit) predicts the track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "5702435d0",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -458,8 +458,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "c4a2536",
-    "sha256": "06b679d82fdd0eb9385e0b3caa146b951dbee1d3d6fdaddce44e5aa4755e841b",
+    "git": "63b903f",
+    "sha256": "019a7cf9d15f68f407fb1e38d9feaa76e2738914f47dc8aa2d54ad6bed0459b6",
     "track": "G"
   },
   "gS4_streamdf_speed": {
