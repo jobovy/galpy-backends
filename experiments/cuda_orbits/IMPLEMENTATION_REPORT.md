@@ -272,14 +272,16 @@ maintenance cost to "write each potential once, with `GALPY_HD`", plus a CI matr
 
 ## 10. Addendum (v3): occupancy headroom and integrator choice
 
-These are TITAN Xp results at N = 3×10⁴; the H100 runs are pending (`run_h100_v3.sh`). Details are in the README
-section "v3".
+These are H100 results at N = 10⁶–10⁷ (job 1066194, exclusive GPU) and TITAN Xp results at N = 3×10⁴. Details are
+in the README section "v3".
 
 **Headroom for dop853 is limited by state, not by code quality.** An adaptive dop853 orbit carries ≈ 880 B of live
 state. The register file (256 KB per SM) therefore fits at most ~9 warps per SM; the refill kernel already runs 8.
 Moving the stage vectors into shared memory adds at most another ~8 warps on the H100 (228 KB) and ~3 on the TITAN
-(96 KB), for an occupancy ceiling of ≈ 25–30% on the H100. Two orbits per thread does not fit at all. This bounds what
-any one-thread-per-orbit dop853 can reach, whatever the potential.
+(96 KB), for an occupancy ceiling of ≈ 25–30% on the H100. Two orbits per thread does not fit at all. Measured on the H100, the
+best shared-memory split (10 stage slots, 168 registers, 19% occupancy) is 1.3× faster than the register kernel:
+1.81 µs/orbit with galpy's arithmetic, 0.69 with fast special functions, at 10⁶. That is the headroom left for
+dop853.
 
 **Integrator choice matters as much as kernel engineering.** galpy's 6th-order symplectic integrator (`symplec6`)
 with one common step for the whole batch gives:
@@ -288,15 +290,18 @@ with one common step for the whole batch gives:
 - 15–30% fewer force evaluations at the looser accuracies 1e-4 and 1e-3;
 - a tiny state (q, p), no accept/reject divergence, and lockstep warps.
 
-On the TITAN it runs 1.7–1.9× faster than the best dop853 kernel at the same accuracy, at ~85% of the GPU's FP64
-issue rate. symplec4 is competitive only at low accuracy (1e-3), and leapfrog needs 3–13× more work.
+On the H100 it runs at 0.25 µs/orbit with fast arithmetic and 0.78 with galpy's (10⁶; 0.23 / 0.75 at 10⁷), with
+registers capped at 64 for 50% occupancy. That is 3.6× / 3.0× faster than the register dop853, about 2.8× / 2.3×
+faster than the best shared-memory dop853, and ~40% of the FP64 issue rate. On the TITAN it is 1.7–1.9× faster, at
+~85% of that GPU's FP64 rate. symplec4 is competitive only at low accuracy (1e-3), and leapfrog needs 3–13× more work.
 
 Two caveats:
 - The symplectic speed needs a *common* step. galpy's per-orbit `estimate_step` picks power-of-two steps that
   overshoot the accuracy.
-- A symplectic integrator's step must be chosen for the most demanding orbit in the batch. These are near-solar
-  disc orbits; a batch mixing very different dynamical times (cusps, halo orbits) would set a common dt by its
-  fastest orbit, and adaptive dop853 would win there.
+- A symplectic integrator's common step must suit the most demanding orbit in the batch. The test is a smooth,
+  cheap potential (MWPotential2014) with near-solar disc orbits of similar dynamical time. A batch mixing very
+  different timescales (cusps, halo orbits), with close encounters, or in rapidly time-varying potentials would
+  have to step at its fastest orbit's rate, and adaptive dop853 would win there.
 
 **For a GPU implementation in galpy** (section 9), this argues for starting with the symplectic integrators. They
 are smaller to port (≈ 290 lines with step estimation, vs ≈ 340 + 160 for dop853), are bit-identical to the C on the

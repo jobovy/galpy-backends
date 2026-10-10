@@ -57,12 +57,12 @@ for v in _noinl _fast_noinl; do
 done
 echo "== Nsight Compute (best variants) =="
 if command -v ncu >/dev/null; then
-  ncu --set full --kernel-name regex:k_symp --launch-count 1 -f -o $OUT/ncu_symp6_n28 \
-    $PY profile_symp.py 2e5 symplec6 28 _fast_noinl 4 > $OUT/ncu_symp6_n28.log 2>&1 \
-    && ncu --import $OUT/ncu_symp6_n28.ncu-rep --page details > $OUT/ncu_symp6_n28.txt 2>&1 || echo "ncu symp failed"
-  ncu --set full --kernel-name regex:k_integrate_smem --launch-count 1 -f -o $OUT/ncu_smem18_3 \
-    $PY profile_run.py 2e5 faithful _fast_noinl 1 18,3 > $OUT/ncu_smem18_3.log 2>&1 \
-    && ncu --import $OUT/ncu_smem18_3.ncu-rep --page details > $OUT/ncu_smem18_3.txt 2>&1 || echo "ncu smem failed"
+  ncu --set full --kernel-name regex:k_symp --launch-count 1 -f -o $OUT/ncu_symp6_n28_minb8 \
+    $PY profile_symp.py 2e5 symplec6 28 _fast_noinl 8 > $OUT/ncu_symp6_n28_minb8.log 2>&1 \
+    && ncu --import $OUT/ncu_symp6_n28_minb8.ncu-rep --page details > $OUT/ncu_symp6_n28_minb8.txt 2>&1 || echo "ncu symp failed"
+  ncu --set full --kernel-name regex:k_integrate_smem --launch-count 1 -f -o $OUT/ncu_smem10_3 \
+    $PY profile_run.py 2e5 faithful _fast_noinl 1 10,3 > $OUT/ncu_smem10_3.log 2>&1 \
+    && ncu --import $OUT/ncu_smem10_3.ncu-rep --page details > $OUT/ncu_smem10_3.txt 2>&1 || echo "ncu smem failed"
 fi
 $PY summarize_v3.py $OUT --md > $OUT/summary.md 2>&1 || true
 echo "done: $(ls $OUT)"

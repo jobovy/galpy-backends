@@ -61,6 +61,7 @@ N ≈ 10³ (0.11 vs 0.12 s). The N < 10³ points come from separate low-N scans 
 N = 1–3×10⁴), run without the cost-sorted schedule. Where N
 overlaps, the high-N scans are plotted. For the fast line the two schedules differ by up
 to ~20% in the overlap: the sort costs a host argsort at small N and pays off at large N.
+The lines show the register kernel (measured from N = 1 to 10⁷). Keeping ten of dop853's stage vectors in shared memory (168 registers, 19% occupancy) is 1.3× faster on the H100 at N = 10⁶ (1.81 / 0.69 µs/orbit), measured at 10⁵–10⁶ only. galpy's sixth-order symplectic integrator with one common step for the whole batch reaches the same worst-case accuracy over the 300 reference orbits with 15% fewer force evaluations and runs at 0.78 / 0.25 µs/orbit (galpy / fast arithmetic, H100, N = 10⁶): 3.0–3.6× the dop853 kernel. That holds because these near-solar disc orbits in a smooth potential share a dynamical timescale; a batch mixing very different timescales would have to step at its fastest orbit's rate.
 These kernels are not differentiable.
 
 Colours follow the paper-wide convention (galpy C grey — one core dark grey,
