@@ -10,7 +10,8 @@
     3000000,
     10000000
   ],
-  "clock_chainF": {
+  "clock_prequiet_run": {
+    "note": "core-8 clock during the EARLIER (pre-quiet-window) chainF run; the CPU series in this file were re-measured in the 2026-10-13 quiet window (box idle, core 8 + sibling 44 idle), whose clock log was lost",
     "cF_gD3_cpu": {
       "cpu": "Xeon E5-2697 v4, 2.3 GHz base, 3.6 GHz single-core turbo, schedutil; core 8 on socket 0",
       "cpu8_MHz_min_median_max": [
