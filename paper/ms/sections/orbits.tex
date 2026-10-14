@@ -224,7 +224,13 @@ the H100 they pass it at $N\approx3$--$7\times10^4$ and are 2.6 to 3.7
 times cheaper per orbit at $N=3\times10^5$. On one CPU core, the
 compiled \jax\ solve costs 2--5\,ms per orbit, comparable to the \cc\
 path; it does, however, take seconds to compile, a cost that is paid
-once per shape of the problem. The derivative of an orbit with respect
+once per shape of the problem. We compare the frameworks on one CPU
+core because only the \cc\ path makes use of more: for $10^4$ to $10^5$
+orbits, its OpenMP loop speeds up almost linearly up to the 36 physical
+cores of our node (22 to 26 times on 36 cores; hyper-threads add
+nothing), eager \torch\ gains at most a factor of 3.5 (on 16 threads, for
+$10^5$ orbits), and compiled \jax, whose runtime keeps no more than a few
+cores busy, gains nothing. The derivative of an orbit with respect
 to its initial condition follows the same pattern
 (\figurename~\ref{fig:icderivcost}): the \cc\ variational integrator
 computes it for a single orbit in about $10$\,ms, where the backend
