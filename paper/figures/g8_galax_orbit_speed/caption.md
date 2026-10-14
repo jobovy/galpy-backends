@@ -31,14 +31,14 @@ it at N=3×10⁵, whereas none of them beats the 72-thread node (re-measured
 6.4 s at 10⁵, 20 vs 19 s at 3×10⁵) and the two per-orbit TITAN lines stay ~3.3×
 slower than the node. galax per-orbit / galpy (re-measured back to back on the
 TITAN 2026-10-14): 0.96, 0.95, 0.72, 0.70, 0.75 at N=1–10⁴ (low-N scan) and 0.63,
-0.77, 0.93, 0.97 at N=10³–3×10⁵ (high-N scan); on the H100 1.09, 1.37, 1.12, 1.14,
-1.08 and 1.15, 1.10, 0.87, 1.01. So the two agree to ≲10% only at N≥10⁵, where the
-integration dominates. On an
+0.77, 0.93, 0.97 at N=10³–3×10⁵ (high-N scan); on the H100 (also back to back,
+2026-10-14) 1.11, 1.19, 1.10, 1.13, 1.08 and 1.16, 1.11, 0.87, 1.02. So the two agree
+to ≤13% only at N≥10⁵, where the integration dominates. On an
 **NVIDIA H100** (Trillium; galpy and galax both measured there; galpy on jax
 0.11.2) every GPU line crosses below one-core C just under N=10³ and below the
-72-thread node at N≈1–3×10⁴, and at N=3×10⁵ reaches **0.0247 ms/orbit for
-galpy's per-orbit integrator (7.4 s)** — ~97× one-core C, ~2.6× the 72-thread
-node and ~9× the TITAN Xp — 0.0246 ms/orbit for galax per-orbit (7.4 s, equal
+72-thread node at N≈1–3×10⁴, and at N=3×10⁵ reaches **0.0244 ms/orbit for
+galpy's per-orbit integrator (7.3 s)** — ~97× one-core C, ~2.6× the 72-thread
+node and ~9× the TITAN Xp — 0.0248 ms/orbit for galax per-orbit (7.4 s, equal
 to galpy) and 0.0130 ms/orbit for galax batched (3.9 s, ~5× the node).
 
 **CUDA kernel** (reddish purple: TITAN Xp circles, H100 dark-purple diamonds). This
@@ -92,9 +92,11 @@ the GPUs, navy for the H100 — galax green); all jax/galax lines are jit-compil
 * **galax (JAX, GPU; per-orbit steps)** — the *apples-to-apples* control: galax's
   `OrbitSolver` vmapped over single-orbit solves, i.e. the same stepping
   semantics as galpy (not how galax is normally used). 0.230 ms/orbit at N=1e5,
-  0.209 at 3e5 on the TITAN Xp — **equal to galpy to within ~3–7%** (and to
-  <1% on the H100, 0.0246 vs 0.0247 ms/orbit at 3e5): at matched semantics there
-  is no framework gap between the two codes.
+  0.209 at 3e5 on the TITAN Xp — **equal to galpy to within ~3–7% at N≥1e5** (H100:
+  0.87 and 1.02 at 1e5 and 3e5; 0.0248 vs 0.0244 ms/orbit at 3e5): at matched
+  semantics and large N there is no framework gap between the two codes. At
+  N≤1e4, where fixed per-call costs dominate, galax takes 0.63–0.96× galpy's time
+  on the TITAN and 1.08–1.19× on the H100.
 * **galax (JAX, GPU; batched steps)** — galax's native mode: the whole batch is
   one ODE system with a *single shared* `PIDController` (one global RMS error
   norm → one dt sequence for all orbits). ~0.07–0.08 ms/orbit at N≥1e5, i.e.
