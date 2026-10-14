@@ -1,0 +1,182 @@
+host trig0031  cpu_affinity 24
+== nvidia-smi before 10:03:03
+Wed Oct 14 10:03:03 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:06:00.0 Off |                    0 |
+| N/A   41C    P0             71W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+name, driver_version, memory.used [MiB], utilization.gpu [%]
+NVIDIA H100 80GB HBM3, 580.178.04, 0 MiB, 0 %
+compute apps:
+pid, process_name, used_gpu_memory [MiB]
+galpy 34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386 dirty=[]  galpy-jax c2779a50298ebc443ba82e079754709a8ea1f9e2
+>>> 10:03:05 galpy jax gpu lowN
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+galpy-jax[gpu,lowN] N=       1: steady=  1607.83 ms (1607.82502 ms/orbit)  compile+run=  3.61 s
+galpy-jax[gpu,lowN] N=      10: steady=   981.43 ms (98.14259 ms/orbit)  compile+run=  2.23 s
+galpy-jax[gpu,lowN] N=     100: steady=  1572.29 ms (15.72294 ms/orbit)  compile+run=  2.60 s
+galpy-jax[gpu,lowN] N=    1000: steady=  1755.29 ms (1.75529 ms/orbit)  compile+run=  2.82 s
+galpy-jax[gpu,lowN] N=   10000: steady=  1978.47 ms (0.19785 ms/orbit)  compile+run=  3.32 s
+galpy-jax[gpu,lowN] N=   30000: steady=  2455.36 ms (0.08185 ms/orbit)  compile+run=  3.44 s
+done
+<<< exit 0 10:04:27
+>>> 10:04:27 galpy jax gpu hiN
+/scratch/bovy/galpy-h100/galpy-fb/galpy/util/config.py:59: UserWarning: Could not write new/fixed galpy configuration to /home/bovy/.galpyrc, because of "PermissionError: [Errno 13] Permission denied: '/home/bovy/.galpyrc'"
+  warnings.warn(
+
+galpy-jax[gpu,hiN] N=    1000: steady=  1675.24 ms (1.67524 ms/orbit)  compile+run=  3.33 s
+galpy-jax[gpu,hiN] N=   10000: steady=  1876.13 ms (0.18761 ms/orbit)  compile+run=  3.14 s
+galpy-jax[gpu,hiN] N=  100000: steady=  3409.52 ms (0.03410 ms/orbit)  compile+run=  4.39 s
+galpy-jax[gpu,hiN] N=  300000: steady=  7327.27 ms (0.02442 ms/orbit)  compile+run=  8.36 s
+done
+<<< exit 0 10:05:47
+== nvidia-smi after galpy 10:05:48
+Wed Oct 14 10:05:48 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:06:00.0 Off |                    0 |
+| N/A   45C    P0            126W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+name, driver_version, memory.used [MiB], utilization.gpu [%]
+NVIDIA H100 80GB HBM3, 580.178.04, 0 MiB, 0 %
+compute apps:
+pid, process_name, used_gpu_memory [MiB]
+galax 16a7e636be126f14fbccac11ec8e96392f223305  jax 0.8.0 [CudaDevice(id=0)]
+>>> 10:05:55 galax default modern
+galax[gpu] N=      1:   1770.24 ms  (1770.23887 ms/orbit)
+galax[gpu] N=     10:    948.64 ms  (94.86398 ms/orbit)
+galax[gpu] N=    100:   1157.04 ms  (11.57043 ms/orbit)
+galax[gpu] N=   1000:   1191.97 ms  (1.19197 ms/orbit)
+galax[gpu] N=  10000:   1327.50 ms  (0.13275 ms/orbit)
+galax[gpu] N=  30000:   1480.97 ms  (0.04937 ms/orbit)
+galax[gpu] N= 100000:   1810.96 ms  (0.01811 ms/orbit)
+done -> galax_gpu.json
+<<< exit 0 10:06:56
+>>> 10:06:56 galax default extended (hiN)
+galax[gpu,16sv] N=    1000:    1251.8 ms (1.25180 ms/orbit)
+galax[gpu,16sv] N=   10000:    1319.4 ms (0.13194 ms/orbit)
+galax[gpu,16sv] N=  100000:    1749.3 ms (0.01749 ms/orbit)
+galax[gpu,16sv] N=  300000:    3899.6 ms (0.01300 ms/orbit)
+done
+<<< exit 0 10:07:43
+>>> 10:07:43 galax perorbit lowN
+galax-perorbit[gpu,lowN] N=      1:   1778.56 ms (1778.56282 ms/orbit)
+galax-perorbit[gpu,lowN] N=     10:   1168.16 ms (116.81593 ms/orbit)
+galax-perorbit[gpu,lowN] N=    100:   1722.01 ms (17.22013 ms/orbit)
+galax-perorbit[gpu,lowN] N=   1000:   1976.58 ms (1.97658 ms/orbit)
+galax-perorbit[gpu,lowN] N=  10000:   2143.31 ms (0.21433 ms/orbit)
+done
+<<< exit 0 10:08:37
+>>> 10:08:37 galax perorbit hiN
+galax-perorbit[gpu,hiN] N=   1000:   1940.90 ms (1.94090 ms/orbit)
+galax-perorbit[gpu,hiN] N=  10000:   2075.21 ms (0.20752 ms/orbit)
+galax-perorbit[gpu,hiN] N= 100000:   2975.17 ms (0.02975 ms/orbit)
+galax-perorbit[gpu,hiN] N= 300000:   7441.40 ms (0.02480 ms/orbit)
+done
+<<< exit 0 10:09:50
+== nvidia-smi after 10:09:50
+Wed Oct 14 10:09:50 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:06:00.0 Off |                    0 |
+| N/A   47C    P0            209W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+name, driver_version, memory.used [MiB], utilization.gpu [%]
+NVIDIA H100 80GB HBM3, 580.178.04, 0 MiB, 0 %
+compute apps:
+pid, process_name, used_gpu_memory [MiB]
+total 7
+drwxr-x--- 2 bovy bovy 4096 Oct 14 10:09 .
+drwxr-x--- 2 bovy bovy 4096 Oct 14 10:03 ..
+-rw-r----- 1 bovy bovy  558 Oct 14 10:07 galax_gpu_hiN.json
+-rw-r----- 1 bovy bovy 1024 Oct 14 10:06 galax_gpu.json
+-rw-r----- 1 bovy bovy  672 Oct 14 10:09 galax_gpu_perorbit_hiN.json
+-rw-r----- 1 bovy bovy  770 Oct 14 10:09 galax_gpu_perorbit.json
+-rw-r----- 1 bovy bovy 1148 Oct 14 10:05 jax_gpu_hiN.json
+-rw-r----- 1 bovy bovy 1440 Oct 14 10:05 jax_gpu.json
+done Wed 14 Oct 2026 10:09:51 AM EDT
+
+scontrol show job 1095183
+JobId=1095183 JobName=g8-remeasure
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1235235 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:06:51 TimeLimit=01:30:00 TimeMin=N/A
+   SubmitTime=2026-10-14T09:58:27 EligibleTime=2026-10-14T09:58:27
+   AccrueTime=2026-10-14T09:58:27
+   StartTime=2026-10-14T10:03:00 EndTime=2026-10-14T10:09:51 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-14T10:03:00 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:856699
+   ReqNodeList=(null) ExcNodeList=trig0021
+   NodeList=trig0031
+   BatchHost=trig0031
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/g8_remeasure.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --time=01:30:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out g8_remeasure.sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --time=01:30:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out g8_remeasure.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --time=01:30:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out g8_remeasure.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/g8-remeasure-1095183.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1095183
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1095183      g8-remeas+   def-bovy   00:06:51                         00:00:00   00:00:00      0:0 
+1095183.bat+      batch   def-bovy   00:06:51                         00:00:00   00:00:00      0:0 
+1095183.ext+     extern   def-bovy   00:06:51                         00:00:00   00:00:00      0:0 
+

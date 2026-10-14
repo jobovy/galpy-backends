@@ -4,41 +4,52 @@
   "solver": "Dopri8",
   "nt": 1000,
   "tspan_Gyr": 2.0,
+  "cpu_affinity": 24,
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "1",
+    "XLA_FLAGS": "unset"
+  },
+  "jax_version": "0.8.0",
   "results": [
     {
       "N": 1,
-      "wall_s": 1.766662668902427,
-      "per_orbit_ms": 1766.662668902427
+      "wall_s": 1.770238872966729,
+      "per_orbit_ms": 1770.238872966729
     },
     {
       "N": 10,
-      "wall_s": 0.936506865080446,
-      "per_orbit_ms": 93.6506865080446
+      "wall_s": 0.948639816022478,
+      "per_orbit_ms": 94.8639816022478
     },
     {
       "N": 100,
-      "wall_s": 1.17699733376503,
-      "per_orbit_ms": 11.769973337650299
+      "wall_s": 1.1570433509768918,
+      "per_orbit_ms": 11.570433509768918
     },
     {
       "N": 1000,
-      "wall_s": 1.2220333172008395,
-      "per_orbit_ms": 1.2220333172008395
+      "wall_s": 1.1919735289993696,
+      "per_orbit_ms": 1.1919735289993696
     },
     {
       "N": 10000,
-      "wall_s": 1.330263912677765,
-      "per_orbit_ms": 0.1330263912677765
+      "wall_s": 1.3274987829499878,
+      "per_orbit_ms": 0.1327498782949988
     },
     {
       "N": 30000,
-      "wall_s": 1.480352315120399,
-      "per_orbit_ms": 0.049345077170679964
+      "wall_s": 1.4809721580240875,
+      "per_orbit_ms": 0.04936573860080292
     },
     {
       "N": 100000,
-      "wall_s": 1.80804905295372,
-      "per_orbit_ms": 0.018080490529537203
+      "wall_s": 1.8109556160052307,
+      "per_orbit_ms": 0.018109556160052307
     }
-  ]
+  ],
+  "galax_commit": "16a7e636be126f14fbccac11ec8e96392f223305",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_jax_commit": "c2779a50298ebc443ba82e079754709a8ea1f9e2",
+  "measured": "2026-10-14, job 1095183 (trig0031), back to back with galpy jax_gpu*.json"
 }

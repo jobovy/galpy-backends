@@ -10,23 +10,28 @@
   "results": [
     {
       "N": 1000,
-      "wall_s": 1.9237434109672904,
-      "per_orbit_ms": 1.9237434109672904
+      "wall_s": 1.940898204979021,
+      "per_orbit_ms": 1.940898204979021
     },
     {
       "N": 10000,
-      "wall_s": 2.063001022208482,
-      "per_orbit_ms": 0.2063001022208482
+      "wall_s": 2.0752123899874277,
+      "per_orbit_ms": 0.20752123899874278
     },
     {
       "N": 100000,
-      "wall_s": 2.9585499176755548,
-      "per_orbit_ms": 0.029585499176755545
+      "wall_s": 2.975168376986403,
+      "per_orbit_ms": 0.02975168376986403
     },
     {
       "N": 300000,
-      "wall_s": 7.393390796147287,
-      "per_orbit_ms": 0.02464463598715762
+      "wall_s": 7.4413990110042505,
+      "per_orbit_ms": 0.02480466337001417
     }
-  ]
+  ],
+  "galax_commit": "16a7e636be126f14fbccac11ec8e96392f223305",
+  "jax_version": "0.8.0",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_jax_commit": "c2779a50298ebc443ba82e079754709a8ea1f9e2",
+  "measured": "2026-10-14, job 1095183 (trig0031), back to back with galpy jax_gpu*.json"
 }

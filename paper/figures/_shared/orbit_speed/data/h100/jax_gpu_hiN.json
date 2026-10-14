@@ -8,37 +8,37 @@
   "rtol": 1e-08,
   "atol": 1e-08,
   "potential": "MWPotential2014",
-  "host": "trig0008",
+  "host": "trig0031",
   "cpu_affinity": 24,
   "thread_env": {
     "OMP_NUM_THREADS": "unset",
-    "OPENBLAS_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "1",
     "XLA_FLAGS": "unset"
   },
   "results": [
     {
       "N": 1000,
-      "wall_s": 1.6712211800040677,
-      "per_orbit_ms": 1.6712211800040677,
-      "compile_run_s": 3.314339693002694
+      "wall_s": 1.6752378839883022,
+      "per_orbit_ms": 1.6752378839883022,
+      "compile_run_s": 3.325897207017988
     },
     {
       "N": 10000,
-      "wall_s": 1.8702630379993934,
-      "per_orbit_ms": 0.18702630379993934,
-      "compile_run_s": 3.0980091119999997
+      "wall_s": 1.8761343189980835,
+      "per_orbit_ms": 0.18761343189980834,
+      "compile_run_s": 3.1419140429934487
     },
     {
       "N": 100000,
-      "wall_s": 3.404350032004004,
-      "per_orbit_ms": 0.034043500320040034,
-      "compile_run_s": 4.364429578999989
+      "wall_s": 3.409523717011325,
+      "per_orbit_ms": 0.03409523717011325,
+      "compile_run_s": 4.386064293968957
     },
     {
       "N": 300000,
-      "wall_s": 7.334415571996942,
-      "per_orbit_ms": 0.024448051906656474,
-      "compile_run_s": 8.304323819000274
+      "wall_s": 7.327268313034438,
+      "per_orbit_ms": 0.02442422771011479,
+      "compile_run_s": 8.356524141971022
     },
     {
       "N": 1000000,
@@ -57,7 +57,6 @@
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.5.3",
   "gpu": "NVIDIA H100 80GB HBM3",
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
   "extra_points": [
     {
       "added": "2026-10-09T13:11:17+00:00",
@@ -138,6 +137,11 @@
         3000000
       ],
       "replaced": []
+    },
+    {
+      "note": "N=[1000000, 3000000] kept from the previous data/h100 file (hiN2 stage, galpy 34bca2d1d); this 2026-10-14 hiN run (job 1095183) measured N<=3e5 only and agrees with it to <=0.3% at the shared N"
     }
-  ]
+  ],
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_jax_commit": "c2779a50298ebc443ba82e079754709a8ea1f9e2"
 }

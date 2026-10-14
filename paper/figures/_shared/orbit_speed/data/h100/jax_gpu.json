@@ -8,54 +8,55 @@
   "rtol": 1e-08,
   "atol": 1e-08,
   "potential": "MWPotential2014",
-  "host": "trig0008",
+  "host": "trig0031",
   "cpu_affinity": 24,
   "thread_env": {
     "OMP_NUM_THREADS": "unset",
-    "OPENBLAS_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "1",
     "XLA_FLAGS": "unset"
   },
   "results": [
     {
       "N": 1,
-      "wall_s": 1.6338714040030027,
-      "per_orbit_ms": 1633.8714040030027,
-      "compile_run_s": 4.469075806999172
+      "wall_s": 1.6078250159625895,
+      "per_orbit_ms": 1607.8250159625895,
+      "compile_run_s": 3.6091231320169754
     },
     {
       "N": 10,
-      "wall_s": 1.0278952160006156,
-      "per_orbit_ms": 102.78952160006156,
-      "compile_run_s": 2.233320254003047
+      "wall_s": 0.9814258650294505,
+      "per_orbit_ms": 98.14258650294505,
+      "compile_run_s": 2.2284868429997005
     },
     {
       "N": 100,
-      "wall_s": 1.5632703309966018,
-      "per_orbit_ms": 15.63270330996602,
-      "compile_run_s": 2.565847466001287
+      "wall_s": 1.5722940969862975,
+      "per_orbit_ms": 15.722940969862975,
+      "compile_run_s": 2.6039273269707337
     },
     {
       "N": 1000,
-      "wall_s": 1.7435768909999751,
-      "per_orbit_ms": 1.7435768909999751,
-      "compile_run_s": 2.784798321998096
+      "wall_s": 1.7552913429681212,
+      "per_orbit_ms": 1.7552913429681212,
+      "compile_run_s": 2.819069823017344
     },
     {
       "N": 10000,
-      "wall_s": 1.9901911369961454,
-      "per_orbit_ms": 0.19901911369961453,
-      "compile_run_s": 3.0410642350034323
+      "wall_s": 1.9784691199893132,
+      "per_orbit_ms": 0.1978469119989313,
+      "compile_run_s": 3.321432666038163
     },
     {
       "N": 30000,
-      "wall_s": 2.437473295998643,
-      "per_orbit_ms": 0.08124910986662144,
-      "compile_run_s": 3.6311108880036045
+      "wall_s": 2.455358528008219,
+      "per_orbit_ms": 0.08184528426694064,
+      "compile_run_s": 3.4364858220214956
     }
   ],
   "jax_version": "0.11.2",
   "galpy_version": "1.12.1.dev0",
   "numpy_version": "2.5.3",
   "gpu": "NVIDIA H100 80GB HBM3",
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_jax_commit": "c2779a50298ebc443ba82e079754709a8ea1f9e2"
 }
