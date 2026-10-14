@@ -211,15 +211,16 @@ $N$ orbits for 2\,Gyr in the Milky-Way model with the \cc\ integrator,
 which parallelizes over orbits with OpenMP, on one core and on all 72
 hardware threads of the CPU, and with the in-backend solvers on one CPU
 core and on two GPUs. On one core the \cc\ path costs 2.2--2.4\,ms per
-orbit; on 72 threads it costs 0.08 to 0.1\,ms per orbit after a few
-milliseconds of setup and is the fastest option for up to about
-$10^4$ orbits on any hardware. The backend solvers start from a floor of
+orbit; on 72 threads it costs 0.064 to 0.07\,ms per orbit after a few
+milliseconds of setup and is faster than every backend solver, on any
+hardware, for up to a few times $10^4$ orbits. The backend solvers start from a floor of
 one to a few seconds, set by compilation and kernel launches, and
-amortize it over the batch. Every GPU line overtakes one-core \cc\ near
-$N=10^3$. On the consumer GPU they never quite reach the cost per orbit
+amortize it over the batch. The \jax\ lines on both GPUs overtake
+one-core \cc\ near $N=10^3$, the \torch\ lines at a few thousand
+orbits. On the consumer GPU they never quite reach the cost per orbit
 of the 72-thread \cc\ node, because that card executes double-precision
 arithmetic at one thirty-second of its single-precision rate, while on
-the H100 they pass it near $N\approx3\times10^4$ and are about three
+the H100 they pass it at $N\approx3$--$7\times10^4$ and are 2.6 to 3.7
 times cheaper per orbit at $N=3\times10^5$. On one CPU core, the
 compiled \jax\ solve costs 2--5\,ms per orbit, comparable to the \cc\
 path; it does, however, take seconds to compile, a cost that is paid

@@ -200,18 +200,18 @@ parameters.
 St\"{a}ckel transformation (actions, frequencies, and angles). On a single
 CPU core, the compiled \cc\ path remains the fastest, at
 0.3\,ms per phase-space point for large $N$. The new vectorized
-\python\ path costs 2.5--3 times more per point in plain \numpy, but it
-is 5--6 times faster than the per-object loop that it replaces for
+\python\ path costs 2--3 times more per point in plain \numpy, but it
+is about 6 times faster than the per-object loop that it replaces for
 $N\gtrsim10^3$. Eager \torch\ on the CPU runs at the speed of \numpy,
 while eager \jax\ is bound by dispatching hundreds of small operations
 per call and stays at a floor of several seconds. On a GPU, the
 same code overtakes the \cc\ path once $N$ is large enough to
-amortize a launch floor of about half a second. On the H100, eager \torch\
-evaluates $10^6$ points in 3.5\,s, 89 times faster than single-threaded
-\cc\ and 7.5 times faster than \cc\ on 16 OpenMP threads, and compiled
+amortize a launch floor of about 0.6\,s. On the H100, eager \torch\
+evaluates $10^6$ points in 3.6\,s, 78 times faster than single-threaded
+\cc\ and 7 times faster than \cc\ on 16 OpenMP threads, and compiled
 \jax\ evaluates $10^5$ points in 0.16\,s. On the TITAN~Xp, with its slow
-double-precision arithmetic, the backends beat single-threaded \cc\ by
-a factor of 6--8 at large $N$, but not \cc\ on 16 threads. Thus the
+double-precision arithmetic, eager \torch\ beats single-threaded \cc\ by
+a factor of 5--6 at large $N$, but not \cc\ on 16 threads. Thus the
 backends that make the action--angle transformation differentiable are
 also the fastest way to evaluate it for large samples when a modern GPU
 is available.
@@ -231,23 +231,23 @@ is available.
     of this figure is qualitatively the same; compiled \jax\ on the H100
     takes 0.16\,s at $N=10^5$. After a launch floor, the GPU overtakes
     one \cc\ thread at $N\approx2000$ and 16 threads at
-    $N\approx2\times10^4$ on the H100.}\label{fig:staeckelspeed}
+    $N\approx3\times10^4$ on the H100.}\label{fig:staeckelspeed}
 \end{figure*}
 
 \figurename~\ref{fig:vinvspeed} shows the speed of the one-dimensional
 inverse transformation. Evaluating the torus map at $N$ angles
 is fastest with \numpy\ at every $N$ on one CPU core: compiled \jax\
 ties it for ten angles and is two to eight times slower for more angles
-(47\,s against 9.8\,s at $N=10^6$), while for many tori the compiled
+(49\,s against 10.9\,s at $N=10^6$), while for many tori the compiled
 \texttt{vmap} over tori is about 1.5 times faster than the \numpy\ loop
 over tori. On a GPU the picture reverses: on the H100 the evaluation
-at $N=10^6$ takes 11\,ms, almost a thousand times faster than \numpy. The
+at $N=10^6$ takes 11\,ms, about a thousand times faster than \numpy. The
 backends find the angle with the same safeguarded Newton iteration as
 \numpy, started at the requested angle. Constructing the map for a
 family of $n_E$ energies is faster on every backend than on \numpy, by
 a factor of three to ten at $n_E=256$, because the batched Gauss--Newton
-solve replaces a loop over tori; on a GPU the compiled construction takes
-a few milliseconds whatever the size of the family. These numbers are for
+solve replaces a loop over tori; on the H100 the compiled construction
+takes 4 to 6 milliseconds whatever the size of the family. These numbers are for
 the development machine and the H100 and should be read as orders of
 magnitude.
 

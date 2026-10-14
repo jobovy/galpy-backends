@@ -29,10 +29,10 @@ few parts in $10^4$ (\figurename~\ref{fig:streamtrack}), which is the
 level set by the fixed iteration count of the track refinement. Construction of a \texttt{streamdf} is
 differentiable with respect to the potential, and can be compiled,
 although the compilation of a construction, which contains tens of
-orbit integrations and the iteration of the track, takes a quarter of an
-hour and is only worthwhile when many streams are to be built; the
-construction itself, once compiled, takes about a minute on a CPU,
-compared with a few to tens of seconds for the \numpy\ and \cc\ version.
+orbit integrations and the iteration of the track, takes a few minutes
+on one CPU core and is only worthwhile when many streams are to be
+built; the construction itself, once compiled, takes 7 to 30\,s on one
+core, about twice as long as the \numpy\ and \cc\ version.
 A \texttt{streamdf} is set up as before, with a progenitor orbit, an
 \texttt{actionAngle} instance, and a velocity dispersion,
 \begin{code}
@@ -46,8 +46,9 @@ sdf.sample(n=10**4,key=grandom.key(3,backend='jax'))
 \end{code}
 and when \texttt{lp} carries a backend parameter the track and the
 sample are differentiable with respect to it. Sampling and evaluating
-the DF, on the other hand, are two orders of
-magnitude faster under compilation than on \numpy, and run on a GPU;
+the DF, on the other hand, are 40--60 and about 18 times faster under
+compilation than on \numpy\ on one CPU core, and hundreds to thousands
+of times faster on a GPU;
 the sampler draws by inverse transformation on \numpy\ too, which is the
 third place where \numpy\ output changed, in the draws but not in their
 distribution. \figurename~\ref{fig:streamdfspeed} summarizes these
@@ -153,9 +154,10 @@ the re-simulated stream makes them anew. Moving the particles to first
 order and re-fitting the track instead leaves a residual that is 1.6 to
 2.4 times larger for $|\Delta q|\geq0.025$. Each spray
 particle's orbit is one more orbit in a batch, such that a sprayed
-stream costs about a millisecond per particle on a CPU under compiled
-\jax, about half the cost of the non-differentiable \cc\ version, and
-microseconds per particle on a GPU (\figurename~\ref{fig:spraysp}).
+stream costs about 0.6\,ms per particle on one CPU core under compiled
+\jax, a fifth of the cost of the non-differentiable \cc\ version, and
+about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
+(\figurename~\ref{fig:spraysp}).
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}
