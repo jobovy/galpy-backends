@@ -14,33 +14,33 @@
   "results": [
     {
       "N": 1,
-      "wall_s": 1.6153213609941304,
-      "per_orbit_ms": 1615.3213609941304
+      "wall_s": 1.61053550500219,
+      "per_orbit_ms": 1610.53550500219
     },
     {
       "N": 10,
-      "wall_s": 0.8885400439612567,
-      "per_orbit_ms": 88.85400439612567
+      "wall_s": 0.8721669110018411,
+      "per_orbit_ms": 87.21669110018411
     },
     {
       "N": 100,
-      "wall_s": 0.9837602559709921,
-      "per_orbit_ms": 9.837602559709921
+      "wall_s": 1.0096582129990566,
+      "per_orbit_ms": 10.096582129990566
     },
     {
       "N": 1000,
-      "wall_s": 1.0682792710140347,
-      "per_orbit_ms": 1.0682792710140347
+      "wall_s": 1.0591141979966778,
+      "per_orbit_ms": 1.0591141979966778
     },
     {
       "N": 10000,
-      "wall_s": 1.5213692429242656,
-      "per_orbit_ms": 0.15213692429242656
+      "wall_s": 1.3392530790006276,
+      "per_orbit_ms": 0.13392530790006277
     },
     {
       "N": 30000,
-      "wall_s": 2.7758843500632793,
-      "per_orbit_ms": 0.09252947833544264
+      "wall_s": 2.7591607729991665,
+      "per_orbit_ms": 0.09197202576663888
     }
   ],
   "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
@@ -49,11 +49,10 @@
       "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
       "worktree": "/var/tmp/fbfinal",
       "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-09T03:39:12",
+      "date": "2026-10-14T09:43:59",
       "cpu_affinity": 72,
       "OMP_NUM_THREADS": "unset",
-      "CUDA_VISIBLE_DEVICES": "0",
-      "galax_git": "6c7cb1acaf418747ac52bf5e583d2cde546d3361"
+      "CUDA_VISIBLE_DEVICES": "0"
     }
   }
 }

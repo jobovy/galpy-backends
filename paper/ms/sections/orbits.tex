@@ -275,12 +275,16 @@ useful check that the cost of the in-backend solve is in the solver and
 the potential rather than in the library around them.
 \figurename~\ref{fig:galax} shows this comparison for the same orbits,
 potential, and tolerances. When we make \texttt{galax} control its step
-size per orbit, as \galpy\ does, the two codes take the same time
-to within a few percent at every batch size and on every device. In its
+size per orbit, as \galpy\ does, the two codes take the same time to
+within about ten per cent on both GPUs for batches of $10^5$ orbits or
+more. For smaller batches, whose cost is dominated by fixed overheads
+rather than by the integration, they differ by more and in opposite
+directions on the two GPUs: \texttt{galax} is up to 1.6 times faster on
+the TITAN~Xp and up to 1.4 times slower on the H100. In its
 default mode, \texttt{galax} uses a single step-size controller for the
 whole batch, such that every orbit takes the steps that the most
-demanding orbit requires; this is cheaper per orbit, by about a factor
-of three on the TITAN~Xp and less on the H100, at the price of an error
+demanding orbit requires; this is cheaper per orbit for large batches, by about a factor
+of three on the TITAN~Xp and two on the H100, at the price of an error
 control that depends on which orbits happen to be in the batch. \galpy\
 keeps the per-orbit control.
 
@@ -308,7 +312,8 @@ keeps the per-orbit control.
     Green: \texttt{galax} on the CPU and the GPUs, with its default
     batched step-size control (solid) and with per-orbit control as in
     \galpy\ (dash-dotted). With the same per-orbit step-size control, the
-    two codes take the same time to within a few percent. Purple: the
+    two codes take the same time to within about ten per cent for
+    $N\geq10^5$. Purple: the
     experimental CUDA kernel of \figurename~\ref{fig:orbitspeed}.}\label{fig:galax}
 \end{figure*}
 

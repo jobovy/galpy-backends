@@ -18,39 +18,39 @@
   "results": [
     {
       "N": 1,
-      "wall_s": 1.6091649429872632,
-      "per_orbit_ms": 1609.1649429872632,
-      "compile_run_s": 5.446504530962557
+      "wall_s": 1.6687946140009444,
+      "per_orbit_ms": 1668.7946140009444,
+      "compile_run_s": 5.915679653000552
     },
     {
       "N": 10,
-      "wall_s": 1.2863907370483503,
-      "per_orbit_ms": 128.63907370483503,
-      "compile_run_s": 4.009405718999915
+      "wall_s": 1.180099501994846,
+      "per_orbit_ms": 118.00995019948459,
+      "compile_run_s": 3.856958576005127
     },
     {
       "N": 100,
-      "wall_s": 2.1315759680001065,
-      "per_orbit_ms": 21.315759680001065,
-      "compile_run_s": 5.723700700909831
+      "wall_s": 2.005854969000211,
+      "per_orbit_ms": 20.05854969000211,
+      "compile_run_s": 5.5886852300027385
     },
     {
       "N": 1000,
-      "wall_s": 2.35349170898553,
-      "per_orbit_ms": 2.35349170898553,
-      "compile_run_s": 5.165352310054004
+      "wall_s": 2.3412282429999323,
+      "per_orbit_ms": 2.3412282429999323,
+      "compile_run_s": 5.325147288996959
     },
     {
       "N": 10000,
-      "wall_s": 3.106597917038016,
-      "per_orbit_ms": 0.3106597917038016,
-      "compile_run_s": 6.707060461980291
+      "wall_s": 3.072797590000846,
+      "per_orbit_ms": 0.3072797590000846,
+      "compile_run_s": 6.140531976998318
     },
     {
       "N": 30000,
-      "wall_s": 9.332638589083217,
-      "per_orbit_ms": 0.3110879529694406,
-      "compile_run_s": 12.138447909033857
+      "wall_s": 9.110216868000862,
+      "per_orbit_ms": 0.3036738956000287,
+      "compile_run_s": 12.067589562997455
     }
   ],
   "jax_version": "0.10.1",
@@ -63,7 +63,7 @@
       "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
       "worktree": "/var/tmp/fbfinal",
       "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-09T02:33:56",
+      "date": "2026-10-14T09:00:26",
       "cpu_affinity": 72,
       "OMP_NUM_THREADS": "unset",
       "CUDA_VISIBLE_DEVICES": "0"

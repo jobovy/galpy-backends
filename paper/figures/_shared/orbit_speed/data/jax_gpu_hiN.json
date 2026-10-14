@@ -18,27 +18,27 @@
   "results": [
     {
       "N": 1000,
-      "wall_s": 2.203282617032528,
-      "per_orbit_ms": 2.203282617032528,
-      "compile_run_s": 6.30037363502197
+      "wall_s": 2.3885723059938755,
+      "per_orbit_ms": 2.3885723059938755,
+      "compile_run_s": 6.2161274870013585
     },
     {
       "N": 10000,
-      "wall_s": 2.7852964370977134,
-      "per_orbit_ms": 0.27852964370977135,
-      "compile_run_s": 5.443674061098136
+      "wall_s": 2.79390960100136,
+      "per_orbit_ms": 0.27939096010013603,
+      "compile_run_s": 5.238848601999052
     },
     {
       "N": 100000,
-      "wall_s": 24.795452053076588,
-      "per_orbit_ms": 0.2479545205307659,
-      "compile_run_s": 28.1203893260099
+      "wall_s": 24.66939432599611,
+      "per_orbit_ms": 0.2466939432599611,
+      "compile_run_s": 27.57851463300176
     },
     {
       "N": 300000,
-      "wall_s": 64.54853873001412,
-      "per_orbit_ms": 0.2151617957667137,
-      "compile_run_s": 67.33935507701244
+      "wall_s": 64.41763188999903,
+      "per_orbit_ms": 0.2147254396333301,
+      "compile_run_s": 67.32273692899616
     }
   ],
   "jax_version": "0.10.1",
@@ -51,7 +51,7 @@
       "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
       "worktree": "/var/tmp/fbfinal",
       "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-09T02:40:45",
+      "date": "2026-10-14T09:07:15",
       "cpu_affinity": 72,
       "OMP_NUM_THREADS": "unset",
       "CUDA_VISIBLE_DEVICES": "0"

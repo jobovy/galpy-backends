@@ -26,15 +26,20 @@ GPU that runs float64 at 1/32 of its float32 rate) they reach 0.215 ms/orbit
 (galpy in-backend, per-orbit steps; 64 s), 0.209 ms/orbit (galax, per-orbit
 steps; 63 s) and **0.068 ms/orbit (galax, batched steps; 20 s)**: all three
 overtake one-core C between N≈500 and 10³ and are 11–35× faster per orbit than
-it at N=3×10⁵, whereas against the 72-thread node only galax's batched line is
-level (N=3×10⁴ and 10⁵: 2.8 vs 3.1 s, 8.0 vs 8.1 s) and then faster (20 vs 25 s
-at 3×10⁵); the two per-orbit TITAN lines stay ~2.5× slower than the node. On an
+it at N=3×10⁵, whereas none of them beats the 72-thread node (re-measured
+2026-10-13): galax's batched line comes closest (2.8 vs 1.9 s at N=3×10⁴, 8.0 vs
+6.4 s at 10⁵, 20 vs 19 s at 3×10⁵) and the two per-orbit TITAN lines stay ~3.3×
+slower than the node. galax per-orbit / galpy (re-measured back to back on the
+TITAN 2026-10-14): 0.96, 0.95, 0.72, 0.70, 0.75 at N=1–10⁴ (low-N scan) and 0.63,
+0.77, 0.93, 0.97 at N=10³–3×10⁵ (high-N scan); on the H100 1.09, 1.37, 1.12, 1.14,
+1.08 and 1.15, 1.10, 0.87, 1.01. So the two agree to ≲10% only at N≥10⁵, where the
+integration dominates. On an
 **NVIDIA H100** (Trillium; galpy and galax both measured there; galpy on jax
 0.11.2) every GPU line crosses below one-core C just under N=10³ and below the
 72-thread node at N≈1–3×10⁴, and at N=3×10⁵ reaches **0.0247 ms/orbit for
-galpy's per-orbit integrator (7.4 s)** — ~97× one-core C, ~3.4× the 72-thread
+galpy's per-orbit integrator (7.4 s)** — ~97× one-core C, ~2.6× the 72-thread
 node and ~9× the TITAN Xp — 0.0246 ms/orbit for galax per-orbit (7.4 s, equal
-to galpy) and 0.0130 ms/orbit for galax batched (3.9 s, ~6× the node).
+to galpy) and 0.0130 ms/orbit for galax batched (3.9 s, ~5× the node).
 
 **CUDA kernel** (reddish purple: TITAN Xp circles, H100 dark-purple diamonds). This
 is not a galpy backend. It is an experimental CUDA port of galpy's C forces and
@@ -75,8 +80,8 @@ the GPUs, navy for the H100 — galax green); all jax/galax lines are jit-compil
   way to keep XLA:CPU's thread pool to one core; 2026-10-08). 2.0 ms/orbit at
   N=10³ — slightly *cheaper* than one-core C (2.3) — rising to 2.6 at 10⁴, 3.6 at
   10⁵ and 4.6 ms/orbit at N=3×10⁵ (1390 s, 1.9× one-core C). **galax (JAX, CPU;
-  batched steps)**, also on one core: 1.5 ms/orbit at 10³ (cheaper than one-core
-  C), 1.8 at 10⁴, 2.9 at 10⁵ (285 s, 1.3× one-core C). (Unpinned, with up to 72
+  batched steps)**, also on one core: 1.4 ms/orbit at 10³ (cheaper than one-core
+  C), 1.7 at 10⁴, 3.0 at 10⁵ (297 s, 1.2× one-core C; re-measured 2026-10-14). (Unpinned, with up to 72
   threads, both were 1.5–4× *slower* than on one core up to N ≈ 10⁴ — XLA's
   thread pool kept only ~1.1–1.3 cores busy — and faster, by 1.4–1.7×, only at
   their largest N: galpy at 3×10⁵, galax at 10⁵.)
