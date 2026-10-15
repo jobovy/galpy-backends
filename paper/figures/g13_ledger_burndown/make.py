@@ -25,10 +25,11 @@ snapshot, not hard-coded): before #1210 (2026-07-27) the -jit rows only; from
 permanent-skip lists only, since --jit then keeps its own measured slow-skip list.
 Counting the -jit rows alone (the first version of this figure) put the --jit
 line on the suite line, an upper bound by up to ~400 tests. The suite grows from 2466
-(the pre-migration anchor) to 4277 tests: new tests that passed straight away
+(the pre-migration anchor) to 4315 tests: new tests that passed straight away
 never entered the ledger, which a ledger count alone cannot show. The bottom
-panel is the separate, dedicated backend-test modules (8664 tests in 88 files
-at the end). Six rewritten-history commits without a PR head collected nothing
+panel is the separate, dedicated backend-test modules (11097 tests in 92 files
+at the end). The last point is feat/backends' tip at the time of writing
+(collected with --tip), after the last ledger change (#1659, ledgers empty). Six rewritten-history commits without a PR head collected nothing
 and are dropped.
 
 measure/burndown_from_git.py (raw entry counts) is kept for reference.
@@ -96,9 +97,9 @@ def _pts():
     """Snapshots with a successful collection (the few rewritten-history commits
     without a PR head to collect at collected nothing; they are dropped)."""
     rows = [r for r in _load("suite.json") if r["existing"] > 0
-            # a PR head without the ledger files (#1527, main-based): no entries
-            # in any mode, so its counts are not of the ledgered branch
-            and sum(r["entries"].values()) > 0
+            # a PR head without the ledger files (#1527, main-based) has no
+            # conftest ledgers to probe (effective None): not the ledgered branch.
+            # (Not "no entries": the ledgers are empty from #1659 on.)
             and r.get("effective")]
     # author dates are not monotonic in commit order across rebases: sort (stable)
     return sorted(rows, key=lambda r: r["date"])
@@ -166,12 +167,12 @@ def make():
     bkrows = [(dt, r["backend_modules"]) for dt, r in zip(dates, rows) if r["backend_modules"] > 0]
     bkd, bk = [x for x, _ in bkrows], [y for _, y in bkrows]
     axes[2].plot(bkd, bk, "-", color="#2a9d8f", lw=1.8)
-    axes[2].set_ylim(0, max(bk) * 1.15)
+    axes[2].set_ylim(0, max(bk) * 1.3)
     axes[2].set_ylabel("tests in the\nbackend modules")
     axes[2].annotate(f"{bk[-1]}" if PAPER
                      else f"{bk[-1]} tests in {_N_BACKEND_MODULES} test_backend_*.py modules",
-                     (bkd[-1], bk[-1]), textcoords="offset points", xytext=(-4, -14),
-                     ha="right", fontsize=_f(9, 7), color="#2a9d8f")
+                     (bkd[-1], bk[-1]), textcoords="offset points", xytext=(-6, 0),
+                     ha="right", va="bottom", fontsize=_f(9, 7), color="#2a9d8f")
     for m in milestones:
         axes[2].axvline(_d(m["date"]), color="0.82", lw=0.7, ls="--", zorder=0)
 
@@ -207,7 +208,7 @@ def make():
     return fig
 
 
-_N_BACKEND_MODULES = 88
+_N_BACKEND_MODULES = 92
 
 
 if __name__ == "__main__":

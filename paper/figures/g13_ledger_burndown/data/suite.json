@@ -8785,5 +8785,121 @@
    "slow_skip": "jit rows only",
    "skip": "inherits eager"
   }
+ },
+ {
+  "sha": "242a7c6feb",
+  "date": "2026-10-09",
+  "subject": "Backend ledgers to zero (non-Torus): the slow/skip/xfail entries were redundant work (#1659)",
+  "source": "pull/1659/head",
+  "existing": 4310,
+  "backend_modules": 8826,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 4,
+   "torch": 4,
+   "jax-jit": 4,
+   "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
+  }
+ },
+ {
+  "sha": "c17c6daffb",
+  "date": "2026-10-14",
+  "subject": "Rebase onto main (2026-10-14): keep main's AdiabaticContraction amp fix and HISTORY entries",
+  "source": "tip",
+  "existing": 4315,
+  "backend_modules": 11097,
+  "collect_errors": 1,
+  "ledgered": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "entries": {
+   "jax": 0,
+   "torch": 0,
+   "jax-jit": 0,
+   "torch-jit": 0
+  },
+  "skipped": {
+   "jax": 4,
+   "torch": 4,
+   "jax-jit": 4,
+   "torch-jit": 0
+  },
+  "effective": {
+   "jax": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   },
+   "torch": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   },
+   "jax-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   },
+   "torch-jit": {
+    "xfail": 0,
+    "slow_skip": 0,
+    "skip": 4,
+    "union": 4
+   }
+  },
+  "jit_rule": {
+   "xfail": "inherits eager",
+   "slow_skip": "jit rows only",
+   "skip": "inherits eager"
+  }
  }
 ]

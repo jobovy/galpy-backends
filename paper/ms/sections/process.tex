@@ -182,7 +182,7 @@ information that a reader deciding whether to work this way needs.
 \subsection{Making the test suite pass under every backend}\label{sec:process-ledger}
 
 The acceptance test for the backends is \galpy's own test suite, which
-grew from 2,466 to 4,277 tests over the course of this work, run under
+grew from 2,466 to 4,315 tests over the course of this work, run under
 \numpy, under \jax\ and \torch\ in eager mode, and under \jax\ and
 \torch\ with compilation at every entry point, for a total of five
 modes. We do not delete or modify tests that fail under a backend, but
@@ -193,14 +193,14 @@ pass under a backend but exceed the time limit of the continuous
 integration, and a third lists the tests of code that is permanently
 out of scope. We regenerate the ledgers from the actual test results on
 demand, such that they cannot drift from reality, and in addition we run
-a dedicated set of tests of the backend code itself, now 8,664 tests in
-89 files.
+a dedicated set of tests of the backend code itself, now 11,097 tests in
+92 files.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g13_ledger_burndown/g13_ledger_burndown.pdf}
   \caption{Tests of \galpy's existing test suite that pass under each
     backend, as a function of time. The grey line is the size of the
-    suite, which grows from 2,466 to 4,277 tests over the period (most
+    suite, which grows from 2,466 to 4,315 tests over the period (most
     of the jump on June 19 comes from splitting the potential tests into
     one test per potential); the colored curves show the number of these
     tests that pass under \torch\ (top) and \jax\ (middle) in eager mode
@@ -212,9 +212,8 @@ a dedicated set of tests of the backend code itself, now 8,664 tests in
     compilation than in eager mode because slow orbit tests that are
     skipped in eager mode run in reasonable time when compiled. The bottom
     panel shows the number of tests in the dedicated backend test modules.
-    At the end, 4,272 of the 4,277 tests pass under \torch\ and 4,268
-    under \jax; the rest are the remaining ledger entries and the
-    permanently skipped tests.}\label{fig:ledger}
+    At the end, 4,311 of the 4,315 tests pass in every mode; the other
+    four test the out-of-scope torus-mapping code and are skipped.}\label{fig:ledger}
 \end{figure*}
 
 \figurename~\ref{fig:ledger} displays how we brought the suite to pass.
@@ -226,10 +225,9 @@ disappeared when we centralized the coercion of inputs (see
 \sectionname~\ref{sec:design}). The eager ledgers were essentially empty
 by 2026 September 12, and we emptied the compiled-mode ledgers, which
 started at 100 and 146 tests when we introduced those modes, over the
-following month. At the time of writing, one eager test and five
-compiled tests remain, the latter all concerning the pickling of unit
-wrappers under compilation, and 16 tests are permanently skipped
-because they test the torus-mapping code or floors that are by design.
+following month. At the time of writing, the ledgers are empty in every
+mode, and four tests are permanently skipped because they test the
+torus-mapping code, which is out of scope.
 A ledger entry that covers a whole file hides how many tests it
 contains, and the figure therefore counts the tests that each entry
 matches at the time; early entries of this kind understated the \jax\
@@ -283,6 +281,23 @@ conditions are computed by the variational equations in \cc\ and by
 reverse-mode AD through two different ODE solvers, and the three agree
 with each other and with finite differences of independently integrated
 orbits to a few parts in $10^{10}$ (\figurename~\ref{fig:icjacobian}).
+That no derivative was missed is checked by a sweep: for every public
+potential, action--angle, and distribution-function class and the
+stream-impulse functions, it differentiates each numeric parameter and
+one input coordinate, 789 derivatives in 206 configurations, under
+compiled \jax\ and eager \torch, with the inputs given as backend
+arrays, as \python\ floats, and under a forced backend, and compares
+them with converged finite differences of the \numpy\ code. When we
+first ran it, about 60 combinations of class and parameter raised an
+error or worked only eagerly, and nine families of derivatives were
+silently wrong, zero, or disconnected from the parameter; for example,
+\torch\ orbit integration with \galpy's \cc\ integrators dropped the
+derivatives with respect to the potential's parameters, which made those
+of a stream model wrong by up to a factor of 45. We fixed all of them,
+and the sweep, 2,712 cases, now runs in the continuous integration. The
+one remaining exception is by design: under compilation, the anisotropy
+of a constant-anisotropy distribution function cannot be traced, because
+it selects the order of a derivative in the inversion.
 Where the backend code implements a numerical method of its own---a
 special function, a quadrature, a root finder---we checked it against
 \scipy\ and against \texttt{mpmath} at 30 to 50 digits and validated the

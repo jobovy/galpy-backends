@@ -193,18 +193,44 @@ def main():
                     help="take backend_modules from the existing suite.json (same sha)")
     ap.add_argument("--limit", type=int, default=None, help="first N snapshots only (testing)")
     ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--incremental", action="store_true",
+                    help="reuse the records in --out (same PR head, or same subject for a "
+                    "rewritten commit) and collect only the snapshots it lacks")
+    ap.add_argument("--tip", action="store_true",
+                    help="end with REF's tip (the suite at the time of writing), also when "
+                    "the tip did not touch a ledger")
     args = ap.parse_args()
     if args.reuse_backend and OUT.exists():
         _PREV.update({r["sha"]: r for r in json.loads(OUT.read_text())})
+
+    def key(source, subject):  # a PR head is stable across rebases; else the subject
+        return source if source.startswith("pull/") else subject
+
+    old = {}
+    if args.incremental and Path(args.out).exists():
+        old = {key(r["source"], r["subject"]): r for r in json.loads(Path(args.out).read_text())}
     shas = _git("log", REF, "--reverse", "--format=%H\t%aI\t%s", "--", *LEDGERS, SKIP).splitlines()
+    if args.tip:
+        tip = _git("log", "-1", "--format=%H\t%aI\t%s", REF).strip()
+        if tip.split("\t")[0] != shas[-1].split("\t")[0]:
+            shas.append(tip)
     jobs = []
     for k, line in enumerate(shas):  # fetch serially (ref locks), collect in parallel
         sha, when, subject = line.split("\t", 2)
+        m = re.search(r"\(#(\d+)\)\s*$", subject)
+        if m and f"pull/{m.group(1)}/head" in old:  # reused: no fetch
+            jobs.append((k, sha, when, subject, f"pull/{m.group(1)}/head"))
+            continue
         snap, source = _snapshot(sha, subject)
+        if k == len(shas) - 1 and args.tip and source == "rewritten":
+            source = "tip"  # the rebased tip is consistent: collect it as is
         jobs.append((k, snap, when, subject, source))
     jobs = jobs[: args.limit]
+    todo = [j for j in jobs if key(j[4], j[3]) not in old]
+    print(f"{len(jobs)} snapshots, {len(jobs) - len(todo)} reused, collecting {len(todo)}", flush=True)
     with ThreadPoolExecutor(args.workers) as ex:
-        recs = list(ex.map(_one, jobs))
+        got = {key(j[4], j[3]): r for j, r in zip(todo, ex.map(_one, todo))}
+    recs = [old.get(key(j[4], j[3])) or got[key(j[4], j[3])] for j in jobs]
     Path(args.out).write_text(json.dumps(recs, indent=1) + "\n")
     print(f"wrote {len(recs)} commits -> {args.out}")
 

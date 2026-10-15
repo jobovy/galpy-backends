@@ -67,7 +67,7 @@
     "description": "backend port of the existing test suite: tests passing per backend (eager, jit) vs time, ledger expanded to the tests it covers; plus the dedicated backend-test modules",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -75,8 +75,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "32d52a1",
-    "sha256": "8125d5eaf7148f5626bb719229c27db4b3a5defbf3434fc07e21306581aa7dec",
+    "git": "89c9c46",
+    "sha256": "6b9cb88d3d9e5a36b274c409e1535cf29d30a12316f7ab74e0f5684e5fcd0357",
     "track": "G"
   },
   "g14_hvs_potential_fit": {

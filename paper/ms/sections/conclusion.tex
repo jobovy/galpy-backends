@@ -7,10 +7,10 @@ and its interface as it was. Potentials, orbit integration, the
 action--angle transformations and their inverses, and the distribution
 functions, including those of tidal streams, accept the arrays of either
 framework and return derivatives with respect to their inputs and
-parameters. The existing test suite of \galpy, now 4,277 tests, passes
+parameters. The existing test suite of \galpy, now 4,315 tests, passes
 under \numpy, under both frameworks in eager mode, and under both with
-compilation, with five tests remaining as known exceptions, and the
-dedicated tests of the backend code add 8,664 more. We tested
+compilation, apart from four tests of the out-of-scope torus-mapping
+code, and the dedicated tests of the backend code add 11,097 more. We tested
 derivatives against finite differences whose convergence is
 demonstrated, against the \cc\ variational equations, and against each
 other across the two frameworks, and where \galpy\ implements a
