@@ -47,9 +47,10 @@ is not a galpy backend. It is an experimental CUDA port of galpy's C forces and
 GPU-native kernels would buy. **Solid**: galpy's own arithmetic (the GSL incomplete
 gamma and libm `pow`), with one out-of-line force function and a persistent-thread
 kernel that hands a finished lane the next orbit. **Thin, faint long-dashed (unlabelled)**: the same with
-division- and `pow`-free special functions and a cost-sorted schedule. Both use the
+division- and `pow`-free special functions (the TITAN's high-N scan also with a
+cost-sorted schedule). Both use the
 same orbit, tolerance (1e-8) and 16 saves as the hiN points. Wall time includes the
-host↔device copies (pinned, reused buffer) and, for the fast line, the host argsort;
+host↔device copies (pinned, reused buffer) and, for a sorted scan, the host argsort;
 one-time nvcc compilation is excluded. Both agree with `dop853_c` to within its own
 1e-8 truncation error: over 300 orbits, the maximum relative position difference
 after 2 Gyr is 1.6e-6 (galpy arithmetic) and 5.3e-6 (fast). galpy at 1e-8 differs
