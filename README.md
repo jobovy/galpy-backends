@@ -18,6 +18,36 @@ Hessian) + **Lyapunov exponents** in C.
 
 ## Status
 
+**Status 2026-10-16.** feat/backends (e2a30992f) carries the gap-audit stack,
+the GPU round and the tutorial notebooks. The ledgers are empty in every mode
+(4 permanent skips: the torus mapper); 4,315 existing tests and 17,995 backend
+tests in 93 files (g13 re-collected).
+
+Since 2026-10-07:
+
+- **Gap audit closed** (`plan/BACKEND_GAP_AUDIT.md`), stack #1706–#1718: the
+  parameter-gradient sweep (783 derivatives in 206 configurations, 2,706 CI
+  cases; one by-design known gap: constantbetadf beta under jit) and the value
+  sweep (4,147 cases, no gaps).
+- **Greedy backend** (#1715): any backend input, a parameter included, turns
+  the backend on. **Forcing runs on the backend** (#1718), except evolveddiskdf,
+  which counts only a differentiated parameter under forcing (its eager
+  in-backend grids took forced test_quantity from 6 to 55 min; Jo OK'd).
+- **GPU round** (#1720, #1721): the backend tests on the TITAN Xp (torch 2.12)
+  and an H100 (torch 2.14+cu130, jax 0.11.2). Six CUDA-only library bugs
+  (hidden numpy conversions, a device mismatch) fixed; the compile tests pass on
+  the H100 except the upstream dynamo/numpy-under-set_default_device issue.
+- **Docs**: seven tutorial notebooks (#1648).
+- **CI**: test_backend in 7 groups, balanced with CI-measured durations.
+- **Paper**: g8/g12 from the H100 v3c CUDA re-measure; g13 re-collected; PR
+  statistics from `paper/ms/stats/pr_stats.py`.
+
+Open: #1721 (a test-conditioning fix), the island audit of the existing suite
+(how much runs on the backend), the v2 pre-release.
+
+<details>
+<summary>Previous status (2026-10-07)</summary>
+
 **Status 2026-10-07.** feat/backends is rebased onto main (7c675eb63, applied
 2026-10-04) and green. Ledgers: **3** xfail entries (all `--jit` pickling of unit
 wrappers), **3** slow-skips (FDM `central_limit` under torch/torch-jit: eager
@@ -52,6 +82,8 @@ Since 2026-10-01:
   TwoPower via the incomplete beta (#1597); jax gammainc ~100x faster (#1615).
 - CI: CPU/AVX-512 runner reported in the pytest header (#1620); the #1614
   inductor SIMD cap confirmed necessary on an avx512f runner.
+
+</details>
 
 <details>
 <summary>Previous status (2026-09-16)</summary>
@@ -588,7 +620,7 @@ form at z=0 for `Rforce`, 3.5e-15; against FD-of-Hankel-`Rforce` for `R2deriv`,
 11 digits). An unvalidated arbiter would have been the third plausible-but-wrong
 number in the pair.
 
-## Merged PRs #1381-#1573 (rebuilt from the GitHub API, 2026-09-25)
+## Merged PRs #1381-#1720 (rebuilt from the GitHub API, 2026-09-25; extended 2026-10-16, project PRs as classified in paper/ms/stats/pr_stats.py)
 
 | PR | Base | Merged | Title |
 |----|------|--------|-------|
@@ -774,3 +806,79 @@ number in the pair.
 | [#1628](https://github.com/jobovy/galpy/pull/1628) | feat/backends | 2026-10-05 | actionAngleVerticalInverse (2/3): momentum-matched family built natively, differentiable in the potential's parameters, jit-able end to end |
 | [#1630](https://github.com/jobovy/galpy/pull/1630) | feat/backends | 2026-10-05 | actionAngleVerticalInverse (3/3): the legacy modes evaluate natively (numpy construction); map_coordinates order 5 + multi-reflection mirror fix |
 | [#1631](https://github.com/jobovy/galpy/pull/1631) | feat/backends | 2026-10-06 | actionAngleVerticalInverse runs on CUDA (energy grid to host; tests CUDA-clean) |
+| [#1635](https://github.com/jobovy/galpy/pull/1635) | feat/backends | 2026-10-06 | backend brentq: bracket_width= keeps the traced halving schedule as short as eager (VerticalInverse jit 2.5-3.7x faster) |
+| [#1634](https://github.com/jobovy/galpy/pull/1634) | feat/backends | 2026-10-06 | Dynamical friction: sigma_r on a log-r grid; every path evaluates C's natural spline (backend side of #1633) |
+| [#1636](https://github.com/jobovy/galpy/pull/1636) | feat/backends | 2026-10-06 | actionAngleVerticalInverse: tables follow the potential's device (CUDA parameters with torch's default device on the CPU) |
+| [#1637](https://github.com/jobovy/galpy/pull/1637) | feat/backends | 2026-10-06 | streamdf: a torch progenitor constructs (eager torch grad tensors stay on torch; a silently dropped gradient fixed) |
+| [#1633](https://github.com/jobovy/galpy/pull/1633) | main | 2026-10-06 | Dynamical friction: sigma_r on a log-r grid (was 20-60% off at small r); Python evaluates C's natural spline |
+| [#1639](https://github.com/jobovy/galpy/pull/1639) | feat/backends | 2026-10-06 | gammainc (torch): a float order follows the argument's device (MWPotential2014 on CUDA failed) |
+| [#1640](https://github.com/jobovy/galpy/pull/1640) | feat/backends | 2026-10-07 | streamdf: a jitted construction matches eager (track solves on DirectAdjoint); jax.grad of the constructor runs |
+| [#1641](https://github.com/jobovy/galpy/pull/1641) | feat/backends | 2026-10-07 | backend brentq: guess= for safeguarded Newton; VerticalInverse angle inversion ~2x faster under jit (4.8x incl. #1635) |
+| [#1642](https://github.com/jobovy/galpy/pull/1642) | feat/backends | 2026-10-07 | actionAngleStaeckel (c=False): chi-anomaly mesh matches C (3.8x faster; fixes the Sept. 2 regression) |
+| [#1644](https://github.com/jobovy/galpy/pull/1644) | main | 2026-10-07 | actionAngleStaeckel (c=False): chi-anomaly quadrature mesh matches C (1.6x faster, same accuracy) |
+| [#1645](https://github.com/jobovy/galpy/pull/1645) | feat/backends | 2026-10-08 | CUDA: numpy-scalar constants under torch.compile, parallel_map after CUDA init, test host copies |
+| [#1646](https://github.com/jobovy/galpy/pull/1646) | feat/backends | 2026-10-08 | Backend usability fixes from the paper examples: Orbit from floats follows use(), DFs follow traced parameters, qdf/spray/forward-mode/torchode fixes |
+| [#1647](https://github.com/jobovy/galpy/pull/1647) | feat/backends | 2026-10-08 | CUDA: torchode solve loop eager under torch.compile; compiled-vs-eager last bit |
+| [#1649](https://github.com/jobovy/galpy/pull/1649) | feat/backends | 2026-10-08 | streamdf: concrete track Jacobians in forward mode (diffrax ForwardMode + jacfwd); eager construction faster than before #1640 |
+| [#1651](https://github.com/jobovy/galpy/pull/1651) | main | 2026-10-08 | dehnendf/shudf moments: accept a numpy array of radii |
+| [#1650](https://github.com/jobovy/galpy/pull/1650) | feat/backends | 2026-10-08 | Doc-notebook workflows: install torch (CPU), diffrax, equinox, torchdiffeq, torchode for the backend tutorials |
+| [#1653](https://github.com/jobovy/galpy/pull/1653) | feat/backends | 2026-10-08 | dehnendf/shudf moments: array R on numpy and on the jax/torch backends |
+| [#1652](https://github.com/jobovy/galpy/pull/1652) | feat/backends | 2026-10-08 | streamgapdf: construct on jax/torch and under jax.jit; differentiable in the subhalo parameters |
+| [#1654](https://github.com/jobovy/galpy/pull/1654) | feat/backends | 2026-10-08 | streamdf: streamTrack() on a differentiated stream; exact d(track)/d(potential) (isochrone angles regular at turning points) |
+| [#1655](https://github.com/jobovy/galpy/pull/1655) | feat/backends | 2026-10-09 | streamgapdf: test d/d(timpact) and d/dq against finite differences (exact since #1654) |
+| [#1656](https://github.com/jobovy/galpy/pull/1656) | feat/backends | 2026-10-09 | Differentiated parameters are data: spherical-DF sampling, DF moments at a float r, normalize=, qdf at float (R,z) without use() (#1648 items 13-16) |
+| [#1657](https://github.com/jobovy/galpy/pull/1657) | feat/backends | 2026-10-09 | make_smoothing_spline: pass scipy's GCV a 1-D y (fixes backend streamTrack on Python 3.10 / scipy 1.15) |
+| [#1658](https://github.com/jobovy/galpy/pull/1658) | feat/backends | 2026-10-10 | CUDA: fix the H100 backend-test failures; classify the classic-suite CUDA failures |
+| [#1660](https://github.com/jobovy/galpy/pull/1660) | main | 2026-10-10 | Orbit: analytic e/rperi/rap/zmax no longer rebuild the spherical-fallback actionAngle on every call |
+| [#1659](https://github.com/jobovy/galpy/pull/1659) | feat/backends | 2026-10-10 | Backend ledgers to zero (non-Torus): the slow/skip/xfail entries were redundant work |
+| [#1662](https://github.com/jobovy/galpy/pull/1662) | feat/backends | 2026-10-10 | Orbit.integrate docstring: the H100 cause of diffrax adjoint nondeterminism |
+| [#1663](https://github.com/jobovy/galpy/pull/1663) | feat/backends | 2026-10-10 | make_smoothing_spline backend GCV: port scipy's GCV lambda; no private scipy API |
+| [#1664](https://github.com/jobovy/galpy/pull/1664) | feat/backends | 2026-10-10 | conftest: remove the per-process torchinductor cache dir on every exit path |
+| [#1665](https://github.com/jobovy/galpy/pull/1665) | feat/backends | 2026-10-10 | DoubleExponentialDiskPotential: differentiable in hr, hz and amp (constructor on the parameters' backend) |
+| [#1666](https://github.com/jobovy/galpy/pull/1666) | feat/backends | 2026-10-10 | quasiisothermaldf: construct on the backend for a differentiated potential or hr |
+| [#1661](https://github.com/jobovy/galpy/pull/1661) | feat/backends | 2026-10-10 | Forced backend wins: user SCF densities get backend arrays; every Orbit accessor returns them |
+| [#1668](https://github.com/jobovy/galpy/pull/1668) | feat/backends | 2026-10-11 | galpy.backend.optimize.fixed_point: scipy's del2 fixed point on the backends, implicitly differentiated (gap PR 3) |
+| [#1669](https://github.com/jobovy/galpy/pull/1669) | feat/backends | 2026-10-11 | AdiabaticContractionWrapperPotential: construct on the backend of a differentiated parameter (gap PR 19) |
+| [#1672](https://github.com/jobovy/galpy/pull/1672) | backend/gap-19-adiabatic-contraction | 2026-10-11 | _rotate_to_arbitrary_vector: backend-native in the target axis (gap audit PR 2) |
+| [#1673](https://github.com/jobovy/galpy/pull/1673) | backend/gap-2-rotation-helpers | 2026-10-11 | Backend boundary follows a differentiated parameter at float coordinates (gap audit PR 1) |
+| [#1671](https://github.com/jobovy/galpy/pull/1671) | main | 2026-10-11 | Fix AdiabaticContractionWrapperPotential ignoring amp; quasiisothermaldf: _precomputerg=False, unbound points in arrays, out-of-grid Lz |
+| [#1674](https://github.com/jobovy/galpy/pull/1674) | feat/backends | 2026-10-13 | C integrators: potential-parameter gradients leave the IC-only C-STM; its second derivatives raise |
+| [#1675](https://github.com/jobovy/galpy/pull/1675) | backend/gap-4-cint-torch-param-grads | 2026-10-13 | coords: B1950 FK4 E-terms on the backend; differentiable Rz_to_lambdanu Delta/ac and vxvyvz_to_galcencyl Zsun |
+| [#1678](https://github.com/jobovy/galpy/pull/1678) | feat/backends | 2026-10-13 | streamspraydf: sample(tail='both') keeps the stripping times on the backend (jittable, differentiable dt) |
+| [#1682](https://github.com/jobovy/galpy/pull/1682) | feat/backends | 2026-10-13 | conftest: --jit boundary counter no longer makes dynamo recompile every call (torch-jit timeouts) |
+| [#1679](https://github.com/jobovy/galpy/pull/1679) | feat/backends | 2026-10-13 | kingdf/KingPotential: d/dW0 to the exact derivative (tighter solve when differentiated); M and W0 under jax.jit |
+| [#1680](https://github.com/jobovy/galpy/pull/1680) | feat/backends | 2026-10-13 | streamgapdf: higherorderTrack and approx=False on the backends; density/meanOmega at the backend boundary |
+| [#1681](https://github.com/jobovy/galpy/pull/1681) | feat/backends | 2026-10-13 | R-DISS: dissipative forces differentiable in their parameters in every input mode |
+| [#1683](https://github.com/jobovy/galpy/pull/1683) | feat/backends | 2026-10-13 | R-SHAPE spherical: differentiable TwoPower/Dehnen/PowerSpherical/FlattenedPower/PowerTriaxial exponents, NFW conc, ExpTruncNFW mass |
+| [#1684](https://github.com/jobovy/galpy/pull/1684) | backend/gap-14-rshape-spherical | 2026-10-13 | R-SHAPE non-axisymmetric: differentiable DehnenBar beta/omegab/rolr, SteadyLogSpiral omegas/p, SpiralArms alpha/H |
+| [#1685](https://github.com/jobovy/galpy/pull/1685) | backend/gap-15-rshape-nonaxi | 2026-10-13 | normalize= under jit: a structural normalize test in every constructor; Potential.normalize on any backend parameter |
+| [#1677](https://github.com/jobovy/galpy/pull/1677) | feat/backends | 2026-10-13 | Orbit.analytic: a backend orbit's actions, frequencies and angles stay on the backend; 0-d backend delta |
+| [#1687](https://github.com/jobovy/galpy/pull/1687) | backend/gap-22-orbit-analytic | 2026-10-13 | actionAngle: derivatives the C code cannot carry fall back to c=False (gap audit PR 5) |
+| [#1688](https://github.com/jobovy/galpy/pull/1688) | backend/gap-5-aa-cjac-params | 2026-10-13 | actionAngleStaeckel (c=False): exact turning-point derivative and direct AD of the actions fix the delta/R gradients (gap audit PR 6) |
+| [#1694](https://github.com/jobovy/galpy/pull/1694) | feat/backends | 2026-10-14 | R-DISK: disk expansions and SCF coefficients differentiable in Sigma/hz scales and the basis scale a |
+| [#1692](https://github.com/jobovy/galpy/pull/1692) | feat/backends | 2026-10-14 | MovingObjectPotential: differentiable w.r.t. the object's orbit and kernel; no forced-backend island (gap audit PR 20) |
+| [#1693](https://github.com/jobovy/galpy/pull/1693) | feat/backends | 2026-10-14 | R-ROT: differentiable triaxial b/c/pa/zvec, Ferrers b, RotateAndTilt angles/offset |
+| [#1695](https://github.com/jobovy/galpy/pull/1695) | feat/backends | 2026-10-14 | Small NOJIT and island leftovers: eddingtondf, jeans.sigmalos, AnyAxisymmetricRazorThinDisk, HarmonicInverse, estimateBIsochrone, SolidBodyRotation flag |
+| [#1698](https://github.com/jobovy/galpy/pull/1698) | feat/backends | 2026-10-14 | Impulse kicks on the backends: general_curvedstream, plummerstream, plummerstream_curvedstream; differentiated perturber parameters at numpy coordinates |
+| [#1697](https://github.com/jobovy/galpy/pull/1697) | feat/backends | 2026-10-14 | sphericaldf __call__ coerces under a forced backend; constant-beta DFs differentiable in beta (gap audit PR 25) |
+| [#1689](https://github.com/jobovy/galpy/pull/1689) | feat/backends | 2026-10-14 | diskdf, evolveddiskdf: differentiable beta; a forced backend coerces __call__ and the moments (gap audit PR 23) |
+| [#1690](https://github.com/jobovy/galpy/pull/1690) | backend/gap-23-diskdf | 2026-10-14 | dehnendf/shudf correct=True on the backends: DFcorrection computed and interpolated natively (gap audit PR 24) |
+| [#1702](https://github.com/jobovy/galpy/pull/1702) | feat/backends | 2026-10-14 | actionAngle: Python-float inputs follow a differentiated parameter; traced gamma (gap audit PR 21) |
+| [#1703](https://github.com/jobovy/galpy/pull/1703) | main | 2026-10-14 | quasiisothermaldf: rg grid looked up at /Lz/ and rl solved for arrays at once (fixes #1671's slowdown) |
+| [#1701](https://github.com/jobovy/galpy/pull/1701) | feat/backends | 2026-10-14 | interpRZPotential: backend-native grids for a differentiated parameter; no forced-backend island (gap audit PR 9, W6) |
+| [#1699](https://github.com/jobovy/galpy/pull/1699) | feat/backends | 2026-10-14 | streamdf: degeneracy-safe differentiable eigendecomposition; d/dsigv and sigangledAngle on the backend |
+| [#1704](https://github.com/jobovy/galpy/pull/1704) | feat/backends | 2026-10-14 | CI: run the Windows build and doc notebooks on pushes to feat/backends |
+| [#1700](https://github.com/jobovy/galpy/pull/1700) | feat/backends | 2026-10-15 | quasiisothermaldf: unbound points and out-of-grid Lz on the backends; finite parameter gradients with an unnormalized potential (gap audit PR 7) |
+| [#1709](https://github.com/jobovy/galpy/pull/1709) | main | 2026-10-15 | AdiabaticContractionWrapperPotential: Phi0 from the exact integral of its force |
+| [#1706](https://github.com/jobovy/galpy/pull/1706) | feat/backends | 2026-10-16 | Parameter-gradient sweep: every potential/df/actionAngle parameter vs FD on every run (gap audit PR 0) |
+| [#1707](https://github.com/jobovy/galpy/pull/1707) | backend/gap-0-param-sweep-v2 | 2026-10-16 | Spherical DFs and jeans: a differentiated parameter at plain-float inputs stays on its backend (sweep gaps, layer 1) |
+| [#1710](https://github.com/jobovy/galpy/pull/1710) | backend/gap-0b-sphericaldf-floatcoords | 2026-10-16 | Impulse kicks: a differentiated parameter at numpy inputs takes the backend path (sweep gaps, layer 2) |
+| [#1711](https://github.com/jobovy/galpy/pull/1711) | backend/gap-0c-impulse-integrations | 2026-10-16 | sweep: a grid differentiated in a parameter is checked against its exact class (layer 3) |
+| [#1712](https://github.com/jobovy/galpy/pull/1712) | backend/gap-0d-aagrid-grads | 2026-10-16 | AdiabaticContraction: Phi0 from the exact trapezoid sum on numpy too (sweep gaps, layer 4) |
+| [#1713](https://github.com/jobovy/galpy/pull/1713) | backend/gap-0e-acwp-phi0 | 2026-10-16 | impulse_deltav_general_fullplummerintegration on the backends; MovingObjectPotential builds its orbit spline once (sweep gaps, layer 5) |
+| [#1714](https://github.com/jobovy/galpy/pull/1714) | backend/gap-0f-fullplummer-twin | 2026-10-16 | Gaps the sweep's rotation hides: constantbetadf inside jit, host_eval's derivative, plain-coordinate delta/beta (sweep gaps, layer 6) |
+| [#1716](https://github.com/jobovy/galpy/pull/1716) | backend/gap-0g-rotation-gaps | 2026-10-16 | Review fixes: no grid parameter gradients in the sweep; no potential lists in the impulse kicks (sweep gaps, layer 6b) |
+| [#1715](https://github.com/jobovy/galpy/pull/1715) | backend/gap-0g2-review-fixes | 2026-10-16 | Greedy backend: a backend parameter turns the backend on (sweep gaps, layer 7) |
+| [#1718](https://github.com/jobovy/galpy/pull/1718) | backend/gap-0h-greedy-backend | 2026-10-16 | Forcing runs on the backend; the greedy value gaps closed (sweep gaps, layer 8) |
+| [#1720](https://github.com/jobovy/galpy/pull/1720) | feat/backends | 2026-10-16 | GPU round: CUDA tensors where galpy converted to numpy; GPU-only test tolerances |
+| [#1648](https://github.com/jobovy/galpy/pull/1648) | feat/backends | 2026-10-16 | Docs: tutorial notebooks for the JAX and PyTorch backends |

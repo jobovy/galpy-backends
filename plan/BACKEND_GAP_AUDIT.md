@@ -372,3 +372,25 @@ Practicalities:
 - **qdf + `actionAngleAdiabatic(c=False)` + `_precomputerg=False`** with an unnormalized MN potential raises "cannot unpack non-iterable" in `_vmomentdensity` (`quasiisothermaldf.py:878`).
 
 Artifacts (scratch, not committed): `/var/tmp/gapaudit_artifacts/` contains `res_pot*.json`, `res_df*.json`, `res_aa*.json`, `fc_pot.txt`, the spec files and the analysis scripts.
+
+## 7. Outcome (2026-10-16)
+
+Every gap family above is closed, in stack #1719 (PRs #1706, #1707, #1710–#1716,
+#1715, #1718), merged into feat/backends on 2026-10-16:
+
+- the parameter-gradient sweep (`tests/test_backend_param_sweep.py`): 783
+  derivatives in 206 configurations, 2,706 CI cases; one known gap, by design
+  (constantbetadf beta under jit: beta selects the inversion's derivative order);
+- the value sweep (#1715): every parameter and coordinate as a concrete backend
+  array, 4,147 cases, all on the input's backend at numpy's values; the 102
+  initial gaps closed in #1718;
+- the grids no longer differentiate their parameters in the sweep (they delegate
+  to their exact classes; #1716);
+- greedy backend (#1715) and forcing on the backend (#1718, with the evolveddiskdf
+  exception for CI time);
+- CI found more in the stack's own runs: the orbit accessors under the numpy pin,
+  zvc/zvc_range with a backend potential (#1715); SCF/DiskSCF masses over an
+  array of radii and zvc's z=0 snap (#1718).
+
+The GPU round that followed (#1720, #1721; TITAN Xp + H100) fixed six CUDA-only
+library bugs the CPU suite cannot see.

@@ -88,7 +88,8 @@ def make():
         cst = {k: jnp.asarray(v) for k, v in dict(R=R, vT=vT, z=z, vz=vz).items()}
 
         def _act(vr, idx):  # scalar v_R -> scalar action (idx 0=Jr, 2=Jz)
-            return aA(cst["R"], vr, cst["vT"], cst["z"], cst["vz"])[idx]
+            # one phase-space point gives shape (1,) outputs, as on numpy
+            return aA(cst["R"], vr, cst["vT"], cst["z"], cst["vz"])[idx][0]
 
         vRj = jnp.asarray(vR)
         Jr = numpy.asarray(jax.vmap(lambda v: _act(v, 0))(vRj))
@@ -148,7 +149,7 @@ def make():
 
         def _jr_of_b(b):  # scalar b -> scalar J_r (potential rebuilt inside grad)
             aAb = actionAngleIsochrone(ip=IsochronePotential(amp=GM, b=b))
-            return aAb(cb["R"], cb["vR"], cb["vT"], cb["z"], cb["vz"])[0]
+            return aAb(cb["R"], cb["vR"], cb["vT"], cb["z"], cb["vz"])[0][0]
 
         bj = jnp.asarray(bsw)
         Jrb = numpy.asarray(jax.vmap(_jr_of_b)(bj))
