@@ -1,0 +1,40 @@
+
+scontrol show job 1109839
+JobId=1109839 JobName=isoapprox-diag
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1273600 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:57 TimeLimit=00:45:00 TimeMin=N/A
+   SubmitTime=2026-10-16T14:55:27 EligibleTime=2026-10-16T15:07:14
+   AccrueTime=2026-10-16T15:07:14
+   StartTime=2026-10-16T15:07:39 EndTime=2026-10-16T15:08:36 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-16T15:07:39 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:2380978
+   ReqNodeList=(null) ExcNodeList=trig0021
+   NodeList=trig0013
+   BatchHost=trig0013
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/isoapprox_diag.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --dependency=afterany:1108803 --time=00:45:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out isoapprox_diag.sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --dependency=afterany:1108803 --time=00:45:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out isoapprox_diag.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --dependency=afterany:1108803 --time=00:45:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out isoapprox_diag.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/isoapprox-diag-1109839.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1109839
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1109839      isoapprox+   def-bovy   00:00:57                        00:05.456  00:44.845      0:0 
+1109839.bat+      batch   def-bovy   00:00:57          0   4671200K  00:05.456  00:44.845      0:0 
+1109839.ext+     extern   def-bovy   00:00:57                         00:00:00   00:00:00      0:0 
+

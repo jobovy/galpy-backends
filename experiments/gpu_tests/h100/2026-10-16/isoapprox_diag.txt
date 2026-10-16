@@ -1,0 +1,109 @@
+galpy 50df80f3b3f2c62ef21cfc1e587c16f62c77dc85 dirty=[]  galpy-jax ebbe4faaa4a416ac2ea2b5b9c0650ba1814dea27  host trig0013  Fri 16 Oct 2026 03:07:42 PM EDT
+== nvidia-smi before
+name, driver_version, memory.used [MiB]
+NVIDIA H100 80GB HBM3, 580.178.04, 0 MiB
+pid, process_name, used_gpu_memory [MiB]
+== cpu
+/home/bovy/miniconda3/envs/galpy-h100/lib/python3.13/site-packages/torch/utils/_device.py:122: UserWarning: torch.asarray: unspecified requires_grad now defaults to obj.requires_grad instead of False. Pass requires_grad=False explicitly to get the old behavior and silence this warning. (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_new.cpp:1737.)
+  return func(*args, **kwargs)
+
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694063 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.6117819526947 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694063 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.6117819526947 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694063 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.6117819526947 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694063 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.6117819526947 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694063 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.6117819526947 2 finite: True
+  fit at [3.207844, -0.07819, -0.555253, -0.295675, 0.505288, 2.501083]
+    sin args: shape (499,) min/max 0.0049259015824884254 3.1356811590996676 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.025219548930365043 26.462057399538992 exact zeros 0 nan 0
+    AtA diag min/argmin: 217.7168926607645 2 finite: True
+  fit at [3.207844, -0.07819, -0.555253, -0.295675, 0.505288, 2.501083]
+    sin args: shape (499,) min/max 0.0049259015824884254 3.1356811590996676 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.025219548930365043 26.462057399538992 exact zeros 0 nan 0
+    AtA diag min/argmin: 217.7168926607645 2 finite: True
+  fit at [3.207844, -0.07819, -0.555253, -0.295675, 0.505288, 2.501083]
+    sin args: shape (499,) min/max 0.0049259015824884254 3.1356811590996676 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.025219548930365043 26.462057399538992 exact zeros 0 nan 0
+    AtA diag min/argmin: 217.7168926607645 2 finite: True
+  fit at [3.854058, -0.162423, -0.699013, -2.905365, 0.018287, -1.615198]
+    sin args: shape (499,) min/max 0.003982431140981826 3.1407114547214245 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max -7.535430929741777 29.35994599938678 exact zeros 0 nan 0
+    AtA diag min/argmin: 146.95807527815296 5 finite: True
+  fit at [3.854058, -0.162423, -0.699013, -2.905365, 0.018287, -1.615198]
+    sin args: shape (499,) min/max 0.003982431140981826 3.1407114547214245 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max -7.535430929741777 29.35994599938678 exact zeros 0 nan 0
+    AtA diag min/argmin: 146.95807527815296 5 finite: True
+  fit at [1.157289, 0.04035, -1.314033, 0.679088, 0.171425, 1.940146]
+    sin args: shape (499,) min/max 0.005348721911786305 3.133766139400193 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max -6.024314778631786 28.479382404134185 exact zeros 0 nan 0
+    AtA diag min/argmin: 120.79276126629642 5 finite: True
+  fit at [1.157289, 0.04035, -1.314033, 0.679088, 0.171425, 1.940146]
+    sin args: shape (499,) min/max 0.005348721911786305 3.133766139400193 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max -6.024314778631786 28.479382404134185 exact zeros 0 nan 0
+    AtA diag min/argmin: 120.79276126629642 5 finite: True
+  fit at [1.109952, -0.75619, -0.81502, -0.693038, -0.066841, -1.520038]
+    sin args: shape (499,) min/max 0.0025287772578285895 3.138585844563267 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max -9.009402683371707 54.23455381331883 exact zeros 0 nan 0
+    AtA diag min/argmin: 242.5379905409814 11 finite: True
+  fit at [1.109952, -0.75619, -0.81502, -0.693038, -0.066841, -1.520038]
+    sin args: shape (499,) min/max 0.0025287772578285895 3.138585844563267 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max -9.009402683371707 54.23455381331883 exact zeros 0 nan 0
+    AtA diag min/argmin: 242.5379905409814 11 finite: True
+  constructed
+== cuda
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694062 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.61178195269457 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694062 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.61178195269457 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694062 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.61178195269457 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694062 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.61178195269457 2 finite: True
+  fit at [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]
+    sin args: shape (499,) min/max 0.0007530401599694062 3.131497121011191 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.11426468893292352 26.887538022654095 exact zeros 0 nan 0
+    AtA diag min/argmin: 225.61178195269457 2 finite: True
+  fit at [4.683244, -0.32002, -0.339518, -1.203775, 0.6037, -2.505866]
+    sin args: shape (499,) min/max 0.00419944883947743 3.138559587576682 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.45526404336193593 20.776881738903036 exact zeros 0 nan 0
+    AtA diag min/argmin: 72.6502035066593 7 finite: True
+  fit at [4.683244, -0.32002, -0.339518, -1.203775, 0.6037, -2.505866]
+    sin args: shape (499,) min/max 0.00419944883947743 3.138559587576682 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.45526404336193593 20.776881738903036 exact zeros 0 nan 0
+    AtA diag min/argmin: 72.6502035066593 7 finite: True
+  fit at [4.683244, -0.32002, -0.339518, -1.203775, 0.6037, -2.505866]
+    sin args: shape (499,) min/max 0.00419944883947743 3.138559587576682 exact zeros 0 nan 0
+    sin args: shape (1, 499, 12) min/max 0.45526404336193593 20.776881738903036 exact zeros 0 nan 0
+    AtA diag min/argmin: 72.6502035066593 7 finite: True
+  fit at [3890.895974, -2180.757848, -170.946148, -37476.97366, 6751.35108, -2.748982]
+    sin args: shape (499,) min/max nan nan exact zeros 0 nan 499
+    sin args: shape (1, 499, 12) min/max nan nan exact zeros 0 nan 5988
+    AtA diag min/argmin: nan 2 finite: False
+  FAILED: _LinAlgError linalg.inv: (Batch element 0): The diagonal element 3 is zero, the inversion could not be completed because the input matrix is singular.
+torch 2.14.1+cu130 cuda 13.0 NVIDIA H100 80GB HBM3
+diag exit 0
+== nvidia-smi after
+pid, process_name, used_gpu_memory [MiB]
+Fri 16 Oct 2026 03:08:36 PM EDT

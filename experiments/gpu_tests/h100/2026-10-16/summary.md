@@ -1,6 +1,6 @@
 # H100 backend tests: galpy backend/gap-0i-forced-backend @ 50df80f3b (PR #1718)
 
-**Preliminary: torch runs 1 and 2 only; jax (run 3) still running and will be added here.**
+Torch runs 1-2 and jax run 3 complete; IsochroneApprox diagnostic in `isoapprox_diag.txt` (section at the end).
 
 ## Environment
 
@@ -133,6 +133,17 @@ Counts: {'passed': 17702, 'failed': 86, 'skipped': 127, 'xfailed': 1}
 | `tests/test_backend_streamgapdf.py::test_gapdf_eval_grad_vs_fd[torch-direct-density]` | REAL GPU defect: numpy conversion of a CUDA tensor (tests/test_backend_streamgapdf.py:638) | TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first. |
 | `tests/test_backend_streamgapdf.py::test_gapdf_eval_grad_vs_fd[torch-direct-meanOmega]` | REAL GPU defect: numpy conversion of a CUDA tensor (tests/test_backend_streamgapdf.py:638) | TypeError: can't convert cuda:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first. |
 
+## run 3: jax, all 92 tests/test_backend_*.py (jax.devices() = [CudaDevice(id=0)])
+
+Counts: {'passed': 17787, 'failed': 2, 'skipped': 126, 'xfailed': 1} (2:53:27, job 1108803)
+
+- 2 known: last-digit miss in test_analytic_actions_*; no new jax failures
+
+| test | classification | error (last line) |
+|---|---|---|
+| `tests/test_backend_orbit_accessors.py::test_analytic_actions_backend_orbit_values[jax-staeckel-noc-delta]` | known: last-digit miss in test_analytic_actions_* (max rel 2.83e-12, max abs 1.71e-12 vs rtol 1e-12, atol 1e-13) | DESIRED: array(0.602894) |
+| `tests/test_backend_orbit_accessors.py::test_analytic_actions_unbound_backend_orbits[jax]` | known: last-digit miss in test_analytic_actions_* (max rel 1.78e-12, max abs 4.60e-12 vs rtol 1e-12, atol 1e-13; the nan is the expected unbound value in both) | DESIRED: array([1.707444, nan, 2.58046 ]) |
+
 ## Notes
 
 - run 2b (param_sweep alone, job 1108802) was cancelled after 2 min: run 2a already included param_sweep
@@ -188,3 +199,16 @@ galpy/actionAngle/actionAngleIsochroneApprox.py:1236: in _actionsFreqsAngles_bac
            ^^^^^^^^^^^^^^^^^^^^^
 E   torch._C._LinAlgError: linalg.inv: (Batch element 0): The diagonal element 3 is zero, the inversion could not be completed because the input matrix is singular.
 ```
+
+## IsochroneApprox diagnostic (job 1109839; `isoapprox_diag.txt`, galpy-jax ebbe4faaa, `h100_isoapprox_diag.py cpu cuda`)
+
+The angle fit itself is not what fails: its input point diverges on CUDA first.
+
+| fit # | CPU point / sin args / AtA diag min | CUDA point / sin args / AtA diag min |
+|---|---|---|
+| 1-5 | [3.173789, -0.120258, -0.56816, -0.157027, 0.510774, 2.383541]; sin args (499,) 0.0007530401599694063 .. 3.131497121011191, (1,499,12) 0.11426468893292352 .. 26.887538022654095; AtA diag min 225.6117819526947 (argmin 2) | same point; sin args identical to the last digit (min 0.0007530401599694062); AtA diag min 225.61178195269457 (argmin 2) |
+| 6-8 | [3.207844, -0.07819, -0.555253, -0.295675, 0.505288, 2.501083]; sin args 0.0049259015824884254 .. 3.1356811590996676, 0.025219548930365043 .. 26.462057399538992; AtA 217.7168926607645 (2) | **different point** [4.683244, -0.32002, -0.339518, -1.203775, 0.6037, -2.505866]; sin args 0.00419944883947743 .. 3.138559587576682, 0.45526404336193593 .. 20.776881738903036; AtA 72.6502035066593 (7); fit fine |
+| 9 (first failure on CUDA) | [3.854058, -0.162423, -0.699013, -2.905365, 0.018287, -1.615198]; sin args (499,) 0.003982431140981826 .. 3.1407114547214245, exact zeros 0, nan 0; (1,499,12) -7.535430929741777 .. 29.35994599938678, nan 0; AtA diag min 146.95807527815296 (argmin 5), finite | [3890.895974, -2180.757848, -170.946148, -37476.97366, 6751.35108, -2.748982]; sin args (499,) nan .. nan, nan 499; (1,499,12) nan .. nan, nan 5988; AtA diag min nan (argmin 2), finite False -> `linalg.inv: diagonal element 3 is zero` |
+
+CPU completes all 14 fits ("constructed"). On CUDA the stream-track point passed to the 6th fit already differs from the CPU's,
+and by the 9th it is far off and every orbit angle is NaN; the "singular" A^T A is NaN, not an all-zero column.
