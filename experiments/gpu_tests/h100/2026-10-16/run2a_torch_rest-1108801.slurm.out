@@ -1,0 +1,40 @@
+
+scontrol show job 1108801
+JobId=1108801 JobName=gaptest
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1325648 Nice=0 Account=def-bovy QOS=normal
+   JobState=COMPLETED Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=03:02:26 TimeLimit=10:00:00 TimeMin=N/A
+   SubmitTime=2026-10-16T08:52:21 EligibleTime=2026-10-16T09:08:57
+   AccrueTime=Unknown
+   StartTime=2026-10-16T09:08:57 EndTime=2026-10-16T12:11:23 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-16T09:08:57 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:1686059
+   ReqNodeList=(null) ExcNodeList=trig0021
+   NodeList=trig0013
+   BatchHost=trig0013
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/gaptest.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --dependency=afterany:1108800 --time=10:00:00 --export=ALL,RUN=run2a_torch_rest,BK=torch,SPEC=/scratch/bovy/galpy-h100/jobs/gapspec/rest --output=/scratch/bovy/galpy-h100/slurm/%x-run2a_torch_rest-%j.out gaptest.sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --dependency=afterany:1108800 --time=10:00:00 --export=ALL,RUN=run2a_torch_rest,BK=torch,SPEC=/scratch/bovy/galpy-h100/jobs/gapspec/rest --output=/scratch/bovy/galpy-h100/slurm/%x-run2a_torch_rest-%j.out gaptest.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=def-bovy --exclude=trig0021 --dependency=afterany:1108800 --time=10:00:00 --export=ALL,RUN=run2a_torch_rest,BK=torch,SPEC=/scratch/bovy/galpy-h100/jobs/gapspec/rest --output=/scratch/bovy/galpy-h100/slurm/%x-run2a_torch_rest-%j.out gaptest.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/gaptest-run2a_torch_rest-1108801.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1108801
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1108801         gaptest   def-bovy   03:02:26                        58:04.104   07:31:32      0:0 
+1108801.bat+      batch   def-bovy   03:02:26          0  29403208K  58:04.104   07:31:32      0:0 
+1108801.ext+     extern   def-bovy   03:02:26                         00:00:00   00:00:00      0:0 
+
