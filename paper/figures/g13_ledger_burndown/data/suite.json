@@ -8845,12 +8845,12 @@
   }
  },
  {
-  "sha": "c17c6daffb",
-  "date": "2026-10-14",
-  "subject": "Rebase onto main (2026-10-14): keep main's AdiabaticContraction amp fix and HISTORY entries",
-  "source": "tip",
+  "sha": "8d4e9ff2d1",
+  "date": "2026-10-16",
+  "subject": "Forcing runs on the backend; the greedy value gaps closed (sweep gaps, layer 8) (#1718)",
+  "source": "pull/1718/head",
   "existing": 4315,
-  "backend_modules": 11097,
+  "backend_modules": 17995,
   "collect_errors": 1,
   "ledgered": {
    "jax": 0,

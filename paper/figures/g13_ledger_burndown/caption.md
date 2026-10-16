@@ -23,5 +23,5 @@ not the eager slow-skips, `--jit` keeping its own measured slow-skip list. Hence
 jax `--jit` runs ~170 orbit tests in August that eager jax still slow-skipped.
 At the end the expected-failure and slow-test ledgers are empty, and 4311 of the
 4315 tests pass in every mode; the other four test the out-of-scope torus mapper
-and are permanently skipped. Bottom: tests in the dedicated backend modules (11097
-in 92 files at the end), which check gradients, parity with numpy and traceability directly.
+and are permanently skipped. Bottom: tests in the dedicated backend modules (17995
+in 93 files at the end), which check gradients, parity with numpy and traceability directly.

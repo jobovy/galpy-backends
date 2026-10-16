@@ -27,7 +27,7 @@ Counting the -jit rows alone (the first version of this figure) put the --jit
 line on the suite line, an upper bound by up to ~400 tests. The suite grows from 2466
 (the pre-migration anchor) to 4315 tests: new tests that passed straight away
 never entered the ledger, which a ledger count alone cannot show. The bottom
-panel is the separate, dedicated backend-test modules (11097 tests in 92 files
+panel is the separate, dedicated backend-test modules (17995 tests in 93 files
 at the end). The last point is feat/backends' tip at the time of writing
 (collected with --tip), after the last ledger change (#1659, ledgers empty). Six rewritten-history commits without a PR head collected nothing
 and are dropped.
