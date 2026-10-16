@@ -31,7 +31,8 @@ EXCLUDED = {
     "unrelated features and maintenance": [
         889, 924, 971, 976, 980, 994, 1031, 1058, 1061, 1062, 1107, 1108, 1345,
         1349, 1501, 1588],
-    "the inverse action-angle project": [
+    "another galpy project (not yet landed)": [
+        1468, 1527, 1553, 1560, 1561, 1010, 1519,
         1309, 1313, 1314, 1317, 1318, 1320, 1325, 1335, 1339, 1340, 1342, 1347,
         1350, 1351, 1353, 1361, 1362, 1373, 1376, 1378, 1379, 1384, 1385, 1387,
         1389, 1395, 1396, 1405, 1412, 1413, 1414, 1415, 1419, 1420, 1421, 1423,
@@ -80,5 +81,5 @@ pm = collections.defaultdict(collections.Counter)
 for p in proj:
     pm[p["createdAt"][:7]][kind(p)] += 1
 print("per month:", {m: dict(c) for m, c in sorted(pm.items())})
-inv = collections.Counter(p["createdAt"][:7] for p in prs if excluded.get(p["number"]) == "the inverse action-angle project")
-print("inverse action-angle PRs per month:", dict(sorted(inv.items())))
+inv = collections.Counter(p["createdAt"][:7] for p in prs if excluded.get(p["number"]) == "another galpy project (not yet landed)")
+print("other-project PRs per month:", dict(sorted(inv.items())))

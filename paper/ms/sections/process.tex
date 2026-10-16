@@ -29,17 +29,17 @@ pull requests (PRs) against a long-lived branch of the \galpy\ repository, which
 rebased onto the main branch without merge commits, and which will be
 merged into the main branch as a whole when this paper is accepted.
 
-Between 2026 June 1 and October 16, 680 PRs were opened for this work,
-of which 652 were merged: 592 on this branch and its sub-branches, 29 for
-the three-dimensional variational equations, and 59 against \galpy's main
+Between 2026 June 1 and October 16, 673 PRs were opened for this work,
+of which 645 were merged: 592 on this branch and its sub-branches, 29 for
+the three-dimensional variational equations, and 52 against \galpy's main
 branch, most of them fixes to the existing \numpy\ and \cc\ code found
 through the backend work (see \sectionname~\ref{sec:process-fixes}). The
-merged PRs have a median size of 184 changed lines (quartiles 75 and 371
+merged PRs have a median size of 183 changed lines (quartiles 74 and 370
 lines).
 We kept the size small on purpose, because a PR is reviewable when it
 does one thing, and a backend migration of one module, with its tests,
 is one thing. We split larger pieces of work into stacks of dependent
-PRs that are reviewed in order (96 of the PRs are members of such stacks);
+PRs that are reviewed in order (94 of the PRs are members of such stacks);
 for example, we split the migration of the spherical DFs by DF family
 into a base PR and four PRs that each port one family, and the port of
 the one-dimensional inverse action--angle code into three. Each PR
@@ -57,10 +57,9 @@ September (115), the work turned to the compiled modes, the ledger, and
 the harder DFs, with PRs that were fewer and larger, because the
 remaining problems were coupled; the first half of October, the last of the
 work, added 99.
-Over the same months, \galpy's main branch received a separate stream
-of 52 PRs in August and September for an unrelated project on inverse
-action--angle transformations, which shared the continuous integration
-and matters for the costs below.
+Over the same months, the repository received a separate stream of 58
+PRs in August and September for another \galpy\ project, which shared
+the continuous integration and matters for the costs below.
 
 In round numbers, the work cost the following. The agent ran on a
 fixed-price subscription to Anthropic's Claude: until 2026 June 25 the
@@ -74,7 +73,7 @@ each; the GitHub Actions bill for the repository at list price was
 \$13,100 in June, \$16,500 in July, \$15,800 in August,
 \$10,200 in September, and \$5,100 in the first half of October 2026. June,
 July, and October were almost entirely this project; in August and
-September the backend PRs were about four fifths of the PRs and, since a PR to
+September the backend PRs were about three quarters of the PRs and, since a PR to
 the main branch runs only the \numpy\ suite, a larger fraction of the
 compute, such that about \$55,000 of the total is attributable to the
 backends. GitHub's Education program covered
@@ -240,7 +239,7 @@ ledger by about 700 tests.
 
 Running the same calculations through a second implementation, and
 differentiating them, is an effective way to find bugs in the first, and
-the backend work led to about 50 PRs that fixed \galpy's \numpy\ and
+the backend work led to about 40 PRs that fixed \galpy's \numpy\ and
 \cc\ code and were merged into the main branch. The three-dimensional
 variational equations, which require correct second derivatives of the
 potential, found some of these: four potentials had incorrect
