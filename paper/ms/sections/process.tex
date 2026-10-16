@@ -29,16 +29,16 @@ pull requests (PRs) against a long-lived branch of the \galpy\ repository, which
 rebased onto the main branch without merge commits, and which will be
 merged into the main branch as a whole when this paper is accepted.
 
-Between 2026 June 4 and October 6, 589 PRs were opened on this branch
-and its sub-branches, of which 546 were merged; a further 121 PRs were
+Between 2026 June 4 and October 16, 589 PRs were opened on this branch
+and its sub-branches, of which 566 were merged; a further 120 PRs were
 opened against \galpy's main branch over the same period, most of them
 fixes to the existing \numpy\ and \cc\ code found through the backend
 work (see \sectionname~\ref{sec:process-fixes}). The merged backend PRs
-have a median size of 185 changed lines (quartiles 74 and 371 lines).
+have a median size of 179 changed lines (quartiles 73 and 362 lines).
 We kept the size small on purpose, because a PR is reviewable when it
 does one thing, and a backend migration of one module, with its tests,
 is one thing. We split larger pieces of work into stacks of dependent
-PRs that are reviewed in order (119 of the PRs are members of such stacks);
+PRs that are reviewed in order (233 of the PRs are members of such stacks);
 for example, we split the migration of the spherical DFs by DF family
 into a base PR and four PRs that each port one family, and the port of
 the one-dimensional inverse action--angle code into three. Each PR
@@ -52,9 +52,10 @@ and 29 PRs for the three-dimensional variational equations were opened
 as the agent migrated the potentials family by family, in parallel, from
 a fixed template. July was the peak, with 175 backend PRs: the agent ported the orbit,
 action--angle, and DF modules, the autonomous stretch started, and the PRs were small, one problem each. In August (114) and
-September (110), the work turned to the compiled modes, the ledger, and
+September (114), the work turned to the compiled modes, the ledger, and
 the harder DFs, with PRs that were fewer and larger, because the
-remaining problems were coupled; the last month of the work, October, added 32.
+remaining problems were coupled; the first half of October, the last of the
+work, added 99.
 Over the same months, \galpy's main branch received a separate stream
 of about 50 PRs per month in August and September for an unrelated
 project on inverse action--angle transformations, which shared the
@@ -69,12 +70,13 @@ Claude Fable was used only to draft this paper. The far larger cost was
 the continuous integration, because every backend PR runs \galpy's test
 suite in five modes over 22 shards, about 150 jobs of 20 to 90 minutes
 each; the GitHub Actions bill for the repository at list price was
-\$13,100 in June, \$16,500 in July, \$15,800 in August, and
-\$10,200 in September 2026. June and July were almost entirely this
-project; in August and September the backend PRs were three quarters of
-the PRs and, since a PR to the main branch runs only the \numpy\ suite,
-a larger fraction of the compute, such that about \$50,000 of the total
-is attributable to the backends. GitHub's Education program covered
+\$13,100 in June, \$16,500 in July, \$15,800 in August,
+\$10,200 in September, and \$5,100 in the first half of October 2026. June,
+July, and October were almost entirely this project; in August and
+September the backend PRs were three quarters of the PRs and, since a PR to
+the main branch runs only the \numpy\ suite, a larger fraction of the
+compute, such that about \$55,000 of the total is attributable to the
+backends. GitHub's Education program covered
 this cost, which would otherwise have been prohibitive; the continuous
 integration was also the bottleneck of the project, because a PR could not be merged
 before its matrix had run, the shards queued behind each other when
