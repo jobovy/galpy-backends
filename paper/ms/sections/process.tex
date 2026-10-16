@@ -30,11 +30,11 @@ rebased onto the main branch without merge commits, and which will be
 merged into the main branch as a whole when this paper is accepted.
 
 Between 2026 June 1 and October 16, 673 PRs were opened for this work,
-of which 645 were merged: 592 on this branch and its sub-branches, 29 for
-the three-dimensional variational equations, and 52 against \galpy's main
+of which 646 were merged: 568 on this branch and its sub-branches, 29 for
+the three-dimensional variational equations, and 49 against \galpy's main
 branch, most of them fixes to the existing \numpy\ and \cc\ code found
 through the backend work (see \sectionname~\ref{sec:process-fixes}). The
-merged PRs have a median size of 183 changed lines (quartiles 74 and 370
+merged PRs have a median size of 184 changed lines (quartiles 75 and 371
 lines).
 We kept the size small on purpose, because a PR is reviewable when it
 does one thing, and a backend migration of one module, with its tests,
@@ -99,7 +99,7 @@ such as a gradient matching a finite difference that is shown to
 converge, and never merely that a result is finite. A test that
 passes under a backend only because the code silently fell back to
 \numpy\ does not count, and the agent hunted down such \emph{numpy
-islands} specifically (\sectionname~\ref{sec:process-ledger}). Before
+islands} specifically (\sectionname~\ref{sec:process-islands}). Before
 pushing any PR, the agent ran its tests locally under forced \jax\ and
 \torch\ backends, which the \numpy-only checks cannot do, and measured
 the \numpy\ byte-identity by comparing checksums of outputs between two
@@ -234,6 +234,70 @@ A ledger entry that covers a whole file hides how many tests it
 contains, and the figure therefore counts the tests that each entry
 matches at the time; early entries of this kind understated the \jax\
 ledger by about 700 tests.
+
+\subsection{How much of the suite runs on the backend}\label{sec:process-islands}
+
+A test that passes under a forced backend shows that the code returned
+the right answer, not that the backend computed it: a code path that
+converts its input to \numpy, computes with \numpy\ or \scipy, and
+converts the result back passes every check of a value. In the first
+months, such \emph{numpy islands} were common, because the natural way
+to add a backend path to a function, a branch on whether its input is a
+backend array, takes the \numpy\ branch for the \numpy\ inputs of the
+existing tests even under a forced backend; a first backend version of
+the action--angle code passed its tests under \jax\ in this way and was
+rejected in review. Three mechanisms make the forced mode meaningful.
+Functions branch on the resolved namespace rather than on the type of
+their input, and the public entry points coerce their inputs to the
+forced backend (\sectionname~\ref{sec:design-choosing}). Objects that
+are constructed under a forced backend hold their parameters as backend
+arrays, such that their methods compute on the backend also when they
+are called from code that still uses \numpy. And on a GPU, an implicit
+conversion of a device array to \numpy\ raises an error rather than
+copying silently, such that running the suite on a GPU turns every
+remaining implicit conversion into a test failure
+(\sectionname~\ref{sec:design-gpu}).
+
+To measure what remains, we instrumented a run of the existing suite
+under forced \torch\ to record every place where \galpy\ hands backend
+data to \numpy: implicit conversions by \numpy\ and \scipy,
+explicit copies to the host, and regions in which \galpy\ deliberately
+computes with \numpy.\footnote{We use \torch\ for this measurement,
+  because \numpy\ reads a \jax\ array on the CPU through the buffer
+  protocol, which bypasses the conversion method that the instrument
+  intercepts.} Of the 4,181 tests that ran, 1,850
+($44\,\%$) never hand backend data to \numpy. Most of the others do so by
+design. They call \galpy's \cc\ extensions, for orbit integration and
+the St\"{a}ckel actions, whose derivatives come from the
+state-transition matrix and from custom derivative rules
+(\sectionname~\ref{sec:orbit-paths}); they read a value on the host to
+make a decision, such as a tolerance, a root bracket, the number of
+integration steps, or a cache key; they convert their output to \astropy\
+quantities or plot it; or they call a \numpy\ function that the test
+itself supplies, such as the density of an expansion. Counting these,
+$73\,\%$ of the tests stay on the backend except for work that has to
+happen on the host. Further tests build a constant table
+at construction, such as the spline of the guiding radius or the
+coefficients of an expansion, from parameters that are not
+differentiated, while a differentiated parameter takes a backend path,
+as the sweep of \sectionname~\ref{sec:process-fixes} verifies; they
+sample with \numpy's global random-number generator, which the tests
+seed, while a backend random key runs the backend sampler; they
+integrate with the \python\ integrators of the \numpy\ code, which warn
+that the result is not differentiable; or they use one of two classes
+that keep \numpy\ for \numpy\ inputs under a forced backend: the
+razor-thin disk of arbitrary surface density, whose adaptive \scipy\
+quadrature some tests need for their accuracy, and the DF of an evolving
+disk, whose grids of orbits, evaluated eagerly on the backend, made one
+shard of the forced run nine times slower. That leaves 220 tests ($5.3\,\%$) that pass through a genuine
+island, \numpy\ computation that could run on the backend: the
+transformation of an integrated orbit in the isochrone approximation (55
+tests), the \numpy\ track tables of \texttt{streamdf} (53), the profiles
+of the disk DFs (39), \scipy\ root finding for orbit quantities such as
+the guiding radius and for the Lindblad resonances (49), and smaller
+sites in about 25 other functions, among them the
+\texttt{MovingObjectPotential} (4 tests). These remain to be moved to the
+backend.
 
 \subsection{Fixes to \lowercase{\galpy}}\label{sec:process-fixes}
 

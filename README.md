@@ -42,8 +42,17 @@ Since 2026-10-07:
 - **Paper**: g8/g12 from the H100 v3c CUDA re-measure; g13 re-collected; PR
   statistics from `paper/ms/stats/pr_stats.py`.
 
-Open: #1721 (a test-conditioning fix), the island audit of the existing suite
-(how much runs on the backend), the v2 pre-release.
+- **Island audit** (`plan/ISLAND_AUDIT.md`): under forced torch, 44 % of the
+  existing tests never hand backend data to numpy; 94.7 % touch no genuine island
+  (the rest: C extensions, host control, output, constant tables, numpy-RNG
+  sampling, Python integrators, two documented exceptions); 220 tests (5.3 %)
+  pass through ~45 island functions (IsochroneApprox orbit input, streamdf
+  tables, diskdf profiles, scipy roots, ...). Consistency check of the result
+  figures on e2a30992f: all reproduce; gD4 (King jit now = eager to 2e-10) and
+  gS1 (1e-4 shifts) re-rendered.
+
+Open: #1721 (a test-conditioning fix), fixing the islands (Jo to decide), the v2
+pre-release.
 
 <details>
 <summary>Previous status (2026-10-07)</summary>

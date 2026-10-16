@@ -7,7 +7,7 @@ $(M,r_t)$, obtained by differentiating through the King ODE solve, eagerly (scip
 DOP853 + forward sensitivities; solid) and under `jax.jit`, where the ODE is solved
 in-graph with diffrax (dashed), against a central finite difference that rebuilds
 the DF on the plain numpy path (circles). (c) The AD–FD difference vs step $h$
-reaches $5\times10^{-8}$–$2\times10^{-7}$. Bottom: an Osipkov–Merritt DF ($r_a=1.5$)
+reaches $5\times10^{-8}$–$10^{-7}$ (eager and jit alike). Bottom: an Osipkov–Merritt DF ($r_a=1.5$)
 of a Hernquist sphere is constructed *and* sampled ($4\times10^6$ particles)
 inside one jitted function of the scale radius $a$, with a fixed PRNG key so
 that every particle is a deterministic function of $a$ (common random numbers).

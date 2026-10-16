@@ -111,11 +111,12 @@ def Jf_np(q, idx):
 
 
 def J_jax(q, idx):
-    return make_aA(q)(*[jnp.asarray(v) for v in ORBIT.values()])[idx]
+    # one phase-space point gives shape (1,) outputs, as on numpy
+    return make_aA(q)(*[jnp.asarray(v) for v in ORBIT.values()])[idx][0]
 
 
 def Jf_jax(q, idx):
-    return make_aA(q).actionsFreqs(*[jnp.asarray(v) for v in ORBIT.values()])[idx]
+    return make_aA(q).actionsFreqs(*[jnp.asarray(v) for v in ORBIT.values()])[idx][0]
 
 
 def fd_np(fn, q, h):

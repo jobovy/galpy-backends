@@ -386,7 +386,7 @@
     "description": "derivatives through spherical-DF construction and sampling: King d/dW0 through the ODE solve (eager graft & jit/diffrax) and Osipkov-Merritt d(sample)/d(scale) with common random numbers vs FD and Jeans (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "e2a30992f",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -394,8 +394,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "5ee8d2a",
-    "sha256": "fd0be5532e6c316b299aafc05e8f9b7eb103c2adafe76279403c7ed13abced63",
+    "git": "ffd6827",
+    "sha256": "a7bf7ebc584fab1517cb3b8f0be02b7e83aaf79e3ac2844beea3deb7f3695b49",
     "track": "F"
   },
   "gF1_autodiff_forces": {
@@ -418,7 +418,7 @@
     "description": "differentiable stream track: d(track)/d(halo q) by AD (jax.jvp) with an on-figure finite-difference cross-check [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "e2a30992f",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -426,8 +426,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
-    "sha256": "74fb92426ecf8c1c16941f2aeb8b610f0256106c9d743c13a6490633f747acf4",
+    "git": "ffd6827",
+    "sha256": "03529bfdaf161cae1fe6f27d6d5e36756112f3785427967b57a702b3fe3edbd4",
     "track": "G"
   },
   "gS2_streamspray_sensitivity": {

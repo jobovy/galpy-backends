@@ -309,7 +309,9 @@ context manager of \sectionname~\ref{sec:design-choosing} and, for the
 compiled modes, in the global trace mode; it is selected by the
 \texttt{--backend} and \texttt{--jit} options of the test runner, and a
 \texttt{--device cuda} option additionally places every tensor on the
-GPU. Tests that fail under a mode are not removed, but listed in a
+GPU; \sectionname~\ref{sec:process-islands} describes what makes a pass
+in these modes meaningful and measures how much of the suite computes on
+the backend. Tests that fail under a mode are not removed, but listed in a
 ledger that marks them as expected failures, as described in
 \sectionname~\ref{sec:process-ledger}. Because a compiled-mode run can
 pass while every call falls back to eager execution, the test runner
