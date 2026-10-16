@@ -284,7 +284,7 @@ orbits to a few parts in $10^{10}$ (\figurename~\ref{fig:icjacobian}).
 That no derivative was missed is checked by a sweep: for every public
 potential, action--angle, and distribution-function class and the
 stream-impulse functions, it differentiates each numeric parameter and
-one input coordinate, 789 derivatives in 206 configurations, under
+one input coordinate, 783 derivatives in 206 configurations, under
 compiled \jax\ and eager \torch, with the inputs given as backend
 arrays, as \python\ floats, and under a forced backend, and compares
 them with converged finite differences of the \numpy\ code. When we
@@ -294,10 +294,16 @@ silently wrong, zero, or disconnected from the parameter; for example,
 \torch\ orbit integration with \galpy's \cc\ integrators dropped the
 derivatives with respect to the potential's parameters, which made those
 of a stream model wrong by up to a factor of 45. We fixed all of them,
-and the sweep, 2,712 cases, now runs in the continuous integration. The
+and the sweep, 2,706 cases, now runs in the continuous integration. The
 one remaining exception is by design: under compilation, the anisotropy
 of a constant-anisotropy distribution function cannot be traced, because
-it selects the order of a derivative in the inversion.
+it selects the order of a derivative in the inversion. A second sweep
+gives each parameter and input coordinate in turn as a concrete backend
+array that is not differentiated, and checks that every output comes
+back on that backend with the \numpy\ values (4,147 cases); when we
+first ran it, about 1,200 cases returned \numpy\ arrays, raised an
+error, or returned an array of the wrong shape, and all of them now
+pass.
 Where the backend code implements a numerical method of its own---a
 special function, a quadrature, a root finder---we checked it against
 \scipy\ and against \texttt{mpmath} at 30 to 50 digits and validated the
