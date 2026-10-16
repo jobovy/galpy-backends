@@ -244,7 +244,7 @@ experiment and not part of \galpy. After restructuring the kernel, such
 that the force is evaluated by a single out-of-line function and
 threads pick up a new orbit when theirs is done, \texttt{dop853} at
 $\mathrm{rtol}=\mathrm{atol}=10^{-8}$ integrates $10^6$ orbits for
-2\,Gyr in 2.3\,$\mu$s per orbit on the H100 with \galpy's own
+2\,Gyr in 2.4\,$\mu$s per orbit on the H100 with \galpy's own
 arithmetic and in 0.9\,$\mu$s with GPU-tuned special functions. That
 is 7 to 18 times faster than \galpy's compiled \jax\ integrator on the
 same GPU and tens of times faster than the \cc\ integrator on all 72
@@ -258,7 +258,7 @@ one common step for the whole batch reaches the same accuracy (the
 worst-case position error over 300 orbits after 2\,Gyr) with 15\% fewer
 force evaluations and a fraction of the state, and runs in
 0.78\,$\mu$s (\galpy's arithmetic) and 0.25\,$\mu$s (fast special
-functions) per orbit, 3.0 to 3.6 times faster than \texttt{dop853}.
+functions) per orbit, 3.0 to 3.7 times faster than \texttt{dop853}.
 These numbers hold for a smooth, cheap potential and near-solar disc
 orbits with similar dynamical times, for which one step suits every
 orbit. A batch that mixes very different timescales, or has close
@@ -338,6 +338,6 @@ keeps the per-orbit control.
     without divisions (thin long-dashed), including the copies between host
     and device. On the H100, \galpy's sixth-order symplectic integrator
     with one common step (not shown) reaches the same worst-case accuracy
-    3.0 to 3.6 times faster, because these disc orbits share a dynamical
+    3.0 to 3.7 times faster, because these disc orbits share a dynamical
     timescale (\sectionname~\ref{sec:orbit-speed}).}\label{fig:orbitspeed}
 \end{figure*}

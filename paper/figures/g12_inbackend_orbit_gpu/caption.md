@@ -82,19 +82,19 @@ than it (0.079 ms/orbit at N = 10⁶) and 150–280× cheaper than one-core C.
   1e-8 truncation error: over 300 orbits, the maximum relative position difference
   after 2 Gyr is 1.6e-6 (galpy arithmetic) and 5.3e-6 (fast). galpy at 1e-8 differs
   from galpy at 1e-13 by up to 1.4e-5.
-  On the H100 at N=10⁶ the kernel costs **2.36 µs/orbit** (galpy arithmetic) and
-  **1.04 µs/orbit** (fast). That is 7× / 16× less than galpy's jax Dopri8 on the same
-  GPU, 4× / 9× less than torch dopri5, 34× / 76× less than the 72-thread C node, and
-  ~1 000× / ~2 250× less than one core. On the TITAN Xp it costs 49 / 15.6 µs/orbit.
+  On the H100 at N=10⁶ the kernel costs **2.37 µs/orbit** (galpy arithmetic) and
+  **0.93 µs/orbit** (fast). That is 7× / 18× less than galpy's jax Dopri8 on the same
+  GPU, 4× / 11× less than torch dopri5, 27× / 69× less than the 72-thread C node, and
+  ~1 000× / ~2 550× less than one core. On the TITAN Xp it costs 49 / 15.6 µs/orbit.
   Measured down to N = 1: one orbit takes 45 ms on the H100 and 0.18 s on the TITAN with
   galpy arithmetic (fast: 20 and 65 ms). The wall time stays near 0.1 s (H100) or 0.4 s
   (TITAN) up to N ≈ 10⁴, because a launch lasts as long as its slowest orbit. The H100
   kernel therefore overtakes one-core C at N ≈ 50 and matches the 72-thread node at
-  N ≈ 10³ (0.11 vs 0.12 s). The N < 10³ points come from separate low-N scans (H100: N = 1–3×10⁵; TITAN:
-  N = 1–3×10⁴), run without the cost-sorted schedule. Where N
-  overlaps, the high-N scans are plotted. For the fast line the two schedules differ by up
-  to ~20% in the overlap: the sort costs a host argsort at small N and pays off at large N.
-  The lines show the register kernel (measured from N = 1 to 10⁷). Keeping ten of dop853's stage vectors in shared memory (168 registers, 19% occupancy) is 1.3× faster on the H100 at N = 10⁶ (1.81 / 0.69 µs/orbit), measured at 10⁵–10⁶ only. galpy's sixth-order symplectic integrator with one common step for the whole batch reaches the same worst-case accuracy over the 300 reference orbits with 15% fewer force evaluations and runs at 0.78 / 0.25 µs/orbit (galpy / fast arithmetic, H100, N = 10⁶): 3.0–3.6× the dop853 kernel. That holds because these near-solar disc orbits in a smooth potential share a dynamical timescale; a batch mixing very different timescales would have to step at its fastest orbit's rate.
+  N ≈ 2×10³ (at 10³: 0.11 vs 0.07 s). The N < 10³ points come from separate low-N scans (H100: N = 1–3×10⁵; TITAN:
+  N = 1–3×10⁴). Where N overlaps, the high-N scans are plotted. All H100 scans (v3c,
+  2026-10-15) and all but the TITAN's fast high-N scan run without the cost-sorted schedule;
+  on the H100 the sort is slower at large N (fast: 1.04 / 1.10 µs/orbit at 10⁶ / 10⁷).
+  The lines show the register kernel (measured from N = 1 to 10⁷). Keeping ten of dop853's stage vectors in shared memory (168 registers, 19% occupancy) is 1.3× faster on the H100 at N = 10⁶ (1.81 / 0.69 µs/orbit), measured at 10⁵–10⁶ only. galpy's sixth-order symplectic integrator with one common step for the whole batch reaches the same worst-case accuracy over the 300 reference orbits with 15% fewer force evaluations and runs at 0.78 / 0.25 µs/orbit (galpy / fast arithmetic, H100, N = 10⁶): 3.0–3.7× the dop853 kernel. That holds because these near-solar disc orbits in a smooth potential share a dynamical timescale; a batch mixing very different timescales would have to step at its fastest orbit's rate.
   These kernels are not differentiable.
 
 **Same-work / work counts** (`measure/work_counts.py` → `data/work_counts.json`), for
