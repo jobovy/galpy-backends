@@ -44,7 +44,23 @@ R= jnp.linspace(0.5,2.,1001)
 FR= evaluateRforces(MWPotential2014,R,0.) # jax array
 \end{code}
 without any further instruction, and with a \torch\ tensor the same
-call returns a tensor. When there is no array to dispatch on, as when
+call returns a tensor. The data include an object's parameters: a
+potential, distribution function, or action-angle object that is set up
+with a backend array as one of its parameters computes with that backend
+in every call, also at \python\ floats,
+\begin{code}
+pot= NFWPotential(a=jnp.array(2.))
+pot(1.1,0.2) # jax array
+\end{code}
+and an \orb\ integrated in such a potential returns backend arrays as
+well. Any backend input therefore turns the backend on, because a user
+who passes one wants the backend's arrays back, whether to
+differentiate, to compile, or to run on an accelerator. A parameter that
+is not differentiated keeps the fast paths that a differentiated one
+cannot take: an orbit in a potential with a concrete backend parameter
+is still integrated by the \cc\ integrators, with the \cc-computed
+sensitivities that make its result differentiable with respect to the
+initial conditions. When there is no array to dispatch on, as when
 a potential is evaluated at \python\ floats, the default
 backend is used; it is \numpy\ unless a different one is set in the
 configuration file or through a context manager,
@@ -63,12 +79,15 @@ o.integrate(ts,MWPotential2014,method='torchode')
 o.R(ts) # a CUDA tensor
 \end{code}
 The resolution order is therefore: an explicit \texttt{xp=} argument,
-the array arguments, the context or configured default, and finally
+the array arguments and the objects' parameters, the context or
+configured default, and finally
 \numpy. The context manager also accepts \texttt{force=True}, which makes
-the default take precedence over the data; the test suite uses this
-option to run \galpy's existing tests, which are written with \numpy\
-inputs, under a different backend, and it is not meant for production
-code.
+the default take precedence over the data. Under a forced backend,
+\galpy\ runs as much as possible on that backend, including the
+internals that otherwise use \numpy\ and \scipy\ for \numpy\ inputs;
+the test suite uses this option to run \galpy's existing tests, which
+are written with \numpy\ inputs, on the backend code, and it is not
+meant for production code.
 
 While a call with backend arrays returns backend arrays, a few
 conventions are needed at the edges of the backend layer. \galpy\
