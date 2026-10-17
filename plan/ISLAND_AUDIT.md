@@ -76,7 +76,19 @@ The backend code paths are shared, so the torch run is the measurement.
 ## Status
 
 Measured and reported in the paper (process.tex, `sec:process-islands`, 2026-10-16).
-Fixing the islands is a follow-up for Jo to decide. Rough sizes: trivial (SpiralArms
+
+**Fixes (2026-10-17).** #1722 (diskdf LOS, StreamTrack.__call__) and #1723 (root
+finders `rl`/`rE`/`zvc`/`zvc_range`/`rhalf`/`lindbladR`/`rvir`, LinShu, lnLambda,
+SpiralArms, Irrgang13, qdf `estimate_*`) merged; forced plain scalars solve on the
+backend too (Jo: forcing means backend use), via `brentq(..., elementwise=True)`'s
+512-section concrete root. Re-audit (forced torch) after #1723: 220 -> 176 island
+tests (the audit map now classes the backend root's bracket-width read and
+lindbladR's sign test as CTL). Remaining in that area: qdf `_rg`'s numpy branch
+returning `rl` to numpy callers (3 tests), and qdf's older untraced-jax host solve
+of out-of-table points. Open: #1724 (from_fit), #1725 (Orbit methods,
+IsochroneApprox); streamdf/streamgapdf branch next.
+
+The original sizing: Rough sizes: trivial (SpiralArms
 `_K`, Irrgang13, Chandrasekhar `lnLambda`, `Orbit.Jacobi`), small (interpRZ out-of-grid,
 qdf `estimate_*`, `align_to_orbit`, MultipoleExpansion at-point helpers, `LinShu`),
 medium (scipy roots -> backend brentq under forcing; IsochroneApprox orbit input;
