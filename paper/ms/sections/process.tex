@@ -29,17 +29,17 @@ pull requests (PRs) against a long-lived branch of the \galpy\ repository, which
 rebased onto the main branch without merge commits, and which will be
 merged into the main branch as a whole when this paper is accepted.
 
-Between 2026 June 1 and October 16, 673 PRs were opened for this work,
-of which 647 were merged: 569 on this branch and its sub-branches, 29 for
+Between 2026 June 1 and October 18, 678 PRs were opened for this work,
+of which 652 were merged: 574 on this branch and its sub-branches, 29 for
 the three-dimensional variational equations, and 49 against \galpy's main
 branch, most of them fixes to the existing \numpy\ and \cc\ code found
 through the backend work (see \sectionname~\ref{sec:process-fixes}). The
-merged PRs have a median size of 183 changed lines (quartiles 74 and 370
+merged PRs have a median size of 184 changed lines (quartiles 76 and 377
 lines).
 We kept the size small on purpose, because a PR is reviewable when it
 does one thing, and a backend migration of one module, with its tests,
 is one thing. We split larger pieces of work into stacks of dependent
-PRs that are reviewed in order (94 of the PRs are members of such stacks);
+PRs that are reviewed in order (96 of the PRs are members of such stacks);
 for example, we split the migration of the spherical DFs by DF family
 into a base PR and four PRs that each port one family, and the port of
 the one-dimensional inverse action--angle code into three. Each PR
@@ -55,8 +55,8 @@ a fixed template. July was the peak, with 176 backend PRs: the agent ported the 
 action--angle, and DF modules, the autonomous stretch started, and the PRs were small, one problem each. In August (114) and
 September (115), the work turned to the compiled modes, the ledger, and
 the harder DFs, with PRs that were fewer and larger, because the
-remaining problems were coupled; the first half of October, the last of the
-work, added 99.
+remaining problems were coupled; October, the last of the
+work, added 104.
 Over the same months, the repository received a separate stream of 58
 PRs in August and September for another \galpy\ project, which shared
 the continuous integration and matters for the costs below.
@@ -71,11 +71,11 @@ the continuous integration, because every backend PR runs \galpy's test
 suite in five modes over 22 shards, about 150 jobs of 20 to 90 minutes
 each; the GitHub Actions bill for the repository at list price was
 \$13,100 in June, \$16,500 in July, \$15,800 in August,
-\$10,200 in September, and \$5,100 in the first half of October 2026. June,
+\$10,200 in September, and \$5,700 in October 2026 through the 18th. June,
 July, and October were almost entirely this project; in August and
 September the backend PRs were about three quarters of the PRs and, since a PR to
 the main branch runs only the \numpy\ suite, a larger fraction of the
-compute, such that about \$55,000 of the total is attributable to the
+compute, such that about \$56,000 of the total is attributable to the
 backends. GitHub's Education program covered
 this cost, which would otherwise have been prohibitive; the continuous
 integration was also the bottleneck of the project, because a PR could not be merged
@@ -266,7 +266,7 @@ computes with \numpy.\footnote{We use \torch\ for this measurement,
   because \numpy\ reads a \jax\ array on the CPU through the buffer
   protocol, which bypasses the conversion method that the instrument
   intercepts.} Of the 4,181 tests that ran, 1,850
-($44\,\%$) never hand backend data to \numpy. Most of the others do so by
+($44\,\%$) never handed backend data to \numpy\ in the first such run. Most of the others do so by
 design. They call \galpy's \cc\ extensions, for orbit integration and
 the St\"{a}ckel actions, whose derivatives come from the
 state-transition matrix and from custom derivative rules
@@ -275,7 +275,7 @@ make a decision, such as a tolerance, a root bracket, the number of
 integration steps, or a cache key; they convert their output to \astropy\
 quantities or plot it; or they call a \numpy\ function that the test
 itself supplies, such as the density of an expansion. Counting these,
-$73\,\%$ of the tests stay on the backend except for work that has to
+$73\,\%$ of the tests stayed on the backend except for work that has to
 happen on the host. Further tests build a constant table
 at construction, such as the spline of the guiding radius or the
 coefficients of an expansion, from parameters that are not
@@ -289,15 +289,42 @@ that keep \numpy\ for \numpy\ inputs under a forced backend: the
 razor-thin disk of arbitrary surface density, whose adaptive \scipy\
 quadrature some tests need for their accuracy, and the DF of an evolving
 disk, whose grids of orbits, evaluated eagerly on the backend, made one
-shard of the forced run nine times slower. That leaves 220 tests ($5.3\,\%$) that pass through a genuine
+shard of the forced run nine times slower. That left 220 tests ($5.3\,\%$) that passed through a genuine
 island, \numpy\ computation that could run on the backend: the
 transformation of an integrated orbit in the isochrone approximation (55
 tests), the \numpy\ track tables of \texttt{streamdf} (53), the profiles
 of the disk DFs (39), \scipy\ root finding for orbit quantities such as
 the guiding radius and for the Lindblad resonances (49), and smaller
 sites in about 25 other functions, among them the
-\texttt{MovingObjectPotential} (4 tests). These remain to be moved to the
-backend.
+\texttt{MovingObjectPotential} (4 tests).
+
+We then moved most of these to the backend, in five PRs. The root
+finders run on the backend for every input under a forced backend,
+including plain scalars. This needed a faster backend root: a bisection
+takes about 45 sequential evaluations of the function, and each costs a
+full eager dispatch, which made a scalar root about 50 times slower than
+\scipy's under \jax. Because the eager cost is per call rather than per
+point, the bracketed root of a single concrete value now evaluates the
+function at 513 points of the bracket in one call and keeps the
+sub-interval with the sign change, which reduces the bracket 512-fold per
+call and the number of calls to about seven, followed by a secant step on
+the final bracket. An orbit whose initial condition is a concrete backend
+array, with nothing to differentiate, is integrated with the plain \cc\
+integrator, and the state-transition matrix is computed only for a
+traced or gradient-tracking initial condition. The streams build their
+tracks on the backend; there, the first eager \jax\ construction was
+dominated by compilation, because \jax\ compiles every operation anew
+at each new array shape and the vectorized map over the track's chunks
+created shapes that nothing else used, so a concrete construction loops
+over the chunks instead. After these changes, the same instrumented run
+finds 1,871 tests ($45\,\%$) without any hand-off to \numpy, $76\,\%$
+that stay on the backend except for work that has to happen on the
+host, and 76 tests ($1.8\,\%$) that still pass through an island. The
+largest of the remaining islands are the surface-density and dispersion
+profiles of the axisymmetric disk DFs (29 tests), the alignment of a
+coordinate frame with an orbit (12), the \numpy\ output of
+\texttt{streamdf}'s sampling with \numpy's random-number generator (9),
+and the evaluation of the multipole expansion at single points.
 
 \subsection{Fixes to \lowercase{\galpy}}\label{sec:process-fixes}
 

@@ -77,6 +77,19 @@ The backend code paths are shared, so the torch run is the measurement.
 
 Measured and reported in the paper (process.tex, `sec:process-islands`, 2026-10-16).
 
+**Final re-audit (2026-10-18, feat/backends 108b69b21, forced torch, 4,181 tests):**
+no numpy contact 1,871 (44.75%); + C 51.78%; + host control 70.15%; + output 73.93%;
++ test-supplied 75.53%; + constant tables 87.97%; + numpy RNG 91.25%; + Python
+integrators 96.75%; island-free 98.18%. Genuine islands 220 -> 76 tests: diskdf
+`_ssp` 29, `align_to_orbit` 12, streamdf `sample` (numpy-RNG output) 9,
+MultipoleExpansion at-point helpers ~6-14, MovingObject 4, streamdf lazy-setup
+re-runs on numpy fixtures 3+3+2+1, qdf `_rl_host` 3, interpRZ out-of-grid 3,
+`compute_legendre` 2, `length(ang=True)` 1, `calcaAJac(lb=True)` 1,
+`surfacemass_z` 1. New by-design sites classified: IsochroneApprox `_parse_args`
+host IC for the C backward orbits (C), from_fit's host copy of the data for L-BFGS
+(CTL), the backend root's bracket-width read and lindbladR's sign test (CTL).
+In the paper (process.tex, sec:process-islands).
+
 **Fixes (2026-10-17).** #1722 (diskdf LOS, StreamTrack.__call__) and #1723 (root
 finders `rl`/`rE`/`zvc`/`zvc_range`/`rhalf`/`lindbladR`/`rvir`, LinShu, lnLambda,
 SpiralArms, Irrgang13, qdf `estimate_*`) merged; forced plain scalars solve on the
