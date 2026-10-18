@@ -83,9 +83,12 @@ SpiralArms, Irrgang13, qdf `estimate_*`) merged; forced plain scalars solve on t
 backend too (Jo: forcing means backend use), via `brentq(..., elementwise=True)`'s
 512-section concrete root. Re-audit (forced torch) after #1723: 220 -> 176 island
 tests (the audit map now classes the backend root's bracket-width read and
-lindbladR's sign test as CTL). Remaining in that area: qdf `_rg`'s numpy branch
-returning `rl` to numpy callers (3 tests), and qdf's older untraced-jax host solve
-of out-of-table points. #1724 (from_fit on the backend) merged.
+lindbladR's sign test as CTL). Remaining in that area, accepted as no-impact (Jo: "numpy islands that have no
+practical impact are fine"): qdf `_rg`'s numpy branch (reached under forcing only by
+direct calls of the private `_rg` with numpy `lz`; `qdf(...)` coerces), qdf's
+untraced-jax host solve of out-of-table points (nothing to differentiate, same
+values), and the constant rg(Lz) setup table. A tried-and-dropped patch for the
+first two: /var/tmp/claude-probes/qdf_rg/dropped_followup.diff. #1724 (from_fit on the backend) merged.
 Open as a stack: #1725 (Orbit methods, IsochroneApprox) -> #1726 (streamdf/streamgapdf).
 
 The original sizing: Rough sizes: trivial (SpiralArms
