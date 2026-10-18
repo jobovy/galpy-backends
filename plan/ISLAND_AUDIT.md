@@ -90,6 +90,25 @@ host IC for the C backward orbits (C), from_fit's host copy of the data for L-BF
 (CTL), the backend root's bracket-width read and lindbladR's sign test (CTL).
 In the paper (process.tex, sec:process-islands).
 
+**Islands part 4 (2026-10-18): #1728 (align_to_orbit + backend custom-frame T through
+Orbit/StreamTrack/pmrapmdec_to_custom/sky_to_customsky_jac; MultipoleExpansion at-point
+helpers) and #1729 (diskdf _ssp + private helpers + eval under forcing; qdf _rg coerced,
+_rl_host removed; surfacemass_z(fixed_quad=False) as scipy's smoothing spline = the
+least-squares cubic, 7e-14; calcaAJac(lb=True) by AD, 100x closer to central differences
+than numpy's forward difference).** Re-audit of feat/backends 108b69b21 + both PRs (forced
+torch, 4,181 tests, 0 unclassified): no numpy contact 1,902 (45.49%); + C 52.55%; + host
+control 71.01%; + output 74.96%; + test-supplied 76.56%; + constant tables 89.33%; + numpy
+RNG 92.61%; + Python integrators 98.23%; island-free 99.78%. Genuine islands 76 -> 9, all
+streamdf.sample with key=None (numpy-RNG output cast to numpy; Jo's exception). Reclassified
+after checking the call stacks: MovingObject's numpy pin (entered only from the pure-Python
+leapfrog/dop853 integrators: PYINT), interpRZ's out-of-grid numpy branch (StaeckelGrid
+tables: TAB; planar Python integrator: PYINT), streamdf `_parse_track_dim` (plot accessor:
+OUT), and the numpy-built-fixture streamdf lazy setups `_determine_stream_spreadLB`,
+`_interpolate_stream_track`, `_lb_track`, `length` (EXC, as kept in #1726). Failures in that
+run: SIGINT timing x2, test_fixedstepsize (timing under load), nemo x2 (local install);
+the earlier run also hit test_streamgapdf_impulse::test_impulse_deltav_general_hernquist,
+an unseeded-RNG flake that fails on the base for 1 of 40 seeds. Paper updated (process.tex).
+
 **Fixes (2026-10-17).** #1722 (diskdf LOS, StreamTrack.__call__) and #1723 (root
 finders `rl`/`rE`/`zvc`/`zvc_range`/`rhalf`/`lindbladR`/`rvir`, LinShu, lnLambda,
 SpiralArms, Irrgang13, qdf `estimate_*`) merged; forced plain scalars solve on the

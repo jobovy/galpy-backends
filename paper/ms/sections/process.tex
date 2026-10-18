@@ -289,7 +289,9 @@ that keep \numpy\ for \numpy\ inputs under a forced backend: the
 razor-thin disk of arbitrary surface density, whose adaptive \scipy\
 quadrature some tests need for their accuracy, and the DF of an evolving
 disk, whose grids of orbits, evaluated eagerly on the backend, made one
-shard of the forced run nine times slower. That left 220 tests ($5.3\,\%$) that passed through a genuine
+shard of the forced run nine times slower. (A stream that the tests build
+with \numpy\ before the backend is forced also keeps the state that it
+computes later on \numpy.) That left 220 tests ($5.3\,\%$) that passed through a genuine
 island, \numpy\ computation that could run on the backend: the
 transformation of an integrated orbit in the isochrone approximation (55
 tests), the \numpy\ track tables of \texttt{streamdf} (53), the profiles
@@ -298,7 +300,7 @@ the guiding radius and for the Lindblad resonances (49), and smaller
 sites in about 25 other functions, among them the
 \texttt{MovingObjectPotential} (4 tests).
 
-We then moved most of these to the backend, in five PRs. The root
+We then moved these to the backend, in seven PRs. The root
 finders run on the backend for every input under a forced backend,
 including plain scalars. This needed a faster backend root: a bisection
 takes about 45 sequential evaluations of the function, and each costs a
@@ -316,15 +318,25 @@ tracks on the backend; there, the first eager \jax\ construction was
 dominated by compilation, because \jax\ compiles every operation anew
 at each new array shape and the vectorized map over the track's chunks
 created shapes that nothing else used, so a concrete construction loops
-over the chunks instead. After these changes, the same instrumented run
-finds 1,871 tests ($45\,\%$) without any hand-off to \numpy, $76\,\%$
-that stay on the backend except for work that has to happen on the
-host, and 76 tests ($1.8\,\%$) that still pass through an island. The
-largest of the remaining islands are the surface-density and dispersion
-profiles of the axisymmetric disk DFs (29 tests), the alignment of a
-coordinate frame with an orbit (12), the \numpy\ output of
-\texttt{streamdf}'s sampling with \numpy's random-number generator (9),
-and the evaluation of the multipole expansion at single points.
+over the chunks instead. The profiles of the disk DFs, the alignment of
+a coordinate frame with an orbit, and the evaluation of the multipole
+expansion at single points now use backend code paths that already
+existed. Two \scipy\ steps were replaced by exact backend equivalents.
+The smoothing spline of a vertical density profile is, at its default
+smoothing and for these profiles, the least-squares cubic polynomial,
+which we fit and integrate on the backend; the result agrees with
+\scipy\ to $10^{-13}$. The Jacobian of the actions with respect to
+observed coordinates, previously a forward difference, is now computed by
+automatic differentiation; that is 100 times closer to a central-difference
+reference than the forward difference. Two sites, in the moving-object
+potential and in the interpolated potential, turned out to be reached
+only from the \python\ integrators and from the construction of constant
+tables, and we count them there. After these changes, the same
+instrumented run finds 1,902 tests ($45\,\%$) without any hand-off to
+\numpy, $77\,\%$ that stay on the backend except for work that has to
+happen on the host, and 9 tests ($0.2\,\%$) that still pass through an
+island. All 9 sample a stream with \numpy's random-number
+generator and return the sample as \numpy\ arrays.
 
 \subsection{Fixes to \lowercase{\galpy}}\label{sec:process-fixes}
 
