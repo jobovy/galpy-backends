@@ -57,11 +57,12 @@ Since 2026-10-07:
   leaves; forced scalar roots on the backend, made affordable by brentq's
   512-section concrete root: ~46 residual calls -> 7-8) merged. Forced-torch
   audit after #1723: 220 -> 176 island tests. #1724 (Orbit.from_fit fits on the
-  backend and returns a backend Orbit) merged. Open, as a GitHub stack (#1727):
-  #1725 (Orbit rguiding/rE/LcE/E/Jacobi, IsochroneApprox orbit input, plain C
-  for concrete backend ICs) -> #1726 (streamdf/streamgapdf on a forced backend).
+  backend and returns a backend Orbit) merged, and the stack #1727: #1725
+  (Orbit rguiding/rE/LcE/E/Jacobi, IsochroneApprox orbit input, plain C for
+  concrete backend ICs) and #1726 (streamdf/streamgapdf on a forced backend).
+  Remaining no-impact islands accepted (Jo, 2026-10-18).
 
-Open: the #1725/#1726 stack, the v2 pre-release.
+Open: the v2 pre-release.
 
 <details>
 <summary>Previous status (2026-10-07)</summary>
@@ -904,3 +905,5 @@ number in the pair.
 | [#1722](https://github.com/jobovy/galpy/pull/1722) | feat/backends | 2026-10-17 | Islands: diskdf line-of-sight methods and StreamTrack.__call__ on the backend |
 | [#1723](https://github.com/jobovy/galpy/pull/1723) | feat/backends | 2026-10-17 | Islands: potential-level root finders and leaves on the backend under forcing |
 | [#1724](https://github.com/jobovy/galpy/pull/1724) | feat/backends | 2026-10-18 | Orbit.from_fit on the backend: backend inputs or a forced backend fit there and return a backend Orbit |
+| [#1725](https://github.com/jobovy/galpy/pull/1725) | feat/backends | 2026-10-18 | Islands: Orbit methods and the isochrone approximation's orbit input on the backend (plain C for concrete backend ICs) |
+| [#1726](https://github.com/jobovy/galpy/pull/1726) | backend/islands-orbits (stack #1727) | 2026-10-18 | Islands: streamdf and streamgapdf build and evaluate on a forced backend |
