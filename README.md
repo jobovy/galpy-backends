@@ -56,12 +56,12 @@ Since 2026-10-07:
   line-of-sight, StreamTrack.__call__) and #1723 (potential root finders and
   leaves; forced scalar roots on the backend, made affordable by brentq's
   512-section concrete root: ~46 residual calls -> 7-8) merged. Forced-torch
-  audit after #1723: 220 -> 176 island tests. Open: #1724 (Orbit.from_fit on the
-  backend), #1725 (Orbit rguiding/rE/LcE/E/Jacobi, IsochroneApprox orbit input);
-  streamdf/streamgapdf next (Jo approved the test reads; the forced-jax build's
-  first-call compiles are being cut first).
+  audit after #1723: 220 -> 176 island tests. #1724 (Orbit.from_fit fits on the
+  backend and returns a backend Orbit) merged. Open, as a GitHub stack (#1727):
+  #1725 (Orbit rguiding/rE/LcE/E/Jacobi, IsochroneApprox orbit input, plain C
+  for concrete backend ICs) -> #1726 (streamdf/streamgapdf on a forced backend).
 
-Open: #1724, #1725, the streamdf islands, the v2 pre-release.
+Open: the #1725/#1726 stack, the v2 pre-release.
 
 <details>
 <summary>Previous status (2026-10-07)</summary>
@@ -903,3 +903,4 @@ number in the pair.
 | [#1721](https://github.com/jobovy/galpy/pull/1721) | feat/backends | 2026-10-16 | test_streamdf_progenitor_grad_with_c_aA_is_loud: a well-conditioned stream track (GPU round follow-up) |
 | [#1722](https://github.com/jobovy/galpy/pull/1722) | feat/backends | 2026-10-17 | Islands: diskdf line-of-sight methods and StreamTrack.__call__ on the backend |
 | [#1723](https://github.com/jobovy/galpy/pull/1723) | feat/backends | 2026-10-17 | Islands: potential-level root finders and leaves on the backend under forcing |
+| [#1724](https://github.com/jobovy/galpy/pull/1724) | feat/backends | 2026-10-18 | Orbit.from_fit on the backend: backend inputs or a forced backend fit there and return a backend Orbit |

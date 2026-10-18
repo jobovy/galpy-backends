@@ -85,8 +85,8 @@ backend too (Jo: forcing means backend use), via `brentq(..., elementwise=True)`
 tests (the audit map now classes the backend root's bracket-width read and
 lindbladR's sign test as CTL). Remaining in that area: qdf `_rg`'s numpy branch
 returning `rl` to numpy callers (3 tests), and qdf's older untraced-jax host solve
-of out-of-table points. Open: #1724 (from_fit), #1725 (Orbit methods,
-IsochroneApprox); streamdf/streamgapdf branch next.
+of out-of-table points. #1724 (from_fit on the backend) merged.
+Open as a stack: #1725 (Orbit methods, IsochroneApprox) -> #1726 (streamdf/streamgapdf).
 
 The original sizing: Rough sizes: trivial (SpiralArms
 `_K`, Irrgang13, Chandrasekhar `lnLambda`, `Orbit.Jacobi`), small (interpRZ out-of-grid,
