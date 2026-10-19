@@ -60,7 +60,10 @@ Since 2026-10-07:
   backend and returns a backend Orbit) merged, and the stack #1727: #1725
   (Orbit rguiding/rE/LcE/E/Jacobi, IsochroneApprox orbit input, plain C for
   concrete backend ICs) and #1726 (streamdf/streamgapdf on a forced backend).
-  Remaining no-impact islands accepted (Jo, 2026-10-18).
+  Then #1728 (align_to_orbit, Multipole at-point helpers), #1729 (disk-DF profile
+  helpers, qdf _rg/surfacemass_z, calcaAJac(lb)) and #1730 (MovingObject) merged:
+  no genuine islands left (streamdf.sample(key=None) retired as numpy-RNG
+  sampling, Jo 2026-10-18); paper section 8.5.
 
 Open: the v2 pre-release.
 
@@ -907,3 +910,6 @@ number in the pair.
 | [#1724](https://github.com/jobovy/galpy/pull/1724) | feat/backends | 2026-10-18 | Orbit.from_fit on the backend: backend inputs or a forced backend fit there and return a backend Orbit |
 | [#1725](https://github.com/jobovy/galpy/pull/1725) | feat/backends | 2026-10-18 | Islands: Orbit methods and the isochrone approximation's orbit input on the backend (plain C for concrete backend ICs) |
 | [#1726](https://github.com/jobovy/galpy/pull/1726) | backend/islands-orbits (stack #1727) | 2026-10-18 | Islands: streamdf and streamgapdf build and evaluate on a forced backend |
+| [#1728](https://github.com/jobovy/galpy/pull/1728) | feat/backends | 2026-10-19 | Islands: align_to_orbit (and a backend custom-frame T) and the MultipoleExpansion at-point helpers on a forced backend |
+| [#1729](https://github.com/jobovy/galpy/pull/1729) | feat/backends | 2026-10-19 | Islands: disk-DF profile helpers, qdf _rg and surfacemass_z, and calcaAJac(lb) on a forced backend |
+| [#1730](https://github.com/jobovy/galpy/pull/1730) | feat/backends | 2026-10-19 | Islands: MovingObjectPotential computes on a forced backend |
