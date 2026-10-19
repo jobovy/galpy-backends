@@ -90,6 +90,14 @@ host IC for the C backward orbits (C), from_fit's host copy of the data for L-BF
 (CTL), the backend root's bracket-width read and lindbladR's sign test (CTL).
 In the paper (process.tex, sec:process-islands).
 
+**Retired (2026-10-18, Jo):** streamdf.sample(key=None) -> RNG (numpy-RNG draws propagated on
+the stream's backend, output cast to numpy, as every key=None sampler returns numpy; the
+spherical DFs copy their one table to the host instead, streamdf would need its whole track).
+MovingObject's numpy pin replaced by @backend_input coercion (#1730): its Python-integrator
+queries compute on the backend; targeted audit of its 4 tests: only C/CTL/PYINT sites. Tiers
+with streamdf.sample as RNG (isl3b run): ... + numpy RNG 92.82%; + Python integrators 98.45%;
+island-free 100.00% (4,181 tests, 0 genuine islands, 0 unclassified).
+
 **Islands part 4 (2026-10-18): #1728 (align_to_orbit + backend custom-frame T through
 Orbit/StreamTrack/pmrapmdec_to_custom/sky_to_customsky_jac; MultipoleExpansion at-point
 helpers) and #1729 (diskdf _ssp + private helpers + eval under forcing; qdf _rg coerced,

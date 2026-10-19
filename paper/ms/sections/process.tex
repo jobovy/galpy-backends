@@ -300,7 +300,7 @@ the guiding radius and for the Lindblad resonances (49), and smaller
 sites in about 25 other functions, among them the
 \texttt{MovingObjectPotential} (4 tests).
 
-We then moved these to the backend, in seven PRs. The root
+We then moved these to the backend, in eight PRs. The root
 finders run on the backend for every input under a forced backend,
 including plain scalars. This needed a faster backend root: a bisection
 takes about 45 sequential evaluations of the function, and each costs a
@@ -328,15 +328,18 @@ which we fit and integrate on the backend; the result agrees with
 \scipy\ to $10^{-13}$. The Jacobian of the actions with respect to
 observed coordinates, previously a forward difference, is now computed by
 automatic differentiation; that is 100 times closer to a central-difference
-reference than the forward difference. Two sites, in the moving-object
-potential and in the interpolated potential, turned out to be reached
-only from the \python\ integrators and from the construction of constant
-tables, and we count them there. After these changes, the same
-instrumented run finds 1,902 tests ($45\,\%$) without any hand-off to
-\numpy, $77\,\%$ that stay on the backend except for work that has to
-happen on the host, and 9 tests ($0.2\,\%$) that still pass through an
-island. All 9 sample a stream with \numpy's random-number
-generator and return the sample as \numpy\ arrays.
+reference than the forward difference. The moving-object potential now
+also computes on the backend when the \python\ integrators query it. One
+site, in the interpolated potential, turned out to be reached only from
+the \python\ integrators and from the construction of constant tables,
+and we count it there. After these changes, the same instrumented run
+finds 1,902 tests ($45\,\%$) without any hand-off to \numpy, $77\,\%$
+that stay on the backend except for work that has to happen on the host,
+and no test that passes through a genuine island. The last site that we
+had counted as one, the sampling of a stream with \numpy's random-number
+generator, computes on the backend but returns \numpy\ arrays, as every
+sampler does without a backend random key, and we count it with the
+sampling.
 
 \subsection{Fixes to \lowercase{\galpy}}\label{sec:process-fixes}
 
