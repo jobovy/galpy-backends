@@ -378,3 +378,28 @@ Verified by DOI through the Crossref API (`https://api.crossref.org/works/<doi>`
 - `Webb2019` 10.1093/mnras/stz2118 (Crossref; volume/page 488, 5748 from the ADS bibcode 2019MNRAS.488.5748W given in galpy's docs) — ttensor/rtide.
 - `Webb2020` 10.1093/mnras/staa788 (Crossref: MNRAS 494, 2268) — to_amuse (galpy docs cite it as Webb et al. 2019b, arXiv:1910.01646).
 - actionAngleVerticalInverse: cited in the text as "(J. Bovy, in prep.)", no reference-list entry (AAS style).
+
+## ADS verification (2026-10-19)
+
+Every refs.bib entry was looked up on ADS (by DOI, else arXiv ID, else title;
+script and raw records: /var/tmp/claude-probes/ads/check_ads.py, compare.py, ads_raw.json)
+and its first author, author list, year, title, volume, first page and DOI compared.
+80 of the 171 entries are cited in the paper.
+
+- 129 entries match ADS exactly.
+- Fixed (both UNcited, so the rendered bibliography did not change): Starkman2023 is
+  now published (ApJ 980, 253, 2025; doi 10.3847/1538-4357/ad94f2), and Ivezic2019's
+  author "P. Angel, James Roger" -> "Angel, J. Roger P.".
+- Benign differences: arXiv-only preprints without a DOI (ADS assigns 10.48550 arXiv DOIs;
+  none of them has a published version on ADS); collaboration authors (Astropy, Gaia,
+  Euclid); LaTeX accents/ADS markup (Zucker2022 Großschedl, Dehnen2002 title); ADS
+  mis-parsing "Ngai Pok Kwan" (Li2022); Benettin1980a's ADS title truncated before
+  "; a method for computing all of them. Part 1: Theory"; Kidger2021 is the 2021 Oxford
+  thesis (arXiv posting 2022); published ML-venue versions that ADS only has as the
+  arXiv preprint (Bingham2019 JMLR, HoffmanGelman2014 JMLR, Baydin2018 JMLR, Ponce2019
+  PEARC, Neal2011 chapter DOI).
+- Not on ADS (checked by DOI resolution or as software/books): Bradbury2018 (JAX),
+  Galassi2009 (GSL manual), Starkman2026 (galax, Zenodo), PriceWhelan2026 (gala, Zenodo),
+  Wu2026 (JOSS 10712), DormandPrince1980, Hairer1993, GriewankWalther2008; all DOIs resolve.
+  Teuben2026 (NEMO's GitHub) matched ADS's ASCL record for NEMO (Barnes, Hut & Teuben 2010,
+  ascl:1010.051) instead; uncited.
