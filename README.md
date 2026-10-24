@@ -64,6 +64,14 @@ Since 2026-10-07:
   helpers, qdf _rg/surfacemass_z, calcaAJac(lb)) and #1730 (MovingObject) merged:
   no genuine islands left (streamdf.sample(key=None) retired as numpy-RNG
   sampling, Jo 2026-10-18); paper section 8.5.
+  Then (2026-10-22/23) the spray-stream track fit became smooth: #1731/#1732
+  make streamTrack(method="pspline") the default on both branches (Newton
+  closest point, REML smoothing, smoothed range; eager == jit), and the paper's
+  spray section and gS3 were re-measured with it (residual of the track
+  derivative now ~|dq|^1.9 with no floor; FD converge to 2e-6). #1733 (jax 0.12
+  diffrax reverse-mode fixes), #1734/#1735 (sphericaldf multi-orbit L), #1736 and
+  #1738 (Orbit at a 0-d time) also merged. Open: #1737/#1743 (truncated NFW and
+  Hernquist potentials for lmc-perturbation; not paper material, Jo 2026-10-23).
 
 Open: the v2 pre-release.
 
@@ -913,3 +921,10 @@ number in the pair.
 | [#1728](https://github.com/jobovy/galpy/pull/1728) | feat/backends | 2026-10-19 | Islands: align_to_orbit (and a backend custom-frame T) and the MultipoleExpansion at-point helpers on a forced backend |
 | [#1729](https://github.com/jobovy/galpy/pull/1729) | feat/backends | 2026-10-19 | Islands: disk-DF profile helpers, qdf _rg and surfacemass_z, and calcaAJac(lb) on a forced backend |
 | [#1730](https://github.com/jobovy/galpy/pull/1730) | feat/backends | 2026-10-19 | Islands: MovingObjectPotential computes on a forced backend |
+| [#1731](https://github.com/jobovy/galpy/pull/1731) | feat/backends | 2026-10-24 | streamTrack: method="pspline", smooth in its inputs and the same eagerly and under jit, as the default |
+| [#1732](https://github.com/jobovy/galpy/pull/1732) | main | 2026-10-23 | streamTrack: a smooth P-spline reconstruction (method="pspline") as the default |
+| [#1733](https://github.com/jobovy/galpy/pull/1733) | feat/backends | 2026-10-22 | jax backend: exact reverse-mode derivatives through diffrax's checkpointed loops (fixes CI on jax 0.12) |
+| [#1734](https://github.com/jobovy/galpy/pull/1734) | main | 2026-10-23 | sphericaldf: evaluate a multi-orbit Orbit with each orbit's own L |
+| [#1735](https://github.com/jobovy/galpy/pull/1735) | feat/backends | 2026-10-23 | sphericaldf: evaluate a multi-orbit Orbit with each orbit's own L (backends) |
+| [#1736](https://github.com/jobovy/galpy/pull/1736) | feat/backends | 2026-10-23 | test_movingobject_dxdv_3d_c_vs_python: one Python reference per deviation (torch-jit timeout) |
+| [#1738](https://github.com/jobovy/galpy/pull/1738) | main | 2026-10-23 | Orbit: evaluate at a 0-d array time (fixes method='dop853' in a MovingObjectPotential) |
