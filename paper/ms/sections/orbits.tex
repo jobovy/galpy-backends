@@ -143,6 +143,48 @@ coordinates. Initializing an orbit from observed coordinates with
 backend arrays works as well, such that a derivative with respect to a
 star's distance or proper motion is available.
 
+\subsection{A leapfrog for many orbits}\label{sec:orbit-leapfrog}
+
+For large batches of orbits in forces that do not depend on velocity,
+\galpy\ also integrates inside the backends with a symplectic method:
+\texttt{method='leapfrog\_jax'} and \texttt{'leapfrog\_torch'} use a
+kick-drift-kick leapfrog with a constant step, which evaluates the forces
+once per step, against thirteen times for a step of \diffrax's
+eighth-order Dormand--Prince method,
+\begin{code}
+o= Orbit(jnp.asarray(ics)) # ics: (N,6)
+o.integrate(ts,MWPotential2014,method='leapfrog_jax',
+            inbackend_kwargs={'nsteps':8000})
+\end{code}
+For each of 2000 orbits in the Milky-Way model with a moving satellite
+and the acceleration of a non-inertial frame, the error against the \cc\
+integrator falls by a factor of four per halving of the step, and in a
+static potential the energy error oscillates without the secular drift
+that a non-symplectic second-order method with the same steps shows. For reverse-mode
+derivatives, the steps are grouped into blocks under the backend's
+checkpointing (\texttt{jax.checkpoint} or \texttt{torch.utils.checkpoint}),
+such that the derivative stores the state at the start of each block and
+the states within one block, about $2\sqrt{N_\mathrm{steps}}$ states
+rather than $N_\mathrm{steps}$: for $10^5$ orbits and 8000 steps in
+\texttt{MWPotential2014}, the compiled \jax\ derivative needs 1.4\,GB of
+temporary memory instead of 39\,GB. The derivatives agree with
+Richardson-extrapolated central differences of the same integration to
+$10^{-10}$, and the \jax\ and \torch\ versions agree with each other to
+$2\times10^{-14}$. An initial condition in single precision is
+integrated in single precision throughout, including the times and the
+forces, which matters on GPUs with a low double-precision rate
+(\sectionname~\ref{sec:orbit-speed}). Velocity-dependent forces, such as
+dynamical friction, raise an error, because the closing kick evaluates
+them at the half-step velocity and the method then converges only at
+first order. For smooth orbits in a static potential, the
+eighth-order method is far more accurate for a similar number of force
+evaluations: for $10^4$ disc orbits integrated for 0.36\,Gyr, 1000
+leapfrog steps give a worst-case position error of $3\times10^{-4}$
+(in units of $R_0$) and 250 Dormand--Prince steps $4\times10^{-7}$. The
+leapfrog is for the problems in which high order does not pay, such as
+close passages of a satellite or rapidly varying potentials, and for
+those in which memory or single precision limit the integration.
+
 \subsection{Variational equations and chaos}\label{sec:orbit-dxdv}
 
 The variational equations that the \cc\ state-transition matrix relies
