@@ -6,14 +6,14 @@ halo of different flattening.
 
 track(q) is the whole pipeline, galpy's own API: fardal15spraydf(...).streamTrack(
 n=6000, key=key, tail='both') draws and integrates the stream in a logarithmic
-halo with flattening q (4.5 Gyr) and fits the track (default GCV smoothing).
+halo with flattening q (4.5 Gyr) and fits the track (method="pspline", the
+default since galpy #1731: REML smoothing).
 It returns phi2 of the fitted track on a FIXED phi1 grid per tail (the q0
 particles' 0.5-99.5% range), in ONE stream frame (phi1 along the progenitor's
 orbital plane, phi2 across it) from the q-independent initial condition
 (Orbit.align_to_orbit). The same random key at every q (common random numbers).
-The traced fit spans the whole closest-point tp range, far beyond the particles
-(it wraps around the sky), so the phi1 interpolation uses a fixed window of its
-(normalized) tp grid around the progenitor.
+The phi1 interpolation uses a fixed window of the track's (normalized) tp grid
+around the progenitor.
 
 (a) tracks at q = 0.7 .. 1.1: direct (solid) and first-order prediction (dashed).
 (b) rms shift of the track at fixed phi1 (inner 10-90% of each tail's q0
@@ -21,21 +21,18 @@ The traced fit spans the whole closest-point tp range, far beyond the particles
     crosses: the earlier route, particles(q0) + dq * dparticles/dq re-fitted
     with the same streamTrack at q0+dq.
 
-THE SAME TRACED FIT FOR EVERY TRACK: streamTrack fits a traced (jit/AD) stream
-with its own differentiable P-spline smoother and a concrete numpy one with
-scipy's; the two differ by ~0.01 deg rms for the same particles, which would put
-a floor under the residual. So every track here (q0, direct, FD, re-fit) is the
-jax.jit-ted fit, and the derivative is jit(jvp) of that same function. The
-derivative holds the fit's discrete choices (each particle's closest point on
-the progenitor's orbit, hence its P-spline basis row, and the GCV smoothing
-level) fixed; the direct re-runs make them afresh. That is the ~1%-of-shift
-floor of the residual at small dq (slope < 2 there).
+THE FIT IS SMOOTH: with method="pspline" every step of the fit is a smooth
+function of the particles (Newton projection onto the progenitor's orbit, REML
+smoothing with its implicit derivative, kernel-smoothed range), and it is the
+same eagerly and under jit. Every track here (q0, direct, FD, re-fit) is the
+jax.jit-ted fit, and the derivative is jit(jvp) of that same function. (Before
+#1731 the traced fit froze each particle's closest point and the smoothing
+level, which put a ~1%-of-shift floor under the residual at small dq and made
+FD at N=6000 stall at ~3%.)
 
 VALIDATION (`fd`, `fd_small_n` in the JSON: max|FD-AD|/max|AD| over the metric
-range): central FD of the same jitted track. At N=6000 FD agrees to ~3% for
-h = 1e-3..1e-5 and gets WORSE for smaller h: some of the 6000 closest-point
-assignments flip within any step, each a finite jump, so FD ~ jump/h. At
-N=600 a step exists that flips none, and FD converges to the derivative.
+range): central FD of the same jitted track, at N=6000 and N=600. FD converges
+as h^2 down to the integration noise (~1e-5 relative below h ~ 1e-5).
 
 sample(tail='both') is not jit-able (galpy concatenates the stripping times
 with numpy), so the particle route's jvp runs eagerly; its q0 fit equals the
@@ -127,7 +124,7 @@ def _measure(n=_N, fd_only=False):
         return (tr.leading, tr.trailing)
 
     def fit(q, p=None):
-        """galpy's streamTrack (default GCV smoothing), both tails; p=None draws
+        """galpy's streamTrack (default pspline fit), both tails; p=None draws
         the particles inside (streamTrack(n=, key=)), as in the paper snippet."""
         return make_df(q).streamTrack(n=n, particles=p, key=key, tail="both",
                                       custom_sky_transform=T)
@@ -146,10 +143,9 @@ def _measure(n=_N, fd_only=False):
     grids = [numpy.linspace(p[0], p[-1], _NGRID) for p in pct]
     metric = numpy.concatenate([(g >= p[1]) & (g <= p[2]) for g, p in zip(grids, pct)])
 
-    # The traced fit spans the whole tp range used for the closest-point match,
-    # far beyond the particles (it wraps around the sky). Use a FIXED window of
-    # the (normalized, concrete) tp grid: from the progenitor (tp=0) out to where
-    # the q0 track leaves the particles' phi1 range by _MARGIN deg.
+    # A FIXED window of the (normalized, concrete) tp grid: from the progenitor
+    # (tp=0) out to where the q0 track leaves the particles' phi1 range by
+    # _MARGIN deg.
     full = npy(jax.jit(lambda q: [(a.tp_grid(), a.phi1(a.tp_grid()))
                                    for a in arms(fit(q))])(jnp.asarray(_Q0)))
     windows = []
@@ -276,7 +272,7 @@ def _measure(n=_N, fd_only=False):
     name="gS3_track_extrapolation",
     track="G",
     seed=_SEED,
-    description="the forward-mode derivative of the streamspraydf fitted track (both tails, traced streamTrack fit) predicts the track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
+    description="the forward-mode derivative of the streamspraydf fitted track (both tails, jitted streamTrack pspline fit) predicts the track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
 )
 def make():
     import matplotlib.pyplot as plt
@@ -285,8 +281,7 @@ def make():
         data = json.load(open(_JSON))
     else:
         data = _measure()
-        # the FD check at a smaller N, where steps exist that change none of the
-        # fit's discrete choices (h-converged)
+        # the FD check also at a smaller N
         data["fd_small_n"] = {"n": _N_FD, "fd": _measure(_N_FD, fd_only=True)}
         os.makedirs(os.path.dirname(_JSON), exist_ok=True)
         with open(_JSON, "w") as fh:

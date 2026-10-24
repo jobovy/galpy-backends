@@ -101,7 +101,13 @@ orbit, the potential, the progenitor mass (or a mass history), and a
 random key: the stripping times are drawn by inverse transformation of
 uniform variates, the offsets by reparameterized normal variates, the
 progenitor and the particles are integrated in the backend, and the
-track is fit with a penalized spline. The whole computation compiles
+track is fit with a penalized spline. Every step of that fit is a smooth
+function of the particles: each particle's closest point on the
+progenitor's orbit is found by Newton iterations on a spline of the
+orbit, the amount of smoothing by maximizing the restricted likelihood,
+and the extent of the track from a kernel-smoothed quantile, so that the
+fit, which is also the default for \numpy\ inputs, gives the same track
+eagerly and compiled. The whole computation compiles
 and is differentiable with respect to every parameter; forward-mode
 derivatives, which are the efficient choice for a few parameters and
 many particles, require \diffrax's direct adjoint,
@@ -130,29 +136,27 @@ def track(q):
     return tr.x(tps)
 track(0.9); jax.jacfwd(track)(0.9)
 \end{code}
-where the derivative holds the discrete choices of the track fit (each
-particle's closest point on the progenitor's orbit and the amount of
-smoothing) fixed. For the 1500 particles of this example, finite
-differences of the fitted track with steps small enough that none of
-these choices changes agree with it to better than $10^{-4}$; for many
-thousands of particles every finite step changes some of them, and
-finite differences of the fit no longer converge. The derivative of the sampled stream
+where the derivative includes the response of the fit itself: of each
+particle's closest point on the progenitor's orbit, through the implicit
+derivative of the Newton iterations, and of the amount of smoothing.
+Central finite differences of the fitted track converge to it, to
+$2\times10^{-6}$ for a step of $10^{-5}$, both for the 1500 particles of
+this example and for the 6000-particle stream of
+\figurename~\ref{fig:extrapolation}. The derivative of the sampled stream
 with respect to the potential agrees with finite differences of the same
 sample to $10^{-6}$, and \figurename~\ref{fig:extrapolation}
 demonstrates what it is good for: a single forward-mode pass through
 the sampling, integration, and track fit of a 6000-particle stream
 predicts the stream's track in a halo of different flattening as
 $\mathrm{track}(q_0)+\Delta q\,\mathrm{d\,track}/\mathrm{d}q$. This
-first-order prediction removes 79\,\% of the shift of the track for
+first-order prediction removes 80\,\% of the shift of the track for
 $|\Delta q|=0.2$, 90\,\% for $|\Delta q|=0.1$, 97\,\% for
-$|\Delta q|=0.025$, and 98--99\,\% for $|\Delta q|\leq0.006$, a range
-that covers the steps a fitter takes. Its residual falls as
-$|\Delta q|^{1.9}$ for $|\Delta q|\geq0.025$ and more slowly, as
-$|\Delta q|^{1.4}$, below that, where it levels off at about 1\,\% of
-the shift: the derivative holds the fit's discrete choices fixed, while
-the re-simulated stream makes them anew. Moving the particles to first
-order and re-fitting the track instead leaves a residual that is 1.6 to
-2.4 times larger for $|\Delta q|\geq0.025$. Each spray
+$|\Delta q|=0.025$, and 99\,\% or more for $|\Delta q|\leq0.006$, a
+range that covers the steps a fitter takes. Its residual falls as
+$|\Delta q|^{1.9}$ over the whole range, to 0.5\,\% of the shift at
+$|\Delta q|=0.003$, the smallest step we tried. Moving the particles to
+first order and re-fitting the track instead leaves a residual that is
+1.5 to 2.4 times larger at every step. Each spray
 particle's orbit is one more orbit in a batch, such that a sprayed
 stream costs about 0.6\,ms per particle on one CPU core under compiled
 \jax, a fifth of the cost of the non-differentiable \cc\ version, and
@@ -175,11 +179,9 @@ about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
     prediction, for $\Delta q>0$ (filled) and $\Delta q<0$ (open), with
     the same random numbers, frame, and track fit throughout; the numbers
     give the fraction of the shift that the prediction removes. The
-    residual falls nearly as $\Delta q^2$ (dotted) for large steps and
-    levels off at about 1\,\% of the shift for small ones, where the fit's
-    discrete choices, which the derivative holds fixed, change in the
-    re-simulation. Crosses show the residual when instead the particles
-    are moved to first order and the track is re-fitted.}\label{fig:extrapolation}
+    residual falls nearly as $\Delta q^2$ (dotted) at every step.
+    Crosses show the residual when instead the particles are moved to
+    first order and the track is re-fitted.}\label{fig:extrapolation}
 \end{figure*}
 
 \begin{figure*}[t!]

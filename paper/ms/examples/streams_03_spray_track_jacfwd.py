@@ -9,10 +9,9 @@ returns the track evaluated at fixed times tps (StreamTrack.x). Since galpy
 PR #1646 the progenitor can be set up from the list (see streams_02); the
 direct adjoint stays for jax 0.6 (Python 3.10).
 The derivative is generative (the particles are drawn and integrated inside
-it) and holds the fit's discrete choices (each particle's closest point on
-the progenitor's orbit, the smoothing level) fixed. It is checked below
-against central finite differences of the same (traced, jitted) fit for two
-steps small enough that no choice changes.
+it). Since galpy #1731/#1732 the track fit (method="pspline", the default) is
+a smooth function of the particles, and the same eagerly and under jax.jit,
+so central finite differences of the track converge to the derivative.
 """
 
 import time
@@ -54,20 +53,17 @@ dx = jax.jacfwd(track)(0.9)
 assert isinstance(x, jax.Array) and isinstance(dx, jax.Array)
 assert dx.shape == tps.shape
 assert numpy.all(numpy.isfinite(numpy.asarray(dx)))
-# The derivative vs central finite differences of the same fit. The eager
-# track(q) at a float q takes the numpy fit (make_smoothing_spline), a
-# different estimator from the traced one that jacfwd differentiates, so the
-# finite difference uses jax.jit(track), which traces q. The fit's discrete
-# choices change for steps h >~ 1e-6, so two smaller steps are used, which
-# agree with each other and with jacfwd.
+# The eager and jitted tracks are the same function (they differ only through
+# the progenitor's integrator: dop853_c eagerly, diffrax under jit).
 track_jit = jax.jit(track)
-fds = []
-for h in (1e-6, 3e-7):
-    fd = (numpy.asarray(track_jit(0.9 + h)) - numpy.asarray(track_jit(0.9 - h))) / (
-        2 * h
-    )
+diff = numpy.max(numpy.abs(numpy.asarray(x) - numpy.asarray(track_jit(0.9))))
+print("max |eager - jit|:", diff)
+assert diff < 1e-8, diff  # measured 5.0e-10
+# The derivative vs central finite differences of the eager track, which
+# converge to it as h^2 down to the integration noise.
+for h, tol in ((1e-4, 1e-3), (1e-5, 1e-5)):
+    fd = (numpy.asarray(track(0.9 + h)) - numpy.asarray(track(0.9 - h))) / (2 * h)
     err = numpy.max(numpy.abs(numpy.asarray(dx) - fd)) / numpy.max(numpy.abs(fd))
     print(f"h={h:.0e}: AD:", numpy.asarray(dx), "FD:", fd, "rel:", err)
-    fds.append(fd)
-    assert err < 2e-4, err  # measured 2e-5 (1e-6), 6e-5 (3e-7)
+    assert err < tol, err  # measured 1.2e-4 (1e-4), 1.8e-6 (1e-5)
 print("OK")
