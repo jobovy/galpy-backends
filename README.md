@@ -70,8 +70,12 @@ Since 2026-10-07:
   spray section and gS3 were re-measured with it (residual of the track
   derivative now ~|dq|^1.9 with no floor; FD converge to 2e-6). #1733 (jax 0.12
   diffrax reverse-mode fixes), #1734/#1735 (sphericaldf multi-orbit L), #1736 and
-  #1738 (Orbit at a 0-d time) also merged. Open: #1737/#1743 (truncated NFW and
-  Hernquist potentials for lmc-perturbation; not paper material, Jo 2026-10-23).
+  #1738 (Orbit at a 0-d time) also merged. For lmc-perturbation (not paper
+  material, Jo 2026-10-23), 2026-10-24/25: #1737/#1743 (truncated NFW and
+  Hernquist potentials, with the spherical DFs' density derivatives and a fix for
+  sampling a mass that converges inside rmax), #1741/#1742/#1746 (C offsets in
+  size_t) and #1745 (batch Orbit read at a traced time) merged. Open: #1744, the
+  in-backend leapfrog (leapfrog_jax/leapfrog_torch), which IS in the paper (4.2).
 
 Open: the v2 pre-release.
 
@@ -928,3 +932,9 @@ number in the pair.
 | [#1735](https://github.com/jobovy/galpy/pull/1735) | feat/backends | 2026-10-23 | sphericaldf: evaluate a multi-orbit Orbit with each orbit's own L (backends) |
 | [#1736](https://github.com/jobovy/galpy/pull/1736) | feat/backends | 2026-10-23 | test_movingobject_dxdv_3d_c_vs_python: one Python reference per deviation (torch-jit timeout) |
 | [#1738](https://github.com/jobovy/galpy/pull/1738) | main | 2026-10-23 | Orbit: evaluate at a 0-d array time (fixes method='dop853' in a MovingObjectPotential) |
+| [#1741](https://github.com/jobovy/galpy/pull/1741) | main | 2026-10-24 | C orbit integration: offsets in size_t (segfault beyond 2^31-1 output elements) |
+| [#1745](https://github.com/jobovy/galpy/pull/1745) | feat/backends | 2026-10-24 | Batch Orbit read at a traced time (jit): one batched spline for all orbits, not one per orbit |
+| [#1746](https://github.com/jobovy/galpy/pull/1746) | main | 2026-10-24 | test_integrate_c_more_than_intmax_elements: run the subprocess in the tested galpy's directory |
+| [#1742](https://github.com/jobovy/galpy/pull/1742) | feat/backends | 2026-10-24 | C orbit integration and actionAngle Jacobians: offsets in size_t (backends side of #1741) |
+| [#1743](https://github.com/jobovy/galpy/pull/1743) | main | 2026-10-25 | TruncatedNFWPotential and TruncatedHernquistPotential (Baltz, Marshall & Oguri 2009); spherical DFs; sampling a converged mass profile |
+| [#1737](https://github.com/jobovy/galpy/pull/1737) | feat/backends | 2026-10-25 | TruncatedNFWPotential and TruncatedHernquistPotential, with a time-dependent truncation radius; spherical DFs; sampling a converged mass profile |
