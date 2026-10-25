@@ -176,14 +176,14 @@ forces, which matters on GPUs with a low double-precision rate
 (\sectionname~\ref{sec:orbit-speed}). Velocity-dependent forces, such as
 dynamical friction, raise an error, because the closing kick evaluates
 them at the half-step velocity and the method then converges only at
-first order. For smooth orbits in a static potential, the
-eighth-order method is far more accurate for a similar number of force
-evaluations: for $10^4$ disc orbits integrated for 0.36\,Gyr, 1000
-leapfrog steps give a worst-case position error of $3\times10^{-4}$
-(in units of $R_0$) and 250 Dormand--Prince steps $4\times10^{-7}$. The
-leapfrog is for the problems in which high order does not pay, such as
-close passages of a satellite or rapidly varying potentials, and for
-those in which memory or single precision limit the integration.
+first order. As a second-order method, the leapfrog needs small steps
+to be precise: for $10^4$ disc orbits integrated for 0.36\,Gyr, 1000
+leapfrog steps (1000 force evaluations) give a worst-case position
+error of $3\times10^{-4}$ (in units of $R_0$), while 250 Dormand--Prince
+steps (3250 force evaluations) give $4\times10^{-7}$. Its strength is
+that it reaches second order with a single force evaluation per step,
+which makes it the method of choice when the force is expensive to
+evaluate and modest precision suffices, as in $N$-body simulations.
 
 \subsection{Variational equations and chaos}\label{sec:orbit-dxdv}
 
