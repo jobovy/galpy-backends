@@ -74,8 +74,13 @@ Since 2026-10-07:
   material, Jo 2026-10-23), 2026-10-24/25: #1737/#1743 (truncated NFW and
   Hernquist potentials, with the spherical DFs' density derivatives and a fix for
   sampling a mass that converges inside rmax), #1741/#1742/#1746 (C offsets in
-  size_t) and #1745 (batch Orbit read at a traced time) merged. Open: #1744, the
-  in-backend leapfrog (leapfrog_jax/leapfrog_torch), which IS in the paper (4.2).
+  size_t) and #1745 (batch Orbit read at a traced time) merged; #1744, the
+  in-backend leapfrog (leapfrog_jax/leapfrog_torch), which IS in the paper (4.2),
+  merged with its isConservative follow-ups #1748 (main) and #1749. 2026-10-25:
+  feat/backends rebased onto main (057dfee16) as 055f142df: 598 commits replayed,
+  tip tree == the hand-resolved merge, one fixup (main's 0-d time fix + HISTORY
+  entries, #1740's per-orbit scaling on a forced backend); checked on #1750, all
+  153 checks green.
 
 Open: the v2 pre-release.
 
@@ -938,3 +943,7 @@ number in the pair.
 | [#1742](https://github.com/jobovy/galpy/pull/1742) | feat/backends | 2026-10-24 | C orbit integration and actionAngle Jacobians: offsets in size_t (backends side of #1741) |
 | [#1743](https://github.com/jobovy/galpy/pull/1743) | main | 2026-10-25 | TruncatedNFWPotential and TruncatedHernquistPotential (Baltz, Marshall & Oguri 2009); spherical DFs; sampling a converged mass profile |
 | [#1737](https://github.com/jobovy/galpy/pull/1737) | feat/backends | 2026-10-25 | TruncatedNFWPotential and TruncatedHernquistPotential, with a time-dependent truncation radius; spherical DFs; sampling a converged mass profile |
+| [#1744](https://github.com/jobovy/galpy/pull/1744) | feat/backends | 2026-10-25 | Orbit.integrate(method="leapfrog_jax"/"leapfrog_torch"): a checkpointed kick-drift-kick leapfrog for many orbits, float32 end to end |
+| [#1748](https://github.com/jobovy/galpy/pull/1748) | main | 2026-10-25 | isConservative: symplectic integration for forces that derive from a potential, including a frame that only accelerates |
+| [#1749](https://github.com/jobovy/galpy/pull/1749) | feat/backends | 2026-10-25 | isConservative on feat/backends; the in-backend leapfrog uses it (follow-up to #1744) |
+| [#1750](https://github.com/jobovy/galpy/pull/1750) | (check) | 2026-10-25 | Rebase feat/backends onto main 057dfee16 -> 055f142df (check PR, closed after Jo's force-push) |

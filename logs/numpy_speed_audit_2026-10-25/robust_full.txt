@@ -1,0 +1,148 @@
+job                                                                    tests  scale  (median tip/main ratio of tests >= 0.5 s on main)
+build (macos-15, 3.14, tests/test_orbit.py -k 'test_energy_jacobi_cons    61   1.02
+build (macos-15, 3.14, tests/test_orbit.py tests/test_orbits.py -k 'no   188   1.31
+build (macos-15-intel, 3.14, tests/test_orbit.py -k 'test_energy_jacob    64   1.22
+build (macos-15-intel, 3.14, tests/test_orbit.py tests/test_orbits.py    258   1.26
+build (ubuntu-latest, 3.10, tests/test_orbit.py -k 'test_energy_jacobi    69   0.55
+build (ubuntu-latest, 3.10, tests/test_orbit.py tests/test_orbits.py -   222   2.51
+build (ubuntu-latest, 3.11, tests/test_orbit.py -k 'test_energy_jacobi    63   1.77
+build (ubuntu-latest, 3.11, tests/test_orbit.py tests/test_orbits.py -   256   1.17
+build (ubuntu-latest, 3.12, tests/test_orbit.py -k 'test_energy_jacobi    69   1.09
+build (ubuntu-latest, 3.12, tests/test_orbit.py tests/test_orbits.py -   235   1.03
+build (ubuntu-latest, 3.13, tests/test_orbit.py -k 'test_energy_jacobi    59   2.61
+build (ubuntu-latest, 3.13, tests/test_orbit.py tests/test_orbits.py -   258   1.46
+build (ubuntu-latest, 3.14, tests/test_SpiralArmsPotential.py tests/te   172   0.54
+build (ubuntu-latest, 3.14, tests/test_actionAngle.py, false, false, f    62   1.33
+build (ubuntu-latest, 3.14, tests/test_actionAngleTorus.py tests/test_    31   1.01
+build (ubuntu-latest, 3.14, tests/test_diskdf.py, false, false, false,    67   0.68
+build (ubuntu-latest, 3.14, tests/test_evolveddiskdf.py, false, false,    33   1.27
+build (ubuntu-latest, 3.14, tests/test_jeans.py tests/test_dynamfric.p    14   1.50
+build (ubuntu-latest, 3.14, tests/test_orbit.py -k 'test_energy_jacobi    63   1.03
+build (ubuntu-latest, 3.14, tests/test_orbit.py tests/test_orbits.py t   219   1.18
+build (ubuntu-latest, 3.14, tests/test_qdf.py tests/test_pv2qdf.py tes    52   1.46
+build (ubuntu-latest, 3.14, tests/test_quantity.py tests/test_coords.p    36   1.30
+build (ubuntu-latest, 3.14, tests/test_sphericaldf.py, false, false, f    98   1.42
+build (ubuntu-latest, 3.14, tests/test_streamdf.py tests/test_streamsp    80   0.97
+build (ubuntu-latest, 3.14, tests/test_streamgapdf.py, false, false, f     8   0.99
+build (windows-latest, 3.10, tests/test_orbit.py -k test_energy_jacobi    65   0.55
+build (windows-latest, 3.10, tests/test_orbit.py tests/test_orbits.py    234   1.42
+build (windows-latest, 3.11, tests/test_orbit.py -k test_energy_jacobi    61   1.77
+build (windows-latest, 3.11, tests/test_orbit.py tests/test_orbits.py    260   1.50
+build (windows-latest, 3.12, tests/test_orbit.py -k test_energy_jacobi    65   0.87
+build (windows-latest, 3.12, tests/test_orbit.py tests/test_orbits.py    257   1.44
+build (windows-latest, 3.13, tests/test_orbit.py -k test_energy_jacobi    59   1.84
+build (windows-latest, 3.13, tests/test_orbit.py tests/test_orbits.py    237   1.17
+build (windows-latest, 3.14, tests/test_SpiralArmsPotential.py tests/t   151   1.42
+build (windows-latest, 3.14, tests/test_actionAngle.py, false, false,     58   1.21
+build (windows-latest, 3.14, tests/test_conversion.py tests/test_galpy     8   2.11
+build (windows-latest, 3.14, tests/test_diskdf.py, false, false, false    52   2.83
+build (windows-latest, 3.14, tests/test_evolveddiskdf.py, false, false    33   1.42
+build (windows-latest, 3.14, tests/test_jeans.py tests/test_dynamfric.    13   1.73
+build (windows-latest, 3.14, tests/test_orbit.py -k test_energy_jacobi    59   1.04
+build (windows-latest, 3.14, tests/test_orbit.py tests/test_orbits.py    214   1.18
+build (windows-latest, 3.14, tests/test_qdf.py tests/test_pv2qdf.py te    69   0.66
+build (windows-latest, 3.14, tests/test_quantity.py tests/test_coords.    45   0.84
+build (windows-latest, 3.14, tests/test_sphericaldf.py, false, false,     78   1.18
+build (windows-latest, 3.14, tests/test_streamdf.py tests/test_streams    74   0.60
+build (windows-latest, 3.14, tests/test_streamgapdf.py, false, false,      8   1.01
+
+FLAGGED: normalized slowdown >= 1.4x in EVERY job that runs it, and >= 2 s per run beyond the job's scale
+  19.11x (min 19.11x, 1 job)  main   106.2s -> tip  2882.9s  +2732.0s  tests/test_sphericaldf.py::test_constantbeta_dehnencore_in_nfw_dens_spherically_symmetric
+   2.77x (min 2.42x, 2 jobs)  main    31.6s -> tip   111.9s  +  71.9s  tests/test_actionAngle.py::test_actionAngleAdiabatic_linear_angles_cylsep
+   1.89x (min 1.64x, 12 jobs)  main    29.7s -> tip    79.5s  +  36.1s  tests/test_orbit.py::test_liouville_3d[RotateAndTiltWrapperPotential_norot_offset]
+   1.91x (min 1.67x, 12 jobs)  main    26.3s -> tip    67.3s  +  30.1s  tests/test_orbit.py::test_liouville_3d[RotateAndTiltWrapperPotential_offset]
+   1.68x (min 1.68x, 1 job)  main    30.5s -> tip    72.8s  +  29.4s  tests/test_sphericaldf.py::test_constantbeta_differentpotentials_dens_directint
+   1.89x (min 1.89x, 1 job)  main    32.0s -> tip    32.7s  +  15.3s  tests/test_snapshotpotential.py::test_interpsnapshotKeplerPotential_eval
+   1.86x (min 1.49x, 2 jobs)  main    15.6s -> tip    30.5s  +  14.5s  tests/test_quantity.py::test_sphericaldf_method_inputAsQuantity_percall_ro
+   2.95x (min 2.86x, 2 jobs)  main     4.6s -> tip    18.2s  +  12.1s  tests/test_sphericaldf.py::test_osipkovmerritt_exptruncnfw_dens_directint
+   1.48x (min 1.43x, 2 jobs)  main    17.0s -> tip    33.1s  +  10.5s  tests/test_sphericaldf.py::test_eddington_interpolatedpotentials_rmin
+   2.30x (min 2.10x, 12 jobs)  main     5.5s -> tip    16.2s  +   9.3s  tests/test_orbit.py::test_analytic_ecc_rperi_rap[ExpTruncNFWPotential]
+   1.77x (min 1.70x, 2 jobs)  main     8.0s -> tip    18.9s  +   8.4s  tests/test_sphericaldf.py::test_eddington_differentpotentials_dMdE_integral
+   2.19x (min 1.95x, 2 jobs)  main     8.8s -> tip    15.5s  +   8.0s  tests/test_streamTrack.py::test_streamTrack_plot_spread_non_cartesian
+   2.05x (min 1.40x, 2 jobs)  main     6.1s -> tip    13.1s  +   7.0s  tests/test_quantity.py::test_diskdf_method_returntype
+   3.05x (min 2.63x, 2 jobs)  main     2.3s -> tip     9.0s  +   6.1s  tests/test_actionAngle.py::test_actionAngleAdiabatic_conserved_actions_cylsep
+   1.42x (min 1.40x, 2 jobs)  main    11.0s -> tip    19.8s  +   5.9s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_momentum_matched_between_tori
+   1.75x (min 1.65x, 2 jobs)  main     5.1s -> tip    11.9s  +   5.2s  tests/test_sphericaldf.py::test_eddington_differentpotentials_dens_directint
+   1.46x (min 1.42x, 2 jobs)  main    12.3s -> tip    15.9s  +   5.0s  tests/test_potential.py::test_poisson_surfdens_potential[mockRotatedTiltedOffsetMWP14WrapperPotentia
+   2.26x (min 1.79x, 12 jobs)  main     3.2s -> tip     9.1s  +   5.0s  tests/test_orbit.py::test_liouville_3d[ExpTruncNFWPotential]
+   1.79x (min 1.43x, 12 jobs)  main     4.7s -> tip    11.2s  +   5.0s  tests/test_orbit.py::test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_offset]
+   1.48x (min 1.45x, 2 jobs)  main    11.4s -> tip    15.0s  +   5.0s  tests/test_potential.py::test_poisson_surfdens_potential[mockOffsetMWP14WrapperPotential]
+   1.44x (min 1.40x, 2 jobs)  main    12.3s -> tip    15.7s  +   4.9s  tests/test_potential.py::test_poisson_surfdens_potential[mockRotatedAndTiltedMWP14WrapperPotentialwI
+   1.54x (min 1.42x, 12 jobs)  main     7.3s -> tip    14.7s  +   4.9s  tests/test_orbit.py::test_liouville_3d[GaussianAmplitudeWrapperPotential]
+   2.01x (min 2.01x, 1 job)  main     4.5s -> tip     9.2s  +   4.6s  tests/test_interp_potential.py::test_interpolation_potential_secondderivs
+   1.49x (min 1.43x, 2 jobs)  main     7.0s -> tip    13.8s  +   4.6s  tests/test_sphericaldf.py::test_eddington_powerspherical_divergent_auto_rmin
+   2.30x (min 1.63x, 12 jobs)  main     2.3s -> tip     7.9s  +   4.0s  tests/test_orbit.py::test_energy_jacobi_conservation[ExpTruncNFWPotential--10.0--10.0-False]
+   2.52x (min 2.16x, 11 jobs)  main     2.0s -> tip     6.3s  +   3.9s  tests/test_orbit.py::test_liouville_3d[DehnenBarPotential]
+   1.88x (min 1.83x, 2 jobs)  main     3.3s -> tip     8.2s  +   3.8s  tests/test_sphericaldf.py::test_osipkovmerritt_dehnencore_in_nfw_sigmar_directint
+   2.03x (min 1.78x, 12 jobs)  main     2.8s -> tip     7.6s  +   3.8s  tests/test_orbit.py::test_energy_jacobi_conservation[nestedListPotential--10.0--10.0-False]
+   1.67x (min 1.66x, 2 jobs)  main     4.3s -> tip     9.4s  +   3.8s  tests/test_sphericaldf.py::test_osipkovmerritt_dehnencore_in_nfw_dens_spherically_symmetric
+   3.04x (min 2.84x, 2 jobs)  main     1.1s -> tip     4.3s  +   2.9s  tests/test_sphericaldf.py::test_eddington_sample_negative_df_regions_no_crash
+   2.00x (min 1.73x, 12 jobs)  main     2.3s -> tip     5.5s  +   2.8s  tests/test_orbit.py::test_energy_jacobi_conservation[mockAdiabaticContractionMWP14WrapperPotential--
+   2.51x (min 2.43x, 2 jobs)  main     1.3s -> tip     4.4s  +   2.7s  tests/test_sphericaldf.py::test_eddington_sample_converged_mass_default_rmax
+   1.87x (min 1.69x, 12 jobs)  main     2.2s -> tip     5.5s  +   2.6s  tests/test_orbit.py::test_liouville_planar[ExpTruncNFWPotential]
+   1.76x (min 1.58x, 2 jobs)  main     4.0s -> tip     6.3s  +   2.6s  tests/test_potential.py::test_AdiabaticContractionWrapper
+   1.79x (min 1.79x, 1 job)  main     5.8s -> tip     5.6s  +   2.5s  tests/test_snapshotpotential.py::test_interpsnapshotKeplerPotential_eval_naz
+   1.94x (min 1.94x, 1 job)  main     2.6s -> tip     5.1s  +   2.5s  tests/test_interp_potential.py::test_interpolation_potential_force_c
+   2.42x (min 2.03x, 11 jobs)  main     1.1s -> tip     3.6s  +   2.2s  tests/test_orbit.py::test_dehnenbar_dxdv_inside_rb_c_vs_python
+   2.15x (min 1.85x, 12 jobs)  main     1.5s -> tip     4.3s  +   2.2s  tests/test_orbit.py::test_energy_jacobi_conservation[mockFlatDehnenSmoothBarPotential--10.0--8.0-Fal
+   1.88x (min 1.83x, 2 jobs)  main     2.7s -> tip     4.5s  +   2.1s  tests/test_potential.py::test_poisson_surfdens_potential[mockRotatedAndTiltedTriaxialLogHaloPotentia
+   3.56x (min 3.02x, 8 jobs)  main     0.7s -> tip     3.3s  +   2.1s  tests/test_orbit.py::test_energy_jacobi_conservation[mockRotatedAndTiltedMWP14WrapperPotential--10.0
+   2.09x (min 1.82x, 12 jobs)  main     1.5s -> tip     4.1s  +   2.1s  tests/test_orbit.py::test_energy_jacobi_conservation[mockSlowFlatDecayingDehnenSmoothBarPotential--1
+   2.09x (min 1.81x, 12 jobs)  main     1.6s -> tip     4.2s  +   2.1s  tests/test_orbit.py::test_energy_jacobi_conservation[mockSlowFlatDehnenSmoothBarPotential--10.0--8.0
+   2.12x (min 1.79x, 12 jobs)  main     1.5s -> tip     4.0s  +   2.1s  tests/test_orbit.py::test_energy_jacobi_conservation[mockFlatGaussianAmplitudeBarPotential--10.0--10
+   2.58x (min 2.10x, 11 jobs)  main     0.9s -> tip     3.2s  +   2.1s  tests/test_orbit.py::test_analytic_zmax[ExpTruncNFWPotential]
+   1.97x (min 1.94x, 2 jobs)  main     1.6s -> tip     4.1s  +   2.1s  tests/test_sphericaldf.py::test_isotropic_eddington_dehnencore_in_nfw_sigmar_directint
+
+borderline: >= 1.25x in every job, >= 1 s
+   1.93x (min 1.25x, 2 jobs)  main    12.6s -> tip    26.0s  +  13.4s  tests/test_quantity.py::test_diskdf_method_value
+   1.61x (min 1.30x, 12 jobs)  main    16.0s -> tip    34.4s  +  13.2s  tests/test_orbit.py::test_liouville_3d[OblateStaeckelWrapperPotential]
+   1.97x (min 1.29x, 2 jobs)  main    11.4s -> tip    24.1s  +  12.6s  tests/test_quantity.py::test_diskdf_method_inputAsQuantity
+   1.42x (min 1.38x, 2 jobs)  main    20.5s -> tip    38.5s  +  11.5s  tests/test_sphericaldf.py::test_pvr_interpolator_rmax_default_vs_explicit
+   1.95x (min 1.27x, 2 jobs)  main     6.4s -> tip    13.2s  +   6.8s  tests/test_quantity.py::test_diskdf_method_returnunit
+   1.78x (min 1.26x, 12 jobs)  main     6.1s -> tip    13.5s  +   5.9s  tests/test_orbit.py::test_dxdv_3d_c_vs_python[RotateAndTiltWrapperPotential_norot_offset]
+   1.44x (min 1.39x, 2 jobs)  main    14.1s -> tip    18.0s  +   5.6s  tests/test_potential.py::test_poisson_surfdens_potential[mockRotatedAndTiltedMWP14WrapperPotential]
+   1.48x (min 1.29x, 12 jobs)  main     8.4s -> tip    15.5s  +   5.1s  tests/test_orbit.py::test_liouville_3d[SoftenedNeedleBarPotential_static]
+   1.52x (min 1.28x, 12 jobs)  main     5.5s -> tip    10.9s  +   3.8s  tests/test_orbit.py::test_liouville_3d[KuzminLikeWrapperPotential]
+   1.43x (min 1.39x, 2 jobs)  main     5.9s -> tip    11.3s  +   3.4s  tests/test_evolveddiskdf.py::test_mildnonaxi_oortA_grid_tlist
+   1.46x (min 1.37x, 2 jobs)  main     5.2s -> tip    10.2s  +   3.3s  tests/test_sphericaldf.py::test_eddington_powerspherical_massprofile
+   1.40x (min 1.32x, 2 jobs)  main     5.9s -> tip    10.6s  +   3.1s  tests/test_actionAngle.py::test_actionAngleVertical_linear_angles
+   1.58x (min 1.27x, 12 jobs)  main     2.6s -> tip     5.9s  +   2.2s  tests/test_orbit.py::test_dxdv_3d_c_vs_python[OblateStaeckelWrapperPotential]
+   1.35x (min 1.30x, 2 jobs)  main     4.3s -> tip     8.5s  +   2.1s  tests/test_diskdf.py::test_dehnendf_cold_flat_oortB
+   2.02x (min 2.01x, 2 jobs)  main     1.5s -> tip     3.9s  +   2.0s  tests/test_sphericaldf.py::test_isotropic_eddington_dehnencore_in_nfw_beta_directint
+   1.79x (min 1.79x, 1 jobs)  main     2.4s -> tip     4.3s  +   1.9s  tests/test_interp_potential.py::test_interpolation_potential_dens
+   1.50x (min 1.36x, 2 jobs)  main     2.8s -> tip     6.1s  +   1.9s  tests/test_diskdf.py::test_moments_array_R[shudf_powerfall-oortA]
+   1.51x (min 1.37x, 12 jobs)  main     2.8s -> tip     5.6s  +   1.8s  tests/test_orbit.py::test_liouville_3d[DehnenSmoothWrapperPotential]
+   1.48x (min 1.32x, 12 jobs)  main     2.9s -> tip     5.7s  +   1.7s  tests/test_orbit.py::test_liouville_3d[BurkertPotential]
+   1.72x (min 1.44x, 11 jobs)  main     1.8s -> tip     3.9s  +   1.6s  tests/test_orbit.py::test_liouville_3d[HomogeneousSpherePotential]
+   1.61x (min 1.55x, 2 jobs)  main     1.8s -> tip     4.4s  +   1.6s  tests/test_diskdf.py::test_vmomentsurfacemass_array_R[dehnendf_flat-R-nm1]
+   1.79x (min 1.43x, 2 jobs)  main     1.4s -> tip     3.6s  +   1.6s  tests/test_interp_potential.py::test_interpolation_potential_secondderivs_c
+   1.92x (min 1.82x, 2 jobs)  main     1.3s -> tip     3.2s  +   1.5s  tests/test_sphericaldf.py::test_osipkovmerritt_dehnencore_in_nfw_dens_directint
+   1.50x (min 1.30x, 2 jobs)  main     2.2s -> tip     3.8s  +   1.4s  tests/test_quantity.py::test_quasiisothermaldf_method_returnunit
+   1.67x (min 1.37x, 12 jobs)  main     1.5s -> tip     3.1s  +   1.4s  tests/test_orbit.py::test_analytic_zmax[RazorThinExponentialDiskPotential]
+   1.51x (min 1.47x, 2 jobs)  main     1.8s -> tip     4.2s  +   1.4s  tests/test_diskdf.py::test_schwarzschild_vs_shu_powerfall
+   1.87x (min 1.87x, 1 jobs)  main     1.6s -> tip     3.0s  +   1.4s  tests/test_interp_potential.py::test_interpolation_potential_force
+   1.80x (min 1.57x, 2 jobs)  main     2.0s -> tip     3.2s  +   1.4s  tests/test_potential.py::test_AdiabaticContractionWrapper_amp
+   1.63x (min 1.57x, 2 jobs)  main     1.5s -> tip     3.6s  +   1.4s  tests/test_diskdf.py::test_vmomentsurfacemass_array_R[dehnendf_flat-R-nm0]
+   3.39x (min 3.22x, 2 jobs)  main     0.6s -> tip     2.0s  +   1.4s  tests/test_potential.py::test_poisson_surfdens_potential[SphericalShellPotential]
+   1.48x (min 1.30x, 2 jobs)  main     3.0s -> tip     4.1s  +   1.4s  tests/test_noninertial.py::test_isConservative
+   2.23x (min 2.00x, 2 jobs)  main     1.2s -> tip     2.4s  +   1.4s  tests/test_noninertial.py::test_linacc_changingacc_xyz_accellsrframe_scalarfuncomegaz
+   1.53x (min 1.47x, 2 jobs)  main     1.7s -> tip     4.0s  +   1.3s  tests/test_diskdf.py::test_schwarzschild_vs_shu_powerrise
+   1.99x (min 1.83x, 2 jobs)  main     1.1s -> tip     2.7s  +   1.3s  tests/test_sphericaldf.py::test_osipkovmerritt_dehnencore_in_nfw_beta_directint
+   1.90x (min 1.84x, 2 jobs)  main     1.0s -> tip     2.8s  +   1.3s  tests/test_diskdf.py::test_vmomentsurfacemass_array_R[shudf_powerfall-R-nm1]
+   1.44x (min 1.32x, 12 jobs)  main     2.1s -> tip     4.2s  +   1.3s  tests/test_orbit.py::test_liouville_3d[PlummerPotential]
+   2.03x (min 1.90x, 2 jobs)  main     1.3s -> tip     2.5s  +   1.3s  tests/test_noninertial.py::test_linacc_changingacc_xyz_accellsrframe_funcomegaz
+   1.44x (min 1.34x, 2 jobs)  main     2.3s -> tip     3.8s  +   1.3s  tests/test_quantity.py::test_quasiisothermaldf_method_returntype
+   1.42x (min 1.34x, 12 jobs)  main     2.0s -> tip     3.6s  +   1.1s  tests/test_orbit.py::test_wrapper_followedbyanotherpotential_3d
+   1.87x (min 1.87x, 2 jobs)  main     0.9s -> tip     2.5s  +   1.1s  tests/test_diskdf.py::test_vmomentsurfacemass_array_R[shudf_powerfall-R-nm0]
+   1.41x (min 1.31x, 2 jobs)  main     2.2s -> tip     3.9s  +   1.1s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_wrtVertical
+   1.27x (min 1.27x, 1 jobs)  main     2.9s -> tip     5.3s  +   1.1s  tests/test_sphericaldf.py::test_constantbeta_selfconsist_dehnencore_dMdE_integral
+   1.98x (min 1.67x, 9 jobs)  main     0.8s -> tip     2.2s  +   1.1s  tests/test_orbit.py::test_doublewrapper_3d
+   1.39x (min 1.30x, 2 jobs)  main     2.2s -> tip     3.8s  +   1.1s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_wrtVertical_bisect
+   1.38x (min 1.29x, 2 jobs)  main     2.2s -> tip     3.9s  +   1.1s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_wrtVertical_pointtransform
+   1.36x (min 1.30x, 2 jobs)  main     2.3s -> tip     4.0s  +   1.1s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_wrtVertical_pointtransform_bisect
+   1.38x (min 1.30x, 2 jobs)  main     2.2s -> tip     3.8s  +   1.1s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_wrtVertical_exactpointtransform
+   1.37x (min 1.25x, 12 jobs)  main     2.2s -> tip     4.3s  +   1.1s  tests/test_orbit.py::test_energy_jacobi_conservation[mockRotatingFlatSpiralArmsPotential--10.0--10.0
+   2.07x (min 2.05x, 2 jobs)  main     0.7s -> tip     2.0s  +   1.1s  tests/test_sphericaldf.py::test_isotropic_eddington_dehnencore_in_nfw_meanvr_directint
+   1.36x (min 1.28x, 2 jobs)  main     2.3s -> tip     4.0s  +   1.1s  tests/test_actionAngle.py::test_actionAngleVerticalInverse_wrtVertical_exactpointtransform_bisect
+
+1021 tests compared (>= 0.5 s on main)
