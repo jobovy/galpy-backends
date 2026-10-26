@@ -114,5 +114,29 @@ DehnenBar Phi 5 -> 90 us, Kepler 1.7 -> 26, SphericalShell 2.5 -> 35, NFW 5.8 ->
 ExpTruncNFW 13 -> 100, HomogeneousSphere 4.7 -> 27, Einasto 11 -> 56, Burkert 12 -> 58.
 Prototype on DehnenBar with `where(xp, c, a, b)` / `ones_where(xp, c, x)` helpers
 (numpy-scalar `a if c else b`, else the exact original expression): 70 -> 22 us,
-bitwise identical results and types (scalars, edges, arrays). Awaiting Jo on the
-approach.
+bitwise identical results and types (scalars, edges, arrays).
+
+## Bodies: #1756 (stack #1757 on #1753)
+
+`where`/`fill_where` in `galpy.backend._coerce` (numpy-scalar `a if c else b`, else the
+same `xp.where`), applied to DehnenBar, NFW Phi, PowerSpherical, SphericalShell,
+HomogeneousSphere, ExpTruncNFW (numpy `_F` -> branch_where), Burkert, Einasto,
+PowerSphericalwCutoff, RotateAndTilt's R=inf guard; router: module-level scipy.special,
+fallbacks as "module.name" strings. Internal scalar Phi (us, main / #1753 / #1756):
+DehnenBar 5/72/23, NFW 5.9/52/11, Kepler 1.7/23/4.4, SphericalShell 2.4/33/6.9,
+HomogeneousSphere 4.6/21/4.5, ExpTruncNFW 19/80/34, MWP14 24/147/54 (forces 66/45/37).
+Flagged tests (s): analytic_ecc[ExpTruncNFW] 8.6/28.4/15.7, liouville_3d[DehnenBar]
+2.3/7.9/4.0; liouville_3d[RotateAndTilt_offset] 32/64/65 (2nd derivs, not touched).
+Bitwise check: `eq_harness.py`/`eq_compare.py` (internal methods, 4023 records) and
+`pub_types.py`/`pub_compare.py` (public functions, 2200 records): 0 value changes; 30
+public types numpy.float64 -> float, all = main's. `bodies_all.py`: per-potential timing.
+
+## ubuntu-26.04 CI (found on these PRs): #1754 (main) / #1755 (feat)
+
+GCC 15 on the new image: (1) coverage build: undeclared __gcov_dump/__gcov_reset;
+(2) Torus build: omp.h inside integrateFullOrbit.h's extern "C" ("template with C
+linkage"); (3) test_harmonic_planar_stm_vs_fd_of_flow: forward FD eps=1e-6 of an
+adaptive integration = integrator error/eps ~1e-4, machine-dependent (5.53e-4 on some
+26.04 runners vs a 5e-4 bound). Central FD eps=1e-4: 1.06e-5 (non-axi Multipole),
+2.5-4.6e-8 others; bounds tightened to 5e-5 / 5e-7. Not #1753: the failure follows
+the runner (#1755 without #1753 fails identically).

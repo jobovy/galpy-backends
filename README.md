@@ -83,8 +83,8 @@ Since 2026-10-07:
   153 checks green.
 
 Open: the v2 pre-release; #1752 (constantbetadf numpy fE back to main's speed
-  without jit, logs/numpy_speed_audit_2026-10-25); #1753 (numpy fast paths in the shared
-  dispatch); next, numpy-scalar paths in the branch-free potential bodies.
+  without jit, logs/numpy_speed_audit_2026-10-25); #1753 + #1756 (stack #1757: numpy dispatch fast
+  paths, then numpy-scalar paths in the potential bodies); #1754/#1755 (ubuntu-26.04 CI).
 
 <details>
 <summary>Previous status (2026-10-07)</summary>
@@ -951,3 +951,6 @@ number in the pair.
 | [#1750](https://github.com/jobovy/galpy/pull/1750) | (check) | 2026-10-25 | Rebase feat/backends onto main 057dfee16 -> 055f142df (check PR, closed after Jo's force-push) |
 | [#1752](https://github.com/jobovy/galpy/pull/1752) | feat/backends | (open) | constantbetadf: numpy fE back to main's speed without jit (bucket padding, main's `_rforce_jax` restored, precise NFW/ExpTruncNFW) |
 | [#1753](https://github.com/jobovy/galpy/pull/1753) | feat/backends | (open) | backend: numpy fast paths in the shared dispatch (@backend_input early return, inline host checks, cached is_compiling, router -> scipy) |
+| [#1754](https://github.com/jobovy/galpy/pull/1754) | main | (open) | CI on ubuntu-26.04 (GCC 15): declare gcov hooks, omp.h outside extern "C", central differences in the planar STM test |
+| [#1755](https://github.com/jobovy/galpy/pull/1755) | feat/backends | (open) | same three commits as #1754 |
+| [#1756](https://github.com/jobovy/galpy/pull/1756) | feat/backends (stack #1757 on #1753) | (open) | potentials: numpy-scalar paths for the branch-free hot sites (where/fill_where helpers; router lazy fallbacks) |
