@@ -82,7 +82,9 @@ Since 2026-10-07:
   entries, #1740's per-orbit scaling on a forced backend); checked on #1750, all
   153 checks green.
 
-Open: the v2 pre-release.
+Open: the v2 pre-release; #1752 (constantbetadf numpy fE back to main's speed
+  without jit, logs/numpy_speed_audit_2026-10-25); next, a numpy fast path in the
+  shared dispatch (numpy per-call 2-7x main's).
 
 <details>
 <summary>Previous status (2026-10-07)</summary>
@@ -947,3 +949,4 @@ number in the pair.
 | [#1748](https://github.com/jobovy/galpy/pull/1748) | main | 2026-10-25 | isConservative: symplectic integration for forces that derive from a potential, including a frame that only accelerates |
 | [#1749](https://github.com/jobovy/galpy/pull/1749) | feat/backends | 2026-10-25 | isConservative on feat/backends; the in-backend leapfrog uses it (follow-up to #1744) |
 | [#1750](https://github.com/jobovy/galpy/pull/1750) | (check) | 2026-10-25 | Rebase feat/backends onto main 057dfee16 -> 055f142df (check PR, closed after Jo's force-push) |
+| [#1752](https://github.com/jobovy/galpy/pull/1752) | feat/backends | (open) | constantbetadf: numpy fE back to main's speed without jit (bucket padding, main's `_rforce_jax` restored, precise NFW/ExpTruncNFW) |

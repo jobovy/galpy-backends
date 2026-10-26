@@ -66,6 +66,23 @@ Fix (branch `backend/constantbeta-numpy-speed`):
    (Jo: yes; to an ulp, 1.3-1.4x);
 4. TruncatedTwoPower `_rho_g` back to main's plain arithmetic.
 
+PR: [#1752](https://github.com/jobovy/galpy/pull/1752) (commit e1d59053c on
+055f142df). Construct + fE spline, x64, numpy path (each row concurrent):
+
+| DF | main | feat | #1752 |
+|---|---|---|---|
+| CI fixture (NFW pot, DehnenCore dens, beta=0.25), jax 0.10.1 | 250 s | 636 s | 312 s |
+| same, jax 0.12 | 235 s | 6256 s | 279 s |
+| same, quiet box | 197 s | | 188 s |
+| Hernquist, beta=-0.3 | 145 s | 234 s | 75 s |
+| TruncatedNFW (rc=5a, n=2), beta=-0.3 | 1249 s | >9000 s | 939 s |
+| TruncNFW + TruncHern, float32, build+sample+eval | 1793 s | | 1499 s |
+
+The NFW fixture is 1.0-1.25x main: the precise small-r series is what runs at
+deep energies (all nodes < 0.25a), and nested autodiff through it costs more
+than main's closed form (which would give 1.75x faster than main, but fE 23% off
+within 1e-8 of Phi_min).
+
 Dead ends: padding alone is not enough for a full 202-energy build (463 s vs
 main's 233 s): 4-energy probes are compile-dominated and overstate it. The
 precise NFW form costs ~2x under `vmap` (both branches evaluate on mixed
