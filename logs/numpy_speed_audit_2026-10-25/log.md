@@ -140,3 +140,8 @@ adaptive integration = integrator error/eps ~1e-4, machine-dependent (5.53e-4 on
 26.04 runners vs a 5e-4 bound). Central FD eps=1e-4: 1.06e-5 (non-axi Multipole),
 2.5-4.6e-8 others; bounds tightened to 5e-5 / 5e-7. Not #1753: the failure follows
 the runner (#1755 without #1753 fails identically).
+
+2026-10-26: #1754 (dd6e0fb06) 105 pass / 3 skipping, #1755 (2f6f784a6) 152 pass, codecov
+patch+project pass, both MERGEABLE CLEAN. Every ubuntu-latest + run-notebooks job ran on
+ubuntu-26.04 (26/26 and 33/33 by the job logs' "Image:" line), so all three fixes were
+exercised. #1754's earlier Windows test_actionAngle red did not recur.
