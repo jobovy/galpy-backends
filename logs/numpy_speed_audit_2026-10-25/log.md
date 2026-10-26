@@ -95,3 +95,24 @@ straddle the series switch).
   in float32, and fE is 25% off at the most-bound energy (main and feat).
 - main's NFW/ExpTruncNFW `_rforce_jax` cancel at small r (NFW dF/dr 290x off at
   r = 1e-6 a).
+
+## Shared dispatch: #1753
+
+Per-layer timing (each decorator's `__wrapped__`) of a scalar `evaluatePotentials`:
+`@backend_input` ~10 us (main has none); the unit decorators cost the same on both
+trees in isolation. #1753 (74a2d19ce): `@backend_input` early return for host
+coordinates + cached no-backend-parameter flag + no non-numpy default; inline host
+checks in `namespace_from_arrays`/`is_backend_array`; `scalar_like` host early
+return; cached `torch.compiler.is_compiling`; router -> scipy for numpy.
+Public calls (us, main / feat / #1753): Hernquist Phi 15/34/23, MWP14 Rforce
+95/104/74, DehnenBar Phi 19/130/106. Internal calls over 44 default-constructible
+potentials: median scalar 1.89x -> 1.63x main.
+
+Remaining: branch-free bodies. numpy.where / ones_like on a scalar ~3-4 us each and
+return a 0-d array (each later op ~1 us). Worst internal scalar calls (main -> feat):
+DehnenBar Phi 5 -> 90 us, Kepler 1.7 -> 26, SphericalShell 2.5 -> 35, NFW 5.8 -> 60,
+ExpTruncNFW 13 -> 100, HomogeneousSphere 4.7 -> 27, Einasto 11 -> 56, Burkert 12 -> 58.
+Prototype on DehnenBar with `where(xp, c, a, b)` / `ones_where(xp, c, x)` helpers
+(numpy-scalar `a if c else b`, else the exact original expression): 70 -> 22 us,
+bitwise identical results and types (scalars, edges, arrays). Awaiting Jo on the
+approach.
