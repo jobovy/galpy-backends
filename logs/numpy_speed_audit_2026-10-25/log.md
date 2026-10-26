@@ -145,3 +145,15 @@ the runner (#1755 without #1753 fails identically).
 patch+project pass, both MERGEABLE CLEAN. Every ubuntu-latest + run-notebooks job ran on
 ubuntu-26.04 (26/26 and 33/33 by the job logs' "Image:" line), so all three fixes were
 exercised. #1754's earlier Windows test_actionAngle red did not recur.
+
+## Coverage 15 vs 14 since the rebase: #1758 (stack #1759 on #1755)
+
+Jo: "15 in 1755". #1755 adds none (codecov base 055f142df 15, head 15). Per-file misses
+6ac49fcc1 (pre-rebase tip) 14 vs 055f142df 15: the new one is conversion.py:1065, the
+rebase commit's `as_backend_constant` move of per-orbit ro/vo scales onto the output's
+backend inside main's #1740 shape branch. #1758 adds
+test_numpy_orbit_per_orbit_scales_under_forced_backend (#1740's shape/time/dontreshape
+grid, forced jax/torch, quantity on/off, 1e-13 vs numpy). A/B under CI's
+-W error::DeprecationWarning: 4/4 with the line, both torch cases fail without
+(Tensor * ndarray -> numpy -> torch __array_wrap__ deprecation). Whole file 239 passed
+(13 min); new test passes in --backend jax/torch, +--jit.
