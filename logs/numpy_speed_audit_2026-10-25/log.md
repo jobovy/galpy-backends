@@ -157,3 +157,7 @@ grid, forced jax/torch, quantity on/off, 1e-13 vs numpy). A/B under CI's
 -W error::DeprecationWarning: 4/4 with the line, both torch cases fail without
 (Tensor * ndarray -> numpy -> torch __array_wrap__ deprecation). Whole file 239 passed
 (13 min); new test passes in --backend jax/torch, +--jit.
+#1758 CI: codecov base (2f6f784a6) 15 -> head (981db67b9) 14 misses, 20/20 sessions.
+3 reds, all SIMBAD (from_name: DALServiceError / SSL-read timeout); CDS unreachable from
+the dev box too (000 after 30 s). Waiter reruns the failed jobs + all-clear once SIMBAD
+answers 200.
