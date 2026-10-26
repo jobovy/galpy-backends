@@ -163,3 +163,8 @@ the dev box too (000 after 30 s). Waiter reruns the failed jobs + all-clear once
 answers 200.
 #1758 green 18:42Z (152 pass, MERGEABLE CLEAN) after SIMBAD reruns: CDS down until ~16:10Z,
 then flaky (1 in 3 local from_name runs fully passed); 4 rerun rounds of the from_name jobs.
+
+2026-10-26: Jo merged stack #1759 (#1755 -> 89ecb4651, #1758 -> 40507855b on feat/backends).
+#1752: empty commit 723b6d0fb. Stack #1757 rebased by hand onto 40507855b: #1753
+74a2d19ce -> 652853a92, #1756 1a94ee3c0 -> 662defbe8; trees == trunk+old-layer merges,
+each layer's diff byte-identical to before; pushed with per-branch leases.
