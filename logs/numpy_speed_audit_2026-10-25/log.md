@@ -161,3 +161,5 @@ grid, forced jax/torch, quantity on/off, 1e-13 vs numpy). A/B under CI's
 3 reds, all SIMBAD (from_name: DALServiceError / SSL-read timeout); CDS unreachable from
 the dev box too (000 after 30 s). Waiter reruns the failed jobs + all-clear once SIMBAD
 answers 200.
+#1758 green 18:42Z (152 pass, MERGEABLE CLEAN) after SIMBAD reruns: CDS down until ~16:10Z,
+then flaky (1 in 3 local from_name runs fully passed); 4 rerun rounds of the from_name jobs.
