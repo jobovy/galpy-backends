@@ -208,3 +208,8 @@ verbatim main's, same place.
 
 2026-10-27: #1762 green at f45e03409 (105 pass, no SIMBAD rerun needed); codecov misses 24 = 24, all
 modified lines covered.
+
+2026-10-27: #1763 green at 322ac41a5 (152 pass after one SIMBAD round). Backend rows (|| true) read from
+logs: test_sphericaldf 255 passed, 0 failed under jax, jax-jit, torch, torch-jit (the local torch
+failures do not occur on CI). Codecov misses 14 = 14, all modified lines covered. Jobs API 502s at
+per_page=100 on this run; per_page=30 works.
