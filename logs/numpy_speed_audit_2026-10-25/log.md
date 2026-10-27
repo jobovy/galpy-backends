@@ -222,3 +222,6 @@ test_rforce_jax_matches_forces). -X theirs replay: 2 min, #1755 skipped as #1754
 #1760's HISTORY entry dropped at #1634's HISTORY hunk -> fix-up commit; tip tree == reference, vs old
 fb +7 HISTORY lines, 0 deletions. Scratch branch rebase/feat-backends-onto-main-2026-10-27 at
 db33e5fcf (no CI: code identical to #1763's green tree). Jo applies.
+
+2026-10-27: Jo applied the feat/backends rebase onto main: tip db33e5fcf (== prepared, main 0 ahead). Scratch
+branch and /var/tmp/rb-1762 removed. Push CI + #892 running, SIMBAD rerun loop on #892.
