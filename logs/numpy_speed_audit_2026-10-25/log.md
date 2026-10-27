@@ -182,3 +182,8 @@ notebooks) and codecov phantoms from the failed shards' missing uploads.
 14 misses head = 14 base (392cdf29a), patch 109/109. Merged-tree check (#1756 + #1752 at
 34abedf03): sphericaldf rforce_jax 4, test_potential profiles 450, exptruncnfw+constantbetadf 135.
 #1754 (main) merged 2026-10-26 as cde125a78.
+
+2026-10-27: #1760 (main): NFW/ExpTruncNFW _rforce_jax use the numpy split (_nfw_h, _F_series)
+at small r. float64 at r=1e-6: F_r 1.2e-4/1.2e-3 -> 0, dF_r/dr 290x/2100x -> 2e-10/8e-10. fE at
+E=Phi(1e-5) moves 2e-6..5e-5. test_rforce_jax_matches_forces (#1752's, unforced) A/B fails on each
+potential separately. Full test_sphericaldf green (one xdist-only fixture-order failure; serial pass).
