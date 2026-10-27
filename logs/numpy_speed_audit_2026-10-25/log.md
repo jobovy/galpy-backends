@@ -187,3 +187,12 @@ notebooks) and codecov phantoms from the failed shards' missing uploads.
 at small r. float64 at r=1e-6: F_r 1.2e-4/1.2e-3 -> 0, dF_r/dr 290x/2100x -> 2e-10/8e-10. fE at
 E=Phi(1e-5) moves 2e-6..5e-5. test_rforce_jax_matches_forces (#1752's, unforced) A/B fails on each
 potential separately. Full test_sphericaldf green (one xdist-only fixture-order failure; serial pass).
+
+2026-10-27: #1756 merged (db1849984). #1760 green (codecov 24=24, patch 5/5). Jo: "let's do the
+temp x64 in the code as a small fix" (not global x64 for users). #1762 (main): constantbetadf's
+_gradfunc runs under jax.enable_x64(True) (jax>=0.8; jax.experimental's before -- checked on a jax
+0.6.2 venv) and returns numpy. Plain main without x64: NFW beta=-0.6 fE(Phi(1e-3)) 1.70e11 vs
+1.34e12, ExpTruncNFW twobeta=-1 NEGATIVE (-2.9e9 vs 9.6e10), 7% at Phi(0.01). Bit-identical with x64
+on (3 DFs x 5 E). New test turns x64 off around build+fE; A/B (jax.enable_x64 directly) fails on
+main. Full test_sphericaldf serial CI flags: 251 passed, constantbetadf.py 100%. Merges cleanly
+with #1760. fb twin in /var/tmp/x64-fb (_numpy_gradfunc only; jax potentials keep user dtype).
