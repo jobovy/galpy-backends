@@ -205,3 +205,6 @@ covered); test_backend_constantbetadf 82; constantbeta forced jax / jax --jit 51
 local failures identical without the change (-W error __array_wrap__ DeprecationWarning; local
 torch 2.12+cu126 dynamo is_leaf assertion under --jit; fb CI torch-jit passes them). HISTORY entry
 verbatim main's, same place.
+
+2026-10-27: #1762 green at f45e03409 (105 pass, no SIMBAD rerun needed); codecov misses 24 = 24, all
+modified lines covered.
