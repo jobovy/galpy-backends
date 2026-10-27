@@ -953,8 +953,8 @@ number in the pair.
 | [#1753](https://github.com/jobovy/galpy/pull/1753) | feat/backends | 2026-10-27 | backend: numpy fast paths in the shared dispatch (@backend_input early return, inline host checks, cached is_compiling, router -> scipy) |
 | [#1754](https://github.com/jobovy/galpy/pull/1754) | main | 2026-10-26 | CI on ubuntu-26.04 (GCC 15): declare gcov hooks, omp.h outside extern "C", central differences in the planar STM test |
 | [#1755](https://github.com/jobovy/galpy/pull/1755) | feat/backends | 2026-10-26 | same three commits as #1754 |
-| [#1763](https://github.com/jobovy/galpy/pull/1763) | feat/backends | (open, green) | constantbetadf: numpy-path jax derivatives (_numpy_gradfunc) in float64 without the user's x64; twin of #1762 |
-| [#1762](https://github.com/jobovy/galpy/pull/1762) | main | (open, green) | constantbetadf: jax derivatives in float64 without turning on jax's x64 for the user (jax.enable_x64 scoped context; fb twin #1763) |
-| [#1760](https://github.com/jobovy/galpy/pull/1760) | main | (open, green) | NFW, ExpTruncNFW: small-r series in the jax radial force that constantbetadf differentiates (feat/backends has it from #1752) |
+| [#1763](https://github.com/jobovy/galpy/pull/1763) | feat/backends | merged 2026-10-27 | constantbetadf: numpy-path jax derivatives (_numpy_gradfunc) in float64 without the user's x64; twin of #1762 |
+| [#1762](https://github.com/jobovy/galpy/pull/1762) | main | merged 2026-10-27 | constantbetadf: jax derivatives in float64 without turning on jax's x64 for the user (jax.enable_x64 scoped context; fb twin #1763) |
+| [#1760](https://github.com/jobovy/galpy/pull/1760) | main | merged 2026-10-27 | NFW, ExpTruncNFW: small-r series in the jax radial force that constantbetadf differentiates (feat/backends has it from #1752) |
 | [#1756](https://github.com/jobovy/galpy/pull/1756) | feat/backends (stack #1757 on #1753) | 2026-10-27 | potentials: numpy-scalar paths for the branch-free hot sites (where/fill_where helpers; router lazy fallbacks) |
 | [#1758](https://github.com/jobovy/galpy/pull/1758) | feat/backends (stack #1759 on #1755) | 2026-10-26 | test: per-orbit ro/vo physical outputs under a forced backend (conversion.py:1065, uncovered since the 10-25 rebase; 15 -> 14 misses) |

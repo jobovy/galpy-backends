@@ -213,3 +213,12 @@ modified lines covered.
 logs: test_sphericaldf 255 passed, 0 failed under jax, jax-jit, torch, torch-jit (the local torch
 failures do not occur on CI). Codecov misses 14 = 14, all modified lines covered. Jobs API 502s at
 per_page=100 on this run; per_page=30 works.
+
+2026-10-27: merged: #1760 (main, f2f6071d7), #1762 (main, 9c129abcb), #1763 (feat/backends,
+1ae1f80f9). feat/backends sync onto main prepared, not applied: main 3 ahead (#1754, #1760, #1762),
+fb 605. Reference tree = fb's tree + #1760's HISTORY entry (#1754 is in via #1755, #1762 via #1763;
+merge-tree -X ours alone would leak a dead _enable_x64 block into _make_gradfunc and a second
+test_rforce_jax_matches_forces). -X theirs replay: 2 min, #1755 skipped as #1754's equivalent,
+#1760's HISTORY entry dropped at #1634's HISTORY hunk -> fix-up commit; tip tree == reference, vs old
+fb +7 HISTORY lines, 0 deletions. Scratch branch rebase/feat-backends-onto-main-2026-10-27 at
+db33e5fcf (no CI: code identical to #1763's green tree). Jo applies.
