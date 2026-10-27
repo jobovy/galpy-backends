@@ -168,3 +168,12 @@ then flaky (1 in 3 local from_name runs fully passed); 4 rerun rounds of the fro
 #1752: empty commit 723b6d0fb. Stack #1757 rebased by hand onto 40507855b: #1753
 74a2d19ce -> 652853a92, #1756 1a94ee3c0 -> 662defbe8; trees == trunk+old-layer merges,
 each layer's diff byte-identical to before; pushed with per-branch leases.
+
+2026-10-27: Jo merged #1753 (392cdf29a) and #1752 (34abedf03). GitHub's stack rebase put
+#1756 on 392cdf29a (e2cba220f, tree == my 662defbe8). #1756 had 15 misses vs 14:
+_router.py `return sp.exp1(x)` went dead behind #1756's numpy early return in exp1 (torch has
+no exp1, jax returns earlier). Fix 2e333522f: numpy selects scipy.special and returns through
+that line; 1.82 us/scalar call unchanged; special+exptruncnfw tests 322 (CI flags, _router.py
+100%) and 328 in jax/torch/+jit. Old runs cancelled on push (Jo: "Don't wait for CI to finish,
+just cancel when you push"). All other reds on #1752/#1753/#1756 were SIMBAD (from_name tests +
+notebooks) and codecov phantoms from the failed shards' missing uploads.

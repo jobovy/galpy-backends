@@ -949,8 +949,8 @@ number in the pair.
 | [#1748](https://github.com/jobovy/galpy/pull/1748) | main | 2026-10-25 | isConservative: symplectic integration for forces that derive from a potential, including a frame that only accelerates |
 | [#1749](https://github.com/jobovy/galpy/pull/1749) | feat/backends | 2026-10-25 | isConservative on feat/backends; the in-backend leapfrog uses it (follow-up to #1744) |
 | [#1750](https://github.com/jobovy/galpy/pull/1750) | (check) | 2026-10-25 | Rebase feat/backends onto main 057dfee16 -> 055f142df (check PR, closed after Jo's force-push) |
-| [#1752](https://github.com/jobovy/galpy/pull/1752) | feat/backends | (open) | constantbetadf: numpy fE back to main's speed without jit (bucket padding, main's `_rforce_jax` restored, precise NFW/ExpTruncNFW) |
-| [#1753](https://github.com/jobovy/galpy/pull/1753) | feat/backends | (open) | backend: numpy fast paths in the shared dispatch (@backend_input early return, inline host checks, cached is_compiling, router -> scipy) |
+| [#1752](https://github.com/jobovy/galpy/pull/1752) | feat/backends | 2026-10-27 | constantbetadf: numpy fE back to main's speed without jit (bucket padding, main's `_rforce_jax` restored, precise NFW/ExpTruncNFW) |
+| [#1753](https://github.com/jobovy/galpy/pull/1753) | feat/backends | 2026-10-27 | backend: numpy fast paths in the shared dispatch (@backend_input early return, inline host checks, cached is_compiling, router -> scipy) |
 | [#1754](https://github.com/jobovy/galpy/pull/1754) | main | (open, green) | CI on ubuntu-26.04 (GCC 15): declare gcov hooks, omp.h outside extern "C", central differences in the planar STM test |
 | [#1755](https://github.com/jobovy/galpy/pull/1755) | feat/backends | 2026-10-26 | same three commits as #1754 |
 | [#1756](https://github.com/jobovy/galpy/pull/1756) | feat/backends (stack #1757 on #1753) | (open) | potentials: numpy-scalar paths for the branch-free hot sites (where/fill_where helpers; router lazy fallbacks) |
