@@ -196,3 +196,12 @@ _gradfunc runs under jax.enable_x64(True) (jax>=0.8; jax.experimental's before -
 on (3 DFs x 5 E). New test turns x64 off around build+fE; A/B (jax.enable_x64 directly) fails on
 main. Full test_sphericaldf serial CI flags: 251 passed, constantbetadf.py 100%. Merges cleanly
 with #1760. fb twin in /var/tmp/x64-fb (_numpy_gradfunc only; jax potentials keep user dtype).
+
+2026-10-27: #1763 (feat/backends twin of #1762) at 322ac41a5: _numpy_gradfunc evaluates inside
+_enable_x64(True) (same module-level alias as main); jax potentials (_raw_gradfunc) and the backend
+fE path keep the user's dtype. fb without x64: NFW fE(Phi(1e-3)) 1.8e4 vs 1.34e12. Bit-identical
+with x64 on; A/B fails on fb HEAD. Full test_sphericaldf serial CI flags 255 passed (new lines
+covered); test_backend_constantbetadf 82; constantbeta forced jax / jax --jit 51 each. Torch-forced
+local failures identical without the change (-W error __array_wrap__ DeprecationWarning; local
+torch 2.12+cu126 dynamo is_leaf assertion under --jit; fb CI torch-jit passes them). HISTORY entry
+verbatim main's, same place.
