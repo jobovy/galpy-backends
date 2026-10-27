@@ -177,3 +177,8 @@ that line; 1.82 us/scalar call unchanged; special+exptruncnfw tests 322 (CI flag
 100%) and 328 in jax/torch/+jit. Old runs cancelled on push (Jo: "Don't wait for CI to finish,
 just cancel when you push"). All other reds on #1752/#1753/#1756 were SIMBAD (from_name tests +
 notebooks) and codecov phantoms from the failed shards' missing uploads.
+
+2026-10-27: #1756 green at 2e333522f after one SIMBAD rerun round (3 from_name shards). Codecov:
+14 misses head = 14 base (392cdf29a), patch 109/109. Merged-tree check (#1756 + #1752 at
+34abedf03): sphericaldf rforce_jax 4, test_potential profiles 450, exptruncnfw+constantbetadf 135.
+#1754 (main) merged 2026-10-26 as cde125a78.
