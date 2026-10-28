@@ -111,7 +111,9 @@ Figure placement ([63], [108], [78]) is handled by the order of the figure envir
 
 ## Open items
 
-- H100: torch.compile data for the jit-amortization figure (`backends-h100`, instructions sent), the symplec6 series once the galpy PR is in.
+- Merge order of the galpy PRs (all against `feat/backends`, disjoint files): #1767 first (the pytest 9.2 test fix; until it merges every PR's Python 3.14 backend shard is red), then #1764, #1765, #1766, #1768 in any order. The remaining CI reds are SIMBAD outages on the `from_name` shards (reruns are being driven automatically).
+- The disk-DF sampler design (Part B): a yes/no on the four stages, in particular whether the κ/ω_R weighting should stay as sample replication (current semantics) or become weights.
+- H100: torch.compile data for the jit-amortization figure and the symplec6 series from #1766 (`backends-h100`, instructions sent; the figures and §2.5/§4.5 take them without further text changes except the two numbers marked `% JB`).
 - The remote of `~/Repos/galpy-jax` still points at the old URL (GitHub redirects); `git remote set-url origin https://github.com/jobovy/galpy-backends.git` when convenient (the agent's permissions did not allow the change).
 - `Bovy2027`'s title in refs.bib.
 - Sections 8 and later: not yet reviewed by JB; the process section's numbers (tests, PRs, costs) will be refreshed when it is.
