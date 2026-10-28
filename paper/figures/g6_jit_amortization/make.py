@@ -133,7 +133,7 @@ def make():
         return rf"$N=10^{{{int(round(numpy.log10(N)))}}}$"
 
     # print size: 7.0 in wide (figure*), text 8-10 pt
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.2), (11.6, 4.3)))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=layout.figsize(PAPER, (7.0, 3.5), (11.6, 4.3)))
     fs_line = layout.FS["line"] if PAPER else 6.5
     fs_note = layout.FS["note"] if PAPER else 7.5
 
@@ -150,15 +150,25 @@ def make():
     # ---- (a) per-call wall-time vs call index ----------------------------------
     # compiled solid, eager (per-call) dashed, at the larger N only (the N=1e4
     # series, measured too, told the same story and cluttered the panel)
+    compiled_lines = {}
     for fw, dev, d in runs:
         if str(N) in d.get("per_call", {}):
             ts = numpy.asarray(d["per_call"][str(N)], dtype=float)
             st = palette.style(fw, dev, "jit")
-            ax1.semilogy(numpy.arange(len(ts)), ts * 1e3, ms=4, label=_lab(fw, dev, _mode(fw, True)), **st)
+            compiled_lines[(fw, dev)] = ax1.semilogy(
+                numpy.arange(len(ts)), ts * 1e3, ms=4, label=_lab(fw, dev, _mode(fw, True)), **st)[0]
         se = palette.style(fw, dev, "eager")
         se.pop("marker")
         ax1.semilogy([0, _NCALLS - 1], [d["eager"][str(N)] * 1e3] * 2, lw=1.1,
                      label=_lab(fw, dev, "eager"), **se)
+    # (2026-10-28) the compiled jax and torch calls on the H100 coincide (both at
+    # the launch floor, 0.048 ms), so the two lines share one label
+    cj, ct = compiled_lines.get(("jax", "h100")), compiled_lines.get(("torch", "h100"))
+    if cj is not None and ct is not None:
+        mj, mt = (float(numpy.median(numpy.asarray(ln.get_ydata())[1:])) for ln in (cj, ct))
+        if abs(mj - mt) < 0.25 * max(mj, mt):
+            ct.set_label("_" + ct.get_label())
+            cj.set_label(cj.get_label().replace("jax jit", "jax jit, torch compiled", 1))
     ax1.annotate("call 0 = compile", xy=(0, data["per_call"][str(N)][0] * 1e3),
                  xytext=(2.2, data["per_call"][str(N)][0] * 1e3 * 0.62), fontsize=fs_note,
                  color="0.3", arrowprops=dict(arrowstyle="->", color="0.5", lw=0.8))
@@ -182,28 +192,29 @@ def make():
         kstar = compile_plus / (eg - steady) if eg > steady else None  # break-even calls
         stats.append((fw, dev, compile_plus, steady, eg, kstar))
     # extend the x-range comfortably past the crossovers so the lines actually meet
-    kmax = int(numpy.ceil(max(k for *_, k in stats if k) * 1.5)) if any(k for *_, k in stats) else 60
-    k = numpy.arange(0, kmax)
-    ax2.plot(k + 1, k + 1, lw=1.5, ls="--", color="0.45", label="eager (any device)")
+    kmax = int(numpy.ceil(max(k for *_, k in stats if k) * 4.0)) if any(k for *_, k in stats) else 60
+    # log-log (2026-10-28): the break-evens span two calls (the CPU) to 10^4
+    # (torch.compile on the H100, where the eager call already sits at the
+    # launch floor), which a linear axis cannot show together
+    k = numpy.unique(numpy.concatenate([numpy.arange(0, 100),
+                                        numpy.geomspace(100, kmax, 200).astype(int)]))
+    ax2.loglog(k + 1, k + 1, lw=1.5, ls="--", color="0.45", label="eager (any device)")
+    # the break-even count goes into each line's label (a third line): the
+    # crossings sit on the eager diagonal, where in-plot texts collide
     for fw, dev, compile_plus, steady, eg, kstar in stats:
-        ax2.plot(k + 1, (compile_plus + steady * k) / eg, lw=2,
-                 label=_lab(fw, dev, _mode(fw, True), "compile + run"),
+        lab = _lab(fw, dev, _mode(fw, True))
+        if kstar:
+            lab += f"\nbreak-even $\\approx${kstar + 1:.0f} calls"
+        ax2.plot(k + 1, (compile_plus + steady * k) / eg, lw=2, label=lab,
                  **{**palette.style(fw, dev, "jit"), "marker": "none"})
         if kstar:
             ystar = (compile_plus + steady * kstar) / eg
             col = palette.style(fw, dev)["color"]
             ax2.plot([kstar + 1], [ystar], marker="o", ms=6, color=col, zorder=5, label="_be")
-            if PAPER:  # two lines, right of the crossing and below the compiled line
-                xr = (kstar + 1) + 0.03 * kmax
-                ax2.text(xr, ystar * 0.97, f"break-even\n$\\approx${kstar + 1:.0f} calls",
-                         fontsize=fs_note, color=col, va="top", ha="left")
-            else:
-                ax2.text(kstar * 0.97, ystar * 1.04, f"break-even $\\approx${kstar + 1:.0f} calls",
-                         fontsize=fs_note, va="bottom", ha="right", color=col)
     ax2.set_xlabel("number of calls")
     ax2.set_ylabel("cumulative time  (eager calls)")
-    ax2.set_xlim(0, kmax)
-    ax2.set_ylim(0, kmax)
+    ax2.set_xlim(1, kmax)
+    ax2.set_ylim(0.8, kmax)
     ax2.set_title(rf"(b) break-even, {_nlab(N)}" if PAPER
                   else rf"(b) compiled vs eager break-even ({_nlab(N)})", fontsize=layout.FS["title"])
     if not PAPER:

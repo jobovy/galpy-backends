@@ -335,11 +335,19 @@ it takes about a tenth of a second on each. On the CPU, a compiled call
 then takes 26\,ms instead of 98\,ms eagerly, such that the compilation
 has paid for itself after two calls, while on the GPUs a call takes a
 fraction of a millisecond rather than a few milliseconds and the
-compilation pays for itself after 60 to 90 calls. The figure shows
-\jax\ only: \texttt{torch.compile} cannot be used on the TITAN~Xp at
-all, because its code generator requires a GPU of compute capability
-7.0 or higher and the consumer card is at 6.1, and on the H100 it
-behaves like \texttt{jax.jit}. % JB: H100 torch.compile numbers pending (backends-h100)
+compilation pays for itself after 60 to 90 calls. \torch\ tells a
+different story. \texttt{torch.compile} cannot be used on the TITAN~Xp
+at all, because its code generator requires a GPU of compute capability
+7.0 or higher and the consumer card is at 6.1, so the figure shows only
+its eager call there, 1\,ms, three times faster than eager \jax. On the
+H100, a compiled \torch\ call takes the same 0.05\,ms as a compiled
+\jax\ call, but an eager \torch\ call already takes 0.1\,ms, seven times
+less than eager \jax, and the compilation costs 0.6\,s (after the first
+compilation in the process, which took 8\,s), so that it pays for itself
+only after about ten thousand calls. For an operation this simple, eager
+\torch\ is within a factor of two of the fused kernel; what
+\texttt{torch.compile} removes is the per-operation dispatch of a longer
+computation, such as an orbit integration.
 \figurename~\ref{fig:adoverhead} shows the cost of a derivative: under
 compiled \jax\ the gradient of the potential with respect to the
 coordinates at $N$ points costs between one and two times the value
@@ -384,14 +392,17 @@ fifth rule, that the user, and not \galpy, decides what to compile.
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}
   \caption{Cost and benefit of compilation for the radial force of a
-    Plummer potential at $N=10^6$ points under \jax. Left: wall time of
-    successive calls on one CPU core, the TITAN~Xp, and the H100; the
-    first call compiles. Dashed lines are the eager cost per call. Right:
-    the cumulative time of compiled and eager calls and the number of
-    calls after which compilation pays for itself: two on the CPU, where
-    eager \jax\ is slowest, and 60 to 90 on the GPUs.
-    \texttt{torch.compile} is not shown, because its code generator does
-    not support the TITAN~Xp (see the text).}\label{fig:jitamort}
+    Plummer potential at $N=10^6$ points under \jax\ and \torch. Left:
+    wall time of successive calls on one CPU core (\jax), the TITAN~Xp,
+    and the H100; the first call compiles. Dashed lines are the eager
+    cost per call; \texttt{torch.compile} does not support the TITAN~Xp,
+    so \torch\ appears there eagerly only. Right: the cumulative time of
+    compiled and eager calls, in units of each device's eager call, and
+    the number of calls after which compilation pays for itself: two on
+    the CPU, where eager \jax\ is slowest, 60 to 90 for \jax\ on the
+    GPUs, and ten thousand for \torch\ on the H100, where the eager call
+    is already within a factor of two of the compiled
+    one.}\label{fig:jitamort}
 \end{figure*}
 
 \begin{figure*}[t!]

@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "6719bae",
-    "sha256": "03fb76c2ecdbdf10a94ff71a7e51255a1ba0f1dd3dae23cef47f4b4b6bf1847f",
+    "git": "8a142ff",
+    "sha256": "f25ca34239fc322d5706c615480c2a2df7ca0daa33d343357a63e935b4cabf94",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -282,8 +282,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "400aaa0",
-    "sha256": "cb2b067a4a7ec3c1d372d04e02082e4ee5fa5423d296389b2a969896bad7f17d",
+    "git": "8a142ff",
+    "sha256": "903482acbfbaf3f3602c404bdd51b3a46dc7ead234bf3621aa09e868c4846668",
     "track": "G"
   },
   "g7_orbit_sensitivity": {

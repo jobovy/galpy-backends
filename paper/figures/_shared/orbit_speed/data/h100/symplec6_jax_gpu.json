@@ -1,0 +1,27 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "symplec6_jax (in-backend, constant step, nsteps=450)",
+  "stepping": "constant, shared by the batch",
+  "nsteps": 450,
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "potential": "MWPotential2014",
+  "host": "trig0009 (Trillium, exclusive H100 node, slurm job 1184895, 2026-10-28)",
+  "jax_version": "0.11.2",
+  "galpy_version": "1.12.1.dev0",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_commit": "00527ee63 (PR #1766 backend/inbackend-symplectic)",
+  "note": "rows transcribed from the backends-h100 session's run log (steady = min of 3 calls after the compile call); N=3e5 is non-monotone (slower per orbit than 1e5 and 1e6) and awaits a repeat",
+  "results": [
+    {"N": 1, "wall_s": 1.28441, "per_orbit_ms": 1284.41254, "compile_run_s": 6.56},
+    {"N": 10, "wall_s": 0.69073, "per_orbit_ms": 69.07307, "compile_run_s": 2.34},
+    {"N": 100, "wall_s": 0.81862, "per_orbit_ms": 8.18620, "compile_run_s": 2.54},
+    {"N": 1000, "wall_s": 0.85672, "per_orbit_ms": 0.85672, "compile_run_s": 2.47},
+    {"N": 10000, "wall_s": 0.04382, "per_orbit_ms": 0.00438, "compile_run_s": 8.54},
+    {"N": 30000, "wall_s": 0.04672, "per_orbit_ms": 0.00156, "compile_run_s": 9.43},
+    {"N": 100000, "wall_s": 0.20425, "per_orbit_ms": 0.00204, "compile_run_s": 14.11},
+    {"N": 300000, "wall_s": 1.45596, "per_orbit_ms": 0.00485, "compile_run_s": 17.40},
+    {"N": 1000000, "wall_s": 1.84971, "per_orbit_ms": 0.00185, "compile_run_s": 13.59}
+  ]
+}
