@@ -70,22 +70,28 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # cores. XLA:CPU's pool spans the CPU affinity, so the jax CPU label states the
 # affinity stamped in its JSON ("cpu_affinity"; unstamped = the unpinned 72-thread
 # run). A series whose JSONs do not exist (yet) is skipped.
-_C1, _C16, _C_NODE = "1 core", "16 threads", "72 threads"
+_C1, _C16, _C_NODE = "1 core", "16 threads", "36 threads"
+_SYMPLEC_LS = (0, (4, 1.5, 1, 1.5, 1, 1.5))  # dash-dot-dot
 _CUDA_FAST = "GPU special functions"  # labelled since 2026-10-28 (JB)
-_C_NODE_FILES = ["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"]
+_C_NODE_FILES = ["galpy_c_cpu_36cores.json", "galpy_c_cpu_36cores_hiN.json"]
 _CPU_SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
      palette.c_threads_style(1)),
     (["galpy_c_cpu_16cores.json", "galpy_c_cpu_16cores_hiN.json"], "c", "cpu", None, _C16,
      palette.c_threads_style(16)),
-    (_C_NODE_FILES, "c", "cpu", None, _C_NODE, palette.c_threads_style(72)),
+    (_C_NODE_FILES, "c", "cpu", None, _C_NODE, palette.c_threads_style(36, node_threads=36)),
     (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit", "Dopri8, {cpu}", None),
-    # a torch CPU series (measure/torch_cpu_measure.py) is drawn when present
+    # the torch CPU series (measure/torch_measure.py with CUDA_VISIBLE_DEVICES=)
     (["torch_cpu.json"], "torch", "cpu", "eager", "dopri5, 1 core", None),
+    # the in-backend constant-step sixth-order symplectic integrator
+    # (_shared/orbit_speed/galpy_symplec_measure.py: 450 steps, the step at which
+    # its worst-case error matches the Dopri8 line's), dash-dot-dot
+    (["symplec6_jax_cpu.json"], "jax", "cpu", "jit", "symplec6, {cpu}", _SYMPLEC_LS),
 ]
 _GPU_SERIES = [
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri8", None),
     (["jax_dopri5_gpu.json", "jax_dopri5_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri5", "-."),
+    (["symplec6_jax_gpu.json"], "jax", "gpu", "jit", "symplec6", _SYMPLEC_LS),
     (["torch_cuda.json"], "torch", "gpu", "eager", "dopri5", None),
     # experimental one-thread-per-orbit CUDA kernel (experiments/cuda_orbits): galpy's
     # C forces + dop853 compiled for the GPU; a direct port (_noinl+refill) and the
@@ -184,7 +190,7 @@ def make():
             d = _load(_C_NODE_FILES)
             if d is not None:
                 Ns, wall = _series_xy(d)
-                st = palette.c_threads_style(72)
+                st = palette.c_threads_style(36, node_threads=36)
                 ax.loglog(Ns, wall, ms=4, zorder=2, label=node_label, **st)
             _plot(ax, _GPU_SERIES, sub, _label)
         ax.set_title(title, loc="left")

@@ -37,7 +37,7 @@ def main(out):
     dev = torch.device("cuda")
     p = PlummerPotential(normalize=1.0)
     Ns = [int(1e4), int(1e6)]
-    per_call, eager = {}, {}
+    per_call, eager, compile_error = {}, {}, {}
     for N in Ns:
         Rn, zn = _grid(N)
         Rt, zt = torch.as_tensor(Rn, device=dev), torch.as_tensor(zn, device=dev)
@@ -46,13 +46,17 @@ def main(out):
         torch._dynamo.reset()
         f = torch.compile(lambda R, z: evaluateRforces(p, R, z))
         ts = []
-        for _ in range(_NCALLS):
-            torch.cuda.synchronize()
-            t0 = time.perf_counter()
-            out_ = f(Rt, zt)
-            torch.cuda.synchronize()
-            ts.append(time.perf_counter() - t0)
-        per_call[str(N)] = ts
+        try:
+            for _ in range(_NCALLS):
+                torch.cuda.synchronize()
+                t0 = time.perf_counter()
+                out_ = f(Rt, zt)
+                torch.cuda.synchronize()
+                ts.append(time.perf_counter() - t0)
+            per_call[str(N)] = ts
+        except Exception as e:  # e.g. the TITAN Xp (sm_61) is too old for Triton
+            compile_error[str(N)] = f"{type(e).__name__}: {str(e)[:300]}"
+            print(f"N={N}: torch.compile failed: {compile_error[str(N)][:120]}", flush=True)
 
         def g():
             evaluateRforces(p, Rt, zt)
@@ -66,15 +70,19 @@ def main(out):
             g()
             et.append(time.perf_counter() - t0)
         eager[str(N)] = float(numpy.median(et))
-        print(f"N={N}: compile {ts[0]*1e3:.1f} ms, compiled steady {numpy.median(ts[1:])*1e3:.3f} ms, "
-              f"eager {eager[str(N)]*1e3:.3f} ms", flush=True)
+        if ts:
+            print(f"N={N}: compile {ts[0]*1e3:.1f} ms, compiled steady {numpy.median(ts[1:])*1e3:.3f} ms, "
+                  f"eager {eager[str(N)]*1e3:.3f} ms", flush=True)
+        else:
+            print(f"N={N}: eager {eager[str(N)]*1e3:.3f} ms", flush=True)
     env = {"python": sys.version.split()[0], "gpu": torch.cuda.get_device_name(0),
            "galpy_file": galpy.__file__}
     for m in ("numpy", "torch", "galpy"):
         env[m] = __import__(m).__version__
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as fh:
-        json.dump({"Ns": Ns, "per_call": per_call, "eager": eager, "env": env}, fh, indent=2)
+        json.dump({"Ns": Ns, "per_call": per_call, "eager": eager, "compile_error": compile_error,
+                   "env": env}, fh, indent=2)
     print("->", out)
 
 

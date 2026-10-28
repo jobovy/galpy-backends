@@ -106,15 +106,15 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # ("cpu_affinity"; an unstamped JSON is the original unpinned 72-thread run).
 # A series whose JSONs do not exist (yet) is skipped.
 _C1 = "galpy C (1 core)"
-_C_NODE = "galpy C (72 threads)"
-_C_NODE_FILES = ["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"]
+_C_NODE = "galpy C (36 threads)"
+_C_NODE_FILES = ["galpy_c_cpu_36cores.json", "galpy_c_cpu_36cores_hiN.json"]
 _CUDA_FAST = "CUDA kernel (GPU special functions)"  # labelled since 2026-10-28 (JB)
 # Three panels (2026-10-28, JB's review): the CPU series, then the TITAN Xp and
 # the H100 series, the GPU panels each repeating the whole-node C line in grey.
 _CPU_SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
      palette.c_threads_style(1)),
-    (_C_NODE_FILES, "c", "cpu", None, _C_NODE, palette.c_threads_style(72)),
+    (_C_NODE_FILES, "c", "cpu", None, _C_NODE, palette.c_threads_style(36, node_threads=36)),
     (["galax_cpu.json"], "galax", "cpu", "jit", "galax ({cpu})", None),
     (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit",
      "galpy jax ({cpu}, per-orbit steps)", None),
@@ -218,7 +218,7 @@ def make():
             d = _load(_C_NODE_FILES)
             if d is not None:
                 Ns, wall = _series_xy(d)
-                ax.loglog(Ns, wall, ms=4, zorder=2, label=node_label, **palette.c_threads_style(72))
+                ax.loglog(Ns, wall, ms=4, zorder=2, label=node_label, **palette.c_threads_style(36, node_threads=36))
             _plot(ax, _GPU_SERIES, sub)
         ax.set_title(title, loc="left")
         ax.set_ylabel(r"wall time for the batch  (s)")

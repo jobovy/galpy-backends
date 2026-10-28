@@ -174,7 +174,17 @@ o= Orbit(jnp.asarray(ics)) # ics: (N,6)
 o.integrate(ts,MWPotential2014,method='leapfrog_jax',
             inbackend_kwargs={'nsteps':8000})
 \end{code}
-The method is second order: its error falls by a factor of four per
+The same route provides the fourth- and sixth-order symplectic
+integrators of \galpy's \cc\ library, \texttt{method='symplec4\_jax'}
+and \texttt{'symplec6\_jax'} (and their \torch\ twins), which evaluate
+the force three and seven times per step and agree with their \cc\
+counterparts at the same step to rounding; they are the better choice
+when more than a few digits are wanted: for the batch of disc orbits of
+\sectionname~\ref{sec:orbit-speed}, 450 sixth-order steps over 2\,Gyr
+reach the worst-case accuracy of the adaptive Dormand--Prince solve at
+tolerances of $10^{-8}$, with 3150 force evaluations against the
+latter's about 3250.
+The leapfrog is second order: its error falls by a factor of four per
 halving of the step, and in a static potential its energy error
 oscillates without the secular drift that a non-symplectic
 second-order method with the same steps shows; we verified both for a
@@ -204,8 +214,10 @@ leapfrog steps (1000 force evaluations) give a worst-case position
 error of $3\times10^{-4}$ (in units of $R_0$), while 250 Dormand--Prince
 steps (3250 force evaluations) give $4\times10^{-7}$. The leapfrog is
 therefore the method of choice when the force is expensive to evaluate
-and modest precision suffices, while the Runge--Kutta solvers remain
-the choice for precise work.
+and modest precision suffices, the sixth-order integrator when the
+orbits share a timescale and precision matters, and the adaptive
+Runge--Kutta solvers remain the choice for batches that mix
+timescales.
 
 \subsection{Variational equations and chaos}\label{sec:orbit-dxdv}
 

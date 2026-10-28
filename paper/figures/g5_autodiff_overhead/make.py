@@ -129,7 +129,10 @@ def make():
     env = data.get("env", {})
 
     hdata = h100.load(os.path.dirname(__file__), "g5_autodiff_overhead.json")
-    runs = [("titan", data)] + ([("h100", hdata)] if hdata else [])
+    # (2026-10-28, JB's review) one CPU core as well (measure_cpu.py)
+    _cpu = os.path.join(_DATA, "cpu", "g5_autodiff_overhead.json")
+    cdata = json.load(open(_cpu)) if os.path.exists(_cpu) else None
+    runs = ([("cpu", cdata)] if cdata else []) + [("titan", data)] + ([("h100", hdata)] if hdata else [])
     # print size: 7.0 in wide (figure*), text 8-10 pt. In (a) only the value lines
     # carry a label (the gradient line is the hollow-marker twin, said by a note),
     # and the labels are two-line, so the label columns stay narrow.

@@ -1,0 +1,112 @@
+{
+  "backend": "galpy-torch",
+  "device": "cpu",
+  "integrator": "torchdiffeq dopri5 (in-backend, eager)",
+  "stepping": "batched state (6,N), shared adaptive controller",
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "wall_budget_s": 200.0,
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 5.29275677294936,
+      "per_orbit_ms": 5292.75677294936,
+      "first_s": 5.670053130015731
+    },
+    {
+      "N": 10,
+      "wall_s": 4.983512729057111,
+      "per_orbit_ms": 498.3512729057111,
+      "first_s": 5.22154669102747
+    },
+    {
+      "N": 100,
+      "wall_s": 5.192370743956417,
+      "per_orbit_ms": 51.92370743956417,
+      "first_s": 5.177851500920951
+    },
+    {
+      "N": 1000,
+      "wall_s": 7.478291579056531,
+      "per_orbit_ms": 7.478291579056531,
+      "first_s": 7.557244410039857
+    },
+    {
+      "N": 10000,
+      "wall_s": 26.466213402920403,
+      "per_orbit_ms": 2.6466213402920404,
+      "first_s": 28.135033337050118
+    },
+    {
+      "N": 30000,
+      "wall_s": 76.97262254101224,
+      "per_orbit_ms": 2.565754084700408,
+      "first_s": 78.63096965500154
+    },
+    {
+      "N": 100000,
+      "wall_s": 299.3446776130004,
+      "per_orbit_ms": 2.993446776130004,
+      "first_s": 288.94395449291915
+    }
+  ],
+  "torch_version": "2.12.0+cu126",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "cpu",
+  "extra_points": [
+    {
+      "added": "2026-10-28T08:18:33+00:00",
+      "host": "geir",
+      "argv": [
+        "torch_measure.py",
+        "--Ns",
+        "1,10,100,1000,10000,30000,100000"
+      ],
+      "Ns": [
+        1,
+        10,
+        100,
+        1000,
+        10000,
+        30000,
+        100000
+      ],
+      "env": {
+        "backend": "galpy-torch",
+        "device": "cpu",
+        "integrator": "torchdiffeq dopri5 (in-backend, eager)",
+        "stepping": "batched state (6,N), shared adaptive controller",
+        "nt": 16,
+        "tspan_Gyr": 2.0,
+        "rtol": 1e-08,
+        "atol": 1e-08,
+        "potential": "MWPotential2014",
+        "host": "geir",
+        "wall_budget_s": 200.0,
+        "torch_version": "2.12.0+cu126",
+        "galpy_version": "1.12.1.dev0",
+        "numpy_version": "2.4.3",
+        "gpu": "cpu"
+      },
+      "Ns_measured": [
+        1,
+        10,
+        100,
+        1000,
+        10000,
+        30000,
+        100000
+      ],
+      "stopped_at": {
+        "N": 100000,
+        "reason": "wall_budget",
+        "wall_s": 299.3446776130004
+      }
+    }
+  ]
+}

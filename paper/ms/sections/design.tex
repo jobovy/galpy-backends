@@ -324,14 +324,22 @@ grad_loss= jax.jit(jax.grad(loss))
 \end{code}
 and it is \galpy's job to be traceable. \figurename~\ref{fig:jitamort}
 displays what compilation costs and what it buys for a simplest operation,
-the radial force of a Plummer potential at $10^6$ points: compiling it
-takes about a tenth of a second, after which a call takes a fraction of
-a millisecond rather than a few milliseconds, such that the compilation
-has paid for itself after about a hundred calls.
+the radial force of a Plummer potential at $10^6$ points, on one CPU
+core and on the two GPUs of \sectionname~\ref{sec:design-gpu}: compiling
+it takes about a tenth of a second on each. On the CPU, a compiled call
+then takes 26\,ms instead of 98\,ms eagerly, such that the compilation
+has paid for itself after two calls, while on the GPUs a call takes a
+fraction of a millisecond rather than a few milliseconds and the
+compilation pays for itself after 60 to 90 calls. The figure shows
+\jax\ only: \texttt{torch.compile} cannot be used on the TITAN~Xp at
+all, because its code generator requires a GPU of compute capability
+7.0 or higher and the consumer card is at 6.1, and on the H100 it
+behaves like \texttt{jax.jit}. % JB: H100 torch.compile numbers pending (backends-h100)
 \figurename~\ref{fig:adoverhead} shows the cost of a derivative: under
 compiled \jax\ the gradient of the potential with respect to the
 coordinates at $N$ points costs between one and two times the value
-itself, and under eager \torch\ two to five times, independent of $N$.
+itself, on the CPU as on the GPUs, and under eager \torch\ two to four
+times, independent of $N$.
 
 Making \galpy\ traceable required a set of changes that recur throughout
 the code, which we list here once. We gave data-dependent loops fixed
@@ -371,13 +379,14 @@ fifth rule, that the user, and not \galpy, decides what to compile.
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}
   \caption{Cost and benefit of compilation for the radial force of a
-    Plummer potential under \jax. Left: wall time of successive calls at
-    $N=10^4$ and $10^6$ points on the TITAN~Xp and the H100; the first
-    call compiles. Dashed lines are the eager cost per call. Right: the
-    cumulative time of compiled and eager calls at $N=10^6$ and the
-    number of calls after which compilation pays for
-    itself. The one-time cost of compilation is recovered after about a
-    hundred calls.}\label{fig:jitamort}
+    Plummer potential at $N=10^6$ points under \jax. Left: wall time of
+    successive calls on one CPU core, the TITAN~Xp, and the H100; the
+    first call compiles. Dashed lines are the eager cost per call. Right:
+    the cumulative time of compiled and eager calls and the number of
+    calls after which compilation pays for itself: two on the CPU, where
+    eager \jax\ is slowest, and 60 to 90 on the GPUs.
+    \texttt{torch.compile} is not shown, because its code generator does
+    not support the TITAN~Xp (see the text).}\label{fig:jitamort}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -385,10 +394,11 @@ fifth rule, that the user, and not \galpy, decides what to compile.
   \caption{Cost of a derivative. Left: throughput of the Plummer
     potential (filled markers) and of its gradient with respect to the
     coordinates by reverse-mode automatic differentiation (open
-    markers), under compiled \jax\ and eager \torch, on the two GPUs.
-    Right: the ratio of the wall time of the gradient to that of the
-    value. The gradient costs a small multiple of the value itself,
-    independent of the number of points.}\label{fig:adoverhead}
+    markers), under compiled \jax\ and eager \torch, on one CPU core and
+    on the two GPUs. Right: the ratio of the wall time of the gradient to
+    that of the value. The gradient costs a small multiple of the value
+    itself, independent of the number of points and of the
+    device.}\label{fig:adoverhead}
 \end{figure*}
 
 \subsection{The test suite under every backend}\label{sec:design-tests}
