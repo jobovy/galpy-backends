@@ -113,25 +113,39 @@ def _measure():
         sdf._determine_stream_track_backend()
         return sdf._ObsTrack
 
-    # R (col 0) and z (col 3) per chunk: 2*nch separate, UNBATCHED reverse-mode
-    # gradients. No jacrev (it vmaps the backward pass) and no vmap anywhere.
-    val = track(jnp.asarray(_Q0), True)
-    cols = (0, 3)
-    dad = numpy.zeros((_NCH, 6))
-    for ci in cols:
-        for k in range(_NCH):
-            g = jax.grad(lambda q, ci=ci, k=k: track(q, True)[k, ci])(jnp.asarray(_Q0))
-            dad[k, ci] = float(g)
-    tp = numpy.asarray(track(jnp.asarray(_Q0 + _H), False), dtype=float)
-    tm = numpy.asarray(track(jnp.asarray(_Q0 - _H), False), dtype=float)
-    dfd = (tp - tm) / (2.0 * _H)
+    # (2026-10-28, JB's review) the SMOOTH track: the chunks interpolated by the
+    # in-backend splines, as streamdf does, and its derivative by one forward-mode
+    # pass (jax.jvp through the direct adjoint) for every interpolated point at
+    # once; the chunk-level values come out of the same pass
+    def both(q):
+        chunks = track(q, True)
+        sdf._interpolate_stream_track_backend()
+        return chunks, sdf._interpolatedObsTrack
+
+    (val, val_i), (dad, dad_i) = jax.jvp(both, (jnp.asarray(_Q0),), (jnp.asarray(1.0),))
+    thetas_i = numpy.asarray(sdf._interpolatedThetasTrack, dtype=float)
+    thetas_c = numpy.asarray(sdf._thetasTrack, dtype=float)
+
+    def fd_arm(q):
+        track(jnp.asarray(q), False)
+        sdf._interpolate_stream_track_backend()
+        return (numpy.asarray(sdf._ObsTrack, dtype=float),
+                numpy.asarray(sdf._interpolatedObsTrack, dtype=float))
+
+    tp, tp_i = fd_arm(_Q0 + _H)
+    tm, tm_i = fd_arm(_Q0 - _H)
 
     return {
         "q0": _Q0, "h": _H, "dq_show": _DQ_SHOW,
         "track": numpy.asarray(val, dtype=float).tolist(),
-        "d_ad": dad.tolist(),
+        "d_ad": numpy.asarray(dad, dtype=float).tolist(),
         "cols_measured": [0, 3],
-        "d_fd": dfd.tolist(),
+        "d_fd": ((tp - tm) / (2.0 * _H)).tolist(),
+        "thetas_chunks": thetas_c.tolist(),
+        "thetas_interp": thetas_i.tolist(),
+        "track_interp": numpy.asarray(val_i, dtype=float).tolist(),
+        "d_ad_interp": numpy.asarray(dad_i, dtype=float).tolist(),
+        "d_fd_interp": ((tp_i - tm_i) / (2.0 * _H)).tolist(),
     }
 
 
@@ -164,27 +178,35 @@ def make():
     _ts = {"fontsize": 10} if PAPER else {}
     _fs_leg = 8 if PAPER else 7
 
-    # (a) track in the (R, z) plane + first-order AD prediction for +-dq
+    # (a) the interpolated track in the (R, z) plane + its first-order AD
+    # prediction for +-dq (smooth curves); the track chunks are the markers
+    ti = numpy.array(data["track_interp"])
+    adi = numpy.array(data["d_ad_interp"])
     R, z = tr[:, 0], tr[:, 3]
-    ax1.plot(R, z, "-o", color=_C_TRACK, ms=4, lw=1.8, label=f"track, $q={data['q0']}$", zorder=3)
-    ax1.plot(R + dq * ad[:, 0], z + dq * ad[:, 3], "--s", color=_C_PLUS, ms=3, lw=1.2,
+    ax1.plot(ti[:, 0], ti[:, 3], "-", color=_C_TRACK, lw=1.8, label=f"track, $q={data['q0']}$", zorder=3)
+    ax1.plot(R, z, "o", color=_C_TRACK, ms=4, zorder=4, label="track chunks")
+    ax1.plot(ti[:, 0] + dq * adi[:, 0], ti[:, 3] + dq * adi[:, 3], "--", color=_C_PLUS, lw=1.2,
              label=rf"AD: $q+{dq}$", zorder=2)
-    ax1.plot(R - dq * ad[:, 0], z - dq * ad[:, 3], "--^", color=_C_MINUS, ms=3, lw=1.2,
+    ax1.plot(ti[:, 0] - dq * adi[:, 0], ti[:, 3] - dq * adi[:, 3], "--", color=_C_MINUS, lw=1.2,
              label=rf"AD: $q-{dq}$", zorder=2)
     ax1.set_xlabel(r"$R$"); ax1.set_ylabel(r"$z$")
     ax1.set_title("(a) track and AD prediction" if PAPER
                   else r"stream track and its AD sensitivity to halo $q$", **_ts)
     ax1.legend(fontsize=_fs_leg, framealpha=0.92)
 
-    # (b) the cross-check: AD vs central FD, per track component
+    # (b) the cross-check: AD vs central FD along the interpolated track, per
+    # component; the chunk positions are marked
     lbl = [r"$R$", r"$v_R$", r"$v_T$", r"$z$", r"$v_z$", r"$\phi$"]
-    rel = numpy.abs(ad - fd) / numpy.maximum(numpy.abs(fd), 1e-30)
-    for j in data.get("cols_measured", [0, 3]):
-        ax2.semilogy(numpy.arange(tr.shape[0]), rel[:, j], "o-", ms=4, lw=1.0, label=lbl[j])
-    ax2.set_xlabel("track chunk"); ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|/|{\rm FD}|$")
+    th = numpy.array(data["thetas_interp"])
+    fdi = numpy.array(data["d_fd_interp"])
+    rel = numpy.abs(adi - fdi) / numpy.maximum(numpy.abs(fdi), 1e-30)
+    for j, c in zip(data.get("cols_measured", [0, 3]), (_C_TRACK, _C_PLUS)):
+        ax2.semilogy(th, rel[:, j], "-", color=c, lw=1.2, label=lbl[j])
+    for t in data["thetas_chunks"]:
+        ax2.axvline(t, color="0.75", lw=0.8, zorder=0)
+    ax2.set_xlabel(r"angle along the track"); ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|/|{\rm FD}|$")
     ax2.set_title("(b) AD vs finite difference" if PAPER
                   else rf"AD vs central FD ($h={data['h']}$)", **_ts)
-    ax2.set_xticks(numpy.arange(tr.shape[0]))
     if PAPER:  # the y-range spans < 1 decade: label the minor ticks too
         from matplotlib.ticker import FuncFormatter, LogFormatterSciNotation
         _lf = LogFormatterSciNotation(labelOnlyBase=False, minor_thresholds=(2, 0.5))

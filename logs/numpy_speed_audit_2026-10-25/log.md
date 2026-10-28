@@ -225,3 +225,15 @@ db33e5fcf (no CI: code identical to #1763's green tree). Jo applies.
 
 2026-10-27: Jo applied the feat/backends rebase onto main: tip db33e5fcf (== prepared, main 0 ahead). Scratch
 branch and /var/tmp/rb-1762 removed. Push CI + #892 running, SIMBAD rerun loop on #892.
+
+2026-10-28: paper review round 1 (JB's 140 PDF comments on sections 1-7; branch paper-revision-r1).
+Code checks against fb db33e5fcf found most "numpy only" statements stale (all 47 parameter-only
+potentials differentiable under jit incl. DiskSCF; adiabatic contraction, interpRZ, SCF/Multipole
+from density, MovingObject with a jax orbit (also on the TITAN Xp), qdf construction,
+schwarzschilddf, closed-form dMdE, power-law DFs all differentiable). Gaps: interpSphericalPotential
+(rforce=<Potential with traced param>) failed -> #1764 (2388c9b67, numpy byte-identical, A/B 9 fail
+on HEAD); 2D disk-DF samplers have no key= (numpy rejection); streamgapdf under torch untested
+(probe running). numpy byte-identity audit main vs fb: DFs identical except King (#1552, 1e-5..1e-3);
+~12 potentials differ at ulp level (<=2e-15; <=1.4e-13 in some R2deriv); C sources of potentials
+unchanged. numpy-test tolerance changes on fb: King, StaeckelGrid te/tzmax, chi bars, 2x spray,
+SpiralArms dx. galax batched mode = one RMS controller (not "most demanding orbit").
