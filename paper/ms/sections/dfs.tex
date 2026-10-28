@@ -7,16 +7,17 @@ These DF models are constructed from a potential and a set of parameters,
 they can be evaluated at phase-space points, integrated to obtain their moments 
 (densities, mean velocities, and velocity dispersions), and they can be sampled.
 On the backends, evaluation and the moments are differentiable for
-essentially every DF, sampling is differentiable wherever it is done by
-inverse transformation, and construction is differentiable for the DFs
-whose construction is itself a numerical computation that could be
-migrated---the spherical DFs obtained by inverting a density, the King
-model, and the stream models of \sectionname~\ref{sec:streams}---and
-remains a \numpy\ computation for the others, chiefly the quasi-isothermal
-disk DF, whose construction tabulates a guiding-center relation with
-\scipy. The parameters of a DF, like those of a potential, can be given
-as backend arrays and are then differentiated through everything that
-follows.
+every DF, sampling is differentiable wherever it is done by inverse
+transformation, which is everywhere except for the many-position
+velocity sampler of the quasi-isothermal disk DF and the samplers of
+the two-dimensional disk DFs (\sectionname~\ref{sec:df-disk}), and
+construction is differentiable for every DF whose construction is
+itself a numerical computation---the spherical DFs obtained by
+inverting a density, the King model, the quasi-isothermal disk DF,
+whose table of guiding-center radii is then built on the backend, and
+the stream models of \sectionname~\ref{sec:streams}. The parameters
+of a DF, like those of a potential, can be given as backend arrays and
+are then differentiated through everything that follows.
 
 Every sampler in \galpy\ takes a \texttt{key=} argument:
 \texttt{key=None} reproduces the previous behavior, drawing
@@ -27,8 +28,15 @@ fixed key, the sample is then a smooth function of the DF's and the
 potential's parameters, and its derivative is the pathwise, or
 reparameterization, derivative: differentiating a statistic of the sample with respect to a
 parameter gives an unbiased estimate of the derivative of the
-expectation of that statistic. \figurename~\ref{fig:dfparam} shows this
-for an Osipkov--Merritt DF of a Hernquist sphere constructed and sampled
+expectation of that statistic. \figurename~\ref{fig:dfsample} shows an
+explicit check that the pathwise derivative of a sample is the
+derivative of the expectation, independently of any DF construction:
+we differentiate a kernel estimate of the velocity dispersion over a
+large fixed sample with respect to radius and compare with the
+derivative of the Jeans equation; the two share no code and agree
+within the Monte-Carlo noise. \figurename~\ref{fig:dfparam} then shows
+the derivative of a sample through the construction of the DF, for an
+Osipkov--Merritt DF of a Hernquist sphere constructed and sampled
 inside a single compiled function of the scale radius: the derivative of
 the sampled velocity dispersion with respect to the scale radius agrees
 with the derivative of the Jeans-equation prediction to within the
@@ -39,13 +47,7 @@ the dimensionless central potential $W_0$ at fixed mass and tidal
 radius, which passes through the solution of the Poisson equation. In
 eager mode, \galpy\ solves this ODE with \scipy\ and attaches the
 derivative from the forward sensitivity equations, while under
-compilation it solves the same ODE in the backend. We checked that the
-pathwise derivative of a sample is the derivative of the expectation
-independently of any DF construction, by differentiating a kernel
-estimate of the velocity dispersion over a large fixed sample with
-respect to radius and comparing with the derivative of the Jeans
-equation (\figurename~\ref{fig:dfsample}); the two share no code and
-agree within the Monte-Carlo noise.
+compilation it solves the same ODE in the backend.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gD2_df_sample_autodiff/gD2_df_sample_autodiff.pdf}
@@ -92,15 +94,16 @@ of the density over the potential, use fixed-order Gauss--Legendre
 quadrature in substituted variables and are differentiable through the
 integrand, such that the DF can be differentiated with respect to the
 parameters of the density and potential that it is built from. The
+King model is the one DF whose \numpy\ result changed on purpose: its
+Poisson equation is now solved to a relative tolerance of $10^{-10}$
+rather than \scipy's default of $10^{-3}$, which left errors of order
+$10^{-4}$ in its tables (\sectionname~\ref{sec:design-principles}). The
 constant-anisotropy DF is the one place where \jax\ was already present
 in \galpy, as an optional dependency for the fractional derivative in its
-inversion, and its \numpy\ result is one of the three places where we
-did not keep byte-identity with the previous version: the force in its
-integrand is now obtained from the generic force routine rather than a
-private one, which reorders floating-point operations. Its construction
-is also much faster than it was, by about a factor of four on \numpy\
-and by orders of magnitude under compilation, because the $f(E)$
-inversion is a fixed-shape quadrature that compiles well. As an example,
+inversion; its construction is now much faster than it was, by about a
+factor of four on \numpy\ and by orders of magnitude under
+compilation, because the $f(E)$ inversion is a fixed-shape quadrature
+that compiles well. As an example,
 under \torch\ we obtain the derivative of a set of sampled radii with
 respect to the scale radius of a Hernquist potential as
 \begin{code}
@@ -135,18 +138,21 @@ def dispersion(a_tracer):
     return df.sigmar(1.)
 jax.grad(dispersion)(0.7)
 \end{code}
-Not everything is differentiable: the energy derivative of the mass
-profile of the closed-form DFs is a \numpy\ computation, and the
-analytic DFs of \citet{Evans1997} for power-law spheres were added to
-\galpy\ on \numpy\ only.
+The closed-form DFs, including the analytic DFs of \citet{Evans1997}
+for power-law spheres, and the energy derivative of their mass
+profiles are likewise differentiable.
 
 \subsection{Disk DFs}\label{sec:df-disk}
 
 \galpy\ contains models for two-dimensional and three-dimensional disk DFs.
-The two-dimensional axisymmetric disk DFs of \citet{Dehnen1999} and \citet{Shu1969}
+The two-dimensional axisymmetric disk DFs of \citet{Dehnen1999},
+\citet{Shu1969}, and Schwarzschild
 and their moments are evaluated with nested Gauss--Legendre quadrature
 on the backends and are differentiable with respect to the parameters of
-their surface-density and velocity-dispersion profiles. \galpy\ also contains 
+their surface-density and velocity-dispersion profiles; their samplers,
+which draw by rejection, remain \numpy\ code, and we did not migrate
+the corrections of these DFs for the difference between their input and
+output profiles. \galpy\ also contains 
 a two-dimensional non-axisymmetric disk DF that is a perturbation of a Dehnen DF by a
 non-axisymmetric and/or time-dependent potential, which is evaluated by integrating orbits
 backwards in time to an initial axisymmetric DF (in \texttt{galpy.df.evolveddiskdf}). 
@@ -155,7 +161,9 @@ this evolved disk DF differentiate through that integration,
 which on the backends is one vectorized in-backend solve over the
 velocity grid rather than a loop. 
 
-As a three-dimensional disk DF, \galpy\ implements the quasi-isothermal DF of \citet{Binney2010}, 
+As a three-dimensional disk DF, \galpy\ implements the quasi-isothermal
+DF of \citet{Binney2010,BinneyMcMillan2011}, in the form used by
+\citet{BovyRix2013},
 which is a function of the actions and is evaluated by first computing the actions with 
 \texttt{actionAngleStaeckel} and then evaluating the DF.  The quasi-isothermal DF is now 
 evaluated and its moments computed on the backends,
@@ -165,8 +173,8 @@ by inverse transformation on a three-dimensional velocity mesh, such
 that a sample drawn with a fixed key is a differentiable function of the
 DF's parameters;
 this sampler replaced a rejection sampler on the \numpy\ path as well,
-which is the second place where \numpy\ output changed (the distribution
-is the same, the particular draws are not). In code this looks as follows:
+which is one of the two places where the \numpy\ draws changed (the
+distribution is the same, the particular draws are not). In code this looks as follows:
 \begin{code}
 qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,
                        pot=MWPotential2014,aA=aAS)
@@ -174,13 +182,13 @@ vs= qdf.sampleV(0.9,0.05,n=10**4,
                 key=grandom.key(0,backend='jax'))
 sigma_R= jnp.std(vs[:,0])
 \end{code}
-Its construction is a \numpy\
-computation, and its interpolated velocity
-sampler, which samples many positions at once, is a rejection sampler
-with \numpy\ proposals that runs on the backends, with its shrinking
-arrays padded to fixed sizes, but is not differentiable. We did not
-migrate the corrections of the disk DFs for the difference between the
-input and output profiles.
+Its construction tabulates the guiding-center radius as a function of
+angular momentum, which is built on the backend when the potential or a
+scale length carries a backend parameter, such that the DF and its
+moments are differentiable through the construction. Its interpolated
+velocity sampler, which samples many positions at once, is a rejection
+sampler with \numpy\ proposals that runs on the backends, with its
+shrinking arrays padded to fixed sizes, but is not differentiable.
 
 \subsection{Speed}\label{sec:df-speed}
 
@@ -191,7 +199,10 @@ than \numpy\ for small samples, because every one of the hundreds of
 array operations in a draw is dispatched separately and each costs a few
 to tens of microseconds, and they catch up only at $N\approx10^4$;
 compiled \jax\ is faster than \numpy\ at every size, by a factor of
-1.5 to 6 at $N=10^7$ on one core. On a GPU the sample of $10^7$ particles takes
+1.5 to 6 at $N=10^7$ on one core, because the compiler fuses the
+hundreds of array operations of a draw into a few loops, where \numpy\
+executes each separately and writes its intermediate results to
+memory. On a GPU the sample of $10^7$ particles takes
 tens of milliseconds on the consumer card and a few milliseconds on the
 H100, two to nearly four orders of magnitude faster than \numpy\ on
 one core. The lower panel

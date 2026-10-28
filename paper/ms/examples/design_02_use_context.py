@@ -18,20 +18,20 @@ import jax
 jax.config.update("jax_enable_x64", True)
 import numpy
 
-from galpy.potential import MWPotential2014, evaluatePotentials
+from galpy.potential import MWPotential2014
 
 # --- paper snippet begins ---
 import galpy.backend
 with galpy.backend.use('jax'):
-    Phi= evaluatePotentials(MWPotential2014,1.,0.) # jax
+    Phi= MWPotential2014(1.,0.) # jax
 # --- paper snippet ends ---
 
 assert isinstance(Phi, jax.Array), type(Phi)
 numpy.testing.assert_allclose(
-    float(Phi), evaluatePotentials(MWPotential2014, 1.0, 0.0), rtol=1e-14
+    float(Phi), MWPotential2014(1.0, 0.0), rtol=1e-14
 )
 # outside the context, the default (numpy) is back
-assert not isinstance(evaluatePotentials(MWPotential2014, 1.0, 0.0), jax.Array)
+assert not isinstance(MWPotential2014(1.0, 0.0), jax.Array)
 # and the claim the original snippet made (galpy PR #1646): an Orbit from
 # floats inside the context gets a jax IC, and is integrated in jax with an
 # in-backend method

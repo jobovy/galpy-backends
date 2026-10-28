@@ -11,25 +11,22 @@ import jax.numpy as jnp
 import numpy
 
 # --- paper snippet begins ---
-from galpy.potential import (MWPotential2014,
-                             evaluateRforces)
+from galpy.potential import MWPotential2014
 R= jnp.linspace(0.5,2.,1001)
-FR= evaluateRforces(MWPotential2014,R,0.) # jax array
+FR= MWPotential2014.Rforce(R,0.) # jax array
 # --- paper snippet ends ---
 
 assert isinstance(FR, jax.Array), type(FR)
 assert FR.devices() == R.devices()
 assert FR.shape == (1001,)
 # the same numbers as the numpy path
-FR_np = evaluateRforces(MWPotential2014, numpy.linspace(0.5, 2.0, 1001), 0.0)
+FR_np = MWPotential2014.Rforce(numpy.linspace(0.5, 2.0, 1001), 0.0)
 assert isinstance(FR_np, numpy.ndarray)
 numpy.testing.assert_allclose(numpy.asarray(FR), FR_np, rtol=1e-13, atol=0.0)
 # "with a torch tensor the same call returns a tensor"
 import torch
 
-FR_t = evaluateRforces(
-    MWPotential2014, torch.linspace(0.5, 2.0, 1001, dtype=torch.float64), 0.0
-)
+FR_t = MWPotential2014.Rforce(torch.linspace(0.5, 2.0, 1001, dtype=torch.float64), 0.0)
 assert isinstance(FR_t, torch.Tensor)
 numpy.testing.assert_allclose(FR_t.numpy(), FR_np, rtol=1e-13, atol=0.0)
 print("OK")

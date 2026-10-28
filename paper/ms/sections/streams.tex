@@ -1,11 +1,11 @@
 \section{Tidal streams}\label{sec:streams}
 
-Tidal streams are the application for which \galpy's DFs are most often
-fit to data, and the one in which derivatives have been most sorely
-missed, because a stream model is an expensive forward computation with
-a handful of parameters, the potential's among them, and fitting it has
-meant exploring that parameter space with a sampler that knows nothing
-of the model's smoothness. \galpy\ contains three stream models, all of
+Tidal streams are the application in which derivatives have been most
+sorely missed, because a stream model is an expensive forward
+computation with a handful of parameters, the potential's among them,
+and fitting it to data has meant exploring that parameter space with a
+sampler that knows nothing of the model's smoothness, a cost that has
+limited such fits to a few parameters at a time. \galpy\ contains three stream models, all of
 which now run on the backends: the action--angle model of
 \citet{Bovy2014}, \texttt{streamdf}, with its extension to stream gaps
 \citep{Sanders2016}; and the particle-spray models of \citet{Fardal2015}
@@ -50,8 +50,8 @@ the DF, on the other hand, are 40--60 and about 18 times faster under
 compilation than on \numpy\ on one CPU core, and hundreds to thousands
 of times faster on a GPU;
 the sampler draws by inverse transformation on \numpy\ too, which is the
-third place where \numpy\ output changed, in the draws but not in their
-distribution. \figurename~\ref{fig:streamdfspeed} summarizes these
+other place where the \numpy\ draws changed, in the draws but not in
+their distribution. \figurename~\ref{fig:streamdfspeed} summarizes these
 costs.
 
 \begin{figure*}[t!]
@@ -79,24 +79,13 @@ costs.
     omitted.}\label{fig:streamdfspeed}
 \end{figure*}
 
-The following point applies to the derivatives of all of \galpy's
-stream models. Because a stream model is a generative model, in which
-the stream's stars are a sample from the model's DF, the derivative of
-the track with respect to a parameter can be taken either with the
-sample of stars held fixed, which is what one obtains by differentiating
-the track code alone, or by letting the sample move with the parameter,
-which is what a finite difference of the full model computes. The two
-differ, and the first is not a physical quantity; where \galpy\
-provides derivatives of stream models, they are of the second kind, and
-we test them against finite differences whose step is shown to be
-converged.
-
 \subsection{Particle-spray models}\label{sec:streams-spray}
 
 The particle-spray models release particles from the progenitor at
 random times with random offsets in position and velocity and integrate
 them forward. On the backends, \texttt{sample()} and the track-fitting
-method \texttt{streamTrack()} are pure functions of the progenitor's
+method \texttt{streamTrack()}, which fits a smooth track through the
+sampled particles, are pure functions of the progenitor's
 orbit, the potential, the progenitor mass (or a mass history), and a
 random key: the stripping times are drawn by inverse transformation of
 uniform variates, the offsets by reparameterized normal variates, the
@@ -132,22 +121,33 @@ def track(q):
     spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
         integrate_kwargs={'adjoint':'direct'})
-    tr= spdf.streamTrack(n=1500,key=key)
+    tr= spdf.streamTrack(n=1500,tail='leading',key=key)
     return tr.x(tps)
 track(0.9); jax.jacfwd(track)(0.9)
 \end{code}
 where the derivative includes the response of the fit itself: of each
 particle's closest point on the progenitor's orbit, through the implicit
 derivative of the Newton iterations, and of the amount of smoothing.
-Central finite differences of the fitted track converge to it, to
-$2\times10^{-6}$ for a step of $10^{-5}$, both for the 1500 particles of
-this example and for the 6000-particle stream of
-\figurename~\ref{fig:extrapolation}. The derivative of the sampled stream
-with respect to the potential agrees with finite differences of the same
-sample to $10^{-6}$. \figurename~\ref{fig:extrapolation}
-demonstrates that this allows a single forward-mode pass through
-the sampling, integration, and track fit of a 6000-particle stream
-to predict the stream's track in a halo of different flattening as
+This is the derivative that matters for a generative model like this
+one, in which the stream's stars are a sample from the model's DF: the
+derivative of the track with respect to a parameter can be taken
+either with the sample of stars held fixed, which is what one obtains
+by differentiating the track code alone, or by letting the sample move
+with the parameter, which is what a finite difference of the full
+model computes. The two differ, and the first is not a physical
+quantity; where \galpy\ provides derivatives of stream models, they
+are of the second kind, and we test them against finite differences
+whose step is shown to be converged. Central finite differences of the
+fitted track converge to the derivative above, to $2\times10^{-6}$ for
+a step of $10^{-5}$, both for the 1500 particles of this example and
+for a 6000-particle stream after 4.5\,Gyr in a logarithmic halo,
+which we use in \figurename~\ref{fig:extrapolation} to show what such
+a derivative can do. The derivative of the sampled stream with respect
+to the potential agrees with finite differences of the same sample to
+$10^{-6}$. \figurename~\ref{fig:extrapolation} demonstrates that a
+single forward-mode pass through the sampling, integration, and track
+fit of the 6000-particle stream predicts the stream's track in a halo
+of different flattening as
 $\mathrm{track}(q_0)+\Delta q\,\mathrm{d\,track}/\mathrm{d}q$. This
 first-order prediction removes 80\,\% of the shift of the track for
 $|\Delta q|=0.2$, 90\,\% for $|\Delta q|=0.1$, 97\,\% for
@@ -161,7 +161,10 @@ particle's orbit is one more orbit in a batch, such that a sprayed
 stream costs about 0.6\,ms per particle on one CPU core under compiled
 \jax, a fifth of the cost of the non-differentiable \cc\ version, and
 about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
-(\figurename~\ref{fig:spraysp}).
+(\figurename~\ref{fig:spraysp}), consistent with the cost per orbit of
+a large batch of in-backend orbit integrations
+(\figurename~\ref{fig:orbitspeed}), of which a spray particle's orbit
+is one.
 
 \begin{figure*}[t!]
   \centering\includegraphics[width=0.94\textwidth,clip=]{../figures/gS3_track_extrapolation/gS3_track_extrapolation.pdf}
@@ -181,7 +184,9 @@ about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
     give the fraction of the shift that the prediction removes. The
     residual falls nearly as $\Delta q^2$ (dotted) at every step.
     Crosses show the residual when instead the particles are moved to
-    first order and the track is re-fitted.}\label{fig:extrapolation}
+    first order and the track is re-fitted, which removes less of the
+    shift at every step, by a factor of 1.5 to 2.4 in the residual, although
+    not by much.}\label{fig:extrapolation}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -200,7 +205,8 @@ about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
 
 The stream-gap model of \citet{Sanders2016}, \texttt{streamgapdf},
 computes the velocity kick that a passing subhalo imparts along a stream
-and propagates it through the action--angle model. The kick kernels for
+and propagates it through the action--angle model of
+\texttt{streamdf}. The kick kernels for
 the Plummer and Hernquist subhalos, the interpolation of the kicks along
 the stream, and the transformation to the impact frame run on the
 backends and are differentiable with respect to the parameters of the

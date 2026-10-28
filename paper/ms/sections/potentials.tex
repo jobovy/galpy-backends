@@ -21,15 +21,19 @@ profile evaluate splines. These go through the special-function router
 and the interpolation layer of \sectionname~\ref{sec:design-numerics}.
 All of the potentials, forces, and wrappers in \texttt{galpy.potential}
 run on both backends, with the exception of the potentials that read
-$N$-body snapshots through \texttt{pynbody} and the \texttt{AMUSE}
-interface \citep{Webb2020}, which have no backend code; the adiabatic-contraction
-wrapper, whose construction is a \scipy\ root-find, declares itself
-incompatible and is computed on \numpy. The convenience functions that
-act on potentials (the circular velocity and epicycle frequencies, the
-radius of a circular orbit of given angular momentum or energy, the
-enclosed mass, the tidal radius and tidal tensor; \citealt{Webb2019}) are backend-aware as
-well; those that require a root are solved with the shared root finder
-and those that require an integral use Gauss--Legendre quadrature.
+$N$-body snapshots through \texttt{pynbody} \citep{Pontzen2013} and
+the interface \citep{Webb2020} to \texttt{AMUSE}
+\citep{PortegiesZwart2009,Pelupessy2013,PortegiesZwart2018}, which
+have no backend code. Even the adiabatic-contraction wrapper, whose
+construction is a root find for the contracted profile, builds that
+profile on the backend when one of its parameters, or a parameter of
+one of the potentials that it contracts, is being differentiated. The
+convenience functions that act on potentials (the circular velocity
+and epicycle frequencies, the radius of a circular orbit of given
+angular momentum or energy, the enclosed mass, and the tidal radius
+and tidal tensor of \citealt{Webb2019}) are backend-aware as well;
+those that require a root are solved with the shared root finder and
+those that require an integral use Gauss--Legendre quadrature.
 
 The derivatives of a potential with respect to the coordinates are, of
 course, its forces and second derivatives, which \galpy\ implements by
@@ -37,9 +41,11 @@ hand. Under a backend, these can also be obtained by differentiating
 the potential, and the agreement between the two is a strong test of
 both:
 for the basis-function expansions, the spiral arms, a rotating bar, and
-composite potentials, the force by AD agrees with the hand-coded force
+composite potentials, the force by automatic differentiation agrees
+with the hand-coded force
 to a few parts in $10^{15}$, within twenty units in the last place
-(\figurename~\ref{fig:adforces}), that is, the derivative that AD
+(\figurename~\ref{fig:adforces}), that is, the derivative that
+automatic differentiation
 produces is the analytic force up to rounding. While the test suite
 checks these identities for every potential, under both backends and in
 both modes, the derivatives that matter to the user are those with
@@ -62,16 +68,16 @@ mp.Rforce(torch.tensor(1.2),
           torch.tensor(0.1)).backward()
 a.grad # dFR/da
 \end{code}
-Forty-nine of the fifty potentials that can be constructed from
-parameters alone are differentiable with respect to their amplitude in
-this way, both eagerly and under compilation; the one exception is the
-disk basis-function expansion under \texttt{jax.jit}. \figurename~\ref{fig:paramgrad}
+All 47 potentials that can be constructed from parameters alone are
+differentiable with respect to their amplitude (or, for the King
+model, its mass) in this way, both eagerly and under
+compilation. \figurename~\ref{fig:paramgrad}
 displays the accuracy of these parameter derivatives and a small
 example of their use, the recovery of the scale length of a Plummer
 potential from its force by gradient descent. The parameters of a
 potential constructed from a density, as the basis-function and
-multipole expansions can be, carry the derivative through the expansion
-coefficients.
+multipole expansions and their disk variants can be, carry the
+derivative through the expansion coefficients.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gF1_autodiff_forces/gF1_autodiff_forces.pdf}
@@ -109,10 +115,18 @@ approximation; we set the order such that the two agree, but the backend
 result is an approximation of fixed cost rather than an adaptive one. Interpolated potentials evaluate
 the same spline as \scipy\ does, to within one unit in the last place,
 by converting the fitted spline to a piecewise-polynomial table; they are
-differentiable in the evaluation point, but not in the tabulated values.
+differentiable in the evaluation point and, when they are built from a
+potential or function with a parameter that is being differentiated,
+also in the tabulated values, because the table and the spline
+coefficients are then computed on the backend and the derivative with
+respect to the parameter passes through them.
 A potential that moves along a precomputed orbit, as the
-\texttt{MovingObjectPotential}, keeps that orbit on \numpy\ and
-computes the field at backend coordinates. And a \python\ branch on the
+\texttt{MovingObjectPotential}, interpolates that orbit on the backend
+when the orbit was integrated there, such that the field of the moving
+object is differentiable with respect to everything that the orbit
+depends on, and lives on the GPU when the orbit does; an orbit
+integrated with \numpy\ stays on \numpy\ and the field is computed at
+backend coordinates. And a \python\ branch on the
 value of a stored parameter, such as the special case of a vanishing
 scale length, is harmless when the parameter is differentiated eagerly
 but fails when the parameter is traced inside a compiled ODE solve; we

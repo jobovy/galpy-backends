@@ -2,14 +2,20 @@
 
 \subsection{General approach}\label{sec:aa-general}
 
-The action--angle module is where \galpy makes heavy use of numerical methods: 
-root finding for the turning points of an orbit,
-quadrature of the action, frequency, and angle integrals between them, and, for the
-approximate methods, auxiliary orbit integrations. All of
-\texttt{galpy.actionAngle} runs on the backends except for the interface
-to the external torus-mapping code, which we excluded permanently. The
-public interface is unchanged: an \texttt{actionAngle} instance is set up
-for a potential and called with phase-space positions, through
+The action--angle module is where \galpy\ makes heavy use of numerical
+methods, all of which are the building blocks of
+\sectionname~\ref{sec:design-numerics}: root finding for the turning
+points of an orbit, quadrature of the action, frequency, and angle
+integrals between them, and, for the isochrone approximation of
+\citet{Bovy2014}, auxiliary orbit integrations with the in-backend
+solvers of \sectionname~\ref{sec:orbit-paths}. All of
+\texttt{galpy.actionAngle} is migrated onto the backends except for
+\texttt{actionAngleTorus}, a convenience wrapper around the external
+torus-mapping code of \citet{BinneyMcMillan2016} that is not a core
+part of \galpy\ and that we excluded from this work. The public
+interface is unchanged: an instance of one of the \texttt{actionAngle}
+classes, such as \texttt{actionAngleStaeckel}, is set up for a
+potential and called with phase-space positions, through
 \texttt{\_\_call\_\_} for the actions, \texttt{actionsFreqs} for actions
 and frequencies, and \texttt{actionsFreqsAngles} for all three; a call
 with backend arrays, or with a potential that carries a backend
@@ -21,14 +27,15 @@ phase-space position and, through the Python implementations, with
 respect to the parameters of the potential; these parameter derivatives
 agree with finite differences in which the potential and the
 \texttt{actionAngle} instance are rebuilt from the perturbed parameter
-to a few parts in $10^{10}$ for the St\"{a}ckel, adiabatic, and
-spherical methods. \figurename~\ref{fig:aasens} shows the two kinds of
+to a few parts in $10^{10}$ for, e.g., the spherical, adiabatic, and
+St\"{a}ckel methods. \figurename~\ref{fig:aasens} shows the two kinds of
 derivative for the isochrone potential, where the actions are known in
 closed form: the derivatives of the radial and vertical actions with
 respect to the radial velocity, and the derivative of the radial action
 with respect to the scale radius of the potential, which is the
-derivative that an inference loop uses when it adjusts the potential
-to match measured actions.
+derivative that an inference loop uses when its model is a function of
+the actions, as a DF of the actions is
+(\sectionname~\ref{sec:df-disk}).
 
 \begin{figure*}[t!]
   \centering\includegraphics[width=0.96\textwidth,clip=]{../figures/g18_actionangle_sensitivity/g18_actionangle_sensitivity.pdf}
@@ -39,6 +46,73 @@ to match measured actions.
     axis) with finite differences (circles). Right: the radial action as
     a function of the scale radius $b$ of the potential and its
     derivative with respect to $b$.}\label{fig:aasens}
+\end{figure*}
+
+\subsection{Spherical potentials, the isochrone approximation, and the inverse transformation}\label{sec:aa-other}
+
+The isochrone and harmonic-oscillator actions are closed forms, which we
+migrated by swapping the namespace. \texttt{actionAngleSpherical}
+replaces its \scipy\ root finds and adaptive quadratures with the
+shared root finder and a fixed-order Gauss--Legendre rule, with special
+handling of circular and near-circular orbits, where the radial
+integral degenerates, and of orbits that are unbound. The
+\texttt{actionAngleIsochroneApprox} method of \citet{Bovy2014}
+integrates an auxiliary orbit, and does so with the in-backend solvers
+of \sectionname~\ref{sec:orbit-paths}; it is therefore differentiable
+with respect to the potential's parameters, twice so under \jax\ with
+the direct adjoint, and runs on a GPU.
+
+The inverse transformation, from actions and angles to positions and
+velocities, exists in \galpy\ for the isochrone and harmonic potentials
+in closed form and for general one-dimensional potentials through
+\texttt{actionAngleVerticalInverse} \citep{Bovy2027}, which constructs a torus map by a
+momentum-matched canonical transformation and tabulates it as a
+function of the action. The construction---a root find for the maximum
+excursion, a spectral sweep over the angle, a batched Gauss--Newton
+solve for the anomaly, and Hermite-spline tables---and the evaluation
+run natively on the backends, trace under compilation, and are
+differentiable with respect to the action, the angle, and the
+parameters of the potential, such that the family of tori can be
+differentiated with respect to the parameters of the disk that
+generates them. \figurename~\ref{fig:vinverse} demonstrates this for a
+self-gravitating isothermal disk: the derivative of the tori with
+respect to the velocity dispersion of the disk predicts the tori of a
+nearby disk, agrees with finite differences to $10^{-10}$, and serves
+as the Jacobian of a Levenberg--Marquardt fit of the disk's parameters to
+stars scattered around three tori. In code, we differentiate the tori of
+a family of disks parametrized by their velocity dispersion as
+\begin{code}
+def torus(sigma):
+    disk= IsothermalDiskPotential(amp=1.,sigma=sigma)
+    aAVI= actionAngleVerticalInverse(
+        pot=disk,Es=Es,nta=128,setup_interp=True)
+    return aAVI.xvFreqs(J,angles)[:2] # (z,v_z)
+z,vz= torus(0.5)
+dz_dsigma,dvz_dsigma= jax.jacfwd(torus)(0.5)
+\end{code}
+As they are not recommended for use, older construction modes of the 
+\texttt{actionAngleVerticalInverse}
+class, which use point transformations, are evaluated natively but
+built on \numpy, and therefore cannot take a potential with backend
+parameters.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/gV1_vertical_inverse/gV1_vertical_inverse.pdf}
+  \caption{Differentiable inverse action--angle transformation in a
+    self-gravitating isothermal disk with \texttt{actionAngleVerticalInverse}.
+    (a) Tori at fixed actions for a disk with velocity dispersion
+    $\sigma_0$ (solid), the same tori for a disk rebuilt with
+    $\sigma_0+0.1$ (dashed), and the first-order prediction from the
+    derivative of the tori with respect to $\sigma$ by automatic
+    differentiation (points). (b) The difference between the derivatives
+    of $z$, $v_z$, and the frequency with respect to $\sigma$, $J$, and
+    $\theta$ along the $J=0.06$ torus and five-point finite differences,
+    relative to the largest derivative. (c) The finite differences
+    converge onto the automatic derivatives as $h^4$ until their
+    round-off floor. (d) A Levenberg--Marquardt fit of $(\sigma,\,\mathrm{amp})$
+    and 120 angles to 120 stars with noisy $(z,v_z)$ on three tori, using
+    the automatic Jacobian; the fit converges in ten steps and the truth
+    lies inside the 68\,\% contour.}\label{fig:vinverse}
 \end{figure*}
 
 \subsection{The St\"{a}ckel and adiabatic approximations}\label{sec:aa-staeckel}
@@ -128,73 +202,6 @@ with a fused Jacobian in \cc\ for \texttt{c=True} and, for
 \texttt{c=False}, the migrated spherical and vertical machinery for
 its radial and vertical parts.
 
-\subsection{Spherical potentials, the isochrone approximation, and the inverse transformation}\label{sec:aa-other}
-
-The isochrone and harmonic-oscillator actions are closed forms, which we
-migrated by swapping the namespace. \texttt{actionAngleSpherical}
-replaces its \scipy\ root finds and adaptive quadratures with the
-shared root finder and a fixed-order Gauss--Legendre rule, with special
-handling of circular and near-circular orbits, where the radial
-integral degenerates, and of orbits that are unbound. The
-\texttt{actionAngleIsochroneApprox} method of \citet{Bovy2014}
-integrates an auxiliary orbit, and does so with the in-backend solvers
-of \sectionname~\ref{sec:orbit-paths}; it is therefore differentiable
-with respect to the potential's parameters, twice so under \jax\ with
-the direct adjoint, and runs on a GPU.
-
-The inverse transformation, from actions and angles to positions and
-velocities, exists in \galpy\ for the isochrone and harmonic potentials
-in closed form and for general one-dimensional potentials through
-\texttt{actionAngleVerticalInverse} (J.~Bovy, in prep.), which constructs a torus map by a
-momentum-matched canonical transformation and tabulates it as a
-function of the action. The construction---a root find for the maximum
-excursion, a spectral sweep over the angle, a batched Gauss--Newton
-solve for the anomaly, and Hermite-spline tables---and the evaluation
-run natively on the backends, trace under compilation, and are
-differentiable with respect to the action, the angle, and the
-parameters of the potential, such that the family of tori can be
-differentiated with respect to the parameters of the disk that
-generates them. \figurename~\ref{fig:vinverse} demonstrates this for a
-self-gravitating isothermal disk: the derivative of the tori with
-respect to the velocity dispersion of the disk predicts the tori of a
-nearby disk, agrees with finite differences to $10^{-10}$, and serves
-as the Jacobian of a Levenberg--Marquardt fit of the disk's parameters to
-stars scattered around three tori. In code, we differentiate the tori of
-a family of disks parametrized by their velocity dispersion as
-\begin{code}
-def torus(sigma):
-    disk= IsothermalDiskPotential(amp=1.,sigma=sigma)
-    aAVI= actionAngleVerticalInverse(
-        pot=disk,Es=Es,nta=128,setup_interp=True)
-    return aAVI.xvFreqs(J,angles)[:2] # (z,v_z)
-z,vz= torus(0.5)
-dz_dsigma,dvz_dsigma= jax.jacfwd(torus)(0.5)
-\end{code}
-As they are not recommended for use, older construction modes of the 
-\texttt{actionAngleVerticalInverse}
-class, which use point transformations, are evaluated natively but
-built on \numpy, and therefore cannot take a potential with backend
-parameters.
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/gV1_vertical_inverse/gV1_vertical_inverse.pdf}
-  \caption{Differentiable inverse action--angle transformation in a
-    self-gravitating isothermal disk with \texttt{actionAngleVerticalInverse}.
-    (a) Tori at fixed actions for a disk with velocity dispersion
-    $\sigma_0$ (solid), the same tori for a disk rebuilt with
-    $\sigma_0+0.1$ (dashed), and the first-order prediction from the
-    derivative of the tori with respect to $\sigma$ by automatic
-    differentiation (points). (b) The difference between the derivatives
-    of $z$, $v_z$, and the frequency with respect to $\sigma$, $J$, and
-    $\theta$ along the $J=0.06$ torus and five-point finite differences,
-    relative to the largest derivative. (c) The finite differences
-    converge onto the automatic derivatives as $h^4$ until their
-    round-off floor. (d) A Levenberg--Marquardt fit of $(\sigma,\,\mathrm{amp})$
-    and 120 angles to 120 stars with noisy $(z,v_z)$ on three tori, using
-    the automatic Jacobian; the fit converges in ten steps and the truth
-    lies inside the 68\,\% contour.}\label{fig:vinverse}
-\end{figure*}
-
 \subsection{Speed}\label{sec:aa-speed}
 
 \figurename~\ref{fig:staeckelspeed} shows the speed of the full
@@ -205,14 +212,22 @@ CPU core, the compiled \cc\ path remains the fastest, at
 is about 6 times faster than the per-object loop that it replaces for
 $N\gtrsim10^3$. Eager \torch\ on the CPU runs at the speed of \numpy,
 while eager \jax\ is bound by dispatching hundreds of small operations
-per call and stays at a floor of several seconds. On a GPU, the
+per call and stays at a floor of several seconds. Compilation removes
+that floor: compiled \jax\ evaluates a single point in 5\,ms on one
+core, against 3.7\,s eagerly, but for large $N$ it is no faster than
+\numpy\ on the CPU (44\,s against about 30\,s at $N=3\times10^4$),
+because this quadrature-heavy code is bound by arithmetic that \numpy\
+already executes in compiled loops. On a GPU, the
 same code overtakes the \cc\ path once $N$ is large enough to
 amortize a launch floor of about 0.6\,s. On the H100, eager \torch\
 evaluates $10^6$ points in 3.6\,s, 78 times faster than single-threaded
 \cc\ and 7 times faster than \cc\ on 16 OpenMP threads, and compiled
-\jax\ evaluates $10^5$ points in 0.16\,s. On the TITAN~Xp, with its slow
+\jax\ evaluates $10^5$ points in 0.16\,s, five times faster than eager
+\torch\ at the same $N$ and 190 times faster than one \cc\ thread. On
+the TITAN~Xp, with its slow
 double-precision arithmetic, eager \torch\ beats single-threaded \cc\ by
-a factor of 5--6 at large $N$, but not \cc\ on 16 threads. Thus the
+a factor of 5--6 at large $N$, but not \cc\ on 16 threads, and compiled
+\jax\ does no better than eager \torch\ there. Thus the
 backends that make the action--angle transformation differentiable are
 also the fastest way to evaluate it for large samples when a modern GPU
 is available.
@@ -233,35 +248,4 @@ is available.
     takes 0.16\,s at $N=10^5$. After a launch floor, the GPU overtakes
     one \cc\ thread at $N\approx2000$ and 16 threads at
     $N\approx3\times10^4$ on the H100.}\label{fig:staeckelspeed}
-\end{figure*}
-
-\figurename~\ref{fig:vinvspeed} shows the speed of the one-dimensional
-inverse transformation. Evaluating the torus map at $N$ angles
-is fastest with \numpy\ at every $N$ on one CPU core: compiled \jax\
-ties it for ten angles and is two to eight times slower for more angles
-(49\,s against 10.9\,s at $N=10^6$), while for many tori the compiled
-\texttt{vmap} over tori is about 1.5 times faster than the \numpy\ loop
-over tori. On a GPU the picture reverses: on the H100 the evaluation
-at $N=10^6$ takes 11\,ms, about a thousand times faster than \numpy. The
-backends find the angle with the same safeguarded Newton iteration as
-\numpy, started at the requested angle. Constructing the map for a
-family of $n_E$ energies is faster on every backend than on \numpy, by
-a factor of three to ten at $n_E=256$, because the batched Gauss--Newton
-solve replaces a loop over tori; on the H100 the compiled construction
-takes 4 to 6 milliseconds whatever the size of the family. These numbers are for
-the development machine and the H100 and should be read as orders of
-magnitude.
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/gV2_vertical_inverse_speed/gV2_vertical_inverse_speed.pdf}
-  \caption{Speed of the one-dimensional inverse action--angle
-    transformation, \texttt{actionAngleVerticalInverse}, for an
-    isothermal disk. (a) Wall time to evaluate positions, velocities, and
-    frequencies at $N$ angles on one torus (or, dash-dotted, at 16 angles
-    on each of $N/16$ tori) with \numpy\ and on the backends on a single
-    CPU core, the TITAN~Xp, and the H100; compilation time is excluded.
-    (b) Time to construct the map for a family of $n_E$ energies, warm
-    (filled markers) and on the first call (open markers), which for
-    eager \jax\ includes compiling every operation for the new
-    shapes.}\label{fig:vinvspeed}
 \end{figure*}

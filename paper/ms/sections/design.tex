@@ -10,10 +10,28 @@ migrated code written as \texttt{xp.sqrt(x)}, where \texttt{xp} is the
 resolved namespace, runs the identical \numpy\ function on the identical
 object. We enforce this rule with tests and, for each pull request (PR), by comparing
 checksums of outputs between a checkout with and one without the change;
-where the \numpy\ result did change, which happened in three places,
-all in the DFs, we flagged and approved the change, and we point these
-places out where they arise; one \numpy\ test tolerance, in the King DF,
-was also loosened. Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
+where the \numpy\ result did change, we flagged and approved the
+change, and we point these places out where they arise. There are
+three deliberate changes: the King model now solves its Poisson
+equation to a relative tolerance of $10^{-10}$ rather than \scipy's
+default of $10^{-3}$, which changes its potential and DF at the
+$10^{-5}$ to $10^{-3}$ level, and the velocity sampler of the
+quasi-isothermal disk DF and the sampler of the stream DF draw by
+inverse transformation rather than by rejection, which changes the
+particular draws but not their distribution. In addition, the
+restructuring of the formulas of about a dozen potentials---for
+accuracy at small radii and for differentiability with respect to
+their shape parameters---reordered floating-point operations, such
+that their \numpy\ values differ from the previous version by a few
+units in the last place (at most $2\times10^{-15}$ relative in the
+potentials and forces, and $10^{-13}$ in some second derivatives),
+which propagates at the same level to everything computed from these
+potentials' \python\ forces. Accordingly, a few \numpy\ test
+tolerances were loosened: that of the King DF, those of two
+statistical checks of the stream sampler, and four comparisons at the
+$10^{-16}$ to $10^{-11}$ level in the action--angle tests that the
+rounding-level changes above moved. % JB: list verified 2026-10-28; see response
+Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
 and keywords, with the backend generally determined by the arrays that are passed
 in (see below). Third, \galpy's code was to be written against a backend-agnostic array
 namespace, with backend-specific code confined to a new \texttt{galpy.backend}
@@ -27,9 +45,16 @@ rather than taking them from the frameworks' own, uneven, \scipy-like
 modules. Fifth, we decided that \galpy\ should never compile anything internally itself: 
 instead we required the code
 to be traceable by \texttt{jax.jit} and \texttt{torch.compile}, and the
-user decides what to compile. Sixth, the existing test suite,
-run under every backend with the same tolerances, is the acceptance
-test.
+user decides what to compile. Sixth, the existing test suite, run
+under every backend with the same tolerances, had to pass in full;
+this was the main acceptance test, but not the only one, because the
+new functionality---differentiation, compilation, running on a
+GPU---has no existing tests, and we wrote new ones for it, as
+described in \sectionname~\ref{sec:process-correctness}. Supporting
+two frameworks from the start, rather than one, was itself a design
+decision that served the third rule: a solution that works for both
+\jax\ and \torch\ is one that does not depend on the particulars of
+either, and should extend to a third framework if one supersedes them.
 
 \subsection{Choosing a backend}\label{sec:design-choosing}
 
@@ -40,10 +65,9 @@ array of the same kind, while a function that receives \numpy\ arrays or
 \python\ scalars computes with \numpy\ as before. Thus, the radial force
 of the standard Milky-Way model is evaluated on a \jax\ array as
 \begin{code}
-from galpy.potential import (MWPotential2014,
-                             evaluateRforces)
+from galpy.potential import MWPotential2014
 R= jnp.linspace(0.5,2.,1001)
-FR= evaluateRforces(MWPotential2014,R,0.) # jax array
+FR= MWPotential2014.Rforce(R,0.) # jax array
 \end{code}
 without any further instruction, and with a \torch\ tensor the same
 call returns a tensor. The data include an object's parameters: a
@@ -55,9 +79,12 @@ pot= NFWPotential(a=jnp.array(2.))
 pot(1.1,0.2) # jax array
 \end{code}
 and an \orb\ integrated in such a potential returns backend arrays as
-well. Any backend input therefore turns the backend on, because we assume that a user
-who passes a backend array wants the backend to perform the computation 
-and to receive backend arrays results, whether to
+well. In short, backends are \emph{greedy}: any backend array among
+the inputs of a calculation, be it a coordinate, an initial condition,
+or the parameter of an object, turns on the backend for that
+calculation and its output. We chose this rule because we assume that
+a user who passes a backend array wants the backend to perform the
+computation and to receive backend arrays as results, whether to
 differentiate, to compile, or to run on an accelerator. A parameter that
 is not differentiated keeps the fast paths that a differentiated one
 cannot take: an orbit in a potential with a concrete backend parameter
@@ -70,22 +97,26 @@ configuration file or through a context manager,
 \begin{code}
 import galpy.backend
 with galpy.backend.use('jax'):
-    Phi= evaluatePotentials(MWPotential2014,1.,0.) # jax
+    Phi= MWPotential2014(1.,0.) # jax
 \end{code}
-Similarly, an \orb\ that is set up from a tensor on a GPU is integrated
-there by an in-backend solver (the default \cc\ integrators run on the
-host),
+The configured or context default only applies in the absence of
+backend data; the data always take precedence over it. Similarly, an
+\orb\ that is set up from a tensor on a GPU is integrated there by an
+in-backend solver (the default \cc\ integrators run on the CPU),
 \begin{code}
 o= Orbit(torch.tensor([1.,0.1,1.1,0.,0.05,0.],
                       device='cuda'))
 o.integrate(ts,MWPotential2014,method='torchode')
 o.R(ts) # a CUDA tensor
 \end{code}
-The resolution order is therefore: an explicit \texttt{xp=} argument,
-the array arguments and the objects' parameters, the context or
-configured default, and finally
-\numpy. The context manager also accepts \texttt{force=True}, which makes
-the default take precedence over the data. Under a forced backend,
+Internally, \galpy's migrated functions also accept an explicit
+namespace as an \texttt{xp=} argument, which \galpy\ uses to keep
+nested calls on one namespace; it is not meant for users. The full
+resolution order is thus: an explicit \texttt{xp=} argument, the array
+arguments and the objects' parameters, the context or configured
+default, and finally \numpy. The context manager also accepts
+\texttt{force=True}, which makes the default take precedence over the
+data. Under a forced backend,
 \galpy\ runs as much as possible on that backend, including the
 internals that otherwise use \numpy\ and \scipy\ for \numpy\ inputs;
 the test suite depends on this option to run \galpy's existing tests, which
@@ -108,15 +139,20 @@ existing unit-handling decorators convert a \texttt{Quantity} input to
 parameter that is given as a backend array carries no units and is
 taken to be in internal units already, which is what makes it possible
 to differentiate with respect to it. Because \texttt{jax.jit} cannot
-trace \texttt{Quantity} objects, the use of units inside a compiled
-program is not supported; a user-defined density that uses units is
-evaluated outside the compiled program, through a callback, and cannot
-be differentiated.
+trace \astropy\ \texttt{Quantity} objects, the use of units inside a
+compiled program is not supported; a user-defined density that uses
+units is evaluated outside the compiled program, through a callback,
+and cannot be differentiated. A \jax-aware units package such as
+\texttt{unxt} \citep{Starkman2025} could lift this restriction, and
+we may add support for it in the future.
 
 \subsection{Backend-agnostic code}\label{sec:design-agnostic}
 
-Every migrated compute method starts by resolving the array namespace
-from its coordinate arguments and then uses only that namespace,
+The code in the physics modules is written in a backend-agnostic
+manner wherever possible. To achieve this, every migrated compute
+method starts by resolving the array namespace from its coordinate
+arguments and then uses only that namespace; for example, the
+potential of a Plummer sphere is computed as
 \begin{code}
 def _evaluate(self,R,z,phi=0.,t=0.):
     xp= get_namespace(R,z,phi,t)
@@ -135,15 +171,16 @@ because it is then resolved at trace time.
 We placed the dispatch at \galpy's private compute layer
 (\texttt{\_evaluate}, \texttt{\_Rforce}, and so on), such that the public
 methods, their unit handling, and their documentation are untouched. The
-public entry points carry one new decorator,
-\texttt{@backend\_input('R','z','phi','t')}, that declares which of the
-arguments are coordinates. This decorator, which does nothing on \numpy\
+public entry points carry one new decorator that declares which of the
+arguments are coordinates, for example
+\texttt{@backend\_input('R','z','phi','t')} for a method whose
+coordinate arguments are $R$, $z$, $\phi$, and $t$. This decorator, which does nothing on \numpy\
 data, coerces the declared arguments, and only those, onto the active
 namespace, whether they are passed positionally or by keyword, and
 leaves derivative orders, flags, masses, option strings, and grids
 alone. It also resolves a single device for the call from the first
 backend array it finds, such that a \python\ scalar passed alongside a
-GPU array does not end up on the host. The central coercion matters
+GPU array does not end up on the host CPU. The central coercion matters
 more than it might appear: \torch, unlike \jax, rejects \python\ scalars
 in most tensor operations, and about two thousand of the tests that
 failed under \torch\ when we first ran the backends failed for this
@@ -167,12 +204,13 @@ For special functions, a router dispatches each function to
 \texttt{torch.special} unless the function is listed as missing or
 unreliable for that framework, in which case we implemented a fallback directly in
 \galpy. The list is short but important: \jax's hypergeometric
-functions ${}_2F_1$ and ${}_1F_1$ return infinities with \texttt{nan}
+functions ${}_2F_1$ and ${}_1F_1$ currently return infinities with \texttt{nan}
 gradients for arguments $z<-1$, which is exactly the regime in which
 \galpy\ uses them; \jax's incomplete gamma function iterates per element
 and is about a hundred times slower than a vectorized series; and
 \torch's incomplete gamma function has no derivative with respect to its
-order and loses six digits where its algorithm switches. We gave the
+order and loses six digits near an order of 20, where its implementation
+switches between a series and a continued fraction. We gave the
 fallbacks fixed iteration counts, such that they trace and vectorize,
 and checked them against \texttt{mpmath} at 30 to 50 digits; the worst
 case
@@ -195,7 +233,8 @@ semi-infinite, boundary-layer, finite-part, and nested variants, and is
 therefore a differentiable approximation rather than an adaptive method;
 we set the order for each use by comparing with the adaptive \scipy\
 result, a comparison that in two cases found the \scipy\ result to be
-the one in error (\sectionname~\ref{sec:process-fixes}).
+the one in error (two of the fixes described in
+\sectionname~\ref{sec:process-fixes}).
 Interpolation comes in two forms: a fitted \scipy\ spline is converted to
 a piecewise-polynomial table that is evaluated by namespace operations,
 which is differentiable in the evaluation point and is used for tables
@@ -224,6 +263,48 @@ key= grandom.key(42,backend='jax')
 sam= df.sample(n=10**6,key=key)  # jax, differentiable
 \end{code}
 
+\subsection{GPUs}\label{sec:design-gpu}
+
+Nothing in the above is specific to a device, and \galpy\ runs on a GPU
+by being given arrays that live there. Throughout this paper we use
+two GPUs, which stand in for the two kinds that a user is likely to
+have: an NVIDIA TITAN~Xp in the development machine, a consumer card
+from 2017 (about \$1,200 at launch) with 12\,GB of memory that
+executes double-precision arithmetic at one thirty-second of its
+single-precision rate, and an NVIDIA H100 on a node of the Trillium
+cluster, a data-center accelerator (of order \$30,000 at the time of
+writing) with 80\,GB of memory and a double-precision rate half of its
+single-precision one. The one thing the library must
+do is place the constants that it creates---rotation matrices, expansion
+coefficients, quadrature nodes, spline tables---on the device of the
+coordinates rather than on the host CPU, and we changed every site where a
+stored table meets a coordinate array to do so. Because these sites are
+invisible on a CPU, where host and device coincide, we found them by
+running the test suite on a GPU, which also served to find code that
+silently converted to \numpy. \figurename~\ref{fig:throughput} displays what the
+GPU buys for a simple operation in \galpy, the evaluation of a force
+at $N$ points: on either GPU the computation alone is launch-bound up to
+$N\approx10^4$ and then scales until it saturates the device's memory
+bandwidth, at about $10^9$ points per second on a consumer card and
+$7\times10^{10}$ on an H100; including the transfer of the input and the
+result over the PCIe bus, the gain over one CPU core is a more modest
+factor of five to six at $N=10^7$. GPUs pay off when the data stay on the device across many
+operations, which is what a compiled program does.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g2_throughput/g2_throughput.pdf}
+  \caption{Throughput of the radial force of a Plummer potential as a
+    function of the number of points per call. The left panel shows the
+    development machine, with \numpy\ on one CPU core and \jax\ and \torch\
+    on an NVIDIA TITAN~Xp; the right panel shows a node of the Trillium
+    cluster, with an NVIDIA H100. Solid and dashed lines are compute-only (compiled \jax\ and eager
+    \torch); dotted lines with open markers include the transfer of
+    inputs and outputs between host and device. Light grey dotted lines mark constant wall time per call, which
+    the GPU curves follow while launch-bound. The GPU gives its largest
+    gains when the inputs and outputs stay on the
+    device.}\label{fig:throughput}
+\end{figure*}
+
 \subsection{Compilation and differentiation from the outside}\label{sec:design-jit}
 
 \galpy\ does not call \texttt{jax.jit} or \texttt{torch.compile} on its
@@ -250,16 +331,13 @@ has paid for itself after about a hundred calls.
 compiled \jax\ the gradient of the potential with respect to the
 coordinates at $N$ points costs between one and two times the value
 itself, and under eager \torch\ two to five times, independent of $N$.
-For the test suite, \galpy\ has an optional global trace mode that
-traces every call at the coercion boundary described above; we use it to
-run the suite in compiled mode, and it is not needed in normal use.
 
 Making \galpy\ traceable required a set of changes that recur throughout
 the code, which we list here once. We gave data-dependent loops fixed
 iteration counts: the bisection discussed above, the arithmetic--geometric
 mean in the elliptic integrals, the series and continued fractions of
-the special functions, the sixty or so iterations with which a stream
-track is refined. We replaced branches on data by \texttt{xp.where}
+the special functions, and the refinement of a stream track, which
+is iterated a fixed number of times rather than to convergence. We replaced branches on data by \texttt{xp.where}
 with both sides evaluated, which requires clamping the unused side to a
 safe argument, because a \texttt{nan} produced on the discarded side
 still poisons the reverse-mode derivative; checks that raise on invalid
@@ -272,14 +350,22 @@ backend array, because \texttt{torch.compile} turns \texttt{float(x)}
 into a symbolic scalar, and a \texttt{float} probe silently took the
 \scipy\ branch of a surface-density integral inside a compiled region.
 We wrap lazily built \numpy\ tables such that their first construction
-inside a compiled region is not traced, and we key \galpy\ objects that
-are passed as static arguments to a compiled function by their type and
-attributes, with \galpy\ sub-objects keyed recursively, rather than by
-identity, such that a potential whose amplitude is changed causes a
-re-trace while a freshly created but identical wrapper does not. The
-\torch\ compiler has its own difficulties: because a read of a \python\
-context variable severs its graph, \galpy's backend selection, which is
-such a variable, reads a thread-local mirror while \torch\ is tracing.
+inside a compiled region is not traced. A compiled function that
+receives a \galpy\ object, such as a potential, as a static argument
+decides from a hash of that argument whether an existing compilation
+can be reused; \python's default hash of an object is its identity,
+which would recompile for every newly created potential even when it
+is identical to one seen before and, worse, would reuse a compilation
+for a potential whose amplitude has been changed in place. We
+therefore key \galpy\ objects by their type and attributes, with
+\galpy\ sub-objects keyed recursively, such that a changed amplitude
+causes the re-trace that it must and a freshly created but identical
+wrapper does not cause a needless one. The \torch\ compiler has its
+own difficulties: because a read of a \python\ context variable severs
+its graph, \galpy's backend selection, which is such a variable, reads
+a thread-local mirror while \torch\ is tracing. None of these changes
+affects what the \numpy\ path computes; they are the price of the
+fifth rule, that the user, and not \galpy, decides what to compile.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}
@@ -307,7 +393,12 @@ such a variable, reads a thread-local mirror while \torch\ is tracing.
 \subsection{The test suite under every backend}\label{sec:design-tests}
 
 We run \galpy's test suite unchanged under five modes: \numpy, \jax\ and
-\torch\ in eager mode, and \jax\ and \torch\ in compiled mode. The
+\torch\ in eager mode, and \jax\ and \torch\ in compiled mode. For
+the compiled modes, \galpy\ has an optional global trace mode that
+wraps every call at the coercion boundary of
+\sectionname~\ref{sec:design-agnostic} in \texttt{jax.jit} or
+\texttt{torch.compile}; it exists for the test suite and is not needed
+in normal use, where the user compiles their own program. The
 mechanism is a fixture that wraps every test in the forced-backend
 context manager of \sectionname~\ref{sec:design-choosing} and, for the
 compiled modes, in the global trace mode; it is selected by the
@@ -330,37 +421,3 @@ cannot reach. In continuous integration, the two frameworks, the two
 modes, and 22 shards of the test suite form a matrix that runs on every
 PR; we run the GPU tests by hand, because the continuous integration framework 
 available to us has no GPU.
-
-\subsection{GPUs}\label{sec:design-gpu}
-
-Nothing in the above is specific to a device, and \galpy\ runs on a GPU
-by being given arrays that live there. The one thing the library must
-do is place the constants that it creates---rotation matrices, expansion
-coefficients, quadrature nodes, spline tables---on the device of the
-coordinates rather than on the host, and we changed every site where a
-stored table meets a coordinate array to do so. Because these sites are
-invisible on a CPU, where host and device coincide, we found them by
-running the test suite on a GPU, which also served to find code that
-silently converted to \numpy. \figurename~\ref{fig:throughput} displays what the
-GPU buys for a simple operation in \galpy, the evaluation of a force
-at $N$ points: on either GPU the computation alone is launch-bound up to
-$N\approx10^4$ and then scales until it saturates the device's memory
-bandwidth, at about $10^9$ points per second on a consumer card and
-$7\times10^{10}$ on an H100; including the transfer of the input and the
-result over the PCIe bus, the gain over one CPU core is a more modest
-factor of five to six at $N=10^7$. GPUs pay off when the data stay on the device across many
-operations, which is what a compiled program does.
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g2_throughput/g2_throughput.pdf}
-  \caption{Throughput of the radial force of a Plummer potential as a
-    function of the number of points per call. The left panel shows the
-    development machine, with \numpy\ on one CPU core and \jax\ and \torch\
-    on an NVIDIA TITAN~Xp; the right panel shows a node of the Trillium
-    cluster, with an NVIDIA H100. Solid and dashed lines are compute-only (compiled \jax\ and eager
-    \torch); dotted lines with open markers include the transfer of
-    inputs and outputs between host and device. Light grey dotted lines mark constant wall time per call, which
-    the GPU curves follow while launch-bound. The GPU gives its largest
-    gains when the inputs and outputs stay on the
-    device.}\label{fig:throughput}
-\end{figure*}
