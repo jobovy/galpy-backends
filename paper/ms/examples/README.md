@@ -31,7 +31,7 @@ torchode, torchdiffeq), pytest. Run on the CPU in double precision:
 `tests_paper_examples.py` runs each script in a fresh interpreter (the scripts
 set jax's x64 flag and some patch galpy to count calls) and checks that every
 snippet line fits the 56-character column. The one example that needs a GPU
-(`design_03_cuda_orbit.py`, `device='cuda'`) is skipped when CUDA is not
+(`design_04_cuda_orbit.py`, `device='cuda'`) is skipped when CUDA is not
 available; run it on a GPU machine without `CUDA_VISIBLE_DEVICES=`. A single
 example runs as a plain script, e.g. `python orbits_03_cstm_jacobian.py`.
 
@@ -41,7 +41,7 @@ The whole set takes about 25 minutes on 12 CPU cores; the slowest examples
 
 Some scripts check behaviour fixed in galpy PR #1646 (so they need galpy
 with that PR): an Orbit from Python floats following `use('jax')`
-(`design_02`), numpy times with a CUDA IC under torchode (`design_03`), DF
+(`design_03`), numpy times with a CUDA IC under torchode (`design_04`), DF
 construction with a traced parameter without a backend context (`dfs_02`,
 `dfs_03`, `dfs_04`), the finite qdf sample derivative for `MWPotential2014`
 (`dfs_04`), and a numpy progenitor with the default adjoint under `jax.jvp`

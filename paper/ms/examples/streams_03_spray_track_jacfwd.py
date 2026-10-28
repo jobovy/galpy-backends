@@ -42,7 +42,7 @@ def track(q):
     spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
         integrate_kwargs={'adjoint':'direct'})
-    tr= spdf.streamTrack(n=1500,key=key)
+    tr= spdf.streamTrack(n=1500,tail='leading',key=key)
     return tr.x(tps)
 track(0.9); jax.jacfwd(track)(0.9)
 # --- paper snippet ends ---
