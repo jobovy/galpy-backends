@@ -297,8 +297,7 @@ which parallelizes over orbits with OpenMP, on one core and on the 36
 physical cores of the CPU node used in this work, and with the in-backend solvers on one CPU
 core and on two GPUs. On one core the \cc\ path costs 2.2--2.4\,ms per
 orbit; on 36 threads it costs 0.08 to 0.09\,ms per orbit after a few
-milliseconds of setup (the node's hyper-threads bring this down by a
-further 10 to 20 per cent) and is faster than every adaptive backend
+milliseconds of setup and is faster than every adaptive backend
 solver, on any hardware, for up to a few times $10^4$ orbits. The
 backend solvers start from a floor of
 one to a few seconds, set by compilation and kernel launches, and
@@ -317,7 +316,7 @@ compile, a cost that is paid once per shape of the problem. We compare
 the frameworks on one CPU core because only the \cc\ path makes use of
 more: for $10^4$ to $10^5$ orbits, its OpenMP loop speeds up almost
 linearly up to the 36 physical cores of our node (22 to 26 times on 36
-cores), eager \torch\ gains at most a factor of 3.5 (on 16 threads, for
+cores; its hyper-threads add nothing), eager \torch\ gains at most a factor of 3.5 (on 16 threads, for
 $10^5$ orbits), and compiled \jax, whose runtime keeps no more than a few
 cores busy, gains nothing. The sixth-order symplectic integrator of
 \sectionname~\ref{sec:orbit-leapfrog}, with one common step for the
