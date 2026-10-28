@@ -410,7 +410,10 @@ keeps the per-orbit control.
     the GPUs. Dash-dot-dotted blue: the in-backend sixth-order symplectic
     integrator (\texttt{symplec6\_jax}) with 450 common steps over the
     2\,Gyr, the step at which its worst-case position error over the
-    batch equals that of the adaptive solve. Purple: an
+    batch equals that of the adaptive solve; its H100 point at
+    $N=3\times10^5$, 2.4 times slower per orbit than its neighbours, is
+    reproducible (two runs agree to 0.1\,\%, at full clocks): XLA
+    compiles that batch shape differently. Purple: an
     experimental CUDA port of \galpy's \cc\ forces and \texttt{dop853}
     that integrates one orbit per GPU thread (not part of \galpy\ and
     not differentiable), with a direct port of \galpy's \cc\ code

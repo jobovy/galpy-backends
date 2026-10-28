@@ -12,7 +12,7 @@
   "galpy_version": "1.12.1.dev0",
   "gpu": "NVIDIA H100 80GB HBM3",
   "galpy_commit": "00527ee63 (PR #1766 backend/inbackend-symplectic)",
-  "note": "rows transcribed from the backends-h100 session's run log (steady = min of 3 calls after the compile call); N=3e5 is non-monotone (slower per orbit than 1e5 and 1e6) and awaits a repeat",
+  "note": "rows transcribed from the backends-h100 session's run log (steady = min of 3 calls after the compile call); N=3e5 is non-monotone (2.4x slower per orbit than 1e5 and 1e6) and REPRODUCIBLE: a repeat (job 1186132, trig0015, 2026-10-28) agreed to 0.1% at every N (3e5: 0.00486 ms/orbit) with the card at full clocks (SM 1980 MHz, no throttle reasons), so it is XLA's lowering for that batch shape",
   "results": [
     {"N": 1, "wall_s": 1.28441, "per_orbit_ms": 1284.41254, "compile_run_s": 6.56},
     {"N": 10, "wall_s": 0.69073, "per_orbit_ms": 69.07307, "compile_run_s": 2.34},
