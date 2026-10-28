@@ -456,6 +456,10 @@ def _measure_old(old_wt, Ns_old):
 _REF = ["C (c=True)", "numpy (CPU)", "numpy (CPU, per-object, OLD)"]
 _JAX = ["jax (CPU)", "jax (CPU, jit)", "jax (GPU)", "jax (GPU, jit)", "jax (GPU, +transfer)"]
 _TORCH = ["torch (CPU)", "torch (GPU)", "torch (GPU, +transfer)"]
+# the paper's figure (2026-10-28, JB's review): eager torch AND compiled jax on
+# the CPU and both GPUs in one figure; eager jax (a floor of seconds, described
+# in the text) and the jax +transfer variant are left to the jax-only figure
+_BOTH = ["torch (CPU)", "jax (CPU, jit)", "torch (GPU)", "torch (GPU, +transfer)", "jax (GPU, jit)"]
 
 
 def _data():
@@ -584,6 +588,15 @@ def _make(names, backend_label):
 
 
 @figure(
+    name="g17_staeckel_actionangle_speed",
+    track="G", seed=0,
+    description="Staeckel actionsFreqsAngles speed vs N -- eager torch and compiled jax (CPU & both GPUs) vs C/numpy [measure->json, plot byte-stable]",
+)
+def make_both():
+    return _make(_REF + _BOTH, "torch (eager) and jax (jit)")
+
+
+@figure(
     name="g17_staeckel_actionangle_speed_jax",
     track="G", seed=0,
     description="Staeckel actionsFreqsAngles throughput vs N -- jax (eager vs jit, CPU & GPU) vs C/numpy [measure->json, plot byte-stable]",
@@ -611,6 +624,14 @@ def _plot_panel(ax, curves, Nfull, mode):
     if mode == "walltime":
         ax.set_ylabel(r"wall time for the batch  (s)")
         ax.set_title("(a) wall time")
+        # constant cost-per-point references (slope 1), decade-spaced to bracket
+        # every curve's cost per point at its largest N, as in the orbit figures
+        ax.set_ylim(*ax.get_ylim())
+        refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time",
+                                 x_range=(1.0, Nfull))
+        ax.text(0.025, 0.975, "grey dotted: " + layout.fmt_seconds(refs) + " per point",
+                transform=ax.transAxes, fontsize=layout.FS["note"] if PAPER else 6.2,
+                color="0.55", va="top", ha="left")
     else:
         ax.set_ylabel(r"throughput  (points / second)")
         ax.set_title("(b) throughput")
@@ -618,7 +639,7 @@ def _plot_panel(ax, curves, Nfull, mode):
         for t0 in (1e-3, 1e-2, 1e-1, 1e0):  # constant wall-time/call references
             ax.plot([1.0, Nfull], [1.0 / t0, Nfull / t0], ls=":", lw=0.8, color="0.82",
                     zorder=0, label="_ref")
-        ax.text(0.025, 0.975, "dotted: 1 ms–1 s per call" if PAPER else
+        ax.text(0.025, 0.975, "grey dotted: 1, 10, 100 ms, 1 s per call" if PAPER else
                 "dotted grey: constant wall-time / call\n(1, 10, 100, 1000 ms)",
                 transform=ax.transAxes, fontsize=layout.FS["note"] if PAPER else 6.2,
                 color="0.55", va="top", ha="left")

@@ -26,11 +26,12 @@ that their \numpy\ values differ from the previous version by a few
 units in the last place (at most $2\times10^{-15}$ relative in the
 potentials and forces, and $10^{-13}$ in some second derivatives),
 which propagates at the same level to everything computed from these
-potentials' \python\ forces. Accordingly, a few \numpy\ test
-tolerances were loosened: that of the King DF, those of two
-statistical checks of the stream sampler, and four comparisons at the
-$10^{-16}$ to $10^{-11}$ level in the action--angle tests that the
-rounding-level changes above moved. % JB: list verified 2026-10-28; see response
+potentials' \python\ forces. Accordingly, a few \numpy\ tests were
+loosened: the tolerance of the King DF test, those of two statistical
+checks of the stream sampler, four tolerances between $10^{-16}$ and
+$3\times10^{-11}$ in the action--angle tests, which the rounding-level
+changes above and differences between platforms moved to between
+$10^{-14}$ and $10^{-9}$, and one finite-difference step.
 Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
 and keywords, with the backend generally determined by the arrays that are passed
 in (see below). Third, \galpy's code was to be written against a backend-agnostic array

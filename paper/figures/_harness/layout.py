@@ -193,3 +193,18 @@ def apply_frame(ax, name):
 def place_frame(ax, name):
     """Fixed axes box of a shared frame; call last (after fit_right)."""
     ax.set_position(FRAMES[name]["axes"])
+
+
+def faster_arrow(ax, direction="down", xy=(0.05, 0.95), length=0.14, fontsize=None):
+    """A short grey arrow labelled "faster" in a corner of a speed plot, so the
+    reader does not have to work out which way is better: ``direction="down"``
+    for a wall-time axis, ``"up"`` for a throughput axis. ``xy`` is the arrow's
+    start in axes fractions and ``length`` its extent."""
+    dy = -length if direction == "down" else length
+    ax.annotate("", xy=(xy[0], xy[1] + dy), xytext=xy, xycoords="axes fraction",
+                textcoords="axes fraction",
+                arrowprops=dict(arrowstyle="-|>", color="0.45", lw=0.9, shrinkA=0,
+                                shrinkB=0, mutation_scale=8))
+    ax.text(xy[0] + 0.025, xy[1] + dy / 2, "faster", transform=ax.transAxes,
+            fontsize=fontsize or FS["note"], color="0.45", va="center", ha="left",
+            rotation=90)

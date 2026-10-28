@@ -1,0 +1,43 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "diffrax Dopri5 (in-backend; same-work match to torch dopri5)",
+  "stepping": "per-orbit adaptive (vmap-of-solve)",
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "results": [
+    {
+      "N": 1000,
+      "wall_s": 1.9808561300160363,
+      "per_orbit_ms": 1.980856130016036,
+      "compile_run_s": 5.263149600010365
+    },
+    {
+      "N": 10000,
+      "wall_s": 2.4906753749819472,
+      "per_orbit_ms": 0.2490675374981947,
+      "compile_run_s": 5.153237645048648
+    },
+    {
+      "N": 100000,
+      "wall_s": 14.973508847062476,
+      "per_orbit_ms": 0.14973508847062475,
+      "compile_run_s": 17.968538690940477
+    },
+    {
+      "N": 300000,
+      "wall_s": 38.609698960906826,
+      "per_orbit_ms": 0.12869899653635608,
+      "compile_run_s": 41.68518754397519
+    }
+  ],
+  "jax_version": "0.10.1",
+  "diffrax_version": "0.7.2",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "NVIDIA TITAN Xp"
+}

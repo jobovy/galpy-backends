@@ -132,25 +132,26 @@ def make():
         return s + ((("\n" if two_line else ", ") + extra) if extra else "")
 
     # ---- (a) per-call wall-time vs call index ----------------------------------
-    # jit solid, eager (un-jit) per-call dashed; N=1e6 filled, N=1e4 hollow markers
+    # jit solid, eager (un-jit) per-call dashed, at the larger N only (the
+    # N=1e4 series, measured too, told the same story and cluttered the panel)
     for dev, d in runs:
         for N in d["Ns"]:
+            if N != max(d["Ns"]):
+                continue
             ts = numpy.asarray(d["per_call"][str(N)], dtype=float)
             idx = numpy.arange(len(ts))
             st = palette.style("jax", dev, "jit")
-            if N != max(d["Ns"]):
-                st["mfc"] = "white"
-            ax1.semilogy(idx, ts * 1e3, ms=4, label=_lab(dev, "jit", _nlab(N)), **st)
+            ax1.semilogy(idx, ts * 1e3, ms=4, label=_lab(dev, "jit"), **st)
             se = palette.style("jax", dev, "eager")
             se.pop("marker")
             ax1.semilogy([0, len(ts) - 1], [d["eager"][str(N)] * 1e3] * 2, lw=1.1,
-                         label=_lab(dev, "eager", _nlab(N)), **se)
+                         label=_lab(dev, "eager"), **se)
     ax1.annotate("call 0 = compile", xy=(0, data["per_call"][str(Ns[1])][0] * 1e3),
                  xytext=(2.2, data["per_call"][str(Ns[1])][0] * 1e3 * 0.62), fontsize=fs_note,
                  color="0.3", arrowprops=dict(arrowstyle="->", color="0.5", lw=0.8))
     ax1.set_xlabel("call index")
     ax1.set_ylabel("wall-time per call  (ms)")
-    ax1.set_title("(a) per-call wall-time" if PAPER
+    ax1.set_title(rf"(a) per-call wall-time, {_nlab(max(Ns))}" if PAPER
                   else "(a) compile-once, run-many (eager per-call dashed)", fontsize=layout.FS["title"])
 
     # ---- (b) cumulative time: jit vs eager, with break-even --------------------

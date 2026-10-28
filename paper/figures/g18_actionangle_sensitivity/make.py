@@ -47,6 +47,13 @@ _C_JR, _C_DJR = "#0072B2", "#56B4E9"  # blue      / sky blue   (radial)
 _C_JZ, _C_DJZ = "#D55E00", "#E69F00"  # vermillion / orange     (vertical)
 
 
+def _pow10(v):
+    """``8\\times10^{-9}`` for 8e-9 (one significant digit), for an in-plot label."""
+    e = int(numpy.floor(numpy.log10(v)))
+    m = v / 10.0**e
+    return (r"%.0f\times10^{%d}" % (m, e)) if round(m) != 1 else (r"10^{%d}" % e)
+
+
 @figure(
     name="g18_actionangle_sensitivity",
     track="G",
@@ -180,7 +187,7 @@ def make():
     # annotate the (tiny) worst autodiff-vs-FD residual across both panels, in the
     # clear lower-right corner of panel (a)
     _resid_ax.text(0.97, 0.04,
-                   r"$\max\,|{\rm AD}-{\rm FD}|/|{\rm FD}| = %.0e$" % max(res_a, res_b),
+                   r"$\max\,|{\rm AD}-{\rm FD}|/|{\rm FD}| = %s$" % _pow10(max(res_a, res_b)),
                    transform=_resid_ax.transAxes, fontsize=_fs_note, va="bottom",
                    ha="right", color="0.35")
 

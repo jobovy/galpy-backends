@@ -163,7 +163,7 @@ def make():
             ax1.text(x, h * 1.15, f"{h:.0f}" if h >= 10 else f"{h:.1f}",
                      ha="center", va="bottom", fontsize=fs_note)
     ax1.set_ylim(top=max(heights) * (30 if PAPER else 3))
-    ax1.text(0.02, 0.97, "hatched = eager\nCPU ($n$): $n$ threads", transform=ax1.transAxes,
+    ax1.text(0.02, 0.97, "hatched = eager, solid = compiled\nCPU ($n$): $n$ threads", transform=ax1.transAxes,
              fontsize=fs_note, color="0.4", va="top")
 
     # ---- (b) IC-gradient wall-clock vs number of orbits N -----------------------
@@ -205,7 +205,7 @@ def make():
         fig.suptitle("Cost of differentiating an orbit w.r.t. its initial conditions "
                      "(full 6-vector gradient; MWPotential2014)", fontsize=11)
         fig.text(0.01, 0.005, "GPU: " + "; ".join(gpus), fontsize=6.5, color="0.5")
-    fig.tight_layout()
+    fig.tight_layout(w_pad=3.0)
     # after tight_layout: label positions are in axes fraction of the final axes
     palette.label_lines(ax2, [(ln, ln.get_label()) for ln in ax2.get_lines()
                               if not ln.get_label().startswith(("_", "galpy C"))],

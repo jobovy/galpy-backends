@@ -48,7 +48,7 @@
     "track": "G"
   },
   "g12_inbackend_orbit_gpu": {
-    "description": "MWPotential2014 in-backend orbit integration wall time vs batch size N: galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
+    "description": "MWPotential2014 in-backend orbit integration wall time vs batch size N, in three stacked panels (CPU, TITAN Xp, H100): galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
       "galpy_git": "7236d252c",
@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "9b0d1e6",
-    "sha256": "23a9a50f939beb4d3207e1c54d632d079ffa0a92f90f3bdb5686d0e4e76cee21",
+    "git": "f6ccf03",
+    "sha256": "92115ae6836fcd19dafb8e0f9b775bf9f1ad2ab4f3203f98f19a259677c6dc2e",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -99,7 +99,7 @@
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "34bca2d1d",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "a9e92c1",
-    "sha256": "cf5e01149850e0c4fa48f62b7edfa5a71b96d05b65b0ece3c081b939ace6e02a",
+    "git": "f6ccf03",
+    "sha256": "8022a42e30f020f777d040f89ca4ebb8a5411754178072a31ebe48c39ebb6bb7",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -125,6 +125,22 @@
     },
     "git": "5ee8d2a",
     "sha256": "602ce165475f43e957faf48335993573a5b7b52d60b6cee092fe7f22b8da88c8",
+    "track": "G"
+  },
+  "g17_staeckel_actionangle_speed": {
+    "description": "Staeckel actionsFreqsAngles speed vs N -- eager torch and compiled jax (CPU & both GPUs) vs C/numpy [measure->json, plot byte-stable]",
+    "env": {
+      "galpy": "1.12.1.dev0",
+      "galpy_git": "7236d252c",
+      "jax": "0.10.1",
+      "matplotlib": "3.10.8",
+      "numpy": "2.4.3",
+      "python": "3.13.12",
+      "scipy": "1.17.1",
+      "torch": "2.12.0+cu126"
+    },
+    "git": "f6ccf03",
+    "sha256": "1609fcfbf137818702a6a0307ef043ada6fb380ae8cf3be088c81ca1dd9b02d7",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_jax": {
@@ -163,7 +179,7 @@
     "description": "differentiable action-angle: IC sensitivity dJ/dv_R + potential-parameter sensitivity dJ_r/db (jax.grad vs finite-diff, CPU float64)",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "db33e5fcf",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -171,8 +187,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "5ee8d2a",
-    "sha256": "cd12b257d0197ff1e5c3a1a4e3f9bc55a3c24d0d0ad7e59b40a6b89ead650897",
+    "git": "f6ccf03",
+    "sha256": "ced18430ec656cecb0dd04d45f717f121d950be7a425c6930a87c53eeed95eac",
     "track": "G"
   },
   "g1_backend_parity": {
@@ -203,8 +219,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "6c43cef",
-    "sha256": "c88165470a1d98cbcc44b53a213612992089b175e268010bbda441704d38280f",
+    "git": "f6ccf03",
+    "sha256": "55c4b8e0eb57a45bf1eb94c0762162e97281ec36d5c19e4f8c723034d6df67f3",
     "track": "G"
   },
   "g2b_transfer": {
@@ -258,7 +274,7 @@
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "34bca2d1d",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -266,8 +282,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "a9e92c1",
-    "sha256": "7efb361a135916be518b57ddd409cc7677dbf1366cddf8c2c55f0deff20a238c",
+    "git": "f6ccf03",
+    "sha256": "bea1f7bab153e26f4e5da06f278d2d0dc8c386f29ab8bb2efcc68706df4c8d68",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -298,8 +314,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "9b0d1e6",
-    "sha256": "cecb4b24c48154986ae70eb03e30b0c28dbc18bb1b81dc56a3eb3e22bca23b5a",
+    "git": "f6ccf03",
+    "sha256": "d22bb6db33b593dc6163c01f31da9d7060ed803241316398238e7850ddbf2dfc",
     "track": "G"
   },
   "g9_variational_validity": {
@@ -378,8 +394,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b76e2dd",
-    "sha256": "145ceacd423a7b13962019b4ab81fa9ffd78b72f74211c63fc6a03bf2f0efb3d",
+    "git": "f6ccf03",
+    "sha256": "421d4800b2c3414874dcfe25d54e0bf07f968cbb8f99ccf89b97d962caa19dad",
     "track": "F"
   },
   "gD4_spherical_df_param": {
@@ -514,7 +530,7 @@
     "description": "differentiable 1D inverse action-angle map (actionAngleVerticalInverse, momentum-matched): tori of an isothermal disk + AD d/dsigma through the native construction, AD vs rebuilt central FD per angle, FD h-convergence, Poisson bracket (jax, jit, CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "9a877712e",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -522,8 +538,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "2c67c22",
-    "sha256": "a1f19f114c3d1be268a1072314ad6c0fc42d4ec96d070a64a0be49e98e7cfc97",
+    "git": "f6ccf03",
+    "sha256": "687c79d38356c424499c52a57ac966b9134b39ba5d074dc73719f10376babd93",
     "track": "E"
   },
   "gV2_vertical_inverse_speed": {

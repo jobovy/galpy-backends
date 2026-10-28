@@ -353,7 +353,7 @@ def make():
     ins.set_ylim(-0.42, 0.42)
     ins.tick_params(labelsize=_fl(6))
     ins.set_title(r"$+z$ turning points" if PAPER else r"zoom: $+z$ turning points",
-                  fontsize=_fl(6.5), pad=2)
+                  fontsize=_fl(6.5), pad=2, loc="right" if PAPER else "center")
     ax1.indicate_inset_zoom(ins, edgecolor="0.4")
     ax1.plot([], [], "-", color="0.3", label=rf"$\sigma_0={s0:g}$")
     ax1.plot([], [], "--", color="0.3", label=rf"rebuilt at $\sigma_0+{ds:g}$")
@@ -383,12 +383,14 @@ def make():
     for key, lab, col, ls in _QUANT:
         r = numpy.maximum(numpy.asarray(data["rel_best"][key]), 1e-17)
         hb = data["h_best"][key]
+        # PAPER: the step of each quantity's FD (the best of the h-scan in (c),
+        # 1e-4 to 1e-3) is given in the caption, not the legend
+        hlab = "" if PAPER else rf" ($h=10^{{{numpy.log10(hb):.1f}}}$)"
         if key == "dO_ds":
-            ax2.axhline(r[0], color=col, ls=ls, lw=1.1,
-                        label=lab + rf" ($h=10^{{{numpy.log10(hb):.1f}}}$)")
+            ax2.axhline(r[0], color=col, ls=ls, lw=1.1, label=lab + hlab)
         else:
             ax2.semilogy(ang, r, ls, color=col, lw=1.0, marker="o", ms=2.0,
-                         label=lab + rf" ($h=10^{{{numpy.log10(hb):.1f}}}$)")
+                         label=lab + hlab)
     pb = numpy.maximum(numpy.asarray(data["poisson_minus_1"]), 1e-17)
     ax2.semilogy(ang, pb, ":", color="0.45", lw=1.3, marker="s", ms=2.0,
                  label=r"$|\{z,v_z\}-1|$ (AD only)")
@@ -402,7 +404,8 @@ def make():
     ax2.set_title(rf"(b) AD vs FD along the $J={data['Jchk']:g}$ torus" if PAPER else
                   rf"(b) AD vs 5-point central FD along the $J={data['Jchk']:g}$ torus" "\n"
                   r"($\sigma$-FD rebuilds the family at $\sigma_0\pm h$)", **_ts)
-    ax2.legend(fontsize=_fl(6.0), ncol=2, framealpha=0.92, loc="upper center")
+    ax2.legend(fontsize=_fl(6.0), ncol=4 if PAPER else 2, framealpha=0.92, loc="upper center",
+               columnspacing=0.9, handlelength=1.6)
     ax2.set_ylim(1e-17, 1e-4)
 
     # (c) h-convergence of the FD onto AD
@@ -417,7 +420,8 @@ def make():
                   r"($\propto h^4$) down to its round-off floor", **_ts)
     if PAPER:  # headroom: the legend sits above the data
         ax3.set_ylim(top=ax3.get_ylim()[1] * 30)
-    ax3.legend(fontsize=_fl(6.0), ncol=2, framealpha=0.92, loc="upper center")
+    ax3.legend(fontsize=_fl(6.0), ncol=4 if PAPER else 2, framealpha=0.92, loc="upper center",
+               columnspacing=0.9, handlelength=1.6)
 
     # (d) the fit in the (sigma, amp) plane
     _plot_fit(fig, ax4, data["fit"])

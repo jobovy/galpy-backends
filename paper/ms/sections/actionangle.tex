@@ -106,8 +106,10 @@ parameters.
     derivative of the tori with respect to $\sigma$ by automatic
     differentiation (points). (b) The difference between the derivatives
     of $z$, $v_z$, and the frequency with respect to $\sigma$, $J$, and
-    $\theta$ along the $J=0.06$ torus and five-point finite differences,
-    relative to the largest derivative. (c) The finite differences
+    $\theta$ along the $J=0.06$ torus and five-point finite differences
+    with steps between $10^{-4}$ and $10^{-3}$ (the best step of the scan
+    in panel c for each quantity), relative to the largest
+    derivative. (c) The finite differences
     converge onto the automatic derivatives as $h^4$ until their
     round-off floor. (d) A Levenberg--Marquardt fit of $(\sigma,\,\mathrm{amp})$
     and 120 angles to 120 stars with noisy $(z,v_z)$ on three tori, using
@@ -233,19 +235,20 @@ also the fastest way to evaluate it for large samples when a modern GPU
 is available.
 
 \begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g17_staeckel_actionangle_speed_torch/g17_staeckel_actionangle_speed_torch.pdf}
+  \includegraphics[width=\textwidth,clip=]{../figures/g17_staeckel_actionangle_speed/g17_staeckel_actionangle_speed.pdf}
   \caption{Speed of the St\"{a}ckel action--angle transformation
     (\texttt{actionAngleStaeckel.actionsFreqsAngles}) for
     \texttt{MWPotential2014} as a function of the number $N$ of
     phase-space points per call: (a) wall time and (b) throughput. CPU
     lines use one core, except for the dash-dotted \cc\ line, which uses
-    16 OpenMP threads; GPU lines are for eager \torch\ on the TITAN~Xp and
-    the H100, without (dashed) and with (dotted) the transfer of the
-    inputs and outputs between host and device. The black dotted line
-    with crosses is the per-object \numpy\ loop that the vectorized path replaces. Points
-    where the TITAN~Xp runs out of memory are omitted. The \jax\ version
-    of this figure is qualitatively the same; compiled \jax\ on the H100
-    takes 0.16\,s at $N=10^5$. After a launch floor, the GPU overtakes
-    one \cc\ thread at $N\approx2000$ and 16 threads at
-    $N\approx3\times10^4$ on the H100.}\label{fig:staeckelspeed}
+    16 OpenMP threads; GPU lines are for eager \torch\ (dashed; dotted
+    with the transfer of the inputs and outputs between host and device)
+    and for compiled \jax\ (solid) on the TITAN~Xp and the H100. The
+    black dotted line with crosses is the per-object \numpy\ loop that
+    the vectorized path replaces; eager \jax, which sits at a floor of
+    several seconds on every device, is not shown. Points where the
+    TITAN~Xp runs out of memory are omitted. Light grey dotted lines mark
+    a constant cost per point in (a) and per call in (b). After a launch
+    floor, the GPU overtakes one \cc\ thread at $N\approx2000$ and 16
+    threads at $N\approx3\times10^4$ on the H100.}\label{fig:staeckelspeed}
 \end{figure*}

@@ -107,26 +107,31 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # A series whose JSONs do not exist (yet) is skipped.
 _C1 = "galpy C (1 core)"
 _C_NODE = "galpy C (72 threads)"
-_CUDA_FAST = "CUDA kernel {dev} (fast arith.)"  # unlabelled, de-emphasised (named in the caption)
-_SERIES = [
+_C_NODE_FILES = ["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"]
+_CUDA_FAST = "CUDA kernel (fast arith.)"  # unlabelled, de-emphasised (named in the caption)
+# Three panels (2026-10-28, JB's review): the CPU series, then the TITAN Xp and
+# the H100 series, the GPU panels each repeating the whole-node C line in grey.
+_CPU_SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
      palette.c_threads_style(1)),
-    (["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"], "c", "cpu", None, _C_NODE,
-     palette.c_threads_style(72)),
-    (["galax_cpu.json"], "galax", "cpu", "jit", "galax CPU ({cpu})", None),
+    (_C_NODE_FILES, "c", "cpu", None, _C_NODE, palette.c_threads_style(72)),
+    (["galax_cpu.json"], "galax", "cpu", "jit", "galax ({cpu})", None),
     (["jax_cpu.json", "jax_cpu_hiN.json"], "jax", "cpu", "jit",
-     "galpy jax CPU ({cpu}, per-orbit steps)", None),
-    (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "galpy jax {dev} (per-orbit steps)", None),
+     "galpy jax ({cpu}, per-orbit steps)", None),
+]
+_GPU_SERIES = [
+    (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "galpy jax (per-orbit steps)", None),
     (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax", "gpu", "jit",
-     "galax {dev} (per-orbit steps)", "-."),
-    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "galax {dev} (batched steps)", None),
+     "galax (per-orbit steps)", "-."),
+    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "galax (batched steps)", None),
     # experimental one-thread-per-orbit CUDA kernel compiled from galpy's C forces +
     # dop853 (experiments/cuda_orbits; not a galpy backend, not differentiable), shared
-    # with G12: galpy arithmetic (solid, labelled) and fast arithmetic (long-dashed,
-    # named in a note); wall incl. H2D + D2H (pinned)
-    (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel {dev} (galpy arith.)", None),
+    # with G12: a direct port (solid, labelled) and fast arithmetic (long-dashed,
+    # named in the caption); wall incl. H2D + D2H (pinned)
+    (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel (direct port)", None),
     (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
 ]
+_PANELS = [("(a) CPU", "cpu", ""), ("(b) NVIDIA TITAN Xp", "gpu", ""), ("(c) NVIDIA H100", "gpu", "h100")]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 
 
@@ -173,75 +178,79 @@ def _load(fnames, sub=""):
     description="MWPotential2014 orbit-integration wall time vs batch size N: galpy(C,CPU) vs galax(JAX,CPU/GPU) [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    # print size: 7.0 in wide (figure*; nine directly-labelled lines do not fit a
-    # 3.4 in column), text 8-10 pt, two-line labels
-    fig, ax = plt.subplots(figsize=layout.figsize(PAPER, (7.0, 3.8), (6.6, 4.6)))
+    # print size: 7.0 in wide (figure*), three stacked panels of the original
+    # panel's proportions, each with its lines labelled directly in a column at
+    # the right (elbow leaders); the frame is shared with G12
+    fig, axes = plt.subplots(
+        3, 1, figsize=layout.figsize(PAPER, (7.0, 9.0), (9.0, 13.0)), sharex=True
+    )
     fs_line = layout.FS["line"] if PAPER else 6.5
     fs_note = layout.FS["note"] if PAPER else 6.5
 
-    def _lab(lab, dev, d=None):
-        lab = lab.format(dev=palette.DEVICE_NAME[palette._device(dev)],
-                         cpu=_cpu_tag(d or {}))
+    def _two_line(lab):
         return lab.replace(" (", "\n(") if PAPER else lab
 
-    h100_meta = _load_one("jax_gpu.json", "h100") or {}
-    for fnames, fw, dev, mode, lab, ls in _SERIES:
-        for sub, d_ in (("", dev), ("h100", "h100")):
-            if sub and dev != "gpu":
-                continue
+    def _series_xy(d):
+        res = sorted((r for r in d["results"] if r["N"] <= _NMAX), key=lambda r: r["N"])
+        Ns = numpy.array([r["N"] for r in res], dtype=float)
+        wall = numpy.array([r["wall_s"] for r in res], dtype=float)
+        return Ns, wall
+
+    def _plot(ax, series, sub):
+        for fnames, fw, dev, mode, lab, ls in series:
             d = _load(fnames, sub)
             if d is None or not d.get("results"):
                 continue
-            res = sorted((r for r in d["results"] if r["N"] <= _NMAX), key=lambda r: r["N"])
-            Ns = numpy.array([r["N"] for r in res], dtype=float)
-            wall = numpy.array([r["wall_s"] for r in res], dtype=float)
+            Ns, wall = _series_xy(d)
+            d_ = "h100" if sub == "h100" else dev
             st = palette.style(fw, d_, mode)
             if isinstance(ls, dict):
                 st.update(ls)
             elif ls:
                 st["ls"] = ls
-            ax.loglog(Ns, wall, ms=4, zorder=3, label=_lab(lab, d_, d), **st)
+            ax.loglog(Ns, wall, ms=4, zorder=3, label=_two_line(lab.format(cpu=_cpu_tag(d))), **st)
 
-    ax.set_xlabel(r"batch size  $N$  (number of orbits)")
-    ax.set_ylabel(r"wall time for the batch  (s)")
-    if not PAPER:
-        ax.set_title(r"MWPotential2014 orbit integration, 2 Gyr")
-
-    # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
-    # same frame as G12, so the two read as a pair
-    layout.apply_frame(ax, "orbit_speed")
-    # decade-spaced to bracket every curve's cost per orbit at its largest N
-    refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
-    ax.text(
-        0.025, 0.975,
-        "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
-        transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
-    )
-    # env stamp from the GPU JSON (the headline machine)
-    if not PAPER:
+    node_label = _two_line(_C_NODE)
+    for ax, (title, kind, sub) in zip(axes, _PANELS):
+        if kind == "cpu":
+            _plot(ax, _CPU_SERIES, "")
+        else:
+            d = _load(_C_NODE_FILES)
+            if d is not None:
+                Ns, wall = _series_xy(d)
+                ax.loglog(Ns, wall, ms=4, zorder=2, label=node_label, **palette.c_threads_style(72))
+            _plot(ax, _GPU_SERIES, sub)
+        ax.set_title(title, loc="left")
+        ax.set_ylabel(r"wall time for the batch  (s)")
+        layout.apply_frame(ax, "orbit_speed")
+        # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
+        refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
         ax.text(
-            0.975, 0.03,
-            "galpy C: dop853_c on 1 core and on all 72 threads (OpenMP)\n"
-            "all lines: diffrax Dopri8 / dop853, rtol=atol=1e-8 (matched)\n"
-            f"TITAN Xp: jax {_load_one('jax_gpu.json').get('jax_version', '?')}"
-            + (f"  ·  H100: jax {h100_meta.get('jax_version', '?')}" if h100_meta else ""),
-            transform=ax.transAxes, fontsize=6.5, color="0.5", va="bottom", ha="right",
+            0.025, 0.975,
+            "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
+            transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
         )
+    axes[-1].set_xlabel(r"batch size  $N$  (number of orbits)")
+    layout.faster_arrow(axes[0], "down", xy=(0.94, 0.42), length=0.16)
+    if not PAPER:
+        fig.suptitle(r"MWPotential2014 orbit integration, 2 Gyr: galpy vs galax")
     fig.tight_layout()
-    # the all-threads C line runs below every other line: label it on the plot, to
-    # the lower right of its N=100 point (clear of the line, which rises to the right)
-    node = [ln for ln in ax.get_lines() if ln.get_label() == _lab(_C_NODE, "cpu")]
-    for ln in node:
-        x, y = (numpy.asarray(v, dtype=float) for v in ln.get_data())
-        k = int(numpy.argmin(abs(numpy.log(x / 100.0))))
-        ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6), textcoords="offset points",
-                    fontsize=fs_line, color=ln.get_color(), ha="left", va="top")
-    palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
-                             if not ln.get_label().startswith("_") and ln not in node
-                             and "fast arith." not in ln.get_label()],
-                        fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
-                        order="elbow", pad_pt=18)
+    for ax in axes:
+        # the whole-node C line runs below every other line: label it on the plot,
+        # to the lower right of its N=100 point (clear of the line, which rises to
+        # the right); the rest are labelled in a column right of the axes
+        node = [ln for ln in ax.get_lines() if ln.get_label() == node_label]
+        for ln in node:
+            x, y = (numpy.asarray(v, dtype=float) for v in ln.get_data())
+            k = int(numpy.argmin(abs(numpy.log(x / 100.0))))
+            ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6),
+                        textcoords="offset points", fontsize=fs_line,
+                        color=ln.get_color(), ha="left", va="top")
+        palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
+                                 if not ln.get_label().startswith("_") and ln not in node
+                                 and "fast arith." not in ln.get_label()],
+                            fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                            order="elbow", pad_pt=18)
     if PAPER:
         layout.fit_right(fig)
-        layout.place_frame(ax, "orbit_speed")
     return fig

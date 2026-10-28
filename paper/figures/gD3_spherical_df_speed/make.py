@@ -522,11 +522,15 @@ def make():
 
     if PAPER:  # final printed width of a figure* (7.0 in), printed text sizes: the
         # four sampling panels as a 2x2 grid (a 1x4 row is too narrow for the names)
-        fig = plt.figure(figsize=(6.8, 8.0))
-        gs = GridSpec(3, 4, figure=fig, height_ratios=[1.0, 1.0, 1.3], hspace=0.5, wspace=0.08,
-                      left=0.085, right=0.80, top=0.965, bottom=0.145)
+        # (JB's review, 2026-10-28) one legend for the whole figure, in a spacer
+        # row between the sampling panels and the construction bars, serves both
+        # (the bars use the same colours and hatching), so the panels need no
+        # label column at the right
+        fig = plt.figure(figsize=(6.8, 8.4))
+        gs = GridSpec(4, 4, figure=fig, height_ratios=[1.0, 1.0, 0.32, 1.3], hspace=0.5,
+                      wspace=0.08, left=0.085, right=0.975, top=0.965, bottom=0.075)
         axs = [fig.add_subplot(gs[i // 2, 2 * (i % 2):2 * (i % 2) + 2]) for i in range(4)]
-        _bar_gs, _left = gs[2, :], (0, 2)
+        _bar_gs, _left = gs[3, :], (0, 2)
     else:
         fig = plt.figure(figsize=(14.6, 8.4))
         gs = GridSpec(2, 4, figure=fig, height_ratios=[1.0, 1.0], hspace=0.42, wspace=0.08,
@@ -606,8 +610,29 @@ def make():
         handles.append(Patch(facecolor=palette.style(fw, dev, md)["color"], edgecolor="w",
                              hatch="////" if md == "eager" else None, label=_label(mode, dev, data)))
     handles.append(Patch(facecolor="none", edgecolor="0.3", label="first call (outline)"))
-    ax.legend(handles=handles, fontsize=_fs_leg, ncol=4 if PAPER else 6, loc="upper center",
-              bbox_to_anchor=(0.5, -0.12 if PAPER else -0.1), framealpha=0.92)
+    if PAPER:
+        # line handles for the sampling panels (same colours/styles) and the two
+        # bar conventions, centred in the spacer row between the two kinds of panel
+        from matplotlib.lines import Line2D
+
+        seen, lh = set(), []
+        for a in axs:
+            for ln in a.get_lines():
+                lab = ln.get_label()
+                if lab.startswith("_") or lab in seen:
+                    continue
+                seen.add(lab)
+                lh.append(Line2D([], [], color=ln.get_color(), ls=ln.get_linestyle(),
+                                 marker=ln.get_marker(), ms=3.5, lw=ln.get_linewidth(), label=lab))
+        lh.append(Patch(facecolor="0.75", edgecolor="w", hatch="////", label="hatched bar: eager"))
+        lh.append(handles[-1])
+        y_mid = 0.5 * (axs[2].get_position().y0 + ax.get_position().y1)
+        fig.legend(handles=lh, fontsize=_fs_leg, ncol=4, loc="center",
+                   bbox_to_anchor=(0.53, y_mid), frameon=False, columnspacing=1.2,
+                   handlelength=2.4)
+    else:
+        ax.legend(handles=handles, fontsize=_fs_leg, ncol=6, loc="upper center",
+                  bbox_to_anchor=(0.5, -0.1), framealpha=0.92)
     recs = [r[m] for src in ([data] + ([h100] if h100 else [])) for r in src["construct"].values()
             for m in r]
     lo = min(r["warm"] for r in recs if numpy.isfinite(r["warm"]))
@@ -636,8 +661,10 @@ def make():
                  + (f"  |  {eh.get('gpu', 'H100')}: jax {eh.get('jax', '?')} · torch {eh.get('torch', '?')}" if eh else "")
                  + "  ·  float64",
                  fontsize=6, color="0.5", ha="right", va="bottom")
-    # the four sampling panels share their series: label them once, beside (d)
-    palette.label_lines(axs[-1], fontsize=_fs_lab, min_sep_pt=1.3 * _fs_lab if PAPER else None)
+    # the four sampling panels share their series: PAPER names them in the one
+    # legend above; the detailed version labels them once, beside (d)
+    if not PAPER:
+        palette.label_lines(axs[-1], fontsize=_fs_lab, min_sep_pt=1.3 * _fs_lab)
     return fig
 
 

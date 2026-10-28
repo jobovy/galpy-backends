@@ -185,11 +185,13 @@ def make():
     for ax in axes[0]:
         ax.set_ylim(lo, hi)
     # constant-wall-time-per-call reference lines (throughput = N / t0, slope 1),
-    # decade-spaced to bracket every curve's time per call at its largest N
-    t_last = [c for ax in axes[0] for c in layout.last_costs(ax, kind="rate")]
+    # decade-spaced to bracket every curve's time per call at EVERY N (the
+    # launch-bound small-N end of the H100 lines sits above 100 us per call)
+    t_all = [t for _, d, _ in panels for v in d["series"].values()
+             for t in numpy.asarray(v, dtype=float) if numpy.isfinite(t) and t > 0]
     for ax, (_, d, _) in zip(axes[0], panels):
         Nd = numpy.asarray(d["Ns"], dtype=float)
-        refs = layout.cost_lines(ax, t_last, kind="rate", x_range=(Nd.min(), Nd.max()))
+        refs = layout.cost_lines(ax, t_all, kind="rate", x_range=(Nd.min(), Nd.max()))
     axes[0][0].text(0.03, 0.97, "grey dotted, per call:\n" + layout.fmt_seconds(refs),
                     transform=axes[0][0].transAxes, fontsize=fs_note, color="0.5", va="top", ha="left")
     if not PAPER:

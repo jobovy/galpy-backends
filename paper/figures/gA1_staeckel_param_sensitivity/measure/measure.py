@@ -1,7 +1,10 @@
-"""gA1 measure: d(J_R, J_z)/dq of the Staeckel actions w.r.t. the halo
-flattening q, by jax.grad through galpy's pure-Python Staeckel code
-(actionAngleStaeckel(..., c=False)), validated against central finite
-differences of the numpy path.
+"""gA1 measure: d(J_R, J_z)/dp of the Staeckel actions w.r.t. the flattening
+p = b/a of the Miyamoto-Nagai disk of MWPotential2014 (the disk's scale
+height over its scale length, at fixed scale length; 2026-10-28, JB's review:
+previously the flattening q of a logarithmic halo, measure_loghalo.py), by
+jax.grad through galpy's pure-Python Staeckel code (actionAngleStaeckel(...,
+c=False)), validated against central finite differences of the numpy path.
+The JSON keeps the key names of the halo version ("q" is the parameter).
 
 Standalone measure script (pattern A, like g10): run it against the galpy
 worktree, NOT inside the figure harness:
@@ -53,7 +56,11 @@ jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp  # noqa: E402
 
 from galpy.actionAngle import actionAngleStaeckel  # noqa: E402
-from galpy.potential import LogarithmicHaloPotential  # noqa: E402
+from galpy.potential import (  # noqa: E402
+    MiyamotoNagaiPotential,
+    NFWPotential,
+    PowerSphericalPotentialwCutoff,
+)
 
 _CPU = jax.devices("cpu")[0]
 OUT = os.path.join(
@@ -63,10 +70,10 @@ OUT = os.path.join(
 
 DELTA, ORDER = 0.45, 10
 ORBIT = dict(R=1.0, vR=0.1, vT=1.1, z=0.1, vz=0.05)  # phi=0, natural units
-Q = numpy.linspace(0.7, 1.1, 30)
+Q = numpy.linspace(0.04, 0.2, 30)  # b/a; MWPotential2014 has 0.28/3 = 0.0933
 FD_EVERY = 5  # FD markers at every 5th sweep point
 H_MARK = 1e-5  # FD step for the sweep markers (near the V floor)
-Q0 = 0.9
+Q0 = 0.28 / 3.0  # MWPotential2014's disk
 H_V = [1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7]
 IDX = {"JR": 0, "Jz": 2}  # (jr, Lz, jz) slots
 FIDX = {"OR": 3, "Oz": 5}  # actionsFreqs (jr, Lz, jz, Or, Op, Oz) slots
@@ -92,12 +99,22 @@ def env_stamp():
     }
 
 
+def make_pot(p):
+    """MWPotential2014 with the disk's b = p * a, everything else as shipped
+    (galpy.potential.mwpotentials: bulge, disk and halo normalised to 0.05,
+    0.6 and 0.35 of the circular velocity at R0)."""
+    a_disk = 3.0 / 8.0
+    return [
+        PowerSphericalPotentialwCutoff(alpha=1.8, rc=1.9 / 8.0, normalize=0.05),
+        MiyamotoNagaiPotential(a=a_disk, b=p * a_disk, normalize=0.6),
+        NFWPotential(a=2.0, normalize=0.35),
+    ]
+
+
 def make_aA(q):
-    # EVERYTHING rebuilt from q: the (normalised) potential and the aA instance
-    return actionAngleStaeckel(
-        pot=LogarithmicHaloPotential(normalize=1.0, q=q), delta=DELTA, c=False,
-        order=ORDER,
-    )
+    # EVERYTHING rebuilt from the parameter: the (normalised) potential and the
+    # aA instance
+    return actionAngleStaeckel(pot=make_pot(q), delta=DELTA, c=False, order=ORDER)
 
 
 def J_np(q, idx):
@@ -197,7 +214,7 @@ def main():
     out = {
         "env": env_stamp(),
         "config": {
-            "potential": "LogarithmicHaloPotential(normalize=1., q=q)",
+            "potential": "MWPotential2014 with the Miyamoto-Nagai disk's b = (b/a) * a, a = 3/8; the parameter 'q' of this JSON is b/a",
             "actionAngle": f"actionAngleStaeckel(pot, delta={DELTA}, c=False, order={ORDER})",
             "orbit": ORBIT, "phi": 0.0,
             "q_range": [float(Q[0]), float(Q[-1])], "n_q": int(len(Q)),

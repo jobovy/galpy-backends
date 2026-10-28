@@ -364,26 +364,30 @@ keeps the per-orbit control.
   \includegraphics[width=\textwidth,clip=]{../figures/g12_inbackend_orbit_gpu/g12_inbackend_orbit_gpu.pdf}
   \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
     \texttt{MWPotential2014} with relative and absolute tolerances of
-    $10^{-8}$. The grey lines are \galpy's \cc\ integrator \texttt{dop853\_c},
-    which parallelizes over orbits with OpenMP, on one core (solid), 16
-    threads, and all 72 hardware threads (dash-dotted). The blue lines are
-    the in-backend \diffrax\ solve under \jax\ on one CPU core and on the
-    two GPUs,
-    compiled, with the eighth-order method that \galpy\ uses by default
-    and, dash-dotted, with a fifth-order method that performs the same
-    number of force evaluations as the \torch\ solve; the orange lines are
-    the eager \texttt{torchdiffeq} solve on the GPUs. Light grey dotted lines mark a
-    constant cost per orbit. The \cc\ integrator is the fastest option
-    for small batches, while for large batches the in-backend solve on
-    the H100 is cheaper per orbit. Purple: an experimental CUDA port of
-    \galpy's \cc\ forces and \texttt{dop853} that integrates one orbit
-    per GPU thread (not part of \galpy\ and not differentiable), with
-    a direct port of \galpy's \cc\ code (solid) and with special
-    functions rewritten for the GPU (thin long-dashed), including the
-    copies of the initial conditions and the result between host and device. On the H100, \galpy's sixth-order symplectic integrator
-    with one common step (not shown) reaches the same worst-case accuracy
-    3.0 to 3.7 times faster, because these disc orbits share a dynamical
-    timescale (\sectionname~\ref{sec:orbit-speed}).}\label{fig:orbitspeed}
+    $10^{-8}$, on (a) the CPU, (b) the TITAN~Xp, and (c) the H100. Grey:
+    \galpy's \cc\ integrator \texttt{dop853\_c}, which parallelizes over
+    orbits with OpenMP, on one core (solid), 16 threads, and all 72
+    hardware threads (dash-dotted); the latter is repeated in the GPU
+    panels for reference. Blue: the in-backend \diffrax\ solve under
+    \jax, compiled, with the eighth-order method that \galpy\ uses by
+    default and, dash-dotted, with a fifth-order method that performs
+    the same number of force evaluations as the \torch\ solve; orange
+    and red: the eager \texttt{torchdiffeq} solve. Purple: an
+    experimental CUDA port of \galpy's \cc\ forces and \texttt{dop853}
+    that integrates one orbit per GPU thread (not part of \galpy\ and
+    not differentiable), with a direct port of \galpy's \cc\ code
+    (solid) and with special functions rewritten for the GPU (thin
+    long-dashed), including the copies of the initial conditions and
+    the result between host and device, which are what keep the purple
+    lines flat up to $N\approx10^4$. Light grey dotted lines mark a
+    constant cost per orbit, and the arrow in (b) points towards lower
+    wall time. The \cc\ integrator is the fastest option for small
+    batches, while for large batches the in-backend solve on the H100
+    is cheaper per orbit. On the H100, \galpy's sixth-order symplectic
+    integrator with one common step (not shown) reaches the same
+    worst-case accuracy 3.0 to 3.7 times faster, because these disc
+    orbits share a dynamical timescale
+    (\sectionname~\ref{sec:orbit-speed}).}\label{fig:orbitspeed}
 \end{figure*}
 
 \begin{figure*}[t!]

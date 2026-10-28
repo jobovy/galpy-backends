@@ -98,8 +98,10 @@ derivative through the expansion coefficients.
     largest difference between the derivatives of the potential and of
     the radial force with respect to the amplitude and scale parameters
     computed with \jax\ and with \torch\ (circles, at the level of the
-    double-precision rounding error) and between either of these and a
-    central finite difference (triangles, at the level of the
+    double-precision rounding error; where the two are bit-identical, the
+    difference is zero and cannot be shown on the logarithmic axis, which
+    the filled triangles on the axis mark) and between either of these and a
+    central finite difference (open triangles, at the level of the
     finite-difference error). The right panel displays the recovery of
     the scale length of a Plummer potential from the radial force at a
     set of points by gradient descent on the derivative, starting from

@@ -1,0 +1,51 @@
+{
+  "backend": "galax",
+  "device": "cpu",
+  "solver": "Dopri8",
+  "nt": 1000,
+  "tspan_Gyr": 2.0,
+  "cpu_affinity": 1,
+  "thread_env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "XLA_FLAGS": "unset"
+  },
+  "jax_version": "0.8.0",
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 0.019178278977051377,
+      "per_orbit_ms": 19.178278977051377
+    },
+    {
+      "N": 10,
+      "wall_s": 0.054094192921184,
+      "per_orbit_ms": 5.4094192921184
+    },
+    {
+      "N": 100,
+      "wall_s": 0.2055005469592288,
+      "per_orbit_ms": 2.055005469592288
+    },
+    {
+      "N": 1000,
+      "wall_s": 1.4988457519793883,
+      "per_orbit_ms": 1.4988457519793883
+    },
+    {
+      "N": 10000,
+      "wall_s": 17.60731990810018,
+      "per_orbit_ms": 1.760731990810018
+    },
+    {
+      "N": 30000,
+      "wall_s": 61.89464106597006,
+      "per_orbit_ms": 2.0631547021990024
+    },
+    {
+      "N": 100000,
+      "wall_s": 285.1663436850067,
+      "per_orbit_ms": 2.8516634368500675
+    }
+  ]
+}
