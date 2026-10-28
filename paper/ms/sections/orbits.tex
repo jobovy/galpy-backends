@@ -376,8 +376,8 @@ keeps the per-orbit control.
     experimental CUDA port of \galpy's \cc\ forces and \texttt{dop853}
     that integrates one orbit per GPU thread (not part of \galpy\ and
     not differentiable), with a direct port of \galpy's \cc\ code
-    (solid) and with special functions rewritten for the GPU (thin
-    long-dashed), including the copies of the initial conditions and
+    (solid) and with special functions rewritten for the GPU (dashed,
+    open markers), including the copies of the initial conditions and
     the result between host and device, which are what keep the purple
     lines flat up to $N\approx10^4$. Light grey dotted lines mark a
     constant cost per orbit, and the arrow in (b) points towards lower
@@ -416,6 +416,8 @@ keeps the per-orbit control.
     \galpy\ (dash-dotted). With the same per-orbit step-size control, the
     two codes take the same time to within 13 per cent for
     $N\geq10^5$. In purple, the experimental CUDA kernel of
-    \figurename~\ref{fig:orbitspeed} is shown for reference.}\label{fig:galax}
+    \figurename~\ref{fig:orbitspeed} is shown for reference, with a
+    direct port of \galpy's \cc\ code (solid) and with special functions
+    rewritten for the GPU (dashed).}\label{fig:galax}
 \end{figure*}
 

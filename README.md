@@ -1,4 +1,4 @@
-# galpy-jax — multi-backend (JAX/PyTorch) + autodiff + 3D variational equations
+# galpy-backends (formerly galpy-jax) — multi-backend (JAX/PyTorch) + autodiff + 3D variational equations
 
 Working log + paper material for making **all of galpy** differentiable and
 backend-agnostic (numpy/scipy, JAX, PyTorch, array-API), and implementing the

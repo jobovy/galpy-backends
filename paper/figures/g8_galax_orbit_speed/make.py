@@ -108,7 +108,7 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 _C1 = "galpy C (1 core)"
 _C_NODE = "galpy C (72 threads)"
 _C_NODE_FILES = ["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"]
-_CUDA_FAST = "CUDA kernel (fast arith.)"  # unlabelled, de-emphasised (named in the caption)
+_CUDA_FAST = "CUDA kernel (GPU special functions)"  # labelled since 2026-10-28 (JB)
 # Three panels (2026-10-28, JB's review): the CPU series, then the TITAN Xp and
 # the H100 series, the GPU panels each repeating the whole-node C line in grey.
 _CPU_SERIES = [
@@ -129,7 +129,7 @@ _GPU_SERIES = [
     # with G12: a direct port (solid, labelled) and fast arithmetic (long-dashed,
     # named in the caption); wall incl. H2D + D2H (pinned)
     (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "CUDA kernel (direct port)", None),
-    (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, palette.CUDA_FAST_STYLE),
+    (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST, {"ls": "--", "mfc": "white"}),
 ]
 _PANELS = [("(a) CPU", "cpu", ""), ("(b) NVIDIA TITAN Xp", "gpu", ""), ("(c) NVIDIA H100", "gpu", "h100")]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
@@ -247,8 +247,7 @@ def make():
                         textcoords="offset points", fontsize=fs_line,
                         color=ln.get_color(), ha="left", va="top")
         palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
-                                 if not ln.get_label().startswith("_") and ln not in node
-                                 and "fast arith." not in ln.get_label()],
+                                 if not ln.get_label().startswith("_") and ln not in node],
                             fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
                             order="elbow", pad_pt=18)
     if PAPER:

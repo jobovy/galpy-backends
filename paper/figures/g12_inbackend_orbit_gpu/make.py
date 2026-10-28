@@ -71,7 +71,7 @@ PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
 # affinity stamped in its JSON ("cpu_affinity"; unstamped = the unpinned 72-thread
 # run). A series whose JSONs do not exist (yet) is skipped.
 _C1, _C16, _C_NODE = "1 core", "16 threads", "72 threads"
-_CUDA_FAST = "fast arith."  # unlabelled, de-emphasised (named in the caption)
+_CUDA_FAST = "GPU special functions"  # labelled since 2026-10-28 (JB)
 _C_NODE_FILES = ["galpy_c_cpu.json", "galpy_c_cpu_hiN.json"]
 _CPU_SERIES = [
     (["galpy_c_cpu_1cores.json", "galpy_c_cpu_1cores_hiN.json"], "c", "cpu", None, _C1,
@@ -93,7 +93,7 @@ _GPU_SERIES = [
     # incl. H2D + D2H into a reused pinned buffer. Shared with G8.
     (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "direct port", None),
     (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST,
-     palette.CUDA_FAST_STYLE),
+     {"ls": "--", "mfc": "white"}),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 _PANELS = [("(a) CPU", "cpu", ""), ("(b) NVIDIA TITAN Xp", "gpu", ""), ("(c) NVIDIA H100", "gpu", "h100")]
@@ -215,8 +215,7 @@ def make():
                         textcoords="offset points", fontsize=fs_line,
                         color=ln.get_color(), ha="left", va="top")
         palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
-                                 if not ln.get_label().startswith("_") and ln not in node
-                                 and _CUDA_FAST not in ln.get_label()],
+                                 if not ln.get_label().startswith("_") and ln not in node],
                             fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
                             order="elbow", pad_pt=18)
     if PAPER:

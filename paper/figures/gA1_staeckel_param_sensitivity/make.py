@@ -1,20 +1,24 @@
 """gA1 -- Staeckel actions differentiated w.r.t. a potential parameter: the
-halo flattening q of LogarithmicHaloPotential(normalize=1, q), by jax.grad
-through galpy's pure-Python Staeckel code (actionAngleStaeckel(c=False)),
+flattening p = b/a of the Miyamoto-Nagai disk of MWPotential2014 (the disk's
+scale height over its scale length, at fixed scale length; until 2026-10-28
+the flattening q of a logarithmic halo, measure/measure_loghalo.py), by
+jax.grad through galpy's pure-Python Staeckel code (actionAngleStaeckel(c=False)),
 validated against central finite differences of the numpy path.
 
-The potential AND the actionAngleStaeckel instance are rebuilt from q inside
-the differentiated function, so dJ/dq flows through the normalisation, the
-Staeckel setup (E, L_z, I_3), the turning-point root-finds and the action
-quadrature. The finite differences rebuild everything from q +/- h as well.
+The potential AND the actionAngleStaeckel instance are rebuilt from p inside
+the differentiated function, so dJ/dp flows through the normalisation of the
+three components, the Staeckel setup (E, L_z, I_3), the turning-point
+root-finds and the action quadrature. The finite differences rebuild
+everything from p +/- h as well. (The JSON keeps the halo version's key names:
+its "q" is b/a.)
 
- (a) J_R(q), J_z(q) of one Sun-like orbit (R=1, v_R=0.1, v_T=1.1, z=0.1,
-     v_z=0.05) over q in [0.7, 1.1].
- (b) dJ_R/dq, dJ_z/dq: jax.grad (lines) vs numpy central finite differences
-     (open circles) at every 5th q.
- (c) |AD - FD|/|FD| at q=0.9 as a function of the FD step h: the h^2 truncation
-     branch, the round-off branch rising as h shrinks, and the AD value sitting
-     at the floor of the V.
+ (a) J_R(p), J_z(p) of one Sun-like orbit (R=1, v_R=0.1, v_T=1.1, z=0.1,
+     v_z=0.05) over b/a in [0.04, 0.2] (MWPotential2014: 0.093).
+ (b) dJ_R/dp, dJ_z/dp: jax.grad (lines) vs numpy central finite differences
+     (open circles) at every 5th p.
+ (c) |AD - FD|/|FD| at MWPotential2014's b/a as a function of the FD step h:
+     the h^2 truncation branch, the round-off branch rising as h shrinks, and
+     the AD value sitting at the floor of the V.
 
 Pattern A: measure/measure.py runs against the galpy worktree and writes
 data/gA1_staeckel_param_sensitivity.json (galpy sha + jax version stamped);
@@ -49,7 +53,7 @@ def _load():
     name="gA1_staeckel_param_sensitivity",
     track="A",
     seed=0,
-    description="Staeckel actions (c=False) differentiated w.r.t. the halo flattening q: jax.grad dJ/dq vs numpy finite differences along a q sweep + the |AD-FD|/|FD| vs h V-curve [cross-env measure->json, plot byte-stable]",
+    description="Staeckel actions (c=False) differentiated w.r.t. the flattening b/a of MWPotential2014's disk: jax.grad dJ/d(b/a) vs numpy finite differences along a b/a sweep + the |AD-FD|/|FD| vs h V-curve [cross-env measure->json, plot byte-stable]",
 )
 def make():
     d = _load()
@@ -89,10 +93,10 @@ def make():
         axb.plot(q, ad, color=_C[k], lw=1.8)
         axb.plot(q[im], fd, ls="none", marker="o", ms=5.5, mfc="none", mec=_C[k],
                  mew=1.2)
-        axb.text(q[-1] + 0.012, ad[-1], r"$\partial %s/\partial q$" % _LBL[k].strip("$"),
+        axb.text(q[-1] + 0.012, ad[-1], r"$\partial %s/\partial (b/a)$" % _LBL[k].strip("$"),
                  color=_C[k], fontsize=FS["line"], va="center", ha="left")
-    axb.set_xlabel(r"halo flattening $q$", fontsize=FS["label"])
-    axb.set_ylabel(r"$\partial J/\partial q\ [10^{-3}]$", fontsize=FS["label"])
+    axb.set_xlabel(r"disk flattening $b/a$", fontsize=FS["label"])
+    axb.set_ylabel(r"$\partial J/\partial (b/a)\ [10^{-3}]$", fontsize=FS["label"])
     axb.set_title("(b) flattening sensitivity", loc="left")
     axb.plot([], [], color="0.3", lw=1.8, label="jax.grad")
     axb.plot([], [], ls="none", marker="o", ms=5.5, mfc="none", mec="0.3", mew=1.2,
@@ -105,7 +109,7 @@ def make():
     for k in ("JR", "Jz"):
         rel = numpy.asarray(vc[f"{k}_relerr"])
         axc.loglog(h, rel, color=_C[k], lw=1.6, marker="o", ms=4.5,
-                   label=r"$\partial %s/\partial q$" % _LBL[k].strip("$"))
+                   label=r"$\partial %s/\partial (b/a)$" % _LBL[k].strip("$"))
     # guide slopes, each anchored to a measured J_R point: h^2 truncation (from
     # the h=1e-2 end) and 1/h round-off growth (from the h=1e-7 end)
     rel_r = numpy.asarray(vc["JR_relerr"])
@@ -124,14 +128,14 @@ def make():
     axc.legend(fontsize=FS["legend"], loc="upper left", frameon=True, framealpha=0.9,
                handlelength=1.6, borderpad=0.35, labelspacing=0.3)
     axc.text(0.97, 0.04,
-             r"$q=%.1f$; floor $\simeq10^{%d}$"
+             r"$b/a=%.3f$; floor $\simeq10^{%d}$"
              % (vc["q0"], int(numpy.round(numpy.log10(floor)))),
              transform=axc.transAxes, fontsize=FS["note"], color="0.35", ha="right",
              va="bottom")
 
     if not PAPER:
         env = d["env"]
-        fig.suptitle("Staeckel action sensitivity to the halo flattening (jax.grad vs "
+        fig.suptitle("Staeckel action sensitivity to the disk flattening b/a (jax.grad vs "
                      "finite differences; CPU float64)", fontsize=10)
         fig.text(0.005, 0.005,
                  f"galpy {env['galpy_branch']}@{env['galpy_commit']}"

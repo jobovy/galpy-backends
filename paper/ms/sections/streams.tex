@@ -58,13 +58,16 @@ costs.
   \includegraphics[width=\textwidth,clip=]{../figures/gS1_stream_track_sensitivity/gS1_stream_track_sensitivity.pdf}
   \caption{Derivative of a \texttt{streamdf} track with respect to the
     flattening $q$ of a logarithmic halo. Left: the track in the
-    meridional plane at $q=0.9$ and its first-order extrapolations to
-    $q\pm0.02$ from the derivative by automatic differentiation through
-    the whole track computation. Right: the relative difference between
-    this derivative and a central finite difference ($h=10^{-3}$) of the
-    same computation, per segment of the track. The two agree at the
-    level set by the fixed iteration count of the track
-    refinement.}\label{fig:streamtrack}
+    meridional plane at $q=0.9$ (the interpolated track through the
+    three computed segments, which are marked) and its first-order
+    extrapolations to $q\pm0.02$ from the derivative by automatic
+    differentiation through the whole track computation, including the
+    interpolation. Right: the difference between this derivative and a
+    central finite difference ($h=10^{-3}$) of the same computation
+    along the track, relative to the largest derivative of each
+    coordinate; the vertical lines mark the computed segments. The two
+    agree to a few parts in $10^4$, the level set by the fixed iteration
+    count of the track refinement.}\label{fig:streamtrack}
 \end{figure*}
 
 \begin{figure*}[t!]

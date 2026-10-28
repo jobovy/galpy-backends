@@ -199,24 +199,17 @@ def make():
     lbl = [r"$R$", r"$v_R$", r"$v_T$", r"$z$", r"$v_z$", r"$\phi$"]
     th = numpy.array(data["thetas_interp"])
     fdi = numpy.array(data["d_fd_interp"])
-    rel = numpy.abs(adi - fdi) / numpy.maximum(numpy.abs(fdi), 1e-30)
+    # relative to the largest derivative along the track: dR/dq and dz/dq cross
+    # zero on the track, where a pointwise relative difference would blow up
+    rel = numpy.abs(adi - fdi) / numpy.max(numpy.abs(fdi), axis=0)
     for j, c in zip(data.get("cols_measured", [0, 3]), (_C_TRACK, _C_PLUS)):
         ax2.semilogy(th, rel[:, j], "-", color=c, lw=1.2, label=lbl[j])
     for t in data["thetas_chunks"]:
         ax2.axvline(t, color="0.75", lw=0.8, zorder=0)
-    ax2.set_xlabel(r"angle along the track"); ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|/|{\rm FD}|$")
+    ax2.set_xlabel(r"angle along the track")
+    ax2.set_ylabel(r"$|{\rm AD}-{\rm FD}|\,/\,\max|{\rm FD}|$")
     ax2.set_title("(b) AD vs finite difference" if PAPER
                   else rf"AD vs central FD ($h={data['h']}$)", **_ts)
-    if PAPER:  # the y-range spans < 1 decade: label the minor ticks too
-        from matplotlib.ticker import FuncFormatter, LogFormatterSciNotation
-        _lf = LogFormatterSciNotation(labelOnlyBase=False, minor_thresholds=(2, 0.5))
-
-        def _minor(v, pos):  # 2, 4, 6 x 10^k only: 3 and 4 x 10^k collide at print size
-            m = round(v / 10 ** numpy.floor(numpy.log10(v) + 1e-9))
-            return _lf(v, pos) if m in (2, 4, 6) else ""
-
-        ax2.yaxis.set_minor_formatter(FuncFormatter(_minor))
-        ax2.tick_params(axis="y", which="minor", labelsize=9)
     ax2.legend(fontsize=_fs_leg, ncol=2, framealpha=0.92)
 
     fig.tight_layout()
