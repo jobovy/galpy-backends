@@ -1,0 +1,54 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "diffrax Dopri8 (in-backend)",
+  "stepping": "per-orbit adaptive (vmap-of-solve)",
+  "nt": 1000,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 1.6698445460060611,
+      "per_orbit_ms": 1669.8445460060611,
+      "compile_run_s": 5.673005891032517
+    },
+    {
+      "N": 10,
+      "wall_s": 1.2175142179476097,
+      "per_orbit_ms": 121.75142179476097,
+      "compile_run_s": 3.88240996201057
+    },
+    {
+      "N": 100,
+      "wall_s": 2.0513747819932178,
+      "per_orbit_ms": 20.513747819932178,
+      "compile_run_s": 5.451084746047854
+    },
+    {
+      "N": 1000,
+      "wall_s": 2.3232073260005563,
+      "per_orbit_ms": 2.3232073260005563,
+      "compile_run_s": 5.271090514957905
+    },
+    {
+      "N": 10000,
+      "wall_s": 3.1218492180341855,
+      "per_orbit_ms": 0.31218492180341856,
+      "compile_run_s": 6.074928198009729
+    },
+    {
+      "N": 30000,
+      "wall_s": 9.193189039011486,
+      "per_orbit_ms": 0.30643963463371615,
+      "compile_run_s": 11.708252568962052
+    }
+  ],
+  "jax_version": "0.10.1",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "NVIDIA TITAN Xp"
+}

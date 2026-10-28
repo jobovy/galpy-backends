@@ -273,7 +273,10 @@ under \texttt{jax.vmap}, however, the adaptive steps of one orbit depend
 on the others and the derivative is wrong by several percent.
 The remedy is to integrate with a fixed number of steps when
 differentiating a batch, which \galpy\ does where it integrates batches
-internally and which the user should do as well. \texttt{torchdiffeq}
+internally and which the user should do as well; \galpy\ warns when a
+batch of orbits is differentiated through an adaptive in-backend
+solve under \jax, where it can detect the derivative being taken, and
+points at the fixed-step option. \texttt{torchdiffeq}
 has no batching rule, such that a batch of orbits under \torch\ is a
 \python\ loop unless \torchode\ is used. The eighth-order method of
 \texttt{torchdiffeq} carries a gradient error of about $10^{-5}$ in its
@@ -290,29 +293,44 @@ all; their derivative rule runs the integration on the CPU.
 
 \figurename~\ref{fig:orbitspeed} compares the wall time of integrating
 $N$ orbits for 2\,Gyr in \texttt{MWPotential2014} with the \cc\ integrator,
-which parallelizes over orbits with OpenMP, on one core and on all 72
-hardware threads of the CPU used in this work, and with the in-backend solvers on one CPU
+which parallelizes over orbits with OpenMP, on one core and on the 36
+physical cores of the CPU node used in this work, and with the in-backend solvers on one CPU
 core and on two GPUs. On one core the \cc\ path costs 2.2--2.4\,ms per
-orbit; on 72 threads it costs 0.064 to 0.07\,ms per orbit after a few
-milliseconds of setup and is faster than every backend solver, on any
-hardware, for up to a few times $10^4$ orbits. The backend solvers start from a floor of
+orbit; on 36 threads it costs 0.08 to 0.09\,ms per orbit after a few
+milliseconds of setup (the node's hyper-threads bring this down by a
+further 10 to 20 per cent) and is faster than every adaptive backend
+solver, on any hardware, for up to a few times $10^4$ orbits. The
+backend solvers start from a floor of
 one to a few seconds, set by compilation and kernel launches, and
 amortize it over the batch. The \jax\ lines on both GPUs overtake
 one-core \cc\ near $N=10^3$, the \torch\ lines at a few thousand
-orbits. On the consumer GPU they never quite reach the cost per orbit
-of the 72-thread \cc\ node, because that card executes double-precision
-arithmetic at one thirty-second of its single-precision rate, while on
-the H100 they pass it at $N\approx3$--$7\times10^4$ and are 2.6 to 3.7
+orbits. On the consumer GPU the \jax\ lines never reach the cost per orbit
+of the 36-thread \cc\ node, because that card executes double-precision
+arithmetic at one thirty-second of its single-precision rate, and the
+\torch\ line only does so at $N=10^6$, while on
+the H100 they pass it at $N\approx3$--$6\times10^4$ and are 3.2 to 4.5
 times cheaper per orbit at $N=3\times10^5$. On one CPU core, the
 compiled \jax\ solve costs 2--5\,ms per orbit, comparable to the \cc\
-path; it does, however, take seconds to compile, a cost that is paid
-once per shape of the problem. We compare the frameworks on one CPU
-core because only the \cc\ path makes use of more: for $10^4$ to $10^5$
-orbits, its OpenMP loop speeds up almost linearly up to the 36 physical
-cores of our node (22 to 26 times on 36 cores; hyper-threads add
-nothing), eager \torch\ gains at most a factor of 3.5 (on 16 threads, for
+path, and the eager \torch\ solve 2.6\,ms per orbit beyond its floor of
+five seconds; the compiled solve does, however, take seconds to
+compile, a cost that is paid once per shape of the problem. We compare
+the frameworks on one CPU core because only the \cc\ path makes use of
+more: for $10^4$ to $10^5$ orbits, its OpenMP loop speeds up almost
+linearly up to the 36 physical cores of our node (22 to 26 times on 36
+cores), eager \torch\ gains at most a factor of 3.5 (on 16 threads, for
 $10^5$ orbits), and compiled \jax, whose runtime keeps no more than a few
-cores busy, gains nothing. The derivative of an orbit with respect
+cores busy, gains nothing. The sixth-order symplectic integrator of
+\sectionname~\ref{sec:orbit-leapfrog}, with one common step for the
+whole batch chosen such that its worst-case position error matches
+that of the adaptive solve (450 steps over the 2\,Gyr, 3150 force
+evaluations against the adaptive method's $\approx$3250), is the
+cheapest in-backend route for this batch of disc orbits: on one CPU
+core it costs 1.0 to 1.4\,ms per orbit, half the cost of the adaptive
+\cc\ path, and on the consumer GPU it is cheaper than the 36-thread
+\cc\ node for $N\geq10^4$ (0.04\,ms per orbit at $N=10^4$ to
+$3\times10^4$, 0.07 to 0.11\,ms at larger $N$), which the adaptive
+solvers cannot be there, because its state per orbit is a fraction of
+theirs and its steps are the same for every orbit. The derivative of an orbit with respect
 to its initial condition follows the same pattern
 (\figurename~\ref{fig:icderivcost}): the \cc\ variational integrator
 computes it for a single orbit in about $10$\,ms, where the backend
@@ -330,8 +348,8 @@ $\mathrm{rtol}=\mathrm{atol}=10^{-8}$ integrates $10^6$ orbits for
 \galpy's \cc\ code, including its special functions, and in
 0.9\,$\mu$s with special functions rewritten for the GPU. That
 is 7 to 18 times faster than \galpy's compiled \jax\ integrator on the
-same GPU and tens of times faster than the \cc\ integrator on all 72
-hardware threads of our CPU node, while agreeing with the latter to
+same GPU and 30 to 90 times faster than the \cc\ integrator on the 36
+cores of our CPU node, while agreeing with the latter to
 within its truncation error (\figurename~\ref{fig:orbitspeed}). The
 kernel is limited by per-thread state: an adaptive eighth-order step
 keeps $\approx$880\,B per orbit live, so few threads fit on each
@@ -378,13 +396,18 @@ keeps the per-orbit control.
     \texttt{MWPotential2014} with relative and absolute tolerances of
     $10^{-8}$, on (a) the CPU, (b) the TITAN~Xp, and (c) the H100. Grey:
     \galpy's \cc\ integrator \texttt{dop853\_c}, which parallelizes over
-    orbits with OpenMP, on one core (solid), 16 threads, and all 72
-    hardware threads (dash-dotted); the latter is repeated in the GPU
-    panels for reference. Blue: the in-backend \diffrax\ solve under
+    orbits with OpenMP, on one core (solid), 16 threads, and the 36
+    physical cores of the node (dash-dotted); the latter is repeated in
+    the GPU panels for reference. Blue: the in-backend \diffrax\ solve under
     \jax, compiled, with the eighth-order method that \galpy\ uses by
     default and, dash-dotted, with a fifth-order method that performs
     the same number of force evaluations as the \torch\ solve; orange
-    and red: the eager \texttt{torchdiffeq} solve. Purple: an
+    and red: the eager \texttt{torchdiffeq} solve, on one CPU core and on
+    the GPUs. Dash-dot-dotted blue: the in-backend sixth-order symplectic
+    integrator (\texttt{symplec6\_jax}) with 450 common steps over the
+    2\,Gyr, the step at which its worst-case position error over the
+    batch equals that of the adaptive solve (not yet measured on the
+    H100). Purple: an
     experimental CUDA port of \galpy's \cc\ forces and \texttt{dop853}
     that integrates one orbit per GPU thread (not part of \galpy\ and
     not differentiable), with a direct port of \galpy's \cc\ code
@@ -395,11 +418,11 @@ keeps the per-orbit control.
     constant cost per orbit, and the arrow in (b) points towards lower
     wall time. The \cc\ integrator is the fastest option for small
     batches, while for large batches the in-backend solve on the H100
-    is cheaper per orbit. On the H100, \galpy's sixth-order symplectic
-    integrator with one common step (not shown) reaches the same
-    worst-case accuracy 3.0 to 3.7 times faster, because these disc
-    orbits share a dynamical timescale
-    (\sectionname~\ref{sec:orbit-speed}).}\label{fig:orbitspeed}
+    is cheaper per orbit. In the CUDA kernel, the same sixth-order
+    symplectic integrator with one common step (not shown) reaches the
+    same worst-case accuracy 3.0 to 3.7 times faster than
+    \texttt{dop853}, because these disc orbits share a dynamical
+    timescale (\sectionname~\ref{sec:orbit-speed}).}\label{fig:orbitspeed}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -420,8 +443,8 @@ keeps the per-orbit control.
   \includegraphics[width=\textwidth,clip=]{../figures/g8_galax_orbit_speed/g8_galax_orbit_speed.pdf}
   \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
     \texttt{MWPotential2014} at matched tolerances with \galpy\ and with
-    \texttt{galax}. Grey: \galpy's \cc\ integrator on one core (solid) and on all
-    72 hardware threads (dash-dotted). Blue: \galpy's in-backend
+    \texttt{galax}. Grey: \galpy's \cc\ integrator on one core (solid) and on
+    the 36 physical cores of the node (dash-dotted). Blue: \galpy's in-backend
     \diffrax\ solve on the CPU (one core) and on the two GPUs.
     Green: \texttt{galax} on the CPU and the GPUs, with its default
     batched step-size control (solid) and with per-orbit control as in

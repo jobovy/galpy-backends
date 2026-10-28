@@ -1,0 +1,78 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "symplec6_jax (in-backend, constant step, nsteps=450)",
+  "stepping": "constant, shared by the batch",
+  "nsteps": 450,
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "cpu_affinity": 1,
+  "thread_env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "XLA_FLAGS": "unset"
+  },
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 1.1637804959900677,
+      "per_orbit_ms": 1163.7804959900677,
+      "compile_run_s": 8.338629210949875
+    },
+    {
+      "N": 10,
+      "wall_s": 0.9727162950439379,
+      "per_orbit_ms": 97.27162950439379,
+      "compile_run_s": 6.208600652986206
+    },
+    {
+      "N": 100,
+      "wall_s": 1.1430329090217128,
+      "per_orbit_ms": 11.430329090217128,
+      "compile_run_s": 6.202406833996065
+    },
+    {
+      "N": 1000,
+      "wall_s": 1.265155432978645,
+      "per_orbit_ms": 1.265155432978645,
+      "compile_run_s": 6.876161003950983
+    },
+    {
+      "N": 10000,
+      "wall_s": 0.4363458401057869,
+      "per_orbit_ms": 0.04363458401057869,
+      "compile_run_s": 28.318436436005868
+    },
+    {
+      "N": 30000,
+      "wall_s": 1.056715248967521,
+      "per_orbit_ms": 0.0352238416322507,
+      "compile_run_s": 31.313889676937833
+    },
+    {
+      "N": 100000,
+      "wall_s": 7.103292257990688,
+      "per_orbit_ms": 0.07103292257990688,
+      "compile_run_s": 32.389741495018825
+    },
+    {
+      "N": 300000,
+      "wall_s": 20.383262082003057,
+      "per_orbit_ms": 0.06794420694001019,
+      "compile_run_s": 43.277016456006095
+    },
+    {
+      "N": 1000000,
+      "wall_s": 110.70237352605909,
+      "per_orbit_ms": 0.11070237352605909,
+      "compile_run_s": 141.11257733101957
+    }
+  ],
+  "jax_version": "0.10.1",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "NVIDIA TITAN Xp",
+  "galpy_file": "/var/tmp/symplec-fb/galpy/__init__.py"
+}

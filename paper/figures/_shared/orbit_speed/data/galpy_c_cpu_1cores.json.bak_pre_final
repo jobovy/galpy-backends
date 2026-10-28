@@ -1,0 +1,42 @@
+{
+  "backend": "galpy",
+  "device": "cpu-C",
+  "integrator": "dop853_c (compiled, OpenMP, OMP_NUM_THREADS=1)",
+  "nt": 1000,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "galpy_version": "1.12.1.dev0",
+  "galpy_file": "/var/tmp/fbp/galpy/__init__.py",
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 0.003424279042519629,
+      "per_orbit_ms": 3.424279042519629
+    },
+    {
+      "N": 10,
+      "wall_s": 0.031502605066634715,
+      "per_orbit_ms": 3.1502605066634715
+    },
+    {
+      "N": 100,
+      "wall_s": 0.22287838498596102,
+      "per_orbit_ms": 2.22878384985961
+    },
+    {
+      "N": 1000,
+      "wall_s": 2.323068532976322,
+      "per_orbit_ms": 2.323068532976322
+    },
+    {
+      "N": 10000,
+      "wall_s": 22.61814618599601,
+      "per_orbit_ms": 2.261814618599601
+    }
+  ],
+  "omp_num_threads": 1,
+  "cpu_affinity": 1
+}

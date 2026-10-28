@@ -1,0 +1,54 @@
+{
+  "backend": "galpy-jax",
+  "device": "cpu",
+  "integrator": "diffrax Dopri8 (in-backend)",
+  "stepping": "per-orbit adaptive (vmap-of-solve)",
+  "nt": 1000,
+  "tspan_Gyr": 2.0,
+  "rtol": 1e-08,
+  "atol": 1e-08,
+  "potential": "MWPotential2014",
+  "host": "geir",
+  "cpu_affinity": 1,
+  "thread_env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "XLA_FLAGS": "unset"
+  },
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 0.02654801297467202,
+      "per_orbit_ms": 26.54801297467202,
+      "compile_run_s": 3.675083862966858
+    },
+    {
+      "N": 10,
+      "wall_s": 0.0554111220408231,
+      "per_orbit_ms": 5.54111220408231,
+      "compile_run_s": 3.4688475439324975
+    },
+    {
+      "N": 100,
+      "wall_s": 0.29926277906633914,
+      "per_orbit_ms": 2.9926277906633914,
+      "compile_run_s": 4.5601050889818
+    },
+    {
+      "N": 1000,
+      "wall_s": 2.274446012917906,
+      "per_orbit_ms": 2.274446012917906,
+      "compile_run_s": 5.934634689008817
+    },
+    {
+      "N": 10000,
+      "wall_s": 30.24803461798001,
+      "per_orbit_ms": 3.024803461798001,
+      "compile_run_s": 34.4542933559278
+    }
+  ],
+  "jax_version": "0.10.1",
+  "galpy_version": "1.12.1.dev0",
+  "numpy_version": "2.4.3",
+  "gpu": "cpu"
+}

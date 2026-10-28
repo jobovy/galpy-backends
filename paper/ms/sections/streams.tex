@@ -224,4 +224,10 @@ frequency, and the frequency--angle kicks are differentiable through
 the construction with respect to the subhalo's mass, scale, impact
 parameter, and velocity, the time of the impact, and the parameters of
 the potential, and these derivatives agree with finite differences of
-rebuilt models to better than $10^{-6}$.
+rebuilt models to better than $10^{-6}$. The same construction runs
+under \torch, with \torchode\ for the orbit integrations, and gives the
+same density and mean frequency along the stream, but eagerly: the
+set-up of the model that takes a minute and a half under compiled \jax\
+takes half an hour under \torch, because its many small array
+operations are each dispatched separately, so that \jax\ is the
+backend of choice for this model.
