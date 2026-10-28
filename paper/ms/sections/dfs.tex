@@ -9,8 +9,8 @@ they can be evaluated at phase-space points, integrated to obtain their moments
 On the backends, evaluation and the moments are differentiable for
 every DF, sampling is differentiable wherever it is done by inverse
 transformation, which is everywhere except for the many-position
-velocity sampler of the quasi-isothermal disk DF and the samplers of
-the two-dimensional disk DFs (\sectionname~\ref{sec:df-disk}), and
+velocity sampler of the quasi-isothermal disk DF
+(\sectionname~\ref{sec:df-disk}), and
 construction is differentiable for every DF whose construction is
 itself a numerical computation---the spherical DFs obtained by
 inverting a density, the King model, the quasi-isothermal disk DF,
@@ -149,10 +149,29 @@ The two-dimensional axisymmetric disk DFs of \citet{Dehnen1999},
 \citet{Shu1969}, and Schwarzschild
 and their moments are evaluated with nested Gauss--Legendre quadrature
 on the backends and are differentiable with respect to the parameters of
-their surface-density and velocity-dispersion profiles; their samplers,
-which draw by rejection, remain \numpy\ code, and we did not migrate
+their surface-density and velocity-dispersion profiles. Their samplers
+draw by inverse transformation on every backend: the guiding-center
+radius of a sample from the surface-density profile, its orbital phase
+from the relation between radius and radial angle that the action-angle
+quadrature of \sectionname~\ref{sec:aa-other} tabulates for every
+sampled orbit at once, its velocities at a given position from the DF on
+a velocity mesh, and its distance along a line of sight from the
+projected density; each orbit is then replicated according to the ratio
+of the epicycle frequency at its guiding radius to its radial frequency,
+which is the DF's measure in the sampled variables. With a key, the
+positions and velocities of the samples are differentiable with respect
+to the profile parameters, the number of samples, set by the
+replication, is not. This replaced adaptive rejection sampling and an
+orbit integration per sample on the \numpy\ path too, and made sampling
+several times faster. It also corrected the samples: the old sampler
+weighted each orbit by the epicycle frequency at the sampled radius over
+the radial frequency of a different orbit, the one with zero radial
+velocity at the guiding radius, which biased the mean azimuthal velocity
+of its samples by a few per cent; the new samples reproduce the DF's
+surface density and velocity moments.
+We did not migrate
 the corrections of these DFs for the difference between their input and
-output profiles. \galpy\ also contains 
+output profiles. \galpy\ also contains
 a two-dimensional non-axisymmetric disk DF that is a perturbation of a Dehnen DF by a
 non-axisymmetric and/or time-dependent potential, which is evaluated by integrating orbits
 backwards in time to an initial axisymmetric DF (in \texttt{galpy.df.evolveddiskdf}). 
@@ -173,7 +192,7 @@ by inverse transformation on a three-dimensional velocity mesh, such
 that a sample drawn with a fixed key is a differentiable function of the
 DF's parameters;
 this sampler replaced a rejection sampler on the \numpy\ path as well,
-which is one of the two places where the \numpy\ draws changed (the
+which is one of the three places where the \numpy\ draws changed (the
 distribution is the same, the particular draws are not). In code this looks as follows:
 \begin{code}
 qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,

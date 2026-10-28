@@ -16,9 +16,10 @@ three deliberate changes: the King model now solves its Poisson
 equation to a relative tolerance of $10^{-10}$ rather than \scipy's
 default of $10^{-3}$, which changes its potential and DF at the
 $10^{-5}$ to $10^{-3}$ level, and the velocity sampler of the
-quasi-isothermal disk DF and the sampler of the stream DF draw by
-inverse transformation rather than by rejection, which changes the
-particular draws but not their distribution. In addition, the forces
+quasi-isothermal disk DF, the samplers of the two-dimensional disk DFs,
+and the sampler of the stream DF draw by inverse transformation rather
+than by rejection, which changes the particular draws but not their
+distribution. In addition, the forces
 of two potentials were rewritten in forms that are accurate and
 differentiable at small radii, the Einasto profile (a series below its
 scale radius, whose derivative with respect to the scale radius the
