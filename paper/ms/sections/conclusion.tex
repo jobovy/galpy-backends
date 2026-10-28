@@ -58,9 +58,9 @@ complement the differentiable backends rather than replace them.
 
 Some things are not done: the torus-mapping code is not covered and
 will not be, \astropy\ units cannot be used inside compiled programs,
-and the construction of the quasi-isothermal disk DF is a \numpy\
-computation, as are the variational
-equations and Lyapunov exponents, which are features of the \cc\
+the interpolated velocity sampler of the quasi-isothermal disk DF is a
+rejection sampler that is not differentiable, and the variational
+equations and Lyapunov exponents are features of the \cc\
 integrators. Derivatives through the \cc\ integrators and the \cc\
 action--angle methods are with respect to the initial conditions only
 and of first order. A backend is also a moving target: the special-function fallbacks exist
