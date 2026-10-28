@@ -18,20 +18,25 @@ default of $10^{-3}$, which changes its potential and DF at the
 $10^{-5}$ to $10^{-3}$ level, and the velocity sampler of the
 quasi-isothermal disk DF and the sampler of the stream DF draw by
 inverse transformation rather than by rejection, which changes the
-particular draws but not their distribution. In addition, the
-restructuring of the formulas of about a dozen potentials---for
-accuracy at small radii and for differentiability with respect to
-their shape parameters---reordered floating-point operations, such
-that their \numpy\ values differ from the previous version by a few
-units in the last place (at most $2\times10^{-15}$ relative in the
-potentials and forces, and $10^{-13}$ in some second derivatives),
-which propagates at the same level to everything computed from these
-potentials' \python\ forces. Accordingly, a few \numpy\ tests were
+particular draws but not their distribution. In addition, the forces
+of two potentials were rewritten in forms that are accurate and
+differentiable at small radii, the Einasto profile (a series below its
+scale radius, whose derivative with respect to the scale radius the
+closed form loses to cancellation) and the power law with an
+exponential cutoff (the regularized incomplete gamma function in
+place of a hypergeometric function), such that their \numpy\ values
+differ from the previous version by a few units in the last place (at
+most $5\times10^{-15}$ relative, $2\times10^{-14}$ in one second
+derivative), which propagates at the same level to everything
+computed from these potentials' \python\ forces; the formulas of a
+dozen other potentials were restructured for the same reasons, but
+evaluate in the same floating-point operation order as before and
+remain byte-identical, which a test checks. Accordingly, a few \numpy\ tests were
 loosened: the tolerance of the King DF test, those of two statistical
 checks of the stream sampler, four tolerances between $10^{-16}$ and
-$3\times10^{-11}$ in the action--angle tests, which the rounding-level
-changes above and differences between platforms moved to between
-$10^{-14}$ and $10^{-9}$, and one finite-difference step.
+$3\times10^{-11}$ in the action--angle tests, which rounding-level
+changes (since reverted) and differences between platforms had moved
+to between $10^{-14}$ and $10^{-9}$, and one finite-difference step.
 Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
 and keywords, with the backend generally determined by the arrays that are passed
 in (see below). Third, \galpy's code was to be written against a backend-agnostic array
