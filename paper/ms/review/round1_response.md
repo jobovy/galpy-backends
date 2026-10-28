@@ -33,6 +33,8 @@ Two further gaps that the audit found and JB had not flagged:
 
 ### A.2 numpy byte-identity
 
+(The audit scripts and their README are in `review/byteid_audit/`.)
+
 The draft claimed byte-identity of the numpy path "except in three places, all in the DFs". Measured directly (checksums of Φ, forces, density and second derivatives of every parameter-free potential on a 40×9 grid; orbits, actions and DF values at fixed points; main `9c129abcb` against `feat/backends` `db33e5fcf`, both with freshly built C extensions):
 
 - **identical**: the Eddington, Hernquist, Osipkov–Merritt, constant-anisotropy (which the draft listed as changed; restored by #1752), Dehnen and Shu DFs; `rk4_c` orbits; the spherical and isochrone-approximation actions;
