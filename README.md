@@ -953,6 +953,9 @@ number in the pair.
 | [#1753](https://github.com/jobovy/galpy/pull/1753) | feat/backends | 2026-10-27 | backend: numpy fast paths in the shared dispatch (@backend_input early return, inline host checks, cached is_compiling, router -> scipy) |
 | [#1754](https://github.com/jobovy/galpy/pull/1754) | main | 2026-10-26 | CI on ubuntu-26.04 (GCC 15): declare gcov hooks, omp.h outside extern "C", central differences in the planar STM test |
 | [#1755](https://github.com/jobovy/galpy/pull/1755) | feat/backends | 2026-10-26 | same three commits as #1754 |
+| [#1767](https://github.com/jobovy/galpy/pull/1767) | feat/backends | (open) | tests: pytest.approx with a float, not a jax array (pytest 9.2.0 of 2026-10-27 inspects `.flat`; 5 tests of the py3.14 backend shard red on every PR) |
+| [#1766](https://github.com/jobovy/galpy/pull/1766) | feat/backends | (open) | symplec4_jax/torch, symplec6_jax/torch: the C library's 4th/6th-order symplectic compositions as in-backend constant-step integrators (paper review; the orbit-speed figure's symplec6 line) |
+| [#1765](https://github.com/jobovy/galpy/pull/1765) | feat/backends | (open) | warn when a batch of orbits is differentiated through the adaptive in-backend solve under jax (paper review) |
 | [#1764](https://github.com/jobovy/galpy/pull/1764) | feat/backends | (open) | interpSphericalPotential: differentiable w.r.t. the parameters of a potential input (paper review) |
 | [#1763](https://github.com/jobovy/galpy/pull/1763) | feat/backends | merged 2026-10-27 | constantbetadf: numpy-path jax derivatives (_numpy_gradfunc) in float64 without the user's x64; twin of #1762 |
 | [#1762](https://github.com/jobovy/galpy/pull/1762) | main | merged 2026-10-27 | constantbetadf: jax derivatives in float64 without turning on jax's x64 for the user (jax.enable_x64 scoped context; fb twin #1763) |
