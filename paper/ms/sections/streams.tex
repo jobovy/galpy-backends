@@ -34,7 +34,7 @@ on one CPU core and is only worthwhile when many streams are to be
 built; the construction itself, once compiled, takes 7 to 30\,s on one
 core, about twice as long as the \numpy\ and \cc\ version.
 A \texttt{streamdf} is set up as before, with a progenitor orbit, an
-\texttt{actionAngle} instance, and a velocity dispersion,
+\texttt{actionAngle} instance, and a velocity dispersion, as in for example:
 \begin{code}
 aAI= actionAngleIsochroneApprox(pot=lp,b=0.8,
         integrate_method='diffrax')
@@ -44,7 +44,7 @@ sdf= streamdf(sigv/220.,pot=lp,aA=aAI,
               leading=True,nTrackChunks=11)
 sdf.sample(n=10**4,key=grandom.key(3,backend='jax'))
 \end{code}
-and when \texttt{lp} carries a backend parameter the track and the
+When \texttt{lp} in this code carries a backend parameter the track and the
 sample are differentiable with respect to it. Sampling and evaluating
 the DF, on the other hand, are 40--60 and about 18 times faster under
 compilation than on \numpy\ on one CPU core, and hundreds to thousands
@@ -110,7 +110,7 @@ fit, which is also the default for \numpy\ inputs, gives the same track
 eagerly and compiled. The whole computation compiles
 and is differentiable with respect to every parameter; forward-mode
 derivatives, which are the efficient choice for a few parameters and
-many particles, require \diffrax's direct adjoint,
+many particles, require \diffrax's direct adjoint, like in the following example
 \begin{code}
 key= galpy.backend.random.key(1,backend='jax')
 def leading_arm(q):
@@ -144,10 +144,10 @@ $2\times10^{-6}$ for a step of $10^{-5}$, both for the 1500 particles of
 this example and for the 6000-particle stream of
 \figurename~\ref{fig:extrapolation}. The derivative of the sampled stream
 with respect to the potential agrees with finite differences of the same
-sample to $10^{-6}$, and \figurename~\ref{fig:extrapolation}
-demonstrates what it is good for: a single forward-mode pass through
+sample to $10^{-6}$. \figurename~\ref{fig:extrapolation}
+demonstrates that this allows a single forward-mode pass through
 the sampling, integration, and track fit of a 6000-particle stream
-predicts the stream's track in a halo of different flattening as
+to predict the stream's track in a halo of different flattening as
 $\mathrm{track}(q_0)+\Delta q\,\mathrm{d\,track}/\mathrm{d}q$. This
 first-order prediction removes 80\,\% of the shift of the track for
 $|\Delta q|=0.2$, 90\,\% for $|\Delta q|=0.1$, 97\,\% for

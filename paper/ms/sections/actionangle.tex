@@ -2,9 +2,9 @@
 
 \subsection{General approach}\label{sec:aa-general}
 
-The action--angle module is where \galpy's numerical methods are
-concentrated: root finding for the turning points of an orbit,
-quadrature of the action integrals between them, and, for the
+The action--angle module is where \galpy makes heavy use of numerical methods: 
+root finding for the turning points of an orbit,
+quadrature of the action, frequency, and angle integrals between them, and, for the
 approximate methods, auxiliary orbit integrations. All of
 \texttt{galpy.actionAngle} runs on the backends except for the interface
 to the external torus-mapping code, which we excluded permanently. The
@@ -56,7 +56,7 @@ rule as the \cc\ implementation, in an anomaly variable that removes the
 square-root singularities at the turning points, such that the two agree
 to machine precision. Everything on this path is
 differentiable with respect to the phase-space coordinates and the
-potential's parameters,
+potential's parameters, as for example in
 \begin{code}
 def jr_of_a(a):
     mp= MiyamotoNagaiPotential(a=a,b=0.3)
@@ -92,7 +92,7 @@ small numbers of points and, on a backend, does more than before: the
 their Jacobian with respect to the five phase-space coordinates, and
 \galpy\ attaches this Jacobian to the result as a custom derivative
 rule, such that \texttt{jax.grad} or \torch's \texttt{backward} through a
-\texttt{c=True} call costs one \cc\ call and a matrix product,
+\texttt{c=True} call costs one \cc\ call and a matrix product:
 \begin{code}
 aAS= actionAngleStaeckel(pot=MWPotential2014,
                          delta=0.45,c=True)
@@ -107,7 +107,7 @@ length \texttt{delta} is a fixed number; derivatives with respect to the
 potential's parameters require \texttt{c=False}. The estimate of the
 focal length from the potential, \texttt{estimateDeltaStaeckel}, runs on
 the backends and traces, such that a focal length estimated along an
-integrated orbit can be part of a compiled program,
+integrated orbit can be part of a compiled program. For example, the following compiles
 \begin{code}
 delta= estimateDeltaStaeckel(MWPotential2014,
                              o.R(ts),o.z(ts))
@@ -170,7 +170,8 @@ def torus(sigma):
 z,vz= torus(0.5)
 dz_dsigma,dvz_dsigma= jax.jacfwd(torus)(0.5)
 \end{code}
-The older construction modes of the
+As they are not recommended for use, older construction modes of the 
+\texttt{actionAngleVerticalInverse}
 class, which use point transformations, are evaluated natively but
 built on \numpy, and therefore cannot take a potential with backend
 parameters.

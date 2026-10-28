@@ -2,8 +2,8 @@
 
 \subsection{Principles}\label{sec:design-principles}
 
-We fixed six rules before writing any code, and the rest of this paper
-is largely a description of how we kept them. First, the \numpy\ path is
+We set six rules before writing any code, and the rest of this paper
+is largely a description of how we kept them. First, the \numpy\ path had to remain
 byte-identical to the previous version of \galpy: every backend helper is
 a strict pass-through when the active array library is \numpy, such that
 migrated code written as \texttt{xp.sqrt(x)}, where \texttt{xp} is the
@@ -13,18 +13,19 @@ checksums of outputs between a checkout with and one without the change;
 where the \numpy\ result did change, which happened in three places,
 all in the DFs, we flagged and approved the change, and we point these
 places out where they arise; one \numpy\ test tolerance, in the King DF,
-was also loosened. Second, the interface is unchanged: the same classes, methods,
-and keywords, with the backend determined by the arrays that are passed
-in. Third, \galpy's code is written against a backend-agnostic array
-namespace, with backend-specific code confined to the \texttt{galpy.backend}
-subpackage and never written as \texttt{if backend == 'jax'} inside the
-physics. Fourth, \galpy\ uses the basic array operations of \jax\ and
+was also loosened. Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
+and keywords, with the backend generally determined by the arrays that are passed
+in (see below). Third, \galpy's code was to be written against a backend-agnostic array
+namespace, with backend-specific code confined to a new \texttt{galpy.backend}
+subpackage and never written as \texttt{if backend == `jax'} inside the
+physics modules. Fourth, \galpy\ must use the basic array operations of \jax\ and
 \torch\ and little else; we implemented the numerical methods that
 \scipy\ supplies on the \numpy\ path---special functions, root finding,
 quadrature, interpolation, sampling---in \texttt{galpy.backend} and
 tested them against \scipy\ and against arbitrary-precision references,
 rather than taking them from the frameworks' own, uneven, \scipy-like
-modules. Fifth, \galpy\ never compiles anything itself: we wrote the code
+modules. Fifth, we decided that \galpy\ should never compile anything internally itself: 
+instead we required the code
 to be traceable by \texttt{jax.jit} and \texttt{torch.compile}, and the
 user decides what to compile. Sixth, the existing test suite,
 run under every backend with the same tolerances, is the acceptance
@@ -32,7 +33,8 @@ test.
 
 \subsection{Choosing a backend}\label{sec:design-choosing}
 
-The backend follows the data: a \galpy\ function that receives a \jax\
+The general design approach for using the backends is that the backend follows from the data: 
+a \galpy\ function that receives a \jax\
 array or a \torch\ tensor computes with that framework and returns an
 array of the same kind, while a function that receives \numpy\ arrays or
 \python\ scalars computes with \numpy\ as before. Thus, the radial force
@@ -53,8 +55,9 @@ pot= NFWPotential(a=jnp.array(2.))
 pot(1.1,0.2) # jax array
 \end{code}
 and an \orb\ integrated in such a potential returns backend arrays as
-well. Any backend input therefore turns the backend on, because a user
-who passes one wants the backend's arrays back, whether to
+well. Any backend input therefore turns the backend on, because we assume that a user
+who passes a backend array wants the backend to perform the computation 
+and to receive backend arrays results, whether to
 differentiate, to compile, or to run on an accelerator. A parameter that
 is not differentiated keeps the fast paths that a differentiated one
 cannot take: an orbit in a potential with a concrete backend parameter
@@ -85,7 +88,7 @@ configured default, and finally
 the default take precedence over the data. Under a forced backend,
 \galpy\ runs as much as possible on that backend, including the
 internals that otherwise use \numpy\ and \scipy\ for \numpy\ inputs;
-the test suite uses this option to run \galpy's existing tests, which
+the test suite depends on this option to run \galpy's existing tests, which
 are written with \numpy\ inputs, on the backend code, and it is not
 meant for production code.
 
@@ -124,7 +127,7 @@ The namespace is the plain \numpy\ module for \numpy\ data,
 \torch\ for tensors, obtained through the \texttt{array-api-compat}
 package. This is the entire change for the majority of \galpy's
 potentials, which are elementary functions of the coordinates; the work
-is in the remainder, which used \scipy\ or \numpy-specific functions and
+is in the remaining potentials, which use \scipy\ or \numpy-specific functions and
 which we describe in the module sections. The dispatch costs about
 $3\,\mu$s per call when run eagerly and nothing under compilation,
 because it is then resolved at trace time.
@@ -162,8 +165,8 @@ otherwise.
 For special functions, a router dispatches each function to
 \texttt{scipy.special}, \texttt{jax.scipy.special}, or
 \texttt{torch.special} unless the function is listed as missing or
-unreliable for that framework, in which case a fallback implemented in
-\galpy\ is used. The list is short but important: \jax's hypergeometric
+unreliable for that framework, in which case we implemented a fallback directly in
+\galpy. The list is short but important: \jax's hypergeometric
 functions ${}_2F_1$ and ${}_1F_1$ return infinities with \texttt{nan}
 gradients for arguments $z<-1$, which is exactly the regime in which
 \galpy\ uses them; \jax's incomplete gamma function iterates per element
@@ -211,7 +214,7 @@ set of uniforms is a smooth function of those parameters. Random keys
 are explicit: a \jax\ key or its \torch\ equivalent is passed as
 \texttt{key=}, while \texttt{key=None} keeps the historical behavior of
 \numpy's global generator, such that existing scripts produce the same
-samples as before. For a Hernquist sphere, this reads
+samples as before. For a Hernquist sphere, this reads as follows:
 \begin{code}
 from galpy.backend import random as grandom
 hp= HernquistPotential(amp=2.,a=1.3)
@@ -224,10 +227,11 @@ sam= df.sample(n=10**6,key=key)  # jax, differentiable
 \subsection{Compilation and differentiation from the outside}\label{sec:design-jit}
 
 \galpy\ does not call \texttt{jax.jit} or \texttt{torch.compile} on its
-own code, because compilation is most effective at the level of the
+own code, because compilation is most effective at the level of a
 user's whole computation, in which a \galpy\ call is one step, and a
 library that compiles its pieces separately defeats this. The user
-therefore writes code as they would without \galpy,
+therefore writes code as they would without \galpy, 
+for example for a loss function that integrates an orbit in a potential and compares its position to an observed value,
 \begin{code}
 def loss(q):
     pot= LogarithmicHaloPotential(normalize=1.,q=q)
@@ -237,7 +241,7 @@ def loss(q):
 grad_loss= jax.jit(jax.grad(loss))
 \end{code}
 and it is \galpy's job to be traceable. \figurename~\ref{fig:jitamort}
-displays what compilation costs and buys for the simplest operation,
+displays what compilation costs and what it buys for a simplest operation,
 the radial force of a Plummer potential at $10^6$ points: compiling it
 takes about a tenth of a second, after which a call takes a fraction of
 a millisecond rather than a few milliseconds, such that the compilation
@@ -252,7 +256,7 @@ run the suite in compiled mode, and it is not needed in normal use.
 
 Making \galpy\ traceable required a set of changes that recur throughout
 the code, which we list here once. We gave data-dependent loops fixed
-iteration counts: the bisection above, the arithmetic--geometric
+iteration counts: the bisection discussed above, the arithmetic--geometric
 mean in the elliptic integrals, the series and continued fractions of
 the special functions, the sixty or so iterations with which a stream
 track is refined. We replaced branches on data by \texttt{xp.where}
@@ -311,9 +315,10 @@ compiled modes, in the global trace mode; it is selected by the
 \texttt{--device cuda} option additionally places every tensor on the
 GPU; \sectionname~\ref{sec:process-islands} describes what makes a pass
 in these modes meaningful and measures how much of the suite computes on
-the backend. Tests that fail under a mode are not removed, but listed in a
-ledger that marks them as expected failures, as described in
-\sectionname~\ref{sec:process-ledger}. Because a compiled-mode run can
+the backend. Tests that fail under a mode were not removed, but were listed in a
+ledger that marked them as expected failures, as described in
+\sectionname~\ref{sec:process-ledger} (this ledger is now empty). 
+Because a compiled-mode run can
 pass while every call falls back to eager execution, the test runner
 counts the fraction of calls that were traced and fails the run if this
 fraction drops below a floor, which is $99\,\%$ for a typical test
@@ -323,8 +328,8 @@ installed frameworks and additionally exercise the mixed case in which
 \numpy\ and backend arrays meet in one call, which the forced mode
 cannot reach. In continuous integration, the two frameworks, the two
 modes, and 22 shards of the test suite form a matrix that runs on every
-PR; we run the GPU tests by hand, because the continuous integration has
-no GPU.
+PR; we run the GPU tests by hand, because the continuous integration framework 
+available to us has no GPU.
 
 \subsection{GPUs}\label{sec:design-gpu}
 
@@ -337,7 +342,7 @@ stored table meets a coordinate array to do so. Because these sites are
 invisible on a CPU, where host and device coincide, we found them by
 running the test suite on a GPU, which also served to find code that
 silently converted to \numpy. \figurename~\ref{fig:throughput} displays what the
-GPU buys for the simplest operation in \galpy, the evaluation of a force
+GPU buys for a simple operation in \galpy, the evaluation of a force
 at $N$ points: on either GPU the computation alone is launch-bound up to
 $N\approx10^4$ and then scales until it saturates the device's memory
 bandwidth, at about $10^9$ points per second on a consumer card and

@@ -45,7 +45,8 @@ checks these identities for every potential, under both backends and in
 both modes, the derivatives that matter to the user are those with
 respect to the parameters: a potential constructed with a backend array
 as a parameter is differentiable with respect to that parameter through
-every method,
+every method. For example, the derivative of the radial force of a Miyamoto--Nagai 
+potential with respect to its scale length $a$ reads with \jax\ as
 \begin{code}
 from galpy.potential import MiyamotoNagaiPotential
 def Rforce_of_a(a):
@@ -53,7 +54,7 @@ def Rforce_of_a(a):
     return mp.Rforce(1.2,0.1)
 dFR_da= jax.grad(Rforce_of_a)(0.5)
 \end{code}
-and the same with \torch\ reads
+and the same with \torch\ is
 \begin{code}
 a= torch.tensor(0.5,requires_grad=True)
 mp= MiyamotoNagaiPotential(amp=1.,a=a,b=0.3)
@@ -121,7 +122,7 @@ potentials should keep this behavior in mind.
 New potentials are written as before: a class that inherits from
 \pot\ and implements \texttt{\_evaluate}, \texttt{\_Rforce}, and
 \texttt{\_zforce}. If these are written with the resolved namespace
-rather than with \numpy\ directly, as in \figurename~\ref{fig:newpot},
+rather than with \numpy\ directly, as illustrated in \figurename~\ref{fig:newpot},
 the new potential runs on every backend and can be differentiated with
 respect to its parameters without any further work, and the test suite's
 automatic checks of new potentials are run under every backend. A test

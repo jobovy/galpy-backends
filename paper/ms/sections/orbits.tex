@@ -2,7 +2,7 @@
 
 \subsection{Three ways to integrate an orbit}\label{sec:orbit-paths}
 
-\orb\ instances are set up and integrated as before, but an orbit whose
+\orb\ instances are set up and integrated as before, but an \orb\ instance whose
 initial condition is a backend array, or whose potential carries a
 backend parameter, is integrated in one of two new ways, depending on
 what is to be differentiated. The first integrates the equations of
@@ -18,7 +18,8 @@ differentiated: the initial condition, the potential's parameters, the
 integration times. $N$ orbits are integrated in a single solve along a
 batch axis, with per-orbit time grids if desired, and the solve runs on
 a GPU when the initial conditions do. This is the path to use for
-derivatives with respect to the parameters of the potential,
+derivatives with respect to the parameters of the potential, 
+as in the following example:
 \begin{code}
 def final_R(b):
     o= Orbit(jnp.asarray(ic))
@@ -27,7 +28,7 @@ def final_R(b):
     return o.R(ts[-1])
 dR_db= jax.grad(final_R)(0.6)
 \end{code}
-and under \torch\
+and under \torch:
 \begin{code}
 b= torch.tensor(0.6,requires_grad=True)
 o= Orbit(torch.as_tensor(ic))
@@ -63,7 +64,8 @@ Jacobian of the integration, which converges quadratically to machine
 
 The second way uses \galpy's compiled \cc\ integrators, which are much
 faster than a solver that runs inside \jax\ or \torch\ on a CPU (for a
-single orbit in the Milky-Way model, about ten times faster than the
+single orbit in the Milky-Way model \texttt{MWPotential2014}, 
+about ten times faster than the
 \diffrax\ solve and a hundred times faster than \texttt{torchdiffeq}),
 but which are opaque to AD. What they can provide is the derivative of the
 orbit with respect to its initial condition, through the variational
@@ -86,7 +88,7 @@ from the \cc\ variational equations with reverse-mode AD through
 \diffrax\ and through \texttt{torchdiffeq} and with finite differences
 of independently integrated orbits, and the four agree to a few parts in
 $10^{10}$. In code, nothing marks the difference between the two paths except the
-method,
+method:
 \begin{code}
 def end_point(ic):
     o= Orbit(ic)
@@ -107,7 +109,7 @@ which must come from the in-backend solve.
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
   \caption{The derivative of an orbit with respect to its initial
-    condition, four ways. For a Sun-like orbit in \texttt{MWPotential2014}
+    condition, in four ways. For a Sun-like orbit in \texttt{MWPotential2014}
     integrated for 3\,Gyr, the left panel shows one element of the
     state-transition matrix, $\partial R(t)/\partial v_{R,0}$, from the
     \cc\ variational equations, from a finite difference of the \cc\
@@ -147,16 +149,16 @@ star's distance or proper motion is available.
 
 For large batches of orbits in forces that do not depend on velocity,
 \galpy\ also integrates inside the backends with a symplectic method:
-\texttt{method='leapfrog\_jax'} and \texttt{'leapfrog\_torch'} use a
+\texttt{method='leapfrog\_jax'} and \texttt{method='leapfrog\_torch'} use a
 kick-drift-kick leapfrog with a constant step, which evaluates the forces
 once per step, against thirteen times for a step of \diffrax's
-eighth-order Dormand--Prince method,
+eighth-order Dormand--Prince method, as for example in the following:
 \begin{code}
 o= Orbit(jnp.asarray(ics)) # ics: (N,6)
 o.integrate(ts,MWPotential2014,method='leapfrog_jax',
             inbackend_kwargs={'nsteps':8000})
 \end{code}
-For each of 2000 orbits in the Milky-Way model with a moving satellite
+For each of 2000 orbits in \texttt{MWPotential2014} with a moving satellite
 and the acceleration of a non-inertial frame, the error against the \cc\
 integrator falls by a factor of four per halving of the step, and in a
 static potential the energy error oscillates without the secular drift
@@ -191,13 +193,14 @@ The variational equations that the \cc\ state-transition matrix relies
 on were part of \galpy\ for planar orbits since 2011; as part of this
 work, we extended them to three-dimensional orbits, to all of the \cc\
 integrators including the symplectic ones, to one-dimensional orbits,
-and to dissipative, velocity-dependent forces, and released them in
+and to dissipative, velocity-dependent forces, and we released them in
 \galpy\ \flag{v1.12}. \appendixname~\ref{app:dxdv} gives the equations
 and the checks that we applied to them. Their user-facing form is
 \texttt{Orbit.integrate\_dxdv}, which integrates an orbit together with a
 deviation vector or with the full state-transition matrix, and
 \texttt{Orbit.lyapunov}, which computes the largest Lyapunov exponent, or
 the spectrum, by the renormalization method of \citet{Benettin1980a,Benettin1980b},
+for example as
 \begin{code}
 o= Orbit([0.8,0.3,0.75,0.,0.2,0.])
 o.integrate_dxdv([1.,0.,0.,0.,0.,0.],ts,
@@ -222,13 +225,14 @@ backends.
     range of values in the literature for the chaotic orbit, and the
     dashed line is the $\ln t/t$ decay expected for a regular orbit.
     Right: a Sun-like orbit in \texttt{MWPotential2014}, which is
-    regular. The estimate for the chaotic orbit converges into the range
+    regular. The estimate for the chaotic  H\'enon--Heiles orbit converges into the range
     found in the literature, while that for the regular orbit decays as
     expected.}\label{fig:lyapunov}
 \end{figure*}
 
 \subsection{Limitations}\label{sec:orbit-limitations}
 
+In-backend orbit integration has a few limitations. 
 By default, the derivative of an in-backend solve with respect to its
 inputs differentiates through the solver's adaptive steps, which is
 correct for a single orbit; when a batch of orbits is differentiated
@@ -240,18 +244,19 @@ internally and which the user should do as well. \texttt{torchdiffeq}
 has no batching rule, such that a batch of orbits under \torch\ is a
 \python\ loop unless \torchode\ is used, and the eighth-order method of
 \texttt{torchdiffeq} carries a gradient error of about $10^{-5}$ in its
-backward pass, such that \galpy\ uses its fifth-order method. The
-pure-\python\ integrators that \galpy\ retains for reference run on the
-backends but are slow there, because each step is a separate set of
-array operations. And the \cc\ integrators cannot be used on a GPU at
+backward pass, such that \galpy\ uses its fifth-order method. Additionally, the
+pure-\python\ integrators implemented in \galpy\ are able to run on the
+backends, but are slow there, because each step is a separate set of
+array operations; it is therefore not recommended to use this on the backends. 
+Finally, the \cc\ integrators cannot be used on a GPU at
 all; their derivative rule runs the integration on the host.
 
 \subsection{Speed}\label{sec:orbit-speed}
 
 \figurename~\ref{fig:orbitspeed} compares the wall time of integrating
-$N$ orbits for 2\,Gyr in the Milky-Way model with the \cc\ integrator,
+$N$ orbits for 2\,Gyr in \texttt{MWPotential2014} with the \cc\ integrator,
 which parallelizes over orbits with OpenMP, on one core and on all 72
-hardware threads of the CPU, and with the in-backend solvers on one CPU
+hardware threads of the CPU used in this work, and with the in-backend solvers on one CPU
 core and on two GPUs. On one core the \cc\ path costs 2.2--2.4\,ms per
 orbit; on 72 threads it costs 0.064 to 0.07\,ms per orbit after a few
 milliseconds of setup and is faster than every backend solver, on any

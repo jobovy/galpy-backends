@@ -2,8 +2,10 @@
 
 \subsection{General approach}\label{sec:df-general}
 
-A DF in \galpy\ is constructed from a potential and a set of parameters,
-evaluated at phase-space points, integrated for its moments, and sampled.
+\galpy\ contains DF models to represent spherical and disky galactic components.
+These DF models are constructed from a potential and a set of parameters,
+they can be evaluated at phase-space points, integrated to obtain their moments 
+(densities, mean velocities, and velocity dispersions), and they can be sampled.
 On the backends, evaluation and the moments are differentiable for
 essentially every DF, sampling is differentiable wherever it is done by
 inverse transformation, and construction is differentiable for the DFs
@@ -23,8 +25,7 @@ backend key selects the inverse-cumulative samplers of
 \sectionname~\ref{sec:design-numerics} and returns backend arrays. For a
 fixed key, the sample is then a smooth function of the DF's and the
 potential's parameters, and its derivative is the pathwise, or
-reparameterization, derivative that is familiar from variational
-inference: differentiating a statistic of the sample with respect to a
+reparameterization, derivative: differentiating a statistic of the sample with respect to a
 parameter gives an unbiased estimate of the derivative of the
 expectation of that statistic. \figurename~\ref{fig:dfparam} shows this
 for an Osipkov--Merritt DF of a Hernquist sphere constructed and sampled
@@ -48,7 +49,7 @@ agree within the Monte-Carlo noise.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gD2_df_sample_autodiff/gD2_df_sample_autodiff.pdf}
-  \caption{A derivative through a sample. Left: the radial velocity
+  \caption{A derivative through a DF sample. Left: the radial velocity
     dispersion of the isotropic Hernquist DF from the analytic
     expression, from the Jeans equation by quadrature, and from a sample
     of $4\times10^6$ particles. Right: its derivative with respect to
@@ -62,21 +63,20 @@ agree within the Monte-Carlo noise.
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gD4_spherical_df_param/gD4_spherical_df_param.pdf}
   \caption{Derivatives through the construction and sampling of
-    spherical DFs. Top row: King models of unit mass and tidal radius
-    $r_t=10$ for four values of $W_0$ (a); the derivative $\partial\ln\rho/\partial W_0$
+    spherical DFs. Top row: (a) King models of unit mass and tidal radius
+    $r_t=10$ for four values of $W_0$; (b) the derivative $\partial\ln\rho/\partial W_0$
     at fixed $(M,r_t)$ through the solution of the Poisson equation,
     eagerly with \scipy\ and under \texttt{jax.jit} with \diffrax, compared
-    with a finite difference in which the model is rebuilt (b), and the
-    convergence of that finite difference onto the automatic derivative
-    (c). Bottom row: an Osipkov--Merritt DF of a Hernquist sphere with
+    with a finite difference in which the model is rebuilt, and (c) the
+    convergence of that finite difference onto the automatic derivative. 
+    Bottom row: an Osipkov--Merritt DF of a Hernquist sphere with
     anisotropy radius $r_a=1.5$, constructed and sampled ($4\times10^6$
-    particles) in one compiled function of the scale radius $a$; the
-    sampled velocity dispersion matches the Jeans equation (d), its
+    particles) in one compiled function of the scale radius $a$; panel (d) shows that the
+    sampled velocity dispersion matches the Jeans equation, (e) demonstrates that its
     derivative with respect to $a$ through construction and sampling
     matches both a finite difference of the same sample and the Jeans
-    expectation within the Monte-Carlo noise (e), and the per-particle
-    derivatives converge onto the automatic ones as $h$ and $h^2$
-    (f).}\label{fig:dfparam}
+    expectation within the Monte-Carlo noise, and panel (f) shows that the per-particle
+    derivatives converge onto the automatic ones as $h$ and $h^2$.}\label{fig:dfparam}
 \end{figure*}
 
 \subsection{Spherical DFs}\label{sec:df-spherical}
@@ -115,7 +115,7 @@ dr_da= torch.autograd.grad(sam.r().sum(),a)
 and for a Hernquist sphere this derivative is $r_i/a$, which the sampler
 reproduces to $10^{-13}$. Under \jax, construction, evaluation, and
 sampling of these DFs run under \texttt{jax.jit}, and for the King
-model so does the derivative with respect to $W_0$,
+model so does the derivative with respect to $W_0$, as in for example
 \begin{code}
 def sigmar(W0):
     kdf= kingdf(W0=W0,M=2.3,rt=1.4)
@@ -126,7 +126,7 @@ dsig(3.)
 A DF built from a density that is not the one generating the
 potential is differentiable with respect to the parameters of both the
 density and the potential; for example, with respect to those of the
-density,
+density:
 \begin{code}
 def dispersion(a_tracer):
     hp= HernquistPotential(amp=0.1,a=a_tracer)
@@ -142,15 +142,23 @@ analytic DFs of \citet{Evans1997} for power-law spheres were added to
 
 \subsection{Disk DFs}\label{sec:df-disk}
 
-The two-dimensional disk DFs of \citet{Dehnen1999} and \citet{Shu1969}
+\galpy\ contains models for two-dimensional and three-dimensional disk DFs.
+The two-dimensional axisymmetric disk DFs of \citet{Dehnen1999} and \citet{Shu1969}
 and their moments are evaluated with nested Gauss--Legendre quadrature
 on the backends and are differentiable with respect to the parameters of
-their surface-density and velocity-dispersion profiles; the moments of
-the evolved disk DF, which integrates orbits backwards through a
-non-axisymmetric perturbation, differentiate through that integration,
+their surface-density and velocity-dispersion profiles. \galpy\ also contains 
+a two-dimensional non-axisymmetric disk DF that is a perturbation of a Dehnen DF by a
+non-axisymmetric and/or time-dependent potential, which is evaluated by integrating orbits
+backwards in time to an initial axisymmetric DF (in \texttt{galpy.df.evolveddiskdf}). 
+The moments of
+this evolved disk DF differentiate through that integration,
 which on the backends is one vectorized in-backend solve over the
-velocity grid rather than a loop. The quasi-isothermal DF of
-\citet{Binney2010} is evaluated and its moments computed on the backends,
+velocity grid rather than a loop. 
+
+As a three-dimensional disk DF, \galpy\ implements the quasi-isothermal DF of \citet{Binney2010}, 
+which is a function of the actions and is evaluated by first computing the actions with 
+\texttt{actionAngleStaeckel} and then evaluating the DF.  The quasi-isothermal DF is now 
+evaluated and its moments computed on the backends,
 differentiably with respect to the parameters of the potential and the
 DF's scale lengths, and its velocity sampler at a given position draws
 by inverse transformation on a three-dimensional velocity mesh, such
@@ -158,7 +166,7 @@ that a sample drawn with a fixed key is a differentiable function of the
 DF's parameters;
 this sampler replaced a rejection sampler on the \numpy\ path as well,
 which is the second place where \numpy\ output changed (the distribution
-is the same, the particular draws are not). In code,
+is the same, the particular draws are not). In code this looks as follows:
 \begin{code}
 qdf= quasiisothermaldf(1./3.,0.2,0.1,1.,1.,
                        pot=MWPotential2014,aA=aAS)
