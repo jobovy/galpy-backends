@@ -1,0 +1,116 @@
+# Response to the first review round (sections 1–7)
+
+Reviewer: JB, 140 annotated comments on the 2026-10-25 draft (`galpy-backends-paper-2026-10-25.pdf`), plus a commit of minor edits (merged first, as `4515cf6`). This document goes with the revised manuscript on branch `paper-revision-r1` and the latexdiff `review/ms-diff-round1.pdf`, both relative to `4515cf6` (the draft with JB's own edits).
+
+The comments are numbered in reading order of the PDF ([1]–[140]); the numbers refer to `review/jo_comments_round1.md`, which pairs each comment with the highlighted text.
+
+The principle followed: where a comment asks a question, the paper now answers it in the text; where a comment says "is this still true?", the claim was tested against `feat/backends` (`db33e5fcf`, the rebase onto main of 2026-10-27) and the text corrected to what the code does; where the code fell short of what the paper should say, a galpy PR fixes the code. The audits that these corrections rest on are summarized in Part A; the galpy PRs in Part B; the figures in Part C; the smaller text changes, comment by comment, in Part D.
+
+**Status at the time of writing** (2026-10-28): all text changes for sections 1–7 are in; the figures are regenerated except where an H100 measurement is still pending (noted below); four galpy PRs are open or in preparation (Part B); the numpy byte-identity restoration and the disk-DF samplers are not started. Items marked ⏳ are still in progress.
+
+---
+
+## Part A — Audits behind the corrections
+
+### A.1 Stale "numpy only" statements
+
+Several claims of the draft described the state of the code in September and were no longer true. Each was tested with an automatic derivative against a central finite difference that rebuilds the object from the perturbed parameter (the test that the differentiability audit of 2026-09-16 established), on jax and, where noted, torch and the TITAN Xp:
+
+| claim in the draft | measured on `feat/backends` | comment |
+|---|---|---|
+| 49 of 50 potentials differentiable w.r.t. amplitude under compilation; DiskSCF fails under `jax.jit` | all 47 potentials that take only numerical parameters (King: its mass) differentiate eagerly and under `jax.jit`, with identical values; DiskSCF's density-parameter derivative through the coefficients: rel. 1e-11 | [58], [59] |
+| the adiabatic-contraction wrapper "declares itself incompatible and is computed on numpy" | d/df_bar and d/da of the contracted NFW halo: rel. 3e-11, 2e-11 | [56] |
+| interpolated potentials "not differentiable in the tabulated values" | interpRZPotential d/da: 1e-11; SCF/Multipole/DiskSCF/DiskMultipole from a density: 1e-9–1e-11; interpSphericalPotential from a *function*: yes; from a *galpy potential*: **failed** → PR #1764 | [60] |
+| MovingObjectPotential "keeps that orbit on numpy" | with a jax orbit the field is differentiable w.r.t. the host potential's parameter through the orbit (rel. 8e-8, finite-difference limited), under `jax.jit`, and on the TITAN Xp | [61] |
+| quasi-isothermal DF construction "remains a numpy computation" | its guiding-centre table is built on the backend: d/dh_R of the density, rel. 2e-9 | [114], [126] |
+| closed-form dM/dE and the power-law DFs "numpy only" | all differentiable (rel. 1e-10) and running under a forced jax backend | [123] |
+| Schwarzschild DF not mentioned | runs on jax, d/dh_R rel. 6e-10 | [124] |
+
+Two further gaps that the audit found and JB had not flagged:
+
+- the two-dimensional disk DFs (`dehnendf`, `shudf`, `schwarzschilddf`) sample by rejection on numpy and take no `key=`, so the draft's "every sampler in galpy takes a `key=` argument" was false; the text now says so (§6.1, §6.3), and migrating these samplers to inverse-CDF sampling is on the PR list (Part B, ⏳);
+- `streamgapdf` constructs under torch (eagerly, in 29 minutes for the test configuration, with the same density and mean frequency as the numpy model), but no test exercised it; a (reduced) torch construction test is being added (⏳).
+
+### A.2 numpy byte-identity
+
+The draft claimed byte-identity of the numpy path "except in three places, all in the DFs". Measured directly (checksums of Φ, forces, density and second derivatives of every parameter-free potential on a 40×9 grid; orbits, actions and DF values at fixed points; main `9c129abcb` against `feat/backends` `db33e5fcf`, both with freshly built C extensions):
+
+- **identical**: the Eddington, Hernquist, Osipkov–Merritt, constant-anisotropy (which the draft listed as changed; restored by #1752), Dehnen and Shu DFs; `rk4_c` orbits; the spherical and isochrone-approximation actions;
+- **deliberately changed**: the King model (its Poisson equation is solved to rtol 1e-10 instead of scipy's default 1e-3, PR #1552: 1e-5 to 1e-3 relative in Φ and the DF), and the particular draws of the quasi-isothermal and stream samplers (same distribution);
+- **rounding-level** (a few ulp, ≤ 2e-15 relative; ≤ 1.4e-13 in the second derivatives of the Perfect-Ellipsoid, Triaxial-Gaussian and PowerSphericalPotentialwCutoff potentials): NFW, Burkert, Einasto, PowerSphericalPotentialwCutoff and the triaxial potentials, whose Python formulas were restructured for small-radius accuracy and for differentiability w.r.t. their shape parameters; everything computed from these potentials' Python forces (the python integrators, the Python Stäckel code, `estimateDeltaStaeckel`, the King potential) differs at the same level. The C sources of the potentials are unchanged (`dop853_c` differs by one ulp between the two builds, a compiler artefact);
+- a dozen methods became **array-capable** on `feat/backends` (DehnenBar, KuzminKutuzov, RazorThinExponentialDisk), which is not a numeric change.
+
+§2.1 now states exactly this. JB chose to **restore** byte-identity where feasible rather than document it; that PR is on the list (Part B, ⏳). A bisection over the branch's history could not attribute the rounding-level changes to individual PRs (intermediate commits of the rebased branch do not import), so the restoration will work from the current diff.
+
+### A.3 Test tolerances ([27])
+
+JB asked whether really only one numpy test tolerance was loosened. No: besides the King DF test, `feat/backends` loosened, in the numpy-path test files, the Stäckel-grid eccentricity and zmax checks (1e-16 → 1e-14 and 1e-9, after the NFW ulp change), the two Stäckel χ-quadrature bars (3e-11 → 1e-10, for platform robustness, #1447), two statistical checks of the stream-spray sampler (6e-2 → 8e-2, 1e-1 → 1.2e-1, after the sampler change, #1155), and a finite-difference step in the spiral-arms test (1e-8 → 1e-6, #1258). The backend-only tolerance ledger (`appendices/E_coverage_tolerance_ledger.md`) is a separate matter and unchanged. §2.1 lists these.
+
+### A.4 Numbers
+
+- Lines of code ([13]): the draft's "36,000 → 93,000 lines of Python" counted physical lines (blank lines, comments and docstrings included); the coverage report counts executable statements (41,669 on main). The text now gives 38,000 → 95,000 lines, "of which 42,000 are executable statements", and ([14]) the coverage, 99.94 % with 24 statements uncovered. Tests: 563 → 2,361 on main.
+- galax's batched stepping ([86]): galax's default mode integrates the batch as one system with a single PID controller whose error norm is the root-mean-square over the batch; the draft's "every orbit takes the steps that the most demanding orbit requires" was wrong (JB's memory of a "median" step was closer). Corrected in §4.5.
+
+---
+
+## Part B — galpy pull requests (all against `feat/backends`)
+
+| PR | what | status |
+|---|---|---|
+| #1764 | `interpSphericalPotential(rforce=<potential>)` with a differentiated parameter: the force grid, the probe and Φ₀'s radius are lifted onto the parameter's backend, the spline is fitted there and d/d(parameter) flows through the tabulated values (the function-input form already did). numpy byte-identical; 11 new tests, 9 of which fail without the fix. | open, CI running |
+| #1765 | a warning when a batch of orbits is differentiated through adaptive steps under jax (JB's [76]): the solve detects a JVP or linearize tracer and a batched or vmapped state, and points at `nsteps`. 6 tests. | open |
+| ⏳ in-backend symplectic integrators | `symplec4_jax/torch`, `symplec6_jax/torch` ([84]): the drift/kick compositions of the C integrators with the leapfrog's checkpointing; agree with `symplec4_c`/`symplec6_c` at the same step to 1e-13, converge at 4th and 6th order, gradients match finite differences, torch matches jax. 73 tests, being finalized. | branch `backend/inbackend-symplectic` |
+| ⏳ byte-identity restoration | restore the numpy formulas of the dozen potentials of A.2 (JB: "if you can restore that's better"). | not started |
+| ⏳ disk-DF samplers | inverse-CDF, differentiable samplers for `dehnendf`/`shudf`/`schwarzschilddf` with `key=`. | not started |
+| ⏳ streamgapdf under torch | a torch construction test (reduced configuration). | timing a reduced configuration |
+
+---
+
+## Part C — Figures
+
+| figure | change | comment |
+|---|---|---|
+| orbit speed (g12) and galax (g8) | three stacked panels (CPU, TITAN Xp, H100), each with the whole-node C line repeated in grey for reference, direct labels with leaders as before, a "faster" arrow; both CUDA-kernel lines labelled; the C line is now on 36 OpenMP threads pinned to the 36 physical cores (0.079–0.085 ms per orbit; the 72-hardware-thread run was 0.064–0.070, i.e. hyper-threads bought 10–20 %, which the text now says); a torch-CPU line (eager torchdiffeq on one core, 2.6 ms per orbit at 3×10⁴); the in-backend symplec6 line (450 steps, the step at which its worst-case error equals the adaptive Dopri8 line's at rtol = atol = 1e-8, 9.0e-6) ⏳ | [51], [78]–[84], [101], [102], [104], [105], JB's follow-ups |
+| jit amortization (g6) | N = 10⁶ only; one CPU core added (compile 98 ms, compiled call 26 ms vs 98 ms eager: break-even after two calls); the break-even panel in units of each device's eager call so that all devices share one axis; torch.compile: its inductor backend refuses the TITAN Xp (Triton needs compute capability ≥ 7.0; the card is 6.1), so the torch line can only come from the H100 (⏳ `backends-h100`) | [43], [51], [52] |
+| AD overhead (g5) | one CPU core added (gradient/value 1.0–1.3 under compiled jax, 2–3 under eager torch) | [44] |
+| throughput (g2) | reference lines bracket every point's cost per call (the 10 μs line) | [53] |
+| Stäckel speed (g17) | eager torch and compiled jax in one figure, CPU and both GPUs; constant-cost reference lines in both panels, all values listed | [110], [111], [119]–[121] |
+| Stäckel sensitivity (gA1) | re-measured: MWPotential2014, derivative w.r.t. the disk's b/a at fixed a (MWPotential2014: 0.093); AD–FD floor 1e-9 | [99], [107] |
+| isochrone sensitivity (g18) | the residual label as a power of ten | [106] |
+| stream track (gS1) | the interpolated track (as streamdf uses it) and its derivative from one forward-mode pass through the in-backend interpolation; the AD–FD panel along the track, relative to the largest derivative (pointwise relative differences spike where dR/dq and dz/dq cross zero); 1–2 parts in 10⁴ | [134] |
+| vertical inverse (gV1) | legends without the per-quantity steps (now in the caption), four columns; the inset title no longer spills | [117], [118] |
+| spherical-DF speed (gD3) | one legend for the whole figure, between the sampling panels and the construction bars | [130] |
+| IC-derivative cost (g15) | more room between the panels; "hatched = eager, solid = compiled" | [91]–[93] |
+| parameter gradients (g3) | caption explains the on-axis markers | [64] |
+| vertical-inverse speed (gV2) | dropped with its paragraph (kept in `notes/dropped_vinvspeed_2026-10-28.md` for the inverse action–angle paper; Fast-orbits-develop informed) | [112] |
+
+Figure placement ([63], [108], [78]) is handled by the order of the figure environments (the orbit-speed figure now precedes the IC-derivative and galax figures in the source) and will be checked once the text is final.
+
+---
+
+## Part D — The comments, one by one
+
+(The highlighted text is quoted in `jo_comments_round1.md`; here each entry says what changed, or why not.)
+
+**Introduction.** [1] added: such a code lets developers build sophisticated models within a framework that users then apply; the action–angle methods as the example. [2] deleted. [3] "orbits are integrated, and orbital parameters and actions computed". [4] "computationally-expensive". [5] "more than a thousand papers", the yearly rate dropped (a `% JB` comment marks the spot for your updated numbers). [6] added non-JB examples: Cautun et al. 2020 (rotation curve and halo tracers), Necib & Lin 2022 (escape velocity), Yang et al. 2020 and Reino et al. 2021 (clustering of stream stars in action space); Lucey et al. 2023 and Malhan & Ibata 2019 were already there. [7] audited against HISTORY.txt: added the Milky-Way model library, `Orbit.from_name`, the analytic orbit parameters (Mackereth & Bovy 2018), Jeans-modeling tools. [8] Qian et al. 2022 cited for the spray implementation. [9] Lane, Bovy & Mackereth 2022 cited. [10] Bovy (2027, in preparation) cited (`Bovy2027` in refs.bib; **title to be confirmed**). [11], [12] the Lyapunov exponents moved into the 2026 sentence, which now says this was the first step of the work described here, with the pointer to §4.3. [13], [14] see A.4. [15]–[18] the galax paragraph rewritten: a sentence introducing galax, then its applications, and every clause as "METHOD was used to … (CITE)". [19] why two backends: a sentence in the "In this paper" paragraph (agnosticism, future-proofing in a fluid ecosystem) and the design principle in §2.1. [20] "numpy (and scipy)". [21] "with a handful of approved exceptions that we list" and "again with very few exceptions" (the exceptions are those of A.2 and A.3). [22] "All of galpy's core functionality is covered". [23], [34] unxt (Starkman, Price-Whelan & Nibauer 2025) mentioned in both places as a possible future route to units inside compiled programs. [24] the torus-mapping code dropped from the gaps sentence (it is now described once, in §5.1, as a convenience wrapper around an external code). [25] the variational equations' use outside the backends (orbit sensitivities, Lyapunov exponents) added. [26], [140] the repository is now `jobovy/galpy-backends` (renamed by JB; the links are updated; the other agents were told).
+
+**Design.** [27] see A.3. [28] "had to pass in full; this was the main acceptance test, but not the only one" with the pointer to §8.6. [29], [31] `MWPotential2014.Rforce(R,0.)` and `MWPotential2014(1.,0.)`; the runnable examples behind the snippets (`examples/design_01`, `design_02`) updated and re-run. [30] "backends are *greedy*: any backend array among the inputs … turns on the backend for that calculation and its output". [32] "run on the CPU". [33] the context/config default is said to defer to the data before the resolution order; `xp=` is described as galpy's internal way of keeping nested calls on one namespace, not for users; "therefore" → "thus" after the explanation. [35] the opening sentence added. [36] "the potential of a Plummer sphere". [37] "for example `@backend_input('R','z','phi','t')` for a method whose coordinate arguments are …". [38] "host CPU". [39] confirmed: all 18 coordinate transformations that take phase-space arrays carry the marker; the remaining functions in `galpy.util.coords` are Jacobians and helpers. [40] "currently return". [41] "loses six digits near an order of 20, where its implementation switches between a series and a continued fraction". [42] your sentence kept. [43], [44] the GPU subsection now precedes "Compilation and differentiation", and both figures carry CPU lines (Part C). [45] the trace-mode sentence moved to the test-suite subsection. [46] the "sixty iterations" replaced by what is true: the refinement of a stream track is iterated a fixed number of times rather than to convergence. [47] the re-trace sentence expanded into an explanation of static-argument hashing. [48] a closing remark. [49] "two of the fixes described in §8.5" (no repetition: §8.5 lists the fixes, §2.4 the method that found them). [50] the two GPUs described (TITAN Xp, 2017, about $1,200, 12 GB, double precision at 1/32; H100, data-centre, of order $30,000, 80 GB, double precision at 1/2). [51], [52], [53] Part C.
+
+**Potentials.** [54] pynbody cited (Pontzen et al. 2013). [55] AMUSE cited (Portegies Zwart et al. 2009; Pelupessy et al. 2013; Portegies Zwart & McMillan 2018). [56] corrected (A.1). [57] Webb et al. 2019 now attached to the tidal radius and tensor only. [58], [59] "All 47 potentials that can be constructed from parameters alone …" (A.1). [60] text corrected to the intended behaviour; PR #1764 makes it true for a potential input. [61] corrected (A.1), including that the field lives on the GPU with the orbit. [62] "AD" spelled out throughout (nine uses). [63] Part C. [64] caption explains the on-axis markers.
+
+**Orbits.** [65], [67] the routing paragraph rewritten from the code: the C variational path is taken when the initial condition is being differentiated; a concrete backend initial condition integrates in C as before (not a "third way"); the pure-Python integrators are not routed and warn. [66] left as you had it. [68] from_name: an orbit initialized by name has numpy coordinates; a derivative w.r.t. a star's distance or proper motion is obtained by rebuilding the orbit from the observed coordinates with the quantity of interest as a backend array (the text says so; a SIMBAD outage prevented the live check at the time of writing, ⏳). [69]–[71] §4.2 rewritten with a motivation (why a fixed-step symplectic method next to adaptive Runge–Kutta), the generic second-order statements separated from the 2000-orbit verification, and "the error" instead of "the error against the C integrator". [72] "forces that do not derive from a potential … marked with the `isConservative` attribute". [73] "For example, for the Hénon–Heiles potential". [74] the N-body remark dropped; the sentence now contrasts the leapfrog, the sixth-order integrator and the adaptive solvers. [75] "do not require the backends: they accept backend initial conditions, but run on the CPU, return numpy arrays, and are not differentiable" (verified). [76] PR #1765; the text will say that galpy warns. [77] split. [78] figure order fixed. [79] torch-CPU line added. [80] the statements re-checked against the new figure ⏳. [81] 36 threads (Part C). [82] no easy way: XLA's CPU runtime parallelizes within large operations only; a batched ODE solve is a sequence of small ones; the only route is sharding the batch over processes, which we did not pursue (said briefly in the text). [83] "a direct port of galpy's C code, including its special functions" and "special functions rewritten for the GPU". [84] the symplectic integrators are now part of galpy (PR, Part B); §4.2 says so and the figure shows the line ⏳. [85] "as in Figure 12". [86] corrected (A.4).
+
+**Action–angle.** [87] the opening refers back to §2.4 and §4.1. [88] "for the isochrone approximation of Bovy (2014)". [89] "is migrated onto". [90] `actionAngleTorus` described as a convenience wrapper around the external torus-mapping code of Binney & McMillan (2016), not a core part of galpy. [91]–[93] Part C. [94] "an instance of one of the actionAngle classes, such as actionAngleStaeckel". [95] "e.g., the spherical, adiabatic, and Stäckel methods". [96] "the derivative that an inference loop uses when its model is a function of the actions, as a DF of the actions is (§6.3)". [97], [98] Part C and the galax caption. [99], [107] Part C; the text now describes the disk b/a. [100] the subsections swapped: spherical, isochrone approximation and inverse first, Stäckel and adiabatic second. [101], [102], [104], [105] Part C and the orbit-speed caption ("the copies … are what keep the purple lines flat up to N ≈ 10⁴"). [103] `\citep{Bovy2027}`. [106] Part C (g18). [108] placement, to be checked at the end. [109] "on one core" was already there; left. [110], [111] compiled jax discussed on the CPU (5 ms for one point against 3.7 s eagerly, but no faster than numpy for large N: 44 s against about 30 s at N = 3×10⁴) and on the GPUs (H100: 0.16 s at 10⁵, five times faster than eager torch and 190 times faster than one C thread; TITAN Xp: no better than eager torch), and the figure shows both. [112] dropped (Part C). [113] still necessary: the many-position velocity sampler of the quasi-isothermal DF and the samplers of the 2-D disk DFs are rejection samplers; the text now names them.
+
+**DFs.** [114] corrected (A.1): construction is differentiable for every DF whose construction is a numerical computation. [115], [116] the sample-derivative check (Figure 18) is discussed first, as "an explicit check that …", then the construction derivatives. [117], [118] Part C. [119]–[121] Part C (g17). [122] the constant-anisotropy DF is byte-identical again (#1752); the sentence removed, and the King model's deliberate change stated in its place. [123] removed; the closed-form and power-law DFs are differentiable (A.1). [124] the Schwarzschild DF added to the 2-D disk DFs. [125] Binney (2010), Binney & McMillan (2011), in the form of Bovy & Rix (2013). [126] corrected (A.1). [127] moved to the 2-D paragraph. [128] because the compiler fuses the hundreds of array operations of a draw into a few loops, where numpy executes each separately and writes its intermediates to memory.
+
+**Streams.** [129] the opening no longer claims streams are what galpy's DFs are most often fit to; it starts from why derivatives have been missed. [130] Part C (gD3). [131] the "two kinds of derivative" paragraph moved into the particle-spray subsection, right after the track-derivative example that it applies to. [132] `streamTrack()` described ("which fits a smooth track through the sampled particles"). [133] `tail='leading'` added. [134] Part C (gS1). [135] the 6000-particle stream is introduced before Figure 23 is cited. [136] the per-particle cost is said to be consistent with the cost per orbit of a large batch of in-backend integrations (Figure 12). [137] "of streamdf". [138] torch: the construction runs (A.1); a test is being added ⏳ and the text will state it. [139] the caption now concludes that moving the particles and re-fitting removes less of the shift, by a factor of 1.5 to 2.4 in the residual, "although not by much".
+
+---
+
+## Open items
+
+- H100: torch.compile data for the jit-amortization figure (`backends-h100`, instructions sent), the symplec6 series once the galpy PR is in.
+- The remote of `~/Repos/galpy-jax` still points at the old URL (GitHub redirects); `git remote set-url origin https://github.com/jobovy/galpy-backends.git` when convenient (the agent's permissions did not allow the change).
+- `Bovy2027`'s title in refs.bib.
+- Sections 8 and later: not yet reviewed by JB; the process section's numbers (tests, PRs, costs) will be refreshed when it is.
