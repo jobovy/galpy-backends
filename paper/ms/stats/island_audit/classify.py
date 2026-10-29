@@ -78,8 +78,23 @@ FUNC = {
  "util/leung_dop853.py:*": "PYINT", "orbit/integrateFullOrbit.py:*": "PYINT", "orbit/integratePlanarOrbit.py:integrate_for_map": "PYINT",
  "orbit/integratePlanarOrbit.py:_planarEOM_dxdv": "PYINT", "orbit/integratePlanarOrbit.py:_planarRectForce": "PYINT",
  "orbit/integrateLinearOrbit.py:*": "PYINT",
+ # evolveddiskdf on the backend (#1774): the deriv offset rounded on the host
+ # like numpy's, host integrators under the numpy pin, the grid's plot
+ "df/evolveddiskdf.py:_df_at_velocities_backend": "CTL", "df/evolveddiskdf.py:plot": "OUT",
+ "df/evolveddiskdf.py:max": "OUT",
+ # AnyAxisym (#1775): the constructor's surfdens unit probes and Phi(0)
+ "potential/AnyAxisymmetricRazorThinDiskPotential.py:_on_numpy": "TAB",
+ # diskdf samplers (#1769): key=None keeps numpy's draws and output; the
+ # radial bracket's width read by the backend root finder
+ "df/diskdf.py:sample": "RNG", "df/diskdf.py:_sample_orbits": "RNG",
+ "df/diskdf.py:sampledSurfacemassLOS": "RNG", "df/diskdf.py:sampleVRVT": "RNG",
+ "df/diskdf.py:_sample_phase": "CTL",
+ # streamTrack pspline (#1731/#1732): k-d tree start indices, the gap warning,
+ # the stored particles, a concrete tp unit
+ "df/streamTrack.py:_closest_sample": "CTL", "df/streamTrack.py:_fit_track_pspline": "CTL",
+ "df/streamTrack.py:from_particles": "CTL",
+ "potential/TruncatedTwoPowerSphericalPotential.py:_c_args": "C", "util/plot.py:dens2d": "OUT",
  # documented exceptions
- "df/evolveddiskdf.py:*": "EXC", "potential/AnyAxisymmetricRazorThinDiskPotential.py:*": "EXC",
  # a numpy-built stream (module fixtures built before the force fixture): its
  # lazily-computed state stays numpy, like the object (#1726)
  "df/streamdf.py:_determine_stream_spreadLB": "EXC", "df/streamdf.py:_interpolate_stream_track": "EXC",
@@ -110,8 +125,14 @@ FUNC = {
 }
 # scipy fallbacks inside otherwise-backend root finders
 SITE = {
- "orbit/Orbits.py:10487:<lambda>": "CTL", "orbit/Orbits.py:10488:<lambda>": "CTL",
- "potential/Potential.py:5367:rhalf": "CTL",
+ "orbit/Orbits.py:10658:<lambda>": "CTL", "potential/Potential.py:5368:rhalf": "CTL",
+ # host integrators under the numpy pin (e807264ec lines, then after the r3 fix PR)
+ "df/evolveddiskdf.py:3367:_df_at_velocities_backend": "PYINT",
+ "df/evolveddiskdf.py:3368:_df_at_velocities_backend": "PYINT",
+ # islands at e807264ec, removed by the r3 fix PR: the pspline fit's numpy
+ # namespace under a forced backend, the backend marginalization's calcRotcurve
+ "df/streamTrack.py:863:_fit_track_pspline": "ISL",
+ "potential/Potential.py:4341:calcRotcurve": "ISL",
  "potential/Potential.py:3709:rl": "ISL", "potential/Potential.py:3719:rl": "ISL",
  "potential/Potential.py:3916:rE": "ISL", "potential/Potential.py:3928:rE": "ISL",
  "potential/Potential.py:5156:zvc": "ISL", "potential/Potential.py:5157:zvc": "ISL", "potential/Potential.py:5173:zvc": "ISL",
