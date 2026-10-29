@@ -17,7 +17,8 @@ Run `python paper/ms/stats/pr_stats.py`. First classify every new PR into main b
 | Value | Where |
 |---|---|
 | 717 opened, 685 merged; 591 backend, 29 variational, 65 main (40 fixes, 16 features, 9 tests/CI) | `process.tex` §8.1, second paragraph |
-| median 183 (quartiles 74, 371); 101 stack members | same paragraph |
+| Median PR size: 183 changed lines (quartiles 74 and 371), additions + deletions of the merged project PRs | `process.tex` §8.1 "median size of 183 changed lines" (the only place) |
+| 101 stack members | `process.tex` §8.1 "101 of the PRs are members of such stacks" |
 | October: 129 | `process.tex` "work, added 129 through the 28th" (June 88/29, July 176, August 114 and September 112 are final) |
 | "40 PRs" (main fixes) | `process.tex` §8.6 "led to the 40 PRs against the main branch"; `conclusion.tex` "which 40 PRs to the main branch fixed" |
 | "in eight PRs" (island removal) | `process.tex` §8.5 "these to the backend, in eight PRs"; this changes only for island PRs |
