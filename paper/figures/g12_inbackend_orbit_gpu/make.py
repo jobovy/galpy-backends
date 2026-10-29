@@ -11,6 +11,9 @@ Series, all integrating the *same* backend-agnostic galpy forces:
   * galpy in-backend jax (Dopri8 and, dash-dotted, Dopri5), compiled, on the GPUs
   * galpy in-backend torch (torchdiffeq dopri5), eager, on the GPUs
   * an experimental one-thread-per-orbit CUDA kernel (not part of galpy)
+  * galax (its diffrax solve; G8's series, folded in here on JB's review of
+    2026-10-29): on one CPU core, and on the GPUs with its default batched
+    step-size control and with per-orbit control as galpy's
 
 Layout (2026-10-28, JB's review): three panels, (a) the CPU series, (b) the
 TITAN Xp series and (c) the H100 series, the GPU panels each repeating the
@@ -54,6 +57,7 @@ _DATA = os.path.join(os.path.dirname(__file__), "data")
 _SHARED = os.path.join(
     os.path.dirname(__file__), "..", "_shared", "orbit_speed", "data"
 )
+_GALAX = os.path.join(os.path.dirname(__file__), "..", "g8_galax_orbit_speed", "data")
 # journal version (default): no title / env stamp / long notes; the caption
 # carries them. GALPY_JAX_PAPER=0 restores the annotated figure.
 PAPER = os.environ.get("GALPY_JAX_PAPER", "1") == "1"
@@ -87,6 +91,7 @@ _CPU_SERIES = [
     # (_shared/orbit_speed/galpy_symplec_measure.py: 450 steps, the step at which
     # its worst-case error matches the Dopri8 line's), dash-dot-dot
     (["symplec6_jax_cpu.json"], "jax", "cpu", "jit", "symplec6, {cpu}", _SYMPLEC_LS),
+    (["galax_cpu.json"], "galax", "cpu", "jit", "{cpu}", None),
 ]
 _GPU_SERIES = [
     (["jax_gpu.json", "jax_gpu_hiN.json"], "jax", "gpu", "jit", "Dopri8", None),
@@ -100,6 +105,11 @@ _GPU_SERIES = [
     (["cuda_kernel_lowN.json", "cuda_kernel_hiN.json"], "cuda", "gpu", None, "direct port", None),
     (["cuda_kernel_fast_lowN.json", "cuda_kernel_fast_hiN.json"], "cuda", "gpu", None, _CUDA_FAST,
      {"ls": "--", "mfc": "white"}),
+    # galax: per-orbit step-size control as galpy's (dash-dotted) and its default
+    # control of the whole batch by one step sequence (solid)
+    (["galax_gpu_perorbit.json", "galax_gpu_perorbit_hiN.json"], "galax", "gpu", "jit",
+     "per-orbit steps", "-."),
+    (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "batched steps", None),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
 _PANELS = [("(a) CPU", "cpu", ""), ("(b) NVIDIA TITAN Xp", "gpu", ""), ("(c) NVIDIA H100", "gpu", "h100")]
@@ -117,7 +127,7 @@ def _cpu_tag(d):
 def _load_one(fname, sub=""):
     # shared galpy JSONs live in _shared/orbit_speed/data; torch JSON is local.
     # sub="h100": the same measurement on an H100 (data/h100/)
-    for base in (_SHARED, _DATA):
+    for base in (_SHARED, _DATA, _GALAX):
         path = os.path.join(base, sub, fname)
         if os.path.exists(path):
             with open(path) as fh:
@@ -205,7 +215,8 @@ def make():
             transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
         )
     axes[-1].set_xlabel(r"batch size  $N$  (number of orbits)")
-    layout.faster_arrow(axes[0], "down", xy=(0.94, 0.42), length=0.16)
+    for ax in axes:
+        layout.faster_arrow(ax, "down", xy=(0.94, 0.42), length=0.16)
     if not PAPER:
         fig.suptitle(r"galpy in-backend orbit integration (MWPotential2014, 2 Gyr)")
     fig.tight_layout()

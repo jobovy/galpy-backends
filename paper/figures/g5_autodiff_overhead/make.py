@@ -157,12 +157,18 @@ def make():
     # constant-wall-time-per-call reference lines (throughput = N / t0, slope 1),
     # decade-spaced to bracket every curve's time per call at the largest N
     ax1.set_ylim(None, 3.0 * ax1.dataLim.y1)  # room above the fastest curve's reference
-    refs = layout.cost_lines(ax1, layout.last_costs(ax1, kind="rate"), kind="rate",
+    # one decade faster than the bracket and two fewer at the slow end (JB,
+    # round 3: 10 us in, 1 s and 10 s out -- they bracket only the slowest
+    # gradient's end point), the note wrapped at the unit change so its last
+    # line stays clear of the curves
+    dec = layout.ref_decades(layout.last_costs(ax1, kind="rate"))
+    refs = layout.cost_lines(ax1, [dec[0] / 10.0] + dec[:-2], kind="rate",
                              x_range=(Ns.min(), Ns.max()))
     if PAPER:
         ax1.text(0.03, 0.97, "filled: value, hollow: gradient\ngrey dotted, per call:\n"
-                 + layout.fmt_seconds(refs), transform=ax1.transAxes,
+                 + layout.fmt_seconds(refs, wrap=True), transform=ax1.transAxes,
                  fontsize=fs_note, color="0.5", va="top", ha="left")
+        layout.faster_arrow(ax1, "up", xy=(0.9, 0.05), length=0.15)
     ax1.set_xlabel(r"array length $N$")
     ax1.set_ylabel(r"throughput  (points / second)")
     ax1.set_title("(a) throughput" if PAPER
@@ -193,8 +199,8 @@ def make():
                      fontsize=11)
     fig.tight_layout(**({} if PAPER else {"w_pad": 11}))
     sep = 1.3 * fs_line if PAPER else None
-    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=sep)
-    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=sep)
+    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=sep, order="elbow")
+    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=sep, order="elbow")
     if PAPER:
         layout.fit_right(fig)
     return fig

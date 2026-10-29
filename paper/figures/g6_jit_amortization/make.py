@@ -168,10 +168,12 @@ def make():
         mj, mt = (float(numpy.median(numpy.asarray(ln.get_ydata())[1:])) for ln in (cj, ct))
         if abs(mj - mt) < 0.25 * max(mj, mt):
             ct.set_label("_" + ct.get_label())
-            cj.set_label(cj.get_label().replace("jax jit", "jax jit, torch compiled", 1))
+            cj.set_label(cj.get_label().replace("jax jit", "jax jit, torch\ncompiled", 1))
+    # above the curves, clear of the dashed eager lines (JB, round 3)
     ax1.annotate("call 0 = compile", xy=(0, data["per_call"][str(N)][0] * 1e3),
-                 xytext=(2.2, data["per_call"][str(N)][0] * 1e3 * 0.62), fontsize=fs_note,
-                 color="0.3", arrowprops=dict(arrowstyle="->", color="0.5", lw=0.8))
+                 xytext=(2.2, data["per_call"][str(N)][0] * 1e3 * 2.6), fontsize=fs_note,
+                 color="0.3", va="center",
+                 arrowprops=dict(arrowstyle="->", color="0.5", lw=0.8))
     ax1.set_xlabel("call index")
     ax1.set_ylabel("wall-time per call  (ms)")
     ax1.set_title(rf"(a) per-call wall-time, {_nlab(N)}" if PAPER
@@ -223,8 +225,11 @@ def make():
                  ha="right", va="bottom")
         fig.suptitle(r"compilation amortization: Plummer $F_R$ (jax and torch; CPU, TITAN Xp and H100, float64)", fontsize=11)
     fig.tight_layout(**({} if PAPER else {"w_pad": 11}))
-    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=1.3 * fs_line)
-    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
+    layout.faster_arrow(ax1, "down", xy=(0.5, 0.615), length=0.1)
+    layout.faster_arrow(ax2, "down", xy=(0.08, 0.73), length=0.14)
+    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=1.3 * fs_line, order="elbow")
+    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                        order="elbow")
     if PAPER:
         layout.fit_right(fig)
     return fig

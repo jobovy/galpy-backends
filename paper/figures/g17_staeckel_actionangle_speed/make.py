@@ -560,19 +560,34 @@ def _make(names, backend_label):
     h = _data_h100()
     curves = _curves(names)
     Nfull = float(max(data["Ns_gpu"] if "Ns_gpu" in data else data["Ns"]))
-    if PAPER:  # printed width of a figure* (7.0 in); stacked, labels at the right
-        fig, (axw, axt) = plt.subplots(2, 1, figsize=layout.figsize(PAPER, (7.0, 6.2), None))
-    else:
-        fig, (axw, axt) = plt.subplots(1, 2, figsize=(13.0, 4.8))
-    _plot_panel(axw, curves, Nfull, "walltime")
-    _plot_panel(axt, curves, Nfull, "throughput")
     if PAPER:
+        # printed width of a figure* (7.0 in); stacked, labels at the right. JB's
+        # round 3: the wall time on the CPU and on the GPUs (the GPU panel
+        # repeating the 16-thread C line for reference), on one y range, instead
+        # of the wall time and the redundant throughput of every series
+        fig, (axw, axt) = plt.subplots(2, 1, figsize=layout.figsize(PAPER, (7.0, 6.2), None),
+                                       sharex=True)
+        cpu = [c for c in curves if "GPU" not in c[0]]
+        gpu = [c for c in curves if "GPU" in c[0]] + [
+            c for c in cpu if c[4].startswith("galpy C (") and "thread" in c[4]
+            and not c[4].startswith("galpy C (1 ")]
+        _plot_panel(axw, cpu, Nfull, "walltime", "(a) CPU")
+        _plot_panel(axt, gpu, Nfull, "walltime", "(b) GPUs")
+        lo = min(ax.get_ylim()[0] for ax in (axw, axt))
+        hi = max(ax.get_ylim()[1] for ax in (axw, axt))
+        for ax, y0 in ((axw, 0.42), (axt, 0.28)):
+            ax.set_ylim(lo, hi)
+            layout.faster_arrow(ax, "down", xy=(0.94, y0), length=0.16)
+        axw.set_xlabel("")
         fig.tight_layout()
         fs = layout.FS["line"]
         for ax in (axw, axt):
-            palette.label_lines(ax, fontsize=fs, min_sep_pt=1.3 * fs)
+            palette.label_lines(ax, fontsize=fs, min_sep_pt=1.3 * fs, order="elbow")
         layout.fit_right(fig)
         return fig
+    fig, (axw, axt) = plt.subplots(1, 2, figsize=(13.0, 4.8))
+    _plot_panel(axw, curves, Nfull, "walltime")
+    _plot_panel(axt, curves, Nfull, "throughput")
     stamp = f"{env.get('gpu', '?')}: jax {env.get('jax', '?')} · torch {env.get('torch', '?')}"
     if h is not None:
         he = h.get("env", {})
@@ -614,7 +629,7 @@ def make_torch():
     return _make(_REF + _TORCH, "torch (eager)")
 
 
-def _plot_panel(ax, curves, Nfull, mode):
+def _plot_panel(ax, curves, Nfull, mode, title=None):
     """One log-log panel: mode='walltime' (s) [matches the orbit speed figures]
     or mode='throughput' (points/s). NaN points (OOM-skipped) drop out."""
     for name, Ns, t, st, lab in curves:
@@ -623,7 +638,7 @@ def _plot_panel(ax, curves, Nfull, mode):
     ax.set_xlabel(r"number of phase-space points $N$ per call")
     if mode == "walltime":
         ax.set_ylabel(r"wall time for the batch  (s)")
-        ax.set_title("(a) wall time")
+        ax.set_title(title or "(a) wall time")
         # constant cost-per-point references (slope 1), decade-spaced to bracket
         # every curve's cost per point at its largest N, as in the orbit figures
         ax.set_ylim(*ax.get_ylim())

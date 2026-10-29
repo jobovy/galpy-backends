@@ -378,8 +378,8 @@ with \diffrax: \texttt{galax} \citep{Starkman2026}, a re-implementation
 of \texttt{gala} in \jax, does so by design, and comparing the two is a
 useful check that the cost of the in-backend solve is in the solver and
 the potential rather than in the library around them.
-\figurename~\ref{fig:galax} shows this comparison for the same orbits,
-potential, and tolerances as in \figurename~\ref{fig:orbitspeed}. When we make \texttt{galax} control its step
+The green lines in \figurename~\ref{fig:orbitspeed} show this
+comparison for the same orbits, potential, and tolerances. When we make \texttt{galax} control its step
 size per orbit, as \galpy\ does, the two codes take the same time to
 within 13 per cent on both GPUs for batches of $10^5$ orbits or more. For smaller batches, whose cost is dominated by fixed overheads
 rather than by the integration, they differ by more and in opposite
@@ -407,7 +407,9 @@ keeps the per-orbit control.
     default and, dash-dotted, with a fifth-order method that performs
     the same number of force evaluations as the \torch\ solve; orange
     and red: the eager \texttt{torchdiffeq} solve, on one CPU core and on
-    the GPUs. Dash-dot-dotted blue: the in-backend sixth-order symplectic
+    the GPUs. Green: \texttt{galax} on one CPU core and on the GPUs, with
+    its default batched step-size control (solid) and with per-orbit
+    control as in \galpy\ (dash-dotted). Dash-dot-dotted blue: the in-backend sixth-order symplectic
     integrator (\texttt{symplec6\_jax}) with 450 common steps over the
     2\,Gyr, the step at which its worst-case position error over the
     batch equals that of the adaptive solve; its H100 point at
@@ -421,8 +423,8 @@ keeps the per-orbit control.
     open markers), including the copies of the initial conditions and
     the result between host and device, which are what keep the purple
     lines flat up to $N\approx10^4$. Light grey dotted lines mark a
-    constant cost per orbit, and the arrow in (b) points towards lower
-    wall time. The \cc\ integrator is the fastest option for small
+    constant cost per orbit, and the arrows point towards lower wall
+    time. The \cc\ integrator is the fastest option for small
     batches, while for large batches the in-backend solve on the H100
     is cheaper per orbit. In the CUDA kernel, the same sixth-order
     symplectic integrator with one common step (not shown) reaches the
@@ -443,22 +445,5 @@ keeps the per-orbit control.
     integrator is the fastest way to obtain the derivative of a single
     orbit, while a GPU overtakes it for large batches. All CPU timings use
     one core.}\label{fig:icderivcost}
-\end{figure*}
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g8_galax_orbit_speed/g8_galax_orbit_speed.pdf}
-  \caption{Wall time for integrating $N$ orbits for 2\,Gyr in
-    \texttt{MWPotential2014} at matched tolerances with \galpy\ and with
-    \texttt{galax}. Grey: \galpy's \cc\ integrator on one core (solid) and on
-    the 36 physical cores of the node (dash-dotted). Blue: \galpy's in-backend
-    \diffrax\ solve on the CPU (one core) and on the two GPUs.
-    Green: \texttt{galax} on the CPU and the GPUs, with its default
-    batched step-size control (solid) and with per-orbit control as in
-    \galpy\ (dash-dotted). With the same per-orbit step-size control, the
-    two codes take the same time to within 13 per cent for
-    $N\geq10^5$. In purple, the experimental CUDA kernel of
-    \figurename~\ref{fig:orbitspeed} is shown for reference, with a
-    direct port of \galpy's \cc\ code (solid) and with special functions
-    rewritten for the GPU (dashed).}\label{fig:galax}
 \end{figure*}
 

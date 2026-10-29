@@ -114,6 +114,12 @@ _H_S_SHOW = 1e-4
 _NPP = 4  # chunks used for the per-particle error statistics
 
 
+
+def _h_tex(h):
+    """A finite-difference step for a legend, compactly: 10^{-4} rather than 0.0001."""
+    k = numpy.log10(h)
+    return f"10^{{{int(round(k))}}}" if abs(k - round(k)) < 1e-9 else f"{h:g}"
+
 def _measure_king():
     import jax
 
@@ -334,7 +340,7 @@ def make():
               else r"AD, eager ($\tt jacfwd$; scipy + sensitivities)")
     ax_b.plot([], [], "--", color="k", lw=0.8, dashes=(3, 3), label=r"AD $\tt jax.jit$" if PAPER
               else r"AD, $\tt jax.jit$ (diffrax solve)")
-    ax_b.plot([], [], "o", mfc="none", mec="0.3", label=rf"FD, $h={K['h_show']:g}$" if PAPER
+    ax_b.plot([], [], "o", mfc="none", mec="0.3", label=rf"FD, $h={_h_tex(K['h_show'])}$" if PAPER
               else rf"FD, rebuilt on numpy ($h={K['h_show']:g}$)")
     if PAPER:  # headroom: the curves fill the panel at this size
         ax_b.set_ylim(top=3.0)
@@ -366,12 +372,12 @@ def make():
     ax_d.legend(fontsize=_fl(7.5), loc="lower left", framealpha=0.92, **(_lk if PAPER else {}))
 
     dsig, dexp, err = (numpy.array(S[k]) for k in ("dsig", "dsig_exp", "dsig_err"))
-    ax_e.semilogx(rm, dexp, "s", mfc="none", mec=_C_E, ms=7, label="expectation (Jeans)")
+    ax_e.semilogx(rm, dexp, "s", mfc="none", mec=_C_E, ms=7, label="Jeans")
     ax_e.errorbar(rm, dsig, yerr=err, fmt="o", color=_C_S, ms=4.5, capsize=2,
                   label=r"AD ($\tt jax.jvp$)" if PAPER
                   else r"$\tt jax.jvp$ through construct + sample")
     ax_e.semilogx(rm, S["dsig_fd_show"], "x", color=_C_FD, ms=7, mew=1.2,
-                  label=f"FD, same key, $h={S['h_show']:g}$" if PAPER
+                  label=f"FD, same key, $h={_h_tex(S['h_show'])}$" if PAPER
                   else rf"FD of the sample, same key ($h={S['h_show']:g}$)")
     pull = (dsig - dexp) / err
     fdv = numpy.array(S["dsig_fd_show"])

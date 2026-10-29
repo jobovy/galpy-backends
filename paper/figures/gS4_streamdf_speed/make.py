@@ -604,6 +604,10 @@ def make():
     if not PAPER:
         fig.subplots_adjust(left=0.045, right=0.9, bottom=0.12, top=0.86, wspace=0.62)
     sep = 1.3 * _fs_lab if PAPER else None
+    if PAPER:
+        layout.faster_arrow(axa, "down", xy=(0.9, 0.22), length=0.16)
+        layout.faster_arrow(axb, "down", xy=(0.08, 0.7), length=0.14)
+        layout.faster_arrow(axc, "down", xy=(0.08, 0.72), length=0.14)
     palette.label_lines(axa, fontsize=_fs_lab, min_sep_pt=sep)
     palette.label_lines(axc, fontsize=_fs_lab, min_sep_pt=sep)
     return fig

@@ -51,6 +51,8 @@ def main():
     axo.set_xlabel(r"$R$  [$R_0$]"); axo.set_ylabel(r"$z$  [$R_0$]")
     if PAPER:  # the orbits, not their actions, are the point: no action labels
         axo.set_title("(a) orbit reconstruction")
+        top = max(abs(v) for v in axo.get_ylim())  # symmetric in z (JB, round 3)
+        axo.set_ylim(-top, top)
         axo.text(0.03, 0.03, "lines: integrated\ncircles: network", transform=axo.transAxes,
                  fontsize=7, color="0.35", va="bottom", ha="left", linespacing=1.1)
     else:

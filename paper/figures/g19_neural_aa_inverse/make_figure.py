@@ -57,8 +57,9 @@ def main():
     axr.set_ylabel(r"$v_z$  [$v_0$]")
     axr.set_title("(a) learned vs exact tori" if PAPER else "(a) learned AA inverse vs exact tori")
     if PAPER:  # the three tori are the point, not their actions: a key, no legend
-        lo, hi = axr.get_ylim()  # a little headroom for the key
-        axr.set_ylim(lo, hi + 0.25 * (hi - lo))
+        lo, hi = axr.get_ylim()  # symmetric (JB, round 3), headroom for the key
+        top = 1.25 * max(-lo, hi)
+        axr.set_ylim(-top, top)
         axr.text(0.03, 0.97, "lines: exact\ncircles: network", transform=axr.transAxes,
                  fontsize=7, color="0.35", va="top", ha="left", linespacing=1.1)
     else:

@@ -404,7 +404,7 @@ def make():
     ax2.set_title(rf"(b) AD vs FD along the $J={data['Jchk']:g}$ torus" if PAPER else
                   rf"(b) AD vs 5-point central FD along the $J={data['Jchk']:g}$ torus" "\n"
                   r"($\sigma$-FD rebuilds the family at $\sigma_0\pm h$)", **_ts)
-    ax2.legend(fontsize=_fl(6.0), ncol=4 if PAPER else 2, framealpha=0.92, loc="upper center",
+    ax2.legend(fontsize=_fl(6.0), ncol=3 if PAPER else 2, framealpha=0.92, loc="upper center",
                columnspacing=0.9, handlelength=1.6)
     ax2.set_ylim(1e-17, 1e-4)
 
@@ -420,7 +420,7 @@ def make():
                   r"($\propto h^4$) down to its round-off floor", **_ts)
     if PAPER:  # headroom: the legend sits above the data
         ax3.set_ylim(top=ax3.get_ylim()[1] * 30)
-    ax3.legend(fontsize=_fl(6.0), ncol=4 if PAPER else 2, framealpha=0.92, loc="upper center",
+    ax3.legend(fontsize=_fl(6.0), ncol=3 if PAPER else 2, framealpha=0.92, loc="upper center",
                columnspacing=0.9, handlelength=1.6)
 
     # (d) the fit in the (sigma, amp) plane

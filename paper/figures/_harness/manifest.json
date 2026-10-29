@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "8a142ff",
-    "sha256": "f25ca34239fc322d5706c615480c2a2df7ca0daa33d343357a63e935b4cabf94",
+    "git": "0bd8409",
+    "sha256": "b1771ba72d961cb1b0d3109b1ab3f298c3d65c2926d32b3d92a1c0c82d747880",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -139,8 +139,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "f6ccf03",
-    "sha256": "1609fcfbf137818702a6a0307ef043ada6fb380ae8cf3be088c81ca1dd9b02d7",
+    "git": "0bd8409",
+    "sha256": "4de7265dbc2b9bc0d3267ead84e3c2a0a3b488267bbf7068c0f478d608b84033",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_jax": {
@@ -219,8 +219,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "f6ccf03",
-    "sha256": "55c4b8e0eb57a45bf1eb94c0762162e97281ec36d5c19e4f8c723034d6df67f3",
+    "git": "0bd8409",
+    "sha256": "9337243f1493e665cecc0ce4542cac05be3810f196f34a9317348387e8706bfb",
     "track": "G"
   },
   "g2b_transfer": {
@@ -266,8 +266,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "7d4b598",
-    "sha256": "62809e4c257f5e8a094a198132495ab3c15589b77349ea08543fa7a3c540754a",
+    "git": "0bd8409",
+    "sha256": "6fba0ebbfd722a8c17bbc9c8ec3215b4f55dd7632935d148f8e293e16a3bdba7",
     "track": "G"
   },
   "g6_jit_amortization": {
@@ -282,8 +282,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "8a142ff",
-    "sha256": "903482acbfbaf3f3602c404bdd51b3a46dc7ead234bf3621aa09e868c4846668",
+    "git": "0bd8409",
+    "sha256": "4c2e0dd5ee9a6ec59b2848701a04c1b824a881d309f236f098e6bd3700a2efac",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -402,7 +402,7 @@
     "description": "derivatives through spherical-DF construction and sampling: King d/dW0 through the ODE solve (eager graft & jit/diffrax) and Osipkov-Merritt d(sample)/d(scale) with common random numbers vs FD and Jeans (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "e2a30992f",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -410,8 +410,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ffd6827",
-    "sha256": "a7bf7ebc584fab1517cb3b8f0be02b7e83aaf79e3ac2844beea3deb7f3695b49",
+    "git": "0bd8409",
+    "sha256": "67005e5b4afa4ee4dd8c6fc5929daa015031eb2e6ed9288a1b8455d1b516ee66",
     "track": "F"
   },
   "gF1_autodiff_forces": {
@@ -466,7 +466,7 @@
     "description": "the forward-mode derivative of the streamspraydf fitted track (both tails, jitted streamTrack pspline fit) predicts the track for LARGE halo-flattening changes (q=0.7-1.1), against a direct re-run (CPU float64) [measure->json, plot byte-stable]",
     "env": {
       "galpy": "1.12.1.dev0",
-      "galpy_git": "36bef7a8f",
+      "galpy_git": "7236d252c",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -474,8 +474,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "491cf6c",
-    "sha256": "4739bf78dfd0b44593bfa2f05527419ca4c12724cb1fad9c293f7828bb014c85",
+    "git": "0bd8409",
+    "sha256": "99eff2a21b28c0f969cc68cee5b452fc935ab9c7950edd1d2fcd46d0120e0e0c",
     "track": "G"
   },
   "gS4_streamdf_speed": {
@@ -490,8 +490,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "6c43cef",
-    "sha256": "f03f50da71b3d6f7acb65ebe8c48807865a7b7307d6b7222b8eb534f7317de1c",
+    "git": "0bd8409",
+    "sha256": "cc68b6f481f341e48b9625f47bb1fd4ad5259a7d82349e462d7b90a5f0b2af8c",
     "track": "S"
   },
   "gS5_streamspray_speed": {
@@ -506,8 +506,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "6c43cef",
-    "sha256": "518c1dfd55e7293074fd8a70382c1591e00894ad0d1aa08a5c7d3266f933d638",
+    "git": "0bd8409",
+    "sha256": "6be6ab1fb4357c0d620433d3cfcccafe473bc0225afbf9a9554949544fb0106b",
     "track": "S"
   },
   "gT1_cpu_thread_scaling": {
@@ -538,8 +538,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "f6ccf03",
-    "sha256": "687c79d38356c424499c52a57ac966b9134b39ba5d074dc73719f10376babd93",
+    "git": "0bd8409",
+    "sha256": "4eb8adaf5d643fdcbc60ff7bd15848bc42c620f1cf896e5a0dcf4a73f64130a9",
     "track": "E"
   },
   "gV2_vertical_inverse_speed": {

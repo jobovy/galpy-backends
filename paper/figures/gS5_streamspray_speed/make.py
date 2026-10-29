@@ -443,6 +443,8 @@ def make():
         axp.set_ylim(top=2e4)  # headroom: the legend sits above the data
         axp.legend(handles=[lines[k] for k in early], loc="upper right", fontsize=8,
                    handlelength=2.2, borderaxespad=0.4, framealpha=0.9)
+        layout.faster_arrow(axw, "down", xy=(0.9, 0.25), length=0.16)
+        layout.faster_arrow(axp, "down", xy=(0.08, 0.3), length=0.16)
         palette.label_lines(axp, [(ln, ln.get_label()) for ln in axp.get_lines()
                                   if not ln.get_label().startswith("_")
                                   and ln.get_label() not in early],

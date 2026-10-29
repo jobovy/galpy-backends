@@ -242,16 +242,17 @@ is available.
   \caption{Speed of the St\"{a}ckel action--angle transformation
     (\texttt{actionAngleStaeckel.actionsFreqsAngles}) for
     \texttt{MWPotential2014} as a function of the number $N$ of
-    phase-space points per call: (a) wall time and (b) throughput. CPU
-    lines use one core, except for the dash-dotted \cc\ line, which uses
-    16 OpenMP threads; GPU lines are for eager \torch\ (dashed; dotted
-    with the transfer of the inputs and outputs between host and device)
-    and for compiled \jax\ (solid) on the TITAN~Xp and the H100. The
-    black dotted line with crosses is the per-object \numpy\ loop that
-    the vectorized path replaces; eager \jax, which sits at a floor of
-    several seconds on every device, is not shown. Points where the
-    TITAN~Xp runs out of memory are omitted. Light grey dotted lines mark
-    a constant cost per point in (a) and per call in (b). After a launch
+    phase-space points per call: wall time on (a) the CPU and (b) the
+    GPUs. CPU lines use one core, except for the dash-dotted \cc\ line,
+    which uses 16 OpenMP threads and is repeated in (b) for reference; GPU
+    lines are for eager \torch\ (dashed; dotted with the transfer of the
+    inputs and outputs between host and device) and for compiled \jax\
+    (solid) on the TITAN~Xp and the H100. The black dotted line with
+    crosses is the per-object \numpy\ loop that the vectorized path
+    replaces; eager \jax, which sits at a floor of several seconds on
+    every device, is not shown. Points where the TITAN~Xp runs out of
+    memory are omitted. Light grey dotted lines mark a constant cost per
+    point, and the arrows point towards lower wall time. After a launch
     floor, the GPU overtakes one \cc\ thread at $N\approx2000$ and 16
     threads at $N\approx3\times10^4$ on the H100.}\label{fig:staeckelspeed}
 \end{figure*}

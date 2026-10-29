@@ -194,6 +194,8 @@ def make():
         refs = layout.cost_lines(ax, t_all, kind="rate", x_range=(Nd.min(), Nd.max()))
     axes[0][0].text(0.03, 0.97, "grey dotted, per call:\n" + layout.fmt_seconds(refs),
                     transform=axes[0][0].transAxes, fontsize=fs_note, color="0.5", va="top", ha="left")
+    for ax in axes[0]:
+        layout.faster_arrow(ax, "up", xy=(0.9, 0.05), length=0.16)
     if not PAPER:
         fig.suptitle(r"Plummer $F_R$ throughput: compute-only vs end-to-end (+transfer, dotted)",
                      fontsize=11)

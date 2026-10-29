@@ -367,9 +367,9 @@ def make():
     ax2.annotate("shift", (d[3], shift[3]), textcoords="offset points",
                  xytext=(-4, 5), ha="right", va="bottom", fontsize=fs_note,
                  color="#111827")
-    ax2.annotate("residual of the\ntrack derivative", (d[4], resid[4]),
-                 textcoords="offset points", xytext=(9, -9), ha="left", va="top",
-                 fontsize=fs_note, color=cres)
+    # right-aligned inside the axes, below the line's right end (JB, round 3)
+    ax2.text(0.97, 0.41, "residual of the\ntrack derivative", transform=ax2.transAxes,
+             ha="right", va="top", fontsize=fs_note, color=cres)
     ax2.annotate("particles + re-fit", (d[0], refit[0]), textcoords="offset points",
                  xytext=(6, -2), ha="left", va="top", fontsize=fs_note,
                  color="0.5")

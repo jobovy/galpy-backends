@@ -1,0 +1,138 @@
+{
+ "fw": "c",
+ "integrator": "dop853_c (compiled C, OpenMP over orbits)",
+ "nt": 16,
+ "tspan_Gyr": 2.0,
+ "rtol": 1e-08,
+ "atol": 1e-08,
+ "potential": "MWPotential2014",
+ "runs": {
+  "1": {
+   "host": "geir",
+   "cpu_affinity": [
+    2
+   ],
+   "n_cores": 1,
+   "twin_cpus_outside_affinity": [
+    38
+   ],
+   "thread_env": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "XLA_FLAGS": "unset",
+    "NUMPY_MADVISE_HUGEPAGE": "0",
+    "GT1_NUMA": "numactl --membind=0",
+    "JAX_PLATFORMS": "cpu",
+    "CUDA_VISIBLE_DEVICES": ""
+   },
+   "versions": {
+    "galpy": "1.12.1.dev0",
+    "numpy": "2.4.3",
+    "galpy_git": "34bca2d1d"
+   },
+   "galpy_file": "/var/tmp/fbfinal/galpy/__init__.py",
+   "python": "3.13.12",
+   "date": "2026-10-13 18:53:07",
+   "loadavg_start": [
+    0.46484375,
+    0.95947265625,
+    1.2705078125
+   ],
+   "busy_cores_at_start": "0.0",
+   "loadavg_end": [
+    1.00244140625,
+    1.0,
+    1.203125
+   ]
+  }
+ },
+ "points": [
+  {
+   "fw": "c",
+   "k": 1,
+   "N": 10000,
+   "wall_s": 20.422867780085653,
+   "cpu_s": 20.42050818,
+   "util": 0.9998844628427769,
+   "per_orbit_ms": 2.0422867780085654,
+   "n_calls": 3,
+   "stat": "median",
+   "calls": [
+    {
+     "wall_s": 20.666116941953078,
+     "cpu_s": 20.663413792,
+     "util": 0.9998691989423717,
+     "load1_before": 0.5078125,
+     "load1_after": 0.72216796875,
+     "busy_own_cpus": 1.0,
+     "busy_twin_cpus": 0.000484027105517909,
+     "busy_other_cpus": 0.05129752281448303
+    },
+    {
+     "wall_s": 20.401553496951237,
+     "cpu_s": 20.399086757,
+     "util": 0.9998790905824104,
+     "load1_before": 0.72216796875,
+     "load1_after": 0.8017578125,
+     "busy_own_cpus": 1.0,
+     "busy_twin_cpus": 0.0004904364884747426,
+     "busy_other_cpus": 0.05688897597100869
+    },
+    {
+     "wall_s": 20.422867780085653,
+     "cpu_s": 20.42050818,
+     "util": 0.9998844628427769,
+     "load1_before": 0.8017578125,
+     "load1_after": 0.85888671875,
+     "busy_own_cpus": 1.0,
+     "busy_twin_cpus": 0.0004899559039686428,
+     "busy_other_cpus": 0.05827837029419763
+    }
+   ],
+   "final_xyz_mean": [
+    -0.006252612286355133,
+    0.003956680150170446,
+    -0.00013832078101000235
+   ],
+   "final_xyz_orbit0": [
+    0.3967148613090702,
+    -0.9311226194996233,
+    -0.016335269194061957
+   ]
+  },
+  {
+   "fw": "c",
+   "k": 1,
+   "N": 100000,
+   "wall_s": 203.74046818097122,
+   "cpu_s": 203.713624214,
+   "util": 0.9998682443050667,
+   "per_orbit_ms": 2.0374046818097122,
+   "n_calls": 1,
+   "stat": "single",
+   "calls": [
+    {
+     "wall_s": 203.74046818097122,
+     "cpu_s": 203.713624214,
+     "util": 0.9998682443050667,
+     "load1_before": 0.85888671875,
+     "load1_after": 1.00244140625,
+     "busy_own_cpus": 1.0,
+     "busy_twin_cpus": 0.0003438282823321381,
+     "busy_other_cpus": 0.05376648093910773
+    }
+   ],
+   "final_xyz_mean": [
+    -0.003119745751099755,
+    -0.009379636294588503,
+    3.294714992584498e-05
+   ],
+   "final_xyz_orbit0": [
+    0.8984562262147705,
+    -0.43467571853339954,
+    -0.015330139566574762
+   ]
+  }
+ ]
+}
