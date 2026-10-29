@@ -7,16 +7,18 @@ and its interface as it was. Potentials, orbit integration, the
 action--angle transformations and their inverses, and the distribution
 functions, including those of tidal streams, accept the arrays of either
 framework and return derivatives with respect to their inputs and
-parameters. The existing test suite of \galpy, now 4,315 tests, passes
-under \numpy, under both frameworks in eager mode, and under both with
-compilation, apart from four tests of the out-of-scope torus-mapping
-code, and the dedicated tests of the backend code add 17,995 more. We tested
+parameters. The existing test suite of \galpy, now 4,458 tests apart
+from the 27 of the out-of-scope torus-mapping code, passes under \numpy,
+under both frameworks in eager mode, and under both with compilation,
+and the dedicated tests of the backend code add 18,604 more (AI agents
+\emph{love} to write tests). We tested
 derivatives against finite differences whose convergence is
 demonstrated, against the \cc\ variational equations, and against each
 other across the two frameworks, and where \galpy\ implements a
 numerical method of its own, we tested it against \scipy\ and against
-arbitrary-precision references. The work also found and fixed about fifty defects in the
-\numpy\ and \cc\ code that had been there before.
+arbitrary-precision references. The work also found defects in the
+\numpy\ and \cc\ code that had been there before, which 40 PRs to the
+main branch fixed.
 
 What this makes possible is the gradient-based fitting of dynamical
 models that \galpy\ already contains, with a likelihood whose derivative
@@ -28,9 +30,6 @@ potential or a DF, or a simulation whose output is compared with data.
 The speed-ups that a GPU provides over a single CPU core, of one to
 five orders of magnitude for large batches, are a second benefit, and one that depends on
 keeping the computation on the device by compiling it as a whole.
-Fitting a stream model to data with a Hamiltonian Monte Carlo sampler,
-which the derivatives of \sectionname~\ref{sec:streams} allow, is the
-obvious next application, and we will present it separately.
 
 The GPU speed-ups are not uniform. Evaluating forces and drawing samples
 are limited by the memory bandwidth of the GPU and come close to it, but
@@ -56,23 +55,30 @@ such kernels are not differentiable unless their variational or
 adjoint equations are written by hand as well. They would therefore
 complement the differentiable backends rather than replace them.
 
-Some things are not done: the torus-mapping code is not covered and
-will not be, \astropy\ units cannot be used inside compiled programs,
-the interpolated velocity sampler of the quasi-isothermal disk DF is a
-rejection sampler that is not differentiable, and the variational
+Some things are not done: the torus-mapping code, a wrapper of the
+external code of \citet{BinneyMcMillan2016}, is not covered and will not
+be, \astropy\ units cannot be used inside compiled programs, the
+interpolated velocity sampler of the quasi-isothermal disk DF runs on
+the backend but is a rejection sampler and therefore not differentiable,
+and the variational
 equations and Lyapunov exponents are features of the \cc\
 integrators. Derivatives through the \cc\ integrators and the \cc\
 action--angle methods are with respect to the initial conditions only
 and of first order. A backend is also a moving target: the special-function fallbacks exist
 because the frameworks' own versions are incomplete today, and the test
-that checks this will say when they are no longer needed.
+that checks this will say when they are no longer needed. It already
+did once: \torch~2.15, released while we revised this paper, made its
+modified Bessel functions of the second kind differentiable, the test
+failed on the day of the release, and \galpy\ now uses \torch's own
+functions from that version on.
 
-The code described here is \galpy's version~2, which is distributed
-as pre-releases, starting with \flag{v2.0.0b1}, that are
+The code described here is the start of \galpy's version~2 series,
+which is distributed as pre-releases, starting with \flag{v2.0.0b1}, that are
 installed with \texttt{pip install --pre galpy[jax]} or
 \texttt{galpy[torch]}; a plain \texttt{pip install galpy} remains at
-version~1.x for now; the documentation describes the backends at
-\\ \centerline{\url{https://docs.galpy.org}~.} All code used to produce
+version~1.x for now; the documentation of version~2, which describes
+the backends, is at
+\\ \centerline{\url{https://docs.galpy.org/en/v2/}~.} All code used to produce
 the figures in this paper, together with the working notes and logs of
 the development, is available at
 \\ \centerline{\url{https://github.com/jobovy/galpy-backends}~.}

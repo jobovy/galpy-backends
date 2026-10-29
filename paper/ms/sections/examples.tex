@@ -3,7 +3,7 @@
 While the sections above illustrate each part of the code on its own,
 here we give two examples that combine several of them in a single
 analysis, of the kind that we built the backends for. Both are deliberately small:
-they use mock data and run in minutes, and their point is the shape of
+they use mock data and run in minutes, and their point is to illustrate
 the computation rather than the result.
 
 \subsection{A hypervelocity star as a probe of the potential}\label{sec:examples-hvs}
@@ -19,7 +19,7 @@ integrated orbit, and both the star's initial condition, within its
 uncertainties, and the potential's parameters are to be varied.
 \figurename~\ref{fig:hvs} displays the two derivatives of
 \sectionname~\ref{sec:orbit-paths} at work on a mock star resembling
-S5-HVS1 in a cored, flattened logarithmic halo. In the left panel, we
+S5-HVS1 \citep{Koposov2020} in a cored, flattened logarithmic halo. In the left panel, we
 hold the potential fixed and adjust the star's phase-space position
 within its observational uncertainties to minimize the closest approach,
 using the derivative of the orbit with respect to its initial condition
@@ -79,8 +79,8 @@ gradient-based sampler.
 
 The transformation from actions and angles to positions and velocities
 has no closed form in a general potential, and \galpy's implementations
-of it are limited to one-dimensional potentials and to the torus
-machinery. A differentiable forward transformation makes a different
+of it are currently limited to one-dimensional potentials and to the
+torus machinery of \citet{BinneyMcMillan2016}. A differentiable forward transformation makes a different
 approach possible: a neural network $G(\vecj,\veca)$ that takes actions
 and angles to phase-space positions can be trained by requiring that
 \galpy's forward transformation, applied to the network's output,
@@ -88,16 +88,22 @@ return the actions and angles that went in. The loss is then a cycle
 consistency, $|F(G(\vecj,\veca))-(\vecj,\veca)|^2$, with $F$ the
 \texttt{actionAngle} method, and because its gradient with respect to
 the network's weights flows through $F$, no reference inverse is needed
-anywhere in the training. \figurenames~\ref{fig:neuralvertical} and
-\ref{fig:neural} show this for the vertical motion in
+anywhere in the training. We show this for the vertical motion in
 \texttt{MWPotential2014} at the solar radius, where the exact inverse of \sectionname~\ref{sec:aa-other} exists and
-serves as a check, and for the full axisymmetric case with the
-St\"{a}ckel approximation, where no reference exists. In the first case a
+serves as a check (\figurename~\ref{fig:neuralvertical}), and for the
+motion in the meridional plane with the St\"{a}ckel approximation, where
+no reference exists (\figurename~\ref{fig:neural}). In the first case a
 small network trained in a few minutes, identically under \jax\ and
 \torch, reproduces the exact tori to a phase-space error of $0.5$ to
-$2\,\%$; in the second, a four-layer network trained for half an hour on
-a GPU returns actions on the round trip with a scatter of $7\times10^{-3}$
-and reconstructs the meridional orbits that it has never seen. The training step is a few lines, whatever the framework,
+$2\,\%$. In the second, we keep the problem small by fixing the angular
+momentum at that of a circular orbit at the solar radius, $L_z = 1$ in
+\galpy's natural units, such that the network maps the two actions $J_R$
+and $J_z$ and the two meridional angles to $(R,z,v_R,v_z)$; a four-layer
+network trained for half an hour on a GPU returns actions on the round
+trip with a scatter of $7\times10^{-3}$ and reconstructs meridional
+orbits that are not in its training set. A network for the full
+three-dimensional transformation would take $L_z$ and the azimuthal
+angle as further inputs. The training step is a few lines, whatever the framework,
 \begin{code}
 def loss(params,J,theta):
     z,vz= net.apply(params,J,theta) # the network
@@ -121,7 +127,10 @@ computes, and that the same code does so in both frameworks.
     transformation, in \jax\ and in \torch. Left: the exact tori at three
     vertical actions (lines) and the network's output for the same
     actions and a grid of angles (circles). Middle: the training loss in
-    the two frameworks. Right: the root-mean-square phase-space error of
+    the two frameworks, with the training time in the legend: \jax\
+    (\texttt{flax} and \texttt{optax}) with a compiled training step and
+    \torch\ (\texttt{torch.nn}) eagerly, to show both options. Right: the
+    root-mean-square phase-space error of
     the network against the exact inverse as a function of the
     action. The network reproduces the exact tori in both
     frameworks.}\label{fig:neuralvertical}
@@ -138,6 +147,6 @@ computes, and that the same code does so in both frameworks.
     cycle-consistency terms. Right: the actions recovered by applying
     the forward transformation to the network's output against the
     input actions for a test set. The network recovers the input actions
-    on the round trip and reconstructs orbits that it has not seen in
-    training.}\label{fig:neural}
+    on the round trip and reconstructs orbits that are not in its
+    training set.}\label{fig:neural}
 \end{figure*}

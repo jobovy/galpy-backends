@@ -16,10 +16,10 @@ the \numpy\ path is byte-for-byte identical to the previous version, and
 obtained either by differentiating through an in-backend ODE solver or,
 for derivatives with respect to the initial conditions, from the
 variational equations integrated in \cc, which run on all of \galpy's
-compiled integrators; the two agree to a few parts in $10^{10}$. The
-existing test suite of 4,315 tests passes under \numpy\ and under both
-frameworks in eager and compiled mode, and 17,995 further tests cover the
-backend code. On a GPU, batches of orbits, samples from distribution
+compiled integrators; the two agree to a few parts in $10^{10}$. Apart
+from the tests of one wrapped external code, the existing test suite of
+4,458 tests passes under \numpy\ and under both frameworks in eager and
+compiled mode, and 18,604 further tests cover the backend code. On a GPU, batches of orbits, samples from distribution
 functions, and stream models run one to five orders of magnitude faster
 than on a single CPU core. An AI coding agent wrote essentially all of the code over four months
 under the detailed direction and review of the human author, and we describe how

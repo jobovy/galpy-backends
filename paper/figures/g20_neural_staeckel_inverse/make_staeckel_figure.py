@@ -49,27 +49,10 @@ def main():
              ms=2.2 if PAPER else 3.5, label="NN $G(J,\\theta)$" if PAPER
              else "NN inverse $G(J,\\theta)$")
     axo.set_xlabel(r"$R$  [$R_0$]"); axo.set_ylabel(r"$z$  [$R_0$]")
-    if PAPER:  # direct labels: each orbit's (J_R, J_z), stacked in headroom above the orbits
+    if PAPER:  # the orbits, not their actions, are the point: no action labels
         axo.set_title("(a) orbit reconstruction")
-        lo, hi = axo.get_ylim()
-        axo.set_ylim(lo, lo + (hi - lo) / 0.66)
         axo.text(0.03, 0.03, "lines: integrated\ncircles: network", transform=axo.transAxes,
                  fontsize=7, color="0.35", va="bottom", ha="left", linespacing=1.1)
-        # stagger the labels so that each leader (from the label's right end) clears the
-        # labels below it: the orbit whose top lies furthest right gets the top label
-        tops = [(float(numpy.asarray(d["orbit_R"][k])[int(numpy.argmax(d["orbit_z"][k]))]), k)
-                for k in range(len(ORB_C))]
-        n = len(tops)
-        for row, (_, k) in enumerate(sorted(tops, reverse=True)):
-            c = ORB_C[k]
-            R, z = numpy.asarray(d["orbit_R"][k]), numpy.asarray(d["orbit_z"][k])
-            i = int(numpy.argmax(z))
-            axo.annotate(f"$({float(d['orbit_JR'][k]):.3f},\\,{float(d['orbit_Jz'][k]):.3f})$",
-                         xy=(R[i], z[i]), xycoords="data",
-                         xytext=(0.04 + 0.13 * (n - 1 - row), 0.93 - 0.075 * row),
-                         textcoords="axes fraction", fontsize=8, color=c, va="center",
-                         ha="left", arrowprops=dict(arrowstyle="-", color=c, lw=0.6,
-                                                    relpos=(1.0, 0.5)))
     else:
         axo.set_title("(a) orbit reconstruction from actions+angles\n"
                       "(line=integrated, ○=neural inverse)")

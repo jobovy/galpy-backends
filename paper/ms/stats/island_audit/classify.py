@@ -70,6 +70,9 @@ FUNC = {
  # sampling with numpy's global RNG (a backend key runs the backend sampler)
  "df/sphericaldf.py:_sample_v": "RNG", "df/sphericaldf.py:_sample_r": "RNG", "df/sphericaldf.py:_numpy_spline": "RNG",
  "df/quasiisothermaldf.py:sampleV": "RNG", "df/quasiisothermaldf.py:sampleV_interpolate": "RNG",
+ # streamdf.sample(key=None): numpy-RNG draws propagated on the stream's backend, output cast to
+ # numpy like the other samplers' key=None output (retired with Jo, 2026-10-18)
+ "df/streamdf.py:sample": "RNG",
  "df/quasiisothermaldf.py:_sampleV_preoptimized": "RNG", "df/diskdf.py:wrapper": "RNG", "df/diskdf.py:_ELtowRRapRperi": "RNG",
  # the legacy pure-Python integrators (numpy by design; warned)
  "util/leung_dop853.py:*": "PYINT", "orbit/integrateFullOrbit.py:*": "PYINT", "orbit/integratePlanarOrbit.py:integrate_for_map": "PYINT",
@@ -77,8 +80,18 @@ FUNC = {
  "orbit/integrateLinearOrbit.py:*": "PYINT",
  # documented exceptions
  "df/evolveddiskdf.py:*": "EXC", "potential/AnyAxisymmetricRazorThinDiskPotential.py:*": "EXC",
+ # a numpy-built stream (module fixtures built before the force fixture): its
+ # lazily-computed state stays numpy, like the object (#1726)
+ "df/streamdf.py:_determine_stream_spreadLB": "EXC", "df/streamdf.py:_interpolate_stream_track": "EXC",
+ "df/streamdf.py:_lb_track": "EXC", "df/streamdf.py:length": "EXC",
+ # numpy-by-design callers: the Python integrators' force queries (MovingObject's
+ # numpy pin), StaeckelGrid's tables and the planar Python integrator (interpRZ's
+ # numpy branch, out-of-grid points)
+ "potential/MovingObjectPotential.py:wrapper": "PYINT",
+ "potential/interpRZPotential.py:_evaluate": "TAB", "potential/interpRZPotential.py:_Rforce": "PYINT",
+ "df/streamdf.py:_parse_track_dim": "OUT",
  # genuine islands: numpy computation that could run on the backend
- "potential/MovingObjectPotential.py:*": "ISL", "df/diskdf.py:_ssp": "ISL",
+ "df/diskdf.py:_ssp": "ISL",
  "actionAngle/actionAngleIsochroneApprox.py:_h": "ISL",
  "df/streamdf.py:*": "ISL", "df/streamgapdf.py:*": "ISL", "df/streamTrack.py:__call__": "ISL",
  "df/quasiisothermaldf.py:estimate_hr": "ISL", "df/quasiisothermaldf.py:estimate_hz": "ISL", "df/quasiisothermaldf.py:estimate_hsr": "ISL",
@@ -86,8 +99,9 @@ FUNC = {
  "orbit/Orbits.py:E": "ISL", "orbit/Orbits.py:rguiding": "ISL", "orbit/Orbits.py:rE": "ISL", "orbit/Orbits.py:LcE": "ISL",
  "orbit/Orbits.py:Jacobi": "ISL", "orbit/Orbits.py:_fit_orbit_mlogl": "ISL", "util/coords.py:align_to_orbit": "ISL",
  "potential/Potential.py:lindbladR": "ISL", "potential/Potential.py:rhalf": "ISL",
+ "potential/Potential.py:_lindbladR_backend": "CTL", "df/quasiisothermaldf.py:_rl_host": "ISL",
+ "actionAngle/actionAngleIsochroneApprox.py:_parse_args": "C",
  "potential/planarPotential.py:*": "ISL", "potential/SpiralArmsPotential.py:*": "ISL", "potential/Irrgang13.py:*": "ISL",
- "potential/interpRZPotential.py:_evaluate": "ISL", "potential/interpRZPotential.py:_Rforce": "ISL",
  "potential/MultipoleExpansionPotential.py:_compute_spher_forces_at_point": "ISL",
  "potential/MultipoleExpansionPotential.py:_compute_spher_2nd_derivs_at_point": "ISL",
  "potential/MultipoleExpansionPotential.py:_eval_R_lm": "ISL", "potential/MultipoleExpansionPotential.py:_eval_dR_lm": "ISL",
@@ -96,6 +110,8 @@ FUNC = {
 }
 # scipy fallbacks inside otherwise-backend root finders
 SITE = {
+ "orbit/Orbits.py:10487:<lambda>": "CTL", "orbit/Orbits.py:10488:<lambda>": "CTL",
+ "potential/Potential.py:5367:rhalf": "CTL",
  "potential/Potential.py:3709:rl": "ISL", "potential/Potential.py:3719:rl": "ISL",
  "potential/Potential.py:3916:rE": "ISL", "potential/Potential.py:3928:rE": "ISL",
  "potential/Potential.py:5156:zvc": "ISL", "potential/Potential.py:5157:zvc": "ISL", "potential/Potential.py:5173:zvc": "ISL",

@@ -33,6 +33,15 @@ at the end). The last point is feat/backends' tip at the time of writing
 and are dropped.
 
 measure/burndown_from_git.py (raw entry counts) is kept for reference.
+
+The out-of-scope torus-mapping code is left out of the tally (JB, 2026-10-29): the
+23 tests of tests/test_actionAngleTorus.py (unchanged over the whole period, never
+run under a backend, never in a ledger) and the 4 streamdf tests that build their
+track with it (test_bovy14_useTM*, permanently skipped under the backends). The
+suite line is existing - 27; passing is existing - 23 - (tests the conftest takes
+out), which is exact whenever the 4 useTM tests are among those taken out (all of
+the period they existed under a ledger: whole-file streamdf defers, then the
+skip list).
 """
 
 import datetime
@@ -87,6 +96,10 @@ def make_panel(ax, dates, vals, color, label, total, milestones, show_xticks,
     ax.margins(x=0.04)
 
 
+TORUS_FILE = 23  # tests in test_actionAngleTorus.py (never run under a backend)
+TORUS_USETM = 4  # streamdf tests that use the torus mapper (permanently skipped)
+
+
 def _excluded(r, mode):
     """Tests the snapshot's conftest takes out of a `mode` run (union of its
     lists, incl. the eager rows a --jit run inherits)."""
@@ -119,7 +132,7 @@ def make():
     milestones = [] if PAPER else _load("milestones.json")
     a = _d(anchor["date"])
     dates = [_d(r["date"]) for r in rows]
-    suite = [r["existing"] for r in rows]
+    suite = [r["existing"] - TORUS_FILE - TORUS_USETM for r in rows]
 
     # print size: 7.0 in wide (figure*), text 9-10 pt
     fig, axes = plt.subplots(
@@ -137,9 +150,11 @@ def make():
         (axes[0], "torch", "#d1495b", "#6b1422", "torch"),
         (axes[1], "jax", "#1f77b4", "#0b2f52", "jax"),
     ):
-        passing = [r["existing"] - _excluded(r, mode) for r in rows]
+        passing = [min(r["existing"] - TORUS_FILE - _excluded(r, mode), s)
+                   for r, s in zip(rows, suite)]
         # anchor: before the backend infrastructure nothing ran under jax/torch
-        dd, ss, pp = [a] + dates, [anchor["total"]] + suite, [0] + passing
+        # the anchor already leaves out test_actionAngleTorus.py (anchor.json)
+        dd, ss, pp = [a] + dates, [anchor["total"] - TORUS_USETM] + suite, [0] + passing
         ax.plot(dd, ss, "-", color="0.45", lw=1.2, label="existing test suite")
         ax.fill_between(dd, pp, ss, color=color, alpha=0.13, lw=0, step=None,
                         label="still ledgered (xfail / slow-skip) or skipped")
@@ -147,7 +162,8 @@ def make():
         # no data between the pre-migration anchor and the first ledger snapshot
         ax.plot([a, dates[0]], [0, passing[0]], ":", color=color, lw=1.0)
         ax.plot(a, 0, "o", mfc="white", mec=color, ms=6)
-        pj = [r["existing"] - _excluded(r, f"{mode}-jit") for r in rows[j0:]]
+        pj = [min(r["existing"] - TORUS_FILE - _excluded(r, f"{mode}-jit"), s)
+              for r, s in zip(rows[j0:], suite[j0:])]
         # on top of the eager and suite lines, which it meets for long stretches:
         # a darker shade, a short dash, a thinner line
         ax.plot(dates[j0:], pj, ls=(0, (2.5, 1.5)), color=jcolor, lw=0.9, zorder=5,
@@ -168,7 +184,7 @@ def make():
     bkd, bk = [x for x, _ in bkrows], [y for _, y in bkrows]
     axes[2].plot(bkd, bk, "-", color="#2a9d8f", lw=1.8)
     axes[2].set_ylim(0, max(bk) * 1.3)
-    axes[2].set_ylabel("tests in the\nbackend modules")
+    axes[2].set_ylabel("backend\ntests")
     axes[2].annotate(f"{bk[-1]}" if PAPER
                      else f"{bk[-1]} tests in {_N_BACKEND_MODULES} test_backend_*.py modules",
                      (bkd[-1], bk[-1]), textcoords="offset points", xytext=(-6, 0),
@@ -203,12 +219,12 @@ def make():
     loc = mdates.AutoDateLocator(minticks=3, maxticks=8)
     axes[2].xaxis.set_major_locator(loc)
     axes[2].xaxis.set_major_formatter(mdates.ConciseDateFormatter(loc))
-    fig.subplots_adjust(left=0.11 if PAPER else 0.14, right=0.97, top=0.97 if PAPER else 0.93,
+    fig.subplots_adjust(left=0.135 if PAPER else 0.14, right=0.97, top=0.97 if PAPER else 0.93,
                         bottom=0.1 if PAPER else 0.17)
     return fig
 
 
-_N_BACKEND_MODULES = 92
+_N_BACKEND_MODULES = 94
 
 
 if __name__ == "__main__":

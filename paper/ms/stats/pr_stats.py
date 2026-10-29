@@ -3,7 +3,7 @@
     python paper/ms/stats/pr_stats.py [--until YYYY-MM-DD]
 
 Every PR opened on jobovy/galpy since 2026-06-01 counts as part of the project
-unless it is listed in EXCLUDED below (reviewed by hand, 2026-10-16):
+unless it is listed in EXCLUDED below (reviewed by hand, 2026-10-16 and 2026-10-29):
 * backend PRs: head backend/*, or base feat/backends*, backend/* or another
   backend sub-branch;
 * the three-dimensional variational equations (base feat/variational3d);
@@ -30,7 +30,7 @@ EXCLUDED = {
         1326, 955, 957, 1638],
     "unrelated features and maintenance": [
         889, 924, 971, 976, 980, 994, 1031, 1058, 1061, 1062, 1107, 1108, 1345,
-        1349, 1501, 1588],
+        1349, 1501, 1588, 1739, 1740, 1751],
     "another galpy project (not yet landed)": [
         1468, 1527, 1553, 1560, 1561, 1010, 1519,
         1309, 1313, 1314, 1317, 1318, 1320, 1325, 1335, 1339, 1340, 1342, 1347,
@@ -57,6 +57,8 @@ merged = [p for p in proj if p["mergedAt"]]
 
 
 def kind(p):
+    if p["baseRefName"] == "main" and p["number"] != 891:  # whatever the head branch is called
+        return "main"
     if (p["headRefName"].startswith("backend/") or p["baseRefName"].startswith("feat/backends")
             or p["baseRefName"].startswith("backend/") or p["number"] in (1034, 1195, 1433)):
         return "backend"
@@ -77,6 +79,21 @@ print(f"project PRs opened {len(proj)}, merged {len(merged)};",
       dict(collections.Counter(kind(p) for p in proj)), "merged:", dict(collections.Counter(kind(p) for p in merged)))
 print(f"merged size median {numpy.median(size):.0f}, quartiles {numpy.percentile(size, 25):.0f}, {numpy.percentile(size, 75):.0f}")
 print(f"stack members {len(stacked)}")
+# The merged project PRs against main, by what they did (reviewed by hand, 2026-10-29).
+MAIN_FIXES = [  # pre-existing defects of the numpy/C code (wrong values, crashes, accuracy, races)
+    899, 902, 912, 923, 943, 947, 948, 953, 954, 1032, 1245, 1274, 1293, 1295, 1296,
+    1323, 1324, 1333, 1355, 1356, 1357, 1398, 1400, 1404, 1424, 1431, 1439, 1475,
+    1484, 1568, 1585, 1596, 1611, 1633, 1671, 1703, 1709, 1734, 1738, 1741]
+MAIN_INFRA = [  # tests, CI and its robustness
+    977, 979, 1253, 1418, 1467, 1589, 1746, 1754, 1770]
+MAIN_FEATURES = [  # new numpy/C capabilities and speed-ups that came out of the work
+    921, 925, 1086, 1091, 1093, 1294, 1422, 1458, 1644, 1651, 1660, 1732, 1743, 1748,
+    1760, 1762]
+mm = {p["number"] for p in merged if kind(p) == "main"}
+cl = set(MAIN_FIXES) | set(MAIN_INFRA) | set(MAIN_FEATURES)
+print(f"merged main PRs {len(mm)}: fixes {len(mm & set(MAIN_FIXES))}, infrastructure "
+      f"{len(mm & set(MAIN_INFRA))}, features {len(mm & set(MAIN_FEATURES))};"
+      f" unclassified {sorted(mm - cl)}; classified but not merged-main {sorted(cl - mm)}")
 pm = collections.defaultdict(collections.Counter)
 for p in proj:
     pm[p["createdAt"][:7]][kind(p)] += 1

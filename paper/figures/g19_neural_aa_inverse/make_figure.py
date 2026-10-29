@@ -48,26 +48,27 @@ def main():
     # (a) phase-space tori: numpy inverse (line) vs jax-NN (circles)
     for k, (Jv, c) in enumerate(zip(dj["J_a"], TORI_C)):
         axr.plot(dj["z_ref_a"][k], dj["vz_ref_a"][k], "-", color=c, lw=2.0,
-                 label=f"$J_z$={Jv:.3f}" if PAPER else f"exact inverse, $J_z$={Jv:.3f}")
+                 label=None if PAPER else f"exact inverse, $J_z$={Jv:.3f}")
         p = dj["pred_a"][k]
         axr.plot(p[::10, 0], p[::10, 1], "o", color=c, ms=4.0 if PAPER else 6, mfc="white", mew=1.3)
-    axr.plot([], [], "o", color="0.35", mfc="white", mew=1.3,
-             label="neural net\n$G(J,\\theta)$" if PAPER else "neural net $G(J,\\theta)$")
+    if not PAPER:
+        axr.plot([], [], "o", color="0.35", mfc="white", mew=1.3, label="neural net $G(J,\\theta)$")
     axr.set_xlabel(r"$z$  [$R_0$]")
     axr.set_ylabel(r"$v_z$  [$v_0$]")
     axr.set_title("(a) learned vs exact tori" if PAPER else "(a) learned AA inverse vs exact tori")
-    if PAPER:  # headroom for the legend above the tori
-        lo, hi = axr.get_ylim()
-        axr.set_ylim(lo, lo + (hi - lo) / 0.5)
-    axr.legend(fontsize=_fl(8), loc="upper center",
-               **({"title": "exact inverse", "title_fontsize": 8, "handlelength": 1.3,
-                   "handletextpad": 0.5, "borderaxespad": 0.3} if PAPER else {}))
+    if PAPER:  # the three tori are the point, not their actions: a key, no legend
+        lo, hi = axr.get_ylim()  # a little headroom for the key
+        axr.set_ylim(lo, hi + 0.25 * (hi - lo))
+        axr.text(0.03, 0.97, "lines: exact\ncircles: network", transform=axr.transAxes,
+                 fontsize=7, color="0.35", va="top", ha="left", linespacing=1.1)
+    else:
+        axr.legend(fontsize=_fl(8), loc="upper center")
 
     # (b) training curves, jax vs torch (col 1 = step, col 2 = total loss)
     hj, ht = dj["hist"], dt["hist"]
     for fw, h, d in (("jax", hj, dj), ("torch", ht, dt)):
         lib = "flax+optax" if fw == "jax" else "torch.nn"
-        lab = (f"{_LAB[fw]}, {float(d['train_seconds']):.0f} s\n({lib})" if PAPER
+        lab = (f"{_LAB[fw]}, {float(d['train_seconds']):.0f} s" if PAPER
                else f"{_LAB[fw]} ({lib}), {float(d['train_seconds']):.0f} s")
         axl.semilogy(h[:, 0], h[:, 1], ms=4, label=lab, **_ST[fw])
     axl.set_xlabel("training step")

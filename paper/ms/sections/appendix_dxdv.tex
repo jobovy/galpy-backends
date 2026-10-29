@@ -36,11 +36,14 @@ and the vertical couplings are
 We added the mixed derivatives $\partial^2\Phi/\partial R\partial z$ and
 $\partial^2\Phi/\partial z\partial\phi$ to the \cc\ interface of every
 potential for this purpose, and the test suite checks the symmetry of
-$\vec{K}$. For a dissipative force
-$\vec{F}(\vecx,\vecv)$, such as dynamical friction, the lower-right
-block $\partial\vec{F}/\partial\vecv$ is non-zero and the lower-left
-block is not symmetric; both are implemented for \galpy's
-dynamical-friction forces.
+$\vec{K}$. For a velocity-dependent force
+$\vec{F}(\vecx,\vecv)$, such as dynamical friction or the Coriolis force
+in a rotating frame, the lower-right block $\partial\vec{F}/\partial\vecv$
+is non-zero and the lower-left block need not be symmetric; both are
+implemented for all three of \galpy's velocity-dependent forces: the
+Chandrasekhar dynamical friction, the dynamical friction in fuzzy dark
+matter \citep{Szpilfidel2026}, and the fictitious forces of a
+non-inertial frame.
 
 The state-transition matrix $\vec{M}(t) = \partial\vecw(t)/\partial\vecw(0)$
 is the solution of \eqnname~(\ref{eq:variational}) for six independent
@@ -73,14 +76,15 @@ orbit that sinks under Chandrasekhar dynamical friction, the phase-space
 volume contracts by five orders of magnitude over ten time units, and
 $\det\vec{M}$ follows the integral of the velocity divergence of the
 force to a few parts in $10^{6}$; the same orbit under the fuzzy-dark-matter
-friction of \galpy\ contracts far less, because that force is
-suppressed at the orbit's velocities.
+friction of \galpy\ \citep{Szpilfidel2026} contracts far less, because
+that force is suppressed at the orbit's velocities.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g9_variational_validity/g9_variational_validity.pdf}
   \caption{Checks of the \cc\ variational equations for an orbit in
     \texttt{MWPotential2014}, integrated with \texttt{dop853\_c} at
     tolerances of $10^{-12}$. (a) The Liouville defect $|\det\vec{M}-1|$
+    of the state-transition matrix $\vec{M}$
     and (b) the symplecticity defect for the three-dimensional and the
     planar state-transition matrix. (c) The difference between the
     columns of $\vec{M}$ at $t=10$ and forward and central finite
@@ -96,7 +100,7 @@ suppressed at the orbit's velocities.
   \caption{Phase-space volume under dissipative forces. Left:
     $\det\vec{M}(t)$ for an orbit in \texttt{MWPotential2014} with
     Chandrasekhar dynamical friction and with fuzzy-dark-matter
-    friction, from the \cc\ variational equations (solid) and from the
+    friction \citep{Szpilfidel2026}, from the \cc\ variational equations (solid) and from the
     integral of the velocity divergence of the force along the orbit
     (dashed). Right: the relative difference between the two. The
     variational equations reproduce the contraction of phase-space
