@@ -1,0 +1,40 @@
+
+scontrol show job 1194481
+JobId=1194481 JobName=oblate
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1617914 Nice=0 Account=ctb-ripperda QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:13:25 TimeLimit=01:00:00 TimeMin=N/A
+   SubmitTime=2026-10-29T20:15:59 EligibleTime=2026-10-30T05:43:16
+   AccrueTime=2026-10-30T05:43:16
+   StartTime=2026-10-30T05:43:38 EndTime=2026-10-30T05:57:03 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-30T05:43:38 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=trig-login01:3307143
+   ReqNodeList=(null) ExcNodeList=trig0021
+   NodeList=trig0022
+   BatchHost=trig0022
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/oblate.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=ctb-ripperda --exclude=trig0021 --dependency=afterany:1193151 --time=01:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out oblate.sbatch --export=NONE --parsable --account=ctb-ripperda --exclude=trig0021 --dependency=afterany:1193151 --time=01:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out oblate.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=ctb-ripperda --exclude=trig0021 --dependency=afterany:1193151 --time=01:00:00 --export=ALL --output=/scratch/bovy/galpy-h100/slurm/%x-%j.out oblate.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/oblate-1194481.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1194481
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1194481          oblate ctb-rippe+   00:13:25                         00:00:00   00:00:00      0:0 
+1194481.bat+      batch ctb-rippe+   00:13:25                         00:00:00   00:00:00      0:0 
+1194481.ext+     extern ctb-rippe+   00:13:25                         00:00:00   00:00:00      0:0 
+

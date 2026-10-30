@@ -1,0 +1,40 @@
+
+scontrol show job 1193151
+JobId=1193151 JobName=fullsuite
+   UserId=bovy(3039629) GroupId=bovy(3039629) MCS_label=N/A
+   Priority=1621076 Nice=0 Account=ctb-ripperda QOS=normal
+   JobState=COMPLETING Reason=None Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=08:05:32 TimeLimit=1-00:00:00 TimeMin=N/A
+   SubmitTime=2026-10-29T16:13:54 EligibleTime=2026-10-29T21:37:43
+   AccrueTime=Unknown
+   StartTime=2026-10-29T21:37:43 EndTime=2026-10-30T05:43:15 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-29T21:37:43 Scheduler=Main
+   Partition=compute AllocNode:Sid=trig-login01:2799578
+   ReqNodeList=(null) ExcNodeList=trig0021
+   NodeList=trig0022
+   BatchHost=trig0022
+   NumNodes=1 NumCPUs=24 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=187.50G,node=1,billing=1,gres/gpu=1
+   AllocTRES=cpu=24,mem=187.50G,node=1,billing=1,gres/gpu=1
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=187.50G MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) LicensesAlloc=(null) Network=(null)
+   Command=/scratch/bovy/galpy-h100/jobs/fullsuite_tip.sbatch
+   SubmitLine=SBATCH --comment /opt/slurm/bin/sbatch --export=NONE --parsable --account=ctb-ripperda --exclude=trig0021 --dependency=afterany:1193150 --time=24:00:00 --export=ALL,BK=jax --output=/scratch/bovy/galpy-h100/slurm/%x-jax-%j.out fullsuite_tip.sbatch --export=NONE --parsable --account=ctb-ripperda --exclude=trig0021 --dependency=afterany:1193150 --time=24:00:00 --export=ALL,BK=jax --output=/scratch/bovy/galpy-h100/slurm/%x-jax-%j.out fullsuite_tip.sbatch
+   WorkDir=/scratch/bovy/galpy-h100/jobs
+   Comment=/opt/slurm/bin/sbatch --export=NONE --parsable --account=ctb-ripperda --exclude=trig0021 --dependency=afterany:1193150 --time=24:00:00 --export=ALL,BK=jax --output=/scratch/bovy/galpy-h100/slurm/%x-jax-%j.out fullsuite_tip.sbatch
+   StdErr=
+   StdIn=/dev/null
+   StdOut=/scratch/bovy/galpy-h100/slurm/fullsuite-jax-1193151.out
+   CpusPerTres=gpu:24
+   TresPerNode=gres/gpu:1
+
+sacct -j 1193151
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+1193151       fullsuite ctb-rippe+   08:05:32                         00:00:00   00:00:00      0:0 
+1193151.bat+      batch ctb-rippe+   08:05:32                         00:00:00   00:00:00      0:0 
+1193151.ext+     extern ctb-rippe+   08:05:32                         00:00:00   00:00:00      0:0 
+

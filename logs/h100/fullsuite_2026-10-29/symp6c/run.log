@@ -1,0 +1,13 @@
+galpy 00527ee631de407ebb90e28f5d34b27ad9c68721 dirty=[]  script from galpy-backends 7a85278  host trig0031 job 1193149 Thu 29 Oct 2026 04:18:39 PM EDT
+== nvidia-smi before
+name, driver_version, memory.used [MiB], clocks.current.sm [MHz], power.draw [W]
+NVIDIA H100 80GB HBM3, 580.178.04, 0 MiB, 345 MHz, 70.52 W
+pid, process_name, used_gpu_memory [MiB]
+galpy-symplec6[gpu,lowN] N= 1000000: steady=  1830.42 ms (0.00183 ms/orbit)  compile+run= 15.95 s
+galpy-symplec6[gpu,lowN] N= 3000000: steady= 20411.59 ms (0.00680 ms/orbit)  compile+run= 38.42 s
+galpy-symplec6[gpu,lowN] N=10000000: steady= 62210.53 ms (0.00622 ms/orbit)  compile+run= 80.10 s
+done -> symplec6_jax_gpu.json
+exit 0
+== nvidia-smi after
+pid, process_name, used_gpu_memory [MiB]
+Thu 29 Oct 2026 04:25:31 PM EDT
