@@ -75,8 +75,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "65a7241",
-    "sha256": "5e68840c6cacf576ceaccabf190a042884336fea235d0cb50d6b1276b3502578",
+    "git": "25095f2",
+    "sha256": "310aeb7d5c86d58a982ba113dda8e469dddce2e867d7df3638a901b305c42b5d",
     "track": "G"
   },
   "g14_hvs_potential_fit": {

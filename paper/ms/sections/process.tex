@@ -45,15 +45,15 @@ and during the stretch described in
 \sectionname~\ref{sec:process-autonomous} the agent worked on a separate
 development branch.
 
-Between 2026 June 1 and October 29, 722 PRs were opened for this work,
-of which 695 were merged: 601 on the backend branch and its sub-branches,
+Between 2026 June 1 and October 30, 723 PRs were opened for this work,
+of which 696 were merged: 602 on the backend branch and its sub-branches,
 29 for the three-dimensional variational equations, and 65 against
 \galpy's main branch, of which 40 fixed defects in the existing \numpy\
 and \cc\ code that the backend work had found
 (\sectionname~\ref{sec:process-fixes}), 16 added capabilities or
 speed-ups to that code that came out of the work, and 9 concerned the
 tests and the continuous integration. The merged PRs have a median size
-of 183 changed lines (quartiles 74 and 374 lines).
+of 182 changed lines (quartiles 74 and 372 lines).
 We kept the size small on purpose, because a PR is reviewable when it
 does one thing, and a backend migration of one module, with its tests,
 is one thing. We split larger pieces of work into stacks of dependent
@@ -75,7 +75,7 @@ September (112), the work turned to the compiled modes, the test ledger
 of \sectionname~\ref{sec:process-ledger}, and
 the harder DFs, with PRs that were fewer and larger, because the
 remaining problems were coupled; October, the last month of the
-work, added 134 through the 29th.
+work, added 135 through the 30th.
 Over the same months, the repository received a separate stream of 58
 PRs in August and September for another \galpy\ project, which shared
 the continuous integration and matters for the costs below.
@@ -125,7 +125,7 @@ The \jax\ and \torch\ paths had to pass the same tests at the same
 tolerances; a tolerance could be loosened only for one test, only
 slightly, and with a justification in the PR. Test coverage was not
 allowed to decrease, not by a single line; in the end, the backend
-branch leaves 14 of its 56,946 executable statements uncovered, against
+branch leaves 14 of its 56,950 executable statements uncovered, against
 24 of 41,704 on the main branch. Tests had to make meaningful assertions
 at tight tolerances: values had to match their reference to a relative
 $10^{-13}$ or better, often $10^{-14}$, and derivatives a finite
@@ -256,7 +256,7 @@ not drift from reality, and the continuous integration posted a report
 of each PR's results per file and mode, ledgered failures included, to
 the PR, such that a reviewer saw at a glance what a PR fixed or broke.
 In addition, we ran a dedicated set of tests of the backend code itself,
-now 18,806 tests in 100 files.
+now 18,807 tests in 100 files.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g13_ledger_burndown/g13_ledger_burndown.pdf}

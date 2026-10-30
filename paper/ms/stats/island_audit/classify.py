@@ -127,7 +127,7 @@ FUNC = {
 }
 # scipy fallbacks inside otherwise-backend root finders
 SITE = {
- "orbit/Orbits.py:10658:<lambda>": "CTL", "potential/Potential.py:5368:rhalf": "CTL",
+ "orbit/Orbits.py:10659:<lambda>": "CTL", "potential/Potential.py:5368:rhalf": "CTL",
  # host integrators under the numpy pin (e807264ec lines, then after the r3 fix PR)
  "df/evolveddiskdf.py:3367:_df_at_velocities_backend": "PYINT",
  "df/evolveddiskdf.py:3368:_df_at_velocities_backend": "PYINT",

@@ -8845,12 +8845,12 @@
   }
  },
  {
-  "sha": "a61a7f31f2",
-  "date": "2026-10-29",
-  "subject": "OblateStaeckelWrapperPotential(ntab=): one array call per table on a backend (#1779)",
+  "sha": "14a186d7d2",
+  "date": "2026-10-30",
+  "subject": "GPU device regressions from the H100 full suite (diskdf, evolveddiskdf plots, root-finder width, compile under a CUDA default device) (#1780)",
   "source": "tip",
   "existing": 4489,
-  "backend_modules": 18806,
+  "backend_modules": 18807,
   "collect_errors": 1,
   "ledgered": {
    "jax": 0,
