@@ -26,8 +26,8 @@ Run `python paper/ms/stats/pr_stats.py`. First classify every new PR into main b
 ## 3. Costs (from JB)
 | Value | Where |
 |---|---|
-| \$13,100 / 16,500 / 15,800 / 10,200 / 5,800 "through the 18th"; about \$56,000 attributable | `process.tex` "the GitHub Actions bill" |
-| subscription tiers | `process.tex` "fixed-price subscription" |
+| \$13,100 / 16,500 / 15,800 / 10,200 / 8,600 (October in full, \$8,615.61, JB 2026-10-30); about \$59,000 attributable (each October change added to the total, as June, July and October count in full) | `process.tex` "the GitHub Actions bill" |
+| subscription tiers (JB 2026-10-30: still on Max 20×, so "for the final two weeks the 20× tier again" stands) | `process.tex` "fixed-price subscription" |
 
 ## 4. Test counts at the tip
 - Existing suite: `pytest --collect-only` on `tests/test_*.py` except `test_backend*`.
