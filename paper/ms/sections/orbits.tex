@@ -330,9 +330,9 @@ core it costs 1.0 to 1.4\,ms per orbit, half the cost of the adaptive
 $3\times10^4$, 0.07 to 0.11\,ms at larger $N$), which the adaptive
 solvers cannot be there, because its state per orbit is a fraction of
 theirs and its steps are the same for every orbit. On the H100 it costs
-2 to 5\,$\mu$s per orbit for $N\geq10^4$, 5 to 40 times less than the
-adaptive solve on the same card and as little as the CUDA kernel described
-below; for fewer orbits, the compiled
+2 to 7\,$\mu$s per orbit for $N\geq10^4$, 2 to 40 times less than the
+adaptive solve on the same card and at best as little as the CUDA kernel
+described below; for fewer orbits, the compiled
 step loop is bound by its kernel launches, at about a second for the
 3150 steps on either GPU. The derivative of an orbit with respect
 to its initial condition follows the same pattern
@@ -415,7 +415,9 @@ keeps the per-orbit control.
     batch equals that of the adaptive solve; its H100 point at
     $N=3\times10^5$, 2.4 times slower per orbit than its neighbours, is
     reproducible (two runs agree to 0.1\,\%, at full clocks): XLA
-    compiles that batch shape differently. Purple: an
+    compiles that batch shape differently; at $N=3\times10^6$ (and at
+    $10^7$, beyond the range shown) its cost per orbit is 3.4 to 3.7
+    times that at $10^6$, without throttling. Purple: an
     experimental CUDA port of \galpy's \cc\ forces and \texttt{dop853}
     that integrates one orbit per GPU thread (not part of \galpy\ and
     not differentiable), with a direct port of \galpy's \cc\ code
