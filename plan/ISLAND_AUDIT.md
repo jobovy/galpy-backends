@@ -33,7 +33,7 @@ between implicit and explicit).
 | TAB | constant tables built at construction from non-differentiated parameters (a differentiated parameter takes the backend path; the param sweep checks it) |
 | RNG | sampling with numpy's global RNG (a backend key runs the backend sampler) |
 | PYINT | the pure-Python integrators (numpy by design; warn for backend ICs) |
-| EXC | documented exceptions: evolveddiskdf (forcing exception, CI time), AnyAxisymmetricRazorThinDisk (scipy quad for numpy inputs) |
+| EXC | documented exceptions: numpy-built streamdf fixtures' lazy setups (#1726); until 2026-10-29 also evolveddiskdf and AnyAxisymmetricRazorThinDisk (removed in #1774, #1775) |
 | ISL | genuine island: numpy computation that could run on the backend |
 
 ## torch (4,181 tests ran)
@@ -97,6 +97,32 @@ MovingObject's numpy pin replaced by @backend_input coercion (#1730): its Python
 queries compute on the backend; targeted audit of its 4 tests: only C/CTL/PYINT sites. Tiers
 with streamdf.sample as RNG (isl3b run): ... + numpy RNG 92.82%; + Python integrators 98.45%;
 island-free 100.00% (4,181 tests, 0 genuine islands, 0 unclassified).
+
+**Post-merge audits (2026-10-29).** After the round that removed the two documented
+exceptions (#1774 evolveddiskdf, #1775 AnyAxisymmetricRazorThinDisk) and merged the
+pspline stream track (#1731/#1732): feat/backends e807264ec (forced torch; orbit group 5
+was killed by the 12 GB memory cap, so 4,106 tests) found two new islands, the pspline
+fit's numpy namespace for numpy particles (`streamTrack._fit_track_pspline`, 12 tests) and
+the backend marginalizations' `calcRotcurve` (2 tests); #1777 removed both. Re-audit of
+feat/backends 72143f658 (#1777 merged; orbit group 5 at a 32 GB cap; 4,353 tests,
+0 unclassified sites, 0 genuine islands): no numpy contact 2,012 (46.22%); + C 53.34%;
++ host control 72.46%; + output 76.34%; + test-supplied 77.88%; + constant tables 90.72%;
++ numpy RNG 94.14%; + Python integrators 99.91%; + the one documented exception 100.00%
+(the numpy-built streamdf fixtures' lazy setups, 4 tests). The razor-thin disk's remaining
+`_on_numpy` pin is its constructor's unit probes and Phi(0) integral (TAB). Classifier: the
+evolveddiskdf host-integrator lines moved by one (3368/3369 -> PYINT). Failures in that run:
+SIMBAD outage (test_from_name_values), nemo x2 (local install); test_amuse not collected
+(amuse not installed). Final re-audit at the tip a61a7f31f (#1778, #1779 merged; 4,353 tests,
+0 unclassified, 0 genuine islands; in the paper's Table 1): no numpy contact 2,011 (46.20%);
++ C 53.32%; + host control 72.43%; + output 76.32%; + test-supplied 77.85%; + constant tables
+90.72%; + numpy RNG 94.14%; + Python integrators 99.91%; + the one documented exception
+100.00%. Against 72143f658: #1779's per-table `as_numpy` in
+`OblateStaeckelWrapperPotential._tabulate` is a new site (TAB; the per-knot `float()` it replaced
+is invisible to the instrument, which does not patch `Tensor.__float__`), moving
+test_actionAngle_oblatestaeckelwrapper_cache_c from host control to constant tables, and
+test_from_name_values, which failed early in the SIMBAD outage, now passes through a host-control
+site. Failures: nemo x2, test_orbit_c_sigint_planar (timing under load). Paper updated
+(process.tex, Table 1).
 
 **Islands part 4 (2026-10-18): #1728 (align_to_orbit + backend custom-frame T through
 Orbit/StreamTrack/pmrapmdec_to_custom/sky_to_customsky_jac; MultipoleExpansion at-point

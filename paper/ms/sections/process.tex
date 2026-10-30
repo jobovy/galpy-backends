@@ -45,15 +45,15 @@ and during the stretch described in
 \sectionname~\ref{sec:process-autonomous} the agent worked on a separate
 development branch.
 
-Between 2026 June 1 and October 28, 717 PRs were opened for this work,
-of which 685 were merged: 591 on the backend branch and its sub-branches,
+Between 2026 June 1 and October 29, 722 PRs were opened for this work,
+of which 695 were merged: 601 on the backend branch and its sub-branches,
 29 for the three-dimensional variational equations, and 65 against
 \galpy's main branch, of which 40 fixed defects in the existing \numpy\
 and \cc\ code that the backend work had found
 (\sectionname~\ref{sec:process-fixes}), 16 added capabilities or
 speed-ups to that code that came out of the work, and 9 concerned the
 tests and the continuous integration. The merged PRs have a median size
-of 183 changed lines (quartiles 74 and 371 lines).
+of 183 changed lines (quartiles 74 and 374 lines).
 We kept the size small on purpose, because a PR is reviewable when it
 does one thing, and a backend migration of one module, with its tests,
 is one thing. We split larger pieces of work into stacks of dependent
@@ -75,7 +75,7 @@ September (112), the work turned to the compiled modes, the test ledger
 of \sectionname~\ref{sec:process-ledger}, and
 the harder DFs, with PRs that were fewer and larger, because the
 remaining problems were coupled; October, the last month of the
-work, added 129 through the 28th.
+work, added 134 through the 29th.
 Over the same months, the repository received a separate stream of 58
 PRs in August and September for another \galpy\ project, which shared
 the continuous integration and matters for the costs below.
@@ -125,7 +125,7 @@ The \jax\ and \torch\ paths had to pass the same tests at the same
 tolerances; a tolerance could be loosened only for one test, only
 slightly, and with a justification in the PR. Test coverage was not
 allowed to decrease, not by a single line; in the end, the backend
-branch leaves 14 of its 56,701 executable statements uncovered, against
+branch leaves 14 of its 56,946 executable statements uncovered, against
 24 of 41,704 on the main branch. Tests had to make meaningful assertions
 at tight tolerances: values had to match their reference to a relative
 $10^{-13}$ or better, often $10^{-14}$, and derivatives a finite
@@ -238,7 +238,7 @@ One of the main acceptance tests for the backends was \galpy's own test
 suite, run under \numpy, under \jax\ and \torch\ in eager mode, and
 under \jax\ and \torch\ with compilation at every entry point, for a
 total of five modes. Leaving aside the 27 tests of the out-of-scope
-torus-mapping code (below), the suite grew from 2,462 to 4,458 tests
+torus-mapping code (below), the suite grew from 2,462 to 4,462 tests
 over the course of this work, mainly because we split existing tests
 up: tests that looped over all of \galpy's potentials inside a single
 test, for example, became one test per potential, such that each
@@ -256,14 +256,14 @@ not drift from reality, and the continuous integration posted a report
 of each PR's results per file and mode, ledgered failures included, to
 the PR, such that a reviewer saw at a glance what a PR fixed or broke.
 In addition, we ran a dedicated set of tests of the backend code itself,
-now 18,604 tests in 98 files.
+now 18,806 tests in 100 files.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g13_ledger_burndown/g13_ledger_burndown.pdf}
   \caption{Tests of \galpy's existing test suite that pass under each
     backend, as a function of time, leaving aside the 27 tests of the
     out-of-scope torus-mapping code. The grey line is the size of the
-    suite, which grows from 2,462 to 4,458 tests over the period (most
+    suite, which grows from 2,462 to 4,462 tests over the period (most
     of the jump on June 19 comes from splitting the potential tests into
     one test per potential); the colored curves show the number of these
     tests that pass under \torch\ (top) and \jax\ (middle) in eager mode
@@ -277,7 +277,7 @@ now 18,604 tests in 98 files.
     panel shows the number of tests in the dedicated backend test
     modules; its jump in October is the two sweeps of
     \sectionname~\ref{sec:process-correctness}, which add 7,045
-    parametrized cases. At the end, all 4,458 tests pass in every
+    parametrized cases. At the end, all 4,462 tests pass in every
     mode.}\label{fig:ledger}
 \end{figure*}
 
@@ -349,19 +349,15 @@ parameter takes a backend path, as the sweep of
 \numpy's global random-number generator, which the tests seed (a
 backend random key runs the backend sampler); and the \python\
 integrators of the \numpy\ code, which warn that their result is not
-differentiable. The last are three documented exceptions that keep
+differentiable. The last is one documented exception that keeps
 \numpy\ for \numpy\ inputs under a forced backend, while a backend input
-or a differentiated parameter takes the backend path: the razor-thin
-disk of arbitrary surface density, whose adaptive \scipy\ quadrature is
-more accurate near the plane than the backend's fixed-order quadrature,
-which some tests need; the DF of an evolving disk, whose grids of orbits,
-integrated eagerly on the backend, made one shard of the forced run nine
-times slower; and streams that the tests build with \numpy\ before the
-backend is forced.
+or a differentiated parameter takes the backend path: a stream that the
+tests build with \numpy\ before the backend is forced, whose lazily
+computed track stays in \numpy\ like the stream itself.
 
 \begin{table}
   \caption{Tests of the existing suite by how they hand backend data to
-    \numpy\ under a forced \torch\ backend (4,181 tests that ran;
+    \numpy\ under a forced \torch\ backend (4,353 tests that ran;
     cumulative).}\label{tab:islands}
   \centering
   \small
@@ -369,15 +365,15 @@ backend is forced.
     \hline
     hand-offs to \numpy\ at most & tests & share \\
     \hline
-    none & 1,902 & $45.5\,\%$ \\
-    + \galpy's \cc\ extensions & 2,197 & $52.6\,\%$ \\
-    + decisions on the host & 2,969 & $71.0\,\%$ \\
-    + output (units, plots) & 3,134 & $75.0\,\%$ \\
-    + \numpy\ functions of the test & 3,201 & $76.6\,\%$ \\
-    + constant tables & 3,735 & $89.3\,\%$ \\
-    + \numpy's random numbers & 3,881 & $92.8\,\%$ \\
-    + the \python\ integrators & 4,116 & $98.4\,\%$ \\
-    + three documented exceptions & 4,181 & $100.0\,\%$ \\
+    none & 2,011 & $46.2\,\%$ \\
+    + \galpy's \cc\ extensions & 2,321 & $53.3\,\%$ \\
+    + decisions on the host & 3,153 & $72.4\,\%$ \\
+    + output (units, plots) & 3,322 & $76.3\,\%$ \\
+    + \numpy\ functions of the test & 3,389 & $77.9\,\%$ \\
+    + constant tables & 3,949 & $90.7\,\%$ \\
+    + \numpy's random numbers & 4,098 & $94.1\,\%$ \\
+    + the \python\ integrators & 4,349 & $99.9\,\%$ \\
+    + one documented exception & 4,353 & $100.0\,\%$ \\
     \hline
   \end{tabular}
 \end{table}
@@ -396,12 +392,12 @@ for plain scalars under a forced backend, needed a bracketing that
 evaluates the function at many points of the bracket at once, because
 the 45 sequential evaluations of a bisection each cost a full eager
 dispatch. The same instrumented run now finds no test that passes
-through a genuine island (\tablename~\ref{tab:islands}): $45\,\%$ of the
-tests never hand backend data to \numpy, $77\,\%$ do so only for work
-that has to happen on the host, and the remaining $23\,\%$ use \numpy\
+through a genuine island (\tablename~\ref{tab:islands}): $46\,\%$ of the
+tests never hand backend data to \numpy, $78\,\%$ do so only for work
+that has to happen on the host, and the remaining $22\,\%$ use \numpy\
 only for constant tables, for sampling with \numpy's random-number
-generator, in the \python\ integrators, or in the three documented
-exceptions.
+generator, in the \python\ integrators, or in the one documented
+exception.
 
 \subsection{Fixes to \lowercase{\galpy}}\label{sec:process-fixes}
 

@@ -94,6 +94,8 @@ FUNC = {
  "df/streamTrack.py:_closest_sample": "CTL", "df/streamTrack.py:_fit_track_pspline": "CTL",
  "df/streamTrack.py:from_particles": "CTL",
  "potential/TruncatedTwoPowerSphericalPotential.py:_c_args": "C", "util/plot.py:dens2d": "OUT",
+ # OblateStaeckelWrapperPotential(ntab=)'s tables, one backend array call each (#1779)
+ "potential/OblateStaeckelWrapperPotential.py:_tabulate": "TAB",
  # documented exceptions
  # a numpy-built stream (module fixtures built before the force fixture): its
  # lazily-computed state stays numpy, like the object (#1726)
@@ -129,6 +131,8 @@ SITE = {
  # host integrators under the numpy pin (e807264ec lines, then after the r3 fix PR)
  "df/evolveddiskdf.py:3367:_df_at_velocities_backend": "PYINT",
  "df/evolveddiskdf.py:3368:_df_at_velocities_backend": "PYINT",
+ # the same two lines at 72143f658 (after #1777)
+ "df/evolveddiskdf.py:3369:_df_at_velocities_backend": "PYINT",
  # islands at e807264ec, removed by the r3 fix PR: the pspline fit's numpy
  # namespace under a forced backend, the backend marginalization's calcRotcurve
  "df/streamTrack.py:863:_fit_track_pspline": "ISL",

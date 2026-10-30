@@ -217,13 +217,16 @@ def main():
     jobs = []
     for k, line in enumerate(shas):  # fetch serially (ref locks), collect in parallel
         sha, when, subject = line.split("\t", 2)
+        if k == len(shas) - 1 and args.tip:
+            # the tip itself, not its PR's head: a PR branched before the
+            # previous merges lacks their tests
+            jobs.append((k, sha, when, subject, "tip"))
+            continue
         m = re.search(r"\(#(\d+)\)\s*$", subject)
         if m and f"pull/{m.group(1)}/head" in old:  # reused: no fetch
             jobs.append((k, sha, when, subject, f"pull/{m.group(1)}/head"))
             continue
         snap, source = _snapshot(sha, subject)
-        if k == len(shas) - 1 and args.tip and source == "rewritten":
-            source = "tip"  # the rebased tip is consistent: collect it as is
         jobs.append((k, snap, when, subject, source))
     jobs = jobs[: args.limit]
     todo = [j for j in jobs if key(j[4], j[3]) not in old]
