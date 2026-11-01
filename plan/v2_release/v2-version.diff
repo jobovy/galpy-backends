@@ -63,7 +63,7 @@ index 49396aa01..c9b2d8022 100644
  preferred-citation:
    type: article
 diff --git a/HISTORY.txt b/HISTORY.txt
-index e5b870f5b..e1395a7ad 100644
+index 0a6859c97..1569c6a83 100644
 --- a/HISTORY.txt
 +++ b/HISTORY.txt
 @@ -1,3 +1,15 @@
@@ -186,19 +186,6 @@ index 532a93cac..e76972b4d 100644
          # Latest is now the final one
          latest_version = latest_version[-1]
      except Exception:  # pragma: no cover
-diff --git a/galpy/backend/interpolate.py b/galpy/backend/interpolate.py
-index b7bd82635..72b1aee15 100644
---- a/galpy/backend/interpolate.py
-+++ b/galpy/backend/interpolate.py
-@@ -1731,7 +1731,7 @@ def _gcv_operator(xv, yv, w):
-     wE[:-1, -2] = -_coeff_of_divided_diff(xv[-4:]) / w[-4:]
-     wE[:-2, -1] = _coeff_of_divided_diff(xv[-3:]) / w[-3:]
-     wE *= 6
--    # 1-D yv: scipy 1.15's (Python 3.10) private GCV accepts only a 1-D y
-+    # 1-D yv: scipy 1.15's private GCV accepts only a 1-D y
-     lam = float(numpy.asarray(_compute_optimal_gcv_parameter(X, wE, yv, w)).ravel()[0])
-     # natural coeffs = Ainv @ yv; scipy's own banded LU (solve_banded) reproduces
-     # its solve even for ill-conditioned A.
 diff --git a/setup.py b/setup.py
 index a7415fb14..b87b5140f 100644
 --- a/setup.py
@@ -252,10 +239,10 @@ index a7415fb14..b87b5140f 100644
          "Programming Language :: Python :: 3.12",
          "Programming Language :: Python :: 3.13",
 diff --git a/tests/conftest.py b/tests/conftest.py
-index 66691de5c..b3114a502 100644
+index ace6bde9b..c0f546cb6 100644
 --- a/tests/conftest.py
 +++ b/tests/conftest.py
-@@ -39,7 +39,7 @@ def torch_compiles():
+@@ -75,7 +75,7 @@ def torch_compiles():
  
      dynamo trails the Python release and refuses to run on one it does not
      support yet, so `import torch` succeeding does not imply that compiling
@@ -264,16 +251,3 @@ index 66691de5c..b3114a502 100644
      reliable this way. Deliberately a function, not a module-level constant, so
      importing this conftest never drags torch into a numpy-only session.
      """
-diff --git a/tests/test_backend_interpolate.py b/tests/test_backend_interpolate.py
-index 4027f1c2a..46e68016f 100644
---- a/tests/test_backend_interpolate.py
-+++ b/tests/test_backend_interpolate.py
-@@ -846,7 +846,7 @@ def test_make_smoothing_spline_parity(backend):
- @pytest.mark.parametrize("backend", AD_BACKENDS)
- def test_make_smoothing_spline_gcv_1d_y(backend, monkeypatch):
-     # The frozen GCV operator passes scipy's private GCV a 1-D y: scipy 1.15
--    # (Python 3.10) accepts only a 1-D y (a (n,1) y fails to broadcast), so
-+    # accepts only a 1-D y (a (n,1) y fails to broadcast), so
-     # this pins the call on any scipy; the fit still matches scipy's.
-     import scipy.interpolate._bsplines as _bspl
- 

@@ -1,5 +1,5 @@
 diff --git a/.github/workflows/backend-tests.yml b/.github/workflows/backend-tests.yml
-index bb63181ae..d4671c3be 100644
+index 7052e9fc7..f9c167307 100644
 --- a/.github/workflows/backend-tests.yml
 +++ b/.github/workflows/backend-tests.yml
 @@ -9,15 +9,15 @@ name: All-backend tests
@@ -21,7 +21,7 @@ index bb63181ae..d4671c3be 100644
 -#     feat/backends (and only on push/schedule/dispatch otherwise).
 +#     v2 (and only on push/schedule/dispatch otherwise).
  #
- # The `report` job (needs backend-suite, if: always()) downloads every shard's
+ # The `report` job (needs backend-suite, if: !cancelled()) downloads every shard's
  # JUnit XML artifact, renders a per-file x backend markdown status table via
 @@ -35,19 +35,12 @@ on:
      # event, once as a pull_request event, both attaching their checks to that
@@ -78,7 +78,7 @@ index bb63181ae..d4671c3be 100644
                || startsWith(github.base_ref, 'backend/')
                || startsWith(github.head_ref, 'backend/')))
      strategy:
-@@ -525,7 +515,7 @@ jobs:
+@@ -530,7 +520,7 @@ jobs:
          name: backend-status-report
          path: status.md
          if-no-files-found: warn
@@ -87,7 +87,7 @@ index bb63181ae..d4671c3be 100644
        # Overwrites the previous comment on re-runs via the fixed header marker,
        # so a PR keeps exactly one always-current backend-status comment.
        if: ${{ github.event_name == 'pull_request' }}
-@@ -533,23 +523,3 @@ jobs:
+@@ -538,23 +528,3 @@ jobs:
        with:
          header: backend-status
          path: status.md
@@ -112,7 +112,7 @@ index bb63181ae..d4671c3be 100644
 -        number: ${{ steps.intpr.outputs.number }}
 -        path: status.md
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 1ddb7a6b3..6b07241a5 100644
+index 313075769..978553f07 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
 @@ -6,8 +6,7 @@ on:
@@ -125,7 +125,7 @@ index 1ddb7a6b3..6b07241a5 100644
      paths:
        - '**'
        - '!*'
-@@ -231,22 +230,6 @@ jobs:
+@@ -249,22 +248,6 @@ jobs:
              REQUIRES_ASTROQUERY: true
              REQUIRES_NUMBA: false
              REQUIRES_JAX: false
@@ -149,10 +149,10 @@ index 1ddb7a6b3..6b07241a5 100644
              python-version: "3.14"
              TEST_FILES: tests/test_orbit.py -k 'test_energy_jacobi_conservation or from_name'
 diff --git a/.github/workflows/build_pyodide_wheels.yml b/.github/workflows/build_pyodide_wheels.yml
-index 42fa82cf7..ed5ef7ead 100644
+index 1a1b8b25c..d64cc4420 100644
 --- a/.github/workflows/build_pyodide_wheels.yml
 +++ b/.github/workflows/build_pyodide_wheels.yml
-@@ -104,7 +104,8 @@ jobs:
+@@ -101,7 +101,8 @@ jobs:
  # Upload to AWS S3
    deploy_s3:
      name: Upload to AWS S3
@@ -163,10 +163,20 @@ index 42fa82cf7..ed5ef7ead 100644
      runs-on: ubuntu-latest
      steps:
 diff --git a/.github/workflows/build_windows.yml b/.github/workflows/build_windows.yml
-index 8c8aa4167..bca2326e9 100644
+index ec293ef78..ea5ca1dd3 100644
 --- a/.github/workflows/build_windows.yml
 +++ b/.github/workflows/build_windows.yml
-@@ -179,22 +179,6 @@ jobs:
+@@ -6,8 +6,7 @@ on:
+     # pull_request, so a PR branch is not built twice (push + pull_request).
+     branches:
+       - main
+-      - feat/backends
+-      - feat/backends-develop
++      - v2
+     paths:
+       - '**'
+       - '!*'
+@@ -181,22 +180,6 @@ jobs:
              REQUIRES_ASTROQUERY: true
              REQUIRES_NUMBA: false
              REQUIRES_JAX: false
@@ -190,18 +200,20 @@ index 8c8aa4167..bca2326e9 100644
      - uses: actions/checkout@v7
      - name: Set up Python ${{ matrix.python-version }}
 diff --git a/.github/workflows/test-doc-notebooks.yml b/.github/workflows/test-doc-notebooks.yml
-index 8f5770230..33c5828c7 100644
+index c00a79b97..33c5828c7 100644
 --- a/.github/workflows/test-doc-notebooks.yml
 +++ b/.github/workflows/test-doc-notebooks.yml
-@@ -6,6 +6,7 @@ on:
+@@ -6,8 +6,7 @@ on:
      # pull_request, so a PR branch is not built twice (push + pull_request).
      branches:
        - main
+-      - feat/backends
+-      - feat/backends-develop
 +      - v2
      paths:
        - '**'
        - '!*'
-@@ -39,7 +40,7 @@ jobs:
+@@ -41,7 +40,7 @@ jobs:
      strategy:
        fail-fast: false
        matrix:
@@ -211,7 +223,7 @@ index 8f5770230..33c5828c7 100644
        - uses: actions/checkout@v7
        - name: Set up Python
 diff --git a/.github/workflows/wheels.yml b/.github/workflows/wheels.yml
-index 75fdb41c3..9fd41123e 100644
+index 74f45eebc..5127f987e 100644
 --- a/.github/workflows/wheels.yml
 +++ b/.github/workflows/wheels.yml
 @@ -1,10 +1,12 @@
@@ -236,7 +248,7 @@ index 75fdb41c3..9fd41123e 100644
          - ["cp311","3.11"]
          - ["cp312","3.12"]
          - ["cp313","3.13"]
-@@ -104,7 +105,6 @@ jobs:
+@@ -102,7 +103,6 @@ jobs:
              - [macos-15, macosx, arm64]
              - [windows-2025, win, amd64]
            python:
