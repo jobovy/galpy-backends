@@ -19,11 +19,8 @@ main stays 1.x; main fixes reach v2 by cherry-pick PRs; no rebasing v2 once a ta
 - **The in-flight PRs are merged** (#1648 2026-10-16; #1659, #1661, #1662 2026-10-10) and nothing is
   open into feat/backends, so checklist step 1 is done and step 6 has nothing to do.
 - **main is 1 commit ahead, not 6**: #1770 (the SIMBAD mirror fallback), whose twin #1771 is already on
-  feat/backends. The last rebase (step 2) would add only #1770's HISTORY.txt entry, with one trivial
-  conflict in `Orbits.py` (keep feat/backends' `_obs_asnumpy`). I'd **skip it** and add that HISTORY line in the
-  version PR, unless 1.12.1 is released from main first (main's HISTORY says "expected around
-  2026-11-01"; PyPI still has 1.12.0): then do one last rebase after the release, so the release commits are
-  ancestors of v2, and regenerate `v2-version.diff` (its `.bumpversion.cfg` context is 1.12.1.dev0).
+  feat/backends. **Jo (2026-11-01): release 1.12.1 from main first, then one final rebase of feat/backends onto
+  the `v1.12.1` tag**, so the split point is a release. See "Final rebase onto v1.12.1" below.
 - **Workflows:** `build_windows.yml` and `test-doc-notebooks.yml` now have `feat/backends` push filters
   (#1704), and `backend-tests.yml`'s header changed (#1747). `v2-workflows.diff` is regenerated and covers both.
 - **Version diff:** the two comment hunks in `galpy/backend/interpolate.py` and `tests/test_backend_interpolate.py`
@@ -32,6 +29,30 @@ main stays 1.x; main fixes reach v2 by cherry-pick PRs; no rebasing v2 once a ta
   oldest versions exercised (jax 0.10.1, torch 2.12 on the TITAN Xp box).
 - **Unchanged:** the rulesets, #892 (open, draft), `feat/backends-develop` (b06985892, 366 orphaned commits), Read the
   Docs (no `v2` version: docs.galpy.org/en/v2/ 404s, and the paper's conclusion links it), `main-docs.diff`.
+
+### Final rebase onto v1.12.1 (Jo, 2026-11-01)
+Order: Jo releases 1.12.1 from main (release PR, version bump, tag `v1.12.1`) → I rebase feat/backends onto
+**the tag** (not main's tip, even if main has moved on) → Jo force-pushes it → then the rename (step 3).
+Afterwards `git merge-base v2 main` is the `v1.12.1` commit, so the split is "2.x = 1.12.1 + the backends".
+
+Dry run on 2026-11-01 (feat/backends 14a186d7d onto main 188d2cb81, scratch worktrees, nothing pushed):
+- Reference merge: the one conflict is `galpy/orbit/Orbits.py` (keep feat/backends' `_obs_asnumpy`). #1770's
+  code and tests auto-merge to exactly feat/backends' (its twin #1771). The reference tree is feat/backends
+  plus #1770's 7-line HISTORY.txt entry.
+- Replay (`git rebase -X theirs`, 619 commits, 59 s): the tip equals feat/backends byte for byte except
+  HISTORY.txt, where the replay drops #1770's entry. This is the same drop as on 10-25 and 10-27, so it needs one closing commit.
+- A simulated release commit on top of main (HISTORY date line; 1.12.1 in `.bumpversion.cfg`, `CITATION.cff`,
+  `doc/source/conf.py`, `galpy/__init__.py`, `setup.py`) merges cleanly with feat/backends. feat/backends
+  touches none of the version lines or `whatsnew.rst`, so the release commits replay without conflicts.
+
+**HISTORY.txt in the closing commit: take v1.12.1's file verbatim.** Then `git diff v1.12.1 v2 -- HISTORY.txt`
+is only the new 2.0.0b1 section. feat/backends' single edit to the 1.12.1 section (the Truncated NFW/Hernquist entry adds
+"run on the JAX and PyTorch backends, differentiable with respect to `a`, `rc` and the tabulated `rc(t)`")
+moves into the 2.0.0b1 section in the version PR.
+
+After the rebase, regenerate `v2-version.diff`: its context changes from 1.12.1.dev0 to 1.12.1, and the
+HISTORY stub opens with "Based on v1.12.1: includes every change through 1.12.1." CI goes through a draft PR
+with a `backend/**` base pinned at the tag, as before. Then I hand Jo the lease command.
 
 ---
 
@@ -260,12 +281,12 @@ in all three OS tabs; `<2` excludes 2.0.0bN under PEP 440.
 | # | step | who |
 |---|---|---|
 | 1 | ~~Merge the in-flight PRs into feat/backends~~: done (#1648 #1659 #1661 #1662 merged; none open on 2026-11-01). Re-check right before step 3 | me |
-| 2 | **Last rebase of feat/backends onto main**: now 1 commit (#1770, already on feat/backends as #1771). Skip it unless 1.12.1 is released from main first (see "What changed"); if done, reference-tree procedure, the last rebase ever | me prepare, Jo force-push (`feat` ruleset) |
+| 2 | **Final rebase of feat/backends onto the `v1.12.1` tag**, after Jo releases 1.12.1 from main (dry-run clean on 2026-11-01: one `Orbits.py` conflict, plus a closing commit that sets HISTORY.txt to v1.12.1's); the reference-tree procedure; the last rebase ever | Jo release; me prepare; Jo force-push (`feat` ruleset) |
 | 3 | Close #892; ruleset (a); delete `feat/backends-develop`; rename; ruleset (b), (c), (d) | Jo |
 | 4 | **Freeze merges into v2** until step 5 lands. Without the patched filters, PRs into v2 skip backend-tests but `all-clear` still passes. | both |
 | 5 | Apply `v2-workflows.diff` as the first PR into v2. Its own run uses the patched filters (pull_request reads workflows from the merge ref), so it validates itself. | Jo |
 | 6 | Only if PRs are open at the rename: push a no-op commit or close/reopen them. A base change does not re-trigger CI. | me |
-| 7 | PR `v2-version.diff` into v2 (2.0.0b1.dev0, cfg, extras, docs, HISTORY stub plus #1770's entry if step 2 is skipped, version check); PR `main-docs.diff` into main | me (v2 merge me; main merge Jo) |
+| 7 | PR `v2-version.diff` into v2 (2.0.0b1.dev0, cfg, extras, docs, HISTORY stub ("based on v1.12.1" plus the Truncated NFW/Hernquist backend sentence), version check; regenerate the diff on the rebased tip first); PR `main-docs.diff` into main | me (v2 merge me; main merge Jo) |
 | 8 | Optional PR into v2: `.gitattributes` with `HISTORY.txt merge=union` (see risks) | me |
 | 8b | Python 3.10 drop (§6): it is already in the step 5 and 7 diffs. After step 7, PR the notebook/paper simplifications from §6 (#1648 is merged) | me |
 | 9 | RTD: activate `v2` | Jo |
