@@ -13,6 +13,13 @@ Material that JB relayed (reports from the H100 agent, Codex reviews, logs,
 code) is split off heuristically (RELAY): from the line where it starts, the
 rest of the message counts as relayed. Words are whitespace-separated; a page
 is 500 words (single-spaced).
+
+The API-equivalent cost prices every response's logged usage at the list
+prices of the model that served it (PRICES, from
+platform.claude.com/docs/en/about-claude/pricing on 2026-11-01; none of these
+models has a long-context premium, and all requests ran at standard speed in
+the global region): uncached input, cache writes (1.25x input for 5-minute
+entries, 2x for 1-hour ones), cache reads, output, and web searches.
 """
 
 import argparse
@@ -40,9 +47,19 @@ RELAY = re.compile(
     re.I | re.M,
 )
 WORDS_PER_PAGE = 500
+# $/MTok: input, cache read, output
+PRICES = {
+    "claude-opus-4-8": (5, 0.50, 25),
+    "claude-opus-5": (5, 0.50, 25),
+    "claude-opus-5-5": (4, 0.20, 20),
+    "claude-fable-5": (10, 1.00, 50),
+    "claude-fable-5-1": (10, 0.25, 50),
+    "claude-haiku-4-5-20251001": (1, 0.10, 5),
+}
+SEARCH_PRICE = 10 / 1000
 
 msgs = {}  # (text, hour) -> (timestamp, text, how); a message is recorded twice
-usage = {}  # API response id -> (timestamp, usage)
+usage = {}  # API response id -> (timestamp, usage, model)
 
 
 def add(ts, text, how):
@@ -61,7 +78,7 @@ with open(args.transcript) as fh:
         if d.get("type") == "assistant":
             m = d.get("message", {})
             if m.get("usage") and m.get("id"):
-                usage[m["id"]] = (ts, m["usage"])
+                usage[m["id"]] = (ts, m["usage"], m.get("model"))
         elif d.get("type") == "user" and not (
             d.get("isMeta") or d.get("isCompactSummary") or d.get("toolUseResult")
         ):
@@ -112,17 +129,45 @@ print(f"  relayed: {relayed:,} words = {relayed / WORDS_PER_PAGE:,.0f} pages, "
       f"in {nrelay} messages ({ncodex} with a Codex review)")
 
 
-def total(rows, label):
+category = collections.Counter()  # cost by kind of token, over all rows
+
+
+def cost(u, model, ttl):
+    """List-price cost of one response; ttl is the cache-write duration when not itemized."""
+    if model not in PRICES:  # "<synthetic>" placeholders for errors carry no usage
+        assert not (u.get("output_tokens") or u.get("cache_read_input_tokens")), model
+        return 0.0
+    pin, pread, pout = PRICES[model]
+    cc = u.get("cache_creation") or {}
+    w5, w1 = cc.get("ephemeral_5m_input_tokens", 0), cc.get("ephemeral_1h_input_tokens", 0)
+    rest = u.get("cache_creation_input_tokens", 0) - w5 - w1
+    w5, w1 = (w5 + rest, w1) if ttl == "5m" else (w5, w1 + rest)
+    searches = (u.get("server_tool_use") or {}).get("web_search_requests", 0)
+    parts = {"input": u.get("input_tokens", 0) * pin / 1e6,
+             "cache writes": (1.25 * w5 + 2 * w1) * pin / 1e6,
+             "cache reads": u.get("cache_read_input_tokens", 0) * pread / 1e6,
+             "output": u.get("output_tokens", 0) * pout / 1e6,
+             "web searches": searches * SEARCH_PRICE}
+    category.update(parts)
+    return sum(parts.values())
+
+
+def total(rows, label, ttl):
+    rows = [r for r in rows if r[0] <= until]
     keys = ("output_tokens", "input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
-    t = {k: sum(u.get(k, 0) for ts, u in rows if ts <= until) for k in keys}
-    n = sum(1 for ts, u in rows if ts <= until)
-    print(f"{label}: {n:,} responses; output {t['output_tokens'] / 1e6:,.1f}M tokens; input "
+    t = {k: sum(u.get(k, 0) for ts, u, model in rows) for k in keys}
+    bymodel = collections.Counter()
+    for ts, u, model in rows:
+        bymodel[model] += cost(u, model, ttl)
+    t["cost"] = sum(bymodel.values())
+    print(f"{label}: {len(rows):,} responses; output {t['output_tokens'] / 1e6:,.1f}M tokens; input "
           f"{(t['input_tokens'] + t['cache_creation_input_tokens'] + t['cache_read_input_tokens']) / 1e9:,.1f}B "
-          f"tokens ({t['cache_read_input_tokens'] / 1e9:,.1f}B read from the cache)")
+          f"tokens ({t['cache_read_input_tokens'] / 1e9:,.1f}B read from the cache); "
+          f"list-price cost ${t['cost']:,.0f} ({', '.join(f'{k} ${v:,.0f}' for k, v in bymodel.most_common() if v)})")
     return t
 
 
-main = total(usage.values(), "main agent")
+main = total(usage.values(), "main agent", "1h")
 sub = {}
 for f in glob.glob(os.path.join(os.path.splitext(args.transcript)[0], "subagents", "**", "*.jsonl"), recursive=True):
     with open(f) as fh:
@@ -133,6 +178,9 @@ for f in glob.glob(os.path.join(os.path.splitext(args.transcript)[0], "subagents
                 continue
             m = d.get("message", {}) if d.get("type") == "assistant" else {}
             if m.get("usage") and m.get("id"):
-                sub[(f, m["id"])] = (d.get("timestamp", ""), m["usage"])
-subt = total(sub.values(), "subagents")
+                sub[(f, m["id"])] = (d.get("timestamp", ""), m["usage"], m.get("model"))
+subt = total(sub.values(), "subagents", "5m")
 print(f"  output in all: {(main['output_tokens'] + subt['output_tokens']) / 1e6:,.0f}M tokens")
+alltot = main["cost"] + subt["cost"]
+print(f"  list-price cost in all: ${alltot:,.0f}: "
+      + ", ".join(f"{k} {v / alltot:.0%}" for k, v in category.most_common()))
