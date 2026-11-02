@@ -78,7 +78,7 @@ Run `python paper/ms/stats/session_stats.py ~/.claude/projects/-home-bovy-Repos-
 | median 14 words; about 57,000 own words (56,555) = roughly 110 pages at 500 words/page; about 33,000 relayed (33,356) | same paragraph |
 | about 114 million output tokens (75.7M main + 38.5M subagents, a third); about 44 billion input tokens (36.6B + 7.5B, 97% cache reads) | same paragraph |
 | "18 reviews in all" (Codex) | `process.tex` "usually by pasting them into the conversation" |
-| about \$31,000 API-equivalent (\$30,682: main \$22,830, subagents \$7,852); 61 % cache reads, 29 % cache writes, 9 % output. Prices in `PRICES` (pricing page, 2026-11-01); add any new model there | `process.tex` "Had the agent's usage" |
+| about \$31,000 API-equivalent (\$30,682: main \$22,830, subagents \$7,852); 61 % cache reads, 29 % cache writes, 9 % output. Prices in `PRICES` (pricing page, 2026-11-01; Internet Archive snapshots of it every ~5 days from 2026-06-01 to 11-01 show no price change for any model while in use: re-check with the CDX API `web.archive.org/cdx/search/cdx?url=platform.claude.com/docs/en/about-claude/pricing` if a new model or month is added) | `process.tex` "Had the agent's usage" |
 | Fable on "six days in June and July" (June 9-13, July 1-2), "about 4 %" of the output tokens (4.86M of 114M; 5,682 of ~126,000 responses) | `process.tex` "Claude Fable did it on six days" (changes only if Fable codes again) |
 
 ## 8. Outside the paper

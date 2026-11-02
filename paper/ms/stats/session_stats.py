@@ -16,9 +16,11 @@ is 500 words (single-spaced).
 
 The API-equivalent cost prices every response's logged usage at the list
 prices of the model that served it (PRICES, from
-platform.claude.com/docs/en/about-claude/pricing on 2026-11-01; none of these
-models has a long-context premium, and all requests ran at standard speed in
-the global region): uncached input, cache writes (1.25x input for 5-minute
+platform.claude.com/docs/en/about-claude/pricing on 2026-11-01; 31 Internet
+Archive snapshots of that page, 2026-06-01 to 11-01, show that no model's price
+or cache multiplier changed while it was in use; none of these models has a
+long-context premium, and all requests ran at standard speed in the global
+region): uncached input, cache writes (1.25x input for 5-minute
 entries, 2x for 1-hour ones), cache reads, output, and web searches.
 """
 
