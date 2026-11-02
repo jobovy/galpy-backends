@@ -1,10 +1,10 @@
 diff --git a/.bumpversion.cfg b/.bumpversion.cfg
-index e18da1d45..edbf1cfae 100644
+index 2f88ec29c..edbf1cfae 100644
 --- a/.bumpversion.cfg
 +++ b/.bumpversion.cfg
 @@ -1,10 +1,22 @@
  [bumpversion]
--current_version = 1.12.1.dev0
+-current_version = 1.12.1
 -parse = (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(\.(?P<release>[a-z]+)(?P<dev>\d+))?
 +current_version = 2.0.0b1.dev0
 +parse = (?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)((?P<pre_l>b|rc)(?P<pre_n>\d+))?(\.(?P<release>[a-z]+)(?P<dev>\d+))?
@@ -50,25 +50,27 @@ index 775b43747..ce2398008 100644
  - **OpenMP disabled on Linux**: CI uses `GALPY_COMPILE_NO_OPENMP=1`
  - **Coverage enabled on Linux**: Uses `GALPY_COMPILE_COVERAGE=1` with lcov
 diff --git a/CITATION.cff b/CITATION.cff
-index 49396aa01..c9b2d8022 100644
+index 144785eac..c9b2d8022 100644
 --- a/CITATION.cff
 +++ b/CITATION.cff
 @@ -5,7 +5,7 @@ authors:
    given-names: "Jo"
    orcid: "https://orcid.org/0000-0001-6855-442X"
  title: "galpy"
--version: 1.12.1.dev0
+-version: 1.12.1
 +version: 2.0.0b1.dev0
  url: "https://github.com/jobovy/galpy"
  preferred-citation:
    type: article
 diff --git a/HISTORY.txt b/HISTORY.txt
-index 0a6859c97..1569c6a83 100644
+index 8c323fa86..7bba3b5a3 100644
 --- a/HISTORY.txt
 +++ b/HISTORY.txt
-@@ -1,3 +1,15 @@
+@@ -1,3 +1,21 @@
 +v2.0.0b1 (pre-release)
 +======================
++
++Based on v1.12.1: includes every change through 1.12.1.
 +
 +- Python 3.10 is no longer supported (galpy 1.x keeps it); galpy 2.x
 +  requires Python >= 3.11.
@@ -79,7 +81,11 @@ index 0a6859c97..1569c6a83 100644
 +  support. Install with ``pip install --pre "galpy[jax]"`` or
 +  ``pip install --pre "galpy[torch]"``. [Jo: expand]
 +
- v1.12.1 (expected around 2026-11-01)
++- ``TruncatedNFWPotential`` and ``TruncatedHernquistPotential`` run on the JAX
++  and PyTorch backends, differentiable with respect to ``a``, ``rc`` and the
++  tabulated ``rc(t)`` values.
++
+ v1.12.1 (2026-11-02)
  ====================
  
 diff --git a/README.md b/README.md
@@ -100,14 +106,14 @@ index b6317de04..658486d55 100644
  
  This package requires [Numpy](https://numpy.org/),
 diff --git a/doc/source/conf.py b/doc/source/conf.py
-index 550acc162..50ba75a58 100644
+index 66a14b5c1..50ba75a58 100644
 --- a/doc/source/conf.py
 +++ b/doc/source/conf.py
 @@ -150,7 +150,7 @@ copyright = f"2010 - {datetime.datetime.now().year}, Jo Bovy"
  # built documents.
  #
  # The short X.Y version.
--version = "1.12.1.dev0"
+-version = "1.12.1"
 +version = "2.0.0b1.dev0"
  # The full version, including alpha/beta/rc tags.
  release = version
@@ -162,11 +168,11 @@ index 2298bb73c..1d51dcf81 100644
  The current configuration file therefore looks like this::
  
 diff --git a/galpy/__init__.py b/galpy/__init__.py
-index 532a93cac..e76972b4d 100644
+index f0ecbcbda..e76972b4d 100644
 --- a/galpy/__init__.py
 +++ b/galpy/__init__.py
 @@ -1,4 +1,4 @@
--__version__ = "1.12.1.dev0"
+-__version__ = "1.12.1"
 +__version__ = "2.0.0b1.dev0"
  # Check whether a new version is available
  import datetime
@@ -187,14 +193,14 @@ index 532a93cac..e76972b4d 100644
          latest_version = latest_version[-1]
      except Exception:  # pragma: no cover
 diff --git a/setup.py b/setup.py
-index a7415fb14..b87b5140f 100644
+index b12120a9e..b87b5140f 100644
 --- a/setup.py
 +++ b/setup.py
 @@ -388,7 +388,7 @@ class BuildExt(build_ext):
  setup(
      cmdclass=dict(build_ext=BuildExt),  # this to allow compiler check above
      name="galpy",
--    version="1.12.1.dev0",
+-    version="1.12.1",
 +    version="2.0.0b1.dev0",
      description="Galactic Dynamics in python",
      author="Jo Bovy",

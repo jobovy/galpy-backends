@@ -54,6 +54,20 @@ After the rebase, regenerate `v2-version.diff`: its context changes from 1.12.1.
 HISTORY stub opens with "Based on v1.12.1: includes every change through 1.12.1." CI goes through a draft PR
 with a `backend/**` base pinned at the tag, as before. Then I hand Jo the lease command.
 
+**Done 2026-11-02** (Jo released 1.12.1 the same day: tag `v1.12.1` = eb67814fd = main):
+- Reference merge of the tag into feat/backends 14a186d7d: three conflicts. `Orbits.py`: kept `_obs_asnumpy`.
+  `HISTORY.txt`: v1.12.1's. New since the dry run, `streams/streamspraydf.ipynb`: feat/backends had changed only
+  papermill timing metadata there since the last rebase (#1731's local re-render), while #1783 refreshed the outputs,
+  so v1.12.1's. Reference tree 150fb9cb7.
+- Replay (`-X theirs`, rerere off, 619 commits, 54 s, no stops): the tip differed from the reference in HISTORY.txt
+  and that notebook only (feat/backends' side of the conflicting hunks). The closing commit 5dda6b923 sets both to v1.12.1's;
+  the tip tree then equals the reference. Against the old feat/backends: no code change at all.
+- CI: draft #1785, `backend/rebase-v1.12.1-2026-11-02` → `backend/v1.12.1-2026-11-02` (pinned at the tag).
+- `v2-version.diff` regenerated on 5dda6b923 (version context 1.12.1; HISTORY stub with the "Based on v1.12.1"
+  line and the Truncated NFW/Hernquist backend sentence). `v2-workflows.diff` (no `.github` change from the rebase) and
+  `main-docs.diff` (on v1.12.1) still apply unchanged.
+- main: #1786 bumps to 1.12.2.dev0.
+
 ---
 
 ## 1. Branch rename
