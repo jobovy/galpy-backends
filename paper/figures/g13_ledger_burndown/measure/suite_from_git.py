@@ -4,7 +4,7 @@ onto it: each ledger entry counts as the number of collected test ids it matches
 matches all of its tests). Splitting one entry into its parametrizations then
 leaves the count unchanged, and whole-file defers count at their real size.
 
-    GALPY_REPO=/home/bovy/Repos/galpy GALPY_REF=origin/feat/backends \\
+    GALPY_REPO=/home/bovy/Repos/galpy GALPY_REF=origin/v2 \\
         python measure/suite_from_git.py [--workers 4]
 
 Writes data/suite.json: per commit, the existing suite's size (tests/ minus the
@@ -38,7 +38,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 REPO = os.environ.get("GALPY_REPO", "/home/bovy/Repos/galpy")
-REF = os.environ.get("GALPY_REF", "origin/feat/backends")
+REF = os.environ.get("GALPY_REF", "origin/v2")
 LEDGERS = ["tests/backend_xfail.txt", "tests/backend_slow_skip.txt"]
 SKIP = "tests/backend_skip.txt"
 MODES = ("jax", "torch", "jax-jit", "torch-jit")

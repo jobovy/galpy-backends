@@ -4,7 +4,8 @@
 
 Every PR opened on jobovy/galpy since 2026-06-01 counts as part of the project
 unless it is listed in EXCLUDED below (reviewed by hand, 2026-10-16 and 2026-10-29):
-* backend PRs: head backend/*, or base feat/backends*, backend/* or another
+* backend PRs: head backend/*, or base v2 (feat/backends* before 2026-11-02),
+  backend/* or another
   backend sub-branch;
 * the three-dimensional variational equations (base feat/variational3d);
 * PRs to main that came out of the backend work (fixes to the numpy/C code,
@@ -59,7 +60,7 @@ merged = [p for p in proj if p["mergedAt"]]
 def kind(p):
     if p["baseRefName"] == "main" and p["number"] != 891:  # whatever the head branch is called
         return "main"
-    if (p["headRefName"].startswith("backend/") or p["baseRefName"].startswith("feat/backends")
+    if (p["headRefName"].startswith("backend/") or p["baseRefName"].startswith("feat/backends") or p["baseRefName"] == "v2"
             or p["baseRefName"].startswith("backend/") or p["number"] in (1034, 1195, 1433)):
         return "backend"
     if p["baseRefName"] == "feat/variational3d" or p["number"] == 891:
@@ -67,7 +68,7 @@ def kind(p):
     return "main"
 
 
-_INTEGRATION = {"main", "feat/backends", "feat/backends-develop", "feat/variational3d"}
+_INTEGRATION = {"main", "v2", "feat/backends", "feat/backends-develop", "feat/variational3d"}
 heads = {p["headRefName"] for p in proj} - _INTEGRATION
 bases = collections.Counter(p["baseRefName"] for p in proj)
 stacked = [p for p in proj if p["headRefName"] not in _INTEGRATION

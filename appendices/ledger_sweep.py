@@ -20,7 +20,7 @@ Usage
     python ledger_sweep.py <run-id> [--repo jobovy/galpy] [--ledger-ref REF]
     python ledger_sweep.py --dir <already-downloaded-artifact-dir>
 
-The ledger is read from a git ref (default origin/feat/backends-develop), not
+The ledger is read from a git ref (default origin/v2), not
 from a working tree -- see ledger_text().
 
 ``<run-id>`` is a backend-tests workflow run (``gh run list --workflow
@@ -51,7 +51,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 GALPY = "/home/bovy/Repos/galpy"
-DEFAULT_REF = "origin/feat/backends-develop"
+DEFAULT_REF = "origin/v2"
 LEDGER_PATH = "tests/backend_xfail.txt"
 
 
@@ -59,7 +59,8 @@ def ledger_text(ref, path=None):
     """The ledger's contents, read from git rather than a working tree.
 
     A checkout is whatever branch it happens to be on -- the main clone sits on
-    feat/backends (857 entries) while the work is on feat/backends-develop (16).
+    an old feat/backends (857 entries) while the work was on feat/backends-develop (16;
+    both are now v2).
     A worktree is worse still: another job may be mid-edit, which is exactly how
     an earlier count missed three lines. So read the ref unless told otherwise.
     """

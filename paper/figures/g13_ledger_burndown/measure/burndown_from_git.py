@@ -1,7 +1,7 @@
 """Reconstruct the backend xfail-ledger burndown time series from git history.
 
 The ledger files (tests/backend_xfail.txt + tests/backend_slow_skip.txt) are
-version-controlled on feat/backends, so every commit that touches them is a
+version-controlled on v2 (formerly feat/backends), so every commit that touches them is a
 burndown data point -- no manual logging needed, and the series is exactly
 reproducible from the repo. The ledger SIZE is the migration progress metric
 (see plan Pillar 1 / memory ledger-milestone-burndown): it shrinks as each
@@ -9,7 +9,7 @@ subsystem (potentials, orbit, action-angle, df, ...) is ported and its tests
 move xfail->pass at a milestone review.
 
 Run at each milestone to refresh data/burndown.json:
-    GALPY_REPO=/path/to/galpy GALPY_REF=origin/feat/backends \
+    GALPY_REPO=/path/to/galpy GALPY_REF=origin/v2 \
         python measure/burndown_from_git.py
 
 Output (data/burndown.json): one record per ledger-touching commit, oldest
@@ -23,7 +23,7 @@ import subprocess
 from pathlib import Path
 
 REPO = os.environ.get("GALPY_REPO", "/home/bovy/Repos/galpy")
-REF = os.environ.get("GALPY_REF", "origin/feat/backends")
+REF = os.environ.get("GALPY_REF", "origin/v2")
 LEDGERS = ["tests/backend_xfail.txt", "tests/backend_slow_skip.txt"]
 # eager modes, and (from the --jit CI rows on) the suite under jit
 _MODES = ("jax", "torch", "jax-jit", "torch-jit")
