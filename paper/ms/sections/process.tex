@@ -156,9 +156,29 @@ kinds of problems that reviews of human code catch: a variable omitted
 from an OpenMP \texttt{private} clause, a coverage drop of one line that
 the automated check had passed.
 
+Claude Code records every message of a session, and the token counts of
+every response, in a transcript, from which we can estimate how much
+input the work took. This is an estimate, not an exact count, because
+separating JB's own text from the material that he passed on (reports
+from other agents, reviews, logs) relies on simple heuristics. Between
+2026 June 4 and October 30, JB sent about 2,500 messages, on 141 of the
+149 days, almost a quarter of them while the agent was working, which
+then folded them into the task at hand. Most were short, with a median
+length of 14 words, and in total they contain about 57,000 words of
+JB's own text, or roughly 110 single-spaced pages, plus about 33,000
+words that he passed on. Over the same period, the agent produced about
+114 million output tokens (including its reasoning and its tool calls;
+a third of them in subagents that it started) and read about 44 billion
+input tokens, almost all of them its own context re-read from a cache at
+every step; these numbers do not include the other agents whose reports
+JB passed on. Review on \github\ itself was light by comparison: of the
+494 PRs that the agent opened under its own account (from July 26 on),
+JB left a formal review on 23 and comments on 24.
+
 JB also used two other forms of review. First, at several points he ran
 an independent AI code reviewer (OpenAI's Codex) over the agent's work and
-posted its findings to the PRs for the agent to address. These reviews
+passed its findings to the agent to address, usually by pasting them into
+the conversation (18 reviews in all). These reviews
 found real defects: a gradient of the incomplete gamma function that
 was \texttt{nan} at the endpoint $x=0$ although its value was correct;
 a quadrature routine documented as accepting arrays that was correct
