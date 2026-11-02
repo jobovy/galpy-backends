@@ -69,7 +69,7 @@ A forced-torch run of the whole existing suite with the instrument. Use `stats/i
 | The description of the exception | `process.tex` "a stream that the tests build with \numpy\ before the backend is forced" |
 
 ## 7b. JB's input and token use (§8 Review, "Claude Code records every message")
-Run `python paper/ms/stats/session_stats.py ~/.claude/projects/-home-bovy-Repos-galpy/e83d6165-0836-4adf-9f62-52251f942f9d.jsonl --until <cut-off>` (~1 min for the 2.1 GB transcript; needs `gh`). The split between JB's own text and relayed material is heuristic, so the paper rounds and calls it an estimate. The Codex count (18 at the cut-off of 2026-10-30) is by hand: the messages mentioning Codex, minus those that only ask about a review.
+Run `python paper/ms/stats/session_stats.py ~/.claude/projects/-home-bovy-Repos-galpy/e83d6165-0836-4adf-9f62-52251f942f9d.jsonl --until <cut-off>` (~1 min for the 2.1 GB transcript). The split between JB's own text and relayed material is heuristic, so the paper rounds and calls it an estimate. The Codex count (18 at the cut-off of 2026-10-30) is by hand: the messages mentioning Codex, minus those that only ask about a review.
 
 | Value | Where |
 |---|---|
@@ -77,7 +77,6 @@ Run `python paper/ms/stats/session_stats.py ~/.claude/projects/-home-bovy-Repos-
 | about 2,500 messages (2,508), almost a quarter while the agent worked (574) | same paragraph |
 | median 14 words; about 57,000 own words (56,555) = roughly 110 pages at 500 words/page; about 33,000 relayed (33,356) | same paragraph |
 | about 114 million output tokens (75.7M main + 38.5M subagents, a third); about 44 billion input tokens (36.6B + 7.5B, 97% cache reads) | same paragraph |
-| 494 agent PRs since 2026-07-26 (its own account); formal review on 23, comments on 24 | same paragraph, "Review on \github\ itself" |
 | "18 reviews in all" (Codex) | `process.tex` "usually by pasting them into the conversation" |
 
 ## 8. Outside the paper

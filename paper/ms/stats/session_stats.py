@@ -13,9 +13,6 @@ Material that JB relayed (reports from the H100 agent, Codex reviews, logs,
 code) is split off heuristically (RELAY): from the line where it starts, the
 rest of the message counts as relayed. Words are whitespace-separated; a page
 is 500 words (single-spaced).
-
-Also counts JB's comments on GitHub on the agent's PRs since it got its own
-account (jobovy-agent, 2026-07-26); before that it posted as jobovy.
 """
 
 import argparse
@@ -24,7 +21,6 @@ import glob
 import json
 import os
 import re
-import subprocess
 
 ap = argparse.ArgumentParser()
 ap.add_argument("transcript")
@@ -140,23 +136,3 @@ for f in glob.glob(os.path.join(os.path.splitext(args.transcript)[0], "subagents
                 sub[(f, m["id"])] = (d.get("timestamp", ""), m["usage"])
 subt = total(sub.values(), "subagents")
 print(f"  output in all: {(main['output_tokens'] + subt['output_tokens']) / 1e6:,.0f}M tokens")
-
-# GitHub: JB's comments on the agent's PRs since it got its own account
-since, last = "2026-07-26", (args.until or "2026-12-31")
-gh = lambda *a: subprocess.run(["gh", *a], check=True, capture_output=True, text=True).stdout
-q = f"repo:jobovy/galpy is:pr author:jobovy-agent created:{since}..{last}"
-count = lambda extra: int(gh("api", "-X", "GET", "search/issues", "-f", f"q={q} {extra}", "--jq", ".total_count"))
-nprs, nreviewed, ncommented = count(""), count("reviewed-by:jobovy"), count("commenter:jobovy")
-agent_prs = set(gh("api", "-X", "GET", "search/issues", "-f", f"q={q}", "--paginate",
-                   "--jq", ".items[].number").split())
-comments = []
-for endpoint, key in (("pulls/comments", "pull_request_url"), ("issues/comments", "issue_url")):
-    out = gh("api", "--paginate", f"repos/jobovy/galpy/{endpoint}?since={since}T00:00:00Z&per_page=100",
-             "--jq", f'.[] | select(.user.login=="jobovy") | {{pr: (.{key}|split("/")|last), body, created_at}}')
-    comments += [json.loads(r) for r in out.splitlines()]
-comments = [c for c in comments if c["pr"] in agent_prs and c["created_at"][:10] <= last]
-codex = [c for c in comments if re.search(r"codex|\[P[123]\]", c["body"], re.I)]
-words = sum(len(c["body"].split()) for c in comments if c not in codex)
-print(f"GitHub, agent's PRs opened {since} to {last}: {nprs}; JB reviewed {nreviewed} and commented on "
-      f"{ncommented}; {len(comments) - len(codex)} comments of his own ({words:,} words) on "
-      f"{len({c['pr'] for c in comments if c not in codex})} PRs, plus {len(codex)} relayed Codex reviews")
