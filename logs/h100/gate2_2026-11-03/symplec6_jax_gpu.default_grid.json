@@ -1,0 +1,78 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "symplec6_jax (in-backend, constant step, nsteps=450)",
+  "stepping": "constant, shared by the batch",
+  "nsteps": 450,
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "potential": "MWPotential2014",
+  "host": "trig0024",
+  "cpu_affinity": 24,
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "XLA_FLAGS": "unset"
+  },
+  "results": [
+    {
+      "N": 1,
+      "wall_s": 0.2581146129523404,
+      "per_orbit_ms": 258.1146129523404,
+      "compile_run_s": 6.5779350670054555
+    },
+    {
+      "N": 10,
+      "wall_s": 0.2768727960065007,
+      "per_orbit_ms": 27.687279600650072,
+      "compile_run_s": 2.894458155031316
+    },
+    {
+      "N": 100,
+      "wall_s": 0.2902654000208713,
+      "per_orbit_ms": 2.902654000208713,
+      "compile_run_s": 3.178283453977201
+    },
+    {
+      "N": 1000,
+      "wall_s": 0.2792274300009012,
+      "per_orbit_ms": 0.2792274300009012,
+      "compile_run_s": 3.1667468840023503
+    },
+    {
+      "N": 10000,
+      "wall_s": 0.29267133498797193,
+      "per_orbit_ms": 0.029267133498797195,
+      "compile_run_s": 2.935964389005676
+    },
+    {
+      "N": 30000,
+      "wall_s": 0.3064919780008495,
+      "per_orbit_ms": 0.010216399266694983,
+      "compile_run_s": 3.0055394640075974
+    },
+    {
+      "N": 100000,
+      "wall_s": 0.28847780695650727,
+      "per_orbit_ms": 0.0028847780695650726,
+      "compile_run_s": 2.8509189219912514
+    },
+    {
+      "N": 300000,
+      "wall_s": 0.8802735779900104,
+      "per_orbit_ms": 0.002934245259966701,
+      "compile_run_s": 3.461278605973348
+    },
+    {
+      "N": 1000000,
+      "wall_s": 2.322624063002877,
+      "per_orbit_ms": 0.002322624063002877,
+      "compile_run_s": 4.9580344569985755
+    }
+  ],
+  "jax_version": "0.11.2",
+  "galpy_version": "2.0.0b1.dev0",
+  "numpy_version": "2.5.3",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_file": "/scratch/bovy/galpy-h100/galpy-gate/galpy/__init__.py"
+}

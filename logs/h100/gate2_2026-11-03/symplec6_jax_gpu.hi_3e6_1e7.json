@@ -1,0 +1,36 @@
+{
+  "backend": "galpy-jax",
+  "device": "gpu",
+  "integrator": "symplec6_jax (in-backend, constant step, nsteps=450)",
+  "stepping": "constant, shared by the batch",
+  "nsteps": 450,
+  "nt": 16,
+  "tspan_Gyr": 2.0,
+  "potential": "MWPotential2014",
+  "host": "trig0024",
+  "cpu_affinity": 24,
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "XLA_FLAGS": "unset"
+  },
+  "results": [
+    {
+      "N": 3000000,
+      "wall_s": 6.512590917991474,
+      "per_orbit_ms": 0.002170863639330491,
+      "compile_run_s": 10.481339188001584
+    },
+    {
+      "N": 10000000,
+      "wall_s": 20.41633829200873,
+      "per_orbit_ms": 0.0020416338292008735,
+      "compile_run_s": 23.07474202098092
+    }
+  ],
+  "jax_version": "0.11.2",
+  "galpy_version": "2.0.0b1.dev0",
+  "numpy_version": "2.5.3",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "galpy_file": "/scratch/bovy/galpy-h100/galpy-gate/galpy/__init__.py"
+}
