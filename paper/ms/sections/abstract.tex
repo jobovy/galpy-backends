@@ -1,31 +1,23 @@
-We describe an extension to \galpy, the \python\ library for galactic
-dynamics, that adds \jax\ and \torch\ as new computational backends to its existing
-\numpy+\cc\ implementation. With it, \galpy's gravitational
-potentials, orbit integration, action--angle transformations and their
-inverses, and distribution functions, including those for tidal streams,
-run on CPUs and GPUs, can be compiled as part of a user's program, and
-can be differentiated with respect to their inputs and parameters:
-orbits with respect to initial conditions and the parameters of the
-potential, actions and angles with respect to phase-space position and
-potential, distribution functions and the samples drawn from them with
-respect to their own and the potential's parameters. The backend is
-chosen by the type of the arrays passed in; the interface is unchanged,
-the \numpy\ path is byte-for-byte identical to the previous version, and
-\galpy\ compiles nothing itself but is written to be traced by
-\texttt{jax.jit} and \texttt{torch.compile}. Derivatives of orbits are
-obtained either by differentiating through an in-backend ODE solver or,
-for derivatives with respect to the initial conditions, from the
-variational equations integrated in \cc, which run on all of \galpy's
-compiled integrators; the two agree to a few parts in $10^{10}$. Apart
-from the tests of one wrapped external code, the existing test suite of
-4,462 tests passes under \numpy\ and under both frameworks in eager and
-compiled mode, and 18,807 further tests cover the backend code. On a GPU, batches of orbits, samples from distribution
-functions, and stream models run one to five orders of magnitude faster
-than on a single CPU core. An AI coding agent wrote essentially all of the code over four months
-under the detailed direction and review of the human author, and we describe how
-we organized this work and how we established the correctness of the
-result. We give examples of fitting the Galactic potential with a
-hypervelocity star and of learning the inverse action--angle
-transformation with a neural network trained through \galpy.
-\galpy\ is available at \url{https://github.com/jobovy/galpy} and
-documented at \url{https://docs.galpy.org}.
+We describe an extension of \galpy, the \python\ library for galactic
+dynamics, that adds \jax\ and \torch\ as computational backends
+alongside its existing \numpy\ and \cc\ implementation. With it,
+\galpy's gravitational potentials, orbit integration, action--angle
+transformations and their inverses, and distribution functions,
+including those for tidal streams, run on GPUs, can be compiled as part
+of a user's program, and can be differentiated with respect to their
+inputs and parameters, from the force at a point to the samples drawn
+from a distribution function. The backend follows from the type of the
+arrays that are passed in, the interface is unchanged, and the \numpy\
+path gives the same results as before. We describe the design of the
+backend framework and its implementation in each of \galpy's modules,
+with examples of use, and we discuss its limitations. On a GPU, batches
+of orbits, samples from distribution functions, and stream models run
+one to five orders of magnitude faster than on a single CPU core. We
+give examples of fitting the Galactic potential with a hypervelocity
+star and of learning the inverse action--angle transformation with a
+neural network trained through \galpy. An AI coding agent wrote
+essentially all of the code under the direction and review of the human
+author, and we describe how we organized this work and how we
+established the correctness of the result. \galpy\ is available at
+\url{https://github.com/jobovy/galpy}, with the documentation of the
+backends at \url{https://docs.galpy.org/en/v2/}.

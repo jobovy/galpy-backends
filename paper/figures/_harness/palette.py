@@ -140,7 +140,7 @@ def label(framework, device="cpu", mode=None, extra=""):
 
 
 def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt=6,
-                order="end"):
+                order="end", swatch_pt=None):
     """Direct line labels in the line's colour, instead of a legend.
 
     Every line (default: each with a label not starting with "_") is labelled in a
@@ -154,8 +154,11 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
     different x). ``order="elbow"``: keep the end-point order but draw each leader
     as a thin horizontal run from the line's end to the axes' right edge, then a
     short slanted run to the label -- leaders can then never cross each other.
+    ``swatch_pt``: also draw a short sample of the line (its style, width,
+    colour, and marker), this long in points, right of each label.
     Call after the axis limits are final.
     """
+
     inline = inline or {}
     if lines is None:
         lines = [(ln, ln.get_label()) for ln in ax.get_lines() if not ln.get_label().startswith("_")]
@@ -190,7 +193,8 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
         i = k[-1]
         P = ax.transData.transform(numpy.c_[x[k[-2:]], y[k[-2:]]])
         Y = P[-1, 1]
-        col.append({"xy": (x[i], y[i]), "Y": Y, "Ynew": Y, "text": text, "color": c, "P": P})
+        col.append({"xy": (x[i], y[i]), "Y": Y, "Ynew": Y, "text": text, "color": c, "P": P,
+                    "line": ln})
     if order == "edge" and col:
         X_edge = max(a["P"][-1, 0] for a in col)
         for a in col:
@@ -232,14 +236,57 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
             ye = to_axes.transform(ax.transData.transform(a["xy"]))[1]
             xe = to_axes.transform(ax.transData.transform(a["xy"]))[0]
             ax.plot([xe, 1.0], [ye, ye], transform=ax.transAxes, color=a["color"], lw=0.5,
-                    alpha=0.6, clip_on=False, zorder=1, label="_leader")
+                    alpha=0.6, clip_on=False, zorder=0.5, label="_leader")
             xy, xycoords = (1.0, ye), "axes fraction"
-        ax.annotate(
+        a["artist"] = ax.annotate(
             a["text"], xy=xy, xycoords=xycoords, xytext=(xt, yt), textcoords="axes fraction",
             fontsize=fontsize, color=a["color"], va="center", ha="left", annotation_clip=False,
-            arrowprops=dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.8,
+            bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85),
+            arrowprops=dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.6,
                             **({"relpos": (0.0, 0.5)} if order == "elbow" else {})),
         )
+        # the leader behind the data lines, the label box above them
+        a["artist"].arrow_patch.set_zorder(0.5)
+        a["artist"].set_zorder(4)
+    if swatch_pt and col:
+        # drawn by draw_swatches once the layout is final (layout.fit_right moves
+        # the labels and shrinks the axes, which would move a swatch placed now)
+        ax._swatches = getattr(ax, "_swatches", []) + [(a["artist"], a["line"], swatch_pt)
+                                                       for a in col]
+
+
+SWATCH_GAP_PT = 4.0
+
+
+def swatch_width_pt(t, ax):
+    """The width in points that a label's swatch (if any) adds right of it."""
+    for artist, _, spt in getattr(ax, "_swatches", []):
+        if artist is t:
+            return SWATCH_GAP_PT + spt
+    return 0.0
+
+
+def draw_swatches(fig):
+    """Draw the line samples requested by label_lines(swatch_pt=...), right of
+    each label, in figure inches so that they stay put when saved."""
+    from matplotlib.lines import Line2D
+
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    dpi = fig.dpi
+    for ax in fig.axes:
+        for t, ln, spt in getattr(ax, "_swatches", []):
+            x0 = (t.get_window_extent(r).x1 + SWATCH_GAP_PT * dpi / 72.0) / dpi
+            x1 = x0 + spt / 72.0
+            y = ax.transAxes.transform(t.xyann)[1] / dpi  # the label is va="center"
+            sw = Line2D([x0, 0.5 * (x0 + x1), x1], [y, y, y])
+            sw.update_from(ln)
+            sw.set_transform(fig.dpi_scale_trans)
+            sw.set_clip_on(False)
+            sw.set_markevery([1])
+            sw.set_label("_swatch")
+            fig.add_artist(sw)
+        ax._swatches = []
 
 
 def extend_right(ax, factor=None, frac=0.25):

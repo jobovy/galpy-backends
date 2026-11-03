@@ -7,15 +7,18 @@ These DF models are constructed from a potential and a set of parameters,
 they can be evaluated at phase-space points, integrated to obtain their moments 
 (densities, mean velocities, and velocity dispersions), and they can be sampled.
 On the backends, evaluation and the moments are differentiable for
-every DF, sampling is differentiable wherever it is done by inverse
+every DF; sampling is differentiable wherever it is done by inverse
 transformation, which is everywhere except for the many-position
 velocity sampler of the quasi-isothermal disk DF
-(\sectionname~\ref{sec:df-disk}), and
-construction is differentiable for every DF whose construction is
-itself a numerical computation---the spherical DFs obtained by
-inverting a density, the King model, the quasi-isothermal disk DF,
-whose table of guiding-center radii is then built on the backend, and
-the stream models of \sectionname~\ref{sec:streams}. The parameters
+(\sectionname~\ref{sec:df-disk}); and construction is differentiable
+for every DF, including those whose construction is itself a numerical
+computation---the spherical DFs obtained by inverting a density, the
+King model, the quasi-isothermal disk DF, whose table of guiding-center
+radii is then built on the backend, and the stream models of
+\sectionname~\ref{sec:streams}---with the one exception of the
+optional corrections of the two-dimensional disk DFs for the difference
+between their input and output profiles, which we did not migrate
+(\sectionname~\ref{sec:df-disk}). The parameters
 of a DF, like those of a potential, can be given as backend arrays and
 are then differentiated through everything that follows.
 
@@ -139,14 +142,14 @@ def dispersion(a_tracer):
 jax.grad(dispersion)(0.7)
 \end{code}
 The closed-form DFs, including the analytic DFs of \citet{Evans1997}
-for power-law spheres, and the energy derivative of their mass
-profiles are likewise differentiable.
+for power-law spheres, and their differential energy distributions
+$\mathrm{d}M/\mathrm{d}E$ are likewise differentiable.
 
 \subsection{Disk DFs}\label{sec:df-disk}
 
 \galpy\ contains models for two-dimensional and three-dimensional disk DFs.
 The two-dimensional axisymmetric disk DFs of \citet{Dehnen1999},
-\citet{Shu1969}, and Schwarzschild
+\citet{Shu1969}, and \citet{Schwarzschild1907}
 and their moments are evaluated with nested Gauss--Legendre quadrature
 on the backends and are differentiable with respect to the parameters of
 their surface-density and velocity-dispersion profiles. Their samplers

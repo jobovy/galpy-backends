@@ -49,10 +49,21 @@ def label(fw, dev, mode=None, extra=""):
 
 def fit_right(fig, pad_in=0.04):
     """Make room for texts drawn right of an axes (the direct line labels of
-    palette.label_lines): shrink the subplot area so they stay inside the page,
-    and widen the gap between side-by-side panels so they clear the next panel's
-    y-axis. Call last, after tight_layout and label_lines."""
+    palette.label_lines, with their style swatches): shrink the subplot area so
+    they stay inside the page, and widen the gap between side-by-side panels so
+    they clear the next panel's y-axis. Call last, after tight_layout and
+    label_lines."""
+    _fit_right(fig, pad_in)
+    palette.draw_swatches(fig)
+
+
+def _fit_right(fig, pad_in):
     pad = pad_in * fig.dpi
+    pt = fig.dpi / 72.0
+
+    def right_edge(t, ax, r):  # a label's right edge, swatch included
+        return t.get_window_extent(r).x1 + palette.swatch_width_pt(t, ax) * pt
+
     fig.canvas.draw()
     r = fig.canvas.get_renderer()
     # a label column spread past the top or bottom of its axes: slide it back
@@ -73,7 +84,7 @@ def fit_right(fig, pad_in=0.04):
         W = fig.bbox.width
         changed = False
         # right edge of the page
-        x1 = max((t.get_window_extent(r).x1 for ax in fig.axes for t in ax.texts
+        x1 = max((right_edge(t, ax, r) for ax in fig.axes for t in ax.texts
                   if t.get_visible() and t.get_text()), default=0.0)
         over = x1 + pad - W
         if over > 0.5:
@@ -84,7 +95,7 @@ def fit_right(fig, pad_in=0.04):
         extra = 0.0
         for ax in axes:
             bb = ax.bbox
-            hang = max((t.get_window_extent(r).x1 for t in ax.texts
+            hang = max((right_edge(t, ax, r) for t in ax.texts
                         if t.get_visible() and t.get_text()), default=bb.x1) - bb.x1
             right_of = [a for a in axes if a is not ax and a.bbox.x0 > bb.x1 - 1
                         and a.bbox.y1 > bb.y0 and a.bbox.y0 < bb.y1]

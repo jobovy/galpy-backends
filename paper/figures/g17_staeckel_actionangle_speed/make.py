@@ -459,7 +459,9 @@ _TORCH = ["torch (CPU)", "torch (GPU)", "torch (GPU, +transfer)"]
 # the paper's figure (2026-10-28, JB's review): eager torch AND compiled jax on
 # the CPU and both GPUs in one figure; eager jax (a floor of seconds, described
 # in the text) and the jax +transfer variant are left to the jax-only figure
-_BOTH = ["torch (CPU)", "jax (CPU, jit)", "torch (GPU)", "torch (GPU, +transfer)", "jax (GPU, jit)"]
+# (2026-11-02, JB: the +transfer line lies on top of the eager one -- the
+# transfer adds at most a few per cent -- so it is left out and said in the caption)
+_BOTH = ["torch (CPU)", "jax (CPU, jit)", "torch (GPU)", "jax (GPU, jit)"]
 
 
 def _data():
@@ -582,7 +584,7 @@ def _make(names, backend_label):
         fig.tight_layout()
         fs = layout.FS["line"]
         for ax in (axw, axt):
-            palette.label_lines(ax, fontsize=fs, min_sep_pt=1.3 * fs, order="elbow")
+            palette.label_lines(ax, fontsize=fs, min_sep_pt=1.3 * fs)
         layout.fit_right(fig)
         return fig
     fig, (axw, axt) = plt.subplots(1, 2, figsize=(13.0, 4.8))

@@ -227,9 +227,8 @@ def make():
     fig.tight_layout(**({} if PAPER else {"w_pad": 11}))
     layout.faster_arrow(ax1, "down", xy=(0.5, 0.615), length=0.1)
     layout.faster_arrow(ax2, "down", xy=(0.08, 0.73), length=0.14)
-    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=1.3 * fs_line, order="elbow")
-    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
-                        order="elbow")
+    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=1.3 * fs_line)
+    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     return fig

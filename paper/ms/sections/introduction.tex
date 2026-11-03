@@ -6,22 +6,20 @@ of Galactic astronomy. Codes such as the NEMO Stellar Dynamics Toolbox
 \citep{PriceWhelan2017}, and \texttt{AGAMA} \citep{Vasiliev2019}
 provide gravitational potentials, orbit integration, action--angle
 coordinates, and distribution functions (DFs) in a form that can be
-applied directly to observed stars, and they are used both to characterize
-the orbits of individual objects and collections of objects, 
-and to build dynamical models that are fit to data. The reason that such codes are 
-useful is simple: the motion of a star in a given gravitational potential is a solved
-problem, but one that requires careful numerical work, and a
-well-tested implementation that is shared saves every user from
-repeating that work. Such a code also allows developers to build more
-sophisticated models within a well-defined framework, which users can
-then apply without implementing them themselves; \galpy's action--angle
-methods are an example, because their implementation is far from
-trivial and they have been used in many analyses that would otherwise
-not have been attempted. The
-kinematic data from the Gaia mission
-\citep{Gaia2016,Gaia2018,Gaia2023}
-have made such codes indispensable, because for the first time orbits
-can be computed for hundreds of millions of stars.
+applied directly to observed stars, both to characterize the orbits of
+individual objects and collections of objects, and to build dynamical
+models that are fit to data. Such codes are useful because the motion of
+a star in a given gravitational potential is a solved problem that
+nevertheless requires careful numerical work, which a shared,
+well-tested implementation saves every user from repeating, and because
+they let developers build sophisticated models within a well-defined
+framework that users can apply without implementing them; \galpy's
+action--angle methods are an example, because their implementation is
+far from trivial and they have been used in many analyses that would
+otherwise not have been attempted. The kinematic data from the Gaia
+mission \citep{Gaia2016,Gaia2018,Gaia2023} have made such codes
+indispensable, because for the first time orbits can be computed for
+hundreds of millions of stars.
 
 \citet{Bovy2015} introduced \galpy\ as a \python\ package, with \cc\
 implementations of the computationally-expensive parts, for computing orbits,
@@ -31,16 +29,16 @@ Most of
 these use \galpy\ as a tool: orbits are integrated, and orbital
 parameters and actions computed, in a model of the
 Milky Way to place objects in the Galaxy and to characterize their
-motion. In this way, \galpy\ has been applied to stars in the disk with
+motion, for stars in the disk with
 measured abundances and ages \citep[\eg,][]{Frankel2020,Xiang2022},
-to the substructure of the stellar halo \citep[\eg,][]{Belokurov2020,
-Lane2023}, to globular clusters and dwarf galaxies \citep[\eg,][]{Fritz2018,
-Pace2022}, to hypervelocity and runaway stars and to the natal kicks of
+the substructure of the stellar halo \citep[\eg,][]{Belokurov2020,
+Lane2023}, globular clusters and dwarf galaxies \citep[\eg,][]{Fritz2018,
+Pace2022}, hypervelocity and runaway stars and the natal kicks of
 pulsars and compact objects \citep[\eg,][]{Boubert2018,Marchetti2022,
-ODoherty2023}, to open clusters and the star-forming regions near the
-Sun \citep[\eg,][]{Zucker2022,Swiggum2024}, to the hosts of exoplanets
-and to interstellar objects \citep[\eg,][]{Stefansson2023,Forbes2025},
-and to galaxies other than our own \citep[\eg,][]{Tonnesen2019}. A
+ODoherty2023}, open clusters and the star-forming regions near the
+Sun \citep[\eg,][]{Zucker2022,Swiggum2024}, the hosts of exoplanets
+and interstellar objects \citep[\eg,][]{Stefansson2023,Forbes2025},
+and galaxies other than our own \citep[\eg,][]{Tonnesen2019}. A
 smaller set of papers, perhaps one in six, uses \galpy\ as a modeling
 framework in which a DF or a potential is fit to data: models of tidal
 streams and of their perturbations by dark-matter subhalos
@@ -57,15 +55,14 @@ requires the likelihood to be evaluated many times over the model's
 parameters, and the efficiency of this search is set by whether its
 derivatives are available.
 
-\galpy\ has changed and grown a lot since 2015. 
+\galpy\ has changed and grown a lot since 2015.
 The number of potentials grew from 22 to 72, with the growth
 shifting from specific density profiles to general solvers (basis-function,
 multipole, and interpolated potentials) and to wrappers that make any
 potential time-dependent, rotating, or tilted, and a library of
-Milky-Way models from the literature was added. \galpy\ also gained
-the ability to include velocity-dependent (e.g., dissipative)
-forces, allowing for example dynamical friction and the fictitious forces
-in non-inertial reference frames to be included in orbit integrations. The
+Milky-Way models from the literature and velocity-dependent forces,
+such as dynamical friction and the fictitious forces in non-inertial
+reference frames, were added. The
 \orb\ class was rewritten as an arbitrarily-shaped array of orbits that
 are integrated in parallel, such that millions of orbits can be analyzed
 at once; orbits can be initialized by name through a query to SIMBAD,
@@ -75,20 +72,11 @@ integration \citep{MackerethBovy2018}. DFs for tidal streams were extended to st
 \citep{Sanders2016} and to particle-spray models \citep[][implemented
 in \galpy\ by \citealt{Qian2022}]{Fardal2015,Chen2025}, a general
 framework for isotropic and anisotropic spherical DFs was added
-\citep{Lane2022}, as were tools for Jeans modeling. The
-action--angle module gained inverse transformations,
-and the orbit module gained chaos diagnostics and surfaces of
-section. In 2026, as the first step of the work described in this
-paper, we implemented the three-dimensional variational equations that
-propagate the derivatives of an orbit with respect to its initial
-conditions in \cc\ for most of the potential library, and on top of
-them the computation of Lyapunov exponents
-(\sectionname~\ref{sec:orbit-dxdv}). Over the same
-period the code grew from 38,000 to 95,000 lines of \python\ (of which
-42,000 are executable statements) and from
-8,000 to 26,000 lines of \cc, and the test suite grew from 560 to 2,360
-tests that cover $99.94\,\%$ of the code (24 of the 41,669 executable
-statements are not covered).
+\citep{Lane2022}, as were tools for Jeans modeling, inverse
+action--angle transformations, chaos diagnostics, and surfaces of
+section. Over the same period the code grew from 38,000 to 95,000 lines
+of \python\ and from 8,000 to 26,000 lines of \cc, and the test suite
+grew from 560 to 2,360 tests that cover $99.94\,\%$ of the code.
 
 Over the same decade, numerical computing has been reshaped by
 frameworks built for machine learning, chiefly \jax\
@@ -108,45 +96,41 @@ inference, or the optimization of models with many parameters, such as
 neural networks that stand in for a potential or a DF. Codes built on
 these frameworks are now in use in cosmology
 \citep[\eg,][]{Modi2021,Campagne2023,Li2024} and, over the past two
-years, in galactic dynamics. A general-purpose code of this kind is
-\texttt{galax} \citep{Starkman2026}, a re-implementation of
-\texttt{gala} in \jax\ that provides gravitational potentials, orbit
-integration, and particle-spray stream models, all of them
-differentiable and able to run on a GPU. \texttt{galax} was used to
-provide the halo potentials whose acceleration directions are compared
-with the curvature of stellar streams around other galaxies to
-constrain the shapes of their halos \citep{Wu2026b,Euclid2026}, to
-compute the orbits used to forecast how well such curvature tests
-separate dark-matter models \citep{Starkman2026b}, and, by
-\citet{AnauMontel2026}, to integrate streams perturbed by subhalos on a
-GPU and to obtain Fisher forecasts by differentiating the full
-simulation. Other \jax-based codes were used to fit the progenitor and
-the host potential of a mock stream by gradient descent through an
-$N$-body simulation \citep{Viterbo2025}, to generate the many
-particle-spray models needed to infer the distribution of halo
-flattenings from a population of streams \citep{Chemaly2026}, and to
+years, in galactic dynamics. \texttt{galax} \citep{Starkman2026}, a
+re-implementation of \texttt{gala} in \jax, provides gravitational
+potentials, orbit integration, and particle-spray stream models, all of
+them differentiable and able to run on a GPU; it supplied the halo
+potentials whose acceleration directions \citet{Wu2026b} and
+\citet{Euclid2026} compare with the curvature of stellar streams around
+other galaxies to constrain the shapes of their halos, the orbits with
+which \citet{Starkman2026b} forecast how well such curvature tests
+separate dark-matter models, and the GPU integration of streams
+perturbed by subhalos that \citet{AnauMontel2026} differentiate to
+obtain Fisher forecasts. With other \jax\ codes, \citet{Viterbo2025}
+fit the progenitor and the host potential of a mock stream by gradient
+descent through an $N$-body simulation, \citet{Chemaly2026} generate
+the many particle-spray models needed to infer the distribution of halo
+flattenings from a population of streams, and \citet{Nibauer2025}
 compute the response of streams to subhalos by integrating linearized
-equations of motion \citep{Nibauer2025}. Gradient-based samplers in
-\jax\ were used to fit a spline model of the track of GD-1 to measure
-the accelerations along it \citep{Nibauer2025b}, and to fit a flexible
-model of vertical orbits to the variation of stellar abundances
-\citep{PriceWhelan2025}. Normalizing flows for the DF, differentiated
-automatically, were used to recover the potential from phase-space
-snapshots of simulated galaxies \citep{Green2023,An2021,Buckley2023}
-and from 5.6 million \textit{Gaia} stars \citep{Kalda2025}.
-Differentiating an entire simulation
+equations of motion. With gradient-based samplers in \jax,
+\citet{Nibauer2025b} fit a spline model of the track of GD-1 to measure
+the accelerations along it, and \citet{PriceWhelan2025} fit a flexible
+model of vertical orbits to the variation of stellar abundances.
+Normalizing flows for the DF, differentiated automatically, recover the
+potential from phase-space snapshots of simulated galaxies
+\citep{Green2023,An2021,Buckley2023} and from 5.6 million \textit{Gaia}
+stars \citep{Kalda2025}. Differentiating an entire simulation
 \citep{Viterbo2025,AnauMontel2026}, or fitting a neural-network
 potential to millions of stars \citep{Kalda2025}, is not practical with
 codes that only return values.
 
 In this paper, we describe an extension of \galpy\ that adds \jax\ and
 \torch\ as \emph{backends} to its existing \numpy\ (and \scipy) and
-\cc\ implementation. We support two frameworks rather than one on
-purpose: doing so forced the implementation to be agnostic of the
-backend, with solutions that do not depend on the particular framework
-or that are at least easy to generalize, and because the ecosystem of
-array frameworks is in flux, this should make it easier in the future
-to add a backend or to replace one that falls out of use. The principle
+\cc\ implementation. We support both frameworks deliberately: a
+solution that works for both cannot depend on the particulars of
+either, which keeps the implementation agnostic of the backend and
+should make it easy to add a third framework, or to replace one, as the
+ecosystem of array frameworks changes. The principle
 that guided this work is that nothing should change for the existing
 user: the \numpy\ path produces results that are byte-for-byte
 identical to those of the previous version, with a handful of approved
@@ -180,22 +164,20 @@ appears at the end of the paper.
 
 The outline of this paper is as follows. \sectionname~\ref{sec:design}
 describes the design of the backend framework: how a backend is chosen,
-how we made \galpy's code backend-agnostic, the utilities that this
-required, and how we made the test suite run under every backend. The
-following sections go through \galpy's main modules in turn: potentials
-in \sectionname~\ref{sec:potential}, orbit integration and its derivatives
-in \sectionname~\ref{sec:orbit}, action--angle coordinates in
-\sectionname~\ref{sec:aa}, DFs in \sectionname~\ref{sec:df}, and models
-of tidal streams in \sectionname~\ref{sec:streams}. Each of these
-sections starts from the general approach and then gives the details that
-are specific to the module, with examples of use. \sectionname~\ref{sec:process}
-describes the development process. \sectionname~\ref{sec:examples}
-presents fuller examples that combine several parts of the code in a
-single analysis, and \sectionname~\ref{sec:conclusion} concludes. An
-Appendix gives the variational equations behind the orbit derivatives,
-which are also useful outside of the backend frameworks, for computing
-the sensitivity of an orbit to its initial conditions and Lyapunov
-exponents.
+how we made \galpy's code backend-agnostic, and how we made the test
+suite run under every backend.
+\sectionname s~\ref{sec:potential}--\ref{sec:streams} go through
+\galpy's main modules in turn---potentials, orbit integration and its
+derivatives, action--angle coordinates, DFs, and models of tidal
+streams---each starting from the general approach and then giving the
+details that are specific to the module, with examples of use.
+\sectionname~\ref{sec:process} describes the development process,
+\sectionname~\ref{sec:examples} presents fuller examples that combine
+several parts of the code in a single analysis, and
+\sectionname~\ref{sec:conclusion} concludes. An Appendix gives the
+variational equations behind the orbit derivatives, which are also
+useful outside of the backend frameworks, for computing the sensitivity
+of an orbit to its initial conditions and Lyapunov exponents.
 
 Code to reproduce all of the figures in this paper, as well as the
 working notes of the development, is available in a \git\ repository

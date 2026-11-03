@@ -5,6 +5,14 @@
 \hypersetup{colorlinks=true,linkcolor=linkcolor,citecolor=linkcolor,urlcolor=linkcolor}
 \definecolor{linkcolor}{rgb}{0,0,0.25}
 \usemintedstyle{friendly}
+% let a tall two-column figure share its page with text instead of taking a
+% page of its own with an empty remainder
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\dbltopfraction}{0.92}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\dblfloatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{dbltopnumber}{3}
 \input{macros}
 \shorttitle{galpy with jax and PyTorch backends}
 \shortauthors{Bovy}

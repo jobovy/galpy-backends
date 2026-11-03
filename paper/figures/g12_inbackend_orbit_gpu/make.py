@@ -112,7 +112,8 @@ _GPU_SERIES = [
     (["galax_gpu.json", "galax_gpu_hiN.json"], "galax", "gpu", "jit", "batched steps", None),
 ]
 _NMAX = 3e6  # common right edge (the H100 CUDA scans also have N=1e7)
-_PANELS = [("(a) CPU", "cpu", ""), ("(b) NVIDIA TITAN Xp", "gpu", ""), ("(c) NVIDIA H100", "gpu", "h100")]
+_PANELS = [("(a) CPU", "cpu", ""), ("(b) NVIDIA TITAN Xp GPU", "gpu", ""),
+           ("(c) NVIDIA H100 GPU", "gpu", "h100")]
 
 
 def _cpu_tag(d):
@@ -181,11 +182,12 @@ def _plot(ax, series, sub, label_fn):
     description="MWPotential2014 in-backend orbit integration wall time vs batch size N, in three stacked panels (CPU, TITAN Xp, H100): galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
 )
 def make():
-    # print size: 7.0 in wide (figure*), three stacked panels of the original
-    # panel's proportions, each with its lines labelled directly in a column at
-    # the right (elbow leaders), as the single-panel figure was
+    # print size: 7.0 in wide (figure*), three stacked panels, each named inside
+    # its axes (2026-11-02, JB: the figure and its caption must fit one page),
+    # each with its lines labelled directly in a column at the right, with a
+    # sample of the line's style next to each label
     fig, axes = plt.subplots(
-        3, 1, figsize=layout.figsize(PAPER, (7.0, 9.0), (9.0, 13.0)), sharex=True
+        3, 1, figsize=layout.figsize(PAPER, (7.0, 7.9), (9.0, 13.0)), sharex=True
     )
     fs_line = layout.FS["line"] if PAPER else 7
     fs_note = layout.FS["note"] if PAPER else 6.5
@@ -203,14 +205,22 @@ def make():
                 st = palette.c_threads_style(36, node_threads=36)
                 ax.loglog(Ns, wall, ms=4, zorder=2, label=node_label, **st)
             _plot(ax, _GPU_SERIES, sub, _label)
-        ax.set_title(title, loc="left")
+        if PAPER:
+            ax.text(0.025, 0.975, title, transform=ax.transAxes, fontsize=layout.FS["title"],
+                    va="top", ha="left")
+        else:
+            ax.set_title(title, loc="left")
         ax.set_ylabel(r"wall time for the batch  (s)")
         # constant per-orbit-cost reference lines (slope-1 in log-log): wall = N * tau
         # same frame as G8, so the two read as a pair
         layout.apply_frame(ax, "orbit_speed")
-        refs = layout.cost_lines(ax, layout.last_costs(ax, kind="time"), kind="time")
+        costs = layout.last_costs(ax, kind="time")
+        if sub == "h100":
+            # no 0.1 us line: the fastest H100 series is just under 1 us per orbit
+            costs = [c for c in costs if c >= 1e-6]
+        refs = layout.cost_lines(ax, costs, kind="time")
         ax.text(
-            0.025, 0.975,
+            0.025, 0.905 if PAPER else 0.975,
             "grey dotted: " + layout.fmt_seconds(refs) + " per orbit",
             transform=ax.transAxes, fontsize=fs_note, color="0.5", va="top", ha="left",
         )
@@ -234,7 +244,7 @@ def make():
         palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
                                  if not ln.get_label().startswith("_") and ln not in node],
                             fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
-                            order="elbow", pad_pt=18)
+                            order="edge", pad_pt=12, swatch_pt=20 if PAPER else None)
     if PAPER:
         layout.fit_right(fig)
     return fig

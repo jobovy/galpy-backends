@@ -24,9 +24,10 @@ run on both backends, with the exception of the potentials that read
 $N$-body snapshots through \texttt{pynbody} \citep{Pontzen2013} and
 the interface \citep{Webb2020} to \texttt{AMUSE}
 \citep{PortegiesZwart2009,Pelupessy2013,PortegiesZwart2018}, which
-have no backend code. Even the adiabatic-contraction wrapper, whose
-construction is a root find for the contracted profile, builds that
-profile on the backend when one of its parameters, or a parameter of
+have no backend code. Even the wrapper that adiabatically contracts a
+dark-matter halo in response to the baryons, following
+\citet{Cautun2020}, whose construction is a root find for the
+contracted profile, builds that profile on the backend when one of its parameters, or a parameter of
 one of the potentials that it contracts, is being differentiated. The
 convenience functions that act on potentials (the circular velocity
 and epicycle frequencies, the radius of a circular orbit of given

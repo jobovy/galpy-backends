@@ -199,8 +199,8 @@ def make():
                      fontsize=11)
     fig.tight_layout(**({} if PAPER else {"w_pad": 11}))
     sep = 1.3 * fs_line if PAPER else None
-    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=sep, order="elbow")
-    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=sep, order="elbow")
+    palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=sep)
+    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=sep)
     if PAPER:
         layout.fit_right(fig)
     return fig

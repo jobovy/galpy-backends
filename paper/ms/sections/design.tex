@@ -19,26 +19,17 @@ $10^{-5}$ to $10^{-3}$ level, and the velocity sampler of the
 quasi-isothermal disk DF, the samplers of the two-dimensional disk DFs,
 and the sampler of the stream DF draw by inverse transformation rather
 than by rejection, which changes the particular draws but not their
-distribution. In addition, the forces
-of two potentials were rewritten in forms that are accurate and
-differentiable at small radii, the Einasto profile (a series below its
-scale radius, whose derivative with respect to the scale radius the
-closed form loses to cancellation) and the power law with an
-exponential cutoff (the regularized incomplete gamma function in
-place of a hypergeometric function), such that their \numpy\ values
-differ from the previous version by a few units in the last place (at
-most $5\times10^{-15}$ relative, $2\times10^{-14}$ in one second
-derivative), which propagates at the same level to everything
-computed from these potentials' \python\ forces; the formulas of a
-dozen other potentials were restructured for the same reasons, but
-evaluate in the same floating-point operation order as before and
-remain byte-identical, which a test checks. Accordingly, a few \numpy\ tests were
-loosened: the tolerance of the King DF test, those of two statistical
-checks of the stream sampler, four tolerances between $10^{-16}$ and
-$3\times10^{-11}$ in the action--angle tests, which rounding-level
-changes (since reverted) and differences between platforms had moved
-to between $10^{-14}$ and $10^{-9}$, and one finite-difference step.
-Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
+distribution. In addition, the forces of the Einasto profile and of
+the power law with an exponential cutoff were rewritten in forms that
+are accurate and differentiable at small radii, such that their
+\numpy\ values differ from the previous version by a few units in the
+last place (at most $5\times10^{-15}$ relative), which propagates at
+the same level to everything computed from these potentials' \python\
+forces; the formulas of a dozen other potentials were restructured for
+the same reasons, but evaluate in the same floating-point operation
+order as before and remain byte-identical, which a test checks.
+Accordingly, the tolerances of a handful of \numpy\ tests were
+loosened slightly. Second, the \galpy\ interface had to stay unchanged: the same classes, methods,
 and keywords, with the backend generally determined by the arrays that are passed
 in (see below). Third, \galpy's code was to be written against a backend-agnostic array
 namespace, with backend-specific code confined to a new \texttt{galpy.backend}
@@ -58,10 +49,8 @@ this was the main acceptance test, but not the only one, because the
 new functionality---differentiation, compilation, running on a
 GPU---has no existing tests, and we wrote new ones for it, as
 described in \sectionname~\ref{sec:process-correctness}. Supporting
-two frameworks from the start, rather than one, was itself a design
-decision that served the third rule: a solution that works for both
-\jax\ and \torch\ is one that does not depend on the particulars of
-either, and should extend to a third framework if one supersedes them.
+two frameworks from the start served the third rule
+(\sectionname~\ref{sec:intro}).
 
 \subsection{Choosing a backend}\label{sec:design-choosing}
 
@@ -329,26 +318,21 @@ def loss(q):
 grad_loss= jax.jit(jax.grad(loss))
 \end{code}
 and it is \galpy's job to be traceable. \figurename~\ref{fig:jitamort}
-displays what compilation costs and what it buys for a simplest operation,
-the radial force of a Plummer potential at $10^6$ points, on one CPU
-core and on the two GPUs of \sectionname~\ref{sec:design-gpu}: compiling
-it takes about a tenth of a second on each. On the CPU, a compiled call
-then takes 26\,ms instead of 98\,ms eagerly, such that the compilation
-has paid for itself after two calls, while on the GPUs a call takes a
-fraction of a millisecond rather than a few milliseconds and the
-compilation pays for itself after 60 to 90 calls. \torch\ tells a
-different story. \texttt{torch.compile} cannot be used on the TITAN~Xp
-at all, because its code generator requires a GPU of compute capability
-7.0 or higher and the consumer card is at 6.1, so the figure shows only
-its eager call there, 1\,ms, three times faster than eager \jax. On the
-H100, a compiled \torch\ call takes the same 0.05\,ms as a compiled
-\jax\ call, but an eager \torch\ call already takes 0.1\,ms, seven times
-less than eager \jax, and the compilation costs 0.6\,s (after the first
-compilation in the process, which took 8\,s), so that it pays for itself
-only after about ten thousand calls. For an operation this simple, eager
-\torch\ is within a factor of two of the fused kernel; what
-\texttt{torch.compile} removes is the per-operation dispatch of a longer
-computation, such as an orbit integration.
+displays what compilation costs and what it buys for a simplest
+operation, the radial force of a Plummer potential at $10^6$ points, on
+one CPU core and on the two GPUs of \sectionname~\ref{sec:design-gpu}:
+compiling it takes about a tenth of a second on each. Under \jax, a
+compiled call is four times faster than an eager one on the CPU, such
+that the compilation has paid for itself after two calls, and ten
+times faster on the GPUs, where it pays for itself after 60 to 90
+calls. \torch\ tells a different story: \texttt{torch.compile}
+cannot be used on the TITAN~Xp at all, because its code generator
+requires a GPU of compute capability 7.0 or higher, and on the H100 an
+eager \torch\ call, which is seven times faster than an eager \jax\
+call, is already within a factor of two of the compiled one, such that
+the compilation pays for itself only after about ten thousand calls.
+What \texttt{torch.compile} removes is the per-operation dispatch of a
+longer computation, such as an orbit integration.
 \figurename~\ref{fig:adoverhead} shows the cost of a derivative: under
 compiled \jax\ the gradient of the potential with respect to the
 coordinates at $N$ points costs between one and two times the value
@@ -381,7 +365,8 @@ which would recompile for every newly created potential even when it
 is identical to one seen before and, worse, would reuse a compilation
 for a potential whose amplitude has been changed in place. We
 therefore key \galpy\ objects by their type and attributes, with
-\galpy\ sub-objects keyed recursively, such that a changed amplitude
+\galpy\ sub-objects keyed recursively, such that a changed amplitude,
+which as a \python\ float is a constant of the compiled program,
 causes the re-trace that it must and a freshly created but identical
 wrapper does not cause a needless one. The \torch\ compiler has its
 own difficulties: because a read of a \python\ context variable severs
@@ -399,11 +384,8 @@ fifth rule, that the user, and not \galpy, decides what to compile.
     cost per call; \texttt{torch.compile} does not support the TITAN~Xp,
     so \torch\ appears there eagerly only. Right: the cumulative time of
     compiled and eager calls, in units of each device's eager call, and
-    the number of calls after which compilation pays for itself: two on
-    the CPU, where eager \jax\ is slowest, 60 to 90 for \jax\ on the
-    GPUs, and ten thousand for \torch\ on the H100, where the eager call
-    is already within a factor of two of the compiled
-    one.}\label{fig:jitamort}
+    the number of calls after which compilation pays for
+    itself.}\label{fig:jitamort}
 \end{figure*}
 
 \begin{figure*}[t!]
@@ -434,10 +416,8 @@ compiled modes, in the global trace mode; it is selected by the
 \texttt{--device cuda} option additionally places every tensor on the
 GPU; \sectionname~\ref{sec:process-islands} describes what makes a pass
 in these modes meaningful and measures how much of the suite computes on
-the backend. Tests that fail under a mode were not removed, but were listed in a
-ledger that marked them as expected failures, as described in
-\sectionname~\ref{sec:process-ledger} (this ledger is now empty). 
-Because a compiled-mode run can
+the backend, and \sectionname~\ref{sec:process-ledger} how we brought
+the suite to pass. Because a compiled-mode run can
 pass while every call falls back to eager execution, the test runner
 counts the fraction of calls that were traced and fails the run if this
 fraction drops below a floor, which is $99\,\%$ for a typical test

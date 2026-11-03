@@ -3,7 +3,7 @@
 \subsection{General approach}\label{sec:aa-general}
 
 The action--angle module is where \galpy\ makes heavy use of numerical
-methods, all of which are the building blocks of
+methods, all of which were discussed in
 \sectionname~\ref{sec:design-numerics}: root finding for the turning
 points of an orbit, quadrature of the action, frequency, and angle
 integrals between them, and, for the isochrone approximation of
@@ -48,7 +48,7 @@ the actions, as a DF of the actions is
     derivative with respect to $b$.}\label{fig:aasens}
 \end{figure*}
 
-\subsection{Spherical potentials, the isochrone approximation, and the inverse transformation}\label{sec:aa-other}
+\subsection{Spherical potentials and the isochrone approximation}\label{sec:aa-other}
 
 The isochrone and harmonic-oscillator actions are closed forms, which we
 migrated by swapping the namespace. \texttt{actionAngleSpherical}
@@ -61,6 +61,8 @@ integrates an auxiliary orbit, and does so with the in-backend solvers
 of \sectionname~\ref{sec:orbit-paths}; it is therefore differentiable
 with respect to the potential's parameters, twice so under \jax\ with
 the direct adjoint, and runs on a GPU.
+
+\subsection{The inverse transformation}\label{sec:aa-inverse}
 
 The inverse transformation, from actions and angles to positions and
 velocities, exists in \galpy\ for the isochrone and harmonic potentials
@@ -211,31 +213,32 @@ its radial and vertical parts.
 
 \figurename~\ref{fig:staeckelspeed} shows the speed of the full
 St\"{a}ckel transformation (actions, frequencies, and angles). On a single
-CPU core, the compiled \cc\ path remains the fastest, at
-0.3\,ms per phase-space point for large $N$. The new vectorized
+CPU core, the compiled \cc\ path remains the fastest. The new vectorized
 \python\ path costs 2--3 times more per point in plain \numpy, but it
 is about 6 times faster than the per-object loop that it replaces for
 $N\gtrsim10^3$. Eager \torch\ on the CPU runs at the speed of \numpy,
 while eager \jax\ is bound by dispatching hundreds of small operations
 per call and stays at a floor of several seconds. Compilation removes
-that floor: compiled \jax\ evaluates a single point in 5\,ms on one
-core, against 3.7\,s eagerly, but for large $N$ it is no faster than
-\numpy\ on the CPU (44\,s against about 30\,s at $N=3\times10^4$),
-because this quadrature-heavy code is bound by arithmetic that \numpy\
-already executes in compiled loops. On a GPU, the
-same code overtakes the \cc\ path once $N$ is large enough to
-amortize a launch floor of about 0.6\,s. On the H100, eager \torch\
-evaluates $10^6$ points in 3.6\,s, 78 times faster than single-threaded
-\cc\ and 7 times faster than \cc\ on 16 OpenMP threads, and compiled
-\jax\ evaluates $10^5$ points in 0.16\,s, five times faster than eager
-\torch\ at the same $N$ and 190 times faster than one \cc\ thread. On
-the TITAN~Xp, with its slow
-double-precision arithmetic, eager \torch\ beats single-threaded \cc\ by
-a factor of 5--6 at large $N$, but not \cc\ on 16 threads, and compiled
-\jax\ does no better than eager \torch\ there. Thus the
-backends that make the action--angle transformation differentiable are
-also the fastest way to evaluate it for large samples when a modern GPU
-is available.
+that floor, but for large $N$ compiled \jax\ is no faster than \numpy\
+on the CPU, because this quadrature-heavy code is bound by arithmetic
+that \numpy\ already executes in compiled loops. On a GPU, the same
+code overtakes the \cc\ path once $N$ is large enough to amortize a
+launch floor of about 0.6\,s: on the H100, eager \torch\ overtakes one
+\cc\ thread at $N\approx2000$ and \cc\ on 16 OpenMP threads at
+$N\approx3\times10^4$, and evaluates $10^6$ points 78 times faster than
+one \cc\ thread. Compiled \jax\ on the H100 is faster still, five times
+faster than eager \torch\ at $N=10^5$, once its arrays are large enough
+to take the vectorized special functions of
+\sectionname~\ref{sec:design-numerics}: the bulge of
+\texttt{MWPotential2014} evaluates an incomplete gamma function, and
+below 4096 elements the compiled program uses \jax's native version,
+which iterates per element and sets the floor of the compiled lines on
+both GPUs. On the TITAN~Xp, with its slow double-precision arithmetic,
+eager \torch\ beats single-threaded \cc\ by a factor of 5--6 at large
+$N$, but not \cc\ on 16 threads, and compiled \jax\ does no better than
+eager \torch\ there. Thus the backends that make the action--angle
+transformation differentiable are also the fastest way to evaluate it
+for large samples when a modern GPU is available.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g17_staeckel_actionangle_speed/g17_staeckel_actionangle_speed.pdf}
@@ -245,9 +248,14 @@ is available.
     phase-space points per call: wall time on (a) the CPU and (b) the
     GPUs. CPU lines use one core, except for the dash-dotted \cc\ line,
     which uses 16 OpenMP threads and is repeated in (b) for reference; GPU
-    lines are for eager \torch\ (dashed; dotted with the transfer of the
-    inputs and outputs between host and device) and for compiled \jax\
-    (solid) on the TITAN~Xp and the H100. The black dotted line with
+    lines are for eager \torch\ (dashed) and for compiled \jax\ (solid)
+    on the TITAN~Xp and the H100; the transfer of the inputs and outputs
+    between host and device adds at most a few per cent to the eager
+    \torch\ times and is not shown separately. The drop of the compiled
+    \jax\ line on the H100 between $N=3\times10^3$ and $10^5$ is the
+    switch, at 4096 elements, from \jax's native incomplete gamma
+    function to \galpy's vectorized series
+    (\sectionname~\ref{sec:design-numerics}). The black dotted line with
     crosses is the per-object \numpy\ loop that the vectorized path
     replaces; eager \jax, which sits at a floor of several seconds on
     every device, is not shown. Points where the TITAN~Xp runs out of
