@@ -202,8 +202,9 @@ unreliable for that framework, in which case we implemented a fallback directly 
 \galpy. The list is short but important: \jax's hypergeometric
 functions ${}_2F_1$ and ${}_1F_1$ currently return infinities with \texttt{nan}
 gradients for arguments $z<-1$, which is exactly the regime in which
-\galpy\ uses them; \jax's incomplete gamma function iterates per element
-and is about a hundred times slower than a vectorized series; and
+\galpy\ uses them; \jax's incomplete gamma function iterates per element,
+which is about a hundred times slower than a vectorized series for large
+arrays on the CPU and slow on a GPU at every size; and
 \torch's incomplete gamma function has no derivative with respect to its
 order and loses six digits near an order of 20, where its implementation
 switches between a series and a continued fraction. We gave the

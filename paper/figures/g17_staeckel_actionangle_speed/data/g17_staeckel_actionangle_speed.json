@@ -50,7 +50,10 @@
   "Ns_jaxjit_gpu": [
     1,
     100,
+    1000,
     3000,
+    10000,
+    30000,
     100000
   ],
   "Ns_old": [
@@ -497,14 +500,14 @@
         "OMP_NUM_THREADS": "1",
         "OPENBLAS_NUM_THREADS": "1",
         "XLA_FLAGS": "unset",
-        "galpy": "1.12.1.dev0",
+        "galpy": "2.0.0b1.dev0",
         "jax": "0.10.1",
         "gpu": "NVIDIA TITAN Xp",
         "gpu_mem_gb": 11.9,
         "loadavg": [
-          2.4658203125,
-          2.42822265625,
-          1.9541015625
+          30.9296875,
+          30.19384765625,
+          29.98388671875
         ]
       },
       "jax (GPU)": {
@@ -598,6 +601,13 @@
       "omp_max_threads_effective": 1,
       "OMP_NUM_THREADS": "1",
       "CUDA_VISIBLE_DEVICES": "0"
+    },
+    "gpu_jaxjit": {
+      "sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+      "worktree": "/var/tmp/v2-spgate",
+      "date": "2026-11-03T09:54:26",
+      "XLA_FLAGS": "unset",
+      "note": "jax (GPU, jit) re-measured alone (jaxjit_gpu_only.py) with the device-aware incomplete-gamma switch"
     }
   },
   "series": {
@@ -673,10 +683,13 @@
       81.37600892991759
     ],
     "jax (GPU, jit)": [
-      0.7226544381119311,
-      0.9133163059595972,
-      0.9758429310750216,
-      4.641160968923941
+      0.21190052200108767,
+      0.28262585611082613,
+      0.26869860012084246,
+      0.37280687503516674,
+      0.4226440479978919,
+      0.9951212790329009,
+      3.468324664980173
     ],
     "jax (GPU)": [
       9.483162838034332,

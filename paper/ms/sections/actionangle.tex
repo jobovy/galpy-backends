@@ -62,7 +62,7 @@ of \sectionname~\ref{sec:orbit-paths}; it is therefore differentiable
 with respect to the potential's parameters, twice so under \jax\ with
 the direct adjoint, and runs on a GPU.
 
-\subsection{The inverse transformation}\label{sec:aa-inverse}
+\subsection{Inverse transformations}\label{sec:aa-inverse}
 
 The inverse transformation, from actions and angles to positions and
 velocities, exists in \galpy\ for the isochrone and harmonic potentials
@@ -96,7 +96,9 @@ As they are not recommended for use, older construction modes of the
 \texttt{actionAngleVerticalInverse}
 class, which use point transformations, are evaluated natively but
 built on \numpy, and therefore cannot take a potential with backend
-parameters.
+parameters. Other \galpy-native inverse action--angle transformations
+are under active development and will be added with full backend
+support soon.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gV1_vertical_inverse/gV1_vertical_inverse.pdf}
@@ -223,22 +225,27 @@ that floor, but for large $N$ compiled \jax\ is no faster than \numpy\
 on the CPU, because this quadrature-heavy code is bound by arithmetic
 that \numpy\ already executes in compiled loops. On a GPU, the same
 code overtakes the \cc\ path once $N$ is large enough to amortize a
-launch floor of about 0.6\,s: on the H100, eager \torch\ overtakes one
-\cc\ thread at $N\approx2000$ and \cc\ on 16 OpenMP threads at
-$N\approx3\times10^4$, and evaluates $10^6$ points 78 times faster than
-one \cc\ thread. Compiled \jax\ on the H100 is faster still, five times
-faster than eager \torch\ at $N=10^5$, once its arrays are large enough
-to take the vectorized special functions of
-\sectionname~\ref{sec:design-numerics}: the bulge of
-\texttt{MWPotential2014} evaluates an incomplete gamma function, and
-below 4096 elements the compiled program uses \jax's native version,
-which iterates per element and sets the floor of the compiled lines on
-both GPUs. On the TITAN~Xp, with its slow double-precision arithmetic,
-eager \torch\ beats single-threaded \cc\ by a factor of 5--6 at large
-$N$, but not \cc\ on 16 threads, and compiled \jax\ does no better than
-eager \torch\ there. Thus the backends that make the action--angle
-transformation differentiable are also the fastest way to evaluate it
-for large samples when a modern GPU is available.
+launch floor. For eager \torch\ that floor is about 0.6\,s on the
+H100, where it overtakes one \cc\ thread at $N\approx2000$ and \cc\
+on 16 OpenMP threads at $N\approx3\times10^4$, and evaluates $10^6$
+points 78 times faster than one \cc\ thread. Compiled \jax\ on the
+H100 starts from a floor of only 0.12\,s and is five times faster than
+eager \torch\ at every $N$ up to $10^5$: it overtakes one \cc\ thread
+at $N\approx400$ and 16 threads at $N\approx5000$, and at $N=10^5$ it is
+14 times faster than 16 threads. That floor is set by the incomplete
+gamma function that the bulge of \texttt{MWPotential2014} evaluates at
+every quadrature node: \jax's native version iterates per element in a
+loop, which is slow on a GPU at every array size, so that under
+compilation on a GPU \galpy\ takes its own vectorized series
+(\sectionname~\ref{sec:design-numerics}) at every size; with the native
+function the floor was 0.7\,s on both GPUs. On the TITAN~Xp, with its
+slow double-precision arithmetic, eager \torch\ beats single-threaded
+\cc\ by a factor of 5--6 at large $N$, but not \cc\ on 16 threads;
+compiled \jax\ starts from 0.2\,s there, is faster than eager \torch\
+at every $N$ measured, and overtakes one \cc\ thread at
+$N\approx10^3$, but not 16 threads. Thus the backends that make the
+action--angle transformation differentiable are also the fastest way to
+evaluate it for large samples when a modern GPU is available.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g17_staeckel_actionangle_speed/g17_staeckel_actionangle_speed.pdf}
@@ -251,16 +258,14 @@ for large samples when a modern GPU is available.
     lines are for eager \torch\ (dashed) and for compiled \jax\ (solid)
     on the TITAN~Xp and the H100; the transfer of the inputs and outputs
     between host and device adds at most a few per cent to the eager
-    \torch\ times and is not shown separately. The drop of the compiled
-    \jax\ line on the H100 between $N=3\times10^3$ and $10^5$ is the
-    switch, at 4096 elements, from \jax's native incomplete gamma
-    function to \galpy's vectorized series
-    (\sectionname~\ref{sec:design-numerics}). The black dotted line with
+    \torch\ times and is not shown separately. The black dotted line with
     crosses is the per-object \numpy\ loop that the vectorized path
     replaces; eager \jax, which sits at a floor of several seconds on
     every device, is not shown. Points where the TITAN~Xp runs out of
     memory are omitted. Light grey dotted lines mark a constant cost per
     point, and the arrows point towards lower wall time. After a launch
-    floor, the GPU overtakes one \cc\ thread at $N\approx2000$ and 16
-    threads at $N\approx3\times10^4$ on the H100.}\label{fig:staeckelspeed}
+    floor, eager \torch\ on the H100 overtakes one \cc\ thread at
+    $N\approx2000$ and 16 threads at $N\approx3\times10^4$; compiled
+    \jax, with a floor of 0.12\,s, overtakes them at $N\approx400$ and
+    $N\approx5000$.}\label{fig:staeckelspeed}
 \end{figure*}

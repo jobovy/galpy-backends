@@ -73,15 +73,21 @@
   "Ns_jaxjit_gpu": [
     1,
     100,
+    1000,
     3000,
+    10000,
+    30000,
     100000
   ],
   "series": {
     "jax (GPU, jit)": [
-      0.7709921599962399,
-      0.699422723002499,
-      0.7459697590020369,
-      0.1605497540003853
+      0.12242584803607315,
+      0.12997162796091288,
+      0.12442552798893303,
+      0.1254595749778673,
+      0.12717767409048975,
+      0.14012776198796928,
+      0.18033343902789056
     ],
     "jax (GPU)": [
       3.6533378590029315,
@@ -160,14 +166,14 @@
         "OMP_NUM_THREADS": "unset",
         "OPENBLAS_NUM_THREADS": "unset",
         "XLA_FLAGS": "unset",
-        "galpy": "1.12.1.dev0",
+        "galpy": "2.0.0b1.dev0",
         "jax": "0.11.2",
         "gpu": "NVIDIA H100 80GB HBM3",
         "gpu_mem_gb": 79.18,
         "loadavg": [
-          5.8,
-          4.51,
-          4.06
+          18.88,
+          14.21,
+          9.84
         ]
       },
       "jax (GPU)": {
@@ -257,5 +263,14 @@
     "gpu": "NVIDIA H100 80GB HBM3",
     "torch": "2.14.1+cu130"
   },
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "gpu_jaxjit": {
+      "sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+      "worktree": "/scratch/bovy/galpy-h100/galpy-gate",
+      "date": "2026-11-03T09:14:50",
+      "XLA_FLAGS": "unset",
+      "note": "jax (GPU, jit) re-measured alone (jaxjit_gpu_only.py) with the device-aware incomplete-gamma switch"
+    }
+  }
 }
