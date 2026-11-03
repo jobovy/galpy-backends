@@ -12,56 +12,44 @@
   "results": [
     {
       "N": 1,
-      "wall_s": 1.6763387829996645,
-      "per_orbit_ms": 1676.3387829996645,
-      "compile_run_s": 5.043531063012779
+      "wall_s": 0.7872680930886418,
+      "per_orbit_ms": 787.2680930886418,
+      "compile_run_s": 5.815488681895658
     },
     {
       "N": 10,
-      "wall_s": 1.196592248044908,
-      "per_orbit_ms": 119.6592248044908,
-      "compile_run_s": 3.7694998829392716
+      "wall_s": 1.162902760086581,
+      "per_orbit_ms": 116.29027600865811,
+      "compile_run_s": 5.505791336065158
     },
     {
       "N": 100,
-      "wall_s": 1.6644524929579347,
-      "per_orbit_ms": 16.644524929579347,
-      "compile_run_s": 5.1504941820167005
+      "wall_s": 1.369795077946037,
+      "per_orbit_ms": 13.69795077946037,
+      "compile_run_s": 5.811012999154627
     },
     {
       "N": 1000,
-      "wall_s": 1.8776883970713243,
-      "per_orbit_ms": 1.8776883970713243,
-      "compile_run_s": 4.893088236101903
+      "wall_s": 1.5088225461076945,
+      "per_orbit_ms": 1.5088225461076945,
+      "compile_run_s": 6.335886340821162
     },
     {
       "N": 10000,
-      "wall_s": 2.383962429012172,
-      "per_orbit_ms": 0.2383962429012172,
-      "compile_run_s": 5.5666259590070695
+      "wall_s": 1.9905419370625168,
+      "per_orbit_ms": 0.1990541937062517,
+      "compile_run_s": 6.099262184929103
     },
     {
       "N": 30000,
-      "wall_s": 5.615277360077016,
-      "per_orbit_ms": 0.1871759120025672,
-      "compile_run_s": 8.141218669014052
+      "wall_s": 5.18268351489678,
+      "per_orbit_ms": 0.17275611716322603,
+      "compile_run_s": 9.904058534884825
     }
   ],
   "jax_version": "0.10.1",
   "diffrax_version": "0.7.2",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "numpy_version": "2.4.3",
-  "gpu": "NVIDIA TITAN Xp",
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-  "galpy_commit_parts": {
-    "gpu": {
-      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-      "worktree": "/var/tmp/fbfinal",
-      "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-09T02:46:36",
-      "cpu_affinity": 72,
-      "OMP_NUM_THREADS": "unset",
-      "CUDA_VISIBLE_DEVICES": "0"
-    }
-  }
+  "gpu": "NVIDIA TITAN Xp"
 }

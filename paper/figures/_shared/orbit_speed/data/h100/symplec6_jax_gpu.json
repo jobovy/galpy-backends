@@ -7,78 +7,78 @@
   "nt": 16,
   "tspan_Gyr": 2.0,
   "potential": "MWPotential2014",
-  "host": "trig0009 (Trillium, exclusive H100 node, slurm job 1184895, 2026-10-28)",
+  "host": "trig0024 (Trillium, exclusive H100, slurm job 1228382, 2026-11-03)",
   "jax_version": "0.11.2",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "gpu": "NVIDIA H100 80GB HBM3",
-  "galpy_commit": "00527ee63 (PR #1766 backend/inbackend-symplectic)",
+  "galpy_commit": "7b2f84c88 (PR #1797 backend/special-gpu-gate)",
   "note": "rows transcribed from the backends-h100 session's run log (steady = min of 3 calls after the compile call); N=3e5 is non-monotone (2.4x slower per orbit than 1e5 and 1e6) and REPRODUCIBLE: a repeat (job 1186132, trig0015, 2026-10-28) agreed to 0.1% at every N (3e5: 0.00486 ms/orbit) with the card at full clocks (SM 1980 MHz, no throttle reasons), so it is XLA's lowering for that batch shape",
   "results": [
     {
       "N": 1,
-      "wall_s": 1.28441,
-      "per_orbit_ms": 1284.41254,
-      "compile_run_s": 6.56
+      "wall_s": 0.2581146129523404,
+      "per_orbit_ms": 258.1146129523404,
+      "compile_run_s": 6.5779350670054555
     },
     {
       "N": 10,
-      "wall_s": 0.69073,
-      "per_orbit_ms": 69.07307,
-      "compile_run_s": 2.34
+      "wall_s": 0.2768727960065007,
+      "per_orbit_ms": 27.687279600650072,
+      "compile_run_s": 2.894458155031316
     },
     {
       "N": 100,
-      "wall_s": 0.81862,
-      "per_orbit_ms": 8.1862,
-      "compile_run_s": 2.54
+      "wall_s": 0.2902654000208713,
+      "per_orbit_ms": 2.902654000208713,
+      "compile_run_s": 3.178283453977201
     },
     {
       "N": 1000,
-      "wall_s": 0.85672,
-      "per_orbit_ms": 0.85672,
-      "compile_run_s": 2.47
+      "wall_s": 0.2792274300009012,
+      "per_orbit_ms": 0.2792274300009012,
+      "compile_run_s": 3.1667468840023503
     },
     {
       "N": 10000,
-      "wall_s": 0.04382,
-      "per_orbit_ms": 0.00438,
-      "compile_run_s": 8.54
+      "wall_s": 0.29267133498797193,
+      "per_orbit_ms": 0.029267133498797195,
+      "compile_run_s": 2.935964389005676
     },
     {
       "N": 30000,
-      "wall_s": 0.04672,
-      "per_orbit_ms": 0.00156,
-      "compile_run_s": 9.43
+      "wall_s": 0.3064919780008495,
+      "per_orbit_ms": 0.010216399266694983,
+      "compile_run_s": 3.0055394640075974
     },
     {
       "N": 100000,
-      "wall_s": 0.20425,
-      "per_orbit_ms": 0.00204,
-      "compile_run_s": 14.11
+      "wall_s": 0.28847780695650727,
+      "per_orbit_ms": 0.0028847780695650726,
+      "compile_run_s": 2.8509189219912514
     },
     {
       "N": 300000,
-      "wall_s": 1.45596,
-      "per_orbit_ms": 0.00485,
-      "compile_run_s": 17.4
+      "wall_s": 0.8802735779900104,
+      "per_orbit_ms": 0.002934245259966701,
+      "compile_run_s": 3.461278605973348
     },
     {
       "N": 1000000,
-      "wall_s": 1.84971,
-      "per_orbit_ms": 0.00185,
-      "compile_run_s": 13.59
+      "wall_s": 2.322624063002877,
+      "per_orbit_ms": 0.002322624063002877,
+      "compile_run_s": 4.9580344569985755
     },
     {
       "N": 3000000,
-      "wall_s": 20.411590111005353,
-      "per_orbit_ms": 0.006803863370335118,
-      "compile_run_s": 38.41512255300768
+      "wall_s": 6.512590917991474,
+      "per_orbit_ms": 0.002170863639330491,
+      "compile_run_s": 10.481339188001584
     },
     {
       "N": 10000000,
-      "wall_s": 62.210530645999825,
-      "per_orbit_ms": 0.006221053064599982,
-      "compile_run_s": 80.09516904200427
+      "wall_s": 20.41633829200873,
+      "per_orbit_ms": 0.0020416338292008735,
+      "compile_run_s": 23.07474202098092
     }
   ],
   "extra_points": [
@@ -99,6 +99,64 @@
         "existing_row_wall_s": 1.84971
       },
       "note": "existing rows kept unchanged; peak GPU memory 32.7 GB (nvidia-smi, 2 s sampling), no throttling"
+    },
+    {
+      "replaced": "2026-11-03, job 1228382: all rows re-measured with the device-aware incomplete-gamma gate",
+      "script": "galpy_symplec_measure.py from paper-revision-r1 7a85278 (N<=1e6) + a copy with only Ns=[3e6,1e7] changed",
+      "previous_rows": [
+        {
+          "N": 1,
+          "wall_s": 1.28441
+        },
+        {
+          "N": 10,
+          "wall_s": 0.69073
+        },
+        {
+          "N": 100,
+          "wall_s": 0.81862
+        },
+        {
+          "N": 1000,
+          "wall_s": 0.85672
+        },
+        {
+          "N": 10000,
+          "wall_s": 0.04382
+        },
+        {
+          "N": 30000,
+          "wall_s": 0.04672
+        },
+        {
+          "N": 100000,
+          "wall_s": 0.20425
+        },
+        {
+          "N": 300000,
+          "wall_s": 1.45596
+        },
+        {
+          "N": 1000000,
+          "wall_s": 1.84971
+        },
+        {
+          "N": 3000000,
+          "wall_s": 20.411590111005353
+        },
+        {
+          "N": 10000000,
+          "wall_s": 62.210530645999825
+        }
+      ]
     }
-  ]
+  ],
+  "cpu_affinity": 24,
+  "thread_env": {
+    "OMP_NUM_THREADS": "unset",
+    "OPENBLAS_NUM_THREADS": "unset",
+    "XLA_FLAGS": "unset"
+  },
+  "numpy_version": "2.5.3",
+  "galpy_file": "/scratch/bovy/galpy-h100/galpy-gate/galpy/__init__.py"
 }

@@ -8,107 +8,68 @@
   "rtol": 1e-08,
   "atol": 1e-08,
   "potential": "MWPotential2014",
-  "host": "trig0031",
+  "host": "trig0024",
   "cpu_affinity": 24,
   "thread_env": {
     "OMP_NUM_THREADS": "unset",
-    "OPENBLAS_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "unset",
     "XLA_FLAGS": "unset"
   },
   "results": [
     {
       "N": 1000,
-      "wall_s": 1.6752378839883022,
-      "per_orbit_ms": 1.6752378839883022,
-      "compile_run_s": 3.325897207017988
+      "wall_s": 0.9209629750112072,
+      "per_orbit_ms": 0.9209629750112072,
+      "compile_run_s": 2.967641025024932
     },
     {
       "N": 10000,
-      "wall_s": 1.8761343189980835,
-      "per_orbit_ms": 0.18761343189980834,
-      "compile_run_s": 3.1419140429934487
+      "wall_s": 0.9708633820409887,
+      "per_orbit_ms": 0.09708633820409887,
+      "compile_run_s": 2.6017995700240135
     },
     {
       "N": 100000,
-      "wall_s": 3.409523717011325,
-      "per_orbit_ms": 0.03409523717011325,
-      "compile_run_s": 4.386064293968957
+      "wall_s": 1.887963866989594,
+      "per_orbit_ms": 0.01887963866989594,
+      "compile_run_s": 3.371700682968367
     },
     {
       "N": 300000,
-      "wall_s": 7.327268313034438,
-      "per_orbit_ms": 0.02442422771011479,
-      "compile_run_s": 8.356524141971022
+      "wall_s": 4.743787000945304,
+      "per_orbit_ms": 0.015812623336484345,
+      "compile_run_s": 6.1002205820404924
     },
     {
       "N": 1000000,
-      "wall_s": 16.414761857995472,
-      "per_orbit_ms": 0.016414761857995473,
-      "compile_run_s": 18.697166575002484
+      "wall_s": 10.233226442011073,
+      "per_orbit_ms": 0.010233226442011073,
+      "compile_run_s": 12.369020988000557
     },
     {
       "N": 3000000,
-      "wall_s": 46.43254849900404,
-      "per_orbit_ms": 0.01547751616633468,
-      "compile_run_s": 49.1224010970036
+      "wall_s": 30.03350427694386,
+      "per_orbit_ms": 0.01001116809231462,
+      "compile_run_s": 32.585796108993236
     }
   ],
   "jax_version": "0.11.2",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "numpy_version": "2.5.3",
   "gpu": "NVIDIA H100 80GB HBM3",
   "extra_points": [
     {
-      "added": "2026-10-09T13:11:17+00:00",
-      "host": "trig0021",
+      "added": "2026-11-03T15:05:58+00:00",
+      "host": "trig0024",
       "argv": [
         "galpy_jax_measure.py",
         "gpu",
         "hiN",
         "--Ns",
-        "1e6"
+        "1e6,3e6"
       ],
       "Ns": [
-        1000000
-      ],
-      "env": {
-        "backend": "galpy-jax",
-        "device": "gpu",
-        "integrator": "diffrax Dopri8 (in-backend)",
-        "stepping": "per-orbit adaptive (vmap-of-solve)",
-        "nt": 16,
-        "tspan_Gyr": 2.0,
-        "rtol": 1e-08,
-        "atol": 1e-08,
-        "potential": "MWPotential2014",
-        "host": "trig0021",
-        "cpu_affinity": 24,
-        "thread_env": {
-          "OMP_NUM_THREADS": "unset",
-          "OPENBLAS_NUM_THREADS": "unset",
-          "XLA_FLAGS": "unset"
-        },
-        "jax_version": "0.11.2",
-        "galpy_version": "1.12.1.dev0",
-        "numpy_version": "2.5.3",
-        "gpu": "NVIDIA H100 80GB HBM3"
-      },
-      "Ns_measured": [
-        1000000
-      ],
-      "replaced": []
-    },
-    {
-      "added": "2026-10-09T13:13:59+00:00",
-      "host": "trig0021",
-      "argv": [
-        "galpy_jax_measure.py",
-        "gpu",
-        "hiN",
-        "--Ns",
-        "3e6"
-      ],
-      "Ns": [
+        1000000,
         3000000
       ],
       "env": {
@@ -121,7 +82,7 @@
         "rtol": 1e-08,
         "atol": 1e-08,
         "potential": "MWPotential2014",
-        "host": "trig0021",
+        "host": "trig0024",
         "cpu_affinity": 24,
         "thread_env": {
           "OMP_NUM_THREADS": "unset",
@@ -129,19 +90,17 @@
           "XLA_FLAGS": "unset"
         },
         "jax_version": "0.11.2",
-        "galpy_version": "1.12.1.dev0",
+        "galpy_version": "2.0.0b1.dev0",
         "numpy_version": "2.5.3",
         "gpu": "NVIDIA H100 80GB HBM3"
       },
       "Ns_measured": [
+        1000000,
         3000000
       ],
       "replaced": []
-    },
-    {
-      "note": "N=[1000000, 3000000] kept from the previous data/h100 file (hiN2 stage, galpy 34bca2d1d); this 2026-10-14 hiN run (job 1095183) measured N<=3e5 only and agrees with it to <=0.3% at the shared N"
     }
   ],
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-  "galpy_jax_commit": "c2779a50298ebc443ba82e079754709a8ea1f9e2"
+  "galpy_commit": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+  "measured": "2026-11-03, slurm job 1228382 (trig0024), with the incomplete-gamma gate (PR #1797)"
 }

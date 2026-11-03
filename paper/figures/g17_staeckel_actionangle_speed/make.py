@@ -31,8 +31,10 @@ core at every N (0.31 ms/point at large N; 310 s at N=1e6); vectorised numpy cos
 loop for N>~1e3; eager torch CPU ~ numpy at large N; eager jax CPU is
 dispatch-bound (~4 s floor); single-core jitted jax is 5 ms at N=1 but slower
 than numpy at large N. C on 16 threads: 26 s at 1e6 (12x). GPUs: H100 eager
-torch 3.5 s at N=1e6 (89x one C thread, 7.5x 16 threads), H100 jitted jax 0.16 s
-at N=1e5; the TITAN Xp beats one C thread 6-8x at large N but not 16 threads, and
+torch 3.5 s at N=1e6 (89x one C thread, 7.5x 16 threads), H100 jitted jax 0.12-0.18 s
+at every N up to 1e5 (re-measured 2026-11-03 with the device-aware incomplete-gamma
+switch, galpy #1797: galpy's series at every size on a GPU; before it jax's native
+kernel set a 0.7 s floor below 4096 elements); the TITAN Xp beats one C thread 6-8x at large N but not 16 threads, and
 runs out of memory for eager jax beyond 1e5 and torch at 1e6. The backends make
 the action-angle map *differentiable and composable* inside jax/torch models; on
 a modern GPU they are also the fastest way to evaluate it at large N.

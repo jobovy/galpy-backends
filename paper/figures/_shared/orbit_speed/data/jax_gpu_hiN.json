@@ -12,49 +12,37 @@
   "cpu_affinity": 72,
   "thread_env": {
     "OMP_NUM_THREADS": "unset",
-    "OPENBLAS_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "unset",
     "XLA_FLAGS": "unset"
   },
   "results": [
     {
       "N": 1000,
-      "wall_s": 2.3885723059938755,
-      "per_orbit_ms": 2.3885723059938755,
-      "compile_run_s": 6.2161274870013585
+      "wall_s": 1.6338158731814474,
+      "per_orbit_ms": 1.6338158731814474,
+      "compile_run_s": 7.4064871340524405
     },
     {
       "N": 10000,
-      "wall_s": 2.79390960100136,
-      "per_orbit_ms": 0.27939096010013603,
-      "compile_run_s": 5.238848601999052
+      "wall_s": 2.084174412069842,
+      "per_orbit_ms": 0.20841744120698422,
+      "compile_run_s": 6.719959094887599
     },
     {
       "N": 100000,
-      "wall_s": 24.66939432599611,
-      "per_orbit_ms": 0.2466939432599611,
-      "compile_run_s": 27.57851463300176
+      "wall_s": 26.230124335968867,
+      "per_orbit_ms": 0.2623012433596887,
+      "compile_run_s": 31.42932437406853
     },
     {
       "N": 300000,
-      "wall_s": 64.41763188999903,
-      "per_orbit_ms": 0.2147254396333301,
-      "compile_run_s": 67.32273692899616
+      "wall_s": 72.34510091203265,
+      "per_orbit_ms": 0.24115033637344216,
+      "compile_run_s": 77.52555424813181
     }
   ],
   "jax_version": "0.10.1",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "numpy_version": "2.4.3",
-  "gpu": "NVIDIA TITAN Xp",
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-  "galpy_commit_parts": {
-    "gpu": {
-      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-      "worktree": "/var/tmp/fbfinal",
-      "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-14T09:07:15",
-      "cpu_affinity": 72,
-      "OMP_NUM_THREADS": "unset",
-      "CUDA_VISIBLE_DEVICES": "0"
-    }
-  }
+  "gpu": "NVIDIA TITAN Xp"
 }

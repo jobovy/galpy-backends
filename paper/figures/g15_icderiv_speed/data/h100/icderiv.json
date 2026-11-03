@@ -1,4 +1,13 @@
 {
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
+  "galpy_commit_parts": {
+    "gpu_jax": {
+      "date": "2026-11-03T10:19:16",
+      "note": "diffrax GPU series re-measured alone (jax_gpu_only.py) with the device-aware incomplete-gamma switch",
+      "sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+      "worktree": "/scratch/bovy/galpy-h100/galpy-gate"
+    }
+  },
   "meta": {
     "gpu": "NVIDIA H100 80GB HBM3",
     "has_gpu": true,
@@ -9,7 +18,7 @@
     "1": {
       "cstm_cpu": 0.007688878999033477,
       "diffrax_cpu": 0.04362301900255261,
-      "diffrax_gpu": 3.257227731999592,
+      "diffrax_gpu": 0.9814959749928676,
       "torchdiffeq_cpu": 1.4078019750013482,
       "torchdiffeq_gpu": 3.4558647610028856
     },
@@ -18,7 +27,7 @@
     },
     "1024": {
       "diffrax_cpu": 2.3527852650004206,
-      "diffrax_gpu": 2.5097973350057146,
+      "diffrax_gpu": 1.5155912400223315,
       "torchdiffeq_gpu": 3.8152487609986565
     },
     "131072": {
@@ -27,25 +36,25 @@
     "16": {
       "cstm_cpu": 0.11987933799537132,
       "diffrax_cpu": 0.10123245100112399,
-      "diffrax_gpu": 2.4876152770011686,
+      "diffrax_gpu": 1.514651652018074,
       "torchdiffeq_cpu": 1.3816254199991818,
       "torchdiffeq_gpu": 3.5703941760002635
     },
     "16384": {
       "diffrax_cpu": 122.66465904300276,
-      "diffrax_gpu": 5.23313511699962,
+      "diffrax_gpu": 1.5924989149789326,
       "torchdiffeq_cpu": 9.619285182001477,
       "torchdiffeq_gpu": 3.7342125549985212
     },
     "256": {
       "cstm_cpu": 1.7662186009983998,
       "diffrax_cpu": 0.8163218240006245,
-      "diffrax_gpu": 2.5239509899984114,
+      "diffrax_gpu": 1.5297890180372633,
       "torchdiffeq_cpu": 1.7084514480011421,
       "torchdiffeq_gpu": 3.881121345999418
     },
     "262144": {
-      "diffrax_gpu": 15.204405984004552,
+      "diffrax_gpu": 5.616877225984354,
       "torchdiffeq_cpu": 54.34671602299932
     },
     "3000": {
@@ -54,25 +63,25 @@
     "4": {
       "cstm_cpu": 0.030273245996795595,
       "diffrax_cpu": 0.0818404039964662,
-      "diffrax_gpu": 2.340913232997991,
+      "diffrax_gpu": 1.4879313750425354,
       "torchdiffeq_cpu": 1.3838519159980933,
       "torchdiffeq_gpu": 3.533773643997847
     },
     "4096": {
       "diffrax_cpu": 24.002392986993073,
-      "diffrax_gpu": 4.996692187000008,
+      "diffrax_gpu": 1.5516683530295268,
       "torchdiffeq_cpu": 3.5469234060001327,
       "torchdiffeq_gpu": 3.967384207993746
     },
     "64": {
       "cstm_cpu": 0.45180785200500395,
       "diffrax_cpu": 0.21306469900446245,
-      "diffrax_gpu": 2.4874696990009397,
+      "diffrax_gpu": 1.525384599051904,
       "torchdiffeq_cpu": 1.5238417590007884,
       "torchdiffeq_gpu": 3.731012023999938
     },
     "65536": {
-      "diffrax_gpu": 7.07521870599885,
+      "diffrax_gpu": 1.9793697139830329,
       "torchdiffeq_cpu": 22.543087112993817,
       "torchdiffeq_gpu": 3.792151701003604
     }
@@ -88,7 +97,7 @@
         "grad": 0.025917319995642174
       },
       "gpu": {
-        "grad": 3.2799004079934093
+        "grad": 0.9741767619852908
       }
     },
     "torchdiffeq": {
@@ -99,6 +108,5 @@
         "grad": 19.159740909999528
       }
     }
-  },
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
+  }
 }

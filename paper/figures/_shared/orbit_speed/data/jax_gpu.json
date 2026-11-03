@@ -12,61 +12,49 @@
   "cpu_affinity": 72,
   "thread_env": {
     "OMP_NUM_THREADS": "unset",
-    "OPENBLAS_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "unset",
     "XLA_FLAGS": "unset"
   },
   "results": [
     {
       "N": 1,
-      "wall_s": 1.6687946140009444,
-      "per_orbit_ms": 1668.7946140009444,
-      "compile_run_s": 5.915679653000552
+      "wall_s": 0.8614097710233182,
+      "per_orbit_ms": 861.4097710233182,
+      "compile_run_s": 6.825307058170438
     },
     {
       "N": 10,
-      "wall_s": 1.180099501994846,
-      "per_orbit_ms": 118.00995019948459,
-      "compile_run_s": 3.856958576005127
+      "wall_s": 1.2042849550489336,
+      "per_orbit_ms": 120.42849550489336,
+      "compile_run_s": 6.587537712883204
     },
     {
       "N": 100,
-      "wall_s": 2.005854969000211,
-      "per_orbit_ms": 20.05854969000211,
-      "compile_run_s": 5.5886852300027385
+      "wall_s": 1.678617267170921,
+      "per_orbit_ms": 16.78617267170921,
+      "compile_run_s": 6.834149995818734
     },
     {
       "N": 1000,
-      "wall_s": 2.3412282429999323,
-      "per_orbit_ms": 2.3412282429999323,
-      "compile_run_s": 5.325147288996959
+      "wall_s": 1.899294737027958,
+      "per_orbit_ms": 1.899294737027958,
+      "compile_run_s": 7.475266101071611
     },
     {
       "N": 10000,
-      "wall_s": 3.072797590000846,
-      "per_orbit_ms": 0.3072797590000846,
-      "compile_run_s": 6.140531976998318
+      "wall_s": 2.510945233050734,
+      "per_orbit_ms": 0.25109452330507337,
+      "compile_run_s": 7.294599428074434
     },
     {
       "N": 30000,
-      "wall_s": 9.110216868000862,
-      "per_orbit_ms": 0.3036738956000287,
-      "compile_run_s": 12.067589562997455
+      "wall_s": 8.644765433855355,
+      "per_orbit_ms": 0.28815884779517853,
+      "compile_run_s": 14.31376145593822
     }
   ],
   "jax_version": "0.10.1",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "numpy_version": "2.4.3",
-  "gpu": "NVIDIA TITAN Xp",
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-  "galpy_commit_parts": {
-    "gpu": {
-      "sha": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
-      "worktree": "/var/tmp/fbfinal",
-      "campaign": "chainF (single-commit dev-box campaign)",
-      "date": "2026-10-14T09:00:26",
-      "cpu_affinity": 72,
-      "OMP_NUM_THREADS": "unset",
-      "CUDA_VISIBLE_DEVICES": "0"
-    }
-  }
+  "gpu": "NVIDIA TITAN Xp"
 }

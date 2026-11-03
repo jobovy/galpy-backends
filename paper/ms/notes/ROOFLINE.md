@@ -268,3 +268,12 @@ across versions (est.).
 * TITAN %-of-peak uses the 1582 MHz rated boost; the actual clock may be higher.
 * gD3 and gV2 censuses are at N=1e5 and scaled linearly. Per-point costs are N-independent
   except for constants such as the baked-in tables, which are negligible.
+
+**2026-11-03 (device-aware incomplete-gamma switch, galpy #1797):** the compiled-jax GPU rows
+above were measured with jax's native gammainc (per-element while_loop) in the vmapped solves.
+Re-measured with galpy's rolled series on the GPU (gpu-h100 25ab49d2c; dev box, idle TITAN):
+jax Dopri8 H100 (3e6) 0.0100 ms/orbit -> ~2.6% of FP64 peak performed, ~1.4% useful (the paper
+now says "only a few percent"); Dopri5 H100 (3e6) 0.0084 ms. TITAN large N within 10% of the rows
+above; the N=1 floors halve (TITAN) or drop 3-5x (H100). symplec6 on the H100 is a flat 0.26-0.31 s
+up to 1e5 (the old unrolled-series lowering gave 0.044 s at 1e4 but 1.46 s at 3e5 and 62 s at 1e7;
+the rolled one is 20 s at 1e7).

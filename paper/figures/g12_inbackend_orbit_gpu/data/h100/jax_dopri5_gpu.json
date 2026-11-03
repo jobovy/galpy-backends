@@ -8,49 +8,50 @@
   "rtol": 1e-08,
   "atol": 1e-08,
   "potential": "MWPotential2014",
-  "host": "trig0008",
+  "host": "trig0024",
   "results": [
     {
       "N": 1,
-      "wall_s": 1.4457131250019302,
-      "per_orbit_ms": 1445.7131250019302,
-      "compile_run_s": 2.617070157000853
+      "wall_s": 0.46545943297678605,
+      "per_orbit_ms": 465.45943297678605,
+      "compile_run_s": 1.9051367479842156
     },
     {
       "N": 10,
-      "wall_s": 0.9797117029957008,
-      "per_orbit_ms": 97.97117029957008,
-      "compile_run_s": 2.1404142800020054
+      "wall_s": 0.6799415409914218,
+      "per_orbit_ms": 67.99415409914218,
+      "compile_run_s": 2.1493783189798705
     },
     {
       "N": 100,
-      "wall_s": 1.3205038329979288,
-      "per_orbit_ms": 13.205038329979288,
-      "compile_run_s": 2.3145499989987
+      "wall_s": 0.7945578920189291,
+      "per_orbit_ms": 7.945578920189291,
+      "compile_run_s": 2.1115883310558274
     },
     {
       "N": 1000,
-      "wall_s": 1.473279611003818,
-      "per_orbit_ms": 1.473279611003818,
-      "compile_run_s": 2.4838309190017753
+      "wall_s": 0.8561010910198092,
+      "per_orbit_ms": 0.8561010910198092,
+      "compile_run_s": 2.4023135620518588
     },
     {
       "N": 10000,
-      "wall_s": 1.6612322740038508,
-      "per_orbit_ms": 0.16612322740038507,
-      "compile_run_s": 2.700739726999018
+      "wall_s": 0.9019379479577765,
+      "per_orbit_ms": 0.09019379479577765,
+      "compile_run_s": 2.2707473379559815
     },
     {
       "N": 30000,
-      "wall_s": 2.018711427001108,
-      "per_orbit_ms": 0.06729038090003693,
-      "compile_run_s": 2.9429395940023824
+      "wall_s": 1.024509984999895,
+      "per_orbit_ms": 0.034150332833329834,
+      "compile_run_s": 2.557991501991637
     }
   ],
   "jax_version": "0.11.2",
   "diffrax_version": "0.7.2",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "numpy_version": "2.5.3",
   "gpu": "NVIDIA H100 80GB HBM3",
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
+  "galpy_commit": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+  "measured": "2026-11-03, slurm job 1228382 (trig0024), with the incomplete-gamma gate (PR #1797)"
 }

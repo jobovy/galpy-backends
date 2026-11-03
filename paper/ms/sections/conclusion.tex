@@ -33,7 +33,7 @@ keeping the computation on the device by compiling it as a whole.
 
 The GPU speed-ups are not uniform. Evaluating forces and drawing samples
 are limited by the memory bandwidth of the GPU and come close to it, but
-the in-backend orbit integration reaches less than two percent of the
+the in-backend orbit integration reaches only a few percent of the
 H100's double-precision peak: the batched array programs that \jax\
 and \torch\ generate step all orbits in lockstep, with a loop overhead
 per step and branch-heavy special functions, which maps poorly onto a
@@ -43,7 +43,7 @@ are a natural complement. A prototype for \texttt{MWPotential2014}
 agrees with \galpy's \cc\ integrators to within their truncation error
 and, on the H100, integrates $10^6$ disc orbits for 2\,Gyr with
 \texttt{dop853} in 2.4\,$\mu$s per orbit with \galpy's arithmetic and in
-0.9\,$\mu$s with GPU-tuned special functions, compared to 16\,$\mu$s for
+0.9\,$\mu$s with GPU-tuned special functions, compared to 10\,$\mu$s for
 compiled \jax\ on the same GPU. Adaptive high-order integrators are
 limited by their per-thread state, and a fixed-step sixth-order
 symplectic integrator reaches the same accuracy another 3 to 3.7 times

@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "5e8b32090bc16759e48ccf55cacc18672a36bc19b8dab8c8b06303a41d410caa",
+    "git": "4be7aed",
+    "sha256": "ddfc7d63d18d6ccefe3b4cb99561b0df2bb049483e26b75cfdce63f53bcceff8",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "b9bf87ffec06bd8e750e7ea79666d99237da635830e8b0a6b6aceb267d89f9a9",
+    "git": "4be7aed",
+    "sha256": "9125b561aa1f7ef2eed8e930002df216c2ca1655449378945a32e763d8fab0ef",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -314,8 +314,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "cecf7dbaa5915d6c7a88bfb00481f261213befa6f02d0167df56524897e1514d",
+    "git": "4be7aed",
+    "sha256": "57ded1c2c42987faa7bf477be1a972c298f434491c90b6a4adf64961b1c6b3d0",
     "track": "G"
   },
   "g9_variational_validity": {

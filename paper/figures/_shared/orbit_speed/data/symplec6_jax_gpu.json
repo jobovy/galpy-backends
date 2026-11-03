@@ -8,71 +8,71 @@
   "tspan_Gyr": 2.0,
   "potential": "MWPotential2014",
   "host": "geir",
-  "cpu_affinity": 1,
+  "cpu_affinity": 72,
   "thread_env": {
-    "OMP_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "unset",
     "OPENBLAS_NUM_THREADS": "unset",
     "XLA_FLAGS": "unset"
   },
   "results": [
     {
       "N": 1,
-      "wall_s": 1.1637804959900677,
-      "per_orbit_ms": 1163.7804959900677,
-      "compile_run_s": 8.338629210949875
+      "wall_s": 0.4342696201056242,
+      "per_orbit_ms": 434.2696201056242,
+      "compile_run_s": 9.546713483985513
     },
     {
       "N": 10,
-      "wall_s": 0.9727162950439379,
-      "per_orbit_ms": 97.27162950439379,
-      "compile_run_s": 6.208600652986206
+      "wall_s": 0.4908209110144526,
+      "per_orbit_ms": 49.08209110144526,
+      "compile_run_s": 7.498752921819687
     },
     {
       "N": 100,
-      "wall_s": 1.1430329090217128,
-      "per_orbit_ms": 11.430329090217128,
-      "compile_run_s": 6.202406833996065
+      "wall_s": 0.5195527761243284,
+      "per_orbit_ms": 5.195527761243284,
+      "compile_run_s": 8.65161891002208
     },
     {
       "N": 1000,
-      "wall_s": 1.265155432978645,
-      "per_orbit_ms": 1.265155432978645,
-      "compile_run_s": 6.876161003950983
+      "wall_s": 0.5326893730089068,
+      "per_orbit_ms": 0.5326893730089068,
+      "compile_run_s": 8.517369236797094
     },
     {
       "N": 10000,
-      "wall_s": 0.4363458401057869,
-      "per_orbit_ms": 0.04363458401057869,
-      "compile_run_s": 28.318436436005868
+      "wall_s": 0.6814680041279644,
+      "per_orbit_ms": 0.06814680041279643,
+      "compile_run_s": 7.411262016976252
     },
     {
       "N": 30000,
-      "wall_s": 1.056715248967521,
-      "per_orbit_ms": 0.0352238416322507,
-      "compile_run_s": 31.313889676937833
+      "wall_s": 1.5236669359728694,
+      "per_orbit_ms": 0.050788897865762316,
+      "compile_run_s": 7.890236760955304
     },
     {
       "N": 100000,
-      "wall_s": 7.103292257990688,
-      "per_orbit_ms": 0.07103292257990688,
-      "compile_run_s": 32.389741495018825
+      "wall_s": 5.7865324770100415,
+      "per_orbit_ms": 0.05786532477010042,
+      "compile_run_s": 12.738640093943104
     },
     {
       "N": 300000,
-      "wall_s": 20.383262082003057,
-      "per_orbit_ms": 0.06794420694001019,
-      "compile_run_s": 43.277016456006095
+      "wall_s": 15.542206520913169,
+      "per_orbit_ms": 0.05180735506971056,
+      "compile_run_s": 22.297469910932705
     },
     {
       "N": 1000000,
-      "wall_s": 110.70237352605909,
-      "per_orbit_ms": 0.11070237352605909,
-      "compile_run_s": 141.11257733101957
+      "wall_s": 44.18898980203085,
+      "per_orbit_ms": 0.04418898980203085,
+      "compile_run_s": 50.703649080125615
     }
   ],
   "jax_version": "0.10.1",
-  "galpy_version": "1.12.1.dev0",
+  "galpy_version": "2.0.0b1.dev0",
   "numpy_version": "2.4.3",
   "gpu": "NVIDIA TITAN Xp",
-  "galpy_file": "/var/tmp/symplec-fb/galpy/__init__.py"
+  "galpy_file": "/var/tmp/v2-spgate/galpy/__init__.py"
 }

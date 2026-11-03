@@ -230,19 +230,16 @@ H100, where it overtakes one \cc\ thread at $N\approx2000$ and \cc\
 on 16 OpenMP threads at $N\approx3\times10^4$, and evaluates $10^6$
 points 78 times faster than one \cc\ thread. Compiled \jax\ on the
 H100 starts from a floor of only 0.12\,s and is five times faster than
-eager \torch\ at every $N$ up to $10^5$: it overtakes one \cc\ thread
-at $N\approx400$ and 16 threads at $N\approx5000$, and at $N=10^5$ it is
-14 times faster than 16 threads. That floor is set by the incomplete
-gamma function that the bulge of \texttt{MWPotential2014} evaluates at
-every quadrature node: \jax's native version iterates per element in a
-loop, which is slow on a GPU at every array size, so that under
-compilation on a GPU \galpy\ takes its own vectorized series
-(\sectionname~\ref{sec:design-numerics}) at every size; with the native
-function the floor was 0.7\,s on both GPUs. On the TITAN~Xp, with its
-slow double-precision arithmetic, eager \torch\ beats single-threaded
-\cc\ by a factor of 5--6 at large $N$, but not \cc\ on 16 threads;
-compiled \jax\ starts from 0.2\,s there, is faster than eager \torch\
-at every $N$ measured, and overtakes one \cc\ thread at
+eager \torch\ at every $N$: it overtakes one \cc\ thread at
+$N\approx400$ and 16 threads at $N\approx5000$. The floor is set by the
+incomplete gamma function of the bulge of \texttt{MWPotential2014}:
+\jax's native version iterates per element, which is slow on a GPU at
+every array size, so compiled programs on a GPU use \galpy's vectorized
+series (\sectionname~\ref{sec:design-numerics}) at every size; with the
+native function the floor was 0.7\,s. On the TITAN~Xp, with its slow
+double-precision arithmetic, eager \torch\ beats single-threaded \cc\
+by a factor of 5--6 at large $N$, but not \cc\ on 16 threads; compiled
+\jax\ starts from 0.2\,s there and overtakes one \cc\ thread at
 $N\approx10^3$, but not 16 threads. Thus the backends that make the
 action--angle transformation differentiable are also the fastest way to
 evaluate it for large samples when a modern GPU is available.
