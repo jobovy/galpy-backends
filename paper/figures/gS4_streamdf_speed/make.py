@@ -80,16 +80,24 @@ What it shows (CPU numbers, measured 2026-10-06):
   1/32 rate) the warm construction is ~130-140 s (~250 s cold), on an NVIDIA H100
   (Trillium; data/h100/, jax 0.11.2 / torch 2.14.1+cu130) ~53-54 s (~110 s cold).
   Jitted sampling at N=10^6: 0.14 s (TITAN) vs 4.1 ms (H100); jitted DF evaluation
-  at 10^6: 67 ms (TITAN) vs 1.7 ms (H100) vs 149 s for numpy -- ~10^5x. Eager torch
-  on the GPU has no points beyond N=10^4 (TITAN) / 10^5 (H100): NaN in the JSONs
-  (OOM or the per-call cap).
+  at 10^6: 67 ms (TITAN) vs 1.7 ms (H100) vs 149 s for numpy -- ~10^5x. The eager
+  GPU series fail at N=10^5 on the 12 GB TITAN (jax and torch, OOM: the closest-
+  track-point search holds (N, 1001) temporaries); on the H100 eager jax fails at
+  10^6 (a single 16-22 GiB block refused with jax's default allocator settings,
+  even alone in a fresh process) while eager torch reaches 10^6 (0.25 s sample,
+  0.05 s eval, 48-53 GiB; measured per call in fresh processes on 2026-11-03,
+  notes["h100_eager_1e6"] -- in the one-process figure run jax's retained pool
+  had made those torch calls OOM too). NaN in the JSONs = not measured/failed.
   Colours/line styles: the shared palette (paper/figures/_harness/palette.py) --
   colour = framework x device (numpy black; jax sky blue / blue / navy and torch
   orange / vermillion / dark red for CPU / TITAN Xp / H100), jit solid, eager
   dashed; the first (cold) call dotted (eager) / dash-dotted (jit).
   CPU caps: the eager jax 10^6-point sample was OOM-killed on the shared box (the
-  closest-track-point search holds (N, 1001) temporaries), so the jax CPU series
-  stop at 10^5.
+  closest-track-point search holds (N, 1001) temporaries; a retry under a 40 GB
+  cap on 2026-11-03 was killed at 50 GB), so the eager jax CPU series stop at
+  10^5; the jitted jax CPU series were extended to 10^6 on 2026-11-03
+  (measure/extend_jax_cpu_largeN.py: 4.6 s sample, 1.4 s eval; JB's round-6
+  request), notes["jax_cpu_largeN_extended"].
 
 CAVEAT: the CPU numbers were measured on a heavily shared machine (load average
 ~65-150 on 72 logical CPUs, other users' threads on the same 4 pinned cores; the

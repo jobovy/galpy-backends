@@ -140,14 +140,20 @@ def label(framework, device="cpu", mode=None, extra=""):
 
 
 def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt=6,
-                order="end", swatch_pt=None):
+                order="end", swatch_pt=None, leader="thin"):
     """Direct line labels in the line's colour, instead of a legend.
 
     Every line (default: each with a label not starting with "_") is labelled in a
     column just right of the axes, at the height of its last finite point, spread
     to ``min_sep_pt`` per text line apart (a two-line label takes twice the room), with a thin leader from the line end
     to the label's left edge (so that leaders never cross the label column; the
-    labels sit on opaque white boxes). ``inline``
+    labels sit on opaque white boxes). ``leader="line"``: the leader runs from
+    the label horizontally into the axes to the point where the line passes the
+    label's height (its rightmost such point; the nearest point of the line when
+    it never does), in the line's colour and style and not faded, so that it
+    reads as a legend line extended into the figure to its curve (for lines that
+    all end at the same corner, where leaders from the line ends would be long
+    and steep). ``inline``
     maps a label to ``(x, dy_pt)``: that line is instead labelled on the plot,
     next to its point at data ``x`` (lines that end well inside the axes).
     ``order="edge"``: order (and aim) the labels by each line's height extrapolated
@@ -196,7 +202,7 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
         P = ax.transData.transform(numpy.c_[x[k[-2:]], y[k[-2:]]])
         Y = P[-1, 1]
         col.append({"xy": (x[i], y[i]), "Y": Y, "Ynew": Y, "text": text, "color": c, "P": P,
-                    "line": ln})
+                    "line": ln, "P_all": ax.transData.transform(numpy.c_[x[k], y[k]])})
     if order == "edge" and col:
         X_edge = max(a["P"][-1, 0] for a in col)
         for a in col:
@@ -234,6 +240,22 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
     for a in col:
         xt, yt = to_axes.transform((x0, a["Ynew"]))
         xy, xycoords = a["xy"], "data"
+        if leader == "line":
+            Pa, Yl = a["P_all"], a["Ynew"]
+            hits = []
+            for (xa, ya), (xb, yb) in zip(Pa[:-1], Pa[1:]):
+                if (ya - Yl) * (yb - Yl) <= 0 and ya != yb:
+                    hits.append(xa + (Yl - ya) * (xb - xa) / (yb - ya))
+            if hits:
+                anchor = (max(hits), Yl)
+            else:
+                anchor = Pa[numpy.argmin(numpy.hypot(Pa[:, 0] - x0, Pa[:, 1] - Yl))]
+            xy = tuple(ax.transData.inverted().transform(anchor))
+            arrow = dict(arrowstyle="-", lw=1.0, ls=a["line"].get_linestyle(), color=a["color"],
+                         shrinkA=0, shrinkB=0, relpos=(0.0, 0.5))
+        else:
+            arrow = dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.6,
+                         relpos=(0.0, 0.5))
         if order == "elbow":
             ye = to_axes.transform(ax.transData.transform(a["xy"]))[1]
             xe = to_axes.transform(ax.transData.transform(a["xy"]))[0]
@@ -248,8 +270,7 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
             # default aims it at the label's centre and clips it at the box, so a
             # leader to a label a few rows away entered the column from above and
             # crossed the labels in between)
-            arrowprops=dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.6,
-                            relpos=(0.0, 0.5)),
+            arrowprops=arrow,
         )
         # the leader behind the data lines, the label box above them
         a["artist"].arrow_patch.set_zorder(0.5)

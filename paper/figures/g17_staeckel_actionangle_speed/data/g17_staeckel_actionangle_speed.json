@@ -54,7 +54,8 @@
     3000,
     10000,
     30000,
-    100000
+    100000,
+    300000
   ],
   "Ns_old": [
     1,
@@ -608,6 +609,18 @@
       "date": "2026-11-03T09:54:26",
       "XLA_FLAGS": "unset",
       "note": "jax (GPU, jit) re-measured alone (jaxjit_gpu_only.py) with the device-aware incomplete-gamma switch"
+    },
+    "gpu_jaxjit_ext": {
+      "sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+      "worktree": "/var/tmp/v2-spgate",
+      "date": "2026-11-03T13:35:52",
+      "XLA_FLAGS": "unset",
+      "note": "jax (GPU, jit) extended to these N (jaxjit_gpu_only.py --Ns); a NaN (the runner's status) is a point the GPU could not hold and is left out",
+      "Ns": [
+        300000,
+        1000000
+      ],
+      "status": "oom-retry at N=1000000"
     }
   },
   "series": {
@@ -689,7 +702,8 @@
       0.37280687503516674,
       0.4226440479978919,
       0.9951212790329009,
-      3.468324664980173
+      3.468324664980173,
+      9.605562298092991
     ],
     "jax (GPU)": [
       9.483162838034332,

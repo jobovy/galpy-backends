@@ -201,10 +201,13 @@ def make():
     k = numpy.unique(numpy.concatenate([numpy.arange(0, 100),
                                         numpy.geomspace(100, kmax, 200).astype(int)]))
     ax2.loglog(k + 1, k + 1, lw=1.5, ls="--", color="0.45", label="eager (any device)")
-    # the break-even count goes into each line's label (a third line): the
-    # crossings sit on the eager diagonal, where in-plot texts collide
+    # the break-even count goes into each line's label (its second line; the
+    # framework and device share the first, so that the labels stay two lines
+    # tall and sit next to their lines -- three-line labels filled the column
+    # and pushed labels far from their lines, JB): the crossings sit on the
+    # eager diagonal, where in-plot texts collide
     for fw, dev, compile_plus, steady, eg, kstar in stats:
-        lab = _lab(fw, dev, _mode(fw, True))
+        lab = _lab(fw, dev, _mode(fw, True)).replace("\n", " ")
         if kstar:
             lab += f"\nbreak-even $\\approx${kstar + 1:.0f} calls"
         ax2.plot(k + 1, (compile_plus + steady * k) / eg, lw=2, label=lab,
@@ -228,7 +231,10 @@ def make():
     layout.faster_arrow(ax1, "down", xy=(0.5, 0.615), length=0.1)
     layout.faster_arrow(ax2, "down", xy=(0.08, 0.73), length=0.14)
     palette.label_lines(ax1, fontsize=fs_line, min_sep_pt=1.3 * fs_line)
-    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None)
+    # (b): the leaders are the lines themselves continued to their labels (not
+    # thin and faded, which were hard to see, JB)
+    palette.label_lines(ax2, fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                        leader="line")
     if PAPER:
         layout.fit_right(fig)
     return fig

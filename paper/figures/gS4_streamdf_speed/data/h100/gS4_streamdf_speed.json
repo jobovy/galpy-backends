@@ -152,9 +152,10 @@
       0.001636758999666199,
       0.001800709003873635,
       0.005832487004227005,
-      NaN
+      0.0514
     ]
   },
+  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386",
   "nch_default": 10,
   "nchs": [
     4,
@@ -165,6 +166,10 @@
   "notes": {
     "construct_jit": "not measured: BUG_jax_streamdf_construct_traced.md",
     "construct_torch": "not measured: BUG_torch_streamdf_construct.md",
+    "h100_eager_1e6": {
+      "jax (GPU, eager) N=1000000": "NaN: RESOURCE_EXHAUSTED even in a fresh process with preallocation off (sample: a single 16.29 GiB block in jit_transpose; eval: 22.39 GiB), with jax's default allocator settings; whether the default XLA_PYTHON_CLIENT_MEM_FRACTION (0.75) is the binding limit was not tested (no non-default setting for one point). Last finite point: 1e5.",
+      "torch (GPU, eager) N=1000000": "sample 0.2505 s, eval 0.0514 s: measured by backends-h100 on 2026-11-03 (Trillium job 1229652, galpy 7b2f84c88, torch 2.14.1+cu130), each call in its own fresh process, one warm-up + median of 3 (torch max_memory_allocated 47.65 / 52.68 GiB). The NaN of the one-process figure run was an artefact: jax's retained allocator pool left too little of the card."
+    },
     "jax (CPU) build for (b)/(c) [s, cold]": 209.52687594795134,
     "jax (GPU) build for (b)/(c) [s, cold]": 83.62780066500272
   },
@@ -216,10 +221,9 @@
       0.002707138999539893,
       0.0037397090054582804,
       0.018747180998616386,
-      NaN
+      0.2505
     ]
   },
   "tintJ": 100,
-  "torch_cpu_threads": 1,
-  "galpy_commit": "34bca2d1d7fd6cf37cd8ade2eac23c7e34b96386"
+  "torch_cpu_threads": 1
 }

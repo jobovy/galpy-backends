@@ -53,17 +53,22 @@ What runs on each backend is DIFFERENT, and that is the point of the figure:
     progenitor IC only, not the potential): ~4.3 ms/particle at N=1000 (torch),
     i.e. ~2x the plain numpy/C cost.
 
-What it shows (CPU numbers, measured 2026-10-05/06): (a) wall time per call vs N;
-(b) cost per particle. numpy/C costs ~2.1 ms/particle at every N (0.30 s at
-N=100, 21 s at 10^4), strictly linear. The jitted, differentiable jax spray has NO
-fixed floor on CPU and costs ~1.0-1.5 ms/particle (0.098 s at N=100, 13 s at
-10^4, 153 s at 10^5) -- i.e. it is as fast as or faster than the non-differentiable
+What it shows (CPU numbers: one pinned core on an idle box, measured 2026-10-13;
+the two largest-N jax points 2026-11-03, see below): (a) wall time per call vs N;
+(b) cost per particle. numpy/C costs ~3 ms/particle at every N (0.28 s at N=100,
+31 s at 10^4), strictly linear. The jitted, differentiable jax spray has NO fixed
+floor on CPU and costs ~0.5-0.7 ms/particle up to N=3x10^4 (0.052 s at N=100,
+6.5 s at 10^4, 20 s at 3x10^4) -- a fifth of the cost of the non-differentiable
 C path (whose cost is set by its 10001-point output grid per particle; the
-adaptive Dopri8 at 1e-12 needs fewer, larger steps). Eager jax adds a ~6 s per-call
-floor (per-call overhead of the un-jitted sampler around the diffrax solve) that is amortised by N~10^4. Eager torch
-has a ~12 s floor (the adaptive-step loop is dispatched from Python) and
-~7 ms/particle at 10^4. The compile of the jitted sampler (excluded) is ~36-50 s
-per shape up to N=10^4 (stored in the JSON).
+adaptive Dopri8 at 1e-12 needs fewer, larger steps) -- rising to 1.2-1.5
+ms/particle at 10^5-10^6 (117 s at 10^5, 442 s at 3x10^5, 1391 s = 23 min at
+10^6). Eager jax adds a ~6 s per-call floor (per-call overhead of the un-jitted
+sampler around the diffrax solve) that is amortised by N~10^4, and then tracks the
+jitted series ~10-20 % above it (1628 s at 10^6). Eager torch has an ~8 s floor
+(the adaptive-step loop is dispatched from Python) and ~3-4 ms/particle at
+10^4-3x10^4. The compile of the jitted sampler (excluded) is ~35-55 s per shape up
+to N=3x10^4, 154 s at 10^5, 399 s at 3x10^5 and 1416 s at 10^6 (stored in the
+JSON).
 
 GPU: the jitted jax sampler has a flat ~0.2-0.3 s floor on both GPUs; on the
 TITAN Xp (float64 at 1/32 rate) it turns linear past N~10^4 (0.15 ms/particle at
@@ -77,18 +82,23 @@ Colours/line styles: the shared palette (paper/figures/_harness/palette.py) --
 colour = framework x device (numpy black; jax sky blue / blue / navy and torch
 orange / vermillion / dark red for CPU / TITAN Xp / H100), jit solid, eager dashed.
 
-CAVEAT: the CPU numbers were measured on a heavily shared machine (load average
-~65-150 on 72 logical CPUs, other users' threads running on the same 4 pinned
-cores; the load is stamped in ``env_cpu``), so absolute CPU times are inflated
-and noisy at the tens-of-percent level; the orders of magnitude and the
-scalings are robust.
-
 Timing protocol: one warm-up call, median of 3 timed calls (bench.time_call), all
-CPU series pinned to the same 4 cores (taskset): numpy/C runs 4 OpenMP threads
-(measured cpu/wall 2.5), jax's XLA:CPU pool spans the 4, torch 1 thread
-(paper/ms/notes/CPU_CORES_AUDIT.md); a series stops once one call
-exceeds ~60 s (later N recorded as NaN). Large-N GPU calls that run out of the
-12 GB device memory are recorded as NaN.
+CPU series pinned to ONE core (``taskset -c 16 OMP_NUM_THREADS=1``, load average
+~1 when measured; ``env_cpu``/``galpy_commit_parts`` stamp it): numpy/C on one
+OpenMP thread, jax's XLA:CPU pool one thread, torch one thread
+(paper/ms/notes/CPU_CORES_AUDIT.md); a series stops once one call exceeds ~60 s
+(later N recorded as NaN). Large-N GPU calls that run out of the 12 GB device
+memory are recorded as NaN.
+
+The jax CPU series were later continued past the 60 s rule to N=3x10^5 and 10^6
+(measure/extend_jax_cpu_largeN.py, 2026-11-03, galpy 7b2f84c88) so that the CPU
+and GPU lines end at the same N: single timed call after a warm-up at 10^6. Those
+two points were measured on a 4-core affinity mask on a busy node (load average
+80-135 on 72 logical CPUs, stamped in ``env_cpu["jax_largeN_extended"]``); the
+process used 1.0-1.4 cores. A re-measurement of the N=10^5 point under those
+conditions gave 141 s jit / 155 s eager against the series' 117 / 123 s, so the
+two extension points are ~20-25 % slow (stamped as "continuity_check N=100000");
+re-measure them on one idle core when the box is quiet.
 
 Reproducibility: measure -> data/gS5_streamspray_speed.json, plot byte-stable from
 it. Re-measure CPU: delete the JSON (or ``python -m paper.figures.gS5_streamspray_speed.make

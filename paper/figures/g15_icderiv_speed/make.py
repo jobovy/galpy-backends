@@ -163,7 +163,8 @@ def make():
             ax1.text(x, h * 1.15, f"{h:.0f}" if h >= 10 else f"{h:.1f}",
                      ha="center", va="bottom", fontsize=fs_note)
     ax1.set_ylim(top=max(heights) * (30 if PAPER else 3))
-    ax1.text(0.02, 0.97, "hatched = eager, solid = compiled\nCPU ($n$): $n$ threads", transform=ax1.transAxes,
+    # three short lines: one long line ran past the frame (JB)
+    ax1.text(0.02, 0.97, "hatched = eager,\nsolid = compiled\nCPU ($n$): $n$ threads", transform=ax1.transAxes,
              fontsize=fs_note, color="0.4", va="top")
 
     # ---- (b) IC-gradient wall-clock vs number of orbits N -----------------------
@@ -187,7 +188,9 @@ def make():
     xd = numpy.concatenate([ln.get_xdata() for ln in ax2.get_lines()]).astype(float)
     refs = layout.cost_lines(ax2, layout.last_costs(ax2, kind="time"), kind="time",
                              x_range=(xd.min(), xd.max()))
-    ax2.text(0.03, 0.97, "grey dotted: " + layout.fmt_seconds([1e-3 * r for r in refs])
+    # three short lines, so that the note ends before the CPU lines climb to the
+    # top right (one long line ran under them, JB)
+    ax2.text(0.03, 0.97, "grey dotted:\n" + layout.fmt_seconds([1e-3 * r for r in refs])
              + "\nper orbit", transform=ax2.transAxes, fontsize=fs_note, color="0.5",
              va="top", ha="left")
     # the C-STM line ends mid-plot: label it in the empty region below, not in the

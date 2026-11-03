@@ -233,14 +233,18 @@ def make():
     for ax in axes:
         # the whole-node C line runs below every other line: label it on the plot,
         # to the lower right of its N=100 point (clear of the line, which rises to
-        # the right); the rest are labelled in a column right of the axes
+        # the right), with a short leader from the label's top-left corner to that
+        # point, as the column labels have; the rest are labelled in a column
+        # right of the axes
         node = [ln for ln in ax.get_lines() if ln.get_label() == node_label]
         for ln in node:
             x, y = (numpy.asarray(v, dtype=float) for v in ln.get_data())
             k = int(numpy.argmin(abs(numpy.log(x / 100.0))))
-            ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(6, -6),
+            ax.annotate(ln.get_label(), xy=(x[k], y[k]), xytext=(12, -9),
                         textcoords="offset points", fontsize=fs_line,
-                        color=ln.get_color(), ha="left", va="top")
+                        color=ln.get_color(), ha="left", va="top",
+                        arrowprops=dict(arrowstyle="-", lw=0.5, color=ln.get_color(),
+                                        alpha=0.6, shrinkA=0, shrinkB=2, relpos=(0.0, 1.0)))
         palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
                                  if not ln.get_label().startswith("_") and ln not in node],
                             # nine two-line labels per panel: a smaller font (and

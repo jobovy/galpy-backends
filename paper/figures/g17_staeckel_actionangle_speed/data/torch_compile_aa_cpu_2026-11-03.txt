@@ -1,0 +1,23 @@
+# torch.compile aa: torch 2.12.0+cu126 on cpu, threads 4
+/home/bovy/miniforge3/envs/py313/lib/python3.13/site-packages/torch/_dynamo/variables/functions.py:2459: UserWarning: Dynamo detected a call to a `functools.lru_cache`-wrapped function at 'actionAngleStaeckel.py:380'. Dynamo ignores the cache wrapper and directly traces the wrapped function. Silent incorrectness is only a *potential* risk, not something we have observed. Enable TORCH_LOGS=+dynamo for a DEBUG stack trace.
+
+This call originates from:
+  File "/var/tmp/v2-spgate/galpy/actionAngle/actionAngleStaeckel.py", line 380, in _staeckel_chi_quads
+    (tu, wu), (tg, wg) = _staeckel_chi_mesh_nearaxis(nchi)
+
+  torch._dynamo.utils.warn_once(msg)
+
+/home/bovy/miniforge3/envs/py313/lib/python3.13/site-packages/torch/_dynamo/variables/functions.py:2459: UserWarning: Dynamo detected a call to a `functools.lru_cache`-wrapped function at 'actionAngleStaeckel.py:376'. Dynamo ignores the cache wrapper and directly traces the wrapped function. Silent incorrectness is only a *potential* risk, not something we have observed. Enable TORCH_LOGS=+dynamo for a DEBUG stack trace.
+
+This call originates from:
+  File "/var/tmp/v2-spgate/galpy/actionAngle/actionAngleStaeckel.py", line 376, in _staeckel_chi_quads
+    t, w = _staeckel_chi_mesh(nchi)
+
+  torch._dynamo.utils.warn_once(msg)
+
+torch.compile aa cpu N=    100 eager    1296.26 ms  compile   460.93 s  warm     982.40 ms  max|compiled-eager| 2.99e-11
+torch.compile aa cpu N=   1000 eager     726.73 ms  compile   174.87 s  warm    3707.71 ms  max|compiled-eager| 7.26e-11
+--- dynamo recompile/graph-break warnings (W1103 lines): 99, at these galpy frames:
+      3 torch_dynamo_resume_in_branch_where_at_423
+      3 torch_dynamo_resume_in_iterate_bracket_at_326
+      1 torch_dynamo_resume_in__staeckel_chi_profiles_at_552

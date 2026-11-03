@@ -2,21 +2,37 @@
 
 While the sections above illustrate each part of the code on its own,
 here we give two examples that combine several of them in a single
-analysis, of the kind that we built the backends for. Both are deliberately small:
+analysis. Both are deliberately small:
 they use mock data and run in minutes, and their point is to illustrate
 the computation rather than the result.
 
 \subsection{A hypervelocity star as a probe of the potential}\label{sec:examples-hvs}
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g14_hvs_potential_fit/g14_hvs_potential_fit.pdf}
+  \caption{A mock hypervelocity star as a constraint on the Galactic potential.
+    Left: the orbit of a star resembling S5-HVS1, integrated backwards
+    from its observed phase-space position (grey) and from the position
+    within the observational uncertainties that brings the orbit closest
+    to Sgr~A$^*$ (blue), found by Gauss--Newton iterations on the
+    derivative of the orbit with respect to its initial condition from
+    the \cc\ variational integrator. Right: the closest approach to the
+    Galactic center of the backward orbit as a function of the
+    flattening $q$ of the halo (black, from a grid of integrations) and
+    the path of a gradient-descent fit of $q$ using the derivative of the
+    closest approach through the in-backend orbit integration (points),
+    which recovers the value from which the star was generated (dashed
+    line).}\label{fig:hvs}
+\end{figure*}
 
 A hypervelocity star ejected from the Galactic center must, when its
 orbit is integrated backwards, return to the Galactic center, and the
 closest approach of the backward orbit to the center is therefore a
 function of the Galactic potential that a measurement of the star's
 phase-space position constrains \citep[see, \eg,][]{Gnedin2005,Contigiani2019}.
-This is a natural problem for differentiable orbits, because the
-objective---the distance of closest approach---is a function of an
-integrated orbit, and both the star's initial condition, within its
-uncertainties, and the potential's parameters are to be varied.
+This is a natural problem for differentiable orbits: the objective is
+a function of an integrated orbit, and both the star's initial
+condition and the potential's parameters are to be varied.
 \figurename~\ref{fig:hvs} displays the two derivatives of
 \sectionname~\ref{sec:orbit-paths} at work on a mock star resembling
 S5-HVS1 \citep{Koposov2020} in a cored, flattened logarithmic halo. In the left panel, we
@@ -58,22 +74,6 @@ parameters and those of the potential, and the derivative of that
 likelihood with respect to all of them would be available for a
 gradient-based sampler.
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g14_hvs_potential_fit/g14_hvs_potential_fit.pdf}
-  \caption{A mock hypervelocity star as a constraint on the Galactic potential.
-    Left: the orbit of a star resembling S5-HVS1, integrated backwards
-    from its observed phase-space position (grey) and from the position
-    within the observational uncertainties that brings the orbit closest
-    to Sgr~A$^*$ (blue), found by Gauss--Newton iterations on the
-    derivative of the orbit with respect to its initial condition from
-    the \cc\ variational integrator. Right: the closest approach to the
-    Galactic center of the backward orbit as a function of the
-    flattening $q$ of the halo (black, from a grid of integrations) and
-    the path of a gradient-descent fit of $q$ using the derivative of the
-    closest approach through the in-backend orbit integration (points),
-    which recovers the value from which the star was generated (dashed
-    line).}\label{fig:hvs}
-\end{figure*}
 
 \subsection{Learning the inverse action--angle transformation}\label{sec:examples-neural}
 

@@ -54,8 +54,8 @@ The isochrone and harmonic-oscillator actions are closed forms, which we
 migrated by swapping the namespace. \texttt{actionAngleSpherical}
 replaces its \scipy\ root finds and adaptive quadratures with the
 shared root finder and a fixed-order Gauss--Legendre rule, with special
-handling of circular and near-circular orbits, where the radial
-integral degenerates, and of orbits that are unbound. The
+handling of circular and near-circular orbits and of orbits that are
+unbound. The
 \texttt{actionAngleIsochroneApprox} method of \citet{Bovy2014}
 integrates an auxiliary orbit, and does so with the in-backend solvers
 of \sectionname~\ref{sec:orbit-paths}; it is therefore differentiable
@@ -74,9 +74,7 @@ excursion, a spectral sweep over the angle, a batched Gauss--Newton
 solve for the anomaly, and Hermite-spline tables---and the evaluation
 run natively on the backends, trace under compilation, and are
 differentiable with respect to the action, the angle, and the
-parameters of the potential, such that the family of tori can be
-differentiated with respect to the parameters of the disk that
-generates them. \figurename~\ref{fig:vinverse} demonstrates this for a
+parameters of the potential. \figurename~\ref{fig:vinverse} demonstrates this for a
 self-gravitating isothermal disk: the derivative of the tori with
 respect to the velocity dispersion of the disk predicts the tori of a
 nearby disk, agrees with finite differences to $10^{-10}$, and serves
@@ -92,13 +90,12 @@ def torus(sigma):
 z,vz= torus(0.5)
 dz_dsigma,dvz_dsigma= jax.jacfwd(torus)(0.5)
 \end{code}
-As they are not recommended for use, older construction modes of the 
-\texttt{actionAngleVerticalInverse}
-class, which use point transformations, are evaluated natively but
-built on \numpy, and therefore cannot take a potential with backend
-parameters. Other \galpy-native inverse action--angle transformations
-are under active development and will be added with full backend
-support soon.
+The older construction modes of this class, which use point
+transformations and are not recommended, are built on \numpy\ and
+cannot take a potential with backend parameters.
+
+Other \galpy-native inverse action--angle transformations are under
+active development and will be added with full backend support soon.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gV1_vertical_inverse/gV1_vertical_inverse.pdf}
@@ -148,8 +145,8 @@ with the restriction that the derivative of the action integral is of
 first order only. \figurename~\ref{fig:staeckelq} shows such a
 derivative, of the radial and vertical actions of a Sun-like orbit in
 \texttt{MWPotential2014} with respect to the flattening $b/a$ of its
-Miyamoto--Nagai disk (the disk's scale height over its scale length, at
-fixed scale length), with the potential, its normalization, and the
+Miyamoto--Nagai disk (its scale height over its scale length, at fixed
+scale length), with the potential, its normalization, and the
 St\"{a}ckel transformation rebuilt from $b/a$ inside the differentiated
 function: the automatic derivative agrees with finite differences to
 $10^{-9}$, at the bottom of the finite-difference error curve, and once
@@ -172,9 +169,9 @@ compiled it costs about a millisecond.
 \end{figure*} The \cc\ path (\texttt{c=True}) is much faster for
 small numbers of points and, on a backend, does more than before: the
 \cc\ code computes, along with the actions, frequencies, and angles,
-their Jacobian with respect to the five phase-space coordinates, and
-\galpy\ attaches this Jacobian to the result as a custom derivative
-rule, such that \texttt{jax.grad} or \torch's \texttt{backward} through a
+their Jacobian with respect to the five phase-space coordinates, which
+\galpy\ attaches to the result as a custom derivative rule, such that
+\texttt{jax.grad} or \torch's \texttt{backward} through a
 \texttt{c=True} call costs one \cc\ call and a matrix product:
 \begin{code}
 aAS= actionAngleStaeckel(pot=MWPotential2014,
@@ -187,17 +184,15 @@ djr_dR= dJ(jnp.asarray([1.1,0.9]))
 As for the orbit integrators, the \cc\ path gives derivatives with
 respect to the phase-space position only, to first order, and the focal
 length \texttt{delta} is a fixed number; derivatives with respect to the
-potential's parameters require \texttt{c=False}. The estimate of the
-focal length from the potential, \texttt{estimateDeltaStaeckel}, runs on
-the backends and traces, such that a focal length estimated along an
-integrated orbit can be part of a compiled program. For example, the following compiles
+potential's parameters require \texttt{c=False}. The focal-length
+estimate \texttt{estimateDeltaStaeckel} runs on the backends and
+traces, such that a focal length estimated along an integrated orbit
+can be part of a compiled program; for example, the following compiles
 \begin{code}
-delta= estimateDeltaStaeckel(MWPotential2014,
-                             o.R(ts),o.z(ts))
-aAS= actionAngleStaeckel(pot=MWPotential2014,
-                         delta=delta,c=False)
-jr,lz,jz= aAS(o.R(ts),o.vR(ts),o.vT(ts),
-              o.z(ts),o.vz(ts))
+R,z= o.R(ts),o.z(ts)
+aAS= actionAngleStaeckel(pot=MWPotential2014,c=False,
+     delta=estimateDeltaStaeckel(MWPotential2014,R,z))
+jr,lz,jz= aAS(R,o.vR(ts),o.vT(ts),z,o.vz(ts))
 \end{code}
 The grid-based interpolated version,
 \texttt{actionAngleStaeckelGrid}, builds its grid on the backend, such
@@ -223,15 +218,21 @@ while eager \jax\ is bound by dispatching hundreds of small operations
 per call and stays at a floor of several seconds. Compilation removes
 that floor, but for large $N$ compiled \jax\ is no faster than \numpy\
 on the CPU, because this quadrature-heavy code is bound by arithmetic
-that \numpy\ already executes in compiled loops. On a GPU, the same
+that \numpy\ already executes in compiled loops. (\torch\ is shown
+eagerly: \texttt{torch.compile} breaks this program into hundreds of
+graphs at the root finder's data-dependent loops, which \jax\ stages
+as compiled loops, and the result is no faster than eager execution on
+the CPU and fails on the H100.) On a GPU, the same
 code overtakes the \cc\ path once $N$ is large enough to amortize a
 launch floor. For eager \torch\ that floor is about 0.6\,s on the
 H100, where it overtakes one \cc\ thread at $N\approx2000$ and \cc\
 on 16 OpenMP threads at $N\approx3\times10^4$, and evaluates $10^6$
 points 78 times faster than one \cc\ thread. Compiled \jax\ on the
 H100 starts from a floor of only 0.12\,s and is five times faster than
-eager \torch\ at every $N$: it overtakes one \cc\ thread at
-$N\approx400$ and 16 threads at $N\approx5000$. The floor is set by the
+eager \torch\ up to $N=10^5$ and 2.7 times at $10^6$ (1.4\,s, 200
+times faster than one \cc\ thread and 19 times faster than 16
+threads); it overtakes one \cc\ thread at $N\approx400$ and 16 threads
+at $N\approx5000$. The floor is set by the
 incomplete gamma function of the bulge of \texttt{MWPotential2014}:
 \jax's native version iterates per element, which is slow on a GPU at
 every array size, so compiled programs on a GPU use \galpy's vectorized
@@ -240,9 +241,9 @@ native function the floor was 0.7\,s. On the TITAN~Xp, with its slow
 double-precision arithmetic, eager \torch\ beats single-threaded \cc\
 by a factor of 5--6 at large $N$, but not \cc\ on 16 threads; compiled
 \jax\ starts from 0.2\,s there and overtakes one \cc\ thread at
-$N\approx10^3$, but not 16 threads. Thus the backends that make the
-action--angle transformation differentiable are also the fastest way to
-evaluate it for large samples when a modern GPU is available.
+$N\approx10^3$, but not 16 threads. Thus the differentiable backends
+are also the fastest way to evaluate the transformation for large
+samples on a modern GPU.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g17_staeckel_actionangle_speed/g17_staeckel_actionangle_speed.pdf}
@@ -252,10 +253,10 @@ evaluate it for large samples when a modern GPU is available.
     phase-space points per call: wall time on (a) the CPU and (b) the
     GPUs. CPU lines use one core, except for the dash-dotted \cc\ line,
     which uses 16 OpenMP threads and is repeated in (b) for reference; GPU
-    lines are for eager \torch\ (dashed) and for compiled \jax\ (solid)
-    on the TITAN~Xp and the H100; the transfer of the inputs and outputs
-    between host and device adds at most a few per cent to the eager
-    \torch\ times and is not shown separately. The black dotted line with
+    lines are for eager \torch\ (dashed; \texttt{torch.compile} is no
+    faster here, see the text) and for compiled \jax\ (solid)
+    on the TITAN~Xp and the H100; host--device transfers add at most a
+    few per cent to the eager \torch\ times and are not shown. The black dotted line with
     crosses is the per-object \numpy\ loop that the vectorized path
     replaces; eager \jax, which sits at a floor of several seconds on
     every device, is not shown. Points where the TITAN~Xp runs out of

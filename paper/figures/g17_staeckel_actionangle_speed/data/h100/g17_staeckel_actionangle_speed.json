@@ -77,7 +77,9 @@
     3000,
     10000,
     30000,
-    100000
+    100000,
+    300000,
+    1000000
   ],
   "series": {
     "jax (GPU, jit)": [
@@ -87,7 +89,9 @@
       0.1254595749778673,
       0.12717767409048975,
       0.14012776198796928,
-      0.18033343902789056
+      0.18033343902789056,
+      0.5071789129870012,
+      1.3527137420605868
     ],
     "jax (GPU)": [
       3.6533378590029315,
@@ -271,6 +275,35 @@
       "date": "2026-11-03T09:14:50",
       "XLA_FLAGS": "unset",
       "note": "jax (GPU, jit) re-measured alone (jaxjit_gpu_only.py) with the device-aware incomplete-gamma switch"
+    },
+    "gpu_jaxjit_ext": {
+      "sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
+      "worktree": "/scratch/bovy/galpy-h100/galpy-gate",
+      "date": "2026-11-03T13:45:00",
+      "XLA_FLAGS": "unset",
+      "Ns": [
+        300000,
+        1000000
+      ],
+      "status": "ok",
+      "cenv": {
+        "python": "3.13.16",
+        "numpy": "2.5.3",
+        "affinity": 24,
+        "OMP_NUM_THREADS": "unset",
+        "OPENBLAS_NUM_THREADS": "unset",
+        "XLA_FLAGS": "unset",
+        "galpy": "2.0.0b1.dev0",
+        "jax": "0.11.2",
+        "gpu": "NVIDIA H100 80GB HBM3",
+        "gpu_mem_gb": 79.18,
+        "loadavg": [
+          9.64,
+          18.95,
+          22.78
+        ]
+      },
+      "note": "jax (GPU, jit) extended to these N by backends-h100 (make._run_series, the jaxjit_gpu_only.py --Ns runner; Trillium job 1229364), round 6 of the review"
     }
   }
 }

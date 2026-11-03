@@ -18,8 +18,8 @@
   "g10_lyapunov": {
     "description": "Largest-Lyapunov-exponent running estimates (Orbit.lyapunov): chaotic vs regular Henon-Heiles at E=1/8 with the literature band, and a regular MWPotential2014 orbit [cross-env measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -27,8 +27,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "064232e08e5ac12fe5cbf39bf16a9d4032417ab482193ca8e514f2a0c27b1670",
+    "git": "ef004f7",
+    "sha256": "b76ad64bb6291e0cda991075f05e77e4ea305429ca3388426e4210d33ea3ad4a",
     "track": "G"
   },
   "g11_dissipative_phase_volume": {
@@ -50,8 +50,8 @@
   "g12_inbackend_orbit_gpu": {
     "description": "MWPotential2014 in-backend orbit integration wall time vs batch size N, in three stacked panels (CPU, TITAN Xp, H100): galpy(C,CPU) vs galpy in-backend (JAX CPU/GPU, torch GPU) [cross-env measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -59,8 +59,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "4be7aed",
-    "sha256": "ddfc7d63d18d6ccefe3b4cb99561b0df2bb049483e26b75cfdce63f53bcceff8",
+    "git": "ef004f7",
+    "sha256": "9bb6200ff46fa2a731f9b02a71a365b8b9d376d9a3e39039be98c39f623a93cc",
     "track": "G"
   },
   "g13_ledger_burndown": {
@@ -98,8 +98,8 @@
   "g15_icderiv_speed": {
     "description": "cost of the IC derivative d(orbit)/d(x0): C-STM vs in-backend AD (CPU + GPU)",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -107,8 +107,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "4be7aed",
-    "sha256": "9125b561aa1f7ef2eed8e930002df216c2ca1655449378945a32e763d8fab0ef",
+    "git": "ef004f7",
+    "sha256": "20ee2907dee676488e54550b0fb907539d567ce1644f05379759af3e52b59408",
     "track": "G"
   },
   "g16_icjacobian_precision": {
@@ -130,8 +130,8 @@
   "g17_staeckel_actionangle_speed": {
     "description": "Staeckel actionsFreqsAngles speed vs N -- eager torch and compiled jax (CPU & both GPUs) vs C/numpy [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -139,8 +139,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "84de364e4a49fa1eb2df1038c1889bc0edb6d832e140102218f31cfeea4d63b8",
+    "git": "ef004f7",
+    "sha256": "5d6fb1a8f5f4680fdee89d60a466f1d77f83f058468003881d651dd2c932579b",
     "track": "G"
   },
   "g17_staeckel_actionangle_speed_jax": {
@@ -273,8 +273,8 @@
   "g6_jit_amortization": {
     "description": "jax jit compile-once/run-many amortization + jit-vs-eager break-even [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -282,8 +282,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "7b588785526618c7be27d1d037e96644889d08ed33c5a715091574d0fe91c893",
+    "git": "ef004f7",
+    "sha256": "c277069a97a3867cbef03e823aafb8220fd25b563e3a941169e555164f6c6186",
     "track": "G"
   },
   "g7_orbit_sensitivity": {
@@ -481,8 +481,8 @@
   "gS4_streamdf_speed": {
     "description": "streamdf cost per backend: construction (incl. track) vs nTrackChunks, sampling and DF evaluation vs N; numpy/C vs jax (eager/jit) vs torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -490,15 +490,15 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "d2068b0d6720f6003b97bf038b1fcf2c30673dd6f33a0134d6143732931a3781",
+    "git": "ef004f7",
+    "sha256": "53e4f4bc65d69a2887d4f22ed762764d05d7aab20312c719d6f21a59fa8cc842",
     "track": "S"
   },
   "gS5_streamspray_speed": {
     "description": "particle-spray stream generation (fardal15spraydf.sample) wall time and per-particle cost vs N: numpy/C vs differentiable jax (eager/jit) and torch, CPU & GPU [measure->json, plot byte-stable]",
     "env": {
-      "galpy": "1.12.1",
-      "galpy_git": "5dda6b923",
+      "galpy": "2.0.0b1.dev0",
+      "galpy_git": "7b2f84c88",
       "jax": "0.10.1",
       "matplotlib": "3.10.8",
       "numpy": "2.4.3",
@@ -506,8 +506,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "b797cec",
-    "sha256": "de4d5335f936f56fc1c3052431a854e4aeeebbd8bbd4b15e7ff602026bcb9148",
+    "git": "ef004f7",
+    "sha256": "292a6b93770c97e668b31994c13a8b5e95bd752b3575faacaf9aa00526d21c90",
     "track": "S"
   },
   "gT1_cpu_thread_scaling": {

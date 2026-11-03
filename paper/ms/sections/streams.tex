@@ -46,7 +46,7 @@ sdf.sample(n=10**4,key=grandom.key(3,backend='jax'))
 \end{code}
 When \texttt{lp} in this code carries a backend parameter the track and the
 sample are differentiable with respect to it. Sampling and evaluating
-the DF, on the other hand, are 40--60 and about 18 times faster under
+the DF, on the other hand, are 40--100 and 18--37 times faster under
 compilation than on \numpy\ on one CPU core, and hundreds to thousands
 of times faster on a GPU;
 the sampler draws by inverse transformation on \numpy\ too, which is the
@@ -77,9 +77,14 @@ costs.
     the number of track segments, on \numpy\ with the \cc\ integrators
     and on the backends, warm and including compilation (cold). (b)
     Sampling $N$ stars and (c) evaluating the DF at $N$ phase-space
-    points from the constructed model. All CPU series use one core. Eager \jax\ on the
-    TITAN~Xp runs out of GPU memory from $N=10^5$ on, and these points are
-    omitted.}\label{fig:streamdfspeed}
+    points from the constructed model. All CPU series use one core. The
+    compiled \jax\ series run to $N=10^6$ on every device; the eager
+    series end at the last $N$ whose temporaries (arrays of $N$ by the
+    number of track points) fit in memory: $10^4$ on the 12\,GB
+    TITAN~Xp, and $10^5$ for eager \jax\ on the H100 (with \jax's
+    default allocator settings) and on the CPU, where $10^6$ needs more
+    than 50\,GB; eager \torch\ on the H100 reaches $10^6$ using
+    50\,GB.}\label{fig:streamdfspeed}
 \end{figure*}
 
 \subsection{Particle-spray models}\label{sec:streams-spray}
@@ -157,7 +162,9 @@ the track instead leaves a residual that is 1.5 to 2.4 times larger at
 every step. Each spray
 particle's orbit is one more orbit in a batch, such that a sprayed
 stream costs about 0.6\,ms per particle on one CPU core under compiled
-\jax, a fifth of the cost of the non-differentiable \cc\ version, and
+\jax\ for batches of up to $3\times10^4$ particles (1.2--1.5\,ms for
+$10^5$--$10^6$), a fifth of the cost
+of the non-differentiable \cc\ version, and
 about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
 (\figurename~\ref{fig:spraysp}), consistent with the cost per orbit of
 a large batch of in-backend orbit integrations
@@ -192,7 +199,10 @@ is one.
     with 4.5\,Gyr of stripping, for the \numpy\ version with the \cc\
     integrator and for the differentiable backend version on the CPU,
     the TITAN~Xp, and the H100, compiled (solid) and eager
-    (dashed). All CPU series use one core. Once compiled, the differentiable version is faster than the
+    (dashed). All CPU series use one core; the \numpy\ and eager \torch\
+    CPU series end where one call exceeds a minute, while the \jax\ CPU
+    series were continued to $N=10^6$, where one compiled call takes about
+    20\,min. Once compiled, the differentiable version is faster than the
     \numpy\ version with the \cc\ integrator at every $N$, and much
     faster on a GPU for large $N$.}\label{fig:spraysp}
 \end{figure*}

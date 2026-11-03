@@ -77,9 +77,11 @@ def make():
     ax.set_xlim(10.0, 4e4)
     ax.set_ylim(1e-4, 1.0)
     ax.legend(fontsize=fs_leg, loc="lower left" if PAPER else "upper right")
+    # right-aligned just inside the frame, above the ln(t)/t line (which its left
+    # end may touch: inside the frame matters more, JB)
     ax.annotate(
         rf"$\lambda(3\times10^4)={hh['lam_chaotic_final']:.3f}$",
-        xy=(t[-1], lamF[-1]), xytext=(2e3, 7e-3), fontsize=fs_note,  # right of the ln(t)/t line
+        xy=(t[-1], lamF[-1]), xytext=(3.3e4, 6e-3), fontsize=fs_note, ha="right",
         arrowprops=dict(arrowstyle="->", lw=0.8, color="0.3"), color="0.3",
     )
 
