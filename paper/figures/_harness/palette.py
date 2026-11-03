@@ -145,7 +145,9 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
 
     Every line (default: each with a label not starting with "_") is labelled in a
     column just right of the axes, at the height of its last finite point, spread
-    to ``min_sep_pt`` per text line apart (a two-line label takes twice the room), with a thin leader from the line end. ``inline``
+    to ``min_sep_pt`` per text line apart (a two-line label takes twice the room), with a thin leader from the line end
+    to the label's left edge (so that leaders never cross the label column; the
+    labels sit on opaque white boxes). ``inline``
     maps a label to ``(x, dy_pt)``: that line is instead labelled on the plot,
     next to its point at data ``x`` (lines that end well inside the axes).
     ``order="edge"``: order (and aim) the labels by each line's height extrapolated
@@ -241,9 +243,13 @@ def label_lines(ax, lines=None, fontsize=7, min_sep_pt=None, inline=None, pad_pt
         a["artist"] = ax.annotate(
             a["text"], xy=xy, xycoords=xycoords, xytext=(xt, yt), textcoords="axes fraction",
             fontsize=fontsize, color=a["color"], va="center", ha="left", annotation_clip=False,
-            bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85),
+            bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none"),
+            # relpos: the leader ends at the LEFT edge of the label (matplotlib's
+            # default aims it at the label's centre and clips it at the box, so a
+            # leader to a label a few rows away entered the column from above and
+            # crossed the labels in between)
             arrowprops=dict(arrowstyle="-", lw=0.5, color=a["color"], shrinkA=1, shrinkB=2, alpha=0.6,
-                            **({"relpos": (0.0, 0.5)} if order == "elbow" else {})),
+                            relpos=(0.0, 0.5)),
         )
         # the leader behind the data lines, the label box above them
         a["artist"].arrow_patch.set_zorder(0.5)

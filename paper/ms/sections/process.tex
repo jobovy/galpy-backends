@@ -30,9 +30,9 @@ its usual maintenance and the fixes to the existing \numpy\ and \cc\
 code that the backend work turned up
 (\sectionname~\ref{sec:process-fixes}). The backend code was developed
 on a long-lived \emph{backend branch}, to which every backend change
-was proposed as a pull request (PR) and which is periodically rebased
-onto the main branch, without merge commits, so that it always contains
-the main branch's fixes; it becomes \galpy's version~2, released as
+was proposed as a pull request (PR) and which was periodically rebased
+onto the main branch, without merge commits, so that it always contained
+the main branch's fixes; it has become \galpy's version~2, released as
 pre-releases while the main branch continues for now as version~1.x.
 Between 2026 June 1 and October 30, 723 PRs were opened for this work,
 of which 696 were merged: 602 on the backend branch, 29 for the
@@ -71,7 +71,7 @@ to draft this paper and its major revisions. Had the agent's usage
 Claude API instead, it would have cost about \$31,000 at the list
 prices of the time, 61\,\% of it for re-reading the cached context at
 every step, 29\,\% for writing it to the cache, and 9\,\% for output.
-The far larger cost was the continuous integration, because every
+The larger cost was the continuous integration, because every
 backend PR runs \galpy's test suite in five modes over 22 shards, about
 150 jobs of 20 to 90 minutes each; the GitHub Actions bill for the
 repository at list price was \$13,100 in June, \$16,500 in July,

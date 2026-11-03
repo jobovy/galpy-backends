@@ -187,7 +187,7 @@ def make():
     # each with its lines labelled directly in a column at the right, with a
     # sample of the line's style next to each label
     fig, axes = plt.subplots(
-        3, 1, figsize=layout.figsize(PAPER, (7.0, 7.9), (9.0, 13.0)), sharex=True
+        3, 1, figsize=layout.figsize(PAPER, (7.0, 7.2), (9.0, 13.0)), sharex=True
     )
     fs_line = layout.FS["line"] if PAPER else 7
     fs_note = layout.FS["note"] if PAPER else 6.5
@@ -243,7 +243,9 @@ def make():
                         color=ln.get_color(), ha="left", va="top")
         palette.label_lines(ax, [(ln, ln.get_label()) for ln in ax.get_lines()
                                  if not ln.get_label().startswith("_") and ln not in node],
-                            fontsize=fs_line, min_sep_pt=1.3 * fs_line if PAPER else None,
+                            # nine two-line labels per panel: a smaller font (and
+                            # the default spacing), so that the column fits the panel
+                            fontsize=6.5 if PAPER else fs_line, min_sep_pt=1.25 * 6.5 if PAPER else None,
                             order="edge", pad_pt=12, swatch_pt=20 if PAPER else None)
     if PAPER:
         layout.fit_right(fig)

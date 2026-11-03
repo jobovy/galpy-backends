@@ -6,18 +6,21 @@ transformations and their inverses, and distribution functions,
 including those for tidal streams, run on GPUs, can be compiled as part
 of a user's program, and can be differentiated with respect to their
 inputs and parameters, from the force at a point to the samples drawn
-from a distribution function. The backend follows from the type of the
-arrays that are passed in, the interface is unchanged, and the \numpy\
-path gives the same results as before. We describe the design of the
+from a distribution function. The user-facing design is kept simple: the
+active backend follows from the type of the arrays that are passed in,
+the \galpy\ interface is unchanged, and the \numpy\ path gives the same
+results as before. We describe the design of the
 backend framework and its implementation in each of \galpy's modules,
 with examples of use, and we discuss its limitations. On a GPU, batches
 of orbits, samples from distribution functions, and stream models run
-one to five orders of magnitude faster than on a single CPU core. We
-give examples of fitting the Galactic potential with a hypervelocity
-star and of learning the inverse action--angle transformation with a
-neural network trained through \galpy. An AI coding agent wrote
-essentially all of the code under the direction and review of the human
-author, and we describe how we organized this work and how we
-established the correctness of the result. \galpy\ is available at
-\url{https://github.com/jobovy/galpy}, with the documentation of the
-backends at \url{https://docs.galpy.org/en/v2/}.
+one to five orders of magnitude faster than on a single CPU core. To
+illustrate the new capabilities, we present simple examples of fitting
+the Galactic potential with a hypervelocity star and of learning the
+inverse action--angle transformation with a neural network trained
+through \galpy. An AI coding agent wrote
+essentially all of the code under the detailed direction and review of
+the human author, and we describe how we organized this work and how we
+established the correctness of the result. This work is the start of
+\galpy's version~2, which is available at
+\url{https://github.com/jobovy/galpy} and documented at
+\url{https://docs.galpy.org/en/v2/}.

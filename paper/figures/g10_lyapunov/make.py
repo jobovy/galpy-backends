@@ -79,7 +79,7 @@ def make():
     ax.legend(fontsize=fs_leg, loc="lower left" if PAPER else "upper right")
     ax.annotate(
         rf"$\lambda(3\times10^4)={hh['lam_chaotic_final']:.3f}$",
-        xy=(t[-1], lamF[-1]), xytext=(7e2, 7e-3), fontsize=fs_note,
+        xy=(t[-1], lamF[-1]), xytext=(2e3, 7e-3), fontsize=fs_note,  # right of the ln(t)/t line
         arrowprops=dict(arrowstyle="->", lw=0.8, color="0.3"), color="0.3",
     )
 

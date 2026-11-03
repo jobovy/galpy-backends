@@ -296,8 +296,8 @@ all; their derivative rule runs the integration on the CPU.
 $N$ orbits for 2\,Gyr in \texttt{MWPotential2014} with the \cc\ integrator,
 which parallelizes over orbits with OpenMP, on one core and on the 36
 physical cores of the CPU node used in this work, and with the in-backend solvers on one CPU
-core and on two GPUs. The absolute times depend on the problem, so we
-focus on the relative ones. On a single CPU core, the compiled \jax\
+core and on two GPUs. The absolute times depend on the specifics of the
+problem, so we focus on the relative trends. On a single CPU core, the compiled \jax\
 solve and the eager \torch\ solve cost about the same per orbit as the
 \cc\ path for large batches, but they start from a floor of one to a
 few seconds, set by compilation and kernel launches, that the \cc\ path
