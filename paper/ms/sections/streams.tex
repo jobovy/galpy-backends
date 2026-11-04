@@ -107,16 +107,14 @@ fit, which is also the default for \numpy\ inputs, gives the same track
 eagerly and compiled. The whole computation compiles
 and is differentiable with respect to every parameter; forward-mode
 derivatives, which are the efficient choice for a few parameters and
-many particles, require \diffrax's direct adjoint and, as for any
-differentiated batch of orbits (\sectionname~\ref{sec:orbit-limitations}),
-a fixed number of steps, like in the following example
+many particles, require \diffrax's direct adjoint, like in the following example
 \begin{code}
 key= galpy.backend.random.key(1,backend='jax')
 def leading_arm(q):
     lp= LogarithmicHaloPotential(normalize=1.,q=q)
     spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
-        integrate_kwargs={'adjoint':'direct','nsteps':4000})
+        integrate_kwargs={'adjoint':'direct'})
     return spdf.sample(n=1500,return_orbit=False,
                        tail='leading',key=key)
 xv,dxv= jax.jvp(leading_arm,(q0,),(1.,))
@@ -130,7 +128,7 @@ def track(q):
     lp= LogarithmicHaloPotential(normalize=1.,q=q)
     spdf= fardal15spraydf(mass,progenitor=Orbit(ic),
         pot=lp,tdisrupt=td,
-        integrate_kwargs={'adjoint':'direct','nsteps':4000})
+        integrate_kwargs={'adjoint':'direct'})
     tr= spdf.streamTrack(n=1500,tail='leading',key=key)
     return tr.x(tps)
 track(0.9); jax.jacfwd(track)(0.9)

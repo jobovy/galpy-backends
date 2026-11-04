@@ -19,8 +19,10 @@ integration times. $N$ orbits that share a time grid are integrated as
 a single solve along a batch axis, under \jax\ with one step-size
 controller for the whole batch; given per-orbit time grids, an
 $(N,n_t)$ array, \galpy\ instead maps independent solves, each with its
-own controller, over the batch with \texttt{jax.vmap}, which is how
-\torchode\ treats every batch. Either way, the solve runs on
+own controller, over the batch with \texttt{jax.vmap}, which is also
+what a user's own \texttt{jax.vmap} over single-orbit integrations
+gives and how \torchode\ treats every batch; a user thus has both
+options. Either way, the solve runs on
 a GPU when the initial conditions do. This is the path to use for
 derivatives with respect to the parameters of the potential, 
 as in the following example:
@@ -42,8 +44,7 @@ o.R(ts[-1]).backward() # b.grad = dR/db
 \end{code}
 Second derivatives are available under \jax\ by selecting the direct
 adjoint through the \texttt{inbackend\_kwargs} keyword, and
-\texttt{jax.vmap} over initial conditions works, with one caveat
-discussed below. \figurename~\ref{fig:orbitsens} displays the simplest
+\texttt{jax.vmap} over initial conditions works. \figurename~\ref{fig:orbitsens} displays the simplest
 use of these derivatives: the sensitivity of an orbit to its initial
 conditions as a function of time, which the solver's derivative gives
 for free and which finite differences confirm, and a Gauss--Newton fit
@@ -161,9 +162,7 @@ star's distance or proper motion is available.
 The in-backend solvers of \sectionname~\ref{sec:orbit-paths} are
 adaptive Runge--Kutta methods: accurate, but expensive, because a step
 of \diffrax's eighth-order Dormand--Prince method evaluates the force
-thirteen times, and, as discussed in
-\sectionname~\ref{sec:orbit-limitations}, their adaptive steps
-complicate the derivative of a batch of orbits. For large batches of
+thirteen times. For large batches of
 orbits in a smooth potential, where modest precision suffices and the
 cost is dominated by the force evaluations, a symplectic integrator
 with a fixed step is the better tool: it evaluates the force once per
@@ -271,20 +270,7 @@ CPU, return \numpy\ arrays, and are not differentiable.
 \subsection{Limitations}\label{sec:orbit-limitations}
 
 In-backend orbit integration has a few limitations. 
-By default, the derivative of an in-backend solve with respect to its
-inputs differentiates through the solver's adaptive steps, which is
-correct for a single orbit; when a batch of orbits is differentiated
-under \texttt{jax.vmap}, however, the adaptive steps of one orbit depend
-on the others and the derivative is wrong by several percent.
-The remedy is to integrate with a fixed number of steps when
-differentiating a batch, which \galpy\ does where it integrates batches
-internally with its own settings (the stream model of
-\sectionname~\ref{sec:streams-streamdf}) and which the user should do
-as well where the integration keywords are theirs (the spray models of
-\sectionname~\ref{sec:streams-spray}); \galpy\ warns when a
-batch of orbits is differentiated through an adaptive in-backend
-solve under \jax, where it can detect the derivative being taken, and
-points at the fixed-step option. \texttt{torchdiffeq}
+\texttt{torchdiffeq}
 has no batching rule, such that a batch of orbits under \torch\ is a
 \python\ loop unless \torchode\ is used. The eighth-order method of
 \texttt{torchdiffeq} carries a gradient error of about $10^{-5}$ in its
