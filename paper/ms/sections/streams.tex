@@ -219,18 +219,3 @@ set-up of the model that takes a minute and a half under compiled \jax\
 takes half an hour under \torch, because its many small array
 operations are each dispatched separately, so that \jax\ is the
 backend of choice for this model.
-\begin{figure*}[t!]
-  \centering\includegraphics[width=0.94\textwidth,clip=]{../figures/gS5_streamspray_speed/gS5_streamspray_speed.pdf}
-  \caption{Speed of the particle-spray stream model: wall time (left)
-    and cost per particle (right) of \texttt{fardal15spraydf.sample(N)}
-    with 4.5\,Gyr of stripping, for the \numpy\ version with the \cc\
-    integrator and for the differentiable backend version on the CPU,
-    the TITAN~Xp, and the H100, compiled (solid) and eager
-    (dashed). All CPU series use one core; the \numpy\ and eager \torch\
-    CPU series end where one call exceeds a minute, while the \jax\ CPU
-    series were continued to $N=10^6$, where one compiled call takes
-    29\,min. Once compiled, the differentiable version is faster than the
-    \numpy\ version with the \cc\ integrator at every $N$, and much
-    faster on a GPU for large $N$.}\label{fig:spraysp}
-\end{figure*}
-

@@ -145,20 +145,6 @@ star's distance or proper motion is available.
 
 \subsection{Backend symplectic integrators for many orbits}\label{sec:orbit-leapfrog}
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
-  \caption{The derivative of an orbit with respect to its initial
-    condition, in four ways. For a Sun-like orbit in \texttt{MWPotential2014}
-    integrated for 3\,Gyr, the left panel shows one element of the
-    state-transition matrix, $\partial R(t)/\partial v_{R,0}$, from the
-    \cc\ variational equations, from a finite difference of the \cc\
-    orbit, and from reverse-mode automatic differentiation through the
-    \diffrax\ and \texttt{torchdiffeq} solvers. The right panel shows the
-    relative Frobenius norm of the difference between each of the
-    latter three and the variational result; all agree to a few parts in
-    $10^{10}$.}\label{fig:icjacobian}
-\end{figure*}
-
 The in-backend solvers of \sectionname~\ref{sec:orbit-paths} are
 adaptive Runge--Kutta methods: accurate, but expensive, because a step
 of \diffrax's eighth-order Dormand--Prince method evaluates the force
@@ -177,6 +163,19 @@ o= Orbit(jnp.asarray(ics)) # ics: (N,6)
 o.integrate(ts,MWPotential2014,method='leapfrog_jax',
             inbackend_kwargs={'nsteps':8000})
 \end{code}
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
+  \caption{The derivative of an orbit with respect to its initial
+    condition, in four ways. For a Sun-like orbit in \texttt{MWPotential2014}
+    integrated for 3\,Gyr, the left panel shows one element of the
+    state-transition matrix, $\partial R(t)/\partial v_{R,0}$, from the
+    \cc\ variational equations, from a finite difference of the \cc\
+    orbit, and from reverse-mode automatic differentiation through the
+    \diffrax\ and \texttt{torchdiffeq} solvers. The right panel shows the
+    relative Frobenius norm of the difference between each of the
+    latter three and the variational result; all agree to a few parts in
+    $10^{10}$.}\label{fig:icjacobian}
+\end{figure*}
 The same route provides backend versions of the fourth- and
 sixth-order symplectic integrators \citep{Yoshida1990,Kinoshita1991}
 of \galpy's \cc\ library, \texttt{method='symplec4\_jax'} and
@@ -254,19 +253,6 @@ themselves, these are \numpy\ and \cc\ features that do not require
 the backends: they accept backend initial conditions, but run on the
 CPU, return \numpy\ arrays, and are not differentiable.
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g10_lyapunov/g10_lyapunov.pdf}
-  \caption{Largest Lyapunov exponent from \texttt{Orbit.lyapunov}, as a
-    running estimate against time. Left: a chaotic and a regular orbit
-    in the H\'enon--Heiles potential at $E=1/8$; the shaded band is the
-    range of values in the literature for the chaotic orbit, and the
-    dashed line is the $\ln t/t$ decay expected for a regular orbit.
-    Right: a Sun-like orbit in \texttt{MWPotential2014}, which is
-    regular. The estimate for the chaotic  H\'enon--Heiles orbit converges into the range
-    found in the literature, while that for the regular orbit decays as
-    expected.}\label{fig:lyapunov}
-\end{figure*}
-
 \subsection{Limitations}\label{sec:orbit-limitations}
 
 In-backend orbit integration has a few limitations. 
@@ -326,6 +312,19 @@ initial condition follows the same pattern
 computes it fastest for a single orbit, by one to three orders of
 magnitude over the backend solvers, and the GPU overtakes it at
 batches of a few hundred orbits.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g10_lyapunov/g10_lyapunov.pdf}
+  \caption{Largest Lyapunov exponent from \texttt{Orbit.lyapunov}, as a
+    running estimate against time. Left: a chaotic and a regular orbit
+    in the H\'enon--Heiles potential at $E=1/8$; the shaded band is the
+    range of values in the literature for the chaotic orbit, and the
+    dashed line is the $\ln t/t$ decay expected for a regular orbit.
+    Right: a Sun-like orbit in \texttt{MWPotential2014}, which is
+    regular. The estimate for the chaotic  H\'enon--Heiles orbit converges into the range
+    found in the literature, while that for the regular orbit decays as
+    expected.}\label{fig:lyapunov}
+\end{figure*}
 
 To gauge what GPU-native code could add, we also compiled \galpy's
 \cc\ implementations of \texttt{MWPotential2014} and of its integrators
