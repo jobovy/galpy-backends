@@ -112,20 +112,6 @@ conditions only, and to first order only; the variational equations do
 not carry derivatives with respect to the parameters of the potential,
 which must come from the in-backend solve.
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
-  \caption{The derivative of an orbit with respect to its initial
-    condition, in four ways. For a Sun-like orbit in \texttt{MWPotential2014}
-    integrated for 3\,Gyr, the left panel shows one element of the
-    state-transition matrix, $\partial R(t)/\partial v_{R,0}$, from the
-    \cc\ variational equations, from a finite difference of the \cc\
-    orbit, and from reverse-mode automatic differentiation through the
-    \diffrax\ and \texttt{torchdiffeq} solvers. The right panel shows the
-    relative Frobenius norm of the difference between each of the
-    latter three and the variational result; all agree to a few parts in
-    $10^{10}$.}\label{fig:icjacobian}
-\end{figure*}
-
 \galpy\ chooses between the two automatically. An \orb\ whose
 initial condition is being differentiated---a traced \jax\ array or a
 \torch\ tensor that requires a gradient---and that is integrated with
@@ -158,6 +144,20 @@ backend arrays works as well, such that a derivative with respect to a
 star's distance or proper motion is available.
 
 \subsection{Backend symplectic integrators for many orbits}\label{sec:orbit-leapfrog}
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g16_icjacobian_precision/g16_icjacobian_precision.pdf}
+  \caption{The derivative of an orbit with respect to its initial
+    condition, in four ways. For a Sun-like orbit in \texttt{MWPotential2014}
+    integrated for 3\,Gyr, the left panel shows one element of the
+    state-transition matrix, $\partial R(t)/\partial v_{R,0}$, from the
+    \cc\ variational equations, from a finite difference of the \cc\
+    orbit, and from reverse-mode automatic differentiation through the
+    \diffrax\ and \texttt{torchdiffeq} solvers. The right panel shows the
+    relative Frobenius norm of the difference between each of the
+    latter three and the variational result; all agree to a few parts in
+    $10^{10}$.}\label{fig:icjacobian}
+\end{figure*}
 
 The in-backend solvers of \sectionname~\ref{sec:orbit-paths} are
 adaptive Runge--Kutta methods: accurate, but expensive, because a step

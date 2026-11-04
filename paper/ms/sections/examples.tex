@@ -8,23 +8,6 @@ the computation rather than the result.
 
 \subsection{A hypervelocity star as a probe of the potential}\label{sec:examples-hvs}
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g14_hvs_potential_fit/g14_hvs_potential_fit.pdf}
-  \caption{A mock hypervelocity star as a constraint on the Galactic potential.
-    Left: the orbit of a star resembling S5-HVS1, integrated backwards
-    from its observed phase-space position (grey) and from the position
-    within the observational uncertainties that brings the orbit closest
-    to Sgr~A$^*$ (blue), found by Gauss--Newton iterations on the
-    derivative of the orbit with respect to its initial condition from
-    the \cc\ variational integrator. Right: the closest approach to the
-    Galactic center of the backward orbit as a function of the
-    flattening $q$ of the halo (black, from a grid of integrations) and
-    the path of a gradient-descent fit of $q$ using the derivative of the
-    closest approach through the in-backend orbit integration (points),
-    which recovers the value from which the star was generated (dashed
-    line).}\label{fig:hvs}
-\end{figure*}
-
 A hypervelocity star ejected from the Galactic center must, when its
 orbit is integrated backwards, return to the Galactic center, and the
 closest approach of the backward orbit to the center is therefore a
@@ -73,6 +56,24 @@ data, one would combine the two fits into one likelihood over the star's
 parameters and those of the potential, and the derivative of that
 likelihood with respect to all of them would be available for a
 gradient-based sampler.
+
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g19_neural_aa_inverse/g19_neural_aa_inverse.png}
+  \caption{A neural network learns the inverse action--angle
+    transformation of the vertical motion in \texttt{MWPotential2014} at
+    the solar radius by differentiating through \galpy's forward
+    transformation, in \jax\ and in \torch. Left: the exact tori at three
+    vertical actions (lines) and the network's output for the same
+    actions and a grid of angles (circles). Middle: the training loss,
+    the sum of the supervised and the cycle-consistency terms, in
+    the two frameworks, with the training time in the legend: \jax\
+    (\texttt{flax} and \texttt{optax}) with a compiled training step and
+    \torch\ (\texttt{torch.nn}) eagerly, to show both options. Right: the
+    root-mean-square phase-space error of
+    the network against the exact inverse as a function of the
+    action. The network reproduces the exact tori in both
+    frameworks.}\label{fig:neuralvertical}
+\end{figure*}
 
 
 \subsection{Learning the inverse action--angle transformation}\label{sec:examples-neural}
@@ -126,35 +127,3 @@ accuracy of these particular fits but that \galpy's action--angle code
 sits inside a training loop, as a layer whose gradient the framework
 computes, and that the same code does so in both frameworks.
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g19_neural_aa_inverse/g19_neural_aa_inverse.png}
-  \caption{A neural network learns the inverse action--angle
-    transformation of the vertical motion in \texttt{MWPotential2014} at
-    the solar radius by differentiating through \galpy's forward
-    transformation, in \jax\ and in \torch. Left: the exact tori at three
-    vertical actions (lines) and the network's output for the same
-    actions and a grid of angles (circles). Middle: the training loss,
-    the sum of the supervised and the cycle-consistency terms, in
-    the two frameworks, with the training time in the legend: \jax\
-    (\texttt{flax} and \texttt{optax}) with a compiled training step and
-    \torch\ (\texttt{torch.nn}) eagerly, to show both options. Right: the
-    root-mean-square phase-space error of
-    the network against the exact inverse as a function of the
-    action. The network reproduces the exact tori in both
-    frameworks.}\label{fig:neuralvertical}
-\end{figure*}
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g20_neural_staeckel_inverse/g20_neural_staeckel_inverse.png}
-  \caption{Neural inverse of the St\"{a}ckel action--angle transformation
-    in \texttt{MWPotential2014} at fixed $L_z$, learned by differentiating
-    through \galpy's forward transformation.
-    Left: three orbits integrated in the potential (lines) and the
-    positions returned by the network for the orbits' actions and
-    angles (circles). Middle: the training loss, with its supervised
-    (``data'') and cycle-consistency terms. Right: the actions recovered by applying
-    the forward transformation to the network's output against the
-    input actions for a test set. The network recovers the input actions
-    on the round trip and reconstructs orbits that are not in its
-    training set.}\label{fig:neural}
-\end{figure*}

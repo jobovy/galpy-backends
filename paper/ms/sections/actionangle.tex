@@ -37,17 +37,6 @@ derivative that an inference loop uses when its model is a function of
 the actions, as a DF of the actions is
 (\sectionname~\ref{sec:df-disk}).
 
-\begin{figure*}[t!]
-  \centering\includegraphics[width=0.96\textwidth,clip=]{../figures/g18_actionangle_sensitivity/g18_actionangle_sensitivity.pdf}
-  \caption{Derivatives of actions in the isochrone potential. Left: the
-    radial and vertical actions of an orbit as a function of its radial
-    velocity (solid, left axis) and their derivatives with respect to
-    the radial velocity by automatic differentiation (dashed, right
-    axis) with finite differences (circles). Right: the radial action as
-    a function of the scale radius $b$ of the potential and its
-    derivative with respect to $b$.}\label{fig:aasens}
-\end{figure*}
-
 \subsection{Spherical potentials and the isochrone approximation}\label{sec:aa-other}
 
 The isochrone and harmonic-oscillator actions are closed forms, which we
@@ -94,11 +83,23 @@ The older construction modes of this class, which use point
 transformations and are not recommended, are built on \numpy\ and
 cannot take a potential with backend parameters.
 
+\begin{figure*}[t!]
+  \centering\includegraphics[width=0.96\textwidth,clip=]{../figures/g18_actionangle_sensitivity/g18_actionangle_sensitivity.pdf}
+  \caption{Derivatives of actions in the isochrone potential. Left: the
+    radial and vertical actions of an orbit as a function of its radial
+    velocity (solid, left axis) and their derivatives with respect to
+    the radial velocity by automatic differentiation (dashed, right
+    axis) with finite differences (circles). Right: the radial action as
+    a function of the scale radius $b$ of the potential and its
+    derivative with respect to $b$.}\label{fig:aasens}
+\end{figure*}
+
 Other \galpy-native inverse action--angle transformations are under
 active development and will be added with full backend support soon.
 
 \begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/gV1_vertical_inverse/gV1_vertical_inverse.pdf}
+  \centering
+  \includegraphics[width=0.9\textwidth,clip=]{../figures/gV1_vertical_inverse/gV1_vertical_inverse.pdf}
   \caption{Differentiable inverse action--angle transformation in a
     self-gravitating isothermal disk with \texttt{actionAngleVerticalInverse}.
     (a) Tori at fixed actions for a disk with velocity dispersion

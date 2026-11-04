@@ -55,6 +55,21 @@ such kernels are not differentiable unless their variational or
 adjoint equations are written by hand as well. They would therefore
 complement the differentiable backends rather than replace them.
 
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g20_neural_staeckel_inverse/g20_neural_staeckel_inverse.png}
+  \caption{Neural inverse of the St\"{a}ckel action--angle transformation
+    in \texttt{MWPotential2014} at fixed $L_z$, learned by differentiating
+    through \galpy's forward transformation.
+    Left: three orbits integrated in the potential (lines) and the
+    positions returned by the network for the orbits' actions and
+    angles (circles). Middle: the training loss, with its supervised
+    (``data'') and cycle-consistency terms. Right: the actions recovered by applying
+    the forward transformation to the network's output against the
+    input actions for a test set. The network recovers the input actions
+    on the round trip and reconstructs orbits that are not in its
+    training set.}\label{fig:neural}
+\end{figure*}
+
 Some things are not done: the torus-mapping code, a wrapper of the
 external code of \citet{BinneyMcMillan2016}, is not covered and will not
 be, \astropy\ units cannot be used inside compiled programs, the

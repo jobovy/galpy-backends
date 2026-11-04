@@ -344,6 +344,19 @@ coordinates at $N$ points costs between one and two times the value
 itself, on the CPU as on the GPUs, and under eager \torch\ two to four
 times, independent of $N$.
 
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}
+  \caption{Cost and benefit of compilation for the radial force of a
+    Plummer potential at $N=10^6$ points under \jax\ and \torch. Left:
+    wall time of successive calls on one CPU core (\jax), the TITAN~Xp,
+    and the H100; the first call compiles. Dashed lines are the eager
+    cost per call; \texttt{torch.compile} does not support the TITAN~Xp,
+    so \torch\ appears there eagerly only. Right: the cumulative time of
+    compiled and eager calls, in units of each device's eager call, and
+    the number of calls after which compilation pays for
+    itself.}\label{fig:jitamort}
+\end{figure*}
+
 Making \galpy\ traceable required a set of changes that recur throughout
 the code, which we list here once. We gave data-dependent loops fixed
 iteration counts: the bisection discussed above, the arithmetic--geometric
@@ -379,19 +392,6 @@ its graph, \galpy's backend selection, which is such a variable, reads
 a thread-local mirror while \torch\ is tracing. None of these changes
 affects what the \numpy\ path computes; they are the price of the
 fifth rule, that the user, and not \galpy, decides what to compile.
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g6_jit_amortization/g6_jit_amortization.pdf}
-  \caption{Cost and benefit of compilation for the radial force of a
-    Plummer potential at $N=10^6$ points under \jax\ and \torch. Left:
-    wall time of successive calls on one CPU core (\jax), the TITAN~Xp,
-    and the H100; the first call compiles. Dashed lines are the eager
-    cost per call; \texttt{torch.compile} does not support the TITAN~Xp,
-    so \torch\ appears there eagerly only. Right: the cumulative time of
-    compiled and eager calls, in units of each device's eager call, and
-    the number of calls after which compilation pays for
-    itself.}\label{fig:jitamort}
-\end{figure*}
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g5_autodiff_overhead/g5_autodiff_overhead.pdf}

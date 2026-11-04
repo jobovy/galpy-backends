@@ -393,6 +393,23 @@ index of three. We fixed pre-existing defects of this kind in their
 own PRs against the main branch, never quietly in the backend branch,
 such that each is documented and their count is known.
 
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g14_hvs_potential_fit/g14_hvs_potential_fit.pdf}
+  \caption{A mock hypervelocity star as a constraint on the Galactic potential.
+    Left: the orbit of a star resembling S5-HVS1, integrated backwards
+    from its observed phase-space position (grey) and from the position
+    within the observational uncertainties that brings the orbit closest
+    to Sgr~A$^*$ (blue), found by Gauss--Newton iterations on the
+    derivative of the orbit with respect to its initial condition from
+    the \cc\ variational integrator. Right: the closest approach to the
+    Galactic center of the backward orbit as a function of the
+    flattening $q$ of the halo (black, from a grid of integrations) and
+    the path of a gradient-descent fit of $q$ using the derivative of the
+    closest approach through the in-backend orbit integration (points),
+    which recovers the value from which the star was generated (dashed
+    line).}\label{fig:hvs}
+\end{figure*}
+
 \subsection{Establishing correctness}\label{sec:process-correctness}
 
 JB does not take the code to be correct because an agent reports that
