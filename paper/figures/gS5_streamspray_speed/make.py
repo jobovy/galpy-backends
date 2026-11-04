@@ -60,14 +60,14 @@ the two largest-N jax points 2026-11-03, see below): (a) wall time per call vs N
 floor on CPU and costs ~0.5-0.7 ms/particle up to N=3x10^4 (0.052 s at N=100,
 6.5 s at 10^4, 20 s at 3x10^4) -- a fifth of the cost of the non-differentiable
 C path (whose cost is set by its 10001-point output grid per particle; the
-adaptive Dopri8 at 1e-12 needs fewer, larger steps) -- rising to 1.2-1.5
-ms/particle at 10^5-10^6 (117 s at 10^5, 442 s at 3x10^5, 1391 s = 23 min at
+adaptive Dopri8 at 1e-12 needs fewer, larger steps) -- rising to 1.2-1.7
+ms/particle at 10^5-10^6 (117 s at 10^5, 462 s at 3x10^5, 1729 s = 29 min at
 10^6). Eager jax adds a ~6 s per-call floor (per-call overhead of the un-jitted
 sampler around the diffrax solve) that is amortised by N~10^4, and then tracks the
-jitted series ~10-20 % above it (1628 s at 10^6). Eager torch has an ~8 s floor
+jitted series within ~5 % (468 s at 3x10^5, 1702 s at 10^6). Eager torch has an ~8 s floor
 (the adaptive-step loop is dispatched from Python) and ~3-4 ms/particle at
 10^4-3x10^4. The compile of the jitted sampler (excluded) is ~35-55 s per shape up
-to N=3x10^4, 154 s at 10^5, 399 s at 3x10^5 and 1416 s at 10^6 (stored in the
+to N=3x10^4, 154 s at 10^5, 491 s at 3x10^5 and 1851 s at 10^6 (stored in the
 JSON).
 
 GPU: the jitted jax sampler has a flat ~0.2-0.3 s floor on both GPUs; on the
@@ -91,14 +91,15 @@ OpenMP thread, jax's XLA:CPU pool one thread, torch one thread
 memory are recorded as NaN.
 
 The jax CPU series were later continued past the 60 s rule to N=3x10^5 and 10^6
-(measure/extend_jax_cpu_largeN.py, 2026-11-03, galpy 7b2f84c88) so that the CPU
-and GPU lines end at the same N: single timed call after a warm-up at 10^6. Those
-two points were measured on a 4-core affinity mask on a busy node (load average
-80-135 on 72 logical CPUs, stamped in ``env_cpu["jax_largeN_extended"]``); the
-process used 1.0-1.4 cores. A re-measurement of the N=10^5 point under those
-conditions gave 141 s jit / 155 s eager against the series' 117 / 123 s, so the
-two extension points are ~20-25 % slow (stamped as "continuity_check N=100000");
-re-measure them on one idle core when the box is quiet.
+(measure/extend_jax_cpu_largeN.py, evening of 2026-11-03, galpy 7b2f84c88) so that
+the CPU and GPU lines end at the same N: one pinned core (taskset -c 16, hyperthread
+sibling idle, numactl --membind=0, load average ~1-2), single timed call after a
+warm-up at 10^6. A first measurement that afternoon on a 4-core affinity mask on a
+busy node (load average 80-135) gave 442/470 s at 3x10^5 and 1391/1628 s at 10^6:
+the compiled 10^6 call 20 % FASTER than on one idle core, because XLA's CPU thread
+pool spans the affinity mask (1.0-1.4 cores busy), which outweighed the load. Those
+values and a continuity check of the 10^5 point under the busy conditions (141/155 s
+vs the series' 117/123 s) are kept in env_cpu["jax_largeN_extended"].
 
 Reproducibility: measure -> data/gS5_streamspray_speed.json, plot byte-stable from
 it. Re-measure CPU: delete the JSON (or ``python -m paper.figures.gS5_streamspray_speed.make

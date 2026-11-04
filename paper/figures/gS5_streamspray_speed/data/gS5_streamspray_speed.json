@@ -19,8 +19,8 @@
       42.491966316942126,
       55.08500699000433,
       153.53392721898854,
-      398.69830246898346,
-      1416.190282527823
+      490.7157932170667,
+      1850.8545844429173
     ],
     "jax (GPU, jit)": [
       34.23057980497833,
@@ -49,6 +49,13 @@
     "gpu": "none",
     "jax": "0.10.1",
     "jax_largeN_extended": {
+      "busy_node_first_measurement": {
+        "jax (CPU, eager) N=1000000": 1628.431603693869,
+        "jax (CPU, eager) N=300000": 470.3814963779878,
+        "jax (CPU, jit) N=1000000": 1390.5279842370655,
+        "jax (CPU, jit) N=300000": 442.0654538401868,
+        "note": "first measurement on a 4-core mask, load average 80-135 (replaced by the one-idle-core values)"
+      },
       "continuity_check N=100000": {
         "cores": 4,
         "date": "2026-11-03T17:05",
@@ -59,55 +66,55 @@
           106.4,
           103.9
         ],
-        "note": "same 4-core mask and busy node as the 3e5/1e6 extension points (which were therefore measured ~20-25 % slow relative to the one-idle-core series); scratch run, series value NOT replaced; re-measure 3e5/1e6 on one idle core when the box is quiet",
+        "note": "same 4-core mask and busy node as the first (2026-11-03 afternoon) measurement of the 3e5/1e6 points, which were then re-measured on one idle core (cores=1 entries above; evening of 2026-11-03) and gave the same values within a few percent; scratch run, series value NOT replaced",
         "series_values_one_idle_core": {
           "jax (CPU, eager)": 122.66,
           "jax (CPU, jit)": 117.14
         }
       },
       "jax (CPU, eager) N=1000000": {
-        "cores": 4,
-        "date": "2026-11-03T16:40:09",
+        "cores": 1,
+        "date": "2026-11-03T23:02:31",
         "galpy_sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
         "loadavg": [
-          134.958984375,
-          93.37548828125,
-          90.42724609375
+          1.41357421875,
+          1.51513671875,
+          1.57958984375
         ],
         "protocol": "warmup=1, single timed call"
       },
       "jax (CPU, eager) N=300000": {
-        "cores": 4,
-        "date": "2026-11-03T14:36:05",
+        "cores": 1,
+        "date": "2026-11-03T21:47:11",
         "galpy_sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
         "loadavg": [
-          77.357421875,
-          76.921875,
-          79.01318359375
+          2.43798828125,
+          2.53857421875,
+          3.1025390625
         ],
         "protocol": "warmup=1, median of 3"
       },
       "jax (CPU, jit) N=1000000": {
-        "compile_s": 1416.190282527823,
-        "cores": 4,
-        "date": "2026-11-03T15:46:24",
+        "compile_s": 1850.8545844429173,
+        "cores": 1,
+        "date": "2026-11-03T22:05:35",
         "galpy_sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
         "loadavg": [
-          95.6796875,
-          79.7236328125,
-          56.2158203125
+          1.68603515625,
+          1.93701171875,
+          2.22900390625
         ],
         "protocol": "warmup=1, single timed call"
       },
       "jax (CPU, jit) N=300000": {
-        "compile_s": 398.69830246898346,
-        "cores": 4,
-        "date": "2026-11-03T14:06:39",
+        "compile_s": 490.7157932170667,
+        "cores": 1,
+        "date": "2026-11-03T21:15:12",
         "galpy_sha": "7b2f84c887a9a51730a80d5b538c46488a07fcab",
         "loadavg": [
-          81.48828125,
-          81.859375,
-          78.22119140625
+          2.7216796875,
+          2.6669921875,
+          6.9091796875
         ],
         "protocol": "warmup=1, median of 3"
       }
@@ -181,8 +188,8 @@
       12.033659438835457,
       25.292478427058086,
       122.66226012795232,
-      470.3814963779878,
-      1628.431603693869
+      467.48954594507813,
+      1702.320419468917
     ],
     "jax (CPU, jit)": [
       0.05183791997842491,
@@ -192,8 +199,8 @@
       6.451637323945761,
       20.086890110978857,
       117.14073876221664,
-      442.0654538401868,
-      1390.5279842370655
+      461.61083219898865,
+      1728.7312903308775
     ],
     "jax (GPU, eager)": [
       11.015908846980892,

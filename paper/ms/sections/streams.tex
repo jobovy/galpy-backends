@@ -162,7 +162,7 @@ the track instead leaves a residual that is 1.5 to 2.4 times larger at
 every step. Each spray
 particle's orbit is one more orbit in a batch, such that a sprayed
 stream costs about 0.6\,ms per particle on one CPU core under compiled
-\jax\ for batches of up to $3\times10^4$ particles (1.2--1.5\,ms for
+\jax\ for batches of up to $3\times10^4$ particles (1.2--1.7\,ms for
 $10^5$--$10^6$), a fifth of the cost
 of the non-differentiable \cc\ version, and
 about 0.15\,ms on the TITAN~Xp and 10\,$\mu$s on the H100 per particle
@@ -201,8 +201,8 @@ is one.
     the TITAN~Xp, and the H100, compiled (solid) and eager
     (dashed). All CPU series use one core; the \numpy\ and eager \torch\
     CPU series end where one call exceeds a minute, while the \jax\ CPU
-    series were continued to $N=10^6$, where one compiled call takes about
-    20\,min. Once compiled, the differentiable version is faster than the
+    series were continued to $N=10^6$, where one compiled call takes
+    29\,min. Once compiled, the differentiable version is faster than the
     \numpy\ version with the \cc\ integrator at every $N$, and much
     faster on a GPU for large $N$.}\label{fig:spraysp}
 \end{figure*}

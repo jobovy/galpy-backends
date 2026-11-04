@@ -7,15 +7,17 @@ the named points of those two series (and the jit compile times) are written int
 data/gS5_streamspray_speed.json -- every other entry is left untouched; the
 protocol, load and galpy commit go under env_cpu["jax_largeN_extended"].
 
-Run pinned under a memory cap (the CPU series were measured on ONE pinned core on
-an idle box; the 2026-11-03 extension ran on a 4-core mask on a busy node, which
-env_cpu["jax_largeN_extended"] records -- see make.py's docstring):
+Run pinned to ONE core on a quiet box, like the CPU series (taskset -c <core> with its
+hyperthread sibling idle, numactl --membind=<its node>), under a memory cap; the
+protocol, cores and load of each point go to env_cpu["jax_largeN_extended"] (a 4-core
+mask makes the compiled 10^6 call 20 % faster -- see make.py's docstring):
   CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu PYTHONPATH=<galpy worktree> \\
-    OMP_NUM_THREADS=1 taskset -c <cores> memcap.sh 32 python extend_jax_cpu_largeN.py [N ...]
+    OMP_NUM_THREADS=1 taskset -c <core> numactl --membind=<node> memcap.sh 32 \\
+      python extend_jax_cpu_largeN.py [N ...]
 Protocol: jit -- compile excluded (make.py's compiled()), then 1 warm-up + median
-of 3 for N <= 3e5 and a single timed call at N >= 1e6 (one call is ~23 min);
+of 3 for N <= 3e5 and a single timed call at N >= 1e6 (one call is ~29 min);
 eager -- 1 warm-up (diffrax's internal compile for the new shape) + median of 3
-for N <= 3e5, 1 warm-up + a single timed call at N >= 1e6 (~27 min).
+for N <= 3e5, 1 warm-up + a single timed call at N >= 1e6 (~28 min).
 """
 import datetime
 import json
