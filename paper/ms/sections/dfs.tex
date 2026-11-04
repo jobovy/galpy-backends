@@ -23,22 +23,24 @@ of a DF, like those of a potential, can be given as backend arrays and
 are then differentiated through everything that follows.
 
 Every sampler in \galpy\ takes a \texttt{key=} argument:
-\texttt{key=None} reproduces the previous behavior, drawing
-from \numpy's global generator with the previous algorithm, while a
-backend key selects the inverse-cumulative samplers of
+\texttt{key=None} draws from \numpy's global generator with the
+previous algorithm, and therefore reproduces the previous draws, for
+every sampler except the three of
+\sectionname~\ref{sec:design-principles} that were replaced on the
+\numpy\ path too, while a backend key selects the inverse-cumulative samplers of
 \sectionname~\ref{sec:design-numerics} and returns backend arrays. For a
 fixed key, the sample is then a smooth function of the DF's and the
 potential's parameters, and its derivative is the pathwise, or
 reparameterization, derivative: differentiating a statistic of the sample with respect to a
 parameter gives an unbiased estimate of the derivative of the
-expectation of that statistic. \figurename~\ref{fig:dfsample} shows an
-explicit check that the pathwise derivative of a sample is the
-derivative of the expectation, independently of any DF construction:
-we differentiate a kernel estimate of the velocity dispersion over a
-large fixed sample with respect to radius and compare with the
+expectation of that statistic. \figurename~\ref{fig:dfsample} shows a
+first check that involves no derivative of the sampler itself: a kernel
+estimate of the velocity dispersion over a large, fixed sample is
+differentiated with respect to the radius at which it is evaluated,
+which enters only through the kernel weights, and compared with the
 derivative of the Jeans equation; the two share no code and agree
 within the Monte-Carlo noise. \figurename~\ref{fig:dfparam} then shows
-the derivative of a sample through the construction of the DF, for an
+the pathwise derivative itself, that of a sample through the construction of the DF, for an
 Osipkov--Merritt DF of a Hernquist sphere constructed and sampled
 inside a single compiled function of the scale radius: the derivative of
 the sampled velocity dispersion with respect to the scale radius agrees
@@ -54,9 +56,10 @@ compilation it solves the same ODE in the backend.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/gD2_df_sample_autodiff/gD2_df_sample_autodiff.pdf}
-  \caption{A derivative through a DF sample. Left: the radial velocity
+  \caption{A spatial derivative of a kernel estimate over a fixed DF
+    sample. Left: the radial velocity
     dispersion of the isotropic Hernquist DF from the analytic
-    expression, from the Jeans equation by quadrature, and from a sample
+    expression \citep{Hernquist1990}, from the Jeans equation by quadrature, and from a sample
     of $4\times10^6$ particles. Right: its derivative with respect to
     radius, from \texttt{jax.grad} of the Jeans quadrature and from
     \texttt{jax.grad} of a kernel estimator over the fixed sample, with

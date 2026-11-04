@@ -15,8 +15,12 @@ evaluated in rectangular coordinates through the backend force layer,
 and the default tolerances are $10^{-12}$. Because the whole integration
 is then a backend program, everything that enters it can be
 differentiated: the initial condition, the potential's parameters, the
-integration times. $N$ orbits are integrated in a single solve along a
-batch axis, with per-orbit time grids if desired, and the solve runs on
+integration times. $N$ orbits that share a time grid are integrated as
+a single solve along a batch axis, under \jax\ with one step-size
+controller for the whole batch; given per-orbit time grids, an
+$(N,n_t)$ array, \galpy\ instead maps independent solves, each with its
+own controller, over the batch with \texttt{jax.vmap}, which is how
+\torchode\ treats every batch. Either way, the solve runs on
 a GPU when the initial conditions do. This is the path to use for
 derivatives with respect to the parameters of the potential, 
 as in the following example:
@@ -274,7 +278,10 @@ under \texttt{jax.vmap}, however, the adaptive steps of one orbit depend
 on the others and the derivative is wrong by several percent.
 The remedy is to integrate with a fixed number of steps when
 differentiating a batch, which \galpy\ does where it integrates batches
-internally and which the user should do as well; \galpy\ warns when a
+internally with its own settings (the stream model of
+\sectionname~\ref{sec:streams-streamdf}) and which the user should do
+as well where the integration keywords are theirs (the spray models of
+\sectionname~\ref{sec:streams-spray}); \galpy\ warns when a
 batch of orbits is differentiated through an adaptive in-backend
 solve under \jax, where it can detect the derivative being taken, and
 points at the fixed-step option. \texttt{torchdiffeq}
@@ -367,7 +374,7 @@ checks that the cost of the in-backend solve is in the solver and the
 potential rather than in the library around them. The green lines in
 \figurename~\ref{fig:orbitspeed} show this comparison for the same
 orbits, potential, and tolerances. When we make \texttt{galax} control
-its step size per orbit, as \galpy\ does, the two codes take the same
+its step size per orbit, as the \galpy\ lines do, the two codes take the same
 time to within 13 per cent on both GPUs for batches of $10^5$ orbits or
 more; for smaller batches, whose cost is dominated by fixed overheads,
 they differ by up to a factor of 1.6, in opposite directions on the two
@@ -377,7 +384,11 @@ the root-mean-square over all orbits, such that one sequence of steps
 serves every orbit; this is cheaper per orbit for large batches, by a
 factor of two to three, at the price of an error control that holds
 only in the batch-averaged sense and that depends on which orbits
-happen to be in the batch. \galpy\ keeps the per-orbit control.
+happen to be in the batch. \galpy's \jax\ solve does the same for a
+batch on a shared time grid (\sectionname~\ref{sec:orbit-paths}); the
+\galpy\ lines in \figurename~\ref{fig:orbitspeed} were measured with
+per-orbit control, as \texttt{jax.vmap} over single-orbit solves, which
+is the arrangement that the per-orbit \texttt{galax} line matches.
 
 \begin{figure*}[t!]
   \includegraphics[width=\textwidth,clip=]{../figures/g12_inbackend_orbit_gpu/g12_inbackend_orbit_gpu.pdf}
@@ -388,7 +399,8 @@ happen to be in the batch. \galpy\ keeps the per-orbit control.
     \texttt{dop853\_c}, which parallelizes over orbits with OpenMP, on
     one core, 16 threads, and the 36 physical cores of the node; the
     latter is repeated in the GPU panels for reference. Blue: the
-    in-backend \diffrax\ solve under \jax, compiled, with the
+    in-backend \diffrax\ solve under \jax, compiled, with per-orbit
+    step control, with the
     eighth-order method that \galpy\ uses by default and with a
     fifth-order method that performs the same number of force
     evaluations as the \torch\ solve, and the in-backend sixth-order

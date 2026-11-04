@@ -19,7 +19,9 @@ $10^{-5}$ to $10^{-3}$ level, and the velocity sampler of the
 quasi-isothermal disk DF, the samplers of the two-dimensional disk DFs,
 and the sampler of the stream DF draw by inverse transformation rather
 than by rejection, which changes the particular draws but not their
-distribution. In addition, the forces of the Einasto profile and of
+distribution, except for the two-dimensional disk DFs, whose previous
+draws had a mean azimuthal velocity that was biased by a few per cent
+and whose new draws do not (\sectionname~\ref{sec:df-disk}). In addition, the forces of the Einasto profile and of
 the power law with an exponential cutoff were rewritten in forms that
 are accurate and differentiable at small radii, such that their
 \numpy\ values differ from the previous version by a few units in the
@@ -152,7 +154,7 @@ potential of a Plummer sphere is computed as
 \begin{code}
 def _evaluate(self,R,z,phi=0.,t=0.):
     xp= get_namespace(R,z,phi,t)
-    return -self._amp/xp.sqrt(R**2+z**2+self._b2)
+    return -1./xp.sqrt(R**2+z**2+self._b2)
 \end{code}
 The namespace is the plain \numpy\ module for \numpy\ data,
 \texttt{jax.numpy} for \jax\ arrays, and the array-API-compatible view of
@@ -250,7 +252,9 @@ set of uniforms is a smooth function of those parameters. Random keys
 are explicit: a \jax\ key or its \torch\ equivalent is passed as
 \texttt{key=}, while \texttt{key=None} keeps the historical behavior of
 \numpy's global generator, such that existing scripts produce the same
-samples as before. For a Hernquist sphere, this reads as follows:
+samples as before, except for the three samplers that were replaced on
+the \numpy\ path as well (\sectionname~\ref{sec:design-principles}). For
+a Hernquist sphere, this reads as follows:
 \begin{code}
 from galpy.backend import random as grandom
 hp= HernquistPotential(amp=2.,a=1.3)

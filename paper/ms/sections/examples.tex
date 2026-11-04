@@ -84,13 +84,19 @@ torus machinery of \citet{BinneyMcMillan2016}. A differentiable forward transfor
 approach possible: a neural network $G(\vecj,\veca)$ that takes actions
 and angles to phase-space positions can be trained by requiring that
 \galpy's forward transformation, applied to the network's output,
-return the actions and angles that went in. The loss is then a cycle
-consistency, $|F(G(\vecj,\veca))-(\vecj,\veca)|^2$, with $F$ the
-\texttt{actionAngle} method, and because its gradient with respect to
-the network's weights flows through $F$, no reference inverse is needed
-anywhere in the training. We show this for the vertical motion in
+return the actions and angles that went in. The loss then contains a
+cycle-consistency term, $|F(G(\vecj,\veca))-(\vecj,\veca)|^2$, with $F$ the
+\texttt{actionAngle} method, whose gradient with respect to
+the network's weights flows through $F$. In both demonstrations below,
+we add to it a supervised term, the mean-square phase-space error on
+training pairs obtained by applying $F$ to phase-space points sampled
+in a box around the origin, which keeps the network on bound orbits
+early in training (in the second demonstration, the weight of the cycle
+term is ramped up from zero over the first 400 steps). Because the
+pairs come from the forward transformation, no reference inverse is
+needed anywhere in the training. We show this for the vertical motion in
 \texttt{MWPotential2014} at the solar radius, where the exact inverse of \sectionname~\ref{sec:aa-other} exists and
-serves as a check (\figurename~\ref{fig:neuralvertical}), and for the
+serves as a check, but is not used in the training (\figurename~\ref{fig:neuralvertical}), and for the
 motion in the meridional plane with the St\"{a}ckel approximation, where
 no reference exists (\figurename~\ref{fig:neural}). In the first case a
 small network trained in a few minutes, identically under \jax\ and
@@ -103,17 +109,18 @@ network trained for half an hour on a GPU returns actions on the round
 trip with a scatter of $7\times10^{-3}$ and reconstructs meridional
 orbits that are not in its training set. A network for the full
 three-dimensional transformation would take $L_z$ and the azimuthal
-angle as further inputs. The training step is a few lines, whatever the framework,
+angle as further inputs. The cycle term of the training step is a few lines, whatever the framework,
 \begin{code}
-def loss(params,J,theta):
+def cycle_loss(params,J,theta):
     z,vz= net.apply(params,J,theta) # the network
     Jp,_,thetap= aAV.actionsFreqsAngles(z,vz) # galpy
     return (jnp.mean((Jp-J)**2/J**2)
             +jnp.mean(wrap(thetap-theta)**2))
-grads= jax.jit(jax.grad(loss))(params,J,theta)
+grads= jax.jit(jax.grad(cycle_loss))(params,J,theta)
 \end{code}
 where \texttt{net} is a small multi-layer perceptron and \texttt{wrap}
-reduces an angle difference to $[-\pi,\pi)$. Neither
+reduces an angle difference to $[-\pi,\pi)$; the supervised term is an
+ordinary mean-square error on the network's output. Neither
 network is a replacement for a proper inverse, and the point is not the
 accuracy of these particular fits but that \galpy's action--angle code
 sits inside a training loop, as a layer whose gradient the framework
@@ -126,7 +133,8 @@ computes, and that the same code does so in both frameworks.
     the solar radius by differentiating through \galpy's forward
     transformation, in \jax\ and in \torch. Left: the exact tori at three
     vertical actions (lines) and the network's output for the same
-    actions and a grid of angles (circles). Middle: the training loss in
+    actions and a grid of angles (circles). Middle: the training loss,
+    the sum of the supervised and the cycle-consistency terms, in
     the two frameworks, with the training time in the legend: \jax\
     (\texttt{flax} and \texttt{optax}) with a compiled training step and
     \torch\ (\texttt{torch.nn}) eagerly, to show both options. Right: the
@@ -143,8 +151,8 @@ computes, and that the same code does so in both frameworks.
     through \galpy's forward transformation.
     Left: three orbits integrated in the potential (lines) and the
     positions returned by the network for the orbits' actions and
-    angles (circles). Middle: the training loss, with its data and
-    cycle-consistency terms. Right: the actions recovered by applying
+    angles (circles). Middle: the training loss, with its supervised
+    (``data'') and cycle-consistency terms. Right: the actions recovered by applying
     the forward transformation to the network's output against the
     input actions for a test set. The network recovers the input actions
     on the round trip and reconstructs orbits that are not in its
