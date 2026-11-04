@@ -5,6 +5,18 @@ This appendix collects the equations behind \texttt{Orbit.integrate\_dxdv},
 of \sectionname~\ref{sec:orbit-paths}. None of it is specific to a
 backend; it is implemented in \cc\ and in \numpy.
 
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g11_dissipative_phase_volume/g11_dissipative_phase_volume.pdf}
+  \caption{Phase-space volume under dissipative forces. Left:
+    $\det\vec{M}(t)$ for an orbit in \texttt{MWPotential2014} with
+    Chandrasekhar dynamical friction and with fuzzy-dark-matter
+    friction \citep{Szpilfidel2026}, from the \cc\ variational equations (solid) and from the
+    integral of the velocity divergence of the force along the orbit
+    (dashed). Right: the relative difference between the two. The
+    variational equations reproduce the contraction of phase-space
+    volume by dissipative forces.}\label{fig:dissipative}
+\end{figure*}
+
 Write the phase-space coordinates as $\vecw = (\vecx,\vecv)$ in
 rectangular Galactocentric coordinates, in which \galpy's \cc\
 integrators work, and the equations of motion as $\dot{\vecw} =
@@ -78,34 +90,6 @@ $\det\vec{M}$ follows the integral of the velocity divergence of the
 force to a few parts in $10^{6}$; the same orbit under the fuzzy-dark-matter
 friction of \galpy\ \citep{Szpilfidel2026} contracts far less, because
 that force is suppressed at the orbit's velocities.
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g9_variational_validity/g9_variational_validity.pdf}
-  \caption{Checks of the \cc\ variational equations for an orbit in
-    \texttt{MWPotential2014}, integrated with \texttt{dop853\_c} at
-    tolerances of $10^{-12}$. (a) The Liouville defect $|\det\vec{M}-1|$
-    of the state-transition matrix $\vec{M}$
-    and (b) the symplecticity defect for the three-dimensional and the
-    planar state-transition matrix. (c) The difference between the
-    columns of $\vec{M}$ at $t=10$ and forward and central finite
-    differences of independently integrated orbits as a function of the
-    finite-difference step; the variational result agrees with the best
-    central difference at its floor. (d) The in-plane block of the
-    three-dimensional matrix for a planar initial condition agrees with
-    the planar matrix, with no leakage out of the plane.}\label{fig:variational}
-\end{figure*}
-
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g11_dissipative_phase_volume/g11_dissipative_phase_volume.pdf}
-  \caption{Phase-space volume under dissipative forces. Left:
-    $\det\vec{M}(t)$ for an orbit in \texttt{MWPotential2014} with
-    Chandrasekhar dynamical friction and with fuzzy-dark-matter
-    friction \citep{Szpilfidel2026}, from the \cc\ variational equations (solid) and from the
-    integral of the velocity divergence of the force along the orbit
-    (dashed). Right: the relative difference between the two. The
-    variational equations reproduce the contraction of phase-space
-    volume by dissipative forces.}\label{fig:dissipative}
-\end{figure*}
 
 The derivative rule of \sectionname~\ref{sec:orbit-paths} follows from
 the chain rule: for a scalar function $L$ of the orbit sampled at times

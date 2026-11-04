@@ -20,6 +20,21 @@ arbitrary-precision references. The work also found defects in the
 \numpy\ and \cc\ code that had been there before, which 40 PRs to the
 main branch fixed.
 
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g20_neural_staeckel_inverse/g20_neural_staeckel_inverse.png}
+  \caption{Neural inverse of the St\"{a}ckel action--angle transformation
+    in \texttt{MWPotential2014} at fixed $L_z$, learned by differentiating
+    through \galpy's forward transformation.
+    Left: three orbits integrated in the potential (lines) and the
+    positions returned by the network for the orbits' actions and
+    angles (circles). Middle: the training loss, with its supervised
+    (``data'') and cycle-consistency terms. Right: the actions recovered by applying
+    the forward transformation to the network's output against the
+    input actions for a test set. The network recovers the input actions
+    on the round trip and reconstructs orbits that are not in its
+    training set.}\label{fig:neural}
+\end{figure*}
+
 What this makes possible is the gradient-based fitting of dynamical
 models that \galpy\ already contains, with a likelihood whose derivative
 with respect to every parameter---of the potential, of the DF, of the
@@ -55,21 +70,6 @@ such kernels are not differentiable unless their variational or
 adjoint equations are written by hand as well. They would therefore
 complement the differentiable backends rather than replace them.
 
-\begin{figure*}[t!]
-  \includegraphics[width=\textwidth,clip=]{../figures/g20_neural_staeckel_inverse/g20_neural_staeckel_inverse.png}
-  \caption{Neural inverse of the St\"{a}ckel action--angle transformation
-    in \texttt{MWPotential2014} at fixed $L_z$, learned by differentiating
-    through \galpy's forward transformation.
-    Left: three orbits integrated in the potential (lines) and the
-    positions returned by the network for the orbits' actions and
-    angles (circles). Middle: the training loss, with its supervised
-    (``data'') and cycle-consistency terms. Right: the actions recovered by applying
-    the forward transformation to the network's output against the
-    input actions for a test set. The network recovers the input actions
-    on the round trip and reconstructs orbits that are not in its
-    training set.}\label{fig:neural}
-\end{figure*}
-
 Some things are not done: the torus-mapping code, a wrapper of the
 external code of \citet{BinneyMcMillan2016}, is not covered and will not
 be, \astropy\ units cannot be used inside compiled programs, the
@@ -97,3 +97,19 @@ the backends, is at
 the figures in this paper, together with the working notes and logs of
 the development, is available at
 \\ \centerline{\url{https://github.com/jobovy/galpy-backends}~.}
+\begin{figure*}[t!]
+  \includegraphics[width=\textwidth,clip=]{../figures/g9_variational_validity/g9_variational_validity.pdf}
+  \caption{Checks of the \cc\ variational equations for an orbit in
+    \texttt{MWPotential2014}, integrated with \texttt{dop853\_c} at
+    tolerances of $10^{-12}$. (a) The Liouville defect $|\det\vec{M}-1|$
+    of the state-transition matrix $\vec{M}$
+    and (b) the symplecticity defect for the three-dimensional and the
+    planar state-transition matrix. (c) The difference between the
+    columns of $\vec{M}$ at $t=10$ and forward and central finite
+    differences of independently integrated orbits as a function of the
+    finite-difference step; the variational result agrees with the best
+    central difference at its floor. (d) The in-plane block of the
+    three-dimensional matrix for a planar initial condition agrees with
+    the planar matrix, with no leakage out of the plane.}\label{fig:variational}
+\end{figure*}
+
