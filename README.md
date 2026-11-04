@@ -12,11 +12,19 @@ Hessian) + **Lyapunov exponents** in C.
 - Paper draft + figures: `paper/`, with `paper/figures/` (every figure ships `make.py` + a reproducibility hash; see Track G)
 
 ## Branches
-- `feat/variational3d` → ✅ **merged to main** (#891, 2026-06-13); branch can be deleted. Lyapunov landed via this branch (#926/#945) — no separate `feat/lyapunov` was needed.
-- `feat/backends` (long-lived; **the only live branch**) → all jax/torch/df/autodiff work; rebase-only syncs with main. #949 (f32 exit-cast + device policy) ✅ **merged 2026-06-13**. Rebased onto post-#891 main (task #37). **#892** remains the open integration branch → main; final review after the Track D wave settles.
-- `feat/param-sensitivity` → Track C, not started.
+- galpy: `v2` (renamed from `feat/backends` on 2026-11-02, rebased onto the v1.12.1 tag) is the backends branch, released as 2.0.0bN pre-releases; `main` stays 1.x. `feat/variational3d` ✅ merged to main (#891, 2026-06-13; Lyapunov via #926/#945). `feat/param-sensitivity` (Track C) was never started.
+- this repo: `main` holds the paper and the logs. `paper-revision-r1` (the seven review rounds, 2026-10-28 to 2026-11-04) was fast-forwarded into `main` and deleted on 2026-11-04. `gpu-h100` / `gpu-h100-g20` are the H100 agent's run logs and data.
 
 ## Status
+
+**Status 2026-11-04.** The paper is converged: seven review rounds (JB's rounds 1–6, a
+Codex content review as round 7; responses in `paper/ms/review/response.md`, latexdiffs
+alongside) and a final layout pass (one full-width figure per page top, 44 pages). The
+batched-adaptive-derivative limitation of §4.4 was retired after re-measurement (galpy
+#1801 drops the warning). galpy's `v2` stack #1794 (#1787 workflows → #1793 deprecations
+→ #1789 version 2.0.0b1.dev0 → #1797 GPU special-function gate → #1799 pre-commit →
+#1801) awaits its all-at-once merge; #1798 (Dependabot for v2) and #1800 (the Dierickx
+release-asset fallback for the notebooks, merged) are on main.
 
 **Status 2026-10-16.** feat/backends (e2a30992f) carries the gap-audit stack,
 the GPU round and the tutorial notebooks. The ledgers are empty in every mode
