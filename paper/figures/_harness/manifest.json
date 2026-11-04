@@ -506,8 +506,8 @@
       "scipy": "1.17.1",
       "torch": "2.12.0+cu126"
     },
-    "git": "ef004f7",
-    "sha256": "292a6b93770c97e668b31994c13a8b5e95bd752b3575faacaf9aa00526d21c90",
+    "git": "2382f2f",
+    "sha256": "ba4322cbc6d24a28976e75b12963026d9eebabda43b52705b550f136d3f94f2e",
     "track": "S"
   },
   "gT1_cpu_thread_scaling": {
