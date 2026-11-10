@@ -1,4 +1,4 @@
-# G18 — Neural action-angle inverse by differentiating through galpy
+# G19 — Neural action-angle inverse by differentiating through galpy
 
 **Paper point:** galpy's action-angle machinery is now *differentiable* and
 *jittable* under JAX and PyTorch, so it can sit inside a machine-learning

@@ -59,13 +59,13 @@ Harness contract:
   `Producer`) so the bytes are stable, and records `sha256` + git sha + env into
   `manifest.json`.
 - CLI:
-  - `python -m paper.figures._harness.figure run [name...]` — (re)generate.
-  - `python -m paper.figures._harness.figure verify [name...]` — regenerate to a temp
+  - `python -m paper.figures._harness run [name...]` — (re)generate.
+  - `python -m paper.figures._harness verify [name...]` — regenerate to a temp
     file and assert the sha256 matches the manifest → **this is the reproducibility
     gate** we run against the final code. Numerical-but-not-byte-stable plots fall
     back to an image-diff tolerance (SSIM/`matplotlib` `compare_images`) recorded in
     the manifest.
-  - `python -m paper.figures._harness.figure list` — table of figures × track × status.
+  - `python -m paper.figures._harness list` — table of figures × track × status.
 - Determinism rules (mirror the tolerance policy): jax `enable_x64`; fixed RNG seeds
   threaded everywhere; pin benchmark machine/env in the caption metadata (timings are
   reported with the env, and the *plot-from-saved-data* path is byte-stable even if a
